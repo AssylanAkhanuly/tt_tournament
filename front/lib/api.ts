@@ -1,4 +1,4 @@
-import { Participant, Tournament, User } from "./types";
+import { Match, Participant, Tournament, User } from "./types";
 
 const BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://127.0.0.1:8000";
 
@@ -94,4 +94,21 @@ export const api = {
       `/api/tournaments/join/${token}/register/`,
       { method: "POST", body: JSON.stringify(data) }
     ),
+
+  // ─── Bracket ───────────────────────────────────────────────────────────────
+
+  startTournament: (id: string) =>
+    apiFetch<{ tournament: Tournament; matches: Match[] }>(
+      `/api/tournaments/${id}/start/`,
+      { method: "POST" }
+    ),
+
+  getMatches: (id: string) =>
+    apiFetch<Match[]>(`/api/tournaments/${id}/matches/`),
+
+  submitScore: (tournamentId: string, matchId: number, score1: number, score2: number) =>
+    apiFetch<Match>(`/api/tournaments/${tournamentId}/matches/${matchId}/score/`, {
+      method: "POST",
+      body: JSON.stringify({ score1, score2 }),
+    }),
 };

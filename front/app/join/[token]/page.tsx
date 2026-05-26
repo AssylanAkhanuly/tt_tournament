@@ -1,5 +1,6 @@
 import { cookies } from "next/headers";
 import { notFound } from "next/navigation";
+import { User } from "@/lib/types";
 import JoinPageClient from "./JoinPageClient";
 
 interface Props {
@@ -21,7 +22,7 @@ export default async function JoinPage({ params }: Props) {
   const tournament = await tournamentRes.json();
 
   // Try to get current user (may fail if not logged in)
-  let user = null;
+  let user: User | null = null;
   let alreadyJoined = false;
 
   const meRes = await fetch(`${base}/api/auth/me/`, {
@@ -38,7 +39,7 @@ export default async function JoinPage({ params }: Props) {
     });
     if (participantsRes.ok) {
       const participants = await participantsRes.json();
-      alreadyJoined = participants.some((p: { user: { id: string } }) => p.user.id === user.id);
+      alreadyJoined = participants.some((p: { user: { id: string } }) => p.user.id === user!.id);
     }
   }
 
