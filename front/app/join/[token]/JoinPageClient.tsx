@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Tournament, User } from "@/lib/types";
 import { api } from "@/lib/api";
@@ -86,6 +86,30 @@ function RegisterAndJoinSteps({ joinToken }: { joinToken: string }) {
   const [error, setError]         = useState<string | null>(null);
   const [loading, setLoading]     = useState(false);
 
+  // Auto-submit when confirm PIN is complete and matches
+  useEffect(() => {
+    if (step === 3 && confirmPin.length === 6 && pin === confirmPin && !loading) {
+      doRegister();
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [confirmPin]);
+
+  async function doRegister() {
+    setFE(null); setError(null);
+    setLoading(true);
+    try {
+      await api.registerAndJoin(joinToken, { phone, name: name.trim(), password: pin, confirm_password: pin });
+      router.push("/dashboard");
+    } catch (err) {
+      const e = err as Record<string, string | string[]>;
+      if (e.phone) { setFE(Array.isArray(e.phone) ? e.phone[0] : e.phone as string); setStep(1); }
+      else if (e.name) { setFE(Array.isArray(e.name) ? e.name[0] : e.name as string); setStep(2); }
+      else { setError((e.detail as string) ?? "Ошибка регистрации."); }
+    } finally {
+      setLoading(false);
+    }
+  }
+
   function goNext(e: React.FormEvent) {
     e.preventDefault();
     setFE(null); setError(null);
@@ -99,23 +123,11 @@ function RegisterAndJoinSteps({ joinToken }: { joinToken: string }) {
     }
   }
 
-  async function handleFinish(e: React.FormEvent) {
+  function handleFinish(e: React.FormEvent) {
     e.preventDefault();
-    setFE(null);
     if (pin.length < 6) { setFE("Введите 6-значный PIN-код."); return; }
     if (pin !== confirmPin) { setFE("PIN-коды не совпадают."); return; }
-    setLoading(true);
-    try {
-      await api.registerAndJoin(joinToken, { phone, name: name.trim(), password: pin, confirm_password: confirmPin });
-      router.push("/dashboard");
-    } catch (err) {
-      const e = err as Record<string, string | string[]>;
-      if (e.phone) { setFE(Array.isArray(e.phone) ? e.phone[0] : e.phone as string); setStep(1); }
-      else if (e.name) { setFE(Array.isArray(e.name) ? e.name[0] : e.name as string); setStep(2); }
-      else { setError((e.detail as string) ?? "Ошибка регистрации."); }
-    } finally {
-      setLoading(false);
-    }
+    doRegister();
   }
 
   return (

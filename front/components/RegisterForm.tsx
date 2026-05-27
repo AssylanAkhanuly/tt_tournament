@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { api } from "@/lib/api";
@@ -33,6 +33,31 @@ export default function RegisterForm({ onSuccess }: Props) {
   const [fieldError, setFE]     = useState<string | null>(null);
   const [loading, setLoading]   = useState(false);
 
+  // Auto-submit when confirm PIN is complete and matches
+  useEffect(() => {
+    if (step === 3 && confirmPin.length === 6 && pin === confirmPin && !loading) {
+      submit();
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [confirmPin]);
+
+  async function submit() {
+    setError(null); setFE(null);
+    setLoading(true);
+    try {
+      const user = await api.register({ phone, name: name.trim(), password: pin, confirm_password: pin });
+      onSuccess?.(user);
+    } catch (err) {
+      const e = err as ApiError;
+      if (e.phone) { setFE(Array.isArray(e.phone) ? e.phone[0] : e.phone as string); setStep(1); }
+      else if (e.name) { setFE(Array.isArray(e.name) ? e.name[0] : e.name as string); setStep(2); }
+      else if (e.password) { setFE(Array.isArray(e.password) ? e.password[0] : e.password as string); }
+      else { setError((e.detail as string) ?? "Ошибка регистрации."); }
+    } finally {
+      setLoading(false);
+    }
+  }
+
   function goNext(e: React.FormEvent) {
     e.preventDefault();
     setError(null); setFE(null);
@@ -46,24 +71,11 @@ export default function RegisterForm({ onSuccess }: Props) {
     }
   }
 
-  async function handleSubmit(e: React.FormEvent) {
+  function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    setError(null); setFE(null);
     if (pin.length < 6) { setFE("Введите 6-значный PIN-код."); return; }
     if (pin !== confirmPin) { setFE("PIN-коды не совпадают."); return; }
-    setLoading(true);
-    try {
-      const user = await api.register({ phone, name: name.trim(), password: pin, confirm_password: confirmPin });
-      onSuccess?.(user);
-    } catch (err) {
-      const e = err as ApiError;
-      if (e.phone) { setFE(Array.isArray(e.phone) ? e.phone[0] : e.phone as string); setStep(1); }
-      else if (e.name) { setFE(Array.isArray(e.name) ? e.name[0] : e.name as string); setStep(2); }
-      else if (e.password) { setFE(Array.isArray(e.password) ? e.password[0] : e.password as string); }
-      else { setError((e.detail as string) ?? "Ошибка регистрации."); }
-    } finally {
-      setLoading(false);
-    }
+    submit();
   }
 
   return (
@@ -152,7 +164,7 @@ export default function RegisterForm({ onSuccess }: Props) {
                   <label className="text-white/60 text-xs font-semibold uppercase tracking-wider">Подтвердите PIN-код</label>
                   <PinInput
                     value={confirmPin}
-                    onChange={setConfirm}
+                    onChange={(v) => { setFE(null); setConfirm(v); }}
                     autoFocus
                     onBackspaceEmpty={() => pinRef.current?.focusLast()}
                   />
