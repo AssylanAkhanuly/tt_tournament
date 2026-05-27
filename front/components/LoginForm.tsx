@@ -23,13 +23,20 @@ export default function LoginForm({ onSuccess }: Props) {
   const [error, setError]     = useState<string | null>(null);
   const [fieldError, setFE]   = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [dir, setDir]         = useState<"forward" | "back">("forward");
+
+  function go(target: 1 | 2) {
+    setDir(target > step ? "forward" : "back");
+    setError(null); setFE(null);
+    setStep(target);
+  }
 
   function goStep2(e: React.FormEvent) {
     e.preventDefault();
     setError(null); setFE(null);
     if (!phone.trim()) { setFE("Введите номер телефона."); return; }
     setPin("");
-    setStep(2);
+    go(2);
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -53,7 +60,7 @@ export default function LoginForm({ onSuccess }: Props) {
       {/* Top bar */}
       <div className="flex items-center justify-between mb-auto">
         {step === 2 ? (
-          <button onClick={() => { setError(null); setFE(null); setStep(1); }}
+          <button onClick={() => go(1)}
             className="text-white/60 hover:text-white transition-colors">
             <ArrowLeft size={22} />
           </button>
@@ -63,7 +70,8 @@ export default function LoginForm({ onSuccess }: Props) {
         <span className="text-white/35 text-xs">Шаг {step} / 2</span>
       </div>
 
-      <div className="flex-1 flex flex-col justify-center max-w-sm mx-auto w-full space-y-8">
+      <div className="flex-1 flex flex-col justify-center max-w-sm mx-auto w-full">
+        <div key={step} className={`space-y-8 ${dir === "forward" ? "step-forward" : "step-back"}`}>
 
         {/* ── Step 1: Phone ─────────────────────────────────────────────────── */}
         {step === 1 && (
@@ -108,6 +116,7 @@ export default function LoginForm({ onSuccess }: Props) {
           </>
         )}
 
+        </div>
       </div>
     </div>
   );

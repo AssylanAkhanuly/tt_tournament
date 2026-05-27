@@ -1,13 +1,12 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { Tournament, User } from "@/lib/types";
 import { api } from "@/lib/api";
 import PhoneInput from "@/components/PhoneInput";
 import PinInput, { PinInputHandle } from "@/components/PinInput";
 import { ArrowLeft } from "lucide-react";
-import { useRef } from "react";
 
 const INPUT = `w-full px-4 py-3.5 rounded-2xl bg-white/10 border border-white/20
   text-white placeholder:text-white/35 text-base outline-none
@@ -58,7 +57,7 @@ function UnauthFlow({ tournament, joinToken }: { tournament: Tournament; joinTok
   return (
     <div className="h-[100dvh] bg-[#0d1b35] flex flex-col overflow-hidden">
       <TournamentBadge tournament={tournament} />
-      <div className="flex mx-5 mb-2 rounded-2xl overflow-hidden border border-white/15 bg-white/5">
+      <div className="flex mx-5 mb-2 rounded-2xl overflow-hidden border border-white/15 bg-white/5 shrink-0">
         <TabBtn label="Регистрация" active={tab === "register"} onClick={() => setTab("register")} />
         <TabBtn label="Уже есть аккаунт" active={tab === "login"} onClick={() => setTab("login")} />
       </div>
@@ -72,23 +71,31 @@ function UnauthFlow({ tournament, joinToken }: { tournament: Tournament; joinTok
   );
 }
 
-// ─── Register 3-step + auto-join ─────────────────────────────────────────────
+// ─── Register 4-step + auto-join ─────────────────────────────────────────────
+
+type JStep = 1 | 2 | 3 | 4;
 
 function RegisterAndJoinSteps({ joinToken }: { joinToken: string }) {
   const router = useRouter();
-  const [step, setStep]           = useState<1 | 2 | 3>(1);
-  const [phone, setPhone]         = useState("");
-  const [name, setName]           = useState("");
-  const [pin, setPin]             = useState("");
-  const [confirmPin, setConfirm]  = useState("");
-  const pinRef                    = useRef<PinInputHandle>(null);
-  const [fieldError, setFE]       = useState<string | null>(null);
-  const [error, setError]         = useState<string | null>(null);
-  const [loading, setLoading]     = useState(false);
+  const [step, setStep]          = useState<JStep>(1);
+  const [dir, setDir]            = useState<"forward" | "back">("forward");
+  const [phone, setPhone]        = useState("");
+  const [name, setName]          = useState("");
+  const [pin, setPin]            = useState("");
+  const [confirmPin, setConfirm] = useState("");
+  const pinRef                   = useRef<PinInputHandle>(null);
+  const [fieldError, setFE]      = useState<string | null>(null);
+  const [error, setError]        = useState<string | null>(null);
+  const [loading, setLoading]    = useState(false);
 
-  // Auto-submit when confirm PIN is complete and matches
+  function go(target: JStep) {
+    setDir(target > step ? "forward" : "back");
+    setFE(null); setError(null);
+    setStep(target);
+  }
+
   useEffect(() => {
-    if (step === 3 && confirmPin.length === 6 && pin === confirmPin && !loading) {
+    if (step === 4 && confirmPin.length === 6 && pin === confirmPin && !loading) {
       doRegister();
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -102,106 +109,112 @@ function RegisterAndJoinSteps({ joinToken }: { joinToken: string }) {
       router.push("/dashboard");
     } catch (err) {
       const e = err as Record<string, string | string[]>;
-      if (e.phone) { setFE(Array.isArray(e.phone) ? e.phone[0] : e.phone as string); setStep(1); }
-      else if (e.name) { setFE(Array.isArray(e.name) ? e.name[0] : e.name as string); setStep(2); }
+      if (e.phone)     { setFE(Array.isArray(e.phone) ? e.phone[0] : e.phone as string); go(1); }
+      else if (e.name) { setFE(Array.isArray(e.name)  ? e.name[0]  : e.name  as string); go(2); }
       else { setError((e.detail as string) ?? "Ошибка регистрации."); }
     } finally {
       setLoading(false);
     }
   }
 
-  function goNext(e: React.FormEvent) {
+  function handleNext(e: React.FormEvent) {
     e.preventDefault();
     setFE(null); setError(null);
     if (step === 1) {
       if (!phone.trim()) { setFE("Введите номер телефона."); return; }
-      setStep(2);
+      go(2);
     } else if (step === 2) {
       if (name.trim().length < 2) { setFE("Имя должно содержать минимум 2 символа."); return; }
-      setPin(""); setConfirm("");
-      setStep(3);
+      setPin(""); go(3);
+    } else if (step === 3) {
+      if (pin.length < 6) { setFE("Введите 6-значный PIN-код."); return; }
+      setConfirm(""); go(4);
+    } else if (step === 4) {
+      if (pin !== confirmPin) { setFE("PIN-коды не совпадают."); return; }
+      doRegister();
     }
   }
 
-  function handleFinish(e: React.FormEvent) {
-    e.preventDefault();
-    if (pin.length < 6) { setFE("Введите 6-значный PIN-код."); return; }
-    if (pin !== confirmPin) { setFE("PIN-коды не совпадают."); return; }
-    doRegister();
-  }
+  const animClass = dir === "forward" ? "step-forward" : "step-back";
 
   return (
-    <div className="px-5 py-5 space-y-7 max-w-sm mx-auto w-full">
+    <div className="px-5 py-5 max-w-sm mx-auto w-full">
+      <div key={step} className={`space-y-6 ${animClass}`}>
 
-      {/* ── Step 1: Phone ── */}
-      {step === 1 && (
-        <>
-          <div>
-            <h1 className="text-2xl font-extrabold text-white leading-tight">Ваш номер телефона?</h1>
-            <p className="text-white/55 mt-1.5 text-sm">Введите данные, чтобы вступить в турнир.</p>
-          </div>
-          <form onSubmit={goNext} className="space-y-4">
-            <Field label="Номер телефона" error={fieldError ?? undefined}>
-              <PhoneInput value={phone} onChange={setPhone} required autoFocus />
-            </Field>
-            <button type="submit" className={BTN_PRIMARY}>Продолжить</button>
-          </form>
-        </>
-      )}
-
-      {/* ── Step 2: Name ── */}
-      {step === 2 && (
-        <>
-          <div className="flex items-start gap-3">
-            <button onClick={() => setStep(1)} className="text-white/60 hover:text-white mt-1"><ArrowLeft size={20} /></button>
+        {step === 1 && (
+          <>
             <div>
-              <h1 className="text-2xl font-extrabold text-white leading-tight">Как вас зовут?</h1>
-              <p className="text-white/55 mt-1 text-sm">Имя увидят другие участники.</p>
+              <h1 className="text-2xl font-extrabold text-white leading-tight">Ваш номер телефона?</h1>
+              <p className="text-white/55 mt-1.5 text-sm">Введите данные, чтобы вступить в турнир.</p>
             </div>
-          </div>
-          <form onSubmit={goNext} className="space-y-4">
-            <Field label="Ваше имя" error={fieldError ?? undefined}>
-              <input type="text" value={name} onChange={(e) => setName(e.target.value)}
-                placeholder="Алан Смагулов" required autoFocus className={INPUT} />
-            </Field>
-            <button type="submit" className={BTN_PRIMARY}>Продолжить</button>
-          </form>
-        </>
-      )}
+            <form onSubmit={handleNext} className="space-y-4">
+              <Field label="Номер телефона" error={fieldError ?? undefined}>
+                <PhoneInput value={phone} onChange={setPhone} required autoFocus />
+              </Field>
+              <button type="submit" className={BTN_PRIMARY}>Продолжить</button>
+            </form>
+          </>
+        )}
 
-      {/* ── Step 3: PIN + Confirm PIN ── */}
-      {step === 3 && (
-        <>
-          <div className="flex items-start gap-3">
-            <button onClick={() => setStep(2)} className="text-white/60 hover:text-white mt-1"><ArrowLeft size={20} /></button>
-            <div>
-              <h1 className="text-2xl font-extrabold text-white leading-tight">Придумайте PIN-код</h1>
-              <p className="text-white/55 mt-1 text-sm">6 цифр для входа в аккаунт.</p>
-            </div>
-          </div>
-          <form onSubmit={handleFinish} className="space-y-6">
-            <div className="space-y-2">
-              <label className="text-white/60 text-xs font-semibold uppercase tracking-wider">PIN-код</label>
-              <PinInput ref={pinRef} value={pin} onChange={setPin} autoFocus />
-            </div>
-            {pin.length === 6 && (
-              <div className="space-y-2 animate-in fade-in slide-in-from-top-2 duration-200">
-                <label className="text-white/60 text-xs font-semibold uppercase tracking-wider">Подтвердите PIN-код</label>
-                <PinInput
-                  value={confirmPin}
-                  onChange={setConfirm}
-                  autoFocus
-                  onBackspaceEmpty={() => pinRef.current?.focusLast()}
-                />
+        {step === 2 && (
+          <>
+            <div className="flex items-start gap-3">
+              <button onClick={() => go(1)} className="text-white/60 hover:text-white mt-1"><ArrowLeft size={20} /></button>
+              <div>
+                <h1 className="text-2xl font-extrabold text-white leading-tight">Как вас зовут?</h1>
+                <p className="text-white/55 mt-1 text-sm">Имя увидят другие участники.</p>
               </div>
-            )}
-            {(fieldError || error) && <ErrorBox msg={fieldError ?? error!} />}
-            <button type="submit" disabled={loading || pin.length < 6 || confirmPin.length < 6} className={BTN_PRIMARY}>
-              {loading ? "Вступаем в турнир..." : "Зарегистрироваться и вступить"}
-            </button>
-          </form>
-        </>
-      )}
+            </div>
+            <form onSubmit={handleNext} className="space-y-4">
+              <Field label="Ваше имя" error={fieldError ?? undefined}>
+                <input type="text" value={name} onChange={(e) => setName(e.target.value)}
+                  placeholder="Алан Смагулов" required autoFocus className={INPUT} />
+              </Field>
+              <button type="submit" className={BTN_PRIMARY}>Продолжить</button>
+            </form>
+          </>
+        )}
+
+        {step === 3 && (
+          <>
+            <div className="flex items-start gap-3">
+              <button onClick={() => go(2)} className="text-white/60 hover:text-white mt-1"><ArrowLeft size={20} /></button>
+              <div>
+                <h1 className="text-2xl font-extrabold text-white leading-tight">Придумайте PIN-код</h1>
+                <p className="text-white/55 mt-1 text-sm">6 цифр для входа в аккаунт.</p>
+              </div>
+            </div>
+            <form onSubmit={handleNext} className="space-y-6">
+              <PinInput ref={pinRef} value={pin} onChange={setPin} autoFocus />
+              {fieldError && <ErrorBox msg={fieldError} />}
+              <button type="submit" disabled={pin.length < 6} className={BTN_PRIMARY}>Продолжить</button>
+            </form>
+          </>
+        )}
+
+        {step === 4 && (
+          <>
+            <div className="flex items-start gap-3">
+              <button onClick={() => go(3)} className="text-white/60 hover:text-white mt-1"><ArrowLeft size={20} /></button>
+              <div>
+                <h1 className="text-2xl font-extrabold text-white leading-tight">Подтвердите PIN-код</h1>
+                <p className="text-white/55 mt-1 text-sm">Введите PIN-код ещё раз.</p>
+              </div>
+            </div>
+            <form onSubmit={handleNext} className="space-y-6">
+              <PinInput
+                value={confirmPin}
+                onChange={(v) => { setFE(null); setConfirm(v); }}
+                autoFocus
+                onBackspaceEmpty={() => go(3)}
+              />
+              {(fieldError || error) && <ErrorBox msg={fieldError ?? error!} />}
+              {loading && <p className="text-center text-white/50 text-sm">Вступаем в турнир...</p>}
+            </form>
+          </>
+        )}
+
+      </div>
     </div>
   );
 }
@@ -211,18 +224,17 @@ function RegisterAndJoinSteps({ joinToken }: { joinToken: string }) {
 function LoginAndJoinForm({ joinToken }: { joinToken: string }) {
   const router = useRouter();
   const [step, setStep]       = useState<1 | 2>(1);
+  const [dir, setDir]         = useState<"forward" | "back">("forward");
   const [phone, setPhone]     = useState("");
   const [pin, setPin]         = useState("");
   const [fieldError, setFE]   = useState<string | null>(null);
   const [error, setError]     = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  function goStep2(e: React.FormEvent) {
-    e.preventDefault();
-    setFE(null);
-    if (!phone.trim()) { setFE("Введите номер телефона."); return; }
-    setPin("");
-    setStep(2);
+  function go(target: 1 | 2) {
+    setDir(target > step ? "forward" : "back");
+    setFE(null); setError(null);
+    setStep(target);
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -242,45 +254,47 @@ function LoginAndJoinForm({ joinToken }: { joinToken: string }) {
     }
   }
 
+  const animClass = dir === "forward" ? "step-forward" : "step-back";
+
   return (
-    <div className="px-5 py-5 space-y-7 max-w-sm mx-auto w-full">
+    <div className="px-5 py-5 max-w-sm mx-auto w-full">
+      <div key={step} className={`space-y-6 ${animClass}`}>
 
-      {/* ── Step 1: Phone ── */}
-      {step === 1 && (
-        <>
-          <div>
-            <h1 className="text-2xl font-extrabold text-white leading-tight">Войдите в аккаунт</h1>
-            <p className="text-white/55 mt-1.5 text-sm">После входа вы автоматически вступите в турнир.</p>
-          </div>
-          <form onSubmit={goStep2} className="space-y-4">
-            <Field label="Номер телефона" error={fieldError ?? undefined}>
-              <PhoneInput value={phone} onChange={setPhone} required autoFocus />
-            </Field>
-            <button type="submit" className={BTN_PRIMARY}>Продолжить</button>
-          </form>
-        </>
-      )}
-
-      {/* ── Step 2: PIN ── */}
-      {step === 2 && (
-        <>
-          <div className="flex items-start gap-3">
-            <button onClick={() => setStep(1)} className="text-white/60 hover:text-white mt-1"><ArrowLeft size={20} /></button>
+        {step === 1 && (
+          <>
             <div>
-              <h1 className="text-2xl font-extrabold text-white leading-tight">Введите PIN-код</h1>
-              <p className="text-white/55 mt-1 text-sm">6-значный PIN-код вашего аккаунта.</p>
+              <h1 className="text-2xl font-extrabold text-white leading-tight">Войдите в аккаунт</h1>
+              <p className="text-white/55 mt-1.5 text-sm">После входа вы автоматически вступите в турнир.</p>
             </div>
-          </div>
-          <form onSubmit={handleSubmit} className="space-y-8">
-            <PinInput value={pin} onChange={setPin} autoFocus />
-            {(fieldError || error) && <ErrorBox msg={fieldError ?? error!} />}
-            <button type="submit" disabled={loading || pin.length < 6} className={BTN_PRIMARY}>
-              {loading ? "Вход..." : "Войти и вступить"}
-            </button>
-          </form>
-        </>
-      )}
+            <form onSubmit={(e) => { e.preventDefault(); if (!phone.trim()) { setFE("Введите номер."); return; } setPin(""); go(2); }} className="space-y-4">
+              <Field label="Номер телефона" error={fieldError ?? undefined}>
+                <PhoneInput value={phone} onChange={setPhone} required autoFocus />
+              </Field>
+              <button type="submit" className={BTN_PRIMARY}>Продолжить</button>
+            </form>
+          </>
+        )}
 
+        {step === 2 && (
+          <>
+            <div className="flex items-start gap-3">
+              <button onClick={() => go(1)} className="text-white/60 hover:text-white mt-1"><ArrowLeft size={20} /></button>
+              <div>
+                <h1 className="text-2xl font-extrabold text-white leading-tight">Введите PIN-код</h1>
+                <p className="text-white/55 mt-1 text-sm">6-значный PIN-код вашего аккаунта.</p>
+              </div>
+            </div>
+            <form onSubmit={handleSubmit} className="space-y-8">
+              <PinInput value={pin} onChange={setPin} autoFocus />
+              {(fieldError || error) && <ErrorBox msg={fieldError ?? error!} />}
+              <button type="submit" disabled={loading || pin.length < 6} className={BTN_PRIMARY}>
+                {loading ? "Вход..." : "Войти и вступить"}
+              </button>
+            </form>
+          </>
+        )}
+
+      </div>
     </div>
   );
 }
@@ -340,7 +354,7 @@ function ErrorBox({ msg }: { msg: string }) {
 
 function TournamentBadge({ tournament }: { tournament: Tournament }) {
   return (
-    <div className="mx-5 mt-10 mb-4 bg-white/10 border border-white/15 rounded-2xl p-4">
+    <div className="mx-5 mt-10 mb-4 bg-white/10 border border-white/15 rounded-2xl p-4 shrink-0">
       <p className="text-blue-400 text-xs font-bold uppercase tracking-widest mb-0.5">Приглашение</p>
       <h2 className="text-white font-bold text-lg leading-snug">{tournament.name}</h2>
       {tournament.description && (
