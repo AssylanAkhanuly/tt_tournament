@@ -102,12 +102,22 @@ export default function PhoneInput({ value, onChange, onComplete, required, auto
     };
   }, [open, updatePos]);
 
+  // Works on desktop (keyboard) and mobile (virtual keyboard).
+  // Mobile Android fires inputType="deleteContentBackward" via beforeinput
+  // instead of keydown with key="Backspace", so we must intercept both.
+  function handleBeforeInput(e: React.FormEvent<HTMLInputElement>) {
+    const ie = e.nativeEvent as InputEvent;
+    if (ie.inputType === "deleteContentBackward") {
+      e.preventDefault();
+      onChange(country.code + rawDigits.slice(0, -1));
+    }
+  }
+
+  // Desktop fallback — browsers that prevent beforeinput via keydown
   function handleKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
     if (e.key === "Backspace") {
       e.preventDefault();
-      // Always delete the last digit — avoids getting stuck on formatting chars
-      const newDigits = rawDigits.slice(0, -1);
-      onChange(country.code + newDigits);
+      onChange(country.code + rawDigits.slice(0, -1));
     }
   }
 
@@ -168,6 +178,7 @@ export default function PhoneInput({ value, onChange, onComplete, required, auto
           inputMode="numeric"
           value={formatted}
           onChange={handleInput}
+          onBeforeInput={handleBeforeInput}
           onKeyDown={handleKeyDown}
           placeholder={formatDigits("0".repeat(maxDigits), country.groups)}
           required={required}
