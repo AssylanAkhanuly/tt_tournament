@@ -2,15 +2,23 @@ import { Match, Participant, Tournament, User } from "./types";
 
 const BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://127.0.0.1:8000";
 
+const NETWORK_ERROR = { detail: "Сервер недоступен. Проверьте подключение и попробуйте позже." };
+
 async function apiFetch<T>(path: string, options: RequestInit = {}): Promise<T> {
-  const res = await fetch(`${BASE}${path}`, {
-    ...options,
-    credentials: "include",
-    headers: {
-      "Content-Type": "application/json",
-      ...options.headers,
-    },
-  });
+  let res: Response;
+  try {
+    res = await fetch(`${BASE}${path}`, {
+      ...options,
+      credentials: "include",
+      headers: {
+        "Content-Type": "application/json",
+        ...options.headers,
+      },
+    });
+  } catch {
+    // fetch() itself throws (ERR_CONNECTION_REFUSED, offline, CORS preflight blocked, etc.)
+    throw NETWORK_ERROR;
+  }
 
   // Try token refresh once on 401
   if (res.status === 401) {

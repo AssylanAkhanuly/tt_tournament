@@ -103,9 +103,11 @@ export default function RegisterForm({ onSuccess }: Props) {
       try {
         const { exists } = await api.checkPhone(phone);
         if (exists) { setFE("Этот номер уже зарегистрирован. Войдите в аккаунт."); return; }
-      } catch { /* network error — proceed anyway */ }
-      finally { setLoading(false); }
-      go(2);
+        go(2);
+      } catch (err) {
+        const e = err as { detail?: string };
+        setError(e?.detail ?? "Не удалось проверить номер. Попробуйте позже.");
+      } finally { setLoading(false); }
     } else if (step === 2) {
       if (name.trim().length < 2) { setFE("Имя должно содержать минимум 2 символа."); return; }
       setPin("");
