@@ -56,7 +56,7 @@ function UnauthFlow({ tournament, joinToken }: { tournament: Tournament; joinTok
   const [tab, setTab] = useState<"register" | "login">("register");
 
   return (
-    <div className="min-h-screen bg-[#0d1b35] flex flex-col">
+    <div className="h-[100dvh] bg-[#0d1b35] flex flex-col overflow-hidden">
       <TournamentBadge tournament={tournament} />
       <div className="flex mx-5 mb-2 rounded-2xl overflow-hidden border border-white/15 bg-white/5">
         <TabBtn label="Регистрация" active={tab === "register"} onClick={() => setTab("register")} />
@@ -353,7 +353,7 @@ function TournamentBadge({ tournament }: { tournament: Tournament }) {
 
 function DarkShell({ tournament, children }: { tournament: Tournament; children: React.ReactNode }) {
   return (
-    <div className="min-h-screen bg-[#0d1b35] flex flex-col px-5 py-10">
+    <div className="h-[100dvh] bg-[#0d1b35] flex flex-col px-5 py-10 overflow-hidden">
       <TournamentBadge tournament={tournament} />
       <div className="flex-1 flex flex-col justify-center max-w-sm mx-auto w-full">
         {children}

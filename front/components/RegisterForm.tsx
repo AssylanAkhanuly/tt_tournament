@@ -79,7 +79,7 @@ export default function RegisterForm({ onSuccess }: Props) {
   }
 
   return (
-    <div className="min-h-screen bg-[#0d1b35] flex flex-col px-6 py-10">
+    <div className="h-[100dvh] bg-[#0d1b35] flex flex-col px-6 py-10 overflow-hidden">
       {/* Top bar */}
       <div className="flex items-center justify-between mb-auto">
         {step > 1 ? (
