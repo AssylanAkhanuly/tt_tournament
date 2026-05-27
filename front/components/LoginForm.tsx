@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import Image from "next/image";
+import SpinCoachLogo from "./SpinCoachLogo";
 import { ArrowLeft } from "lucide-react";
 import { api } from "@/lib/api";
 import { ApiError, User } from "@/lib/types";
@@ -63,7 +63,7 @@ export default function LoginForm({ onSuccess }: Props) {
             <ArrowLeft size={22} />
           </button>
         ) : (
-          <Image src="/logo.png" alt="SpinCoach" width={120} height={36} className="object-contain" />
+          <SpinCoachLogo size="sm" />
         )}
         <span className="text-white/35 text-xs">Шаг {step} / 2</span>
       </div>
