@@ -76,7 +76,6 @@ function UnauthFlow({ tournament, joinToken }: { tournament: Tournament; joinTok
 type JStep = 1 | 2 | 3 | 4;
 
 function RegisterAndJoinSteps({ joinToken }: { joinToken: string }) {
-  const router = useRouter();
   const [step, setStep]          = useState<JStep>(1);
   const [dir, setDir]            = useState<"forward" | "back">("forward");
   const [phone, setPhone]        = useState("");
@@ -123,7 +122,7 @@ function RegisterAndJoinSteps({ joinToken }: { joinToken: string }) {
     setLoading(true);
     try {
       await api.registerAndJoin(joinToken, { phone, name: name.trim(), password: pin, confirm_password: pin });
-      router.push("/dashboard");
+      window.location.href = "/dashboard";
     } catch (err) {
       const e = err as Record<string, string | string[]>;
       if (e.phone)     { setFE(Array.isArray(e.phone) ? e.phone[0] : e.phone as string); go(1); }
@@ -239,7 +238,6 @@ function RegisterAndJoinSteps({ joinToken }: { joinToken: string }) {
 // ─── Login + auto-join (2-step) ───────────────────────────────────────────────
 
 function LoginAndJoinForm({ joinToken }: { joinToken: string }) {
-  const router = useRouter();
   const [step, setStep]       = useState<1 | 2>(1);
   const [dir, setDir]         = useState<"forward" | "back">("forward");
   const [phone, setPhone]     = useState("");
@@ -279,7 +277,7 @@ function LoginAndJoinForm({ joinToken }: { joinToken: string }) {
     try {
       await api.login(phone, pin);
       try { await api.joinByToken(joinToken); } catch { /* already joined */ }
-      router.push("/dashboard");
+      window.location.href = "/dashboard";
     } catch (err) {
       const e = err as Record<string, string>;
       setError(e?.detail ?? "Неверный номер или PIN-код.");

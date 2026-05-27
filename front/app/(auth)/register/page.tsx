@@ -1,14 +1,13 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { User } from "@/lib/types";
 import RegisterForm from "@/components/RegisterForm";
 
 export default function RegisterPage() {
-  const router = useRouter();
-
   function handleSuccess(_user: User) {
-    router.push("/dashboard");
+    // Hard redirect so the Next.js server picks up the fresh auth cookie
+    // that was just set by the registration API response.
+    window.location.href = "/dashboard";
   }
 
   return <RegisterForm onSuccess={handleSuccess} />;
