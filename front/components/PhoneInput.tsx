@@ -102,18 +102,7 @@ export default function PhoneInput({ value, onChange, onComplete, required, auto
     };
   }, [open, updatePos]);
 
-  // Works on desktop (keyboard) and mobile (virtual keyboard).
-  // Mobile Android fires inputType="deleteContentBackward" via beforeinput
-  // instead of keydown with key="Backspace", so we must intercept both.
-  function handleBeforeInput(e: React.FormEvent<HTMLInputElement>) {
-    const ie = e.nativeEvent as InputEvent;
-    if (ie.inputType === "deleteContentBackward") {
-      e.preventDefault();
-      onChange(country.code + rawDigits.slice(0, -1));
-    }
-  }
-
-  // Desktop fallback — browsers that prevent beforeinput via keydown
+  // Desktop: intercept Backspace before the browser touches the value.
   function handleKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
     if (e.key === "Backspace") {
       e.preventDefault();
@@ -122,6 +111,18 @@ export default function PhoneInput({ value, onChange, onComplete, required, auto
   }
 
   function handleInput(e: React.ChangeEvent<HTMLInputElement>) {
+    const ie = e.nativeEvent as InputEvent;
+    // Mobile virtual keyboards (Gboard, etc.) don't fire keydown with
+    // key="Backspace". Instead they modify the value and fire the input
+    // event with inputType="deleteContentBackward".
+    // At this point rawDigits is still the OLD value (React hasn't
+    // re-rendered yet), so slicing it gives the correct result regardless
+    // of which character the browser happened to delete from the formatted
+    // string (e.g. the ')' in '(777)').
+    if (ie.inputType === "deleteContentBackward") {
+      onChange(country.code + rawDigits.slice(0, -1));
+      return;
+    }
     const digits = digitsOnly(e.target.value).slice(0, maxDigits);
     onChange(country.code + digits);
   }
@@ -178,7 +179,6 @@ export default function PhoneInput({ value, onChange, onComplete, required, auto
           inputMode="numeric"
           value={formatted}
           onChange={handleInput}
-          onBeforeInput={handleBeforeInput}
           onKeyDown={handleKeyDown}
           placeholder={formatDigits("0".repeat(maxDigits), country.groups)}
           required={required}
