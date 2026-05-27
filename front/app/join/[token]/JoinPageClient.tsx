@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Tournament, User } from "@/lib/types";
 import { api } from "@/lib/api";
 import PinInput from "@/components/PinInput";
+import PhoneInput from "@/components/PhoneInput";
 
 // Shared input class for the dark theme
 const INPUT = `w-full px-4 py-3.5 rounded-2xl bg-white/10 border border-white/20
@@ -60,7 +61,7 @@ function UnauthFlow({ tournament, joinToken }: { tournament: Tournament; joinTok
   const [tab, setTab] = useState<"register" | "login">("register");
 
   return (
-    <div className="min-h-screen bg-[#163535] flex flex-col">
+    <div className="min-h-screen bg-[#0d1b35] flex flex-col">
       <TournamentBadge tournament={tournament} />
 
       {/* Tab switcher */}
@@ -144,8 +145,7 @@ function RegisterAndJoinSteps({ joinToken }: { joinToken: string }) {
             </Field>
 
             <Field label="Номер телефона" error={fieldErrors.phone}>
-              <input type="tel" value={phone} onChange={(e) => setPhone(e.target.value)}
-                placeholder="+7 700 000 00 00" required className={INPUT} />
+              <PhoneInput value={phone} onChange={setPhone} required />
             </Field>
 
             {error && <ErrorBox msg={error} />}
@@ -220,8 +220,7 @@ function LoginAndJoinForm({ joinToken }: { joinToken: string }) {
 
       <form onSubmit={handleSubmit} className="space-y-6">
         <Field label="Номер телефона">
-          <input type="tel" value={phone} onChange={(e) => setPhone(e.target.value)}
-            placeholder="+7 700 000 00 00" required className={INPUT} />
+          <PhoneInput value={phone} onChange={setPhone} required />
         </Field>
 
         <div className="space-y-3">
@@ -312,7 +311,7 @@ function TournamentBadge({ tournament }: { tournament: Tournament }) {
 
 function DarkShell({ tournament, children }: { tournament: Tournament; children: React.ReactNode }) {
   return (
-    <div className="min-h-screen bg-[#163535] flex flex-col px-5 py-10">
+    <div className="min-h-screen bg-[#0d1b35] flex flex-col px-5 py-10">
       <TournamentBadge tournament={tournament} />
       <div className="flex-1 flex flex-col justify-center max-w-sm mx-auto w-full">
         {children}

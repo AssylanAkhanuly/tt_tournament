@@ -1,9 +1,14 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
+import { ArrowLeft } from "lucide-react";
 import { api } from "@/lib/api";
 import { ApiError, User } from "@/lib/types";
+import { registerSchema } from "@/lib/validation";
 import PinInput from "./PinInput";
+import PhoneInput from "./PhoneInput";
+import SpinCoachLogo from "./SpinCoachLogo";
 
 interface Props {
   onSuccess?: (user: User) => void;
@@ -22,6 +27,19 @@ export default function RegisterForm({ onSuccess }: Props) {
     e.preventDefault();
     setError(null);
     setFieldErrors({});
+
+    // Validate name + phone with Zod
+    const result = registerSchema.pick({ name: true, phone: true }).safeParse({ name, phone });
+    if (!result.success) {
+      const errs: Record<string, string> = {};
+      result.error.errors.forEach((err) => {
+        const field = err.path[0] as string;
+        errs[field] = err.message;
+      });
+      setFieldErrors(errs);
+      return;
+    }
+
     setPin("");
     setStep(2);
   }
@@ -54,15 +72,15 @@ export default function RegisterForm({ onSuccess }: Props) {
   }
 
   return (
-    <div className="min-h-screen bg-[#163535] flex flex-col px-6 py-10">
+    <div className="min-h-screen bg-[#0d1b35] flex flex-col px-6 py-10">
       {/* Top bar */}
       <div className="flex items-center justify-between mb-auto">
         {step === 2 ? (
-          <button onClick={() => setStep(1)} className="text-white/60 hover:text-white text-2xl leading-none">
-            ←
+          <button onClick={() => setStep(1)} className="text-white/60 hover:text-white transition-colors">
+            <ArrowLeft size={22} />
           </button>
         ) : (
-          <div className="text-white/50 text-sm font-medium">🏓 ТТ Платформа</div>
+          <SpinCoachLogo size="sm" />
         )}
         <span className="text-white/35 text-xs">Шаг {step} / 2</span>
       </div>
@@ -74,10 +92,10 @@ export default function RegisterForm({ onSuccess }: Props) {
           <>
             <div>
               <h1 className="text-4xl font-extrabold text-white leading-tight">
-                Ваш номер<br />телефона?
+                Создать<br />аккаунт
               </h1>
               <p className="text-white/55 mt-2 text-sm">
-                Введите имя и номер, чтобы создать аккаунт.
+                Введите имя и номер, чтобы зарегистрироваться.
               </p>
             </div>
 
@@ -104,16 +122,7 @@ export default function RegisterForm({ onSuccess }: Props) {
                 <label className="text-white/60 text-xs font-semibold uppercase tracking-wider">
                   Номер телефона
                 </label>
-                <input
-                  type="tel"
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                  placeholder="+7 700 000 00 00"
-                  required
-                  className="w-full px-4 py-3.5 rounded-2xl bg-white/10 border border-white/20
-                    text-white placeholder:text-white/35 text-base outline-none
-                    focus:border-blue-500 focus:bg-white/15 transition-all"
-                />
+                <PhoneInput value={phone} onChange={setPhone} required />
                 {fieldErrors.phone && <p className="text-red-300 text-xs mt-1">{fieldErrors.phone}</p>}
               </div>
 
@@ -129,6 +138,13 @@ export default function RegisterForm({ onSuccess }: Props) {
                 Продолжить
               </button>
             </form>
+
+            <p className="text-center text-sm text-white/40">
+              Уже есть аккаунт?{" "}
+              <Link href="/login" className="text-blue-400 hover:underline font-medium">
+                Войти
+              </Link>
+            </p>
           </>
         )}
 
@@ -137,10 +153,10 @@ export default function RegisterForm({ onSuccess }: Props) {
           <>
             <div>
               <h1 className="text-4xl font-extrabold text-white leading-tight">
-                Добро<br />пожаловать!
+                Придумайте<br />PIN-код
               </h1>
               <p className="text-white/55 mt-2 text-sm">
-                Придумайте 6-значный PIN-код для входа.
+                Запомните его — он нужен для входа.
               </p>
             </div>
 
