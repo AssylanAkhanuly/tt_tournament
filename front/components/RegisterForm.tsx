@@ -8,7 +8,7 @@ import { ApiError, User } from "@/lib/types";
 import { registerSchema } from "@/lib/validation";
 import PinInput from "./PinInput";
 import PhoneInput from "./PhoneInput";
-import SpinCoachLogo from "./SpinCoachLogo";
+import Image from "next/image";
 
 interface Props {
   onSuccess?: (user: User) => void;
@@ -80,7 +80,7 @@ export default function RegisterForm({ onSuccess }: Props) {
             <ArrowLeft size={22} />
           </button>
         ) : (
-          <SpinCoachLogo size="sm" />
+          <Image src="/logo.png" alt="SpinCoach" width={120} height={36} className="object-contain" />
         )}
         <span className="text-white/35 text-xs">Шаг {step} / 2</span>
       </div>

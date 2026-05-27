@@ -7,7 +7,7 @@ import { ApiError, User } from "@/lib/types";
 import { loginSchema } from "@/lib/validation";
 import PinInput from "./PinInput";
 import PhoneInput from "./PhoneInput";
-import SpinCoachLogo from "./SpinCoachLogo";
+import Image from "next/image";
 
 interface Props {
   onSuccess?: (user: User) => void;
@@ -54,7 +54,7 @@ export default function LoginForm({ onSuccess }: Props) {
     <div className="min-h-screen bg-[#0d1b35] flex flex-col px-6 py-10">
       {/* Logo */}
       <div className="mb-auto">
-        <SpinCoachLogo size="sm" />
+        <Image src="/logo.png" alt="SpinCoach" width={120} height={36} className="object-contain" />
       </div>
 
       <div className="flex-1 flex flex-col justify-center max-w-sm mx-auto w-full space-y-8">
