@@ -61,6 +61,12 @@ export const api = {
 
   me: () => apiFetch<User>("/api/auth/me/"),
 
+  checkPhone: (phone: string) =>
+    apiFetch<{ exists: boolean }>("/api/auth/check-phone/", {
+      method: "POST",
+      body: JSON.stringify({ phone }),
+    }),
+
   // ─── Tournaments ───────────────────────────────────────────────────────────
 
   getTournaments: () => apiFetch<Tournament[]>("/api/tournaments/"),

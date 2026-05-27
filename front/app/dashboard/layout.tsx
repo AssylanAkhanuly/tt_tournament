@@ -1,32 +1,32 @@
-import { redirect } from "next/navigation";
-import { cookies } from "next/headers";
+"use client";
+
+import { useEffect, useState } from "react";
+import { User } from "@/lib/types";
+import { api } from "@/lib/api";
 import LogoutButton from "@/components/LogoutButton";
 import SpinCoachLogo from "@/components/SpinCoachLogo";
 
-export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
-  const cookieStore = await cookies();
-  const token = cookieStore.get("access_token");
+export default function DashboardLayout({ children }: { children: React.ReactNode }) {
+  const [user, setUser] = useState<User | null>(null);
+  const [ready, setReady] = useState(false);
 
-  if (!token) redirect("/login");
+  useEffect(() => {
+    api.me()
+      .then(setUser)
+      .catch(() => { window.location.href = "/login"; })
+      .finally(() => setReady(true));
+  }, []);
 
-  let user;
-  try {
-    // Forward the cookie to Django when fetching on the server
-    user = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/me/`, {
-      credentials: "include",
-      headers: { Cookie: cookieStore.toString() },
-      cache: "no-store",
-    }).then((r) => {
-      if (!r.ok) throw new Error("unauthorized");
-      return r.json();
-    });
-  } catch {
-    redirect("/login");
+  if (!ready || !user) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
   }
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Top nav */}
       <header className="bg-white border-b border-gray-200 sticky top-0 z-10">
         <div className="max-w-5xl mx-auto px-4 h-16 flex items-center justify-between">
           <SpinCoachLogo variant="light" size="sm" />
@@ -43,7 +43,6 @@ export default async function DashboardLayout({ children }: { children: React.Re
           </div>
         </div>
       </header>
-
       <main className="max-w-5xl mx-auto px-4 py-8">{children}</main>
     </div>
   );

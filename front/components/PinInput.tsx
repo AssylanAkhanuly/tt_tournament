@@ -83,7 +83,7 @@ const PinInput = forwardRef<PinInputHandle, Props>(
             onPaste={i === 0 ? handlePaste : undefined}
             onFocus={(e) => e.target.select()}
             className={`
-              w-11 h-14 text-center text-xl font-bold rounded-2xl border-2 outline-none
+              w-11 h-14 text-center text-xl font-bold rounded-2xl border-2 outline-none caret-transparent
               transition-all duration-150 select-none
               ${disabled ? "opacity-50 cursor-not-allowed bg-white/80" : "bg-white cursor-text"}
               ${value[i]

@@ -111,8 +111,11 @@ function RegisterAndJoinSteps({ joinToken }: { joinToken: string }) {
   }, []);
 
   useEffect(() => {
-    if (step === 4 && confirmPin.length === 6 && pin === confirmPin && !loading) {
+    if (step !== 4 || confirmPin.length < 6) return;
+    if (pin === confirmPin && !loading) {
       doRegister();
+    } else if (pin !== confirmPin) {
+      setFE("PIN-коды не совпадают.");
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [confirmPin]);
@@ -133,11 +136,17 @@ function RegisterAndJoinSteps({ joinToken }: { joinToken: string }) {
     }
   }
 
-  function handleNext(e: React.FormEvent) {
+  async function handleNext(e: React.FormEvent) {
     e.preventDefault();
     setFE(null); setError(null);
     if (step === 1) {
       if (!phoneComplete) { setFE("Введите полный номер телефона."); return; }
+      setLoading(true);
+      try {
+        const { exists } = await api.checkPhone(phone);
+        if (exists) { setFE("Этот номер уже зарегистрирован. Войдите в аккаунт."); return; }
+      } catch { /* network error — proceed */ }
+      finally { setLoading(false); }
       go(2);
     } else if (step === 2) {
       if (name.trim().length < 2) { setFE("Имя должно содержать минимум 2 символа."); return; }
@@ -167,7 +176,9 @@ function RegisterAndJoinSteps({ joinToken }: { joinToken: string }) {
               <Field label="Номер телефона" error={fieldError ?? undefined}>
                 <PhoneInput value={phone} onChange={setPhone} onComplete={setPhoneComplete} required autoFocus />
               </Field>
-              <button type="submit" disabled={!phoneComplete} className={BTN_PRIMARY}>Продолжить</button>
+              <button type="submit" disabled={!phoneComplete || loading} className={BTN_PRIMARY}>
+                {loading ? "Проверяем..." : "Продолжить"}
+              </button>
             </form>
           </>
         )}

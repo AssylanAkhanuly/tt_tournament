@@ -60,10 +60,13 @@ export default function RegisterForm({ onSuccess }: Props) {
     return () => window.removeEventListener("popstate", onPop);
   }, []);
 
-  // ── Auto-submit when confirm PIN matches ───────────────────────────────────
+  // ── Auto-submit / mismatch error when confirm PIN is fully entered ─────────
   useEffect(() => {
-    if (step === 4 && confirmPin.length === 6 && pin === confirmPin && !loading) {
+    if (step !== 4 || confirmPin.length < 6) return;
+    if (pin === confirmPin && !loading) {
       submit();
+    } else if (pin !== confirmPin) {
+      setFE("PIN-коды не совпадают.");
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [confirmPin]);
@@ -91,11 +94,17 @@ export default function RegisterForm({ onSuccess }: Props) {
     setStep(target);
   }
 
-  function handleNext(e: React.FormEvent) {
+  async function handleNext(e: React.FormEvent) {
     e.preventDefault();
     setError(null); setFE(null);
     if (step === 1) {
       if (!phoneComplete) { setFE("Введите полный номер телефона."); return; }
+      setLoading(true);
+      try {
+        const { exists } = await api.checkPhone(phone);
+        if (exists) { setFE("Этот номер уже зарегистрирован. Войдите в аккаунт."); return; }
+      } catch { /* network error — proceed anyway */ }
+      finally { setLoading(false); }
       go(2);
     } else if (step === 2) {
       if (name.trim().length < 2) { setFE("Имя должно содержать минимум 2 символа."); return; }
@@ -149,7 +158,9 @@ export default function RegisterForm({ onSuccess }: Props) {
                   />
                   {fieldError && <p className="text-red-300 text-xs">{fieldError}</p>}
                 </div>
-                <button type="submit" disabled={!phoneComplete} className={BTN}>Продолжить</button>
+                <button type="submit" disabled={!phoneComplete || loading} className={BTN}>
+                  {loading ? "Проверяем..." : "Продолжить"}
+                </button>
               </form>
               <p className="text-center text-sm text-white/40">
                 Уже есть аккаунт?{" "}
