@@ -1,6 +1,6 @@
 import { Match, Participant, Tournament, User } from "./types";
 
-const BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://127.0.0.1:8000";
+const BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
 const NETWORK_ERROR = { detail: "Сервер недоступен. Проверьте подключение и попробуйте позже." };
 
