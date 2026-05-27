@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
+import { createPortal } from "react-dom";
 import { ChevronDown } from "lucide-react";
 
 interface Country {
@@ -8,25 +9,48 @@ interface Country {
   iso: string;
   flag: string;
   name: string;
-  maxDigits: number;
+  /** Digit groups for formatting, e.g. [3,3,2,2] → (700) 123-45-67 */
+  groups: number[];
 }
 
 const COUNTRIES: Country[] = [
-  { code: "+7",   iso: "KZ", flag: "🇰🇿", name: "Казахстан",   maxDigits: 10 },
-  { code: "+7",   iso: "RU", flag: "🇷🇺", name: "Россия",       maxDigits: 10 },
-  { code: "+996", iso: "KG", flag: "🇰🇬", name: "Кыргызстан",  maxDigits: 9  },
-  { code: "+998", iso: "UZ", flag: "🇺🇿", name: "Узбекистан",  maxDigits: 9  },
-  { code: "+992", iso: "TJ", flag: "🇹🇯", name: "Таджикистан", maxDigits: 9  },
-  { code: "+993", iso: "TM", flag: "🇹🇲", name: "Туркменистан",maxDigits: 8  },
-  { code: "+994", iso: "AZ", flag: "🇦🇿", name: "Азербайджан", maxDigits: 9  },
-  { code: "+374", iso: "AM", flag: "🇦🇲", name: "Армения",     maxDigits: 8  },
-  { code: "+995", iso: "GE", flag: "🇬🇪", name: "Грузия",      maxDigits: 9  },
-  { code: "+380", iso: "UA", flag: "🇺🇦", name: "Украина",     maxDigits: 9  },
-  { code: "+375", iso: "BY", flag: "🇧🇾", name: "Беларусь",    maxDigits: 9  },
+  { code: "+7",   iso: "KZ", flag: "🇰🇿", name: "Казахстан",    groups: [3, 3, 2, 2] },
+  { code: "+7",   iso: "RU", flag: "🇷🇺", name: "Россия",        groups: [3, 3, 2, 2] },
+  { code: "+996", iso: "KG", flag: "🇰🇬", name: "Кыргызстан",   groups: [3, 2, 2, 2] },
+  { code: "+998", iso: "UZ", flag: "🇺🇿", name: "Узбекистан",   groups: [2, 3, 2, 2] },
+  { code: "+992", iso: "TJ", flag: "🇹🇯", name: "Таджикистан",  groups: [3, 2, 2, 2] },
+  { code: "+993", iso: "TM", flag: "🇹🇲", name: "Туркменистан", groups: [2, 2, 2, 2] },
+  { code: "+994", iso: "AZ", flag: "🇦🇿", name: "Азербайджан",  groups: [2, 3, 2, 2] },
+  { code: "+374", iso: "AM", flag: "🇦🇲", name: "Армения",      groups: [2, 6]       },
+  { code: "+995", iso: "GE", flag: "🇬🇪", name: "Грузия",       groups: [3, 2, 2, 2] },
+  { code: "+380", iso: "UA", flag: "🇺🇦", name: "Украина",      groups: [2, 3, 2, 2] },
+  { code: "+375", iso: "BY", flag: "🇧🇾", name: "Беларусь",     groups: [2, 3, 2, 2] },
 ];
 
+/** Format raw digits into grouped chunks, e.g. "7001234567" → "(700) 123-45-67" */
+function formatDigits(digits: string, groups: number[]): string {
+  const max = groups.reduce((s, n) => s + n, 0);
+  const d = digits.slice(0, max);
+  const parts: string[] = [];
+  let pos = 0;
+  for (const g of groups) {
+    const chunk = d.slice(pos, pos + g);
+    if (!chunk) break;
+    parts.push(chunk);
+    pos += g;
+  }
+  if (parts.length === 0) return "";
+  const [first, ...rest] = parts;
+  return `(${first})` + (rest.length ? " " + rest.join("-") : "");
+}
+
+/** Strip everything except digits */
+function digitsOnly(s: string) {
+  return s.replace(/\D/g, "");
+}
+
 interface Props {
-  /** Full international number like "+77001234567" */
+  /** Full international number e.g. "+77001234567" */
   value: string;
   onChange: (val: string) => void;
   required?: boolean;
@@ -34,47 +58,108 @@ interface Props {
 }
 
 export default function PhoneInput({ value, onChange, required, autoFocus }: Props) {
-  const [country, setCountry] = useState<Country>(COUNTRIES[0]);
-  const [open, setOpen]       = useState(false);
-  const wrapperRef            = useRef<HTMLDivElement>(null);
+  const [country, setCountry]   = useState<Country>(COUNTRIES[0]);
+  const [open, setOpen]         = useState(false);
+  const [dropPos, setDropPos]   = useState({ top: 0, left: 0, width: 0 });
+  const btnRef                  = useRef<HTMLButtonElement>(null);
+  const wrapperRef              = useRef<HTMLDivElement>(null);
 
-  // Extract local digits from the full value (strip dial code prefix)
-  const localDigits = value.startsWith(country.code)
-    ? value.slice(country.code.length).replace(/\D/g, "")
-    : value.replace(/\D/g, "");
+  const maxDigits = country.groups.reduce((s, n) => s + n, 0);
 
-  // Close dropdown on outside click
+  // Extract raw digits from the stored full value
+  const rawDigits = value.startsWith(country.code)
+    ? digitsOnly(value.slice(country.code.length))
+    : digitsOnly(value);
+
+  const formatted = formatDigits(rawDigits, country.groups);
+
+  // Position the dropdown using fixed coordinates
+  const updatePos = useCallback(() => {
+    if (wrapperRef.current) {
+      const r = wrapperRef.current.getBoundingClientRect();
+      setDropPos({ top: r.bottom + 6, left: r.left, width: r.width });
+    }
+  }, []);
+
+  function openDropdown() {
+    updatePos();
+    setOpen(true);
+  }
+
+  // Close on outside click
   useEffect(() => {
+    if (!open) return;
     function onDown(e: MouseEvent) {
-      if (wrapperRef.current && !wrapperRef.current.contains(e.target as Node)) {
+      const target = e.target as Node;
+      if (wrapperRef.current && !wrapperRef.current.contains(target)) {
+        // also allow clicks inside the portal dropdown
+        const portal = document.getElementById("phone-dropdown-portal");
+        if (portal && portal.contains(target)) return;
         setOpen(false);
       }
     }
     document.addEventListener("mousedown", onDown);
     return () => document.removeEventListener("mousedown", onDown);
-  }, []);
+  }, [open]);
+
+  // Reposition on scroll/resize
+  useEffect(() => {
+    if (!open) return;
+    window.addEventListener("scroll", updatePos, true);
+    window.addEventListener("resize", updatePos);
+    return () => {
+      window.removeEventListener("scroll", updatePos, true);
+      window.removeEventListener("resize", updatePos);
+    };
+  }, [open, updatePos]);
 
   function handleInput(e: React.ChangeEvent<HTMLInputElement>) {
-    const digits = e.target.value.replace(/\D/g, "").slice(0, country.maxDigits);
+    // Strip formatting, keep only digits
+    const digits = digitsOnly(e.target.value).slice(0, maxDigits);
     onChange(country.code + digits);
   }
 
   function selectCountry(c: Country) {
     setCountry(c);
-    onChange(c.code); // reset digits when country changes
+    onChange(c.code);
     setOpen(false);
   }
 
-  return (
-    <div className="relative" ref={wrapperRef}>
-      {/* Main pill */}
-      <div className="flex items-center bg-white/10 border border-white/20 rounded-2xl overflow-hidden
-        focus-within:border-blue-500 focus-within:bg-white/15 transition-all">
-
-        {/* Country button */}
+  const dropdown = open ? (
+    <div
+      id="phone-dropdown-portal"
+      style={{ position: "fixed", top: dropPos.top, left: dropPos.left, width: dropPos.width, zIndex: 9999 }}
+      className="bg-[#0d1b35] border border-white/15 rounded-2xl shadow-2xl overflow-hidden"
+    >
+      {COUNTRIES.map((c) => (
         <button
+          key={c.iso}
           type="button"
-          onClick={() => setOpen((v) => !v)}
+          onMouseDown={(e) => { e.preventDefault(); selectCountry(c); }}
+          className={`w-full flex items-center gap-3 px-4 py-2.5 text-left
+            hover:bg-white/10 transition-colors
+            ${country.iso === c.iso ? "bg-blue-600/20" : ""}`}
+        >
+          <span className="text-lg leading-none">{c.flag}</span>
+          <span className="text-white/85 text-sm flex-1">{c.name}</span>
+          <span className="text-white/45 text-xs font-mono">{c.code}</span>
+        </button>
+      ))}
+    </div>
+  ) : null;
+
+  return (
+    <>
+      <div
+        ref={wrapperRef}
+        className="flex items-center bg-white/10 border border-white/20 rounded-2xl overflow-hidden
+          focus-within:border-blue-500 focus-within:bg-white/15 transition-all"
+      >
+        {/* Country selector button */}
+        <button
+          ref={btnRef}
+          type="button"
+          onClick={openDropdown}
           className="flex items-center gap-1.5 pl-4 pr-3 py-3.5 shrink-0 border-r border-white/20
             hover:bg-white/5 transition-colors select-none"
         >
@@ -86,41 +171,24 @@ export default function PhoneInput({ value, onChange, required, autoFocus }: Pro
           />
         </button>
 
-        {/* Digit input */}
+        {/* Formatted digit input */}
         <input
           type="tel"
           inputMode="numeric"
-          value={localDigits}
+          value={formatted}
           onChange={handleInput}
-          placeholder={"0".repeat(country.maxDigits)}
+          placeholder={formatDigits("0".repeat(maxDigits), country.groups)}
           required={required}
           autoFocus={autoFocus}
-          maxLength={country.maxDigits}
           className="flex-1 bg-transparent px-4 py-3.5
-            text-white placeholder:text-white/25 text-base outline-none tracking-wider"
+            text-white placeholder:text-white/25 text-base outline-none"
         />
       </div>
 
-      {/* Dropdown */}
-      {open && (
-        <div className="absolute z-50 top-full mt-1.5 left-0 w-64
-          bg-[#0d1b35] border border-white/15 rounded-2xl shadow-2xl overflow-hidden">
-          {COUNTRIES.map((c) => (
-            <button
-              key={c.iso}
-              type="button"
-              onClick={() => selectCountry(c)}
-              className={`w-full flex items-center gap-3 px-4 py-2.5 text-left
-                hover:bg-white/10 transition-colors
-                ${country.iso === c.iso ? "bg-blue-600/20" : ""}`}
-            >
-              <span className="text-lg leading-none">{c.flag}</span>
-              <span className="text-white/85 text-sm flex-1">{c.name}</span>
-              <span className="text-white/45 text-xs font-mono">{c.code}</span>
-            </button>
-          ))}
-        </div>
-      )}
-    </div>
+      {/* Render dropdown via portal so it never causes layout shift */}
+      {typeof document !== "undefined" && dropdown
+        ? createPortal(dropdown, document.body)
+        : null}
+    </>
   );
 }
