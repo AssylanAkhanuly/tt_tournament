@@ -1,15 +1,16 @@
 import { z } from "zod";
 
-/** Kazakh/Russian mobile number — strips spaces/dashes, checks 11-digit +7 format */
+/**
+ * International phone — must start with a + and a dial code,
+ * followed by 7-12 digits. PhoneInput always composes "+<code><digits>".
+ */
 const phoneSchema = z
   .string()
   .min(1, "Введите номер телефона")
   .transform((val) => val.replace(/[\s\-()]/g, ""))
   .refine(
-    (val) =>
-      /^\+?7\d{10}$/.test(val) ||   // +7XXXXXXXXXX or 7XXXXXXXXXX
-      /^8\d{10}$/.test(val),          // 8XXXXXXXXXX (Russian local)
-    { message: "Введите корректный номер (+7 XXX XXX XX XX)" }
+    (val) => /^\+\d{7,15}$/.test(val),
+    { message: "Введите корректный номер телефона" }
   );
 
 export const registerSchema = z.object({
