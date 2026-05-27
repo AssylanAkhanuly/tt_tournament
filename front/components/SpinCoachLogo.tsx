@@ -1,5 +1,3 @@
-import Image from "next/image";
-
 interface Props {
   variant?: "dark" | "light";
   size?: "sm" | "md" | "lg";
@@ -17,12 +15,13 @@ export default function SpinCoachLogo({ variant = "dark", size = "md" }: Props) 
 
   return (
     <div className="flex items-center gap-2 select-none">
-      <Image
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
         src="/logo.png"
         alt="SpinCoach"
         width={imgSize}
         height={imgSize}
-        className="object-contain"
+        style={{ width: imgSize, height: imgSize, objectFit: "contain" }}
       />
       <span
         className={`font-black leading-none tracking-tight ${textClass} ${gradient} bg-clip-text text-transparent`}

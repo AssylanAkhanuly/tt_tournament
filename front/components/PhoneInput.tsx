@@ -129,7 +129,7 @@ export default function PhoneInput({ value, onChange, required, autoFocus }: Pro
     <div
       id="phone-dropdown-portal"
       style={{ position: "fixed", top: dropPos.top, left: dropPos.left, width: dropPos.width, zIndex: 9999 }}
-      className="bg-[#0d1b35] border border-white/15 rounded-2xl shadow-2xl overflow-hidden"
+      className="bg-[#0d1b35] border border-white/15 rounded-2xl shadow-2xl overflow-y-auto overscroll-contain max-h-64"
     >
       {COUNTRIES.map((c) => (
         <button
