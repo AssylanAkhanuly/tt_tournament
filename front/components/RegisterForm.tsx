@@ -1,12 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { api } from "@/lib/api";
 import { ApiError, User } from "@/lib/types";
 import PhoneInput from "./PhoneInput";
-import PinInput from "./PinInput";
+import PinInput, { PinInputHandle } from "./PinInput";
 import SpinCoachLogo from "./SpinCoachLogo";
 
 const INPUT = `w-full px-4 py-3.5 rounded-2xl bg-white/10 border border-white/20
@@ -27,6 +27,7 @@ export default function RegisterForm({ onSuccess }: Props) {
   const [name, setName]         = useState("");
   const [pin, setPin]           = useState("");
   const [confirmPin, setConfirm] = useState("");
+  const pinRef                  = useRef<PinInputHandle>(null);
 
   const [error, setError]       = useState<string | null>(null);
   const [fieldError, setFE]     = useState<string | null>(null);
@@ -142,14 +143,19 @@ export default function RegisterForm({ onSuccess }: Props) {
             <form onSubmit={handleSubmit} className="space-y-6">
               <div className="space-y-2">
                 <label className="text-white/60 text-xs font-semibold uppercase tracking-wider">PIN-код</label>
-                <PinInput value={pin} onChange={setPin} autoFocus />
+                <PinInput ref={pinRef} value={pin} onChange={setPin} autoFocus />
               </div>
 
               {/* Confirm appears once PIN is filled */}
               {pin.length === 6 && (
                 <div className="space-y-2 animate-in fade-in slide-in-from-top-2 duration-200">
                   <label className="text-white/60 text-xs font-semibold uppercase tracking-wider">Подтвердите PIN-код</label>
-                  <PinInput value={confirmPin} onChange={setConfirm} autoFocus />
+                  <PinInput
+                    value={confirmPin}
+                    onChange={setConfirm}
+                    autoFocus
+                    onBackspaceEmpty={() => pinRef.current?.focusLast()}
+                  />
                 </div>
               )}
 

@@ -5,8 +5,9 @@ import { useRouter } from "next/navigation";
 import { Tournament, User } from "@/lib/types";
 import { api } from "@/lib/api";
 import PhoneInput from "@/components/PhoneInput";
-import PinInput from "@/components/PinInput";
+import PinInput, { PinInputHandle } from "@/components/PinInput";
 import { ArrowLeft } from "lucide-react";
+import { useRef } from "react";
 
 const INPUT = `w-full px-4 py-3.5 rounded-2xl bg-white/10 border border-white/20
   text-white placeholder:text-white/35 text-base outline-none
@@ -80,6 +81,7 @@ function RegisterAndJoinSteps({ joinToken }: { joinToken: string }) {
   const [name, setName]           = useState("");
   const [pin, setPin]             = useState("");
   const [confirmPin, setConfirm]  = useState("");
+  const pinRef                    = useRef<PinInputHandle>(null);
   const [fieldError, setFE]       = useState<string | null>(null);
   const [error, setError]         = useState<string | null>(null);
   const [loading, setLoading]     = useState(false);
@@ -168,12 +170,17 @@ function RegisterAndJoinSteps({ joinToken }: { joinToken: string }) {
           <form onSubmit={handleFinish} className="space-y-6">
             <div className="space-y-2">
               <label className="text-white/60 text-xs font-semibold uppercase tracking-wider">PIN-код</label>
-              <PinInput value={pin} onChange={setPin} autoFocus />
+              <PinInput ref={pinRef} value={pin} onChange={setPin} autoFocus />
             </div>
             {pin.length === 6 && (
               <div className="space-y-2 animate-in fade-in slide-in-from-top-2 duration-200">
                 <label className="text-white/60 text-xs font-semibold uppercase tracking-wider">Подтвердите PIN-код</label>
-                <PinInput value={confirmPin} onChange={setConfirm} autoFocus />
+                <PinInput
+                  value={confirmPin}
+                  onChange={setConfirm}
+                  autoFocus
+                  onBackspaceEmpty={() => pinRef.current?.focusLast()}
+                />
               </div>
             )}
             {(fieldError || error) && <ErrorBox msg={fieldError ?? error!} />}
