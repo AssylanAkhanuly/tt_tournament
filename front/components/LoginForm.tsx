@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { api } from "@/lib/api";
@@ -17,13 +17,30 @@ interface Props {
 }
 
 export default function LoginForm({ onSuccess }: Props) {
-  const [step, setStep]       = useState<1 | 2>(1);
-  const [phone, setPhone]     = useState("");
-  const [pin, setPin]         = useState("");
-  const [error, setError]     = useState<string | null>(null);
-  const [fieldError, setFE]   = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [dir, setDir]         = useState<"forward" | "back">("forward");
+  const [step, setStep]           = useState<1 | 2>(1);
+  const [phone, setPhone]         = useState("");
+  const [phoneComplete, setPhoneComplete] = useState(false);
+  const [pin, setPin]             = useState("");
+  const [error, setError]         = useState<string | null>(null);
+  const [fieldError, setFE]       = useState<string | null>(null);
+  const [loading, setLoading]     = useState(false);
+  const [dir, setDir]             = useState<"forward" | "back">("forward");
+
+  // Browser back interception
+  useEffect(() => {
+    if (step > 1) window.history.pushState({ loginStep: step }, "");
+  }, [step]);
+
+  useEffect(() => {
+    function onPop() {
+      setStep((s) => {
+        if (s > 1) { setDir("back"); setError(null); setFE(null); return 1; }
+        return s;
+      });
+    }
+    window.addEventListener("popstate", onPop);
+    return () => window.removeEventListener("popstate", onPop);
+  }, []);
 
   function go(target: 1 | 2) {
     setDir(target > step ? "forward" : "back");
@@ -34,7 +51,7 @@ export default function LoginForm({ onSuccess }: Props) {
   function goStep2(e: React.FormEvent) {
     e.preventDefault();
     setError(null); setFE(null);
-    if (!phone.trim()) { setFE("Введите номер телефона."); return; }
+    if (!phoneComplete) { setFE("Введите полный номер телефона."); return; }
     setPin("");
     go(2);
   }
@@ -83,10 +100,10 @@ export default function LoginForm({ onSuccess }: Props) {
             <form onSubmit={goStep2} className="space-y-4">
               <div className="space-y-1.5">
                 <label className="text-white/60 text-xs font-semibold uppercase tracking-wider">Номер телефона</label>
-                <PhoneInput value={phone} onChange={setPhone} required autoFocus />
+                <PhoneInput value={phone} onChange={setPhone} onComplete={setPhoneComplete} required autoFocus />
                 {fieldError && <p className="text-red-300 text-xs">{fieldError}</p>}
               </div>
-              <button type="submit" className={BTN}>Продолжить</button>
+              <button type="submit" disabled={!phoneComplete} className={BTN}>Продолжить</button>
             </form>
             <p className="text-center text-sm text-white/40">
               Нет аккаунта?{" "}

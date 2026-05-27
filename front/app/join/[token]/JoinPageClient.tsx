@@ -80,6 +80,7 @@ function RegisterAndJoinSteps({ joinToken }: { joinToken: string }) {
   const [step, setStep]          = useState<JStep>(1);
   const [dir, setDir]            = useState<"forward" | "back">("forward");
   const [phone, setPhone]        = useState("");
+  const [phoneComplete, setPhoneComplete] = useState(false);
   const [name, setName]          = useState("");
   const [pin, setPin]            = useState("");
   const [confirmPin, setConfirm] = useState("");
@@ -93,6 +94,22 @@ function RegisterAndJoinSteps({ joinToken }: { joinToken: string }) {
     setFE(null); setError(null);
     setStep(target);
   }
+
+  // Browser back interception
+  useEffect(() => {
+    if (step > 1) window.history.pushState({ joinRegStep: step }, "");
+  }, [step]);
+
+  useEffect(() => {
+    function onPop() {
+      setStep((s) => {
+        if (s > 1) { setDir("back"); setError(null); setFE(null); return (s - 1) as JStep; }
+        return s;
+      });
+    }
+    window.addEventListener("popstate", onPop);
+    return () => window.removeEventListener("popstate", onPop);
+  }, []);
 
   useEffect(() => {
     if (step === 4 && confirmPin.length === 6 && pin === confirmPin && !loading) {
@@ -121,7 +138,7 @@ function RegisterAndJoinSteps({ joinToken }: { joinToken: string }) {
     e.preventDefault();
     setFE(null); setError(null);
     if (step === 1) {
-      if (!phone.trim()) { setFE("Введите номер телефона."); return; }
+      if (!phoneComplete) { setFE("Введите полный номер телефона."); return; }
       go(2);
     } else if (step === 2) {
       if (name.trim().length < 2) { setFE("Имя должно содержать минимум 2 символа."); return; }
@@ -149,9 +166,9 @@ function RegisterAndJoinSteps({ joinToken }: { joinToken: string }) {
             </div>
             <form onSubmit={handleNext} className="space-y-4">
               <Field label="Номер телефона" error={fieldError ?? undefined}>
-                <PhoneInput value={phone} onChange={setPhone} required autoFocus />
+                <PhoneInput value={phone} onChange={setPhone} onComplete={setPhoneComplete} required autoFocus />
               </Field>
-              <button type="submit" className={BTN_PRIMARY}>Продолжить</button>
+              <button type="submit" disabled={!phoneComplete} className={BTN_PRIMARY}>Продолжить</button>
             </form>
           </>
         )}
@@ -226,6 +243,7 @@ function LoginAndJoinForm({ joinToken }: { joinToken: string }) {
   const [step, setStep]       = useState<1 | 2>(1);
   const [dir, setDir]         = useState<"forward" | "back">("forward");
   const [phone, setPhone]     = useState("");
+  const [phoneComplete, setPhoneComplete] = useState(false);
   const [pin, setPin]         = useState("");
   const [fieldError, setFE]   = useState<string | null>(null);
   const [error, setError]     = useState<string | null>(null);
@@ -236,6 +254,22 @@ function LoginAndJoinForm({ joinToken }: { joinToken: string }) {
     setFE(null); setError(null);
     setStep(target);
   }
+
+  // Browser back interception
+  useEffect(() => {
+    if (step > 1) window.history.pushState({ joinLoginStep: step }, "");
+  }, [step]);
+
+  useEffect(() => {
+    function onPop() {
+      setStep((s) => {
+        if (s > 1) { setDir("back"); setError(null); setFE(null); return 1; }
+        return s;
+      });
+    }
+    window.addEventListener("popstate", onPop);
+    return () => window.removeEventListener("popstate", onPop);
+  }, []);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -266,11 +300,11 @@ function LoginAndJoinForm({ joinToken }: { joinToken: string }) {
               <h1 className="text-2xl font-extrabold text-white leading-tight">Войдите в аккаунт</h1>
               <p className="text-white/55 mt-1.5 text-sm">После входа вы автоматически вступите в турнир.</p>
             </div>
-            <form onSubmit={(e) => { e.preventDefault(); if (!phone.trim()) { setFE("Введите номер."); return; } setPin(""); go(2); }} className="space-y-4">
+            <form onSubmit={(e) => { e.preventDefault(); if (!phoneComplete) { setFE("Введите полный номер телефона."); return; } setPin(""); go(2); }} className="space-y-4">
               <Field label="Номер телефона" error={fieldError ?? undefined}>
-                <PhoneInput value={phone} onChange={setPhone} required autoFocus />
+                <PhoneInput value={phone} onChange={setPhone} onComplete={setPhoneComplete} required autoFocus />
               </Field>
-              <button type="submit" className={BTN_PRIMARY}>Продолжить</button>
+              <button type="submit" disabled={!phoneComplete} className={BTN_PRIMARY}>Продолжить</button>
             </form>
           </>
         )}

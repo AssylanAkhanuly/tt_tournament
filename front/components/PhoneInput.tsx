@@ -9,7 +9,6 @@ interface Country {
   iso: string;
   flag: string;
   name: string;
-  /** Digit groups for formatting, e.g. [3,3,2,2] → (700) 123-45-67 */
   groups: number[];
 }
 
@@ -27,7 +26,6 @@ const COUNTRIES: Country[] = [
   { code: "+375", iso: "BY", flag: "🇧🇾", name: "Беларусь",     groups: [2, 3, 2, 2] },
 ];
 
-/** Format raw digits into grouped chunks, e.g. "7001234567" → "(700) 123-45-67" */
 function formatDigits(digits: string, groups: number[]): string {
   const max = groups.reduce((s, n) => s + n, 0);
   const d = digits.slice(0, max);
@@ -44,36 +42,35 @@ function formatDigits(digits: string, groups: number[]): string {
   return `(${first})` + (rest.length ? " " + rest.join("-") : "");
 }
 
-/** Strip everything except digits */
-function digitsOnly(s: string) {
-  return s.replace(/\D/g, "");
-}
+function digitsOnly(s: string) { return s.replace(/\D/g, ""); }
 
 interface Props {
-  /** Full international number e.g. "+77001234567" */
   value: string;
   onChange: (val: string) => void;
+  /** Called with true when digit count equals country max, false otherwise */
+  onComplete?: (complete: boolean) => void;
   required?: boolean;
   autoFocus?: boolean;
 }
 
-export default function PhoneInput({ value, onChange, required, autoFocus }: Props) {
-  const [country, setCountry]   = useState<Country>(COUNTRIES[0]);
-  const [open, setOpen]         = useState(false);
-  const [dropPos, setDropPos]   = useState({ top: 0, left: 0, width: 0 });
-  const btnRef                  = useRef<HTMLButtonElement>(null);
-  const wrapperRef              = useRef<HTMLDivElement>(null);
+export default function PhoneInput({ value, onChange, onComplete, required, autoFocus }: Props) {
+  const [country, setCountry] = useState<Country>(COUNTRIES[0]);
+  const [open, setOpen]       = useState(false);
+  const [dropPos, setDropPos] = useState({ top: 0, left: 0, width: 0 });
+  const wrapperRef            = useRef<HTMLDivElement>(null);
 
   const maxDigits = country.groups.reduce((s, n) => s + n, 0);
-
-  // Extract raw digits from the stored full value
   const rawDigits = value.startsWith(country.code)
     ? digitsOnly(value.slice(country.code.length))
     : digitsOnly(value);
 
   const formatted = formatDigits(rawDigits, country.groups);
 
-  // Position the dropdown using fixed coordinates
+  // Notify parent whenever completeness changes
+  useEffect(() => {
+    onComplete?.(rawDigits.length === maxDigits);
+  }, [rawDigits.length, maxDigits, onComplete]);
+
   const updatePos = useCallback(() => {
     if (wrapperRef.current) {
       const r = wrapperRef.current.getBoundingClientRect();
@@ -81,18 +78,11 @@ export default function PhoneInput({ value, onChange, required, autoFocus }: Pro
     }
   }, []);
 
-  function openDropdown() {
-    updatePos();
-    setOpen(true);
-  }
-
-  // Close on outside click
   useEffect(() => {
     if (!open) return;
     function onDown(e: MouseEvent) {
       const target = e.target as Node;
       if (wrapperRef.current && !wrapperRef.current.contains(target)) {
-        // also allow clicks inside the portal dropdown
         const portal = document.getElementById("phone-dropdown-portal");
         if (portal && portal.contains(target)) return;
         setOpen(false);
@@ -102,7 +92,6 @@ export default function PhoneInput({ value, onChange, required, autoFocus }: Pro
     return () => document.removeEventListener("mousedown", onDown);
   }, [open]);
 
-  // Reposition on scroll/resize
   useEffect(() => {
     if (!open) return;
     window.addEventListener("scroll", updatePos, true);
@@ -113,8 +102,16 @@ export default function PhoneInput({ value, onChange, required, autoFocus }: Pro
     };
   }, [open, updatePos]);
 
+  function handleKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
+    if (e.key === "Backspace") {
+      e.preventDefault();
+      // Always delete the last digit — avoids getting stuck on formatting chars
+      const newDigits = rawDigits.slice(0, -1);
+      onChange(country.code + newDigits);
+    }
+  }
+
   function handleInput(e: React.ChangeEvent<HTMLInputElement>) {
-    // Strip formatting, keep only digits
     const digits = digitsOnly(e.target.value).slice(0, maxDigits);
     onChange(country.code + digits);
   }
@@ -155,28 +152,23 @@ export default function PhoneInput({ value, onChange, required, autoFocus }: Pro
         className="flex items-center bg-white/10 border border-white/20 rounded-2xl overflow-hidden
           focus-within:border-blue-500 focus-within:bg-white/15 transition-all"
       >
-        {/* Country selector button */}
         <button
-          ref={btnRef}
           type="button"
-          onClick={openDropdown}
+          onClick={() => { updatePos(); setOpen(v => !v); }}
           className="flex items-center gap-1.5 pl-4 pr-3 py-3.5 shrink-0 border-r border-white/20
             hover:bg-white/5 transition-colors select-none"
         >
           <span className="text-base leading-none">{country.flag}</span>
           <span className="text-white/80 text-sm font-semibold">{country.code}</span>
-          <ChevronDown
-            size={13}
-            className={`text-white/40 transition-transform duration-150 ${open ? "rotate-180" : ""}`}
-          />
+          <ChevronDown size={13} className={`text-white/40 transition-transform duration-150 ${open ? "rotate-180" : ""}`} />
         </button>
 
-        {/* Formatted digit input */}
         <input
           type="tel"
           inputMode="numeric"
           value={formatted}
           onChange={handleInput}
+          onKeyDown={handleKeyDown}
           placeholder={formatDigits("0".repeat(maxDigits), country.groups)}
           required={required}
           autoFocus={autoFocus}
@@ -185,7 +177,6 @@ export default function PhoneInput({ value, onChange, required, autoFocus }: Pro
         />
       </div>
 
-      {/* Render dropdown via portal so it never causes layout shift */}
       {typeof document !== "undefined" && dropdown
         ? createPortal(dropdown, document.body)
         : null}

@@ -27,6 +27,7 @@ export default function RegisterForm({ onSuccess }: Props) {
   const [dir, setDir]             = useState<"forward" | "back">("forward");
 
   const [phone, setPhone]         = useState("");
+  const [phoneComplete, setPhoneComplete] = useState(false);
   const [name, setName]           = useState("");
   const [pin, setPin]             = useState("");
   const [confirmPin, setConfirm]  = useState("");
@@ -36,13 +37,30 @@ export default function RegisterForm({ onSuccess }: Props) {
   const [fieldError, setFE]       = useState<string | null>(null);
   const [loading, setLoading]     = useState(false);
 
-  function go(target: Step) {
-    setDir(target > step ? "forward" : "back");
-    setError(null); setFE(null);
-    setStep(target);
-  }
+  // ── Browser back interception ──────────────────────────────────────────────
+  useEffect(() => {
+    // Push a history entry every time we advance past step 1
+    if (step > 1) {
+      window.history.pushState({ registerStep: step }, "");
+    }
+  }, [step]);
 
-  // Auto-submit when confirm PIN is complete and matches
+  useEffect(() => {
+    function onPop() {
+      setStep((s) => {
+        if (s > 1) {
+          setDir("back");
+          setError(null); setFE(null);
+          return (s - 1) as Step;
+        }
+        return s;
+      });
+    }
+    window.addEventListener("popstate", onPop);
+    return () => window.removeEventListener("popstate", onPop);
+  }, []);
+
+  // ── Auto-submit when confirm PIN matches ───────────────────────────────────
   useEffect(() => {
     if (step === 4 && confirmPin.length === 6 && pin === confirmPin && !loading) {
       submit();
@@ -58,8 +76,8 @@ export default function RegisterForm({ onSuccess }: Props) {
       onSuccess?.(user);
     } catch (err) {
       const e = err as ApiError;
-      if (e.phone)     { setFE(Array.isArray(e.phone)    ? e.phone[0]    : e.phone as string);    go(1); }
-      else if (e.name) { setFE(Array.isArray(e.name)     ? e.name[0]     : e.name as string);     go(2); }
+      if (e.phone)         { setFE(Array.isArray(e.phone)    ? e.phone[0]    : e.phone as string);    go(1); }
+      else if (e.name)     { setFE(Array.isArray(e.name)     ? e.name[0]     : e.name as string);     go(2); }
       else if (e.password) { setFE(Array.isArray(e.password) ? e.password[0] : e.password as string); go(3); }
       else { setError((e.detail as string) ?? "Ошибка регистрации."); }
     } finally {
@@ -67,11 +85,17 @@ export default function RegisterForm({ onSuccess }: Props) {
     }
   }
 
+  function go(target: Step) {
+    setDir(target > step ? "forward" : "back");
+    setError(null); setFE(null);
+    setStep(target);
+  }
+
   function handleNext(e: React.FormEvent) {
     e.preventDefault();
     setError(null); setFE(null);
     if (step === 1) {
-      if (!phone.trim()) { setFE("Введите номер телефона."); return; }
+      if (!phoneComplete) { setFE("Введите полный номер телефона."); return; }
       go(2);
     } else if (step === 2) {
       if (name.trim().length < 2) { setFE("Имя должно содержать минимум 2 символа."); return; }
@@ -116,10 +140,16 @@ export default function RegisterForm({ onSuccess }: Props) {
               <form onSubmit={handleNext} className="space-y-4">
                 <div className="space-y-1.5">
                   <label className="text-white/60 text-xs font-semibold uppercase tracking-wider">Номер телефона</label>
-                  <PhoneInput value={phone} onChange={setPhone} required autoFocus />
+                  <PhoneInput
+                    value={phone}
+                    onChange={setPhone}
+                    onComplete={setPhoneComplete}
+                    required
+                    autoFocus
+                  />
                   {fieldError && <p className="text-red-300 text-xs">{fieldError}</p>}
                 </div>
-                <button type="submit" className={BTN}>Продолжить</button>
+                <button type="submit" disabled={!phoneComplete} className={BTN}>Продолжить</button>
               </form>
               <p className="text-center text-sm text-white/40">
                 Уже есть аккаунт?{" "}
@@ -192,9 +222,7 @@ export default function RegisterForm({ onSuccess }: Props) {
                     <p className="text-red-200 text-sm">{fieldError ?? error}</p>
                   </div>
                 )}
-                {loading && (
-                  <p className="text-center text-white/50 text-sm">Создание аккаунта...</p>
-                )}
+                {loading && <p className="text-center text-white/50 text-sm">Создание аккаунта...</p>}
               </form>
             </>
           )}
