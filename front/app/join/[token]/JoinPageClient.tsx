@@ -148,7 +148,7 @@ function RegisterAndJoinSteps({ joinToken }: { joinToken: string }) {
         go(2);
       } catch (err) {
         const e = err as { detail?: string };
-        setError(e?.detail ?? "Не удалось проверить номер. Попробуйте позже.");
+        setFE(e?.detail ?? "Сервер недоступен. Попробуйте позже.");
       } finally { setLoading(false); }
     } else if (step === 2) {
       if (name.trim().length < 2) { setFE("Имя должно содержать минимум 2 символа."); return; }
