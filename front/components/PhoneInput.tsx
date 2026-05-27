@@ -165,10 +165,10 @@ export default function PhoneInput({ value, onChange, onComplete, required, auto
         <button
           type="button"
           onClick={() => { updatePos(); setOpen(v => !v); }}
-          className="flex items-center gap-2 pl-4 pr-3 py-3.5 shrink-0 border-r border-white/20
+          className="flex items-center gap-1.5 pl-5 pr-3 py-3.5 shrink-0 border-r border-white/20
             hover:bg-white/5 transition-colors select-none"
         >
-          <span className="text-lg">{country.flag}</span>
+          <span className="text-base leading-none">{country.flag}</span>
           <span className="text-white/80 text-sm font-semibold">{country.code}</span>
           <ChevronDown size={13} className={`text-white/40 transition-transform duration-150 ${open ? "rotate-180" : ""}`} />
         </button>
