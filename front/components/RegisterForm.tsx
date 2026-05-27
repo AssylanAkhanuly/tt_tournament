@@ -5,67 +5,61 @@ import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { api } from "@/lib/api";
 import { ApiError, User } from "@/lib/types";
-import { registerSchema } from "@/lib/validation";
-import PinInput from "./PinInput";
 import PhoneInput from "./PhoneInput";
+import PinInput from "./PinInput";
 import SpinCoachLogo from "./SpinCoachLogo";
+
+const INPUT = `w-full px-4 py-3.5 rounded-2xl bg-white/10 border border-white/20
+  text-white placeholder:text-white/35 text-base outline-none
+  focus:border-blue-500 focus:bg-white/15 transition-all`;
+
+const BTN = `w-full py-4 rounded-full bg-blue-600 hover:bg-blue-700
+  disabled:opacity-40 text-white font-bold text-base transition-all active:scale-[.98]`;
 
 interface Props {
   onSuccess?: (user: User) => void;
 }
 
 export default function RegisterForm({ onSuccess }: Props) {
-  const [step, setStep] = useState<1 | 2>(1);
-  const [name, setName] = useState("");
-  const [phone, setPhone] = useState("");
-  const [pin, setPin] = useState("");
-  const [error, setError] = useState<string | null>(null);
-  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
-  const [loading, setLoading] = useState(false);
+  const [step, setStep] = useState<1 | 2 | 3>(1);
 
-  function goToStep2(e: React.FormEvent) {
+  const [phone, setPhone]       = useState("");
+  const [name, setName]         = useState("");
+  const [pin, setPin]           = useState("");
+  const [confirmPin, setConfirm] = useState("");
+
+  const [error, setError]       = useState<string | null>(null);
+  const [fieldError, setFE]     = useState<string | null>(null);
+  const [loading, setLoading]   = useState(false);
+
+  function goNext(e: React.FormEvent) {
     e.preventDefault();
-    setError(null);
-    setFieldErrors({});
-
-    // Validate name + phone with Zod
-    const result = registerSchema.pick({ name: true, phone: true }).safeParse({ name, phone });
-    if (!result.success) {
-      const errs: Record<string, string> = {};
-      result.error.errors.forEach((err) => {
-        const field = err.path[0] as string;
-        errs[field] = err.message;
-      });
-      setFieldErrors(errs);
-      return;
+    setError(null); setFE(null);
+    if (step === 1) {
+      if (!phone.trim()) { setFE("Введите номер телефона."); return; }
+      setStep(2);
+    } else if (step === 2) {
+      if (name.trim().length < 2) { setFE("Имя должно содержать минимум 2 символа."); return; }
+      setPin(""); setConfirm("");
+      setStep(3);
     }
-
-    setPin("");
-    setStep(2);
   }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (pin.length < 6) { setError("Введите 6-значный PIN-код."); return; }
-    setError(null);
-    setFieldErrors({});
+    setError(null); setFE(null);
+    if (pin.length < 6) { setFE("Введите 6-значный PIN-код."); return; }
+    if (pin !== confirmPin) { setFE("PIN-коды не совпадают."); return; }
     setLoading(true);
     try {
-      const user = await api.register({ phone, name, password: pin, confirm_password: pin });
+      const user = await api.register({ phone, name: name.trim(), password: pin, confirm_password: confirmPin });
       onSuccess?.(user);
     } catch (err) {
       const e = err as ApiError;
-      if (e.phone || e.name) {
-        setFieldErrors({
-          phone: Array.isArray(e.phone) ? e.phone[0] : (e.phone as string) ?? "",
-          name: Array.isArray(e.name) ? e.name[0] : (e.name as string) ?? "",
-        });
-        setStep(1);
-      } else if (e.password) {
-        setError(Array.isArray(e.password) ? e.password[0] : e.password as string);
-      } else {
-        setError((e.detail as string) ?? "Ошибка регистрации.");
-      }
+      if (e.phone) { setFE(Array.isArray(e.phone) ? e.phone[0] : e.phone as string); setStep(1); }
+      else if (e.name) { setFE(Array.isArray(e.name) ? e.name[0] : e.name as string); setStep(2); }
+      else if (e.password) { setFE(Array.isArray(e.password) ? e.password[0] : e.password as string); }
+      else { setError((e.detail as string) ?? "Ошибка регистрации."); }
     } finally {
       setLoading(false);
     }
@@ -75,35 +69,53 @@ export default function RegisterForm({ onSuccess }: Props) {
     <div className="min-h-screen bg-[#0d1b35] flex flex-col px-6 py-10">
       {/* Top bar */}
       <div className="flex items-center justify-between mb-auto">
-        {step === 2 ? (
-          <button onClick={() => setStep(1)} className="text-white/60 hover:text-white transition-colors">
+        {step > 1 ? (
+          <button
+            onClick={() => { setError(null); setFE(null); setStep((s) => (s - 1) as 1 | 2 | 3); }}
+            className="text-white/60 hover:text-white transition-colors"
+          >
             <ArrowLeft size={22} />
           </button>
         ) : (
           <SpinCoachLogo size="sm" />
         )}
-        <span className="text-white/35 text-xs">Шаг {step} / 2</span>
+        <span className="text-white/35 text-xs">Шаг {step} / 3</span>
       </div>
 
       <div className="flex-1 flex flex-col justify-center max-w-sm mx-auto w-full space-y-8">
 
-        {/* ── Step 1: Name + Phone ─────────────────────────────────────────── */}
+        {/* ── Step 1: Phone ─────────────────────────────────────────────────── */}
         {step === 1 && (
           <>
             <div>
-              <h1 className="text-4xl font-extrabold text-white leading-tight">
-                Создать<br />аккаунт
-              </h1>
-              <p className="text-white/55 mt-2 text-sm">
-                Введите имя и номер, чтобы зарегистрироваться.
-              </p>
+              <h1 className="text-3xl font-extrabold text-white leading-tight">Ваш номер телефона?</h1>
+              <p className="text-white/55 mt-2 text-sm">Создайте аккаунт, чтобы участвовать в турнирах.</p>
             </div>
-
-            <form onSubmit={goToStep2} className="space-y-4">
+            <form onSubmit={goNext} className="space-y-4">
               <div className="space-y-1.5">
-                <label className="text-white/60 text-xs font-semibold uppercase tracking-wider">
-                  Ваше имя
-                </label>
+                <label className="text-white/60 text-xs font-semibold uppercase tracking-wider">Номер телефона</label>
+                <PhoneInput value={phone} onChange={setPhone} required autoFocus />
+                {fieldError && <p className="text-red-300 text-xs">{fieldError}</p>}
+              </div>
+              <button type="submit" className={BTN}>Продолжить</button>
+            </form>
+            <p className="text-center text-sm text-white/40">
+              Уже есть аккаунт?{" "}
+              <Link href="/login" className="text-blue-400 hover:underline font-medium">Войти</Link>
+            </p>
+          </>
+        )}
+
+        {/* ── Step 2: Name ──────────────────────────────────────────────────── */}
+        {step === 2 && (
+          <>
+            <div>
+              <h1 className="text-3xl font-extrabold text-white leading-tight">Как вас зовут?</h1>
+              <p className="text-white/55 mt-2 text-sm">Имя увидят другие участники.</p>
+            </div>
+            <form onSubmit={goNext} className="space-y-4">
+              <div className="space-y-1.5">
+                <label className="text-white/60 text-xs font-semibold uppercase tracking-wider">Ваше имя</label>
                 <input
                   type="text"
                   value={name}
@@ -111,70 +123,46 @@ export default function RegisterForm({ onSuccess }: Props) {
                   placeholder="Алан Смагулов"
                   required
                   autoFocus
-                  className="w-full px-4 py-3.5 rounded-2xl bg-white/10 border border-white/20
-                    text-white placeholder:text-white/35 text-base outline-none
-                    focus:border-blue-500 focus:bg-white/15 transition-all"
+                  className={INPUT}
                 />
-                {fieldErrors.name && <p className="text-red-300 text-xs mt-1">{fieldErrors.name}</p>}
+                {fieldError && <p className="text-red-300 text-xs">{fieldError}</p>}
               </div>
-
-              <div className="space-y-1.5">
-                <label className="text-white/60 text-xs font-semibold uppercase tracking-wider">
-                  Номер телефона
-                </label>
-                <PhoneInput value={phone} onChange={setPhone} required />
-                {fieldErrors.phone && <p className="text-red-300 text-xs mt-1">{fieldErrors.phone}</p>}
-              </div>
-
-              <p className="text-white/35 text-xs leading-relaxed">
-                Нажимая «Продолжить» вы соглашаетесь с условиями использования платформы.
-              </p>
-
-              <button
-                type="submit"
-                className="w-full py-4 rounded-full bg-blue-600 hover:bg-blue-700
-                  text-white font-bold text-base transition-all active:scale-[.98]"
-              >
-                Продолжить
-              </button>
+              <button type="submit" className={BTN}>Продолжить</button>
             </form>
-
-            <p className="text-center text-sm text-white/40">
-              Уже есть аккаунт?{" "}
-              <Link href="/login" className="text-blue-400 hover:underline font-medium">
-                Войти
-              </Link>
-            </p>
           </>
         )}
 
-        {/* ── Step 2: PIN ──────────────────────────────────────────────────── */}
-        {step === 2 && (
+        {/* ── Step 3: PIN + Confirm PIN ─────────────────────────────────────── */}
+        {step === 3 && (
           <>
             <div>
-              <h1 className="text-4xl font-extrabold text-white leading-tight">
-                Придумайте<br />PIN-код
-              </h1>
-              <p className="text-white/55 mt-2 text-sm">
-                Запомните его — он нужен для входа.
-              </p>
+              <h1 className="text-3xl font-extrabold text-white leading-tight">Придумайте PIN-код</h1>
+              <p className="text-white/55 mt-2 text-sm">6 цифр — запомните его для входа.</p>
             </div>
+            <form onSubmit={handleSubmit} className="space-y-6">
+              <div className="space-y-2">
+                <label className="text-white/60 text-xs font-semibold uppercase tracking-wider">PIN-код</label>
+                <PinInput value={pin} onChange={setPin} autoFocus />
+              </div>
 
-            <form onSubmit={handleSubmit} className="space-y-8">
-              <PinInput value={pin} onChange={setPin} autoFocus />
+              {/* Confirm appears once PIN is filled */}
+              {pin.length === 6 && (
+                <div className="space-y-2 animate-in fade-in slide-in-from-top-2 duration-200">
+                  <label className="text-white/60 text-xs font-semibold uppercase tracking-wider">Подтвердите PIN-код</label>
+                  <PinInput value={confirmPin} onChange={setConfirm} autoFocus />
+                </div>
+              )}
 
-              {error && (
+              {(fieldError || error) && (
                 <div className="bg-red-500/20 border border-red-400/40 rounded-xl px-4 py-3">
-                  <p className="text-red-200 text-sm">{error}</p>
+                  <p className="text-red-200 text-sm">{fieldError ?? error}</p>
                 </div>
               )}
 
               <button
                 type="submit"
-                disabled={loading || pin.length < 6}
-                className="w-full py-4 rounded-full bg-blue-600 hover:bg-blue-700
-                  disabled:opacity-40 text-white font-bold text-base
-                  transition-all active:scale-[.98]"
+                disabled={loading || pin.length < 6 || confirmPin.length < 6}
+                className={BTN}
               >
                 {loading ? "Создание аккаунта..." : "Зарегистрироваться"}
               </button>
