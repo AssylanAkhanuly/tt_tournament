@@ -35,6 +35,15 @@ def _set_auth_cookies(response, refresh_token: RefreshToken):
     return response
 
 
+class CheckPhoneView(APIView):
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        phone = request.data.get("phone", "").strip()
+        exists = User.objects.filter(phone=phone).exists()
+        return Response({"exists": exists})
+
+
 class RegisterView(APIView):
     permission_classes = [AllowAny]
 
