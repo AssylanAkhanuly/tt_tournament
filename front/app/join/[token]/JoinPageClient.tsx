@@ -185,14 +185,24 @@ function RegisterAndJoinSteps({ joinToken }: { joinToken: string }) {
   );
 }
 
-// ─── Login + auto-join ────────────────────────────────────────────────────────
+// ─── Login + auto-join (2-step) ───────────────────────────────────────────────
 
 function LoginAndJoinForm({ joinToken }: { joinToken: string }) {
   const router = useRouter();
+  const [step, setStep] = useState<1 | 2>(1);
   const [phone, setPhone] = useState("");
   const [pin, setPin] = useState("");
+  const [phoneError, setPhoneError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+
+  function goToStep2(e: React.FormEvent) {
+    e.preventDefault();
+    setPhoneError(null);
+    if (!phone.trim()) { setPhoneError("Введите номер телефона."); return; }
+    setPin("");
+    setStep(2);
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -213,27 +223,45 @@ function LoginAndJoinForm({ joinToken }: { joinToken: string }) {
 
   return (
     <div className="px-5 py-5 space-y-7 max-w-sm mx-auto w-full">
-      <div>
-        <h1 className="text-3xl font-extrabold text-white leading-tight">Войдите<br />в аккаунт</h1>
-        <p className="text-white/55 mt-1.5 text-sm">После входа вы автоматически вступите в турнир.</p>
-      </div>
 
-      <form onSubmit={handleSubmit} className="space-y-6">
-        <Field label="Номер телефона">
-          <PhoneInput value={phone} onChange={setPhone} required />
-        </Field>
+      {/* ── Step 1: Phone ── */}
+      {step === 1 && (
+        <>
+          <div>
+            <h1 className="text-3xl font-extrabold text-white leading-tight">Войдите<br />в аккаунт</h1>
+            <p className="text-white/55 mt-1.5 text-sm">После входа вы автоматически вступите в турнир.</p>
+          </div>
 
-        <div className="space-y-3">
-          <label className="text-white/60 text-xs font-semibold uppercase tracking-wider">PIN-код</label>
-          <PinInput value={pin} onChange={setPin} />
-        </div>
+          <form onSubmit={goToStep2} className="space-y-4">
+            <Field label="Номер телефона" error={phoneError ?? undefined}>
+              <PhoneInput value={phone} onChange={setPhone} required autoFocus />
+            </Field>
+            <button type="submit" className={BTN_PRIMARY}>Продолжить</button>
+          </form>
+        </>
+      )}
 
-        {error && <ErrorBox msg={error} />}
+      {/* ── Step 2: PIN ── */}
+      {step === 2 && (
+        <>
+          <div className="flex items-start gap-3">
+            <button onClick={() => setStep(1)} className="text-white/60 hover:text-white text-2xl mt-0.5">←</button>
+            <div>
+              <h1 className="text-3xl font-extrabold text-white leading-tight">Введите<br />PIN-код</h1>
+              <p className="text-white/55 mt-1 text-sm">6-значный PIN-код вашего аккаунта.</p>
+            </div>
+          </div>
 
-        <button type="submit" disabled={loading || pin.length < 6} className={BTN_PRIMARY}>
-          {loading ? "Вход..." : "Войти и вступить"}
-        </button>
-      </form>
+          <form onSubmit={handleSubmit} className="space-y-8">
+            <PinInput value={pin} onChange={setPin} autoFocus />
+            {error && <ErrorBox msg={error} />}
+            <button type="submit" disabled={loading || pin.length < 6} className={BTN_PRIMARY}>
+              {loading ? "Вход..." : "Войти и вступить"}
+            </button>
+          </form>
+        </>
+      )}
+
     </div>
   );
 }
