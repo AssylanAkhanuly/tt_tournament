@@ -66,7 +66,7 @@ export default function PinInput({ value, onChange, disabled, autoFocus }: Props
         <input
           key={i}
           ref={(el) => { refs.current[i] = el; }}
-          type="tel"
+          type="password"
           inputMode="numeric"
           pattern="[0-9]*"
           maxLength={1}
