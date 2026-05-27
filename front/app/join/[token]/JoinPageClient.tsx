@@ -4,9 +4,16 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Tournament, User } from "@/lib/types";
 import { api } from "@/lib/api";
-import LoginForm from "@/components/LoginForm";
-import RegisterForm from "@/components/RegisterForm";
-import JoinConfirmation from "@/components/JoinConfirmation";
+import PinInput from "@/components/PinInput";
+
+// Shared input class for the dark theme
+const INPUT = `w-full px-4 py-3.5 rounded-2xl bg-white/10 border border-white/20
+  text-white placeholder:text-white/35 text-base outline-none
+  focus:border-blue-500 focus:bg-white/15 transition-all`;
+
+// Shared button class
+const BTN_PRIMARY = `w-full py-4 rounded-full bg-blue-600 hover:bg-blue-700
+  disabled:opacity-40 text-white font-bold text-base transition-all active:scale-[.98]`;
 
 interface Props {
   tournament: Tournament;
@@ -17,190 +24,312 @@ interface Props {
 
 export default function JoinPageClient({ tournament, joinToken, user, alreadyJoined }: Props) {
   const router = useRouter();
-  const [tab, setTab] = useState<"login" | "register">("register");
 
-  // ─── State A: already joined ───────────────────────────────────────────────
+  // ─── State A: already joined ─────────────────────────────────────────────
   if (user && alreadyJoined) {
     return (
-      <PageShell tournament={tournament}>
-        <div className="text-center space-y-4 py-6">
-          <div className="text-5xl">✅</div>
-          <h2 className="text-xl font-bold text-gray-900">Вы уже участник!</h2>
-          <p className="text-gray-500">Вы уже зарегистрированы в турнире «{tournament.name}».</p>
-          <button
-            onClick={() => router.push("/dashboard")}
-            className="mt-2 px-6 py-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold transition-colors"
-          >
+      <DarkShell tournament={tournament}>
+        <div className="text-center space-y-5 py-6">
+          <div className="text-6xl">✅</div>
+          <h2 className="text-2xl font-bold text-white">Вы уже участник!</h2>
+          <p className="text-white/60">Вы уже зарегистрированы в этом турнире.</p>
+          <button onClick={() => router.push("/dashboard")} className={BTN_PRIMARY}>
             Перейти в кабинет
           </button>
         </div>
-      </PageShell>
+      </DarkShell>
     );
   }
 
-  // ─── State B: logged in, not yet joined ────────────────────────────────────
+  // ─── State B: logged in, not yet joined ──────────────────────────────────
   if (user && !alreadyJoined) {
     return (
-      <PageShell tournament={tournament}>
-        <JoinConfirmation tournament={tournament} joinToken={joinToken} />
-      </PageShell>
+      <DarkShell tournament={tournament}>
+        <JoinConfirmSection tournament={tournament} joinToken={joinToken} />
+      </DarkShell>
     );
   }
 
-  // ─── State C: not authenticated ────────────────────────────────────────────
-  async function handleLoginSuccess(_u: User) {
-    // After login, join the tournament immediately
-    try {
-      await api.joinByToken(joinToken);
-    } catch {
-      // Might already be joined — ignore
-    }
-    router.push("/dashboard");
-  }
+  // ─── State C: not authenticated ──────────────────────────────────────────
+  return <UnauthFlow tournament={tournament} joinToken={joinToken} />;
+}
 
-  async function handleRegisterSuccess(_u: User) {
-    // registerAndJoin was called inside RegisterForm's onSuccess context below
-    router.push("/dashboard");
-  }
+// ─── Unauthenticated: tabs ────────────────────────────────────────────────────
+
+function UnauthFlow({ tournament, joinToken }: { tournament: Tournament; joinToken: string }) {
+  const [tab, setTab] = useState<"register" | "login">("register");
 
   return (
-    <PageShell tournament={tournament}>
+    <div className="min-h-screen bg-[#163535] flex flex-col">
+      <TournamentBadge tournament={tournament} />
+
       {/* Tab switcher */}
-      <div className="flex rounded-xl border border-gray-200 overflow-hidden mb-6">
-        <button
-          onClick={() => setTab("register")}
-          className={`flex-1 py-2.5 text-sm font-medium transition-colors ${
-            tab === "register"
-              ? "bg-blue-600 text-white"
-              : "text-gray-500 hover:text-gray-900 bg-white"
-          }`}
-        >
-          Регистрация
-        </button>
-        <button
-          onClick={() => setTab("login")}
-          className={`flex-1 py-2.5 text-sm font-medium transition-colors ${
-            tab === "login"
-              ? "bg-blue-600 text-white"
-              : "text-gray-500 hover:text-gray-900 bg-white"
-          }`}
-        >
-          Уже есть аккаунт
-        </button>
+      <div className="flex mx-5 mb-2 rounded-2xl overflow-hidden border border-white/15 bg-white/5">
+        <TabBtn label="Регистрация" active={tab === "register"} onClick={() => setTab("register")} />
+        <TabBtn label="Уже есть аккаунт" active={tab === "login"} onClick={() => setTab("login")} />
       </div>
 
-      {tab === "login" ? (
-        <LoginForm onSuccess={handleLoginSuccess} />
-      ) : (
-        <RegisterAndJoinForm joinToken={joinToken} onSuccess={handleRegisterSuccess} />
-      )}
-    </PageShell>
+      <div className="flex-1 overflow-y-auto">
+        {tab === "register"
+          ? <RegisterAndJoinSteps joinToken={joinToken} />
+          : <LoginAndJoinForm joinToken={joinToken} />
+        }
+      </div>
+    </div>
   );
 }
 
-// ─── Register + auto-join in a single request ──────────────────────────────
+// ─── Register 2-step + auto-join ─────────────────────────────────────────────
 
-function RegisterAndJoinForm({
-  joinToken,
-  onSuccess,
-}: {
-  joinToken: string;
-  onSuccess: (u: User) => void;
-}) {
-  const [form, setForm] = useState({ phone: "", name: "", password: "", confirm_password: "" });
-  const [errors, setErrors] = useState<Record<string, string | string[]>>({});
+function RegisterAndJoinSteps({ joinToken }: { joinToken: string }) {
+  const router = useRouter();
+  const [step, setStep] = useState<1 | 2>(1);
+  const [name, setName] = useState("");
+  const [phone, setPhone] = useState("");
+  const [pin, setPin] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
 
-  function update(field: keyof typeof form) {
-    return (e: React.ChangeEvent<HTMLInputElement>) =>
-      setForm((prev) => ({ ...prev, [field]: e.target.value }));
+  function goStep2(e: React.FormEvent) {
+    e.preventDefault();
+    setError(null);
+    setFieldErrors({});
+    setPin("");
+    setStep(2);
   }
 
-  async function handleSubmit(e: React.FormEvent) {
+  async function handleFinish(e: React.FormEvent) {
     e.preventDefault();
-    setErrors({});
+    if (pin.length < 6) { setError("Введите 6-значный PIN-код."); return; }
+    setError(null);
     setLoading(true);
     try {
-      const result = await api.registerAndJoin(joinToken, form);
-      onSuccess(result.user);
+      await api.registerAndJoin(joinToken, { phone, name, password: pin, confirm_password: pin });
+      router.push("/dashboard");
     } catch (err) {
-      setErrors(err as Record<string, string | string[]>);
+      const e = err as Record<string, string | string[]>;
+      if (e.phone || e.name) {
+        setFieldErrors({
+          phone: Array.isArray(e.phone) ? e.phone[0] : (e.phone as string) ?? "",
+          name: Array.isArray(e.name) ? e.name[0] : (e.name as string) ?? "",
+        });
+        setStep(1);
+      } else {
+        setError((e.detail as string) ?? "Ошибка регистрации.");
+      }
     } finally {
       setLoading(false);
     }
   }
 
-  const fieldError = (field: string) => {
-    const val = errors[field];
-    if (!val) return null;
-    return <p className="text-xs text-red-600 mt-1">{Array.isArray(val) ? val[0] : val}</p>;
-  };
-
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">Имя</label>
-        <input type="text" value={form.name} onChange={update("name")} placeholder="Алан Смагулов" required
-          className="w-full px-4 py-2.5 rounded-xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900" />
-        {fieldError("name")}
-      </div>
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">Номер телефона</label>
-        <input type="tel" value={form.phone} onChange={update("phone")} placeholder="+7 700 000 00 00" required
-          className="w-full px-4 py-2.5 rounded-xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900" />
-        {fieldError("phone")}
-      </div>
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">Пароль</label>
-        <input type="password" value={form.password} onChange={update("password")} placeholder="Минимум 6 символов" required
-          className="w-full px-4 py-2.5 rounded-xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900" />
-        {fieldError("password")}
-      </div>
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">Подтвердите пароль</label>
-        <input type="password" value={form.confirm_password} onChange={update("confirm_password")} placeholder="••••••••" required
-          className="w-full px-4 py-2.5 rounded-xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900" />
-        {fieldError("confirm_password")}
-      </div>
+    <div className="px-5 py-5 space-y-7 max-w-sm mx-auto w-full">
+      {/* ── Step 1 ── */}
+      {step === 1 && (
+        <>
+          <div>
+            <h1 className="text-3xl font-extrabold text-white leading-tight">
+              Ваш номер<br />телефона?
+            </h1>
+            <p className="text-white/55 mt-1.5 text-sm">
+              Введите данные, чтобы вступить в турнир.
+            </p>
+          </div>
 
-      {errors.detail && (
-        <p className="text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2">
-          {String(errors.detail)}
-        </p>
+          <form onSubmit={goStep2} className="space-y-4">
+            <Field label="Имя" error={fieldErrors.name}>
+              <input type="text" value={name} onChange={(e) => setName(e.target.value)}
+                placeholder="Алан Смагулов" required autoFocus className={INPUT} />
+            </Field>
+
+            <Field label="Номер телефона" error={fieldErrors.phone}>
+              <input type="tel" value={phone} onChange={(e) => setPhone(e.target.value)}
+                placeholder="+7 700 000 00 00" required className={INPUT} />
+            </Field>
+
+            {error && <ErrorBox msg={error} />}
+
+            <p className="text-white/35 text-xs leading-relaxed">
+              Нажимая «Продолжить» вы соглашаетесь с условиями использования платформы.
+            </p>
+
+            <button type="submit" className={BTN_PRIMARY}>Продолжить</button>
+          </form>
+        </>
       )}
 
-      <button type="submit" disabled={loading}
-        className="w-full py-3 rounded-xl bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-bold text-base transition-colors">
-        {loading ? "Регистрация..." : "Зарегистрироваться и вступить"}
-      </button>
-    </form>
+      {/* ── Step 2 ── */}
+      {step === 2 && (
+        <>
+          <div className="flex items-start gap-3">
+            <button onClick={() => setStep(1)} className="text-white/60 hover:text-white text-2xl mt-0.5">←</button>
+            <div>
+              <h1 className="text-3xl font-extrabold text-white leading-tight">
+                Добро<br />пожаловать!
+              </h1>
+              <p className="text-white/55 mt-1 text-sm">Введите 6-значный PIN-код для входа.</p>
+            </div>
+          </div>
+
+          <form onSubmit={handleFinish} className="space-y-8">
+            <PinInput value={pin} onChange={setPin} autoFocus />
+            {error && <ErrorBox msg={error} />}
+            <button type="submit" disabled={loading || pin.length < 6} className={BTN_PRIMARY}>
+              {loading ? "Вступаем в турнир..." : "Зарегистрироваться и вступить"}
+            </button>
+          </form>
+        </>
+      )}
+    </div>
   );
 }
 
-// ─── Shared page shell ─────────────────────────────────────────────────────
+// ─── Login + auto-join ────────────────────────────────────────────────────────
 
-function PageShell({ tournament, children }: { tournament: Tournament; children: React.ReactNode }) {
+function LoginAndJoinForm({ joinToken }: { joinToken: string }) {
+  const router = useRouter();
+  const [phone, setPhone] = useState("");
+  const [pin, setPin] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (pin.length < 6) { setError("Введите PIN-код."); return; }
+    setError(null);
+    setLoading(true);
+    try {
+      await api.login(phone, pin);
+      try { await api.joinByToken(joinToken); } catch { /* already joined */ }
+      router.push("/dashboard");
+    } catch (err) {
+      const e = err as Record<string, string>;
+      setError(e?.detail ?? "Неверный номер или PIN-код.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-      <div className="w-full max-w-md">
-        <div className="text-center mb-6">
-          <h1 className="text-3xl font-bold text-gray-900">🏓 ТТ Платформа</h1>
+    <div className="px-5 py-5 space-y-7 max-w-sm mx-auto w-full">
+      <div>
+        <h1 className="text-3xl font-extrabold text-white leading-tight">Войдите<br />в аккаунт</h1>
+        <p className="text-white/55 mt-1.5 text-sm">После входа вы автоматически вступите в турнир.</p>
+      </div>
+
+      <form onSubmit={handleSubmit} className="space-y-6">
+        <Field label="Номер телефона">
+          <input type="tel" value={phone} onChange={(e) => setPhone(e.target.value)}
+            placeholder="+7 700 000 00 00" required className={INPUT} />
+        </Field>
+
+        <div className="space-y-3">
+          <label className="text-white/60 text-xs font-semibold uppercase tracking-wider">PIN-код</label>
+          <PinInput value={pin} onChange={setPin} />
         </div>
 
-        {/* Tournament info card */}
-        <div className="bg-blue-600 rounded-2xl p-5 mb-4 text-white">
-          <p className="text-blue-200 text-xs uppercase tracking-wider mb-1">Приглашение на турнир</p>
-          <h2 className="text-xl font-bold">{tournament.name}</h2>
-          {tournament.description && (
-            <p className="text-blue-100 text-sm mt-1 line-clamp-2">{tournament.description}</p>
-          )}
-          <p className="text-blue-200 text-sm mt-2">👥 {tournament.participant_count} участников</p>
-        </div>
+        {error && <ErrorBox msg={error} />}
 
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
-          {children}
-        </div>
+        <button type="submit" disabled={loading || pin.length < 6} className={BTN_PRIMARY}>
+          {loading ? "Вход..." : "Войти и вступить"}
+        </button>
+      </form>
+    </div>
+  );
+}
+
+// ─── Confirm join ─────────────────────────────────────────────────────────────
+
+function JoinConfirmSection({ tournament, joinToken }: { tournament: Tournament; joinToken: string }) {
+  const router = useRouter();
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function handleJoin() {
+    setLoading(true);
+    setError(null);
+    try {
+      await api.joinByToken(joinToken);
+      router.push("/dashboard");
+    } catch (err) {
+      const e = err as Record<string, string>;
+      setError(e?.detail ?? "Не удалось вступить.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <div className="text-center space-y-5 py-4">
+      <div className="text-5xl">🏓</div>
+      <h2 className="text-2xl font-bold text-white">Вступить в турнир?</h2>
+      <p className="text-white/60 text-sm">Вы войдёте как участник «{tournament.name}».</p>
+      {error && <p className="text-red-300 text-sm">{error}</p>}
+      <button onClick={handleJoin} disabled={loading} className={BTN_PRIMARY}>
+        {loading ? "Вступаем..." : "Вступить"}
+      </button>
+    </div>
+  );
+}
+
+// ─── Tiny shared helpers ──────────────────────────────────────────────────────
+
+function Field({ label, error, children }: { label: string; error?: string; children: React.ReactNode }) {
+  return (
+    <div className="space-y-1.5">
+      <label className="text-white/60 text-xs font-semibold uppercase tracking-wider">{label}</label>
+      {children}
+      {error && <p className="text-red-300 text-xs">{error}</p>}
+    </div>
+  );
+}
+
+function ErrorBox({ msg }: { msg: string }) {
+  return (
+    <div className="bg-red-500/20 border border-red-400/40 rounded-xl px-4 py-3">
+      <p className="text-red-200 text-sm">{msg}</p>
+    </div>
+  );
+}
+
+// ─── Tournament badge ─────────────────────────────────────────────────────────
+
+function TournamentBadge({ tournament }: { tournament: Tournament }) {
+  return (
+    <div className="mx-5 mt-10 mb-4 bg-white/10 border border-white/15 rounded-2xl p-4">
+      <p className="text-blue-400 text-xs font-bold uppercase tracking-widest mb-0.5">Приглашение</p>
+      <h2 className="text-white font-bold text-lg leading-snug">{tournament.name}</h2>
+      {tournament.description && (
+        <p className="text-white/50 text-sm mt-0.5 line-clamp-1">{tournament.description}</p>
+      )}
+      <p className="text-white/40 text-xs mt-1">👥 {tournament.participant_count} участников</p>
+    </div>
+  );
+}
+
+// ─── Dark shell ───────────────────────────────────────────────────────────────
+
+function DarkShell({ tournament, children }: { tournament: Tournament; children: React.ReactNode }) {
+  return (
+    <div className="min-h-screen bg-[#163535] flex flex-col px-5 py-10">
+      <TournamentBadge tournament={tournament} />
+      <div className="flex-1 flex flex-col justify-center max-w-sm mx-auto w-full">
+        {children}
       </div>
     </div>
+  );
+}
+
+// ─── Tab button ───────────────────────────────────────────────────────────────
+
+function TabBtn({ label, active, onClick }: { label: string; active: boolean; onClick: () => void }) {
+  return (
+    <button onClick={onClick}
+      className={`flex-1 py-2.5 text-sm font-semibold transition-colors ${
+        active ? "bg-blue-600 text-white" : "text-white/50 hover:text-white"
+      }`}>
+      {label}
+    </button>
   );
 }

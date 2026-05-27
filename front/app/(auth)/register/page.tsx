@@ -2,8 +2,8 @@
 
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import RegisterForm from "@/components/RegisterForm";
 import { User } from "@/lib/types";
+import RegisterForm from "@/components/RegisterForm";
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -13,24 +13,16 @@ export default function RegisterPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-      <div className="w-full max-w-md">
-        <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">🏓 ТТ Платформа</h1>
-          <p className="text-gray-500 mt-2">Создайте аккаунт</p>
-        </div>
+    <div className="min-h-screen bg-[#163535]">
+      <RegisterForm onSuccess={handleSuccess} />
 
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-8">
-          <RegisterForm onSuccess={handleSuccess} />
-
-          <p className="text-center text-sm text-gray-500 mt-6">
-            Уже есть аккаунт?{" "}
-            <Link href="/login" className="text-blue-600 hover:underline font-medium">
-              Войти
-            </Link>
-          </p>
-        </div>
-      </div>
+      {/* Footer link — shown below the form */}
+      <p className="text-center text-sm text-white/40 pb-8 -mt-4">
+        Уже есть аккаунт?{" "}
+        <Link href="/login" className="text-[#0dcfcf] hover:underline font-medium">
+          Войти
+        </Link>
+      </p>
     </div>
   );
 }
