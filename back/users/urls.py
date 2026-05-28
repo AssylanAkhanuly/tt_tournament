@@ -1,5 +1,13 @@
 from django.urls import path
-from .views import CheckPhoneView, LoginView, LogoutView, MeView, RegisterView, TokenRefreshCookieView
+from .views import (
+    CheckPhoneView,
+    LoginView,
+    LogoutView,
+    MeView,
+    RegisterView,
+    TokenRefreshCookieView,
+    UserSearchView,
+)
 
 urlpatterns = [
     path("register/", RegisterView.as_view(), name="auth-register"),
@@ -8,4 +16,5 @@ urlpatterns = [
     path("me/", MeView.as_view(), name="auth-me"),
     path("token/refresh/", TokenRefreshCookieView.as_view(), name="auth-token-refresh"),
     path("check-phone/", CheckPhoneView.as_view(), name="auth-check-phone"),
+    path("users/", UserSearchView.as_view(), name="auth-user-search"),
 ]

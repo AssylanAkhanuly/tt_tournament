@@ -1,5 +1,6 @@
 from django.conf import settings
 from django.contrib.auth import authenticate, get_user_model
+from django.db.models import Q
 from rest_framework import status
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
@@ -89,6 +90,27 @@ class MeView(APIView):
 
     def get(self, request):
         return Response(UserSerializer(request.user).data)
+
+
+class UserSearchView(APIView):
+    """
+    GET /api/auth/users/          → 20 most-recently-created non-staff users
+    GET /api/auth/users/?q=query  → filter by phone or name (any length, up to 20)
+    Admin-only.
+    """
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        # Allow club admins to search too
+        is_club_admin = request.user.club_admin_roles.exists()
+        if not request.user.is_staff and not is_club_admin:
+            return Response({"detail": "Только администраторы."}, status=status.HTTP_403_FORBIDDEN)
+        q = request.query_params.get("q", "").strip()
+        qs = User.objects.filter(is_staff=False)
+        if q:
+            qs = qs.filter(Q(phone__icontains=q) | Q(name__icontains=q))
+        qs = qs.order_by("-created_at")[:20]
+        return Response(UserSerializer(qs, many=True).data)
 
 
 class TokenRefreshCookieView(APIView):

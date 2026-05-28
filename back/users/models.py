@@ -4,10 +4,10 @@ from django.db import models
 
 
 class UserManager(BaseUserManager):
-    def create_user(self, phone, name, password=None):
+    def create_user(self, phone, name, password=None, rating=100):
         if not phone:
             raise ValueError("Номер телефона обязателен")
-        user = self.model(phone=phone, name=name)
+        user = self.model(phone=phone, name=name, rating=rating)
         user.set_password(password)
         user.save(using=self._db)
         return user
@@ -24,6 +24,7 @@ class User(AbstractBaseUser, PermissionsMixin):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     phone = models.CharField(max_length=20, unique=True, verbose_name="Телефон")
     name = models.CharField(max_length=150, verbose_name="Имя")
+    rating = models.PositiveIntegerField(default=100, verbose_name="Рейтинг")
     is_active = models.BooleanField(default=True)
     is_staff = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
