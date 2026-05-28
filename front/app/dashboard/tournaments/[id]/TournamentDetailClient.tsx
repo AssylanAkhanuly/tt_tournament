@@ -1,234 +1,2328 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useCallback, useEffect, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
-import { Match, Participant, Tournament, User } from "@/lib/types";
+import {
+  ArrowLeft, Pencil, Check, X, Trash2, UserPlus,
+  Zap, Users, Trophy, Clock, Settings, Minus,
+  RefreshCw, Calendar, LayoutGrid, Plus, ToggleLeft, ToggleRight, Layers,
+} from "lucide-react";
+import { useRouter } from "next/navigation";
+import { GroupMatch, Match, Participant, Tournament, TournamentGroup, TournamentTable, User } from "@/lib/types";
 import { api } from "@/lib/api";
-import ParticipantList from "@/components/ParticipantList";
-import BracketView from "@/components/BracketView";
 import ScoreModal from "@/components/ScoreModal";
+import AddPlayerModal from "@/components/AddPlayerModal";
+import LiveMatchesPanel from "@/components/LiveMatchesPanel";
 
-// QRCodeDisplay uses window.location.origin — load client-only
 const QRCodeDisplay = dynamic(() => import("@/components/QRCodeDisplay"), { ssr: false });
+const BracketFlow   = dynamic(() => import("@/components/BracketFlow"),   { ssr: false });
 
+// ─── Avatar gradient ──────────────────────────────────────────────────────────
+const AVATAR_GRADIENTS = [
+  ["#3b82f6","#6366f1"], ["#06b6d4","#3b82f6"], ["#8b5cf6","#ec4899"],
+  ["#10b981","#06b6d4"], ["#f59e0b","#ef4444"], ["#22c55e","#3b82f6"],
+];
+function avatarGrad(name: string) {
+  let h = 0; for (const c of name) h = (h * 31 + c.charCodeAt(0)) & 0xffffffff;
+  return AVATAR_GRADIENTS[Math.abs(h) % AVATAR_GRADIENTS.length];
+}
+
+// ─── Tokens ──────────────────────────────────────────────────────────────────
+const INPUT = "w-full px-4 py-3 bg-white/[0.08] border border-white/[0.12] rounded-xl text-[15px] text-white placeholder:text-white/30 focus:outline-none focus:border-blue-500/70 focus:bg-white/[0.11] transition-all [color-scheme:dark]";
+const LABEL = "text-[10px] font-bold uppercase tracking-[0.14em] text-white/35";
+const BTN_P = "inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 active:scale-[.97] text-white font-semibold text-[14px] transition-all";
+const BTN_G = "inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-white/[0.08] hover:bg-white/[0.13] active:scale-[.97] text-white font-medium text-[14px] transition-all border border-white/[0.08]";
+const BTN_D = "inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-red-500/10 hover:bg-red-500/20 active:scale-[.97] text-red-400 font-semibold text-[14px] transition-all border border-red-500/20";
+
+const S = {
+  open:        { dot: "bg-emerald-400",            pill: "bg-emerald-400/15 text-emerald-300", label: "Открыт"   },
+  in_progress: { dot: "bg-blue-400 animate-pulse", pill: "bg-blue-500/20 text-blue-300",       label: "Live"     },
+  finished:    { dot: "bg-white/20",               pill: "bg-white/[0.07] text-white/35",      label: "Завершён" },
+} as const;
+
+type Page = "overview" | "bracket" | "players" | "tables" | "settings";
+
+// ─── Toast ───────────────────────────────────────────────────────────────────
+type ToastItem = { id: number; msg: string; ok: boolean };
+
+function useToast() {
+  const [toasts, setToasts] = useState<ToastItem[]>([]);
+  const show = useCallback((msg: string, ok = true) => {
+    const id = Date.now();
+    setToasts((p) => [...p, { id, msg, ok }]);
+    setTimeout(() => setToasts((p) => p.filter((t) => t.id !== id)), 3200);
+  }, []);
+  return { toasts, show };
+}
+
+function ToastStack({ toasts }: { toasts: ToastItem[] }) {
+  if (toasts.length === 0) return null;
+  return (
+    <div className="fixed bottom-6 right-6 z-[200] flex flex-col gap-2 pointer-events-none">
+      {toasts.map((t) => (
+        <div key={t.id}
+          className={`flex items-center gap-2.5 px-4 py-3 rounded-2xl border backdrop-blur-xl
+                      shadow-xl text-[14px] font-semibold animate-toast ${
+            t.ok
+              ? "bg-emerald-500/20 border-emerald-500/30 text-emerald-200"
+              : "bg-red-500/20 border-red-500/30 text-red-300"
+          }`}
+        >
+          <span>{t.ok ? "✓" : "✗"}</span>
+          {t.msg}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// ─── Props ────────────────────────────────────────────────────────────────────
 interface Props {
   user: User;
   tournament: Tournament;
   participants: Participant[];
   initialMatches: Match[];
+  tournamentTables?: TournamentTable[];
 }
-
-const STATUS_LABEL: Record<Tournament["status"], string> = {
-  open: "Открыт",
-  in_progress: "В процессе",
-  finished: "Завершён",
-};
-
-const STATUS_COLOR: Record<Tournament["status"], string> = {
-  open: "bg-emerald-100 text-emerald-700",
-  in_progress: "bg-blue-100 text-blue-700",
-  finished: "bg-gray-100 text-gray-600",
-};
 
 export default function TournamentDetailClient({
   user,
-  tournament,
-  participants,
+  tournament: initTournament,
+  participants: initParticipants,
   initialMatches,
+  tournamentTables: initTables = [],
 }: Props) {
-  const router = useRouter();
-  const [currentTournament, setTournament] = useState<Tournament>(tournament);
-  const [matches, setMatches] = useState<Match[]>(initialMatches);
-  const [starting, setStarting] = useState(false);
-  const [startError, setStartError] = useState<string | null>(null);
-  const [scoreMatch, setScoreMatch] = useState<Match | null>(null);
+  const router  = useRouter();
+  // Club admin OR superuser can manage this tournament
+  const isAdmin = user.is_staff ||
+    (initTournament.club_id != null && user.club_ids_admin.includes(initTournament.club_id));
+  const { toasts, show: toast } = useToast();
 
-  const startsAt = currentTournament.starts_at
-    ? new Date(currentTournament.starts_at).toLocaleDateString("ru-RU", {
-        day: "numeric",
-        month: "long",
-        year: "numeric",
-        hour: "2-digit",
-        minute: "2-digit",
+  const [tournament,   setTournament]   = useState<Tournament>(initTournament);
+  const [participants, setParticipants] = useState<Participant[]>(initParticipants);
+  const [matches,      setMatches]      = useState<Match[]>(initialMatches);
+  const [tables,       setTables]       = useState<TournamentTable[]>(initTables);
+  const [groups,       setGroups]       = useState<TournamentGroup[]>([]);
+  const [page, setPage] = useState<Page>(
+    initTournament.status === "in_progress" ? "overview" : "bracket"
+  );
+  const [refreshing,   setRefreshing]   = useState(false);
+  const lastRefresh = useRef(Date.now());
+
+  // Edit
+  const [editing,      setEditing]      = useState(false);
+  const [editName,     setEditName]     = useState(tournament.name);
+  const [editDesc,     setEditDesc]     = useState(tournament.description);
+  const [editStartsAt, setEditStartsAt] = useState(tournament.starts_at?.slice(0, 16) ?? "");
+  const [saving,       setSaving]       = useState(false);
+  const [editError,    setEditError]    = useState<string | null>(null);
+
+  // Modals
+  const [scoreMatch,        setScoreMatch]        = useState<Match | null>(null);
+  const [showAddPlayer,     setShowAddPlayer]     = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+
+  // Start
+  const [starting,   setStarting]   = useState(false);
+  const [startError, setStartError] = useState<string | null>(null);
+
+  // Remove
+  const [removingId, setRemovingId] = useState<number | null>(null);
+
+  // ── Derived ───────────────────────────────────────────────────────────────
+  const liveCount   = matches.filter((m) => m.status === "in_progress").length;
+  const finishedCnt = matches.filter((m) => m.status === "finished").length;
+  const pendingCnt  = matches.filter((m) => m.status === "pending" && m.player1 && m.player2).length;
+  const s           = S[tournament.status];
+  const existingIds = new Set(participants.map((p) => p.user.id));
+  const totalMatches = matches.length;
+
+  const finalMatch = matches.length
+    ? matches.find((m) => m.round_number === Math.max(...matches.map((x) => x.round_number)))
+    : null;
+  const winner = finalMatch?.winner ?? null;
+
+  const startsAtDisplay = tournament.starts_at
+    ? new Date(tournament.starts_at).toLocaleDateString("ru-RU", {
+        day: "numeric", month: "long", year: "numeric",
+        hour: "2-digit", minute: "2-digit",
       })
     : null;
 
-  // ── Start tournament ──────────────────────────────────────────────────────
-  async function handleStart() {
-    setStarting(true);
-    setStartError(null);
+  // ── Auto-refresh every 30s while live ─────────────────────────────────────
+  const refresh = useCallback(async (silent = true) => {
+    if (!silent) setRefreshing(true);
     try {
-      const result = await api.startTournament(currentTournament.id);
-      setTournament(result.tournament);
-      setMatches(result.matches);
-    } catch (err: unknown) {
-      const e = err as Record<string, string>;
-      setStartError(e?.detail ?? "Не удалось начать турнир.");
-    } finally {
-      setStarting(false);
+      const [fm, ft] = await Promise.all([
+        api.getMatches(tournament.id),
+        api.getTournament(tournament.id),
+      ]);
+      setMatches(fm);
+      setTournament(ft);
+      lastRefresh.current = Date.now();
+    } catch { /* silent */ }
+    finally { if (!silent) setRefreshing(false); }
+  }, [tournament.id]);
+
+  useEffect(() => {
+    if (tournament.status !== "in_progress") return;
+    const id = setInterval(() => refresh(true), 30_000);
+    return () => clearInterval(id);
+  }, [tournament.status, refresh]);
+
+  // Load groups for group_playoff format
+  useEffect(() => {
+    if (tournament.format !== "group_playoff" || tournament.status === "open") return;
+    api.getGroups(tournament.id).then(setGroups).catch(() => {});
+  }, [tournament.id, tournament.format, tournament.status]);
+
+  // ── Keyboard shortcut: press 1-9/0 in Overview or Live to open score modal ──
+  useEffect(() => {
+    if (page !== "overview" && page !== "bracket") return;
+    function onKey(e: KeyboardEvent) {
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+      if (e.target instanceof HTMLSelectElement) return;
+      const n = e.key === "0" ? 10 : parseInt(e.key);
+      if (isNaN(n) || n < 1 || n > 10) return;
+      const m = matches.find((x) => x.status === "in_progress" && x.table_number === n);
+      if (m) setScoreMatch(m);
     }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [page, matches]);
+
+  // ── Actions ───────────────────────────────────────────────────────────────
+  async function handleSave() {
+    setSaving(true); setEditError(null);
+    try {
+      const updated = await api.updateTournament(tournament.id, {
+        name: editName, description: editDesc, starts_at: editStartsAt || null,
+      });
+      setTournament(updated); setEditing(false);
+      toast("Турнир обновлён");
+    } catch (err: unknown) {
+      setEditError((err as Record<string, string>)?.detail ?? "Не удалось сохранить.");
+    } finally { setSaving(false); }
   }
 
-  // ── Submit score ──────────────────────────────────────────────────────────
-  async function handleScoreSubmit(score1: number, score2: number) {
+  function cancelEdit() {
+    setEditName(tournament.name); setEditDesc(tournament.description);
+    setEditStartsAt(tournament.starts_at?.slice(0, 16) ?? "");
+    setEditing(false); setEditError(null);
+  }
+
+  async function handleDelete() {
+    try { await api.deleteTournament(tournament.id); router.push("/dashboard"); }
+    catch (err: unknown) { alert((err as Record<string, string>)?.detail ?? "Ошибка."); }
+    setShowDeleteConfirm(false);
+  }
+
+  async function handleStart() {
+    setStarting(true); setStartError(null);
+    try {
+      const r = await api.startTournament(tournament.id);
+      setTournament(r.tournament);
+      if (r.groups) {
+        setGroups(r.groups);
+        toast("Турнир начат! Групповой этап создан.");
+      } else {
+        setMatches(r.matches ?? []);
+        toast("Турнир начат! Матчи сгенерированы.");
+      }
+      setPage("overview");
+    } catch (err: unknown) {
+      setStartError((err as Record<string, string>)?.detail ?? "Ошибка.");
+    } finally { setStarting(false); }
+  }
+
+  async function handleScoreSubmit(s1: number, s2: number) {
     if (!scoreMatch) return;
-    const updated = await api.submitScore(currentTournament.id, scoreMatch.id, score1, score2);
-    setMatches((prev) => prev.map((m) => (m.id === updated.id ? updated : m)));
-
-    // Also refresh newly unlocked next-round matches from server
-    const freshMatches = await api.getMatches(currentTournament.id);
-    setMatches(freshMatches);
-
-    // Refresh tournament status (might be finished now)
-    const freshT = await api.getTournament(currentTournament.id);
-    setTournament(freshT);
-
-    setScoreMatch(null);
+    await api.submitScore(tournament.id, scoreMatch.id, s1, s2);
+    const [fm, ft] = await Promise.all([api.getMatches(tournament.id), api.getTournament(tournament.id)]);
+    setMatches(fm); setTournament(ft); setScoreMatch(null);
+    const winner = s1 > s2 ? scoreMatch.player1?.name : scoreMatch.player2?.name;
+    toast(`${winner ?? "Игрок"} победил ${s1}:${s2}`);
   }
 
-  // ── My active matches (for player view) ───────────────────────────────────
-  const myActiveMatches = matches.filter(
-    (m) =>
-      m.status === "in_progress" &&
-      (m.player1?.id === user.id || m.player2?.id === user.id)
-  );
+  async function handleRemove(participantId: number) {
+    setRemovingId(participantId);
+    try {
+      await api.removeParticipant(tournament.id, participantId);
+      setParticipants((p) => p.filter((x) => x.id !== participantId));
+      setTournament((t) => ({ ...t, participant_count: t.participant_count - 1 }));
+      toast("Игрок удалён");
+    } catch (err: unknown) { toast((err as Record<string, string>)?.detail ?? "Ошибка", false); }
+    finally { setRemovingId(null); }
+  }
+
+  function handlePlayerAdded(participant: Participant) {
+    setParticipants((p) => p.find((x) => x.id === participant.id) ? p : [...p, participant]);
+    setTournament((t) => ({ ...t, participant_count: t.participant_count + 1 }));
+    toast(`${participant.user.name} добавлен`);
+  }
+
+  function handleMatchUpdated(updated: Match) {
+    setMatches((m) => m.map((x) => (x.id === updated.id ? updated : x)));
+  }
+
+  // Nav items
+  const navItems: { id: Page; label: string; Icon: React.ElementType; badge?: number; show: boolean }[] = [
+    { id: "overview",  label: "Обзор",     Icon: Zap,        badge: liveCount || undefined, show: tournament.status === "in_progress" },
+    { id: "bracket",   label: "Сетка",     Icon: Trophy,     show: tournament.status !== "in_progress" },
+    { id: "players",   label: "Игроки",    Icon: Users,      badge: participants.length, show: true },
+    { id: "tables",    label: "Столы",     Icon: LayoutGrid, badge: tables.length || undefined, show: isAdmin },
+    { id: "settings",  label: "Настройки", Icon: Settings,   show: isAdmin },
+  ];
+
+  // Progress bar for live tournaments
+  const progress = totalMatches > 0 ? Math.round((finishedCnt / totalMatches) * 100) : 0;
 
   return (
-    <div className="space-y-8">
-      {/* Back */}
-      <Link href="/dashboard" className="text-sm text-blue-600 hover:underline">
-        ← Назад к турнирам
-      </Link>
+    <div className="fixed inset-x-0 bottom-0 top-[52px] flex overflow-hidden">
 
-      {/* Header */}
-      <div>
-        <div className="flex items-center gap-3 flex-wrap">
-          <h1 className="text-2xl font-bold text-gray-900">{currentTournament.name}</h1>
-          <span
-            className={`text-xs font-semibold px-2.5 py-1 rounded-full ${STATUS_COLOR[currentTournament.status]}`}
-          >
-            {STATUS_LABEL[currentTournament.status]}
+      {/* ════════════════════════════════════════════════════════════════
+          SIDEBAR
+      ════════════════════════════════════════════════════════════════ */}
+      <aside className="flex-none w-[60px] sm:w-[220px] flex flex-col
+                        bg-[#070f1d] border-r border-white/[0.07] shrink-0
+                        overflow-hidden">
+
+        {/* Back — goes to club page if club exists, else dashboard */}
+        <Link href={tournament.club_id ? `/dashboard/clubs/${tournament.club_id}` : "/dashboard"}
+          className="flex items-center gap-3 px-4 py-4
+                     text-white/40 hover:text-white hover:bg-white/[0.04]
+                     transition-all border-b border-white/[0.06] shrink-0 group">
+          <ArrowLeft size={17} className="shrink-0 group-hover:-translate-x-0.5 transition-transform" />
+          <span className="hidden sm:block text-[13px] font-medium">
+            {tournament.club_name ?? "Назад"}
           </span>
+        </Link>
+
+        {/* Tournament info */}
+        <div className="hidden sm:block px-4 py-4 border-b border-white/[0.06] shrink-0">
+          {/* Mini card with gradient avatar */}
+          <div className="flex items-center gap-2.5 mb-3">
+            {(() => {
+              const [g1, g2] = avatarGrad(tournament.name);
+              return (
+                <div className="w-8 h-8 rounded-lg flex items-center justify-center
+                                text-[13px] font-black text-white shrink-0"
+                     style={{
+                       background: `linear-gradient(135deg, ${g1}, ${g2})`,
+                       boxShadow: `0 3px 8px ${g1}50`,
+                     }}>
+                  {tournament.name.charAt(0).toUpperCase()}
+                </div>
+              );
+            })()}
+            <div className="min-w-0">
+              <p className="text-[13px] font-bold text-white leading-snug truncate">
+                {tournament.name}
+              </p>
+              <div className="flex items-center gap-1.5 mt-0.5">
+                <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${s.dot}`} />
+                <span className="text-[11px] text-white/35">{s.label}</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Stats row */}
+          <div className="flex items-center gap-3 text-[11px] text-white/30 mb-2.5">
+            <span className="flex items-center gap-1">
+              <Users size={10} />{participants.length} уч.
+            </span>
+            {totalMatches > 0 && (
+              <span className="flex items-center gap-1">
+                <Trophy size={10} />{totalMatches} матчей
+              </span>
+            )}
+          </div>
+
+          {/* Progress bar */}
+          {tournament.status === "in_progress" && totalMatches > 0 && (
+            <div>
+              <div className="flex items-center justify-between mb-1.5">
+                <span className="text-[10px] text-white/25">Прогресс</span>
+                <span className="text-[10px] font-bold text-white/40">{finishedCnt}/{totalMatches}</span>
+              </div>
+              <div className="h-1.5 bg-white/[0.08] rounded-full overflow-hidden">
+                <div
+                  className="h-full rounded-full transition-all duration-700"
+                  style={{
+                    width: `${progress}%`,
+                    background: "linear-gradient(90deg, #3b82f6, #06b6d4)",
+                  }}
+                />
+              </div>
+            </div>
+          )}
         </div>
-        {currentTournament.description && (
-          <p className="text-gray-500 mt-2">{currentTournament.description}</p>
+
+        {/* Nav */}
+        <nav className="flex-1 py-2 overflow-y-auto">
+          {navItems.filter((n) => n.show).map(({ id, label, Icon, badge }) => {
+            const active = page === id;
+            return (
+              <button key={id} onClick={() => setPage(id)}
+                className={`w-full flex items-center gap-3 px-4 py-3
+                            text-left transition-all relative group ${
+                  active
+                    ? "bg-blue-600/[0.14] text-white"
+                    : "text-white/35 hover:text-white/75 hover:bg-white/[0.04]"
+                }`}>
+                {active && (
+                  <span className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-7
+                                   bg-blue-500 rounded-r-full" />
+                )}
+                <Icon size={18} className={`shrink-0 transition-colors ${
+                  active ? "text-blue-400" : "group-hover:text-white/60"
+                }`} />
+                <span className="hidden sm:block text-[14px] font-semibold flex-1">
+                  {label}
+                </span>
+                {badge !== undefined && badge > 0 && (
+                  <span className={`hidden sm:flex h-5 min-w-[20px] px-1.5 rounded-full text-[11px]
+                                    font-bold items-center justify-center ${
+                    id === "overview"
+                      ? "bg-blue-500/30 text-blue-200"
+                      : "bg-white/[0.10] text-white/45"
+                  }`}>
+                    {badge}
+                  </span>
+                )}
+                {badge !== undefined && badge > 0 && (
+                  <span className={`sm:hidden absolute top-2 right-2.5 w-2 h-2 rounded-full ${
+                    id === "overview" ? "bg-blue-400 animate-pulse" : "bg-white/25"
+                  }`} />
+                )}
+              </button>
+            );
+          })}
+        </nav>
+
+        {/* Refresh button (live only) */}
+        {tournament.status === "in_progress" && (
+          <button onClick={() => refresh(false)} disabled={refreshing}
+            className="hidden sm:flex items-center gap-2 px-4 py-3 border-t border-white/[0.06]
+                       text-white/25 hover:text-white/60 hover:bg-white/[0.03]
+                       transition-all shrink-0 text-[12px]">
+            <RefreshCw size={13} className={refreshing ? "animate-spin" : ""} />
+            Обновить
+          </button>
         )}
-        <div className="flex items-center gap-4 mt-3 text-sm text-gray-500 flex-wrap">
-          {startsAt && <span>📅 {startsAt}</span>}
-          <span>👥 {currentTournament.participant_count} участников</span>
-          <span>Создан: {new Date(currentTournament.created_at).toLocaleDateString("ru-RU")}</span>
+
+        {/* Winner */}
+        {tournament.status === "finished" && winner && (
+          <div className="hidden sm:block px-4 py-4 border-t border-white/[0.06] shrink-0">
+            <p className="text-[10px] font-bold text-amber-400/50 uppercase tracking-wider mb-1">
+              Победитель
+            </p>
+            <div className="flex items-center gap-2">
+              <span className="text-xl">🏆</span>
+              <p className="text-[13px] font-bold text-amber-300 truncate">{winner.name}</p>
+            </div>
+          </div>
+        )}
+      </aside>
+
+      {/* ════════════════════════════════════════════════════════════════
+          MAIN
+      ════════════════════════════════════════════════════════════════ */}
+      <main className="flex-1 relative overflow-hidden bg-[#050c18]">
+
+        {/* ── OVERVIEW (bracket + groups + live combined) ─────────── */}
+        {page === "overview" && tournament.status === "in_progress" && (
+          <OverviewPanel
+            tournament={tournament}
+            matches={matches}
+            tables={tables}
+            groups={groups}
+            user={user}
+            isAdmin={isAdmin}
+            refreshing={refreshing}
+            onRefresh={() => refresh(false)}
+            onEnterScore={setScoreMatch}
+            onMatchUpdated={handleMatchUpdated}
+            onGroupsChange={setGroups}
+            onMatchesChange={setMatches}
+            onTournamentChange={setTournament}
+          />
+        )}
+
+        {/* ── BRACKET ─────────────────────────────────────────────── */}
+        {page === "bracket" && (
+          <div className="absolute inset-0 overflow-y-auto">
+            {matches.length > 0 ? (
+              tournament.format === "group_playoff" ? (
+                <ConsolationBracketView
+                  matches={matches}
+                  user={user}
+                  isAdmin={isAdmin}
+                  onEnterScore={setScoreMatch}
+                />
+              ) : (
+                <BracketFlow
+                  matches={matches}
+                  currentUser={user}
+                  isAdmin={isAdmin}
+                  onEnterScore={setScoreMatch}
+                  className="w-full h-full bg-[#050c18]"
+                />
+              )
+            ) : (
+              <div className="h-full flex flex-col items-center justify-center gap-3">
+                <Trophy size={56} className="text-white/[0.06]" />
+                <p className="text-[15px] text-white/20">
+                  {tournament.status === "open" ? "Турнир не начат" : "Нет матчей"}
+                </p>
+              </div>
+            )}
+
+            {/* Start prompt */}
+            {isAdmin && tournament.status === "open" && (
+              <div className="absolute bottom-6 inset-x-0 flex justify-center px-4">
+                <div className="bg-[#0a1a30]/95 backdrop-blur-xl border border-amber-400/25
+                                rounded-2xl px-5 py-4 flex items-center gap-4
+                                w-full max-w-md shadow-2xl">
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[14px] font-bold text-white">
+                      {participants.length < 2
+                        ? `Добавьте ещё ${2 - participants.length} участн.`
+                        : `${participants.length} участников — готово к старту`}
+                    </p>
+                    {startError && <p className="text-[12px] text-red-400 mt-0.5">{startError}</p>}
+                  </div>
+                  <button onClick={handleStart} disabled={starting || participants.length < 2}
+                    className="px-4 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400
+                               active:scale-[.97] disabled:opacity-40 text-white font-bold
+                               text-[14px] transition-all whitespace-nowrap">
+                    {starting ? "..." : "🏆 Начать"}
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Winner banner */}
+            {tournament.status === "finished" && winner && (
+              <div className="absolute top-4 inset-x-0 flex justify-center px-4 pointer-events-none">
+                <div className="bg-[#0a1a30]/90 backdrop-blur-xl border border-amber-400/30
+                                rounded-2xl px-5 py-3 flex items-center gap-3 shadow-2xl">
+                  <span className="text-2xl">🏆</span>
+                  <div>
+                    <p className="text-[10px] font-bold text-amber-400/60 uppercase tracking-wider">
+                      Победитель турнира
+                    </p>
+                    <p className="text-[18px] font-black text-amber-300">{winner.name}</p>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ── PLAYERS ─────────────────────────────────────────────── */}
+        {page === "players" && (
+          <div className="h-full flex flex-col">
+            <div className="flex items-center justify-between px-6 py-4
+                            border-b border-white/[0.07] shrink-0 bg-[#070f1d]/60">
+              <div>
+                <h2 className="text-[17px] font-bold text-white">Участники</h2>
+                <p className="text-[12px] text-white/30 mt-0.5">
+                  {participants.length} зарегистрировано
+                </p>
+              </div>
+              {isAdmin && tournament.status === "open" && (
+                <button onClick={() => setShowAddPlayer(true)} className={BTN_P}>
+                  <UserPlus size={15} />Добавить
+                </button>
+              )}
+            </div>
+
+            <div className="flex-1 overflow-y-auto">
+              {participants.length === 0 ? (
+                <div className="h-full flex flex-col items-center justify-center gap-4">
+                  <Users size={44} className="text-white/[0.07]" />
+                  <div className="text-center">
+                    <p className="text-[16px] font-semibold text-white/20">Нет участников</p>
+                    <p className="text-[13px] text-white/15 mt-1">
+                      Добавьте игроков вручную или через QR‑код
+                    </p>
+                  </div>
+                  {isAdmin && tournament.status === "open" && (
+                    <button onClick={() => setShowAddPlayer(true)} className={BTN_P}>
+                      <UserPlus size={15} />Добавить первого игрока
+                    </button>
+                  )}
+                </div>
+              ) : (
+                <div className="max-w-2xl mx-auto px-5 py-5">
+                  <div className="rounded-2xl border border-white/[0.08] overflow-hidden"
+                       style={{ background: "var(--card)" }}>
+                    {participants.map((p, idx) => {
+                      const [g1, g2] = avatarGrad(p.user.name);
+                      const isWinner = tournament.status === "finished" && winner?.id === p.user.id;
+                      return (
+                        <div key={p.id}>
+                          <div className={`flex items-center gap-4 px-5 py-3.5 transition-colors ${
+                            isWinner ? "bg-amber-400/[0.04]" : "hover:bg-white/[0.02]"
+                          }`}>
+                            {/* Rank */}
+                            <div className="w-7 h-7 rounded-full bg-white/[0.05]
+                                            flex items-center justify-center text-[12px] font-bold
+                                            text-white/20 shrink-0 select-none tabular-nums">
+                              {idx + 1}
+                            </div>
+                            {/* Gradient avatar */}
+                            <div className="w-9 h-9 rounded-xl flex items-center justify-center
+                                            text-[14px] font-black text-white shrink-0"
+                                 style={{
+                                   background: `linear-gradient(135deg, ${g1}, ${g2})`,
+                                   boxShadow: `0 4px 10px ${g1}55`,
+                                 }}>
+                              {p.user.name.charAt(0).toUpperCase()}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2">
+                                <p className="text-[14px] font-semibold text-white truncate">
+                                  {p.user.name}
+                                </p>
+                                {isWinner && (
+                                  <span className="text-[11px] font-bold text-amber-300
+                                                   bg-amber-400/15 px-2 py-0.5 rounded-full
+                                                   border border-amber-400/20 shrink-0">
+                                    🏆 Победитель
+                                  </span>
+                                )}
+                              </div>
+                              <div className="flex items-center gap-2 mt-0.5">
+                                <p className="text-[12px] text-white/25">{p.user.phone}</p>
+                                <span className="text-[11px] text-blue-300/60 font-medium">
+                                  Рейтинг: {p.user.rating}
+                                </span>
+                              </div>
+                            </div>
+                            <div className="hidden sm:flex items-center gap-1.5
+                                            text-[11px] text-white/15 shrink-0">
+                              <Calendar size={10} />
+                              {new Date(p.joined_at).toLocaleDateString("ru-RU")}
+                            </div>
+                            {isAdmin && tournament.status === "open" && (
+                              <button onClick={() => handleRemove(p.id)} disabled={removingId === p.id}
+                                className="w-7 h-7 rounded-full hover:bg-red-500/15 flex items-center
+                                           justify-center text-white/15 hover:text-red-400
+                                           disabled:opacity-40 transition-all shrink-0">
+                                <X size={14} />
+                              </button>
+                            )}
+                          </div>
+                          {idx < participants.length - 1 && (
+                            <div className="h-px bg-white/[0.04] ml-[88px]" />
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* ── TABLES ──────────────────────────────────────────────── */}
+        {page === "tables" && isAdmin && (
+          <TablesTab
+            tournamentId={tournament.id}
+            tables={tables}
+            onTablesChange={setTables}
+          />
+        )}
+
+        {/* ── SETTINGS ────────────────────────────────────────────── */}
+        {page === "settings" && isAdmin && (
+          <div className="h-full flex flex-col">
+            <div className="px-6 py-4 border-b border-white/[0.07] shrink-0 bg-[#070f1d]/60">
+              <h2 className="text-[17px] font-bold text-white">Настройки</h2>
+              <p className="text-[12px] text-white/30 mt-0.5">{tournament.name}</p>
+            </div>
+
+            <div className="flex-1 overflow-y-auto">
+              <div className="max-w-2xl mx-auto px-5 py-6 space-y-7">
+
+                {/* Tournament info card */}
+                <section>
+                  <p className={LABEL + " mb-3"}>Информация о турнире</p>
+                  {editing ? (
+                    <div className="space-y-3 bg-white/[0.03] rounded-2xl border border-white/[0.08] p-5">
+                      <input value={editName} onChange={(e) => setEditName(e.target.value)}
+                        placeholder="Название" autoFocus className={INPUT} />
+                      <textarea value={editDesc} onChange={(e) => setEditDesc(e.target.value)}
+                        placeholder="Описание" rows={2} className={INPUT + " resize-none"} />
+                      <div className="space-y-1.5">
+                        <label className={LABEL}>Дата начала</label>
+                        <input type="datetime-local" value={editStartsAt}
+                          onChange={(e) => setEditStartsAt(e.target.value)} className={INPUT} />
+                      </div>
+                      {editError && (
+                        <p className="text-[13px] text-red-400 bg-red-500/10 border border-red-500/20
+                                      rounded-xl px-4 py-2.5">{editError}</p>
+                      )}
+                      <div className="flex gap-2.5">
+                        <button onClick={handleSave} disabled={saving || !editName.trim()} className={BTN_P}>
+                          <Check size={15} />{saving ? "Сохранение..." : "Сохранить"}
+                        </button>
+                        <button onClick={cancelEdit} className={BTN_G}><X size={15} />Отмена</button>
+                      </div>
+                    </div>
+                  ) : (
+                    <button onClick={() => setEditing(true)}
+                      className="w-full flex items-center gap-4 px-5 py-4 rounded-2xl
+                                 border border-white/[0.08] bg-white/[0.03] hover:bg-white/[0.05]
+                                 transition-all text-left group">
+                      <div className="flex-1 min-w-0">
+                        <p className="text-[15px] font-bold text-white">{tournament.name}</p>
+                        {tournament.description && (
+                          <p className="text-[13px] text-white/40 mt-0.5 truncate">
+                            {tournament.description}
+                          </p>
+                        )}
+                        {startsAtDisplay && (
+                          <p className="text-[12px] text-white/25 mt-2 flex items-center gap-1.5">
+                            <Clock size={11} />{startsAtDisplay}
+                          </p>
+                        )}
+                      </div>
+                      <Pencil size={15} className="text-white/20 group-hover:text-white/50 shrink-0 transition-colors" />
+                    </button>
+                  )}
+                </section>
+
+                {/* Stats */}
+                <section>
+                  <p className={LABEL + " mb-3"}>Статистика</p>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                    {[
+                      { label: "Участников", value: participants.length, color: "text-blue-300",    icon: <Users size={14} /> },
+                      { label: "Матчей",     value: totalMatches,        color: "text-white/80",   icon: <Trophy size={14} /> },
+                      { label: "Идут",       value: liveCount,            color: "text-cyan-400",  icon: <Zap size={14} /> },
+                      { label: "Сыграно",    value: finishedCnt,          color: "text-emerald-400", icon: <Check size={14} /> },
+                    ].map(({ label, value, color, icon }) => (
+                      <div key={label} className="border border-white/[0.07] rounded-2xl p-4 text-center"
+                           style={{ background: "var(--elevated)" }}>
+                        <div className={`flex justify-center mb-2 ${color} opacity-50`}>{icon}</div>
+                        <p className={`text-[30px] font-black tabular-nums leading-none ${color}`}>
+                          {value}
+                        </p>
+                        <p className="text-[11px] text-white/25 mt-1.5 font-medium">{label}</p>
+                      </div>
+                    ))}
+                  </div>
+                </section>
+
+                {/* QR Code */}
+                <section>
+                  <p className={LABEL + " mb-3"}>QR‑код для вступления</p>
+                  <div className="bg-white/[0.03] border border-white/[0.08] rounded-2xl p-5">
+                    <QRCodeDisplay joinToken={tournament.join_token} />
+                  </div>
+                </section>
+
+                {/* Actions */}
+                {tournament.status === "open" && (
+                  <section>
+                    <p className={LABEL + " mb-3"}>Действия</p>
+                    <button onClick={() => setShowDeleteConfirm(true)} className={BTN_D + " w-full"}>
+                      <Trash2 size={15} />Удалить турнир
+                    </button>
+                  </section>
+                )}
+
+              </div>
+            </div>
+          </div>
+        )}
+      </main>
+
+      {/* ════════════════════════════════════════════════════════════════
+          MODALS + TOASTS
+      ════════════════════════════════════════════════════════════════ */}
+
+      <ToastStack toasts={toasts} />
+
+      {scoreMatch && (
+        <ScoreModal match={scoreMatch} onClose={() => setScoreMatch(null)} onSubmit={handleScoreSubmit} />
+      )}
+
+      {showAddPlayer && (
+        <AddPlayerModal
+          tournamentId={tournament.id}
+          existingUserIds={existingIds}
+          onClose={() => setShowAddPlayer(false)}
+          onAdded={handlePlayerAdded}
+        />
+      )}
+
+      {/* ════════════════════════════════════════════════════════════════
+          TABLES TAB component (defined outside so it can call hooks)
+      ════════════════════════════════════════════════════════════════ */}
+
+      {showDeleteConfirm && (
+        <div
+          className="fixed inset-0 z-50 flex items-end sm:items-center justify-center
+                     bg-black/70 backdrop-blur-sm p-4"
+          onClick={(e) => { if (e.target === e.currentTarget) setShowDeleteConfirm(false); }}
+        >
+          <div className="border border-white/[0.12] rounded-[24px]
+                          shadow-2xl w-full max-w-sm overflow-hidden"
+               style={{ background: "var(--elevated)" }}>
+            <div className="px-6 pt-7 pb-5 text-center">
+              <div className="w-14 h-14 rounded-full bg-red-500/15 border border-red-500/20
+                              flex items-center justify-center mx-auto mb-4">
+                <Trash2 size={24} className="text-red-400" />
+              </div>
+              <h2 className="text-[18px] font-bold text-white">Удалить турнир?</h2>
+              <p className="text-[14px] text-white/40 mt-2 leading-relaxed">
+                «{tournament.name}» и все связанные данные будут удалены навсегда.
+              </p>
+            </div>
+            <div className="border-t border-white/[0.07]">
+              <button onClick={handleDelete}
+                className="w-full py-4 text-[16px] font-bold text-red-400
+                           hover:bg-red-500/[0.05] transition-colors">
+                Удалить навсегда
+              </button>
+              <div className="h-px bg-white/[0.06]" />
+              <button onClick={() => setShowDeleteConfirm(false)}
+                className="w-full py-4 text-[16px] font-medium text-blue-400
+                           hover:bg-white/[0.03] transition-colors">
+                Отмена
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Groups Tab ────────────────────────────────────────────────────────────────
+
+const GINPUT = "w-16 px-2 py-1.5 bg-white/[0.08] border border-white/[0.12] rounded-lg text-[14px] text-white text-center focus:outline-none focus:border-blue-500/60 transition-all [color-scheme:dark]";
+
+function GroupsTab({
+  tournamentId,
+  groups,
+  isAdmin,
+  onGroupsChange,
+  onPlayoffStarted,
+}: {
+  tournamentId: string;
+  groups: TournamentGroup[];
+  isAdmin: boolean;
+  onGroupsChange: (g: TournamentGroup[]) => void;
+  onPlayoffStarted: (matches: Match[], tournament: Tournament) => void;
+}) {
+  const [scores, setScores] = useState<Record<number, { s1: string; s2: string }>>({});
+  const [submitting, setSubmitting] = useState<number | null>(null);
+  const [startingPlayoff, setStartingPlayoff] = useState(false);
+
+  // Check if all group matches are finished
+  const allFinished = groups.length > 0 && groups.every((g) =>
+    g.matches.every((m) => m.status === "finished")
+  );
+
+  function setMatchScore(matchId: number, field: "s1" | "s2", val: string) {
+    setScores((prev) => {
+      const existing = prev[matchId] ?? { s1: "", s2: "" };
+      return { ...prev, [matchId]: { ...existing, [field]: val } };
+    });
+  }
+
+  async function submitScore(groupId: number, match: GroupMatch) {
+    const sc = scores[match.id];
+    if (!sc) return;
+    const s1 = parseInt(sc.s1 ?? "");
+    const s2 = parseInt(sc.s2 ?? "");
+    if (isNaN(s1) || isNaN(s2)) return;
+    setSubmitting(match.id);
+    try {
+      const updated = await api.submitGroupScore(tournamentId, groupId, match.id, s1, s2);
+      onGroupsChange(
+        groups.map((g) =>
+          g.id === groupId
+            ? {
+                ...g,
+                matches: g.matches.map((m) => (m.id === match.id ? updated : m)),
+                participants: g.participants.map((p) => {
+                  // Refresh participants by re-fetching groups
+                  return p;
+                }),
+              }
+            : g
+        )
+      );
+      // Refresh groups to get updated standings
+      const fresh = await api.getGroups(tournamentId);
+      onGroupsChange(fresh);
+      setScores((prev) => { const n = { ...prev }; delete n[match.id]; return n; });
+    } catch { /* silent */ }
+    finally { setSubmitting(null); }
+  }
+
+  async function handleStartPlayoff() {
+    setStartingPlayoff(true);
+    try {
+      const r = await api.startPlayoff(tournamentId);
+      onPlayoffStarted(r.matches, r.tournament);
+    } catch { /* silent */ }
+    finally { setStartingPlayoff(false); }
+  }
+
+  if (groups.length === 0) {
+    return (
+      <div className="h-full flex items-center justify-center">
+        <p className="text-white/25 text-[15px]">Группы не созданы</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="h-full flex flex-col">
+      <div className="px-6 py-4 border-b border-white/[0.07] shrink-0 bg-[#070f1d]/60 flex items-center justify-between">
+        <div>
+          <h2 className="text-[17px] font-bold text-white">Группы</h2>
+          <p className="text-[12px] text-white/30 mt-0.5">{groups.length} групп</p>
+        </div>
+        {isAdmin && allFinished && (
+          <button
+            onClick={handleStartPlayoff}
+            disabled={startingPlayoff}
+            className="px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 active:scale-[.97]
+                       disabled:opacity-40 text-white font-bold text-[14px] transition-all"
+          >
+            {startingPlayoff ? "..." : "Начать плей-офф"}
+          </button>
+        )}
+      </div>
+
+      <div className="flex-1 overflow-y-auto">
+        <div className="max-w-4xl mx-auto px-5 py-5 space-y-8">
+          {groups.map((group) => (
+            <div key={group.id} className="space-y-4">
+              <h3 className="text-[13px] font-bold uppercase tracking-[0.14em] text-white/40">
+                Группа {group.name}
+              </h3>
+
+              {/* Standings table */}
+              <div className="rounded-2xl border border-white/[0.08] overflow-hidden"
+                   style={{ background: "var(--card)" }}>
+                <div className="grid grid-cols-[1fr_auto_auto_auto_auto_auto] gap-0 text-[11px] font-bold uppercase tracking-wider text-white/30 px-5 py-2.5 border-b border-white/[0.06]">
+                  <span>Игрок</span>
+                  <span className="w-10 text-center">Рейт.</span>
+                  <span className="w-8 text-center">В</span>
+                  <span className="w-8 text-center">П</span>
+                  <span className="w-8 text-center">О</span>
+                  <span className="w-12 text-center">Разн.</span>
+                </div>
+                {group.participants.map((gp, idx) => (
+                  <div key={gp.id}
+                    className={`grid grid-cols-[1fr_auto_auto_auto_auto_auto] items-center gap-0 px-5 py-3 ${
+                      idx < group.participants.length - 1 ? "border-b border-white/[0.04]" : ""
+                    }`}
+                  >
+                    <span className="text-[14px] font-semibold text-white truncate pr-3">{gp.user.name}</span>
+                    <span className="w-10 text-center text-[12px] text-blue-300/60">{gp.user.rating}</span>
+                    <span className="w-8 text-center text-[13px] text-emerald-400">{gp.wins}</span>
+                    <span className="w-8 text-center text-[13px] text-red-400/70">{gp.losses}</span>
+                    <span className="w-8 text-center text-[13px] font-bold text-white">{gp.points}</span>
+                    <span className={`w-12 text-center text-[12px] ${gp.diff >= 0 ? "text-emerald-400/70" : "text-red-400/70"}`}>
+                      {gp.diff >= 0 ? "+" : ""}{gp.diff}
+                    </span>
+                  </div>
+                ))}
+              </div>
+
+              {/* Matches */}
+              <div className="space-y-2">
+                {group.matches.map((m) => {
+                  const sc = scores[m.id] ?? { s1: "", s2: "" };
+                  const done = m.status === "finished";
+                  return (
+                    <div key={m.id}
+                      className={`rounded-xl border px-4 py-3 flex items-center gap-3 ${
+                        done
+                          ? "border-white/[0.06] bg-white/[0.02]"
+                          : "border-white/[0.10] bg-white/[0.04]"
+                      }`}
+                    >
+                      <span className={`text-[13px] font-semibold flex-1 truncate ${done && m.winner?.id === m.player1.id ? "text-emerald-300" : "text-white/70"}`}>
+                        {m.player1.name}
+                      </span>
+                      {done ? (
+                        <span className="text-[15px] font-black text-white tabular-nums">
+                          {m.score1} : {m.score2}
+                        </span>
+                      ) : isAdmin ? (
+                        <div className="flex items-center gap-1.5 shrink-0">
+                          <input
+                            type="number"
+                            min={0}
+                            value={sc.s1}
+                            onChange={(e) => setMatchScore(m.id, "s1", e.target.value)}
+                            className={GINPUT}
+                            placeholder="0"
+                          />
+                          <span className="text-white/30 text-[13px]">:</span>
+                          <input
+                            type="number"
+                            min={0}
+                            value={sc.s2}
+                            onChange={(e) => setMatchScore(m.id, "s2", e.target.value)}
+                            className={GINPUT}
+                            placeholder="0"
+                          />
+                          <button
+                            onClick={() => submitScore(group.id, m)}
+                            disabled={submitting === m.id || !sc.s1 || !sc.s2}
+                            className="px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500
+                                       disabled:opacity-40 text-white font-semibold text-[12px]
+                                       transition-all whitespace-nowrap"
+                          >
+                            {submitting === m.id ? "..." : "OK"}
+                          </button>
+                        </div>
+                      ) : (
+                        <span className="text-[13px] text-white/25">vs</span>
+                      )}
+                      <span className={`text-[13px] font-semibold flex-1 truncate text-right ${done && m.winner?.id === m.player2.id ? "text-emerald-300" : "text-white/70"}`}>
+                        {m.player2.name}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Overview Panel ────────────────────────────────────────────────────────────
+
+interface OverviewProps {
+  tournament: Tournament;
+  matches: Match[];
+  tables: TournamentTable[];
+  groups: TournamentGroup[];
+  user: User;
+  isAdmin: boolean;
+  refreshing: boolean;
+  onRefresh: () => void;
+  onEnterScore: (m: Match) => void;
+  onMatchUpdated: (m: Match) => void;
+  onGroupsChange: (g: TournamentGroup[]) => void;
+  onMatchesChange: (m: Match[]) => void;
+  onTournamentChange: (t: Tournament) => void;
+}
+
+function OverviewPanel({
+  tournament, matches, tables, groups, user, isAdmin,
+  refreshing, onRefresh, onEnterScore, onMatchUpdated,
+  onGroupsChange, onMatchesChange, onTournamentChange,
+}: OverviewProps) {
+  const activeTables = tables.filter((t) => t.is_active);
+  const live         = matches.filter((m) => m.status === "in_progress");
+  const pendingAll   = matches.filter((m) => m.status === "pending");
+  const pendingReady = pendingAll.filter((m) => m.player1 && m.player2);
+  // usedNums must include BOTH bracket match tables AND group match tables
+  // so a table occupied by a group match doesn't appear free for another
+  const usedNums = new Set<number>([
+    ...live.flatMap((m) => m.table_number ? [m.table_number] : []),
+    // group matches resolved later (after groupMatchesLive is derived)
+  ]);
+  const tableNameMap = Object.fromEntries(tables.map((t) => [t.number, t.display_name]));
+  // freeTables will be recalculated after groupMatchesLive is known (see below)
+  const [assigning,      setAssigning]      = useState<number | null>(null);
+  const [groupAssigning, setGroupAssigning] = useState<number | null>(null);
+  const [groupScoreMatch, setGroupScoreMatch] = useState<(GroupMatch & { groupId: number; groupName: string }) | null>(null);
+
+  async function assignGroupTable(groupId: number, matchId: number, tableNum: number | null) {
+    setGroupAssigning(matchId);
+    try {
+      const updated = await api.assignGroupMatchTable(tournament.id, groupId, matchId, tableNum);
+      onGroupsChange(groups.map((g) => g.id === groupId
+        ? { ...g, matches: g.matches.map((m) => m.id === matchId ? updated : m) }
+        : g
+      ));
+    } catch { /* silent */ }
+    finally { setGroupAssigning(null); }
+  }
+
+  const isGroupPhase = tournament.format === "group_playoff" && groups.length > 0 && matches.length === 0;
+
+  // Group phase: live = in_progress group matches; callable = pending matches
+  // where NEITHER player is currently at a table (non-conflicting schedule)
+  const allGroupMatches     = isGroupPhase ? groups.flatMap((g) => g.matches.map((m) => ({ ...m, groupId: g.id, groupName: g.name }))) : [];
+  const groupMatchesLive = allGroupMatches.filter((m) => m.status === "in_progress");
+
+  // Now that we know groupMatchesLive, include their table numbers so group
+  // matches don't appear "free" when assigning another group match
+  groupMatchesLive.forEach((m) => { if (m.table_number) usedNums.add(m.table_number); });
+  const freeTables = activeTables.filter((t) => !usedNums.has(t.number));
+
+  // Players currently at a table (bracket or group match in_progress)
+  const atTableIds = new Set<string>([
+    ...groupMatchesLive.flatMap((m) => [m.player1.id, m.player2.id]),
+    ...live.flatMap((m) => [m.player1?.id, m.player2?.id].filter(Boolean) as string[]),
+  ]);
+
+  // Greedy non-conflicting pass: each player appears at most once in the queue.
+  // Walk through all pending matches in order; once a player is picked for a
+  // callable match, skip any later match involving that player.
+  const allPending = allGroupMatches.filter((m) => m.status === "pending");
+  const scheduledIds = new Set<string>(atTableIds); // starts with already-busy players
+  const groupMatchesPending: typeof allGroupMatches = [];
+  const groupMatchesBlocked: typeof allGroupMatches = [];
+
+  for (const m of allPending) {
+    if (!scheduledIds.has(m.player1.id) && !scheduledIds.has(m.player2.id)) {
+      groupMatchesPending.push(m);
+      scheduledIds.add(m.player1.id);
+      scheduledIds.add(m.player2.id);
+    } else {
+      groupMatchesBlocked.push(m);
+    }
+  }
+  const hasGroups    = groups.length > 0;
+  const hasBracket   = matches.length > 0;
+
+  // Toggle between groups view and bracket view in center
+  // Use format + matches.length (server data, available immediately) so the
+  // correct tab is shown on landing before the async groups fetch completes.
+  const [centerView, setCenterView] = useState<"bracket" | "groups">(
+    tournament.format === "group_playoff" && matches.length === 0 ? "groups" : "bracket"
+  );
+
+  async function assignTable(match: Match, tableNum: number | null) {
+    setAssigning(match.id);
+    try {
+      const updated = await api.assignTable(tournament.id, match.id, tableNum);
+      onMatchUpdated(updated);
+    } catch { /* silent */ }
+    finally { setAssigning(null); }
+  }
+
+  return (
+    <>
+    <div className="h-full flex flex-col">
+
+      {/* ── Top bar: stats + table pills ── */}
+      <div className="shrink-0 border-b border-white/[0.07] bg-[#070f1d]/80 px-4 py-2 flex items-center gap-2.5 flex-wrap">
+        {[
+          { label: "Идут",   value: live.length + groupMatchesLive.length, color: "bg-blue-500/20 text-blue-300 border-blue-500/25" },
+          { label: "Ждут",   value: isGroupPhase ? allGroupMatches.filter(m => m.status === "pending").length : pendingReady.length, color: "bg-white/[0.07] text-white/40 border-white/[0.07]" },
+          { label: "Готово", value: isGroupPhase ? allGroupMatches.filter(m => m.status === "finished").length : matches.filter(m => m.status === "finished").length,
+            color: "bg-emerald-500/15 text-emerald-400 border-emerald-500/20" },
+        ].map(({ label, value, color }) => (
+          <span key={label} className={`text-[11px] font-semibold px-2.5 py-1 rounded-xl border shrink-0 ${color}`}>
+            {value} {label}
+          </span>
+        ))}
+
+        <div className="w-px h-4 bg-white/[0.08] mx-0.5 shrink-0" />
+
+        {activeTables.map((t) => {
+          const bracketM = live.find((x) => x.table_number === t.number);
+          const groupM   = groupMatchesLive.find((x) => x.table_number === t.number);
+          const isActive = !!(bracketM || groupM);
+          const title    = bracketM
+            ? `${bracketM.player1?.name} vs ${bracketM.player2?.name} — ввести счёт`
+            : groupM
+            ? `${groupM.player1.name} vs ${groupM.player2.name} — ввести счёт`
+            : `${t.display_name} свободен`;
+          return (
+            <button key={t.id} disabled={!isActive}
+              onClick={() => {
+                if (bracketM) onEnterScore(bracketM);
+                else if (groupM) setGroupScoreMatch(groupM);
+              }}
+              title={title}
+              className={`flex items-center gap-1 px-2 py-0.5 rounded-lg text-[11px] font-bold
+                          transition-all shrink-0 ${
+                isActive ? "bg-blue-600 text-white cursor-pointer hover:bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.4)]"
+                         : "bg-white/[0.04] text-white/15 cursor-default"
+              }`}>
+              {t.display_name}
+              {isActive && <span className="w-1.5 h-1.5 rounded-full bg-blue-300 animate-pulse" />}
+            </button>
+          );
+        })}
+
+        <button onClick={onRefresh} disabled={refreshing}
+          className="ml-auto flex items-center gap-1.5 text-[11px] text-white/25 hover:text-white/60 transition-colors shrink-0">
+          <RefreshCw size={12} className={refreshing ? "animate-spin" : ""} />
+        </button>
+      </div>
+
+      {/* ── 3-column body ── */}
+      <div className="flex-1 min-h-0 flex overflow-hidden">
+
+
+        {/* ── Center: bracket OR group matches (toggle) ── */}
+        <div className="flex-1 min-w-0 flex flex-col overflow-hidden bg-[#050c18]">
+          {/* Toggle when both views available */}
+          {hasGroups && (
+            <div className="shrink-0 flex items-center gap-1 px-3 py-2 border-b border-white/[0.06]
+                            bg-[#070f1d]/60">
+              {[
+                { v: "groups"  as const, label: "Группы" },
+                { v: "bracket" as const, label: "Сетка"  },
+              ].map(({ v, label }) => (
+                <button key={v} onClick={() => setCenterView(v)}
+                  className={`px-3 py-1 rounded-lg text-[12px] font-semibold transition-all ${
+                    centerView === v
+                      ? "bg-blue-600/25 text-blue-300 border border-blue-500/30"
+                      : "text-white/30 hover:text-white/60 hover:bg-white/[0.04]"
+                  }`}>
+                  {label}
+                </button>
+              ))}
+              {isGroupPhase && isAdmin &&
+               groups.every((g) => g.matches.every((m) => m.status === "finished")) && (
+                <div className="ml-auto">
+                  <StartPlayoffButton
+                    tournamentId={tournament.id}
+                    onStarted={(ms, t) => { onMatchesChange(ms); onTournamentChange(t); setCenterView("bracket"); }}
+                  />
+                </div>
+              )}
+            </div>
+          )}
+
+          <div className="flex-1 min-h-0 overflow-hidden relative">
+            {/* ── Bracket view ── */}
+            {centerView === "bracket" && (
+              hasBracket ? (
+                <BracketFlow matches={matches} currentUser={user} isAdmin={isAdmin}
+                  onEnterScore={onEnterScore} className="w-full h-full bg-[#050c18]" />
+              ) : (
+                <div className="h-full flex flex-col items-center justify-center gap-3">
+                  <Trophy size={40} className="text-white/[0.06]" />
+                  <p className="text-[13px] text-white/20">
+                    {isGroupPhase ? "Плей-офф ещё не начат" : "Нет матчей"}
+                  </p>
+                </div>
+              )
+            )}
+
+            {/* ── Groups round-robin table view ── */}
+            {centerView === "groups" && (
+              <div className="h-full overflow-y-auto px-4 py-4">
+                {groups.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center h-40 gap-2">
+                    <p className="text-[13px] text-white/20">Группы не созданы</p>
+                  </div>
+                ) : (
+                  <div className={`grid gap-4 ${groups.length >= 2 ? "grid-cols-2" : "grid-cols-1"}`}>
+                    {groups.map((g, idx) => (
+                      <GroupRoundRobinTable key={g.id} group={g} colorIdx={idx} />
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
+          </div>
+        </div>
+
+        {/* ── Right column: live (top 50%) + pending queue (bottom 50%) ── */}
+        <div className="w-[270px] shrink-0 border-l border-white/[0.07] flex flex-col overflow-hidden"
+             style={{ background: "var(--surface)" }}>
+
+          {/* ── Live — exactly half, independently scrollable ── */}
+          <div className="h-1/2 flex flex-col border-b border-white/[0.07] overflow-hidden">
+            <div className="px-3 py-2.5 border-b border-white/[0.06] shrink-0 flex items-center gap-2">
+              <span className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-pulse shrink-0" />
+              <span className="text-[10px] font-bold uppercase tracking-[0.12em] text-white/30">Идут сейчас</span>
+              {(isGroupPhase ? groupMatchesLive : live).length > 0 && (
+                <span className="ml-auto text-[11px] font-bold text-blue-300 bg-blue-500/20 px-1.5 py-0.5 rounded-full">
+                  {(isGroupPhase ? groupMatchesLive : live).length}
+                </span>
+              )}
+            </div>
+            <div className="flex-1 min-h-0 overflow-y-auto px-2 py-2 space-y-2">
+              {isGroupPhase ? (
+                groupMatchesLive.length === 0 ? (
+                  <p className="text-[12px] text-white/20 text-center py-8">Нет активных матчей</p>
+                ) : (
+                  groupMatchesLive.map((m) => (
+                    <GroupMatchRow key={m.id} match={m} label="live"
+                      isAdmin={isAdmin} freeTables={freeTables} tableNameMap={tableNameMap}
+                      assigning={groupAssigning === m.id}
+                      onClear={() => assignGroupTable(m.groupId, m.id, null)}
+                      onScore={() => setGroupScoreMatch(m)}
+                    />
+                  ))
+                )
+              ) : (
+                live.length === 0 ? (
+                  <p className="text-[12px] text-white/20 text-center py-8">Нет активных матчей</p>
+                ) : (
+                  live.map((m) => (
+                    <CompactMatchCard key={m.id} match={m} isAdmin={isAdmin}
+                      assigning={assigning === m.id} freeTables={freeTables} tableNameMap={tableNameMap}
+                      onAssign={(t) => assignTable(m, t)}
+                      onClear={() => assignTable(m, null)}
+                      onScore={() => onEnterScore(m)}
+                    />
+                  ))
+                )
+              )}
+            </div>
+          </div>
+
+          {/* ── Pending queue — exactly half, independently scrollable ── */}
+          <div className="h-1/2 flex flex-col overflow-hidden">
+            <div className="px-3 py-2 border-b border-white/[0.05] shrink-0 flex items-center gap-2">
+              <Clock size={11} className="text-white/25 shrink-0" />
+              <span className="text-[10px] font-bold uppercase tracking-[0.12em] text-white/25">
+                {isGroupPhase ? "Матчи групп" : "Ожидают стола"}
+              </span>
+              {(() => {
+                const total = isGroupPhase
+                  ? groupMatchesPending.length + groupMatchesBlocked.length
+                  : pendingAll.length;
+                const ready = isGroupPhase ? groupMatchesPending.length : total;
+                return total > 0 && (
+                  <span className="ml-auto text-[11px] text-white/30">
+                    {ready}/{total}
+                  </span>
+                );
+              })()}
+            </div>
+            <div className="flex-1 min-h-0 overflow-y-auto px-2 py-2 space-y-1.5">
+              {isGroupPhase ? (
+                groupMatchesPending.length === 0 && groupMatchesBlocked.length === 0 ? (
+                  <p className="text-[11px] text-white/15 text-center py-3">Все матчи сыграны</p>
+                ) : (
+                  <>
+                    {/* Callable (both players free) */}
+                    {groupMatchesPending.map((m) => (
+                      <GroupMatchRow key={m.id} match={m} label="pending"
+                        isAdmin={isAdmin} freeTables={freeTables} tableNameMap={tableNameMap}
+                        assigning={groupAssigning === m.id}
+                        onAssign={(t) => assignGroupTable(m.groupId, m.id, t)}
+                      />
+                    ))}
+                    {/* Blocked (a player is currently playing) — shown dimmed */}
+                    {groupMatchesBlocked.map((m) => (
+                      <div key={m.id} className="opacity-40 pointer-events-none">
+                        <GroupMatchRow match={m} label="pending"
+                          isAdmin={false} freeTables={[]} tableNameMap={tableNameMap}
+                        />
+                      </div>
+                    ))}
+                  </>
+                )
+              ) : (
+                pendingAll.length === 0 ? (
+                  <p className="text-[11px] text-white/15 text-center py-3">Нет ожидающих</p>
+                ) : (
+                  pendingAll.map((m) => (
+                    <PendingBracketRow key={m.id} match={m} isAdmin={isAdmin}
+                      freeTables={freeTables} assigning={assigning === m.id}
+                      onAssign={(t) => assignTable(m, t)} />
+                  ))
+                )
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    {/* ── Group score modal ── */}
+    {groupScoreMatch && (
+      <GroupScoreModal
+        match={groupScoreMatch}
+        onClose={() => setGroupScoreMatch(null)}
+        onSubmit={async (s1, s2) => {
+          await api.submitGroupScore(tournament.id, groupScoreMatch.groupId, groupScoreMatch.id, s1, s2);
+          const updated = await api.getGroups(tournament.id);
+          onGroupsChange(updated);
+          setGroupScoreMatch(null);
+        }}
+        onClear={groupScoreMatch.table_number != null ? async () => {
+          await assignGroupTable(groupScoreMatch.groupId, groupScoreMatch.id, null);
+          setGroupScoreMatch(null);
+        } : undefined}
+      />
+    )}
+    </>
+  );
+}
+
+// ── Group colors ──────────────────────────────────────────────────────────────
+const GROUP_COLORS = [
+  { header: "from-blue-700/80 to-blue-600/70",   accent: "rgba(59,130,246,0.18)", border: "rgba(59,130,246,0.30)",  num: "rgba(59,130,246,0.25)"  },
+  { header: "from-purple-700/80 to-purple-600/70", accent: "rgba(139,92,246,0.18)", border: "rgba(139,92,246,0.30)", num: "rgba(139,92,246,0.25)"  },
+  { header: "from-teal-700/80 to-cyan-600/70",   accent: "rgba(20,184,166,0.18)", border: "rgba(20,184,166,0.30)", num: "rgba(20,184,166,0.25)"  },
+  { header: "from-orange-700/80 to-amber-600/70", accent: "rgba(249,115,22,0.18)", border: "rgba(249,115,22,0.30)", num: "rgba(249,115,22,0.25)"  },
+  { header: "from-rose-700/80 to-pink-600/70",   accent: "rgba(244,63,94,0.18)",  border: "rgba(244,63,94,0.30)",  num: "rgba(244,63,94,0.25)"   },
+  { header: "from-emerald-700/80 to-green-600/70", accent: "rgba(16,185,129,0.18)", border: "rgba(16,185,129,0.30)", num: "rgba(16,185,129,0.25)" },
+];
+
+// ── Group score modal (same UX as ScoreModal) ─────────────────────────────────
+const GROUP_QUICK: [number, number][] = [
+  [3, 0], [3, 1], [3, 2],
+  [0, 3], [1, 3], [2, 3],
+];
+
+function GroupScoreModal({
+  match, onClose, onSubmit, onClear,
+}: {
+  match: GroupMatch & { groupId?: number; groupName?: string };
+  onClose: () => void;
+  onSubmit: (s1: number, s2: number) => Promise<void>;
+  onClear?: () => void;
+}) {
+  const [s1, setS1]       = useState(0);
+  const [s2, setS2]       = useState(0);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const p1wins = s1 > s2, p2wins = s2 > s1;
+
+  function pick(a: number, b: number) { setS1(a); setS2(b); setError(null); }
+
+  async function save() {
+    if (s1 === s2) { setError("Ничья недопустима."); return; }
+    setLoading(true); setError(null);
+    try { await onSubmit(s1, s2); }
+    catch (err: unknown) { setError((err as Record<string, string>)?.detail ?? "Не удалось сохранить."); }
+    finally { setLoading(false); }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center
+                    bg-black/75 backdrop-blur-md p-4"
+         onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
+      <div className="border border-white/[0.12] rounded-[24px] shadow-[0_32px_80px_rgba(0,0,0,0.7)]
+                      w-full max-w-[360px] overflow-hidden"
+           style={{ background: "var(--elevated)" }}>
+
+        {/* Header */}
+        <div className="flex items-start justify-between px-5 pt-5 pb-3">
+          <div>
+            <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-white/30">
+              {match.groupName ? `Группа ${match.groupName} · ` : ""}М{match.match_number}
+              {match.table_number ? ` · Стол ${match.table_number}` : ""}
+            </p>
+            <h2 className="text-[20px] font-bold text-white mt-0.5 leading-tight">Счёт матча</h2>
+          </div>
+          <button onClick={onClose}
+            className="mt-0.5 w-8 h-8 rounded-full bg-white/[0.07] hover:bg-white/[0.13]
+                       flex items-center justify-center text-white/35 hover:text-white transition-all">
+            <X size={15} />
+          </button>
+        </div>
+
+        <div className="px-5 pb-5 space-y-4">
+          {/* Player rows with steppers */}
+          <div className="space-y-2.5">
+            {([
+              { name: match.player1.name, score: s1, setScore: setS1, wins: p1wins },
+              { name: match.player2.name, score: s2, setScore: setS2, wins: p2wins },
+            ] as const).map(({ name, score, setScore, wins }, i) => (
+              <div key={i}
+                className={`flex items-center gap-3 rounded-2xl px-3.5 py-3 border transition-all ${
+                  wins ? "border-emerald-500/35 bg-emerald-500/[0.08]" : "border-white/[0.08] bg-white/[0.04]"
+                }`}>
+                <div className={`w-9 h-9 rounded-full flex items-center justify-center text-[14px]
+                                 font-black shrink-0 ${wins ? "bg-emerald-500/25 text-emerald-300" : "bg-white/[0.07] text-white/35"}`}>
+                  {name.charAt(0).toUpperCase()}
+                </div>
+                <span className={`flex-1 text-[14px] font-semibold truncate ${wins ? "text-white" : "text-white/55"}`}>
+                  {name}
+                </span>
+                <div className="flex items-center gap-1 shrink-0">
+                  <button onClick={() => { setScore(Math.max(0, score - 1)); setError(null); }}
+                    className="w-8 h-8 rounded-xl bg-white/[0.07] hover:bg-white/[0.14] flex items-center
+                               justify-center text-white/50 hover:text-white transition-all active:scale-[.90]">
+                    <Minus size={13} />
+                  </button>
+                  <span className={`w-10 text-center text-[28px] font-black tabular-nums leading-none ${
+                    wins ? "text-emerald-300" : "text-white/80"
+                  }`}>{score}</span>
+                  <button onClick={() => { setScore(score + 1); setError(null); }}
+                    className="w-8 h-8 rounded-xl bg-white/[0.07] hover:bg-white/[0.14] flex items-center
+                               justify-center text-white/50 hover:text-white transition-all active:scale-[.90]">
+                    <Plus size={13} />
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Quick presets */}
+          <div>
+            <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-white/25 mb-2">Быстрый результат</p>
+            <div className="grid grid-cols-3 gap-1.5">
+              {GROUP_QUICK.map(([a, b]) => {
+                const active = s1 === a && s2 === b;
+                return (
+                  <button key={`${a}:${b}`} onClick={() => pick(a, b)}
+                    className={`py-2 rounded-xl text-[13px] font-bold transition-all active:scale-[.95] ${
+                      active
+                        ? "bg-blue-600 text-white shadow-[0_0_12px_rgba(59,130,246,0.4)]"
+                        : a > b
+                        ? "bg-white/[0.06] hover:bg-white/[0.11] text-white/55 hover:text-white"
+                        : "bg-white/[0.04] hover:bg-white/[0.09] text-white/40 hover:text-white/70"
+                    }`}>
+                    {a} : {b}
+                  </button>
+                );
+              })}
+            </div>
+            <p className="text-[10px] text-white/20 text-center mt-2">
+              Победа {match.player1.name} · Победа {match.player2.name}
+            </p>
+          </div>
+
+          {error && (
+            <p className="text-[13px] text-red-400 bg-red-500/10 border border-red-500/20
+                          rounded-xl px-4 py-2.5 text-center">{error}</p>
+          )}
+
+          {/* Three action buttons */}
+          <div className="flex gap-2">
+            {onClear && (
+              <button onClick={() => { onClear(); onClose(); }}
+                className="flex-1 py-3 rounded-xl font-semibold text-[14px] transition-all
+                           bg-white/[0.07] hover:bg-red-500/15 border border-white/[0.09]
+                           hover:border-red-500/30 text-white/50 hover:text-red-400 active:scale-[.97]">
+                Освободить
+              </button>
+            )}
+            <button onClick={save} disabled={loading || s1 === s2}
+              className="flex-1 py-3 rounded-xl font-bold text-[15px] transition-all active:scale-[.98]
+                         disabled:opacity-35 bg-blue-600 hover:bg-blue-500 text-white
+                         shadow-[0_4px_16px_rgba(59,130,246,0.35)]">
+              {loading ? "..." : `${s1}:${s2} Сохранить`}
+            </button>
+            <button onClick={onClose}
+              className="flex-1 py-3 rounded-xl font-semibold text-[14px] transition-all
+                         bg-white/[0.07] hover:bg-white/[0.11] border border-white/[0.09]
+                         text-white/50 hover:text-white/80 active:scale-[.97]">
+              Отмена
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Group match row — clickable, opens assignment modal ───────────────────────
+interface GroupMatchRowProps {
+  match: GroupMatch & { groupId?: number; groupName?: string };
+  label: "live" | "pending";
+  isAdmin?: boolean;
+  freeTables?: TournamentTable[];
+  tableNameMap?: Record<number, string>;
+  assigning?: boolean;
+  onAssign?: (t: number) => void;
+  onClear?: () => void;
+  onScore?: () => void;
+}
+function GroupMatchRow({ match, label, isAdmin, freeTables = [], tableNameMap = {}, assigning, onAssign, onClear, onScore }: GroupMatchRowProps) {
+  const [showModal, setShowModal] = useState(false);
+  const isLive = label === "live";
+  const currentTableName = match.table_number ? (tableNameMap[match.table_number] ?? `Стол ${match.table_number}`) : null;
+  const canAssign = isAdmin && !isLive && freeTables.length > 0;
+  const canClear  = isAdmin && isLive && !!currentTableName;
+
+  // For live matches: skip the intermediate modal, open score directly
+  function handleClick() {
+    if (!isAdmin) return;
+    if (isLive && onScore) { onScore(); return; }
+    setShowModal(true);
+  }
+
+  return (
+    <>
+      <div
+        onClick={handleClick}
+        className={`rounded-xl border overflow-hidden transition-all ${
+          isAdmin ? "cursor-pointer" : ""
+        } ${
+          isLive
+            ? "border-blue-500/25 bg-blue-500/[0.05] hover:border-blue-500/40"
+            : "border-white/[0.07] bg-white/[0.02] hover:border-white/[0.14] hover:bg-white/[0.04]"
+        }`}>
+
+        {/* Header */}
+        <div className={`flex items-center justify-between px-2.5 py-1.5 ${
+          isLive ? "bg-blue-500/[0.08] border-b border-blue-500/15" : "border-b border-white/[0.05]"
+        }`}>
+          <div className="flex items-center gap-1.5">
+            {isLive && <span className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-pulse shrink-0" />}
+            <span className="text-[10px] font-bold text-white/30 uppercase tracking-wide">
+              {match.groupName ? `Гр.${match.groupName} · ` : ""}М{match.match_number}
+            </span>
+          </div>
+          {currentTableName
+            ? <span className="text-[10px] font-bold text-blue-300 bg-blue-500/20 px-2 py-0.5 rounded-full">{currentTableName}</span>
+            : canAssign && <span className="text-[10px] text-white/20">нажмите для назначения</span>
+          }
+        </div>
+
+        {/* Players */}
+        <div className="px-2.5 py-2">
+          <p className="text-[12px] font-semibold text-white/80 truncate">
+            {match.player1.name}
+            <span className="text-white/20 mx-1.5 font-normal text-[11px]">vs</span>
+            {match.player2.name}
+          </p>
+          {match.score1 !== null && match.score2 !== null && (
+            <p className="text-[13px] font-black text-white/60 tabular-nums mt-0.5">
+              {match.score1}:{match.score2}
+            </p>
+          )}
         </div>
       </div>
 
-      {/* ── Admin controls ─────────────────────────────────────────────────── */}
-      {user.is_staff && currentTournament.status === "open" && (
-        <div className="bg-amber-50 border border-amber-200 rounded-2xl p-5">
-          <h2 className="font-semibold text-amber-900 mb-1">Турнир ещё не начат</h2>
-          <p className="text-sm text-amber-700 mb-4">
-            Когда все участники зарегистрированы, нажмите «Начать турнир» — будет создан сетка плей-офф.
-          </p>
-          {startError && (
-            <p className="text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2 mb-3">{startError}</p>
-          )}
+      {/* Modal */}
+      {showModal && isAdmin && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/65 backdrop-blur-sm p-4"
+          onClick={(e) => { if (e.target === e.currentTarget) setShowModal(false); }}
+        >
+          <div className="w-full max-w-sm rounded-2xl border border-white/[0.12] shadow-2xl overflow-hidden"
+               style={{ background: "var(--elevated)" }}>
+
+            {/* Modal header */}
+            <div className="flex items-center justify-between px-5 py-4 border-b border-white/[0.07]">
+              <div>
+                <p className="text-[15px] font-bold text-white">Назначить стол</p>
+                <p className="text-[12px] text-white/35 mt-0.5">
+                  {match.groupName ? `Группа ${match.groupName} · ` : ""}Матч {match.match_number}
+                </p>
+              </div>
+              <button onClick={() => setShowModal(false)}
+                className="w-7 h-7 rounded-full bg-white/[0.08] hover:bg-white/[0.14]
+                           flex items-center justify-center text-white/40 hover:text-white transition-all">
+                <X size={14} />
+              </button>
+            </div>
+
+            {/* Players */}
+            <div className="px-5 py-4 border-b border-white/[0.06]">
+              <div className="flex items-center gap-3">
+                <div className="flex-1 flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-full bg-white/[0.08] flex items-center justify-center
+                                  text-[12px] font-bold text-white/50 shrink-0">
+                    {match.player1.name.charAt(0).toUpperCase()}
+                  </div>
+                  <span className="text-[14px] font-semibold text-white truncate">{match.player1.name}</span>
+                </div>
+                <span className="text-[11px] font-bold text-white/20 shrink-0">vs</span>
+                <div className="flex-1 flex items-center gap-2 justify-end">
+                  <span className="text-[14px] font-semibold text-white truncate text-right">{match.player2.name}</span>
+                  <div className="w-8 h-8 rounded-full bg-white/[0.08] flex items-center justify-center
+                                  text-[12px] font-bold text-white/50 shrink-0">
+                    {match.player2.name.charAt(0).toUpperCase()}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Table grid or clear button */}
+            <div className="px-5 py-4">
+              {canClear ? (
+                <button
+                  onClick={() => { onScore?.(); setShowModal(false); }}
+                  className="w-full py-3 rounded-xl bg-emerald-600/20 hover:bg-emerald-600/30
+                             border border-emerald-500/30 text-emerald-300 hover:text-emerald-200
+                             font-semibold text-[14px] transition-all">
+                  Ввести счёт и результат
+                </button>
+              ) : freeTables.length === 0 ? (
+                <p className="text-[13px] text-white/30 text-center py-2">Нет свободных столов</p>
+              ) : (
+                <>
+                  <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-white/30 mb-3">
+                    Выберите стол
+                  </p>
+                  <div className="grid grid-cols-4 gap-2">
+                    {freeTables.map((t) => (
+                      <button key={t.id}
+                        onClick={() => { onAssign?.(t.number); setShowModal(false); }}
+                        disabled={assigning}
+                        className="py-3 rounded-xl bg-white/[0.07] hover:bg-blue-600 border border-white/[0.10]
+                                   hover:border-blue-500/60 text-[13px] font-bold text-white/60 hover:text-white
+                                   transition-all active:scale-[.95] disabled:opacity-40">
+                        {t.display_name}
+                      </button>
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+    </>
+  );
+}
+
+// ── Pending bracket match row (right panel) ───────────────────────────────────
+function PendingBracketRow({
+  match, isAdmin, freeTables, assigning, onAssign,
+}: { match: Match; isAdmin: boolean; freeTables: TournamentTable[]; assigning: boolean; onAssign: (t: number) => void }) {
+  const [tableInput, setTableInput] = useState("");
+  return (
+    <div className="rounded-xl border border-white/[0.07] bg-white/[0.02] px-3 py-2">
+      <p className="text-[12px] font-semibold text-white/70 truncate">
+        <span className={match.player1 ? "text-white/85" : "text-white/25 italic"}>{match.player1?.name ?? "???"}</span>
+        <span className="text-white/20 mx-1.5 font-normal">vs</span>
+        <span className={match.player2 ? "text-white/85" : "text-white/25 italic"}>{match.player2?.name ?? "???"}</span>
+      </p>
+      <p className="text-[10px] text-white/25 mt-0.5">Р{match.round_number} · М{match.match_number}</p>
+      {isAdmin && match.player1 && match.player2 && freeTables.length > 0 && (
+        <div className="flex items-center gap-1.5 mt-1.5">
+          <select value={tableInput} onChange={(e) => setTableInput(e.target.value)}
+            style={{ colorScheme: "dark" }}
+            className="flex-1 text-[11px] px-2 py-1 bg-white/[0.07] border border-white/[0.10]
+                       rounded-lg text-white focus:outline-none min-w-0">
+            <option value="">Стол</option>
+            {freeTables.map((t) => <option key={t.id} value={t.number}>{t.display_name}</option>)}
+          </select>
           <button
-            onClick={handleStart}
-            disabled={starting}
-            className="px-6 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 disabled:opacity-50 text-white font-bold text-sm transition-colors"
-          >
-            {starting ? "Создание сетки..." : "🏆 Начать турнир"}
+            onClick={() => { const n = parseInt(tableInput); if (!isNaN(n)) onAssign(n); }}
+            disabled={!tableInput || assigning}
+            className="text-[11px] px-2.5 py-1 rounded-lg bg-blue-600 hover:bg-blue-500
+                       text-white disabled:opacity-40 transition-all shrink-0">
+            {assigning ? "…" : "→"}
           </button>
         </div>
       )}
+    </div>
+  );
+}
 
-      {/* ── Winner banner ──────────────────────────────────────────────────── */}
-      {currentTournament.status === "finished" && (() => {
-        const finalMatch = matches.find(
-          (m) => m.round_number === Math.max(...matches.map((x) => x.round_number))
-        );
-        return finalMatch?.winner ? (
-          <div className="bg-gradient-to-r from-yellow-400 to-amber-500 rounded-2xl p-6 text-center text-white shadow-md">
-            <div className="text-4xl mb-2">🏆</div>
-            <h2 className="text-xl font-bold">Победитель турнира</h2>
-            <p className="text-2xl font-black mt-1">{finalMatch.winner.name}</p>
-          </div>
-        ) : null;
-      })()}
+// ── Group Round-Robin Table ────────────────────────────────────────────────────
+function GroupRoundRobinTable({ group, colorIdx = 0 }: { group: TournamentGroup; colorIdx?: number }) {
+  const players = group.participants;
+  const color   = GROUP_COLORS[colorIdx % GROUP_COLORS.length];
 
-      {/* ── Bracket view ──────────────────────────────────────────────────── */}
-      {matches.length > 0 && (
-        <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm">
-          <h2 className="text-lg font-semibold text-gray-900 mb-5">Турнирная сетка</h2>
-          <BracketView
-            matches={matches}
-            currentUser={user}
-            isAdmin={user.is_staff}
-            onEnterScore={setScoreMatch}
-          />
-        </div>
-      )}
+  // Build matrix: results[rowPlayerId][colPlayerId]
+  type Cell = { s1: number | null; s2: number | null; won: boolean | null };
+  const matrix: Record<string, Record<string, Cell>> = {};
+  players.forEach((p) => { matrix[p.user.id] = {}; });
 
-      {/* ── My active matches (player only) ───────────────────────────────── */}
-      {!user.is_staff && myActiveMatches.length > 0 && (
-        <div className="bg-blue-50 border border-blue-200 rounded-2xl p-5">
-          <h2 className="font-semibold text-blue-900 mb-3">Ваши текущие матчи</h2>
-          <div className="space-y-3">
-            {myActiveMatches.map((m) => {
-              const opponent =
-                m.player1?.id === user.id ? m.player2 : m.player1;
-              return (
-                <div
-                  key={m.id}
-                  className="flex items-center justify-between bg-white rounded-xl px-4 py-3 border border-blue-100"
-                >
-                  <div>
-                    <p className="text-sm font-medium text-gray-800">
-                      Раунд {m.round_number} · Матч {m.match_number}
-                    </p>
-                    <p className="text-sm text-gray-500">
-                      vs {opponent?.name ?? "—"}
-                    </p>
-                  </div>
-                  <button
-                    onClick={() => setScoreMatch(m)}
-                    className="px-4 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold transition-colors"
-                  >
-                    Счёт
-                  </button>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
+  group.matches.forEach((m: GroupMatch) => {
+    matrix[m.player1.id] ??= {};
+    matrix[m.player2.id] ??= {};
+    const won1 = m.winner ? m.winner.id === m.player1.id : null;
+    matrix[m.player1.id][m.player2.id] = { s1: m.score1, s2: m.score2, won: won1 };
+    matrix[m.player2.id][m.player1.id] = { s1: m.score2, s2: m.score1, won: won1 === null ? null : !won1 };
+  });
 
-      <div className="grid gap-8 lg:grid-cols-2">
-        {/* QR code — admins only */}
-        {user.is_staff && (
-          <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm">
-            <h2 className="text-lg font-semibold text-gray-900 mb-5">QR-код для вступления</h2>
-            <QRCodeDisplay joinToken={currentTournament.join_token} />
-          </div>
-        )}
+  const HATCH = `repeating-linear-gradient(-45deg,${color.num},${color.num} 2px,rgba(0,0,0,0.08) 2px,rgba(0,0,0,0.08) 9px)`;
 
-        {/* Participants */}
-        <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm lg:col-span-1">
-          <h2 className="text-lg font-semibold text-gray-900 mb-5">
-            Участники ({participants.length})
-          </h2>
-          <ParticipantList participants={participants} />
+  return (
+    <div className="rounded-2xl overflow-hidden border"
+         style={{ background: "var(--card)", borderColor: color.border }}>
+
+      {/* Colored header */}
+      <div className={`bg-gradient-to-r ${color.header} px-4 py-2.5 flex items-center justify-between`}>
+        <span className="text-[14px] font-black text-white/90 tracking-wide">Группа {group.name}</span>
+        <div className="flex items-center gap-3 text-[9px] font-bold uppercase tracking-widest text-white/40">
+          <span>О = очки</span><span>М = место</span>
         </div>
       </div>
 
-      {/* Score modal */}
-      {scoreMatch && (
-        <ScoreModal
-          match={scoreMatch}
-          onClose={() => setScoreMatch(null)}
-          onSubmit={handleScoreSubmit}
-        />
+      <div className="overflow-x-auto">
+        <table className="w-full border-collapse text-[12px]">
+          {/* Column headers */}
+          <thead>
+            <tr style={{ background: color.accent }}>
+              <th className="text-left px-2.5 py-2 text-[10px] font-bold uppercase tracking-wider text-white/40 w-5">#</th>
+              <th className="text-left px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-white/40">Участник</th>
+              {players.map((_, i) => (
+                <th key={i} className="py-2 text-center text-[11px] font-black text-white/60 w-12"
+                    style={{ borderLeft: `1px solid ${color.border}` }}>
+                  {i + 1}
+                </th>
+              ))}
+              <th className="py-2 text-center text-[12px] font-black text-white w-10"
+                  style={{ borderLeft: `1px solid ${color.border}` }}>О</th>
+              <th className="py-2 text-center text-[12px] font-black text-white/60 w-10"
+                  style={{ borderLeft: `1px solid ${color.border}` }}>М</th>
+            </tr>
+          </thead>
+
+          <tbody>
+            {players.map((p, rowIdx) => (
+              <tr key={p.user.id}
+                  className="hover:bg-white/[0.02] transition-colors"
+                  style={{ borderTop: "1px solid rgba(255,255,255,0.05)" }}>
+                {/* Row number */}
+                <td className="px-2.5 py-2.5 text-center text-[11px] text-white/30 font-semibold">
+                  {rowIdx + 1}
+                </td>
+                {/* Player + rating */}
+                <td className="px-3 py-2.5 max-w-[140px]">
+                  <span className="text-[12px] font-semibold text-white/85 truncate block">{p.user.name}</span>
+                  <span className="text-[10px] text-red-400/60 font-bold">R:{p.user.rating}</span>
+                </td>
+                {/* Head-to-head cells */}
+                {players.map((opp, colIdx) => {
+                  if (rowIdx === colIdx) {
+                    return (
+                      <td key={opp.user.id}
+                          style={{ background: HATCH, borderLeft: `1px solid ${color.border}`, width: 48 }} />
+                    );
+                  }
+                  const cell = matrix[p.user.id]?.[opp.user.id];
+                  const scored = cell?.s1 !== null && cell?.s1 !== undefined;
+                  return (
+                    <td key={opp.user.id}
+                        className={`text-center py-2.5 text-[12px] font-black tabular-nums ${
+                          !scored           ? "text-white/15" :
+                          cell.won === true  ? "text-emerald-200" :
+                          cell.won === false ? "text-red-300" :
+                          "text-white/40"
+                        }`}
+                        style={{
+                          borderLeft: `1px solid rgba(255,255,255,0.05)`,
+                          background: scored
+                            ? cell.won === true
+                              ? "rgba(16,185,129,0.22)"
+                              : cell.won === false
+                              ? "rgba(239,68,68,0.18)"
+                              : undefined
+                            : undefined,
+                        }}>
+                      {scored ? `${cell.s1}:${cell.s2}` : "·"}
+                    </td>
+                  );
+                })}
+                {/* Points */}
+                <td className="text-center py-2.5 text-[14px] font-black text-white tabular-nums"
+                    style={{ borderLeft: `1px solid ${color.border}`, background: color.accent }}>
+                  {p.points}
+                </td>
+                {/* Place */}
+                <td className="text-center py-2.5 text-[13px] font-bold text-white/50 tabular-nums"
+                    style={{ borderLeft: `1px solid rgba(255,255,255,0.07)` }}>
+                  {rowIdx + 1}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+// ── Start Playoff Button ───────────────────────────────────────────────────────
+function StartPlayoffButton({
+  tournamentId, onStarted,
+}: { tournamentId: string; onStarted: (matches: Match[], tournament: Tournament) => void }) {
+  const [loading, setLoading] = useState(false);
+  const [error, setError]     = useState<string | null>(null);
+
+  async function start() {
+    setLoading(true); setError(null);
+    try {
+      const r = await api.startPlayoff(tournamentId);
+      onStarted(r.matches, r.tournament);
+    } catch (err: unknown) {
+      setError((err as Record<string, string>)?.detail ?? "Ошибка.");
+    } finally { setLoading(false); }
+  }
+
+  return (
+    <div>
+      <button onClick={start} disabled={loading}
+        className="w-full py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-white
+                   font-bold text-[13px] transition-all active:scale-[.97] disabled:opacity-50">
+        {loading ? "..." : "🏆 Начать плей-офф"}
+      </button>
+      {error && <p className="text-[11px] text-red-400 mt-1 text-center">{error}</p>}
+    </div>
+  );
+}
+
+// ── Consolation Bracket View ──────────────────────────────────────────────────
+function ConsolationBracketView({
+  matches,
+  user,
+  isAdmin,
+  onEnterScore,
+}: {
+  matches: Match[];
+  user: User;
+  isAdmin: boolean;
+  onEnterScore: (m: Match) => void;
+}) {
+  const winnersMatches    = matches.filter((m) => !m.is_consolation);
+  const consolationMatches = matches.filter((m) => m.is_consolation);
+
+  // Group by round
+  const maxRound = matches.length ? Math.max(...matches.map((m) => m.round_number)) : 0;
+
+  // Label a consolation match based on its match_number within consolation matches of that round
+  function consolationLabel(match: Match): string {
+    const roundConsolation = consolationMatches
+      .filter((m) => m.round_number === match.round_number)
+      .sort((a, b) => a.match_number - b.match_number);
+    const idx = roundConsolation.findIndex((m) => m.id === match.id);
+    // idx 0 in last round → 3rd place, idx 1 → 5th, idx 2 → 7th, etc.
+    if (match.round_number === maxRound) {
+      const place = 3 + idx * 2;
+      return `За ${place}-${place + 1} место`;
+    }
+    return `Утешительный матч`;
+  }
+
+  function MatchCard({ match, label }: { match: Match; label?: string }) {
+    const isLive     = match.status === "in_progress";
+    const isFinished = match.status === "finished";
+    const canScore   = isAdmin && isLive;
+
+    return (
+      <div
+        className={`rounded-xl border px-3 py-2.5 transition-all ${
+          isLive
+            ? "border-blue-500/30 bg-blue-500/[0.06] cursor-pointer hover:border-blue-500/50"
+            : isFinished
+            ? "border-white/[0.06] bg-white/[0.02]"
+            : "border-white/[0.09] bg-white/[0.03]"
+        }`}
+        onClick={() => { if (canScore) onEnterScore(match); }}
+      >
+        {label && (
+          <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-amber-400/60 mb-1.5">
+            {label}
+          </p>
+        )}
+        <div className="flex items-center justify-between gap-2">
+          {/* Player 1 */}
+          <span className={`text-[13px] font-semibold flex-1 truncate ${
+            isFinished && match.winner?.id === match.player1?.id
+              ? "text-emerald-300"
+              : match.player1
+              ? "text-white/80"
+              : "text-white/20 italic"
+          }`}>
+            {match.player1?.name ?? "???"}
+          </span>
+
+          {/* Score / status */}
+          <div className="shrink-0 text-center min-w-[48px]">
+            {isFinished ? (
+              <span className="text-[14px] font-black text-white tabular-nums">
+                {match.score1}:{match.score2}
+              </span>
+            ) : isLive ? (
+              <span className="text-[11px] font-bold text-blue-300 flex items-center gap-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-pulse" />
+                Live
+              </span>
+            ) : (
+              <span className="text-[11px] text-white/20">vs</span>
+            )}
+          </div>
+
+          {/* Player 2 */}
+          <span className={`text-[13px] font-semibold flex-1 truncate text-right ${
+            isFinished && match.winner?.id === match.player2?.id
+              ? "text-emerald-300"
+              : match.player2
+              ? "text-white/80"
+              : "text-white/20 italic"
+          }`}>
+            {match.player2?.name ?? "???"}
+          </span>
+        </div>
+        {match.table_number && (
+          <p className="text-[10px] text-blue-300/50 mt-1">Стол {match.table_number}</p>
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-full bg-[#050c18] px-5 py-6 space-y-8">
+
+      {/* Winners bracket */}
+      <section>
+        <div className="flex items-center gap-2 mb-4">
+          <Trophy size={16} className="text-amber-400/70" />
+          <h2 className="text-[13px] font-bold uppercase tracking-[0.12em] text-amber-400/70">
+            Основная сетка
+          </h2>
+        </div>
+        {Array.from({ length: maxRound }, (_, i) => i + 1).map((r) => {
+          const rMatches = winnersMatches
+            .filter((m) => m.round_number === r)
+            .sort((a, b) => a.match_number - b.match_number);
+          if (rMatches.length === 0) return null;
+          const isLastRound = r === maxRound;
+          return (
+            <div key={r} className="mb-5">
+              <p className="text-[11px] font-bold uppercase tracking-[0.11em] text-white/25 mb-2 ml-1">
+                {isLastRound ? "Финал" : `Раунд ${r}`}
+              </p>
+              <div className="grid gap-2" style={{
+                gridTemplateColumns: `repeat(${Math.min(rMatches.length, 4)}, minmax(0, 1fr))`,
+              }}>
+                {rMatches.map((m) => (
+                  <MatchCard key={m.id} match={m}
+                    label={isLastRound ? "Финал — 1-2 место" : undefined}
+                  />
+                ))}
+              </div>
+            </div>
+          );
+        })}
+      </section>
+
+      {/* Consolation bracket */}
+      {consolationMatches.length > 0 && (
+        <section>
+          <div className="flex items-center gap-2 mb-4">
+            <Layers size={16} className="text-purple-400/70" />
+            <h2 className="text-[13px] font-bold uppercase tracking-[0.12em] text-purple-400/70">
+              Утешительная сетка
+            </h2>
+          </div>
+          {Array.from({ length: maxRound }, (_, i) => i + 1).map((r) => {
+            const rMatches = consolationMatches
+              .filter((m) => m.round_number === r)
+              .sort((a, b) => a.match_number - b.match_number);
+            if (rMatches.length === 0) return null;
+            return (
+              <div key={r} className="mb-5">
+                <p className="text-[11px] font-bold uppercase tracking-[0.11em] text-white/25 mb-2 ml-1">
+                  Раунд {r}
+                </p>
+                <div className="grid gap-2" style={{
+                  gridTemplateColumns: `repeat(${Math.min(rMatches.length, 4)}, minmax(0, 1fr))`,
+                }}>
+                  {rMatches.map((m) => (
+                    <MatchCard key={m.id} match={m} label={consolationLabel(m)} />
+                  ))}
+                </div>
+              </div>
+            );
+          })}
+        </section>
       )}
+    </div>
+  );
+}
+
+// ── Compact match card for overview right panel ────────────────────────────────
+interface CCardProps {
+  match: Match; isAdmin: boolean; assigning: boolean;
+  freeTables: TournamentTable[]; tableNameMap: Record<number, string>;
+  onAssign: (t: number) => void; onClear: () => void; onScore: () => void;
+}
+function CompactMatchCard({ match, isAdmin, assigning, freeTables, tableNameMap, onAssign, onClear, onScore }: CCardProps) {
+  const [tableInput, setTableInput] = useState("");
+  const currentName = match.table_number ? (tableNameMap[match.table_number] ?? `Стол ${match.table_number}`) : null;
+  return (
+    <div className="rounded-xl border border-blue-500/20 overflow-hidden" style={{ background: "rgba(59,130,246,0.04)" }}>
+      <div className="flex items-center justify-between px-2.5 py-1.5 bg-blue-500/[0.08] border-b border-blue-500/15">
+        <span className="text-[10px] font-bold text-blue-300/60 uppercase tracking-wide">
+          ● Р{match.round_number}·М{match.match_number}
+        </span>
+        {currentName
+          ? <span className="text-[10px] font-bold text-blue-300 bg-blue-500/20 px-2 py-0.5 rounded-full">{currentName}</span>
+          : <span className="text-[10px] text-white/20">Без стола</span>
+        }
+      </div>
+      <div className="px-2.5 py-2">
+        <div className="flex items-center justify-between text-[12px] mb-1.5">
+          <span className="truncate text-white/80 font-medium">{match.player1?.name ?? "—"}</span>
+          <span className="text-white/20 text-[10px] mx-1 shrink-0">vs</span>
+          <span className="truncate text-white/80 font-medium text-right">{match.player2?.name ?? "—"}</span>
+        </div>
+        <div className="flex items-center gap-1.5 flex-wrap">
+          {isAdmin && (currentName ? (
+            <button onClick={onClear} disabled={assigning}
+              className="text-[11px] px-2 py-1 rounded-lg bg-white/[0.06] hover:bg-white/[0.10]
+                         text-white/40 transition-all disabled:opacity-40 border border-white/[0.06]">
+              Освободить
+            </button>
+          ) : freeTables.length > 0 && (
+            <div className="flex items-center gap-1">
+              <select value={tableInput} onChange={(e) => setTableInput(e.target.value)}
+                style={{ colorScheme: "dark" }}
+                className="text-[11px] px-2 py-1 bg-white/[0.07] border border-white/[0.10]
+                           rounded-lg text-white focus:outline-none">
+                <option value="">Стол</option>
+                {freeTables.map((t) => <option key={t.id} value={t.number}>{t.display_name}</option>)}
+              </select>
+              <button onClick={() => { const n = parseInt(tableInput); if (!isNaN(n)) onAssign(n); }}
+                disabled={!tableInput || assigning}
+                className="text-[11px] px-2 py-1 rounded-lg bg-blue-600 hover:bg-blue-500
+                           text-white disabled:opacity-40 transition-all">
+                {assigning ? "..." : "→"}
+              </button>
+            </div>
+          ))}
+          <button onClick={onScore}
+            className="ml-auto text-[11px] px-3 py-1 rounded-lg bg-emerald-500/20
+                       hover:bg-emerald-500/30 border border-emerald-500/25 text-emerald-300
+                       font-semibold transition-all">
+            Счёт
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function CompactPendingRow({
+  match, isAdmin, freeTables, assigning, onAssign,
+}: { match: Match; isAdmin: boolean; freeTables: TournamentTable[]; assigning: boolean; onAssign: (t: number) => void }) {
+  const [tableInput, setTableInput] = useState("");
+  return (
+    <div className="flex items-center gap-2 px-2.5 py-2 rounded-xl border border-white/[0.06] bg-white/[0.02]">
+      <div className="flex-1 min-w-0 text-[11px] text-white/50 truncate">
+        {match.player1?.name} <span className="text-white/20">vs</span> {match.player2?.name}
+      </div>
+      {isAdmin && freeTables.length > 0 && (
+        <div className="flex items-center gap-1 shrink-0">
+          <select value={tableInput} onChange={(e) => setTableInput(e.target.value)}
+            style={{ colorScheme: "dark" }}
+            className="text-[11px] px-1.5 py-1 bg-white/[0.07] border border-white/[0.08]
+                       rounded-lg text-white focus:outline-none w-16">
+            <option value="">—</option>
+            {freeTables.map((t) => <option key={t.id} value={t.number}>{t.display_name}</option>)}
+          </select>
+          <button onClick={() => { const n = parseInt(tableInput); if (!isNaN(n)) onAssign(n); }}
+            disabled={!tableInput || assigning}
+            className="text-[11px] px-1.5 py-1 rounded-lg bg-white/[0.08] hover:bg-white/[0.14]
+                       text-white/60 disabled:opacity-40 transition-all">
+            {assigning ? "…" : "→"}
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Tables Tab ────────────────────────────────────────────────────────────────
+
+const TINPUT = "px-3 py-2 bg-white/[0.08] border border-white/[0.12] rounded-xl text-[14px] text-white placeholder:text-white/25 focus:outline-none focus:border-blue-500/60 transition-all [color-scheme:dark]";
+
+function TablesTab({
+  tournamentId,
+  tables,
+  onTablesChange,
+}: {
+  tournamentId: string;
+  tables: TournamentTable[];
+  onTablesChange: (t: TournamentTable[]) => void;
+}) {
+  const [addName,  setAddName]  = useState("");
+  const [adding,   setAdding]   = useState(false);
+  const [addError, setAddError] = useState<string | null>(null);
+
+  // Per-row edit state
+  const [editId,   setEditId]   = useState<number | null>(null);
+  const [editName, setEditName] = useState("");
+  const [saving,   setSaving]   = useState<number | null>(null);
+  const [deleting, setDeleting] = useState<number | null>(null);
+
+  async function handleAdd(e: React.FormEvent) {
+    e.preventDefault();
+    const nextNumber = Math.max(0, ...tables.map((t) => t.number)) + 1;
+    setAdding(true); setAddError(null);
+    try {
+      const created = await api.createTournamentTable(tournamentId, { number: nextNumber, name: addName.trim() || undefined });
+      onTablesChange([...tables, created].sort((a, b) => a.number - b.number));
+      setAddName("");
+    } catch (err: unknown) {
+      setAddError((err as Record<string, string>)?.detail ?? "Ошибка.");
+    } finally { setAdding(false); }
+  }
+
+  async function handleSaveName(table: TournamentTable) {
+    setSaving(table.id);
+    try {
+      const updated = await api.updateTournamentTable(tournamentId, table.id, { name: editName.trim() });
+      onTablesChange(tables.map((t) => t.id === updated.id ? updated : t));
+      setEditId(null);
+    } catch { /* silent */ }
+    finally { setSaving(null); }
+  }
+
+  async function handleToggle(table: TournamentTable) {
+    setSaving(table.id);
+    try {
+      const updated = await api.updateTournamentTable(tournamentId, table.id, { is_active: !table.is_active });
+      onTablesChange(tables.map((t) => t.id === updated.id ? updated : t));
+    } catch { /* silent */ }
+    finally { setSaving(null); }
+  }
+
+  async function handleDelete(table: TournamentTable) {
+    setDeleting(table.id);
+    try {
+      await api.deleteTournamentTable(tournamentId, table.id);
+      onTablesChange(tables.filter((t) => t.id !== table.id));
+    } catch { /* silent */ }
+    finally { setDeleting(null); }
+  }
+
+  return (
+    <div className="h-full flex flex-col">
+      {/* Header */}
+      <div className="px-6 py-4 border-b border-white/[0.07] shrink-0 bg-[#070f1d]/60">
+        <h2 className="text-[17px] font-bold text-white">Столы</h2>
+        <p className="text-[12px] text-white/30 mt-0.5">
+          {tables.length} столов · {tables.filter((t) => t.is_active).length} активных
+        </p>
+      </div>
+
+      <div className="flex-1 overflow-y-auto">
+        <div className="max-w-2xl mx-auto px-5 py-5 space-y-6">
+
+          {/* ── Add form ── */}
+          <form onSubmit={handleAdd}
+                className="flex items-center gap-2 rounded-2xl border border-white/[0.09] px-4 py-3"
+                style={{ background: "var(--card)" }}>
+            <input
+              type="text" value={addName} autoFocus
+              onChange={(e) => setAddName(e.target.value)}
+              placeholder="Название стола (необязательно)"
+              className={TINPUT + " flex-1"}
+            />
+            <button type="submit" disabled={adding}
+              className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 active:scale-[.97]
+                         disabled:opacity-40 text-white font-semibold text-[13px] transition-all
+                         whitespace-nowrap h-[42px] flex items-center gap-1.5">
+              <Plus size={14} />{adding ? "..." : "Добавить"}
+            </button>
+          </form>
+          {addError && (
+            <p className="text-[12px] text-red-400 px-1">{addError}</p>
+          )}
+
+          {/* ── Table list ── */}
+          {tables.length === 0 ? (
+            <div className="py-16 text-center">
+              <LayoutGrid size={36} className="mx-auto text-white/[0.07] mb-3" />
+              <p className="text-[15px] text-white/20">Нет столов</p>
+              <p className="text-[13px] text-white/12 mt-1">Добавьте столы выше</p>
+            </div>
+          ) : (
+            <div className="rounded-2xl border border-white/[0.08] overflow-hidden"
+                 style={{ background: "var(--card)" }}>
+              {tables.map((table, idx) => (
+                <div key={table.id}>
+                  <div className={`flex items-center gap-3 px-5 py-3.5 transition-colors ${
+                    !table.is_active ? "opacity-45" : "hover:bg-white/[0.02]"
+                  }`}>
+                    {/* Number badge */}
+                    <div className="w-9 h-9 rounded-xl bg-white/[0.07] flex items-center justify-center
+                                    text-[14px] font-black text-white/50 shrink-0">
+                      {table.number}
+                    </div>
+
+                    {/* Name — inline edit */}
+                    {editId === table.id ? (
+                      <input
+                        autoFocus
+                        value={editName}
+                        onChange={(e) => setEditName(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") handleSaveName(table);
+                          if (e.key === "Escape") setEditId(null);
+                        }}
+                        className={TINPUT + " flex-1 h-8 py-1.5"}
+                        placeholder="Название стола"
+                      />
+                    ) : (
+                      <button
+                        onClick={() => { setEditId(table.id); setEditName(table.name); }}
+                        className="flex-1 text-left group"
+                      >
+                        <p className="text-[14px] font-semibold text-white group-hover:text-blue-300 transition-colors truncate">
+                          {table.display_name}
+                        </p>
+                        {table.name && (
+                          <p className="text-[11px] text-white/25">Стол {table.number}</p>
+                        )}
+                      </button>
+                    )}
+
+                    {/* Actions */}
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      {editId === table.id ? (
+                        <>
+                          <button onClick={() => handleSaveName(table)} disabled={saving === table.id}
+                            className="w-8 h-8 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30
+                                       flex items-center justify-center text-emerald-400 transition-all
+                                       disabled:opacity-40">
+                            <Check size={14} />
+                          </button>
+                          <button onClick={() => setEditId(null)}
+                            className="w-8 h-8 rounded-xl bg-white/[0.06] hover:bg-white/[0.12]
+                                       flex items-center justify-center text-white/40 transition-all">
+                            <X size={14} />
+                          </button>
+                        </>
+                      ) : (
+                        <>
+                          {/* Active toggle */}
+                          <button
+                            onClick={() => handleToggle(table)}
+                            disabled={saving === table.id}
+                            title={table.is_active ? "Деактивировать" : "Активировать"}
+                            className="w-8 h-8 rounded-xl bg-white/[0.05] hover:bg-white/[0.10]
+                                       flex items-center justify-center transition-all disabled:opacity-40"
+                          >
+                            {table.is_active
+                              ? <ToggleRight size={16} className="text-emerald-400" />
+                              : <ToggleLeft size={16} className="text-white/30" />
+                            }
+                          </button>
+                          {/* Delete */}
+                          <button
+                            onClick={() => handleDelete(table)}
+                            disabled={deleting === table.id}
+                            className="w-8 h-8 rounded-xl bg-white/[0.04] hover:bg-red-500/15
+                                       flex items-center justify-center text-white/20 hover:text-red-400
+                                       transition-all disabled:opacity-40">
+                            <Trash2 size={13} />
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                  {idx < tables.length - 1 && <div className="h-px bg-white/[0.04] ml-[72px]" />}
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Info note */}
+          <p className="text-[12px] text-white/20 text-center">
+            Неактивные столы не участвуют в авто-назначении матчей
+          </p>
+        </div>
+      </div>
     </div>
   );
 }

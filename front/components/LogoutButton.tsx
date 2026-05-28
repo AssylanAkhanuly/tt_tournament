@@ -1,23 +1,16 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
 
 export default function LogoutButton() {
-  const router = useRouter();
-
   async function handleLogout() {
-    try {
-      await api.logout();
-    } finally {
-      router.push("/login");
-    }
+    try { await api.logout(); } finally { window.location.href = "/login"; }
   }
 
   return (
     <button
       onClick={handleLogout}
-      className="text-sm text-gray-500 hover:text-gray-900 transition-colors"
+      className="text-[13px] font-medium text-white/50 hover:text-white/80 transition-colors"
     >
       Выйти
     </button>

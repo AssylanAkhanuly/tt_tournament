@@ -1,4 +1,4 @@
-import { Match, Participant, Tournament, User } from "./types";
+import { Club, ClubAdmin, ClubTable, GroupMatch, Match, Participant, Tournament, TournamentGroup, TournamentTable, User } from "./types";
 
 const BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
@@ -16,7 +16,6 @@ async function apiFetch<T>(path: string, options: RequestInit = {}): Promise<T> 
       },
     });
   } catch {
-    // fetch() itself throws (ERR_CONNECTION_REFUSED, offline, CORS preflight blocked, etc.)
     throw NETWORK_ERROR;
   }
 
@@ -36,7 +35,6 @@ async function apiFetch<T>(path: string, options: RequestInit = {}): Promise<T> 
       if (retry.status === 204) return undefined as T;
       return retry.json();
     }
-    // Refresh also failed — throw so callers can redirect to /login
     const err = await res.json().catch(() => ({ detail: "Не авторизован" }));
     throw err;
   }
@@ -49,9 +47,9 @@ async function apiFetch<T>(path: string, options: RequestInit = {}): Promise<T> 
   return res.json();
 }
 
-// ─── Auth ────────────────────────────────────────────────────────────────────
-
 export const api = {
+  // ─── Auth ──────────────────────────────────────────────────────────────────
+
   login: (phone: string, password: string) =>
     apiFetch<User>("/api/auth/login/", {
       method: "POST",
@@ -64,8 +62,7 @@ export const api = {
       body: JSON.stringify(data),
     }),
 
-  logout: () =>
-    apiFetch<void>("/api/auth/logout/", { method: "POST" }),
+  logout: () => apiFetch<void>("/api/auth/logout/", { method: "POST" }),
 
   me: () => apiFetch<User>("/api/auth/me/"),
 
@@ -75,17 +72,87 @@ export const api = {
       body: JSON.stringify({ phone }),
     }),
 
+  searchUsers: (q: string) =>
+    apiFetch<User[]>(`/api/auth/users/?q=${encodeURIComponent(q)}`),
+
+  // ─── Clubs ─────────────────────────────────────────────────────────────────
+
+  getClubs: () => apiFetch<Club[]>("/api/clubs/"),
+
+  getMyClubs: () => apiFetch<Club[]>("/api/clubs/my/"),
+
+  getClub: (id: string) => apiFetch<Club>(`/api/clubs/${id}/`),
+
+  createClub: (data: { name: string; description?: string }) =>
+    apiFetch<Club>("/api/clubs/", {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+
+  updateClub: (id: string, data: { name?: string; description?: string }) =>
+    apiFetch<Club>(`/api/clubs/${id}/`, {
+      method: "PATCH",
+      body: JSON.stringify(data),
+    }),
+
+  deleteClub: (id: string) =>
+    apiFetch<void>(`/api/clubs/${id}/`, { method: "DELETE" }),
+
+  // ─── Club Tables ───────────────────────────────────────────────────────────
+
+  getClubTables: (clubId: string) =>
+    apiFetch<ClubTable[]>(`/api/clubs/${clubId}/tables/`),
+
+  createClubTable: (clubId: string, data: { number: number; name?: string }) =>
+    apiFetch<ClubTable>(`/api/clubs/${clubId}/tables/`, {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+
+  updateClubTable: (clubId: string, tableId: number, data: { name?: string; is_active?: boolean }) =>
+    apiFetch<ClubTable>(`/api/clubs/${clubId}/tables/${tableId}/`, {
+      method: "PATCH",
+      body: JSON.stringify(data),
+    }),
+
+  deleteClubTable: (clubId: string, tableId: number) =>
+    apiFetch<void>(`/api/clubs/${clubId}/tables/${tableId}/`, { method: "DELETE" }),
+
+  // ─── Club Admins ───────────────────────────────────────────────────────────
+
+  getClubAdmins: (clubId: string) =>
+    apiFetch<ClubAdmin[]>(`/api/clubs/${clubId}/admins/`),
+
+  addClubAdmin: (clubId: string, phone: string) =>
+    apiFetch<ClubAdmin>(`/api/clubs/${clubId}/admins/`, {
+      method: "POST",
+      body: JSON.stringify({ phone }),
+    }),
+
+  removeClubAdmin: (clubId: string, adminId: number) =>
+    apiFetch<void>(`/api/clubs/${clubId}/admins/${adminId}/`, { method: "DELETE" }),
+
   // ─── Tournaments ───────────────────────────────────────────────────────────
 
-  getTournaments: () => apiFetch<Tournament[]>("/api/tournaments/"),
+  getTournaments: (clubId?: string) =>
+    apiFetch<Tournament[]>(clubId ? `/api/tournaments/?club_id=${clubId}` : "/api/tournaments/"),
 
   getMyTournaments: () => apiFetch<Tournament[]>("/api/tournaments/my/"),
 
-  createTournament: (data: { name: string; description?: string; starts_at?: string }) =>
+  createTournament: (data: { name: string; description?: string; starts_at?: string; club_id?: string; format?: string; group_size?: number }) =>
     apiFetch<Tournament>("/api/tournaments/", {
       method: "POST",
       body: JSON.stringify(data),
     }),
+
+  updateTournament: (id: string, data: { name?: string; description?: string; starts_at?: string | null }) =>
+    apiFetch<Tournament>(`/api/tournaments/${id}/update/`, {
+      method: "PATCH",
+      body: JSON.stringify(data),
+    }),
+
+  deleteTournament: (id: string) =>
+    apiFetch<void>(`/api/tournaments/${id}/update/`, { method: "DELETE" }),
 
   getTournament: (id: string) => apiFetch<Tournament>(`/api/tournaments/${id}/`),
 
@@ -94,6 +161,17 @@ export const api = {
 
   getParticipants: (id: string) =>
     apiFetch<Participant[]>(`/api/tournaments/${id}/participants/`),
+
+  addParticipant: (tournamentId: string, phone: string, name?: string, rating?: number) =>
+    apiFetch<Participant>(`/api/tournaments/${tournamentId}/participants/add/`, {
+      method: "POST",
+      body: JSON.stringify({ phone, name, rating }),
+    }),
+
+  removeParticipant: (tournamentId: string, participantId: number) =>
+    apiFetch<void>(`/api/tournaments/${tournamentId}/participants/${participantId}/remove/`, {
+      method: "DELETE",
+    }),
 
   // ─── Join flows ────────────────────────────────────────────────────────────
 
@@ -109,13 +187,53 @@ export const api = {
       { method: "POST", body: JSON.stringify(data) }
     ),
 
+  // ─── Tournament Tables ─────────────────────────────────────────────────────
+
+  getTournamentTables: (tournamentId: string) =>
+    apiFetch<TournamentTable[]>(`/api/tournaments/${tournamentId}/tables/`),
+
+  createTournamentTable: (tournamentId: string, data: { number: number; name?: string }) =>
+    apiFetch<TournamentTable>(`/api/tournaments/${tournamentId}/tables/`, {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+
+  updateTournamentTable: (tournamentId: string, tableId: number, data: { name?: string; is_active?: boolean }) =>
+    apiFetch<TournamentTable>(`/api/tournaments/${tournamentId}/tables/${tableId}/`, {
+      method: "PATCH",
+      body: JSON.stringify(data),
+    }),
+
+  deleteTournamentTable: (tournamentId: string, tableId: number) =>
+    apiFetch<void>(`/api/tournaments/${tournamentId}/tables/${tableId}/`, { method: "DELETE" }),
+
   // ─── Bracket ───────────────────────────────────────────────────────────────
 
   startTournament: (id: string) =>
-    apiFetch<{ tournament: Tournament; matches: Match[] }>(
+    apiFetch<{ tournament: Tournament; matches?: Match[]; groups?: TournamentGroup[] }>(
       `/api/tournaments/${id}/start/`,
       { method: "POST" }
     ),
+
+  getGroups: (tournamentId: string) =>
+    apiFetch<TournamentGroup[]>(`/api/tournaments/${tournamentId}/groups/`),
+
+  submitGroupScore: (tournamentId: string, groupId: number, matchId: number, score1: number, score2: number) =>
+    apiFetch<GroupMatch>(`/api/tournaments/${tournamentId}/groups/${groupId}/matches/${matchId}/score/`, {
+      method: "POST",
+      body: JSON.stringify({ score1, score2 }),
+    }),
+
+  assignGroupMatchTable: (tournamentId: string, groupId: number, matchId: number, tableNumber: number | null) =>
+    apiFetch<GroupMatch>(`/api/tournaments/${tournamentId}/groups/${groupId}/matches/${matchId}/table/`, {
+      method: "PATCH",
+      body: JSON.stringify({ table_number: tableNumber }),
+    }),
+
+  startPlayoff: (tournamentId: string) =>
+    apiFetch<{ tournament: Tournament; matches: Match[] }>(`/api/tournaments/${tournamentId}/playoff/`, {
+      method: "POST",
+    }),
 
   getMatches: (id: string) =>
     apiFetch<Match[]>(`/api/tournaments/${id}/matches/`),
@@ -124,5 +242,11 @@ export const api = {
     apiFetch<Match>(`/api/tournaments/${tournamentId}/matches/${matchId}/score/`, {
       method: "POST",
       body: JSON.stringify({ score1, score2 }),
+    }),
+
+  assignTable: (tournamentId: string, matchId: number, tableNumber: number | null) =>
+    apiFetch<Match>(`/api/tournaments/${tournamentId}/matches/${matchId}/table/`, {
+      method: "PATCH",
+      body: JSON.stringify({ table_number: tableNumber }),
     }),
 };

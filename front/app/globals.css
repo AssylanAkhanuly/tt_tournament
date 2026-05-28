@@ -1,38 +1,197 @@
 @import "tailwindcss";
 
+/* ─── Design system ───────────────────────────────────────────────────────── */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --bg:        #09091a;
+  --surface:   #111228;
+  --card:      #14162a;
+  --elevated:  #1a1d35;
+  --border:    rgba(255,255,255,0.07);
+  --border-hi: rgba(255,255,255,0.13);
+  --accent:    #3b82f6;
+  --accent-dim:rgba(59,130,246,0.18);
+  --live:      #06b6d4;
+  --success:   #22c55e;
+  --warning:   #f59e0b;
+  --danger:    #ef4444;
+  --text:      #f1f5f9;
+  --text-2:    rgba(241,245,249,0.55);
+  --text-3:    rgba(241,245,249,0.28);
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background:
+    radial-gradient(ellipse 100% 50% at 50% -10%,
+      rgba(59,130,246,0.09) 0%, transparent 70%),
+    radial-gradient(ellipse 60% 40% at 90% 110%,
+      rgba(139,92,246,0.05) 0%, transparent 70%),
+    #09091a;
+  color: var(--text);
+  font-family: var(--font-geist-sans, system-ui, -apple-system, sans-serif);
+  -webkit-font-smoothing: antialiased;
+  min-height: 100vh;
 }
 
-/* ─── Step transition animations ─────────────────────────────────────────── */
+/* ─── Scrollbar ───────────────────────────────────────────────────────────── */
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.09); border-radius: 10px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.18); }
+
+/* ─── Step transitions ────────────────────────────────────────────────────── */
 @keyframes step-in-forward {
-  from { opacity: 0; transform: translateX(40px); }
+  from { opacity: 0; transform: translateX(32px); }
   to   { opacity: 1; transform: translateX(0);    }
 }
 @keyframes step-in-back {
-  from { opacity: 0; transform: translateX(-40px); }
+  from { opacity: 0; transform: translateX(-32px); }
   to   { opacity: 1; transform: translateX(0);     }
 }
-.step-forward { animation: step-in-forward 0.28s cubic-bezier(.25,.46,.45,.94) both; }
-.step-back    { animation: step-in-back    0.28s cubic-bezier(.25,.46,.45,.94) both; }
+.step-forward { animation: step-in-forward 0.25s cubic-bezier(.25,.46,.45,.94) both; }
+.step-back    { animation: step-in-back    0.25s cubic-bezier(.25,.46,.45,.94) both; }
+
+/* ─── Toast ───────────────────────────────────────────────────────────────── */
+@keyframes toast-in {
+  from { opacity: 0; transform: translateY(10px) scale(0.96); }
+  to   { opacity: 1; transform: translateY(0)    scale(1);    }
+}
+.animate-toast { animation: toast-in 0.2s cubic-bezier(.34,1.46,.64,1) both; }
+
+/* ─── React Flow — strip white defaults ───────────────────────────────────── */
+.react-flow__node {
+  background:    transparent !important;
+  border:        none       !important;
+  padding:       0          !important;
+  box-shadow:    none       !important;
+  pointer-events: all       !important;   /* elementsSelectable=false kills clicks */
+}
+.react-flow__controls {
+  background:   rgba(9,9,26,0.92)        !important;
+  border:       1px solid rgba(255,255,255,0.07) !important;
+  border-radius:12px                     !important;
+  box-shadow:   none                     !important;
+  overflow:     hidden;
+}
+.react-flow__controls-button {
+  background:   transparent             !important;
+  border:       none                    !important;
+  border-bottom:1px solid rgba(255,255,255,0.06) !important;
+  color:        rgba(255,255,255,0.30)  !important;
+  fill:         rgba(255,255,255,0.30)  !important;
+}
+.react-flow__controls-button:hover {
+  background:   rgba(255,255,255,0.05) !important;
+  color:        rgba(255,255,255,0.75) !important;
+  fill:         rgba(255,255,255,0.75) !important;
+}
+.react-flow__controls-button svg { fill: inherit !important; }
+.react-flow__controls-button:last-child { border-bottom: none !important; }
+
+/* ─── FullCalendar dark theme ─────────────────────────────────────────────── */
+.fc-dark {
+  --fc-border-color:                 rgba(255,255,255,0.07);
+  --fc-page-bg-color:                transparent;
+  --fc-neutral-bg-color:             rgba(255,255,255,0.03);
+  --fc-neutral-text-color:           rgba(255,255,255,0.35);
+  --fc-today-bg-color:               rgba(59,130,246,0.07);
+  --fc-highlight-color:              rgba(59,130,246,0.13);
+  --fc-now-indicator-color:          #3b82f6;
+  --fc-non-business-color:           rgba(0,0,0,0.10);
+  --fc-button-text-color:            rgba(255,255,255,0.65);
+  --fc-button-bg-color:              rgba(255,255,255,0.06);
+  --fc-button-border-color:          rgba(255,255,255,0.10);
+  --fc-button-hover-bg-color:        rgba(255,255,255,0.10);
+  --fc-button-hover-border-color:    rgba(255,255,255,0.15);
+  --fc-button-active-bg-color:       rgba(59,130,246,0.22);
+  --fc-button-active-border-color:   rgba(59,130,246,0.40);
+  --fc-event-bg-color:               rgba(59,130,246,0.22);
+  --fc-event-border-color:           transparent;
+  --fc-event-text-color:             #93c5fd;
+  --fc-event-selected-overlay-color: rgba(0,0,0,0.25);
+  --fc-more-link-bg-color:           rgba(255,255,255,0.07);
+  --fc-more-link-text-color:         rgba(255,255,255,0.45);
+
+  height: 100%;
+}
+
+/* Scrollgrid */
+.fc-dark .fc-scrollgrid               { border-radius: 16px; overflow: hidden; }
+.fc-dark td, .fc-dark th              { border-color: rgba(255,255,255,0.07) !important; }
+
+/* Column headers */
+.fc-dark .fc-col-header-cell          { background: rgba(255,255,255,0.02); }
+.fc-dark .fc-col-header-cell-cushion  {
+  color: rgba(255,255,255,0.30) !important;
+  font-size: 11px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.10em;
+  padding: 10px 4px; text-decoration: none !important;
+}
+.fc-dark .fc-scrollgrid-section-header .fc-scroller { overflow: hidden !important; }
+
+/* Day numbers */
+.fc-dark .fc-daygrid-day:hover        { background: rgba(255,255,255,0.015); }
+.fc-dark .fc-daygrid-day-top          { justify-content: flex-end; }
+.fc-dark .fc-daygrid-day-number       {
+  color: rgba(255,255,255,0.40) !important;
+  font-size: 12px; font-weight: 600;
+  padding: 5px 8px; text-decoration: none !important;
+}
+.fc-dark .fc-day-today .fc-daygrid-day-number {
+  background: #3b82f6; color: #fff !important; border-radius: 50%;
+  width: 26px; height: 26px; display: flex; align-items: center;
+  justify-content: center; padding: 0; margin: 4px; font-weight: 800;
+}
+.fc-dark .fc-day-other .fc-daygrid-day-number { color: rgba(255,255,255,0.15) !important; }
+
+/* Events */
+.fc-dark .fc-event {
+  border-radius: 5px; border-left-width: 3px;
+  border-top-width: 0; border-right-width: 0; border-bottom-width: 0;
+  padding: 2px 5px; font-size: 11px; font-weight: 600;
+  cursor: pointer; transition: filter 0.12s, transform 0.12s;
+}
+.fc-dark .fc-event:hover              { filter: brightness(1.18); transform: scale(1.01); }
+.fc-dark .fc-event-dragging           { opacity: 0.85; box-shadow: 0 8px 24px rgba(0,0,0,0.4); }
+.fc-dark .fc-event-title              { font-weight: 600; }
+.fc-dark .fc-daygrid-event-dot        { display: none; }
+
+/* Toolbar */
+.fc-dark .fc-toolbar-title            { color: #fff; font-size: 18px; font-weight: 800; }
+.fc-dark .fc-toolbar-chunk button     {
+  border-radius: 10px !important; font-size: 13px !important;
+  font-weight: 600 !important; padding: 6px 14px !important;
+  text-transform: none !important; box-shadow: none !important;
+  transition: all 0.15s !important;
+}
+.fc-dark .fc-button-group > button:not(:first-child) { margin-left: 2px !important; }
+
+/* Time grid */
+.fc-dark .fc-timegrid-slot            { border-color: rgba(255,255,255,0.04) !important; height: 40px; }
+.fc-dark .fc-timegrid-slot-label-cushion { color: rgba(255,255,255,0.25); font-size: 11px; }
+.fc-dark .fc-timegrid-col.fc-day-today { background: rgba(59,130,246,0.05); }
+.fc-dark .fc-timegrid-now-indicator-line { border-color: #3b82f6; }
+.fc-dark .fc-timegrid-now-indicator-arrow { border-color: #3b82f6; }
+
+/* List view */
+.fc-dark .fc-list-table               { border-color: rgba(255,255,255,0.07) !important; }
+.fc-dark .fc-list-day-cushion         { background: rgba(255,255,255,0.04) !important; }
+.fc-dark .fc-list-day-text,
+.fc-dark .fc-list-day-side-text       { color: rgba(255,255,255,0.45) !important; font-weight: 700; text-decoration: none !important; }
+.fc-dark .fc-list-event:hover td      { background: rgba(255,255,255,0.03) !important; }
+.fc-dark .fc-list-event-title a       { color: rgba(255,255,255,0.75) !important; text-decoration: none !important; }
+.fc-dark .fc-list-empty               { background: transparent; color: rgba(255,255,255,0.25); }
+
+/* Popover */
+.fc-dark .fc-popover                  {
+  background: #1a1d35 !important; border-color: rgba(255,255,255,0.12) !important;
+  border-radius: 14px !important; box-shadow: 0 20px 60px rgba(0,0,0,0.55) !important; overflow: hidden;
+}
+.fc-dark .fc-popover-header           {
+  background: rgba(255,255,255,0.05) !important;
+  color: rgba(255,255,255,0.8) !important; font-weight: 700; font-size: 13px;
+}
+.fc-dark .fc-popover-close            { color: rgba(255,255,255,0.35) !important; opacity: 1; }
+
+/* Misc */
+.fc-dark .fc-bg-event                 { opacity: 0.12; }
+.fc-dark .fc-non-business             { background: rgba(0,0,0,0.08); }

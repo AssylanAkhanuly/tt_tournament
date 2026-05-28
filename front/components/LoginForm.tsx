@@ -73,7 +73,7 @@ export default function LoginForm({ onSuccess }: Props) {
   }
 
   return (
-    <div className="h-[100dvh] bg-[#0d1b35] flex flex-col px-6 py-10 overflow-hidden">
+    <div className="h-[100dvh] flex flex-col px-6 py-10 overflow-hidden" style={{ background: "var(--bg)" }}>
       {/* Top bar */}
       <div className="flex items-center justify-between mb-auto">
         {step === 2 ? (

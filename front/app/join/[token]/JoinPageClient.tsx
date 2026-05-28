@@ -6,7 +6,7 @@ import { Tournament, User } from "@/lib/types";
 import { api } from "@/lib/api";
 import PhoneInput from "@/components/PhoneInput";
 import PinInput, { PinInputHandle } from "@/components/PinInput";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Users } from "lucide-react";
 
 const INPUT = `w-full px-4 py-3.5 rounded-2xl bg-white/10 border border-white/20
   text-white placeholder:text-white/35 text-base outline-none
@@ -55,9 +55,10 @@ function UnauthFlow({ tournament, joinToken }: { tournament: Tournament; joinTok
   const [tab, setTab] = useState<"register" | "login">("register");
 
   return (
-    <div className="h-[100dvh] bg-[#0d1b35] flex flex-col overflow-hidden">
+    <div className="h-[100dvh] flex flex-col overflow-hidden" style={{ background: "var(--bg)" }}>
       <TournamentBadge tournament={tournament} />
-      <div className="flex mx-5 mb-2 rounded-2xl overflow-hidden border border-white/15 bg-white/5 shrink-0">
+      <div className="flex mx-5 mb-2 rounded-2xl overflow-hidden border border-white/[0.10] shrink-0"
+           style={{ background: "var(--surface)" }}>
         <TabBtn label="Регистрация" active={tab === "register"} onClick={() => setTab("register")} />
         <TabBtn label="Уже есть аккаунт" active={tab === "login"} onClick={() => setTab("login")} />
       </div>
@@ -399,20 +400,31 @@ function ErrorBox({ msg }: { msg: string }) {
 
 function TournamentBadge({ tournament }: { tournament: Tournament }) {
   return (
-    <div className="mx-5 mt-10 mb-4 bg-white/10 border border-white/15 rounded-2xl p-4 shrink-0">
-      <p className="text-blue-400 text-xs font-bold uppercase tracking-widest mb-0.5">Приглашение</p>
-      <h2 className="text-white font-bold text-lg leading-snug">{tournament.name}</h2>
-      {tournament.description && (
-        <p className="text-white/50 text-sm mt-0.5 line-clamp-1">{tournament.description}</p>
-      )}
-      <p className="text-white/40 text-xs mt-1">👥 {tournament.participant_count} участников</p>
+    <div className="mx-5 mt-8 mb-4 shrink-0 rounded-2xl border border-white/[0.10] overflow-hidden"
+         style={{ background: "var(--card)" }}>
+      <div className="h-[3px] w-full"
+           style={{ background: "linear-gradient(90deg, #3b82f6, #06b6d4)" }} />
+      <div className="px-4 py-4">
+        <p className="text-[10px] font-bold text-blue-400/70 uppercase tracking-[0.14em] mb-1.5">
+          Приглашение в турнир
+        </p>
+        <h2 className="text-white font-bold text-[17px] leading-snug">{tournament.name}</h2>
+        {tournament.description && (
+          <p className="text-white/45 text-[13px] mt-1 line-clamp-2 leading-relaxed">
+            {tournament.description}
+          </p>
+        )}
+        <p className="text-white/30 text-[12px] mt-2.5 flex items-center gap-1.5">
+          <Users size={11} />{tournament.participant_count} участников
+        </p>
+      </div>
     </div>
   );
 }
 
 function DarkShell({ tournament, children }: { tournament: Tournament; children: React.ReactNode }) {
   return (
-    <div className="h-[100dvh] bg-[#0d1b35] flex flex-col px-5 py-10 overflow-hidden">
+    <div className="h-[100dvh] flex flex-col px-5 py-10 overflow-hidden" style={{ background: "var(--bg)" }}>
       <TournamentBadge tournament={tournament} />
       <div className="flex-1 flex flex-col justify-center max-w-sm mx-auto w-full">
         {children}
