@@ -258,7 +258,20 @@ export default function ClassicBracket({
     })();
     const isPhantom = (m: Match) => truePhantoms.has(m.id);
 
-    const visible = matches.filter((m) => !isPhantom(m));
+    // A bye is a match that auto-finished with a single player and no score
+    // (its opponent slot was permanently empty). RTTF doesn't draw these as
+    // match boxes — the player is shown seated directly in their next round —
+    // so we hide the bye card; the backend already advanced the player into
+    // the following match, where they appear waiting for a real opponent.
+    const isBye = (m: Match) =>
+      m.status === "finished" &&
+      m.score1 == null &&
+      m.score2 == null &&
+      (m.player1 == null) !== (m.player2 == null);
+
+    const hidden = (m: Match) => isPhantom(m) || isBye(m);
+
+    const visible = matches.filter((m) => !hidden(m));
     if (visible.length === 0) return empty;
 
     const allRounds = [...new Set(visible.map((m) => m.round_number))].sort((a, b) => a - b);
@@ -377,9 +390,9 @@ export default function ClassicBracket({
     for (const m of visible) {
       if (!posY.has(m.id)) continue;
       const we = m.winner_next_id ? byId.get(m.winner_next_id) : null;
-      if (we && !isPhantom(we) && posY.has(we.id)) winnerEdges.push({ m, t: we });
+      if (we && !hidden(we) && posY.has(we.id)) winnerEdges.push({ m, t: we });
       const le = m.loser_next_id ? byId.get(m.loser_next_id) : null;
-      if (le && !isPhantom(le) && posY.has(le.id)) loserEdges.push({ m, t: le });
+      if (le && !hidden(le) && posY.has(le.id)) loserEdges.push({ m, t: le });
     }
 
     const elbow = (fromX: number, fromY: number, vx: number, toY: number, toX: number) =>
