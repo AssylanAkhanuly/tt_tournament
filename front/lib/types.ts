@@ -81,6 +81,9 @@ export interface Match {
   is_consolation: boolean;
   winner_next_id: number | null;
   loser_next_id:  number | null;
+  /** Range of final places this match's participants can finish in (all-places playoff). */
+  place_lo: number | null;
+  place_hi: number | null;
 }
 
 export interface GroupMatch {

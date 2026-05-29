@@ -201,39 +201,11 @@ export default function ClassicBracket({
     }
     const playerCount = seedById.size; // real field size (bracket is padded to 2^n)
 
-    // ── Place intervals from the winner_next / loser_next graph ───────────────
-    // size(m) = number of final places contested in m's interval.
-    // start(m) = the best (lowest) place number of that interval.
-    const sizeMemo = new Map<number, number>();
-    const computeSize = (m: Match): number => {
-      const cached = sizeMemo.get(m.id);
-      if (cached !== undefined) return cached;
-      sizeMemo.set(m.id, 2); // cycle guard
-      if (!m.winner_next_id && !m.loser_next_id) return 2;
-      const w = m.winner_next_id ? byId.get(m.winner_next_id) : null;
-      const l = m.loser_next_id ? byId.get(m.loser_next_id) : null;
-      const s = ((w ? computeSize(w) : 0) + (l ? computeSize(l) : 0)) || 2;
-      sizeMemo.set(m.id, s);
-      return s;
-    };
-
-    const incoming = new Set<number>();
-    for (const m of matches) {
-      if (m.winner_next_id) incoming.add(m.winner_next_id);
-      if (m.loser_next_id)  incoming.add(m.loser_next_id);
-    }
-    const startMemo = new Map<number, number>();
-    const setStart = (m: Match, s: number) => {
-      if (startMemo.has(m.id)) return;
-      startMemo.set(m.id, s);
-      const w = m.winner_next_id ? byId.get(m.winner_next_id) : null;
-      const l = m.loser_next_id ? byId.get(m.loser_next_id) : null;
-      if (w) setStart(w, s);
-      if (l) setStart(l, s + (w ? computeSize(w) : 0));
-    };
-    for (const m of matches) if (!incoming.has(m.id)) setStart(m, 1);
-
-    const startOf = (m: Match) => startMemo.get(m.id) ?? 1;
+    // ── Place range comes straight from the backend ──────────────────────────
+    // (winner and loser branches overlap in the RTTF climbing ladder, so the
+    // range can't be inferred from topology — the server computes place_lo/hi.)
+    const startOf = (m: Match) => m.place_lo ?? 1;
+    const endOf   = (m: Match) => m.place_hi ?? playerCount;
 
     // ── True-phantom detection (slots that will never receive a real player) ──
     const truePhantoms = (() => {
@@ -277,21 +249,12 @@ export default function ClassicBracket({
     const maxRound  = allRounds[allRounds.length - 1];
     const colX = (round: number) => LEFT_PADDING + (round - 1) * (CARD_W + COL_GAP);
 
-    // ── Group matches into place-band sections ────────────────────────────────
-    // Main bracket (interval starting at place 1) is its own section; every
-    // other match is grouped by the power-of-two place block it resolves into:
-    //   3–4 | 5–8 | 9–16 | 17–32 …  (block b spans 2^(b-1)+1 .. 2^b)
-    const sectionKey = (m: Match): number => {
-      const lo = startOf(m);
-      if (lo === 1) return 0;
-      return Math.ceil(Math.log2(lo)); // 2,3,4 …
-    };
-    const sectionBounds = (key: number): [number, number] =>
-      key === 0 ? [1, 2] : [2 ** (key - 1) + 1, 2 ** key];
-
+    // ── Group matches into sections by their best reachable place ─────────────
+    // The main bracket is place_lo == 1; each consolation chain shares a
+    // place_lo (3, 5, 7, 9 …), forming one connected sub-bracket per section.
     const sections = new Map<number, Match[]>();
     for (const m of visible) {
-      const k = sectionKey(m);
+      const k = startOf(m);
       (sections.get(k) ?? sections.set(k, []).get(k)!).push(m);
     }
     const sectionKeys = [...sections.keys()].sort((a, b) => a - b);
@@ -336,12 +299,10 @@ export default function ClassicBracket({
         }
       }
 
-      // Section header. The bracket is padded to a power of two, so structural
-      // place ranges can exceed the real field (e.g. "17–32" for 20 players).
-      // Cap the displayed range at the actual player count — places beyond it
-      // are phantom byes that no real player can finish in.
-      const [lo, hiRaw] = sectionBounds(key);
-      const hi = Math.min(hiRaw, playerCount);
+      // Section header — places [key .. max reachable], capped at the real
+      // field (the bracket is padded to a power of two, so ranges can exceed it).
+      const lo = key;
+      const hi = Math.min(Math.max(...ms.map(endOf)), playerCount);
       const headerWidth =
         (rounds[rounds.length - 1] - rounds[0] + 1) * (CARD_W + COL_GAP) - COL_GAP;
       labels.push({
