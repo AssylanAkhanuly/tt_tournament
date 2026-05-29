@@ -369,27 +369,7 @@ export default function ClassicBracket({
     const elbow = (fromX: number, fromY: number, vx: number, toY: number, toX: number) =>
       `M ${fromX} ${fromY} H ${vx} V ${toY} H ${toX}`;
 
-    // Exit the source's right edge at a winner-vs-loser-distinct height so a
-    // box's two outgoing lines never overlap.
-    const exitY = (m: Match, winner: boolean) => posY.get(m.id)! + CARD_H * (winner ? 0.34 : 0.66);
-
-    // Enter the target at a distinct row per feeder (a box has ≤2 incoming
-    // lines): the higher source enters the upper row, the lower the lower row,
-    // so two lines into one box never overlap.
-    const entryFrac = new Map<string, number>();
-    {
-      const incoming = new Map<number, Edge[]>();
-      for (const e of [...winnerEdges, ...loserEdges]) {
-        (incoming.get(e.t.id) ?? incoming.set(e.t.id, []).get(e.t.id)!).push(e);
-      }
-      for (const arr of incoming.values()) {
-        arr.sort((a, b) => posY.get(a.m.id)! - posY.get(b.m.id)!);
-        arr.forEach((e, i) =>
-          entryFrac.set(`${e.m.id}-${e.t.id}`, arr.length < 2 ? 0.5 : i === 0 ? 0.3 : 0.7));
-      }
-    }
-    const entryY = (e: Edge) =>
-      posY.get(e.t.id)! + CARD_H * (entryFrac.get(`${e.m.id}-${e.t.id}`) ?? 0.5);
+    const midY = (m: Match) => posY.get(m.id)! + CARD_H / 2;
 
     // Winner elbows — vertical at the target column's gap midpoint.
     for (const e of winnerEdges) {
@@ -397,15 +377,14 @@ export default function ClassicBracket({
       const toX   = colX(e.t.round_number);
       lines.push({
         id: `w-${e.m.id}-${e.t.id}`,
-        d: elbow(fromX, exitY(e.m, true), toX - COL_GAP * 0.5, entryY(e), toX),
+        d: elbow(fromX, midY(e.m), toX - COL_GAP * 0.5, midY(e.t), toX),
       });
     }
 
     // Loser drops — classic side-to-side elbow (source RIGHT → vertical spine →
-    // target LEFT), exactly like the winners but dashed and tinted a distinct
-    // colour. The two feeders of a target share a spine just left of the target
-    // column so they merge; spines for different targets are nudged apart so
-    // overlapping drops stay separable.
+    // target LEFT), solid and tinted a distinct colour. The two feeders of a
+    // target share a spine just left of the target column so they merge; spines
+    // for different targets are nudged apart so overlapping drops stay separable.
     const targetLane = new Map<number, number>();
     const targetColor = new Map<number, string>();
     {
@@ -431,7 +410,7 @@ export default function ClassicBracket({
       const vx    = toX - COL_GAP * 0.72 + lane * 13;   // per-target spine, well separated
       lines.push({
         id: `l-${e.m.id}-${e.t.id}`,
-        d: elbow(fromX, exitY(e.m, false), vx, entryY(e), toX),
+        d: elbow(fromX, midY(e.m), vx, midY(e.t), toX),
         loser: true,
         color: targetColor.get(e.t.id),
       });
@@ -542,12 +521,10 @@ export default function ClassicBracket({
                 d={line.d}
                 fill="none"
                 stroke={line.loser ? (line.color ?? "#f59e0b") : "rgba(125,211,252,0.45)"}
-                strokeOpacity={line.loser ? 0.55 : 1}
-                strokeWidth={line.loser ? 1.4 : 1.5}
-                strokeDasharray={line.loser ? "5 4" : undefined}
+                strokeOpacity={line.loser ? 0.7 : 1}
+                strokeWidth={1.5}
                 strokeLinejoin="round"
-                strokeLinecap="round"
-                shapeRendering={line.loser ? undefined : "crispEdges"}
+                shapeRendering="crispEdges"
               />
             ))}
           </svg>
