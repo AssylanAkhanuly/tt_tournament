@@ -57,6 +57,10 @@ def _can_create_tournament(user, club=None):
     return False
 
 
+def _playoff_started(tournament):
+    return tournament.matches.exists()
+
+
 # ─── Tournament CRUD ─────────────────────────────────────────────────────────
 
 class TournamentListCreateView(generics.ListCreateAPIView):
@@ -545,6 +549,8 @@ class GroupMatchScoreView(APIView):
         tournament = get_object_or_404(Tournament.objects.select_related('club'), pk=pk)
         if not _can_manage_tournament(request.user, tournament):
             return Response({"detail": "Нет прав."}, status=status.HTTP_403_FORBIDDEN)
+        if _playoff_started(tournament):
+            return Response({"detail": "Плей-офф уже начат — групповые результаты заблокированы."}, status=status.HTTP_400_BAD_REQUEST)
 
         group = get_object_or_404(TournamentGroup, pk=group_id, tournament=tournament)
         match = get_object_or_404(GroupMatch, pk=match_id, group=group)
@@ -608,6 +614,8 @@ class GroupMatchResetView(APIView):
         tournament = get_object_or_404(Tournament.objects.select_related('club'), pk=pk)
         if not _can_manage_tournament(request.user, tournament):
             return Response({"detail": "Нет прав."}, status=status.HTTP_403_FORBIDDEN)
+        if _playoff_started(tournament):
+            return Response({"detail": "Плей-офф уже начат — групповые результаты заблокированы."}, status=status.HTTP_400_BAD_REQUEST)
         group = get_object_or_404(TournamentGroup, pk=group_id, tournament=tournament)
         match = get_object_or_404(GroupMatch, pk=match_id, group=group)
 
@@ -652,6 +660,8 @@ class GroupMatchTableView(APIView):
         tournament = get_object_or_404(Tournament.objects.select_related('club'), pk=pk)
         if not _can_manage_tournament(request.user, tournament):
             return Response({"detail": "Нет прав."}, status=status.HTTP_403_FORBIDDEN)
+        if _playoff_started(tournament):
+            return Response({"detail": "Плей-офф уже начат — групповые результаты заблокированы."}, status=status.HTTP_400_BAD_REQUEST)
         group = get_object_or_404(TournamentGroup, pk=group_id, tournament=tournament)
         match = get_object_or_404(GroupMatch, pk=match_id, group=group)
 
