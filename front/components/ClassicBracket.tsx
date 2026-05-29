@@ -89,6 +89,8 @@ function MatchCard({
     (isAdmin ||
       currentUser?.id === match.player1?.id ||
       currentUser?.id === match.player2?.id);
+  // Admins can also open a finished match to correct/reset its score.
+  const canOpen = canScore || (isAdmin && isFinished && match.score1 != null);
 
   const p1Winner = !!match.winner && match.winner.id === match.player1?.id;
   const p2Winner = !!match.winner && match.winner.id === match.player2?.id;
@@ -135,10 +137,10 @@ function MatchCard({
   return (
     <div
       style={{ width: CARD_W }}
-      onClick={canScore ? () => onActivate(match) : undefined}
-      title={canScore ? "Ввести счёт" : undefined}
+      onClick={canOpen ? () => onActivate(match) : undefined}
+      title={canOpen ? (canScore ? "Ввести счёт" : "Изменить / сбросить счёт") : undefined}
       className={`overflow-hidden border shadow-[0_8px_30px_rgba(0,0,0,0.18)] ${
-        canScore ? "cursor-pointer ring-1 ring-blue-400/40 hover:ring-blue-300/80 hover:border-blue-300/80" : ""
+        canOpen ? "cursor-pointer ring-1 ring-blue-400/40 hover:ring-blue-300/80 hover:border-blue-300/80" : ""
       } ${
         isLive
           ? "border-blue-400/60 bg-[#0e2344]"

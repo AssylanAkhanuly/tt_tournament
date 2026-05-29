@@ -224,6 +224,11 @@ export const api = {
       body: JSON.stringify({ score1, score2 }),
     }),
 
+  resetGroupMatch: (tournamentId: string, groupId: number, matchId: number) =>
+    apiFetch<GroupMatch>(`/api/tournaments/${tournamentId}/groups/${groupId}/matches/${matchId}/reset/`, {
+      method: "POST",
+    }),
+
   assignGroupMatchTable: (tournamentId: string, groupId: number, matchId: number, tableNumber: number | null) =>
     apiFetch<GroupMatch>(`/api/tournaments/${tournamentId}/groups/${groupId}/matches/${matchId}/table/`, {
       method: "PATCH",
@@ -242,6 +247,11 @@ export const api = {
     apiFetch<Match>(`/api/tournaments/${tournamentId}/matches/${matchId}/score/`, {
       method: "POST",
       body: JSON.stringify({ score1, score2 }),
+    }),
+
+  resetMatch: (tournamentId: string, matchId: number) =>
+    apiFetch<Match>(`/api/tournaments/${tournamentId}/matches/${matchId}/reset/`, {
+      method: "POST",
     }),
 
   assignTable: (tournamentId: string, matchId: number, tableNumber: number | null) =>

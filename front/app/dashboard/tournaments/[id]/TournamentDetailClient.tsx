@@ -138,6 +138,11 @@ export default function TournamentDetailClient({
   const s           = S[tournament.status];
   const existingIds = new Set(participants.map((p) => p.user.id));
   const totalMatches = matches.length;
+  // Late entries: allowed before start, and during the group stage (groups
+  // exist but the playoff bracket isn't generated yet).
+  const isGroupStage = tournament.format === "group_playoff"
+    && tournament.status === "in_progress" && groups.length > 0 && matches.length === 0;
+  const canAddPlayer = tournament.status === "open" || isGroupStage;
 
   // The champion is the winner of the grand final (places 1–2). In the
   // all-places ladder the consolation runs deeper than the final, so we must
@@ -258,6 +263,14 @@ export default function TournamentDetailClient({
     toast(`${winner ?? "Игрок"} победил ${s1}:${s2}`);
   }
 
+  async function handleScoreReset() {
+    if (!scoreMatch) return;
+    await api.resetMatch(tournament.id, scoreMatch.id);
+    const [fm, ft] = await Promise.all([api.getMatches(tournament.id), api.getTournament(tournament.id)]);
+    setMatches(fm); setTournament(ft); setScoreMatch(null);
+    toast("Счёт сброшен — введите заново");
+  }
+
   async function handleRemove(participantId: number) {
     setRemovingId(participantId);
     try {
@@ -273,6 +286,9 @@ export default function TournamentDetailClient({
     setParticipants((p) => p.find((x) => x.id === participant.id) ? p : [...p, participant]);
     setTournament((t) => ({ ...t, participant_count: t.participant_count + 1 }));
     toast(`${participant.user.name} добавлен`);
+    // A late entry during the group stage gets seated in a group server-side —
+    // refresh the groups so the new player and their matches appear.
+    if (isGroupStage) api.getGroups(tournament.id).then(setGroups).catch(() => {});
   }
 
   function handleMatchUpdated(updated: Match) {
@@ -547,9 +563,9 @@ export default function TournamentDetailClient({
                   {participants.length} зарегистрировано
                 </p>
               </div>
-              {isAdmin && tournament.status === "open" && (
+              {isAdmin && canAddPlayer && (
                 <button onClick={() => setShowAddPlayer(true)} className={BTN_P}>
-                  <UserPlus size={15} />Добавить
+                  <UserPlus size={15} />Добавить{isGroupStage ? " в группу" : ""}
                 </button>
               )}
             </div>
@@ -564,7 +580,7 @@ export default function TournamentDetailClient({
                       Добавьте игроков вручную или через QR‑код
                     </p>
                   </div>
-                  {isAdmin && tournament.status === "open" && (
+                  {isAdmin && canAddPlayer && (
                     <button onClick={() => setShowAddPlayer(true)} className={BTN_P}>
                       <UserPlus size={15} />Добавить первого игрока
                     </button>
@@ -765,7 +781,13 @@ export default function TournamentDetailClient({
       <ToastStack toasts={toasts} />
 
       {scoreMatch && (
-        <ScoreModal match={scoreMatch} onClose={() => setScoreMatch(null)} onSubmit={handleScoreSubmit} />
+        <ScoreModal
+          match={scoreMatch}
+          onClose={() => setScoreMatch(null)}
+          onSubmit={handleScoreSubmit}
+          canReset={isAdmin}
+          onReset={handleScoreReset}
+        />
       )}
 
       {showAddPlayer && (
@@ -1328,7 +1350,8 @@ function OverviewPanel({
                 ) : (
                   <div className={`grid gap-4 ${groups.length >= 2 ? "grid-cols-1 2xl:grid-cols-2" : "grid-cols-1"}`}>
                     {groups.map((g, idx) => (
-                      <GroupRoundRobinTable key={g.id} group={g} colorIdx={idx} />
+                      <GroupRoundRobinTable key={g.id} group={g} colorIdx={idx} isAdmin={isAdmin}
+                        onEditMatch={(m) => setGroupScoreMatch({ ...m, groupId: g.id, groupName: g.name })} />
                     ))}
                   </div>
                 )}
@@ -1465,6 +1488,13 @@ function OverviewPanel({
           await assignGroupTable(groupScoreMatch.groupId, groupScoreMatch.id, null);
           setGroupScoreMatch(null);
         } : undefined}
+        canReset={isAdmin}
+        onReset={async () => {
+          await api.resetGroupMatch(tournament.id, groupScoreMatch.groupId, groupScoreMatch.id);
+          const updated = await api.getGroups(tournament.id);
+          onGroupsChange(updated);
+          setGroupScoreMatch(null);
+        }}
       />
     )}
     </>
@@ -1488,15 +1518,18 @@ const GROUP_QUICK: [number, number][] = [
 ];
 
 function GroupScoreModal({
-  match, onClose, onSubmit, onClear,
+  match, onClose, onSubmit, onClear, canReset, onReset,
 }: {
   match: GroupMatch & { groupId?: number; groupName?: string };
   onClose: () => void;
   onSubmit: (s1: number, s2: number) => Promise<void>;
   onClear?: () => void;
+  canReset?: boolean;
+  onReset?: () => Promise<void>;
 }) {
-  const [s1, setS1]       = useState(0);
-  const [s2, setS2]       = useState(0);
+  const isFinished = match.status === "finished";
+  const [s1, setS1]       = useState(match.score1 ?? 0);
+  const [s2, setS2]       = useState(match.score2 ?? 0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -1510,6 +1543,13 @@ function GroupScoreModal({
     try { await onSubmit(s1, s2); }
     catch (err: unknown) { setError((err as Record<string, string>)?.detail ?? "Не удалось сохранить."); }
     finally { setLoading(false); }
+  }
+
+  async function reset() {
+    if (!onReset) return;
+    setLoading(true); setError(null);
+    try { await onReset(); }
+    catch (err: unknown) { setError((err as Record<string, string>)?.detail ?? "Не удалось отменить."); setLoading(false); }
   }
 
   return (
@@ -1613,12 +1653,20 @@ function GroupScoreModal({
                 Освободить
               </button>
             )}
-            <button onClick={save} disabled={loading || s1 === s2}
-              className="flex-1 py-3 rounded-xl font-bold text-[15px] transition-all active:scale-[.98]
-                         disabled:opacity-35 bg-blue-600 hover:bg-blue-500 text-white
-                         shadow-[0_4px_16px_rgba(59,130,246,0.35)]">
-              {loading ? "..." : `${s1}:${s2} Сохранить`}
-            </button>
+            {isFinished && canReset && onReset ? (
+              <button onClick={reset} disabled={loading}
+                className="flex-1 py-3 rounded-xl font-bold text-[15px] transition-all active:scale-[.98]
+                           disabled:opacity-40 bg-red-500/15 hover:bg-red-500/25 border border-red-500/25 text-red-300">
+                {loading ? "..." : "↺ Сбросить счёт"}
+              </button>
+            ) : (
+              <button onClick={save} disabled={loading || s1 === s2 || isFinished}
+                className="flex-1 py-3 rounded-xl font-bold text-[15px] transition-all active:scale-[.98]
+                           disabled:opacity-35 bg-blue-600 hover:bg-blue-500 text-white
+                           shadow-[0_4px_16px_rgba(59,130,246,0.35)]">
+                {loading ? "..." : `${s1}:${s2} Сохранить`}
+              </button>
+            )}
             <button onClick={onClose}
               className="flex-1 py-3 rounded-xl font-semibold text-[14px] transition-all
                          bg-white/[0.07] hover:bg-white/[0.11] border border-white/[0.09]
@@ -1882,13 +1930,17 @@ function StandingsTable({ matches, participants }: { matches: Match[]; participa
 }
 
 // ── Group Round-Robin Table ────────────────────────────────────────────────────
-function GroupRoundRobinTable({ group, colorIdx = 0 }: { group: TournamentGroup; colorIdx?: number }) {
+function GroupRoundRobinTable({ group, colorIdx = 0, isAdmin = false, onEditMatch }: {
+  group: TournamentGroup; colorIdx?: number; isAdmin?: boolean;
+  onEditMatch?: (m: GroupMatch) => void;
+}) {
   const players = group.participants;
   const color   = GROUP_COLORS[colorIdx % GROUP_COLORS.length];
 
-  // Build matrix: results[rowPlayerId][colPlayerId]
+  // Build matrix + a lookup of the match for a given (rowId, colId) pair.
   type Cell = { s1: number | null; s2: number | null; won: boolean | null };
   const matrix: Record<string, Record<string, Cell>> = {};
+  const matchByPair: Record<string, GroupMatch> = {};
   players.forEach((p) => { matrix[p.user.id] = {}; });
 
   group.matches.forEach((m: GroupMatch) => {
@@ -1897,6 +1949,8 @@ function GroupRoundRobinTable({ group, colorIdx = 0 }: { group: TournamentGroup;
     const won1 = m.winner ? m.winner.id === m.player1.id : null;
     matrix[m.player1.id][m.player2.id] = { s1: m.score1, s2: m.score2, won: won1 };
     matrix[m.player2.id][m.player1.id] = { s1: m.score2, s2: m.score1, won: won1 === null ? null : !won1 };
+    matchByPair[`${m.player1.id}|${m.player2.id}`] = m;
+    matchByPair[`${m.player2.id}|${m.player1.id}`] = m;
   });
 
   const HATCH = `repeating-linear-gradient(-45deg,${color.num},${color.num} 2px,rgba(0,0,0,0.08) 2px,rgba(0,0,0,0.08) 9px)`;
@@ -1957,9 +2011,15 @@ function GroupRoundRobinTable({ group, colorIdx = 0 }: { group: TournamentGroup;
                   }
                   const cell = matrix[p.user.id]?.[opp.user.id];
                   const scored = cell?.s1 !== null && cell?.s1 !== undefined;
+                  const m = matchByPair[`${p.user.id}|${opp.user.id}`];
+                  const editable = isAdmin && scored && !!m && !!onEditMatch;
                   return (
                     <td key={opp.user.id}
+                        onClick={editable ? () => onEditMatch!(m) : undefined}
+                        title={editable ? "Изменить / сбросить счёт" : undefined}
                         className={`text-center py-2.5 text-[12px] font-black tabular-nums ${
+                          editable ? "cursor-pointer hover:brightness-150" : ""
+                        } ${
                           !scored           ? "text-white/15" :
                           cell.won === true  ? "text-emerald-200" :
                           cell.won === false ? "text-red-300" :
