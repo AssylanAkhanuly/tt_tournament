@@ -259,18 +259,16 @@ export default function ClassicBracket({
     })();
     const isPhantom = (m: Match) => truePhantoms.has(m.id);
 
-    // A bye is a match that auto-finished with a single player and no score
-    // (its opponent slot was permanently empty). RTTF doesn't draw these as
-    // match boxes — the player is shown seated directly in their next round —
-    // so we hide the bye card; the backend already advanced the player into
-    // the following match, where they appear waiting for a real opponent.
-    const isBye = (m: Match) =>
-      m.status === "finished" &&
-      m.score1 == null &&
-      m.score2 == null &&
-      (m.player1 == null) !== (m.player2 == null);
+    // Hide every match that no real player can ever appear in:
+    //  • byes / ghosts — auto-finished with no score (a bye seats its single
+    //    player directly in the next round, RTTF-style; a ghost had none);
+    //  • unreachable — its whole place range lies beyond the real field
+    //    (e.g. places 21–32 for 20 players), so it only resolves phantom places.
+    const isFinishedEmpty = (m: Match) =>
+      m.status === "finished" && m.score1 == null && m.score2 == null;
+    const isUnreachable = (m: Match) => startOf(m) > playerCount;
 
-    const hidden = (m: Match) => isPhantom(m) || isBye(m);
+    const hidden = (m: Match) => isPhantom(m) || isFinishedEmpty(m) || isUnreachable(m);
 
     const visible = matches.filter((m) => !hidden(m));
     if (visible.length === 0) return empty;
