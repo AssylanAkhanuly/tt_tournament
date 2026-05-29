@@ -76,6 +76,9 @@ class TournamentParticipant(models.Model):
         verbose_name="Участник",
     )
     joined_at = models.DateTimeField(auto_now_add=True)
+    # RTTF rating snapshot, set when the tournament finishes.
+    rating_before = models.IntegerField(null=True, blank=True, verbose_name="Рейтинг до")
+    rating_change = models.IntegerField(null=True, blank=True, verbose_name="Изменение рейтинга")
 
     class Meta:
         verbose_name = "Участник"

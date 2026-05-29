@@ -436,6 +436,8 @@ class SubmitScoreView(APIView):
         if total_matches > 0 and total_matches == finished_matches:
             tournament.status = Tournament.STATUS_FINISHED
             tournament.save()
+            from .rating import apply_tournament_ratings
+            apply_tournament_ratings(tournament)
 
         return Response(MatchSerializer(match).data)
 
