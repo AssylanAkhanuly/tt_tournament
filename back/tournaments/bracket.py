@@ -277,55 +277,69 @@ def generate_all_places_bracket(tournament, players):
     # Build pk→match map for propagation
     all_matches_flat = {m.pk: m for r in range(1, rounds + 1) for m in all_rounds[r]}
 
-    # ── Helpers for bye propagation ─────────────────────────────────────────
-    def _propagate_consolation(m: Match, winner, loser) -> None:
-        """Push winner/loser to the next matches (for byes in round 1)."""
-        if m.winner_next_id and winner is not None:
-            nxt = all_matches_flat.get(m.winner_next_id)
-            if nxt:
-                if m.winner_next_slot == 1:
-                    nxt.player1 = winner
-                else:
-                    nxt.player2 = winner
-                nxt.save()
-                _maybe_start(nxt)
+    # Feeder map: which source match (and edge type) fills each (match, slot).
+    slot_feeder: dict[tuple[int, int], tuple[Match, str]] = {}
+    for s in all_matches_flat.values():
+        if s.winner_next_id:
+            slot_feeder[(s.winner_next_id, s.winner_next_slot)] = (s, "W")
+        if s.loser_next_id:
+            slot_feeder[(s.loser_next_id, s.loser_next_slot)] = (s, "L")
 
-        if m.loser_next_id and loser is not None:
-            nxt = all_matches_flat.get(m.loser_next_id)
-            if nxt:
-                if m.loser_next_slot == 1:
-                    nxt.player1 = loser
-                else:
-                    nxt.player2 = loser
-                nxt.save()
-                _maybe_start(nxt)
-
-    def _maybe_start(m: Match) -> None:
-        """Start match if both players are set; handle further byes."""
-        if m.player1 is None and m.player2 is None:
-            return
-        if m.player1 is None:
-            m.winner = m.player2
-            m.status = Match.FINISHED
-            m.save()
-            _propagate_consolation(m, winner=m.player2, loser=None)
-        elif m.player2 is None:
-            m.winner = m.player1
-            m.status = Match.FINISHED
-            m.save()
-            _propagate_consolation(m, winner=m.player1, loser=None)
-        else:
-            m.status = Match.IN_PROGRESS
-            m.save()
-            auto_assign_table(m)
-
-    # ── Populate round 1 and propagate byes ─────────────────────────────────
-    r1 = all_rounds[1]
-    for i, m in enumerate(r1):
+    # ── Populate round 1 from the seeded slots ───────────────────────────────
+    for i, m in enumerate(all_rounds[1]):
         m.player1 = padded[i * 2]
         m.player2 = padded[i * 2 + 1]
-        m.save()
-        _maybe_start(m)
+
+    # ── Resolve the bracket round by round ───────────────────────────────────
+    # A match is auto-won by "bye" only when the empty slot is PERMANENTLY empty
+    # (its feeder is finished and will never deliver a player) — never just
+    # because the opponent's feeder has not been played yet. This stops byes
+    # from cascading a player through several rounds without playing.
+    def _perm_empty(m: Match, slot: int) -> bool:
+        cur = m.player1 if slot == 1 else m.player2
+        if cur is not None:
+            return False
+        fdr = slot_feeder.get((m.id, slot))
+        if fdr is None:
+            return True                        # round-1 padding slot
+        src, _etype = fdr
+        return src.status == Match.FINISHED    # finished feeder yields nothing further
+
+    for r in range(1, rounds + 1):
+        for m in all_rounds[r]:
+            # Pull in winners already decided by upstream byes.
+            if r > 1:
+                for slot in (1, 2):
+                    fdr = slot_feeder.get((m.id, slot))
+                    if fdr and fdr[1] == "W" and fdr[0].status == Match.FINISHED and fdr[0].winner_id:
+                        if slot == 1:
+                            m.player1 = fdr[0].winner
+                        else:
+                            m.player2 = fdr[0].winner
+
+            e1, e2 = m.player1 is None, m.player2 is None
+            pe1, pe2 = _perm_empty(m, 1), _perm_empty(m, 2)
+
+            if e1 and e2:
+                # Ghost (neither side will ever arrive) → finished w/o a winner;
+                # otherwise still waiting on a live feeder → pending.
+                m.status = Match.FINISHED if (pe1 and pe2) else Match.PENDING
+                m.save()
+            elif (e1 and not pe1) or (e2 and not pe2):
+                m.status = Match.PENDING       # real player waiting for a live opponent
+                m.save()
+            elif e1:                           # slot 1 permanently empty → bye
+                m.winner = m.player2
+                m.status = Match.FINISHED
+                m.save()
+            elif e2:                           # slot 2 permanently empty → bye
+                m.winner = m.player1
+                m.status = Match.FINISHED
+                m.save()
+            else:                              # both real → playable now
+                m.status = Match.IN_PROGRESS
+                m.save()
+                auto_assign_table(m)
 
     return (
         Match.objects.filter(tournament=tournament)
@@ -457,6 +471,57 @@ def advance_winner(tournament, round_number: int, match_number: int, winner) -> 
     advance_winner_and_loser(match, winner, loser)
 
 
+def _slot_feeder(match: Match, slot: int):
+    """The source match (if any) that feeds the given slot of ``match``."""
+    from django.db.models import Q
+    return (
+        Match.objects.filter(
+            Q(winner_next=match, winner_next_slot=slot)
+            | Q(loser_next=match, loser_next_slot=slot)
+        )
+        .exclude(pk=match.pk)
+        .first()
+    )
+
+
+def _resolve_after_fill(nxt: Match) -> None:
+    """
+    Decide a match's state after one of its slots was just filled.
+
+    - both slots set → start the match
+    - one slot set, the empty slot PERMANENTLY empty (its feeder is finished and
+      will deliver nothing more) → bye-advance the present player and cascade
+    - otherwise → wait (the opponent is still to be decided live)
+    """
+    if nxt.status == Match.FINISHED:
+        return
+
+    p1, p2 = nxt.player1, nxt.player2
+    if p1 is not None and p2 is not None:
+        if nxt.status != Match.IN_PROGRESS:
+            nxt.status = Match.IN_PROGRESS
+            nxt.save()
+            auto_assign_table(nxt)
+        else:
+            nxt.save()
+        return
+    if p1 is None and p2 is None:
+        nxt.save()
+        return
+
+    empty_slot = 1 if p1 is None else 2
+    feeder = _slot_feeder(nxt, empty_slot)
+    if feeder is not None and feeder.status == Match.FINISHED:
+        # Opponent will never arrive → bye.
+        bye_winner = p2 if p1 is None else p1
+        nxt.winner = bye_winner
+        nxt.status = Match.FINISHED
+        nxt.save()
+        advance_winner_and_loser(nxt, bye_winner, None)
+    else:
+        nxt.save()  # still waiting for the live opponent
+
+
 def advance_winner_and_loser(match: Match, winner, loser) -> None:
     """
     After a match finishes, advance winner to winner_next and loser to loser_next.
@@ -465,59 +530,30 @@ def advance_winner_and_loser(match: Match, winner, loser) -> None:
     """
     # ── Winner routing ────────────────────────────────────────────────────────
     if match.winner_next_id:
-        # Explicit FK routing (consolation bracket)
-        try:
-            nxt = Match.objects.get(pk=match.winner_next_id)
-        except Match.DoesNotExist:
-            nxt = None
-        if nxt and winner:
-            if match.winner_next_slot == 1:
-                nxt.player1 = winner
-            else:
-                nxt.player2 = winner
-            if nxt.player1 is not None and nxt.player2 is not None:
-                nxt.status = Match.IN_PROGRESS
-                nxt.save()
-                auto_assign_table(nxt)
-            else:
-                nxt.save()
+        nxt = Match.objects.filter(pk=match.winner_next_id).first()
+        slot = match.winner_next_slot
     else:
         # Legacy round-number routing (single-elim)
         next_r = match.round_number + 1
         next_m = math.ceil(match.match_number / 2)
         slot = 1 if match.match_number % 2 == 1 else 2
-        try:
-            nxt = Match.objects.get(
-                tournament=match.tournament,
-                round_number=next_r,
-                match_number=next_m,
-            )
-        except Match.DoesNotExist:
-            nxt = None
-        if nxt and winner:
-            if slot == 1:
-                nxt.player1 = winner
-            else:
-                nxt.player2 = winner
-            if nxt.player1 is not None and nxt.player2 is not None:
-                nxt.status = Match.IN_PROGRESS
-                nxt.save()
-                auto_assign_table(nxt)
-            else:
-                nxt.save()
+        nxt = Match.objects.filter(
+            tournament=match.tournament, round_number=next_r, match_number=next_m,
+        ).first()
+
+    if nxt and winner:
+        if slot == 1:
+            nxt.player1 = winner
+        else:
+            nxt.player2 = winner
+        _resolve_after_fill(nxt)
 
     # ── Loser routing ─────────────────────────────────────────────────────────
     if match.loser_next_id and loser:
-        try:
-            loser_match = Match.objects.get(pk=match.loser_next_id)
-        except Match.DoesNotExist:
-            loser_match = None
+        loser_match = Match.objects.filter(pk=match.loser_next_id).first()
         if loser_match:
             if match.loser_next_slot == 1:
                 loser_match.player1 = loser
             else:
                 loser_match.player2 = loser
-            if loser_match.player1 is not None and loser_match.player2 is not None:
-                loser_match.status = Match.IN_PROGRESS
-                auto_assign_table(loser_match)
-            loser_match.save()
+            _resolve_after_fill(loser_match)
