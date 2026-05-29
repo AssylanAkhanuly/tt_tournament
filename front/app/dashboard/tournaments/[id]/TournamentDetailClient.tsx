@@ -1237,43 +1237,26 @@ function OverviewPanel({
             </div>
           )}
 
-          <div className="flex-1 min-h-0 overflow-hidden relative p-3 sm:p-4">
-            {/* ── Bracket view ── */}
+          <div className={`flex-1 min-h-0 overflow-hidden relative ${centerView === "groups" ? "p-3 sm:p-4" : ""}`}>
+            {/* ── Bracket view — full-bleed map, no chrome ── */}
             {centerView === "bracket" && (
-              <div className="h-full rounded-[24px] border border-white/[0.08] bg-[linear-gradient(180deg,rgba(11,21,38,0.94),rgba(5,12,24,0.98))] shadow-[inset_0_1px_0_rgba(255,255,255,0.03),0_30px_80px_rgba(0,0,0,0.28)] overflow-hidden">
-                <div className="flex items-center justify-between gap-3 border-b border-white/[0.06] px-4 py-3">
-                  <div>
-                    <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-white/30">
-                      {tournament.format === "group_playoff" ? "Плей-офф" : "Турнирная сетка"}
-                    </p>
-                    <p className="mt-1 text-[13px] text-white/55">
-                      {hasBracket ? "Матчи, переходы и активные столы в одном поле." : "Сетка появится после генерации матчей."}
+              <div className="h-full overflow-hidden">
+                {hasBracket ? (
+                  tournament.format === "group_playoff" ? (
+                    <ClassicBracket key={matches.length} matches={matches} currentUser={user} isAdmin={isAdmin}
+                      onEnterScore={onEnterScore} className="w-full h-full bg-transparent" />
+                  ) : (
+                    <BracketFlow matches={matches} currentUser={user} isAdmin={isAdmin}
+                      onEnterScore={onEnterScore} className="w-full h-full bg-transparent" />
+                  )
+                ) : (
+                  <div className="h-full flex flex-col items-center justify-center gap-3">
+                    <Trophy size={40} className="text-white/[0.06]" />
+                    <p className="text-[13px] text-white/20">
+                      {isGroupPhase ? "Плей-офф ещё не начат" : "Нет матчей"}
                     </p>
                   </div>
-                  {hasBracket && (
-                    <div className="rounded-full border border-white/[0.08] bg-white/[0.03] px-3 py-1 text-[11px] font-semibold text-white/45">
-                      {matches.length} матч.
-                    </div>
-                  )}
-                </div>
-                <div className="h-[calc(100%-76px)]">
-                  {hasBracket ? (
-                tournament.format === "group_playoff" ? (
-                  <ClassicBracket key={matches.length} matches={matches} currentUser={user} isAdmin={isAdmin}
-                    onEnterScore={onEnterScore} className="w-full h-full bg-transparent" />
-                ) : (
-                  <BracketFlow matches={matches} currentUser={user} isAdmin={isAdmin}
-                    onEnterScore={onEnterScore} className="w-full h-full bg-transparent" />
-                )
-              ) : (
-                <div className="h-full flex flex-col items-center justify-center gap-3">
-                  <Trophy size={40} className="text-white/[0.06]" />
-                  <p className="text-[13px] text-white/20">
-                    {isGroupPhase ? "Плей-офф ещё не начат" : "Нет матчей"}
-                  </p>
-                </div>
-                  )}
-                </div>
+                )}
               </div>
             )}
 
@@ -1352,7 +1335,7 @@ function OverviewPanel({
               {(() => {
                 const total = isGroupPhase
                   ? groupMatchesPending.length + groupMatchesBlocked.length
-                  : pendingAll.length;
+                  : pendingReady.length;
                 const ready = isGroupPhase ? groupMatchesPending.length : total;
                 return total > 0 && (
                   <span className="ml-auto text-[11px] text-white/30">
@@ -1386,10 +1369,10 @@ function OverviewPanel({
                   </>
                 )
               ) : (
-                pendingAll.length === 0 ? (
+                pendingReady.length === 0 ? (
                   <p className="text-[11px] text-white/15 text-center py-3">Нет ожидающих</p>
                 ) : (
-                  pendingAll.map((m) => (
+                  pendingReady.map((m) => (
                     <PendingBracketRow key={m.id} match={m} isAdmin={isAdmin}
                       freeTables={freeTables} assigning={assigning === m.id}
                       onAssign={(t) => assignTable(m, t)} />
@@ -1743,23 +1726,14 @@ function PendingBracketRow({
 }: { match: Match; isAdmin: boolean; freeTables: TournamentTable[]; assigning: boolean; onAssign: (t: number) => void }) {
   const [tableInput, setTableInput] = useState("");
   return (
-    <div className="rounded-2xl border border-white/[0.08] bg-white/[0.03] px-3.5 py-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.02)]">
-      <div className="mb-2 flex items-center justify-between gap-2">
-        <span className="rounded-full border border-white/[0.08] bg-white/[0.03] px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.12em] text-white/35">
-          Р {match.round_number} · М {match.match_number}
-        </span>
-        {!match.player1 || !match.player2 ? (
-          <span className="text-[10px] text-white/20">ожидаем участников</span>
-        ) : null}
-      </div>
-      <p className="text-[13px] font-semibold text-white/70 truncate">
-        <span className={match.player1 ? "text-white/85" : "text-white/25 italic"}>{match.player1?.name ?? "???"}</span>
+    <div className="rounded-xl border border-white/[0.08] bg-white/[0.03] px-3 py-2.5">
+      <p className="text-[13px] font-semibold truncate">
+        <span className="text-white/85">{match.player1?.name ?? "—"}</span>
         <span className="text-white/20 mx-1.5 font-normal">vs</span>
-        <span className={match.player2 ? "text-white/85" : "text-white/25 italic"}>{match.player2?.name ?? "???"}</span>
+        <span className="text-white/85">{match.player2?.name ?? "—"}</span>
       </p>
-      <p className="text-[10px] text-white/25 mt-0.5">Р{match.round_number} · М{match.match_number}</p>
       {isAdmin && match.player1 && match.player2 && freeTables.length > 0 && (
-        <div className="flex items-center gap-2 mt-3">
+        <div className="flex items-center gap-2 mt-2.5">
           <select value={tableInput} onChange={(e) => setTableInput(e.target.value)}
             style={{ colorScheme: "dark" }}
             className="flex-1 text-[11px] px-3 py-2 bg-white/[0.07] border border-white/[0.10]
@@ -2115,30 +2089,27 @@ function CompactMatchCard({ match, isAdmin, freeTables, tableNameMap, onAssign, 
           isAdmin ? "cursor-pointer" : ""
         } border-blue-500/20 hover:border-blue-400/50 hover:shadow-[0_10px_30px_rgba(37,99,235,0.16)]`}
         style={{ background: "linear-gradient(180deg, rgba(59,130,246,0.10), rgba(59,130,246,0.04))" }}>
-        <div className="flex items-center justify-between px-3 py-2 bg-blue-500/[0.10] border-b border-blue-500/15">
-          <span className="text-[10px] font-bold text-blue-300/60 uppercase tracking-wide">
-            {isLive && <span className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-pulse inline-block mr-1" />}
-            Р{match.round_number}·М{match.match_number}
-          </span>
-          {currentName
-            ? <span className="text-[10px] font-bold text-blue-300 bg-blue-500/20 px-2 py-0.5 rounded-full">{currentName}</span>
-            : isAdmin && <span className="text-[10px] text-white/20">нажмите для назначения</span>
-          }
-        </div>
-        <div className="space-y-1 px-3 py-3">
-          <div className="flex items-center justify-between gap-2">
-            <p className="min-w-0 flex-1 truncate text-[13px] font-semibold text-white/88">
-              {match.player1?.name ?? "???"}
-            </p>
-            {match.score1 !== null && <span className="text-[15px] font-black tabular-nums text-white/85">{match.score1}</span>}
+        <div className="px-3 py-2.5 flex items-center gap-2">
+          <div className="min-w-0 flex-1 space-y-1">
+            <div className="flex items-center justify-between gap-2">
+              <p className="min-w-0 flex-1 truncate text-[13px] font-semibold text-white/88">
+                {match.player1?.name ?? "—"}
+              </p>
+              {match.score1 !== null && <span className="text-[15px] font-black tabular-nums text-white/85">{match.score1}</span>}
+            </div>
+            <div className="h-px bg-white/[0.06]" />
+            <div className="flex items-center justify-between gap-2">
+              <p className="min-w-0 flex-1 truncate text-[13px] font-semibold text-white/72">
+                {match.player2?.name ?? "—"}
+              </p>
+              {match.score2 !== null && <span className="text-[15px] font-black tabular-nums text-white/70">{match.score2}</span>}
+            </div>
           </div>
-          <div className="h-px bg-white/[0.06]" />
-          <div className="flex items-center justify-between gap-2">
-            <p className="min-w-0 flex-1 truncate text-[13px] font-semibold text-white/72">
-              {match.player2?.name ?? "???"}
-            </p>
-            {match.score2 !== null && <span className="text-[15px] font-black tabular-nums text-white/70">{match.score2}</span>}
-          </div>
+          {isLive && (
+            <span className="shrink-0 text-[10px] font-bold text-blue-300 bg-blue-500/20 px-2 py-0.5 rounded-full">
+              {currentName ?? "live"}
+            </span>
+          )}
         </div>
       </div>
 

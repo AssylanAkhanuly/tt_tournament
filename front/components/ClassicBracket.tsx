@@ -15,7 +15,14 @@ const LEFT_PADDING = 30;
 const INITIAL_PAN  = { x: 40, y: 24 };
 const INITIAL_SCALE = 0.82;
 
-type LayoutLine  = { id: string; d: string; loser?: boolean };
+type LayoutLine  = { id: string; d: string; loser?: boolean; color?: string };
+
+// Distinct hues for the consolation (loser) drops so overlapping connectors
+// stay individually traceable.
+const DROP_COLORS = [
+  "#f59e0b", "#a78bfa", "#34d399", "#fb7185", "#22d3ee",
+  "#fb923c", "#a3e635", "#e879f9", "#2dd4bf", "#60a5fa",
+];
 type LayoutLabel = { id: string; text: string; x: number; y: number; width: number; section?: boolean };
 type LayoutItem  = { id: string; match: Match; x: number; y: number; seed1: number | null; seed2: number | null };
 
@@ -372,26 +379,37 @@ export default function ClassicBracket({
       });
     }
 
-    // Loser drops — one lane per drop within the left part of the gap, ordered
-    // by source height so neighbouring drops occupy neighbouring lanes.
+    // Loser drops — connect at the nearest edges (leave the source's BOTTOM,
+    // enter the target's TOP), each routed in its own horizontal lane just below
+    // the source row and tinted a distinct colour, so the many long cross-band
+    // connectors stay separable instead of stacking into a wall.
     const loserByRound = new Map<number, Edge[]>();
     for (const e of loserEdges) {
       const r = e.m.round_number;
       (loserByRound.get(r) ?? loserByRound.set(r, []).get(r)!).push(e);
     }
+    let colorSeq = 0;
     for (const [, arr] of loserByRound) {
       arr.sort((a, b) => posY.get(a.m.id)! - posY.get(b.m.id)!);
-      const K = arr.length;
-      const band = COL_GAP * 0.5;
       arr.forEach((e, i) => {
-        const fromX = colX(e.m.round_number) + CARD_W;
-        const toX   = colX(e.t.round_number);
-        const vx    = fromX + 10 + (K > 1 ? (i * band) / (K - 1) : 0);
-        lines.push({
-          id: `l-${e.m.id}-${e.t.id}`,
-          d: elbow(fromX, posY.get(e.m.id)! + CARD_H / 2, vx, posY.get(e.t.id)! + CARD_H / 2, toX),
-          loser: true,
-        });
+        const sy = posY.get(e.m.id)!;
+        const ty = posY.get(e.t.id)!;
+        const sCx = colX(e.m.round_number) + CARD_W / 2;
+        const tCx = colX(e.t.round_number) + CARD_W / 2;
+        const color = DROP_COLORS[colorSeq++ % DROP_COLORS.length];
+        let d: string;
+        if (ty > sy + CARD_H) {
+          const laneY = sy + CARD_H + 12 + i * 7;          // target below → bottom→top
+          d = `M ${sCx} ${sy + CARD_H} V ${laneY} H ${tCx} V ${ty}`;
+        } else if (ty < sy - CARD_H) {
+          const laneY = sy - 12 - i * 7;                    // target above → top→bottom
+          d = `M ${sCx} ${sy} V ${laneY} H ${tCx} V ${ty + CARD_H}`;
+        } else {
+          const fromX = colX(e.m.round_number) + CARD_W;    // similar height → side to side
+          const toX = colX(e.t.round_number);
+          d = elbow(fromX, sy + CARD_H / 2, fromX + 10 + i * 7, ty + CARD_H / 2, toX);
+        }
+        lines.push({ id: `l-${e.m.id}-${e.t.id}`, d, loser: true, color });
       });
     }
 
@@ -499,10 +517,12 @@ export default function ClassicBracket({
                 key={line.id}
                 d={line.d}
                 fill="none"
-                stroke={line.loser ? "rgba(251,191,36,0.20)" : "rgba(125,211,252,0.34)"}
-                strokeWidth={line.loser ? 1 : 1.5}
-                strokeDasharray={line.loser ? "4 4" : undefined}
-                strokeLinecap="square"
+                stroke={line.loser ? (line.color ?? "#f59e0b") : "rgba(125,211,252,0.45)"}
+                strokeOpacity={line.loser ? 0.55 : 1}
+                strokeWidth={line.loser ? 1.4 : 1.5}
+                strokeDasharray={line.loser ? "5 4" : undefined}
+                strokeLinejoin="round"
+                strokeLinecap="round"
                 shapeRendering={line.loser ? undefined : "crispEdges"}
               />
             ))}
