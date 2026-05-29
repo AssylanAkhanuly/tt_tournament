@@ -7,10 +7,11 @@ import {
   ArrowLeft, Pencil, Check, X, Trash2, UserPlus,
   Zap, Users, Trophy, Clock, Settings, Minus,
   RefreshCw, Calendar, LayoutGrid, Plus, ToggleLeft, ToggleRight, Layers,
+  ChevronDown, Moon, Sun, Volume2, VolumeX,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { GroupMatch, Match, Participant, Tournament, TournamentGroup, TournamentTable, User } from "@/lib/types";
-import { api } from "@/lib/api";
+import { api, type ElevenLabsVoice } from "@/lib/api";
 import ScoreModal from "@/components/ScoreModal";
 import AddPlayerModal from "@/components/AddPlayerModal";
 import LiveMatchesPanel from "@/components/LiveMatchesPanel";
@@ -43,6 +44,7 @@ const S = {
 } as const;
 
 type Page = "overview" | "bracket" | "players" | "tables" | "settings";
+type ThemeMode = "dark" | "light";
 
 // ─── Toast ───────────────────────────────────────────────────────────────────
 type ToastItem = { id: number; msg: string; ok: boolean };
@@ -90,6 +92,178 @@ function canResetBracketScore(match: Match | null | undefined, matches: Match[])
   return nextIds.every((id) => !hasFinishedBracketScore(byId.get(id)));
 }
 
+const MALE_RUSSIAN_VOICE_HINTS = [
+  "dmitry", "pavel", "yuri", "yury", "maxim", "maksim", "alexander", "alexandr",
+  "nikolai", "oleg", "sergey", "kirill", "igor", "ivan", "константин",
+  "дмитрий", "павел", "юрий", "максим", "александр", "николай", "олег",
+  "сергей", "кирилл", "игорь", "иван",
+];
+
+function isRussianVoice(voice: SpeechSynthesisVoice): boolean {
+  const lang = voice.lang.toLowerCase();
+  const name = voice.name.toLowerCase();
+  return lang.startsWith("ru") || name.includes("russian") || name.includes("рус");
+}
+
+function isLikelyMaleRussianVoice(voice: SpeechSynthesisVoice): boolean {
+  const name = voice.name.toLowerCase();
+  return isRussianVoice(voice) && MALE_RUSSIAN_VOICE_HINTS.some((hint) => name.includes(hint));
+}
+
+function speakRussian(text: string, voiceURI?: string): boolean {
+  if (typeof window === "undefined" || !("speechSynthesis" in window)) return false;
+
+  const utterance = new SpeechSynthesisUtterance(text);
+  utterance.lang = "ru-RU";
+  utterance.rate = 0.92;
+
+  const voices = window.speechSynthesis.getVoices();
+  const selectedVoice = voiceURI ? voices.find((voice) => voice.voiceURI === voiceURI) : null;
+  const russianVoice = selectedVoice
+    ?? voices.find(isLikelyMaleRussianVoice)
+    ?? voices.find(isRussianVoice);
+  if (russianVoice) utterance.voice = russianVoice;
+
+  window.speechSynthesis.resume();
+  window.speechSynthesis.speak(utterance);
+  return true;
+}
+
+function speakTableCall(player1: string, player2: string, tableNumber: number, voiceURI?: string): boolean {
+  return speakRussian(`${player1} и ${player2}, стол ${tableNumber}`, voiceURI);
+}
+
+function isRussianElevenVoice(voice: ElevenLabsVoice): boolean {
+  const labels = Object.values(voice.labels ?? {}).join(" ").toLowerCase();
+  const languages = (voice.verified_languages ?? [])
+    .flatMap((entry) => Object.values(entry))
+    .join(" ")
+    .toLowerCase();
+  return labels.includes("russian") || labels.includes("ru") || languages.includes("ru");
+}
+
+function isLikelyMaleElevenVoice(voice: ElevenLabsVoice): boolean {
+  const labels = Object.values(voice.labels ?? {}).join(" ").toLowerCase();
+  const name = voice.name.toLowerCase();
+  return labels.includes("male") || MALE_RUSSIAN_VOICE_HINTS.some((hint) => name.includes(hint));
+}
+
+function elevenVoiceLabel(voice: ElevenLabsVoice): string {
+  const labels = voice.labels ?? {};
+  const parts = [labels.gender, labels.language, labels.accent].filter(Boolean);
+  return parts.length > 0 ? `${voice.name} (${parts.join(", ")})` : voice.name;
+}
+
+function ElevenVoicePicker({
+  disabled,
+  onChange,
+  selectedVoiceId,
+  voices,
+}: {
+  disabled: boolean;
+  onChange: (voiceId: string) => void;
+  selectedVoiceId: string;
+  voices: ElevenLabsVoice[];
+}) {
+  const [open, setOpen] = useState(false);
+  const selectedVoice = voices.find((voice) => voice.voice_id === selectedVoiceId);
+
+  return (
+    <div className="relative sm:flex-1">
+      <button
+        type="button"
+        disabled={disabled}
+        onClick={() => setOpen((value) => !value)}
+        className="w-full h-[44px] px-4 rounded-xl border border-white/[0.12]
+                   bg-white/[0.08] hover:bg-white/[0.11] disabled:opacity-40
+                   text-left text-[15px] text-white font-semibold transition-all
+                   flex items-center gap-3 focus:outline-none focus:border-blue-500/70"
+      >
+        <span className="flex-1 min-w-0 truncate">
+          {selectedVoice ? elevenVoiceLabel(selectedVoice) : "ElevenLabs voice"}
+        </span>
+        <ChevronDown size={16} className={`shrink-0 text-white/45 transition-transform ${open ? "rotate-180" : ""}`} />
+      </button>
+
+      {open && (
+        <>
+          <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
+          <div className="absolute left-0 right-0 top-full z-50 mt-2 max-h-[280px] overflow-y-auto
+                          rounded-xl border border-white/[0.12] bg-[#101928] shadow-2xl">
+            {voices.length === 0 ? (
+              <p className="px-4 py-3 text-[13px] text-white/35">ElevenLabs voice</p>
+            ) : (
+              voices.map((voice) => {
+                const active = voice.voice_id === selectedVoiceId;
+                return (
+                  <button
+                    key={voice.voice_id}
+                    type="button"
+                    onClick={() => {
+                      onChange(voice.voice_id);
+                      setOpen(false);
+                    }}
+                    className={`w-full px-4 py-3 text-left text-[14px] font-semibold transition-colors
+                                flex items-start gap-3 ${
+                      active
+                        ? "bg-blue-500/18 text-blue-100"
+                        : "text-white/75 hover:bg-white/[0.06] hover:text-white"
+                    }`}
+                  >
+                    <span className="flex-1 min-w-0">
+                      <span className="block truncate">{voice.name}</span>
+                      {Object.keys(voice.labels ?? {}).length > 0 && (
+                        <span className="mt-0.5 block truncate text-[11px] font-medium text-white/35">
+                          {Object.values(voice.labels ?? {}).filter(Boolean).join(", ")}
+                        </span>
+                      )}
+                    </span>
+                    {active && <Check size={15} className="mt-0.5 shrink-0 text-blue-300" />}
+                  </button>
+                );
+              })
+            )}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+function playAudioBlob(blob: Blob): Promise<void> {
+  return new Promise((resolve, reject) => {
+    if (typeof window === "undefined") {
+      reject(new Error("Audio playback is unavailable."));
+      return;
+    }
+
+    const url = window.URL.createObjectURL(blob);
+    const audio = new Audio(url);
+    const cleanup = () => window.URL.revokeObjectURL(url);
+
+    audio.onended = () => {
+      cleanup();
+      resolve();
+    };
+    audio.onerror = () => {
+      cleanup();
+      reject(new Error("Audio playback failed."));
+    };
+    audio.play().catch((err) => {
+      cleanup();
+      reject(err);
+    });
+  });
+}
+
+function errorDetail(err: unknown, fallback: string): string {
+  if (err && typeof err === "object" && "detail" in err) {
+    const detail = (err as { detail?: unknown }).detail;
+    if (typeof detail === "string" && detail.trim()) return detail;
+  }
+  return fallback;
+}
+
 // Props
 interface Props {
   user: User;
@@ -111,6 +285,10 @@ export default function TournamentDetailClient({
   const isAdmin = user.is_staff ||
     (initTournament.club_id != null && user.club_ids_admin.includes(initTournament.club_id));
   const { toasts, show: toast } = useToast();
+  const voiceStorageKey = `tt_voice_calling_${initTournament.id}`;
+  const voiceChoiceStorageKey = `tt_voice_uri_${initTournament.id}`;
+  const naturalVoiceStorageKey = `tt_elabs_voice_id_${initTournament.id}`;
+  const themeStorageKey = "tt_theme_mode";
 
   const [tournament,   setTournament]   = useState<Tournament>(initTournament);
   const [participants, setParticipants] = useState<Participant[]>(initParticipants);
@@ -121,7 +299,27 @@ export default function TournamentDetailClient({
     initTournament.status === "open" ? "bracket" : "overview"
   );
   const [refreshing,   setRefreshing]   = useState(false);
+  const [voiceCallingEnabled, setVoiceCallingEnabled] = useState(() => {
+    if (typeof window === "undefined") return false;
+    return window.localStorage.getItem(voiceStorageKey) === "1";
+  });
+  const [selectedVoiceURI, setSelectedVoiceURI] = useState(() => {
+    if (typeof window === "undefined") return "";
+    return window.localStorage.getItem(voiceChoiceStorageKey) ?? "";
+  });
+  const [elevenLabsVoices, setElevenLabsVoices] = useState<ElevenLabsVoice[]>([]);
+  const [selectedElevenVoiceId, setSelectedElevenVoiceId] = useState(() => {
+    if (typeof window === "undefined") return "";
+    return window.localStorage.getItem(naturalVoiceStorageKey) ?? "";
+  });
+  const [themeMode, setThemeMode] = useState<ThemeMode>(() => {
+    if (typeof window === "undefined") return "dark";
+    return window.localStorage.getItem(themeStorageKey) === "light" ? "light" : "dark";
+  });
   const lastRefresh = useRef(Date.now());
+  const audioQueueRef = useRef<Promise<void>>(Promise.resolve());
+  const voiceCallingEnabledRef = useRef(voiceCallingEnabled);
+  const voiceFallbackNoticeRef = useRef(false);
 
   // Edit
   const [editing,      setEditing]      = useState(false);
@@ -222,7 +420,140 @@ export default function TournamentDetailClient({
     return () => window.removeEventListener("keydown", onKey);
   }, [page, matches]);
 
+  useEffect(() => {
+    voiceCallingEnabledRef.current = voiceCallingEnabled;
+    window.localStorage.setItem(voiceStorageKey, voiceCallingEnabled ? "1" : "0");
+    if (!voiceCallingEnabled && "speechSynthesis" in window) {
+      window.speechSynthesis.cancel();
+    }
+  }, [voiceStorageKey, voiceCallingEnabled]);
+
+  useEffect(() => {
+    if (typeof window === "undefined" || !("speechSynthesis" in window)) return;
+
+    function loadVoices() {
+      const voices = window.speechSynthesis.getVoices();
+      const russianVoices = voices.filter(isRussianVoice);
+      setSelectedVoiceURI((current) => {
+        if (current && russianVoices.some((voice) => voice.voiceURI === current)) return current;
+        const stored = window.localStorage.getItem(voiceChoiceStorageKey);
+        if (stored && russianVoices.some((voice) => voice.voiceURI === stored)) return stored;
+        return (russianVoices.find(isLikelyMaleRussianVoice) ?? russianVoices[0])?.voiceURI ?? "";
+      });
+    }
+
+    loadVoices();
+    window.speechSynthesis.addEventListener("voiceschanged", loadVoices);
+    return () => window.speechSynthesis.removeEventListener("voiceschanged", loadVoices);
+  }, [voiceChoiceStorageKey]);
+
+  useEffect(() => {
+    if (!selectedVoiceURI) return;
+    window.localStorage.setItem(voiceChoiceStorageKey, selectedVoiceURI);
+  }, [voiceChoiceStorageKey, selectedVoiceURI]);
+
+  useEffect(() => {
+    if (!isAdmin) return;
+    let cancelled = false;
+
+    api.getTtsVoices(tournament.id)
+      .then(({ voices, default_voice_id }) => {
+        if (cancelled) return;
+        setElevenLabsVoices(voices);
+        setSelectedElevenVoiceId((current) => {
+          if (current && voices.some((voice) => voice.voice_id === current)) return current;
+          const stored = window.localStorage.getItem(naturalVoiceStorageKey);
+          if (stored && voices.some((voice) => voice.voice_id === stored)) return stored;
+          if (default_voice_id && voices.some((voice) => voice.voice_id === default_voice_id)) {
+            return default_voice_id;
+          }
+          return (
+            voices.find((voice) => isLikelyMaleElevenVoice(voice) && isRussianElevenVoice(voice))
+            ?? voices.find(isLikelyMaleElevenVoice)
+            ?? voices.find(isRussianElevenVoice)
+            ?? voices[0]
+          )?.voice_id ?? "";
+        });
+      })
+      .catch(() => {
+        if (!cancelled) setElevenLabsVoices([]);
+      });
+
+    return () => { cancelled = true; };
+  }, [isAdmin, naturalVoiceStorageKey, tournament.id]);
+
+  useEffect(() => {
+    if (!selectedElevenVoiceId) return;
+    window.localStorage.setItem(naturalVoiceStorageKey, selectedElevenVoiceId);
+  }, [naturalVoiceStorageKey, selectedElevenVoiceId]);
+
+  useEffect(() => {
+    document.documentElement.dataset.theme = themeMode;
+    window.localStorage.setItem(themeStorageKey, themeMode);
+  }, [themeMode, themeStorageKey]);
+
   // ── Actions ───────────────────────────────────────────────────────────────
+  const queueTableCall = useCallback((
+    player1: string,
+    player2: string,
+    tableNumber: number,
+    force = false
+  ) => {
+    audioQueueRef.current = audioQueueRef.current.catch(() => undefined).then(async () => {
+      if (!force && !voiceCallingEnabledRef.current) return;
+      try {
+        const audio = await api.tableCallAudio(tournament.id, {
+          player1,
+          player2,
+          table_number: tableNumber,
+          voice_id: selectedElevenVoiceId || undefined,
+        });
+        await playAudioBlob(audio);
+        voiceFallbackNoticeRef.current = false;
+      } catch (err) {
+        const fallbackWorked = speakTableCall(player1, player2, tableNumber, selectedVoiceURI || undefined);
+        if (!fallbackWorked || force || !voiceFallbackNoticeRef.current) {
+          toast(errorDetail(err, "Не удалось воспроизвести голосовой вызов"), false);
+          voiceFallbackNoticeRef.current = true;
+        }
+      }
+    });
+  }, [selectedElevenVoiceId, selectedVoiceURI, toast, tournament.id]);
+
+  function toggleVoiceCalling() {
+    setVoiceCallingEnabled((enabled) => !enabled);
+  }
+
+  function testVoiceCalling() {
+    queueTableCall("Игрок один", "Игрок два", 1, true);
+  }
+
+  const callPlayersToTable = useCallback((player1: string, player2: string, tableNumber: number) => {
+    if (!voiceCallingEnabled) return;
+    queueTableCall(player1, player2, tableNumber);
+  }, [queueTableCall, voiceCallingEnabled]);
+
+  const callNewlyAssignedMatches = useCallback((previous: Match[], next: Match[]) => {
+    if (!voiceCallingEnabled) return;
+    const previousCalls = new Set(
+      previous
+        .filter((m) => m.status === "in_progress" && m.table_number != null)
+        .map((m) => `${m.id}:${m.table_number}`)
+    );
+    next
+      .filter((m) => (
+        m.status === "in_progress" &&
+        m.table_number != null &&
+        m.player1 &&
+        m.player2 &&
+        !previousCalls.has(`${m.id}:${m.table_number}`)
+      ))
+      .sort((a, b) => (a.table_number ?? 0) - (b.table_number ?? 0))
+      .forEach((m) => {
+        callPlayersToTable(m.player1!.name, m.player2!.name, m.table_number!);
+      });
+  }, [callPlayersToTable, voiceCallingEnabled]);
+
   async function handleSave() {
     setSaving(true); setEditError(null);
     try {
@@ -268,8 +599,10 @@ export default function TournamentDetailClient({
 
   async function handleScoreSubmit(s1: number, s2: number) {
     if (!scoreMatch) return;
+    const previousMatches = matches;
     await api.submitScore(tournament.id, scoreMatch.id, s1, s2);
     const [fm, ft] = await Promise.all([api.getMatches(tournament.id), api.getTournament(tournament.id)]);
+    callNewlyAssignedMatches(previousMatches, fm);
     setMatches(fm); setTournament(ft); setScoreMatch(null);
     const winner = s1 > s2 ? scoreMatch.player1?.name : scoreMatch.player2?.name;
     toast(`${winner ?? "Игрок"} победил ${s1}:${s2}`);
@@ -324,7 +657,7 @@ export default function TournamentDetailClient({
   const progress = totalMatches > 0 ? Math.round((finishedCnt / totalMatches) * 100) : 0;
 
   return (
-    <div className="fixed inset-x-0 bottom-0 top-[52px] flex overflow-hidden">
+    <div className={`tt-tournament-theme ${themeMode === "light" ? "tt-theme-light" : "tt-theme-dark"} fixed inset-x-0 bottom-0 top-[52px] flex overflow-hidden`}>
 
       {/* ════════════════════════════════════════════════════════════════
           SIDEBAR
@@ -493,6 +826,8 @@ export default function TournamentDetailClient({
             onGroupsChange={setGroups}
             onMatchesChange={setMatches}
             onTournamentChange={setTournament}
+            voiceCallingEnabled={voiceCallingEnabled}
+            onCallTable={callPlayersToTable}
           />
         )}
 
@@ -742,6 +1077,86 @@ export default function TournamentDetailClient({
                       <Pencil size={15} className="text-white/20 group-hover:text-white/50 shrink-0 transition-colors" />
                     </button>
                   )}
+                </section>
+
+                {/* Appearance */}
+                <section>
+                  <p className={LABEL + " mb-3"}>Внешний вид</p>
+                  <div className="grid grid-cols-2 gap-2.5">
+                    {([
+                      { mode: "dark" as const, label: "Темная", Icon: Moon },
+                      { mode: "light" as const, label: "Светлая", Icon: Sun },
+                    ]).map(({ mode, label, Icon }) => {
+                      const active = themeMode === mode;
+                      return (
+                        <button
+                          key={mode}
+                          type="button"
+                          onClick={() => setThemeMode(mode)}
+                          aria-pressed={active}
+                          className={`flex items-center justify-center gap-2.5 h-[44px] rounded-xl border
+                                      text-[14px] font-bold transition-all ${
+                            active
+                              ? "border-blue-500/35 bg-blue-500/[0.14] text-blue-100"
+                              : "border-white/[0.08] bg-white/[0.03] text-white/55 hover:bg-white/[0.06] hover:text-white"
+                          }`}
+                        >
+                          <Icon size={16} />
+                          {label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </section>
+
+                {/* Voice calls */}
+                <section>
+                  <p className={LABEL + " mb-3"}>Вызовы к столам</p>
+                  <button
+                    type="button"
+                    onClick={toggleVoiceCalling}
+                    aria-pressed={voiceCallingEnabled}
+                    className={`w-full flex items-center gap-4 px-5 py-4 rounded-2xl
+                                border transition-all text-left ${
+                      voiceCallingEnabled
+                        ? "border-blue-500/35 bg-blue-500/[0.10]"
+                        : "border-white/[0.08] bg-white/[0.03] hover:bg-white/[0.05]"
+                    }`}
+                  >
+                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${
+                      voiceCallingEnabled ? "bg-blue-500/20 text-blue-300" : "bg-white/[0.07] text-white/35"
+                    }`}>
+                      {voiceCallingEnabled ? <Volume2 size={18} /> : <VolumeX size={18} />}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[15px] font-bold text-white">Голосовые вызовы</p>
+                      <p className="text-[12px] text-white/35 mt-0.5">
+                        {voiceCallingEnabled ? "Включены" : "Выключены"}
+                      </p>
+                    </div>
+                    {voiceCallingEnabled
+                      ? <ToggleRight size={24} className="text-blue-300 shrink-0" />
+                      : <ToggleLeft size={24} className="text-white/30 shrink-0" />
+                    }
+                  </button>
+                  <div className="mt-3 flex flex-col sm:flex-row gap-2.5">
+                    <ElevenVoicePicker
+                      disabled={elevenLabsVoices.length === 0}
+                      onChange={setSelectedElevenVoiceId}
+                      selectedVoiceId={selectedElevenVoiceId}
+                      voices={elevenLabsVoices}
+                    />
+                    <button
+                      type="button"
+                      onClick={testVoiceCalling}
+                      className="inline-flex items-center justify-center gap-2 px-4 h-[44px] rounded-xl
+                                 bg-white/[0.08] hover:bg-white/[0.13] active:scale-[.97]
+                                 text-white/70 hover:text-white font-semibold text-[13px]
+                                 transition-all border border-white/[0.08]"
+                    >
+                      <Volume2 size={15} />Проверить
+                    </button>
+                  </div>
                 </section>
 
                 {/* Stats */}
@@ -1079,12 +1494,15 @@ interface OverviewProps {
   onGroupsChange: (g: TournamentGroup[]) => void;
   onMatchesChange: (m: Match[]) => void;
   onTournamentChange: (t: Tournament) => void;
+  voiceCallingEnabled: boolean;
+  onCallTable: (player1: string, player2: string, tableNumber: number) => void;
 }
 
 function OverviewPanel({
   tournament, matches, participants, tables, groups, user, isAdmin,
   refreshing, onRefresh, onEnterScore, onMatchUpdated,
   onGroupsChange, onMatchesChange, onTournamentChange,
+  voiceCallingEnabled, onCallTable,
 }: OverviewProps) {
   const activeTables = tables.filter((t) => t.is_active);
   const live         = matches.filter((m) => m.status === "in_progress");
@@ -1110,6 +1528,9 @@ function OverviewPanel({
         ? { ...g, matches: g.matches.map((m) => m.id === matchId ? updated : m) }
         : g
       ));
+      if (voiceCallingEnabled && updated.table_number != null) {
+        onCallTable(updated.player1.name, updated.player2.name, updated.table_number);
+      }
     } catch { /* silent */ }
     finally { setGroupAssigning(null); }
   }
@@ -1214,6 +1635,9 @@ function OverviewPanel({
     try {
       const updated = await api.assignTable(tournament.id, match.id, tableNum);
       onMatchUpdated(updated);
+      if (voiceCallingEnabled && updated.table_number != null && updated.player1 && updated.player2) {
+        onCallTable(updated.player1.name, updated.player2.name, updated.table_number);
+      }
     } catch { /* silent */ }
     finally { setAssigning(null); }
   }

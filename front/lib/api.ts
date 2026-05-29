@@ -2,6 +2,16 @@ import { Club, ClubAdmin, ClubTable, GroupMatch, Match, Participant, Tournament,
 
 const BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
+export type ElevenLabsVoice = {
+  voice_id: string;
+  name: string;
+  category?: string | null;
+  description?: string | null;
+  labels?: Record<string, string>;
+  preview_url?: string | null;
+  verified_languages?: Array<Record<string, string>>;
+};
+
 const NETWORK_ERROR = { detail: "Сервер недоступен. Проверьте подключение и попробуйте позже." };
 
 async function apiFetch<T>(path: string, options: RequestInit = {}): Promise<T> {
@@ -45,6 +55,46 @@ async function apiFetch<T>(path: string, options: RequestInit = {}): Promise<T> 
   }
   if (res.status === 204) return undefined as T;
   return res.json();
+}
+
+async function apiBlobFetch(path: string, options: RequestInit = {}): Promise<Blob> {
+  let res: Response;
+  try {
+    res = await fetch(`${BASE}${path}`, {
+      ...options,
+      credentials: "include",
+      headers: {
+        "Content-Type": "application/json",
+        ...options.headers,
+      },
+    });
+  } catch {
+    throw NETWORK_ERROR;
+  }
+
+  if (res.status === 401) {
+    const refreshed = await fetch(`${BASE}/api/auth/token/refresh/`, {
+      method: "POST",
+      credentials: "include",
+    });
+    if (refreshed.ok) {
+      const retry = await fetch(`${BASE}${path}`, {
+        ...options,
+        credentials: "include",
+        headers: { "Content-Type": "application/json", ...options.headers },
+      });
+      if (!retry.ok) throw await retry.json().catch(() => ({ detail: "Ошибка сервера" }));
+      return retry.blob();
+    }
+    const err = await res.json().catch(() => ({ detail: "Не авторизован" }));
+    throw err;
+  }
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ detail: "Ошибка сервера" }));
+    throw err;
+  }
+  return res.blob();
 }
 
 export const api = {
@@ -155,6 +205,20 @@ export const api = {
     apiFetch<void>(`/api/tournaments/${id}/update/`, { method: "DELETE" }),
 
   getTournament: (id: string) => apiFetch<Tournament>(`/api/tournaments/${id}/`),
+
+  getTtsVoices: (id: string) =>
+    apiFetch<{ voices: ElevenLabsVoice[]; default_voice_id: string; model_id: string }>(
+      `/api/tournaments/${id}/tts/voices/`
+    ),
+
+  tableCallAudio: (
+    id: string,
+    data: { player1: string; player2: string; table_number: number; voice_id?: string }
+  ) =>
+    apiBlobFetch(`/api/tournaments/${id}/tts/table-call/`, {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
 
   getTournamentByToken: (token: string) =>
     apiFetch<Tournament>(`/api/tournaments/join/${token}/`),
