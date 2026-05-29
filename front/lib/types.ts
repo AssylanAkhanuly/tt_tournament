@@ -62,6 +62,9 @@ export interface Participant {
   id: number;
   user: User;
   joined_at: string;
+  /** RTTF rating snapshot, set when the tournament finishes */
+  rating_before: number | null;
+  rating_change: number | null;
   /** Present only when admin just created the user */
   created_user?: boolean;
   temp_password?: string;

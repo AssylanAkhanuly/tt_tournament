@@ -247,6 +247,10 @@ export default function TournamentDetailClient({
     await api.submitScore(tournament.id, scoreMatch.id, s1, s2);
     const [fm, ft] = await Promise.all([api.getMatches(tournament.id), api.getTournament(tournament.id)]);
     setMatches(fm); setTournament(ft); setScoreMatch(null);
+    // Ratings are applied server-side when the tournament finishes — refresh participants.
+    if (ft.status === "finished") {
+      api.getParticipants(tournament.id).then(setParticipants).catch(() => {});
+    }
     const winner = s1 > s2 ? scoreMatch.player1?.name : scoreMatch.player2?.name;
     toast(`${winner ?? "Игрок"} победил ${s1}:${s2}`);
   }
@@ -442,6 +446,7 @@ export default function TournamentDetailClient({
           <OverviewPanel
             tournament={tournament}
             matches={matches}
+            participants={participants}
             tables={tables}
             groups={groups}
             user={user}
@@ -1021,6 +1026,7 @@ function GroupsTab({
 interface OverviewProps {
   tournament: Tournament;
   matches: Match[];
+  participants: Participant[];
   tables: TournamentTable[];
   groups: TournamentGroup[];
   user: User;
@@ -1035,7 +1041,7 @@ interface OverviewProps {
 }
 
 function OverviewPanel({
-  tournament, matches, tables, groups, user, isAdmin,
+  tournament, matches, participants, tables, groups, user, isAdmin,
   refreshing, onRefresh, onEnterScore, onMatchUpdated,
   onGroupsChange, onMatchesChange, onTournamentChange,
 }: OverviewProps) {
@@ -1291,7 +1297,7 @@ function OverviewPanel({
             {/* ── Final standings (places + rating change) ── */}
             {centerView === "results" && (
               <div className="h-full overflow-y-auto rounded-[24px] border border-white/[0.08] bg-[linear-gradient(180deg,rgba(11,21,38,0.94),rgba(5,12,24,0.98))] px-4 py-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.03),0_30px_80px_rgba(0,0,0,0.28)]">
-                <StandingsTable matches={matches} />
+                <StandingsTable matches={matches} participants={participants} />
               </div>
             )}
 
@@ -1772,8 +1778,8 @@ function PendingBracketRow({
   );
 }
 
-// ── Final standings (places + rating change) ────────────────────────────────────
-function StandingsTable({ matches }: { matches: Match[] }) {
+// ── Final standings (places + RTTF rating change) ───────────────────────────────
+function StandingsTable({ matches, participants }: { matches: Match[]; participants: Participant[] }) {
   const finished = matches.filter((m) => m.status === "finished" && m.winner);
 
   // Place: the winner of a no-winner_next match takes place_lo; the loser of a
@@ -1787,22 +1793,14 @@ function StandingsTable({ matches }: { matches: Match[] }) {
     }
   }
 
-  // Rating change — ELO over every played match (zero-sum per match).
-  const K = 20, D = 400;
-  const expected = (a: number, b: number) => 1 / (1 + Math.pow(10, (b - a) / D));
-  const delta = new Map<string, number>();
-  for (const m of finished) {
-    if (!m.player1 || !m.player2 || !m.winner) continue;          // skip byes
-    const w = m.winner;
-    const l = m.winner.id === m.player1.id ? m.player2 : m.player1;
-    const dw = K * (1 - expected(w.rating, l.rating));
-    delta.set(w.id, (delta.get(w.id) ?? 0) + dw);
-    delta.set(l.id, (delta.get(l.id) ?? 0) - dw);
-  }
+  // Persisted RTTF rating change (computed server-side when the tournament ended).
+  const partByUser = new Map(participants.map((p) => [p.user.id, p]));
 
   const rows = [...byPlace.entries()].sort((a, b) => a[0] - b[0]).map(([place, u]) => {
-    const change = Math.round(delta.get(u.id) ?? 0);
-    return { place, u, change };
+    const p = partByUser.get(u.id);
+    const before = p?.rating_before ?? u.rating;
+    const change = p?.rating_change ?? 0;
+    return { place, u, before, change };
   });
 
   if (rows.length === 0) {
@@ -1815,11 +1813,11 @@ function StandingsTable({ matches }: { matches: Match[] }) {
     <div className="max-w-2xl mx-auto">
       <div className="mb-3 flex items-center justify-between">
         <h3 className="text-[13px] font-bold uppercase tracking-[0.14em] text-white/40">Итоговые места</h3>
-        <span className="text-[11px] text-white/25">Δ рейтинг · ELO</span>
+        <span className="text-[11px] text-white/25">Δ рейтинг · RTTF</span>
       </div>
       <div className="rounded-2xl border border-white/[0.08] overflow-hidden divide-y divide-white/[0.05]"
            style={{ background: "var(--card)" }}>
-        {rows.map(({ place, u, change }) => (
+        {rows.map(({ place, u, before, change }) => (
           <div key={place} className={`grid grid-cols-[2.5rem_1fr_auto_auto] items-center gap-3 px-4 py-2.5 ${
             place <= 3 ? "bg-amber-400/[0.04]" : ""
           }`}>
@@ -1827,8 +1825,8 @@ function StandingsTable({ matches }: { matches: Match[] }) {
               {medal(place) ?? place}
             </span>
             <span className="truncate text-[14px] font-semibold text-white">{u.name}</span>
-            <span className="text-right text-[12px] text-white/35 tabular-nums w-14">
-              {u.rating} → {u.rating + change}
+            <span className="text-right text-[12px] text-white/35 tabular-nums w-16">
+              {before} → {before + change}
             </span>
             <span className={`text-right text-[13px] font-bold tabular-nums w-12 ${
               change > 0 ? "text-emerald-400" : change < 0 ? "text-red-400/80" : "text-white/30"
