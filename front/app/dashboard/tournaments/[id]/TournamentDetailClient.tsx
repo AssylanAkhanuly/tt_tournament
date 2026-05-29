@@ -177,6 +177,13 @@ export default function TournamentDetailClient({
     return () => clearInterval(id);
   }, [tournament.status, refresh]);
 
+  // When the tournament finishes, ratings are applied server-side — pull the
+  // updated participants (rating_before/rating_change) so the standings show them.
+  useEffect(() => {
+    if (tournament.status !== "finished") return;
+    api.getParticipants(tournament.id).then(setParticipants).catch(() => {});
+  }, [tournament.status, tournament.id]);
+
   // Load groups for group_playoff format
   useEffect(() => {
     if (tournament.format !== "group_playoff" || tournament.status === "open") return;
@@ -247,10 +254,6 @@ export default function TournamentDetailClient({
     await api.submitScore(tournament.id, scoreMatch.id, s1, s2);
     const [fm, ft] = await Promise.all([api.getMatches(tournament.id), api.getTournament(tournament.id)]);
     setMatches(fm); setTournament(ft); setScoreMatch(null);
-    // Ratings are applied server-side when the tournament finishes — refresh participants.
-    if (ft.status === "finished") {
-      api.getParticipants(tournament.id).then(setParticipants).catch(() => {});
-    }
     const winner = s1 > s2 ? scoreMatch.player1?.name : scoreMatch.player2?.name;
     toast(`${winner ?? "Игрок"} победил ${s1}:${s2}`);
   }
@@ -1122,6 +1125,7 @@ function OverviewPanel({
       : "bracket"
   );
   const [autoScoring, setAutoScoring] = useState(false);
+  const [autoFinishing, setAutoFinishing] = useState(false);
 
   async function handleAutoRandomScores() {
     setAutoScoring(true);
@@ -1140,6 +1144,30 @@ function OverviewPanel({
       onGroupsChange(fresh);
     } catch { /* silent */ }
     finally { setAutoScoring(false); }
+  }
+
+  // Dev shortcut: play out the whole playoff bracket with random scores.
+  async function handleAutoFinishBracket() {
+    setAutoFinishing(true);
+    try {
+      for (let guard = 0; guard < 300; guard++) {
+        const fresh = await api.getMatches(tournament.id);
+        const liveNow = fresh.filter((m) => m.status === "in_progress");
+        if (liveNow.length === 0) break;
+        for (const m of liveNow) {
+          const winnerFirst = Math.random() > 0.5;
+          const loserScore  = Math.floor(Math.random() * 3); // 0-2
+          await api.submitScore(
+            tournament.id, m.id,
+            winnerFirst ? 3 : loserScore,
+            winnerFirst ? loserScore : 3,
+          );
+        }
+      }
+      const [fm, ft] = await Promise.all([api.getMatches(tournament.id), api.getTournament(tournament.id)]);
+      onMatchesChange(fm); onTournamentChange(ft);
+    } catch { /* silent */ }
+    finally { setAutoFinishing(false); }
   }
 
   async function assignTable(match: Match, tableNum: number | null) {
@@ -1250,6 +1278,19 @@ function OverviewPanel({
                     />
                   )}
                 </div>
+              )}
+              {!isGroupPhase && isAdmin && hasBracket && tournament.status === "in_progress" && (
+                <button
+                  onClick={handleAutoFinishBracket}
+                  disabled={autoFinishing}
+                  title="Доиграть плей-офф случайными счётами"
+                  className="ml-auto inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-semibold
+                             bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/30 text-amber-300
+                             disabled:opacity-40 transition-all"
+                >
+                  <Zap size={12} />
+                  {autoFinishing ? "Идёт..." : "Доиграть плей-офф"}
+                </button>
               )}
             </div>
           )}
