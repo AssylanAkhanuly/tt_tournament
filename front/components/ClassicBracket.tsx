@@ -379,37 +379,39 @@ export default function ClassicBracket({
       });
     }
 
-    // Loser drops — connect at the nearest edges (leave the source's BOTTOM,
-    // enter the target's TOP), each routed in its own horizontal lane just below
-    // the source row and tinted a distinct colour, so the many long cross-band
-    // connectors stay separable instead of stacking into a wall.
-    const loserByRound = new Map<number, Edge[]>();
-    for (const e of loserEdges) {
-      const r = e.m.round_number;
-      (loserByRound.get(r) ?? loserByRound.set(r, []).get(r)!).push(e);
+    // Loser drops — classic side-to-side elbow (source RIGHT → vertical spine →
+    // target LEFT), exactly like the winners but dashed and tinted a distinct
+    // colour. The two feeders of a target share a spine just left of the target
+    // column so they merge; spines for different targets are nudged apart so
+    // overlapping drops stay separable.
+    const targetLane = new Map<number, number>();
+    const targetColor = new Map<number, string>();
+    {
+      const byTargetCol = new Map<number, Match[]>();
+      for (const e of loserEdges) {
+        const c = e.t.round_number;
+        const arr = byTargetCol.get(c) ?? byTargetCol.set(c, []).get(c)!;
+        if (!arr.some((x) => x.id === e.t.id)) arr.push(e.t);
+      }
+      let seq = 0;
+      for (const arr of byTargetCol.values()) {
+        arr.sort((a, b) => posY.get(a.id)! - posY.get(b.id)!);
+        arr.forEach((t, i) => {
+          targetLane.set(t.id, i);
+          targetColor.set(t.id, DROP_COLORS[seq++ % DROP_COLORS.length]);
+        });
+      }
     }
-    let colorSeq = 0;
-    for (const [, arr] of loserByRound) {
-      arr.sort((a, b) => posY.get(a.m.id)! - posY.get(b.m.id)!);
-      arr.forEach((e, i) => {
-        const sy = posY.get(e.m.id)!;
-        const ty = posY.get(e.t.id)!;
-        const sCx = colX(e.m.round_number) + CARD_W / 2;
-        const tCx = colX(e.t.round_number) + CARD_W / 2;
-        const color = DROP_COLORS[colorSeq++ % DROP_COLORS.length];
-        let d: string;
-        if (ty > sy + CARD_H) {
-          const laneY = sy + CARD_H + 12 + i * 7;          // target below → bottom→top
-          d = `M ${sCx} ${sy + CARD_H} V ${laneY} H ${tCx} V ${ty}`;
-        } else if (ty < sy - CARD_H) {
-          const laneY = sy - 12 - i * 7;                    // target above → top→bottom
-          d = `M ${sCx} ${sy} V ${laneY} H ${tCx} V ${ty + CARD_H}`;
-        } else {
-          const fromX = colX(e.m.round_number) + CARD_W;    // similar height → side to side
-          const toX = colX(e.t.round_number);
-          d = elbow(fromX, sy + CARD_H / 2, fromX + 10 + i * 7, ty + CARD_H / 2, toX);
-        }
-        lines.push({ id: `l-${e.m.id}-${e.t.id}`, d, loser: true, color });
+    for (const e of loserEdges) {
+      const fromX = colX(e.m.round_number) + CARD_W;
+      const toX   = colX(e.t.round_number);
+      const lane  = targetLane.get(e.t.id) ?? 0;
+      const vx    = toX - COL_GAP * 0.62 + lane * 9;   // shared per target → feeders merge
+      lines.push({
+        id: `l-${e.m.id}-${e.t.id}`,
+        d: elbow(fromX, posY.get(e.m.id)! + CARD_H / 2, vx, posY.get(e.t.id)! + CARD_H / 2, toX),
+        loser: true,
+        color: targetColor.get(e.t.id),
       });
     }
 
