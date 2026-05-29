@@ -86,6 +86,10 @@ STATIC_ROOT = BASE_DIR / "staticfiles"
 MEDIA_URL = "media/"
 MEDIA_ROOT = BASE_DIR / "media"
 
+ELABS_KEY = os.getenv("ELABS_KEY", "")
+ELABS_VOICE_ID = os.getenv("ELABS_VOICE_ID", "pNInz6obpgDQGcFmaJgB")
+ELABS_MODEL_ID = os.getenv("ELABS_MODEL_ID", "eleven_flash_v2_5")
+
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 CORS_ALLOWED_ORIGINS = os.getenv(

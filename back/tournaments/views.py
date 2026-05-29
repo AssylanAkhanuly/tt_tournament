@@ -1,7 +1,14 @@
+import hashlib
+import json
 import secrets
+import urllib.error
+import urllib.request
+from pathlib import Path
 
+from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.db.models import Q
+from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
 from rest_framework import generics, status
 from rest_framework.permissions import AllowAny, IsAuthenticated, IsAuthenticatedOrReadOnly
@@ -57,8 +64,182 @@ def _can_create_tournament(user, club=None):
     return False
 
 
+def _clean_tts_name(value):
+    name = " ".join(str(value or "").strip().split())
+    if not name:
+        raise ValueError("Player name is required.")
+    return name[:80]
+
+
+def _clean_elabs_voice_id(value):
+    voice_id = str(value or "").strip()
+    if not voice_id:
+        raise ValueError("ElevenLabs voice id is required.")
+    if len(voice_id) > 128 or not all(
+        ch.isascii() and (ch.isalnum() or ch in "-_") for ch in voice_id
+    ):
+        raise ValueError("Invalid ElevenLabs voice id.")
+    return voice_id
+
+
+def _elabs_api_key():
+    return str(getattr(settings, "ELABS_KEY", "") or "").strip()
+
+
+def _elabs_model_id():
+    return str(getattr(settings, "ELABS_MODEL_ID", "") or "").strip() or "eleven_flash_v2_5"
+
+
+def _elabs_default_voice_id():
+    return str(getattr(settings, "ELABS_VOICE_ID", "") or "").strip()
+
+
+def _elabs_error_response(exc):
+    detail = "ElevenLabs request failed."
+    if isinstance(exc, urllib.error.HTTPError):
+        body = exc.read().decode("utf-8", errors="ignore")
+        try:
+            parsed = json.loads(body) if body else {}
+            raw_detail = parsed.get("detail")
+            if isinstance(raw_detail, dict):
+                detail = raw_detail.get("message") or detail
+            elif isinstance(raw_detail, str):
+                detail = raw_detail
+        except (TypeError, ValueError):
+            if body:
+                detail = body[:240]
+    return Response({"detail": detail}, status=status.HTTP_502_BAD_GATEWAY)
+
+
+def _tts_audio_response(audio, cache_status):
+    response = HttpResponse(audio, content_type="audio/mpeg")
+    response["Cache-Control"] = "private, max-age=86400"
+    response["X-TTS-Cache"] = cache_status
+    return response
+
+
 def _playoff_started(tournament):
     return tournament.matches.exists()
+
+
+class ElevenLabsVoicesView(APIView):
+    """GET /api/tournaments/<pk>/tts/voices/"""
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, pk):
+        tournament = get_object_or_404(Tournament.objects.select_related('club'), pk=pk)
+        if not _can_manage_tournament(request.user, tournament):
+            return Response({"detail": "Нет прав."}, status=status.HTTP_403_FORBIDDEN)
+
+        api_key = _elabs_api_key()
+        if not api_key:
+            return Response(
+                {"detail": "ELABS_KEY is not configured on the backend."},
+                status=status.HTTP_503_SERVICE_UNAVAILABLE,
+            )
+
+        req = urllib.request.Request(
+            "https://api.elevenlabs.io/v2/voices?page_size=100&include_total_count=false",
+            headers={"xi-api-key": api_key},
+            method="GET",
+        )
+        try:
+            with urllib.request.urlopen(req, timeout=10) as upstream:
+                payload = json.loads(upstream.read().decode("utf-8"))
+        except (urllib.error.URLError, TimeoutError, ValueError) as exc:
+            return _elabs_error_response(exc)
+
+        voices = []
+        for voice in payload.get("voices", []):
+            voices.append({
+                "voice_id": voice.get("voice_id"),
+                "name": voice.get("name"),
+                "category": voice.get("category"),
+                "description": voice.get("description"),
+                "labels": voice.get("labels") or {},
+                "preview_url": voice.get("preview_url"),
+                "verified_languages": voice.get("verified_languages") or [],
+            })
+
+        return Response({
+            "voices": [voice for voice in voices if voice["voice_id"] and voice["name"]],
+            "default_voice_id": _elabs_default_voice_id(),
+            "model_id": _elabs_model_id(),
+        })
+
+
+class TableCallTTSView(APIView):
+    """POST /api/tournaments/<pk>/tts/table-call/"""
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, pk):
+        tournament = get_object_or_404(Tournament.objects.select_related('club'), pk=pk)
+        if not _can_manage_tournament(request.user, tournament):
+            return Response({"detail": "Нет прав."}, status=status.HTTP_403_FORBIDDEN)
+
+        api_key = _elabs_api_key()
+        if not api_key:
+            return Response(
+                {"detail": "ELABS_KEY is not configured on the backend."},
+                status=status.HTTP_503_SERVICE_UNAVAILABLE,
+            )
+
+        try:
+            player1 = _clean_tts_name(request.data.get("player1"))
+            player2 = _clean_tts_name(request.data.get("player2"))
+            table_number = int(request.data.get("table_number"))
+            if table_number < 1:
+                raise ValueError("Table number must be positive.")
+            voice_id = _clean_elabs_voice_id(request.data.get("voice_id") or _elabs_default_voice_id())
+        except (TypeError, ValueError) as exc:
+            return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+
+        model_id = _elabs_model_id()
+        text = f"{player1} \u0438 {player2}, \u0441\u0442\u043e\u043b {table_number}."
+        cache_dir = Path(settings.MEDIA_ROOT) / "tts_cache"
+        cache_dir.mkdir(parents=True, exist_ok=True)
+        cache_key = hashlib.sha256(
+            json.dumps(
+                {"model_id": model_id, "text": text, "voice_id": voice_id, "v": 1},
+                sort_keys=True,
+                ensure_ascii=False,
+            ).encode("utf-8")
+        ).hexdigest()
+        audio_path = cache_dir / f"{cache_key}.mp3"
+        if audio_path.exists():
+            return _tts_audio_response(audio_path.read_bytes(), "HIT")
+
+        body = json.dumps({
+            "text": text,
+            "model_id": model_id,
+            "language_code": "ru",
+            "voice_settings": {
+                "stability": 0.55,
+                "similarity_boost": 0.8,
+                "style": 0.15,
+                "use_speaker_boost": True,
+                "speed": 0.98,
+            },
+        }).encode("utf-8")
+        req = urllib.request.Request(
+            f"https://api.elevenlabs.io/v1/text-to-speech/{voice_id}?output_format=mp3_44100_128",
+            data=body,
+            headers={
+                "Accept": "audio/mpeg",
+                "Content-Type": "application/json",
+                "xi-api-key": api_key,
+            },
+            method="POST",
+        )
+
+        try:
+            with urllib.request.urlopen(req, timeout=15) as upstream:
+                audio = upstream.read()
+        except (urllib.error.URLError, TimeoutError) as exc:
+            return _elabs_error_response(exc)
+
+        audio_path.write_bytes(audio)
+        return _tts_audio_response(audio, "MISS")
 
 
 # ─── Tournament CRUD ─────────────────────────────────────────────────────────
