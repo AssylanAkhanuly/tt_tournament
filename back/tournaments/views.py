@@ -579,7 +579,9 @@ class StartPlayoffView(APIView):
         if tournament.format != Tournament.FORMAT_GROUP:
             return Response({"detail": "Плей-офф доступен только для группового формата."}, status=status.HTTP_400_BAD_REQUEST)
 
-        advance_count = int(request.data.get("advance_count", 2))
+        # advance_count=None → advance ALL players from groups (розыгрыш всех мест)
+        advance_count_raw = request.data.get("advance_count")
+        advance_count = int(advance_count_raw) if advance_count_raw is not None else None
         matches = generate_playoff_from_groups(tournament, advance_count=advance_count)
 
         return Response({

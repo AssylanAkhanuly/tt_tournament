@@ -81,6 +81,7 @@ class MatchSerializer(serializers.ModelSerializer):
             "score1", "score2",
             "winner", "status", "table_number",
             "is_consolation",
+            "winner_next_id", "loser_next_id",
         ]
 
 

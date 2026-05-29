@@ -5,6 +5,31 @@ import math
 from .models import Match
 
 
+def standard_seed_order(bracket_size: int) -> list[int]:
+    """
+    Return the slot order of seed numbers for a single-elimination bracket
+    of size ``bracket_size`` (a power of two), using classic tournament
+    seeding so that the top seeds are spread to opposite halves and only
+    meet in the latest possible rounds.
+
+    Example (size 8): [1, 8, 4, 5, 2, 7, 3, 6]
+      → round-1 matches: (1 vs 8), (4 vs 5), (2 vs 7), (3 vs 6)
+
+    When the bracket is larger than the field, seeds beyond the real player
+    count map to ``None`` (a bye), which naturally lands against the top
+    seeds (seed 1, 2, …) since they sit opposite the highest seed numbers.
+    """
+    order = [1, 2]
+    while len(order) < bracket_size:
+        target = len(order) * 2 + 1
+        nxt = []
+        for s in order:
+            nxt.append(s)
+            nxt.append(target - s)
+        order = nxt
+    return order
+
+
 def auto_assign_table(match: Match) -> None:
     """
     Try to assign the lowest-numbered free TournamentTable to this match.
@@ -149,7 +174,12 @@ def generate_all_places_bracket(tournament, players):
 
     rounds = math.ceil(math.log2(n))
     bracket_size = 2 ** rounds
-    padded = list(players) + [None] * (bracket_size - n)
+
+    # ``players`` arrives in seed order (best first). Place each seed into its
+    # standard-seeding slot so top seeds are split to opposite halves and byes
+    # (seeds beyond the real field) land against the top seeds.
+    seed_order = standard_seed_order(bracket_size)
+    padded = [players[s - 1] if (s - 1) < n else None for s in seed_order]
 
     # ── Create all Match shells ──────────────────────────────────────────────
     # all_rounds[r] = list of Match objects for round r
@@ -362,15 +392,25 @@ def generate_group_bracket(tournament):
     )
 
 
-def generate_playoff_from_groups(tournament, advance_count=2):
+def generate_playoff_from_groups(tournament, advance_count=None):
     """
-    Takes top `advance_count` players from each group and seeds a full consolation bracket.
+    Seeds ALL players from groups into a full consolation bracket.
+    Players are seeded by position across groups:
+      A1, B1, C1, A2, B2, C2, A3, B3, A4, B4 ...
+    If advance_count is given, only top N per group advance.
     """
     from .models import TournamentGroup, GroupParticipant
 
     groups = list(TournamentGroup.objects.filter(tournament=tournament).order_by('order'))
     if not groups:
         raise ValueError("Нет групп для генерации плей-офф.")
+
+    # Determine how many positions to iterate (max group size = advance all)
+    if advance_count is None:
+        advance_count = max(
+            GroupParticipant.objects.filter(group=g).count()
+            for g in groups
+        )
 
     advancers_by_position = []
     for pos in range(advance_count):
@@ -383,11 +423,17 @@ def generate_playoff_from_groups(tournament, advance_count=2):
             )
             if len(top) > pos:
                 position_players.append(top[pos].user)
-        advancers_by_position.append(position_players)
+        if position_players:
+            advancers_by_position.append(position_players)
 
-    seeded_players = []
+    pool = []
     for pos_players in advancers_by_position:
-        seeded_players.extend(pos_players)
+        pool.extend(pos_players)
+
+    # RTTF seeding: order the qualifying pool by rating (best first) so the
+    # standard-seeding placement in generate_all_places_bracket spreads the
+    # strongest players to opposite halves of the draw.
+    seeded_players = sorted(pool, key=lambda u: (-(u.rating or 0), u.id))
 
     n = len(seeded_players)
     if n < 2:
