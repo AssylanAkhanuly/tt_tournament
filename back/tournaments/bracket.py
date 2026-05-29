@@ -146,19 +146,129 @@ def generate_bracket(tournament):
     )
 
 
+class _Node:
+    """In-memory bracket node used while constructing the RTTF ladder."""
+    __slots__ = ("idx", "p", "w_next", "l_next", "w_place", "l_place")
+
+    def __init__(self, idx):
+        self.idx = idx
+        self.p = [None, None]      # seeded players (User/None) for WB round-1 nodes
+        self.w_next = None         # (node, slot) — where the winner goes
+        self.l_next = None         # (node, slot) — where the loser goes
+        self.w_place = None        # terminal place for the winner (no w_next)
+        self.l_place = None        # terminal place for the loser  (no l_next)
+
+
+def _build_rttf_ladder(inputs, lo, nodes):
+    """
+    Build a full RTTF-style all-places bracket over ``inputs`` (length m = 2^j;
+    each item is a seeded player/None for a round-1 slot, or an output tuple
+    ``(node, 'W'|'L')`` feeding this sub-bracket), ranking everyone into places
+    ``[lo, lo+m-1]``.
+
+    The losers of every winners-bracket round MERGE into one climbing
+    consolation ladder (3..N → … → 3..4); drop-groups at each ladder step are
+    ranked recursively. A round-1 loser can climb back up — matching RTTF.
+    """
+    import math as _math
+
+    def mk():
+        nd = _Node(len(nodes))
+        nodes.append(nd)
+        return nd
+
+    def out(src_out, dst, slot):
+        src, kind = src_out
+        if kind == "W":
+            src.w_next = (dst, slot)
+        else:
+            src.l_next = (dst, slot)
+
+    def place(src_out, pl):
+        src, kind = src_out
+        if kind == "W":
+            src.w_place = pl
+        else:
+            src.l_place = pl
+
+    def feed(node, slot, inp):
+        if isinstance(inp, tuple):
+            out(inp, node, slot)
+        else:
+            node.p[slot] = inp
+
+    m = len(inputs)
+    if m == 1:
+        place(inputs[0], lo)
+        return
+    if m == 2:
+        dm = mk()
+        feed(dm, 0, inputs[0]); feed(dm, 1, inputs[1])
+        dm.w_place = lo; dm.l_place = lo + 1
+        return
+
+    j = int(round(_math.log2(m)))
+
+    # ── Winners bracket ──────────────────────────────────────────────────────
+    wb = [[mk() for _ in range(m // (2 ** r))] for r in range(1, j + 1)]
+    for i in range(m // 2):
+        feed(wb[0][i], 0, inputs[2 * i])
+        feed(wb[0][i], 1, inputs[2 * i + 1])
+    for r in range(2, j + 1):
+        for i in range(m // (2 ** r)):
+            out((wb[r - 2][2 * i], "W"), wb[r - 1][i], 0)
+            out((wb[r - 2][2 * i + 1], "W"), wb[r - 1][i], 1)
+    final = wb[j - 1][0]
+    final.w_place = lo; final.l_place = lo + 1
+
+    # ── Losers ladder (place bands fill from the worst place upward) ─────────
+    band_hi = [lo + m - 1]
+
+    def drop(louts):
+        s = len(louts)
+        blo = band_hi[0] - s + 1
+        if s == 1:
+            place(louts[0], blo)
+        else:
+            _build_rttf_ladder(louts, blo, nodes)
+        band_hi[0] = blo - 1
+
+    def minor(pool):
+        wins, lous, mats = [], [], []
+        for i in range(len(pool) // 2):
+            dm = mk()
+            out(pool[2 * i], dm, 0); out(pool[2 * i + 1], dm, 1)
+            wins.append((dm, "W")); lous.append((dm, "L")); mats.append(dm)
+        return wins, lous, mats
+
+    pool = [(wb[0][i], "L") for i in range(m // 2)]
+    wb_round = 1
+    while True:
+        wins, lous, mats = minor(pool)
+        if len(mats) == 1:                       # LB final → 3rd / 4th
+            mats[0].w_place = lo + 2
+            mats[0].l_place = lo + 3
+            break
+        drop(lous); pool = wins
+        wb_round += 1                            # merge next WB round's losers
+        wbl = [(wb[wb_round - 1][i], "L") for i in range(m // (2 ** wb_round))]
+        nwins, nlous = [], []
+        for i in range(len(pool)):
+            dm = mk()
+            out(pool[i], dm, 0); out(wbl[i], dm, 1)
+            nwins.append((dm, "W")); nlous.append((dm, "L"))
+        drop(nlous); pool = nwins
+
+
 def generate_all_places_bracket(tournament, players):
     """
-    Generate a full consolation (all-places) bracket.
+    Generate a full RTTF-style all-places bracket: a single-elimination main
+    bracket plus a double-elimination "losers ladder" that ranks every player.
+    Losers from successive rounds merge into one climbing consolation chain, so
+    a player eliminated early can still climb (розыгрыш всех мест).
 
-    Structure per round r (bracket_size = 2^rounds):
-      - Winners bracket matches in round r: wc = bracket_size // 2^r
-      - Consolation matches in round r:     cc = bracket_size//2 - wc
-      - Total matches per round:            bracket_size // 2
-
-    For N=8 (rounds=3):
-      Round 1: 4 W-bracket matches  (M1..M4)
-      Round 2: 2 W-bracket (M5,M6) + 2 consolation (M7,M8)
-      Round 3: 1 W-bracket final (M9) + 3 consolation (M10=3rd, M11=5th, M12=7th)
+    Players arrive in seed order (best first) and are placed into standard
+    seeding slots, with byes landing on the top seeds.
 
     Routing:
       Winners bracket[r][j] ← winner(prev_winners[2j]), winner(prev_winners[2j+1])
@@ -181,165 +291,140 @@ def generate_all_places_bracket(tournament, players):
     seed_order = standard_seed_order(bracket_size)
     padded = [players[s - 1] if (s - 1) < n else None for s in seed_order]
 
-    # ── Create all Match shells ──────────────────────────────────────────────
-    # all_rounds[r] = list of Match objects for round r
-    # Within each round: [winners_bracket..., consolation...]
-    all_rounds: list[list[Match]] = [[]]  # index 0 unused
+    # ── Build the ladder structure in memory ─────────────────────────────────
+    nodes: list[_Node] = []
+    _build_rttf_ladder(padded, 1, nodes)
 
-    match_num = 0
-    for r in range(1, rounds + 1):
-        wc = bracket_size // (2 ** r)
-        cc = (bracket_size // 2) - wc
-        r_matches = []
-        for _ in range(wc):
-            match_num += 1
-            m = Match(
-                tournament=tournament,
-                round_number=r,
-                match_number=match_num,
-                status=Match.PENDING,
-                is_consolation=False,
-            )
-            m.save()
-            r_matches.append(m)
-        for _ in range(cc):
-            match_num += 1
-            m = Match(
-                tournament=tournament,
-                round_number=r,
-                match_number=match_num,
-                status=Match.PENDING,
-                is_consolation=True,
-            )
-            m.save()
-            r_matches.append(m)
-        all_rounds.append(r_matches)
+    # Place range (min/max reachable place) per node. Winner/loser branches now
+    # overlap (climbing), so use min/max — not a sum.
+    pmin: dict[int, int] = {}
+    pmax: dict[int, int] = {}
 
-    # ── Wire routing between rounds ──────────────────────────────────────────
-    for r in range(2, rounds + 1):
-        wc_r    = bracket_size // (2 ** r)
-        wc_prev = bracket_size // (2 ** (r - 1))
-        cc_prev = (bracket_size // 2) - wc_prev
+    def _range(nd: _Node) -> tuple[int, int]:
+        if nd.idx in pmin:
+            return pmin[nd.idx], pmax[nd.idx]
+        pmin[nd.idx], pmax[nd.idx] = 1, bracket_size      # guard (no cycles expected)
 
-        prev_winners    = all_rounds[r - 1][:wc_prev]
-        prev_consolation = all_rounds[r - 1][wc_prev:]   # length = cc_prev
+        def out_range(pl, nxt):
+            if pl is not None:
+                return pl, pl
+            return _range(nxt[0])
 
-        curr_winners    = all_rounds[r][:wc_r]
-        curr_consolation = all_rounds[r][wc_r:]          # length = cc_r
+        wa, wb = out_range(nd.w_place, nd.w_next)
+        la, lb = out_range(nd.l_place, nd.l_next)
+        pmin[nd.idx], pmax[nd.idx] = min(wa, la), max(wb, lb)
+        return pmin[nd.idx], pmax[nd.idx]
 
-        # Winners bracket: pair up consecutive prev_winners
-        for j, cw in enumerate(curr_winners):
-            src1 = prev_winners[2 * j]
-            src2 = prev_winners[2 * j + 1]
-            src1.winner_next = cw
-            src1.winner_next_slot = 1
-            src2.winner_next = cw
-            src2.winner_next_slot = 2
+    for nd in nodes:
+        _range(nd)
 
-        # Consolation part 1: losers from prev winners bracket
-        # Fills curr_consolation[0..wc_r-1]
-        for j in range(wc_r):
-            cc_match = curr_consolation[j]
-            src1 = prev_winners[2 * j]
-            src2 = prev_winners[2 * j + 1]
-            src1.loser_next = cc_match
-            src1.loser_next_slot = 1
-            src2.loser_next = cc_match
-            src2.loser_next_slot = 2
+    # Column (round_number) = longest path from a seeded node.
+    feeders: dict[int, list[_Node]] = {}
+    for nd in nodes:
+        if nd.w_next:
+            feeders.setdefault(nd.w_next[0].idx, []).append(nd)
+        if nd.l_next:
+            feeders.setdefault(nd.l_next[0].idx, []).append(nd)
+    col: dict[int, int] = {}
 
-        # Consolation part 2: winners from prev consolation
-        # Fills curr_consolation[wc_r .. wc_r + cc_prev//2 - 1]
-        cc_prev_half = cc_prev // 2
-        for j in range(cc_prev_half):
-            cc_match = curr_consolation[wc_r + j]
-            src1 = prev_consolation[2 * j]
-            src2 = prev_consolation[2 * j + 1]
-            src1.winner_next = cc_match
-            src1.winner_next_slot = 1
-            src2.winner_next = cc_match
-            src2.winner_next_slot = 2
+    def _col(nd: _Node) -> int:
+        if nd.idx in col:
+            return col[nd.idx]
+        col[nd.idx] = 1
+        fs = feeders.get(nd.idx, [])
+        col[nd.idx] = 1 if not fs else max(_col(f) for f in fs) + 1
+        return col[nd.idx]
 
-        # Consolation part 3: losers from prev consolation
-        # Fills curr_consolation[wc_r + cc_prev//2 .. cc_r - 1]
-        for j in range(cc_prev_half):
-            cc_match = curr_consolation[wc_r + cc_prev_half + j]
-            src1 = prev_consolation[2 * j]
-            src2 = prev_consolation[2 * j + 1]
-            src1.loser_next = cc_match
-            src1.loser_next_slot = 1
-            src2.loser_next = cc_match
-            src2.loser_next_slot = 2
+    for nd in nodes:
+        _col(nd)
 
-        # Save wiring on all round r-1 matches
-        for m in all_rounds[r - 1]:
-            m.save()
+    # ── Create Match rows (column order → topological) ────────────────────────
+    ordered = sorted(nodes, key=lambda nd: (col[nd.idx], nd.idx))
+    idx_to_match: dict[int, Match] = {}
+    for num, nd in enumerate(ordered, start=1):
+        m = Match(
+            tournament=tournament,
+            round_number=col[nd.idx],
+            match_number=num,
+            status=Match.PENDING,
+            is_consolation=pmin[nd.idx] > 2,
+            place_lo=pmin[nd.idx],
+            place_hi=pmax[nd.idx],
+            player1=nd.p[0],
+            player2=nd.p[1],
+        )
+        m.save()
+        idx_to_match[nd.idx] = m
 
-    # Build pk→match map for propagation
-    all_matches_flat = {m.pk: m for r in range(1, rounds + 1) for m in all_rounds[r]}
+    # Wire winner_next / loser_next FKs.
+    for nd in nodes:
+        m = idx_to_match[nd.idx]
+        if nd.w_next:
+            m.winner_next = idx_to_match[nd.w_next[0].idx]
+            m.winner_next_slot = nd.w_next[1] + 1
+        if nd.l_next:
+            m.loser_next = idx_to_match[nd.l_next[0].idx]
+            m.loser_next_slot = nd.l_next[1] + 1
+        if nd.w_next or nd.l_next:
+            m.save(update_fields=["winner_next", "winner_next_slot", "loser_next", "loser_next_slot"])
 
     # Feeder map: which source match (and edge type) fills each (match, slot).
+    all_matches = list(idx_to_match.values())
     slot_feeder: dict[tuple[int, int], tuple[Match, str]] = {}
-    for s in all_matches_flat.values():
+    for s in all_matches:
         if s.winner_next_id:
             slot_feeder[(s.winner_next_id, s.winner_next_slot)] = (s, "W")
         if s.loser_next_id:
             slot_feeder[(s.loser_next_id, s.loser_next_slot)] = (s, "L")
 
-    # ── Populate round 1 from the seeded slots ───────────────────────────────
-    for i, m in enumerate(all_rounds[1]):
-        m.player1 = padded[i * 2]
-        m.player2 = padded[i * 2 + 1]
-
-    # ── Resolve the bracket round by round ───────────────────────────────────
+    # ── Resolve byes in column (topological) order ────────────────────────────
     # A match is auto-won by "bye" only when the empty slot is PERMANENTLY empty
     # (its feeder is finished and will never deliver a player) — never just
-    # because the opponent's feeder has not been played yet. This stops byes
-    # from cascading a player through several rounds without playing.
+    # because the opponent's feeder has not been played yet.
     def _perm_empty(m: Match, slot: int) -> bool:
         cur = m.player1 if slot == 1 else m.player2
         if cur is not None:
             return False
         fdr = slot_feeder.get((m.id, slot))
         if fdr is None:
-            return True                        # round-1 padding slot
+            return True                        # seeded round-1 padding slot
         src, _etype = fdr
         return src.status == Match.FINISHED    # finished feeder yields nothing further
 
-    for r in range(1, rounds + 1):
-        for m in all_rounds[r]:
-            # Pull in winners already decided by upstream byes.
-            if r > 1:
-                for slot in (1, 2):
-                    fdr = slot_feeder.get((m.id, slot))
-                    if fdr and fdr[1] == "W" and fdr[0].status == Match.FINISHED and fdr[0].winner_id:
-                        if slot == 1:
-                            m.player1 = fdr[0].winner
-                        else:
-                            m.player2 = fdr[0].winner
+    for m in sorted(all_matches, key=lambda x: (x.round_number, x.match_number)):
+        # Pull in winners already decided by upstream byes.
+        for slot in (1, 2):
+            cur = m.player1 if slot == 1 else m.player2
+            if cur is not None:
+                continue
+            fdr = slot_feeder.get((m.id, slot))
+            if fdr and fdr[1] == "W" and fdr[0].status == Match.FINISHED and fdr[0].winner_id:
+                if slot == 1:
+                    m.player1 = fdr[0].winner
+                else:
+                    m.player2 = fdr[0].winner
 
-            e1, e2 = m.player1 is None, m.player2 is None
-            pe1, pe2 = _perm_empty(m, 1), _perm_empty(m, 2)
+        e1, e2 = m.player1 is None, m.player2 is None
+        pe1, pe2 = _perm_empty(m, 1), _perm_empty(m, 2)
 
-            if e1 and e2:
-                # Ghost (neither side will ever arrive) → finished w/o a winner;
-                # otherwise still waiting on a live feeder → pending.
-                m.status = Match.FINISHED if (pe1 and pe2) else Match.PENDING
-                m.save()
-            elif (e1 and not pe1) or (e2 and not pe2):
-                m.status = Match.PENDING       # real player waiting for a live opponent
-                m.save()
-            elif e1:                           # slot 1 permanently empty → bye
-                m.winner = m.player2
-                m.status = Match.FINISHED
-                m.save()
-            elif e2:                           # slot 2 permanently empty → bye
-                m.winner = m.player1
-                m.status = Match.FINISHED
-                m.save()
-            else:                              # both real → playable now
-                m.status = Match.IN_PROGRESS
-                m.save()
-                auto_assign_table(m)
+        if e1 and e2:
+            m.status = Match.FINISHED if (pe1 and pe2) else Match.PENDING
+            m.save()
+        elif (e1 and not pe1) or (e2 and not pe2):
+            m.status = Match.PENDING
+            m.save()
+        elif e1:
+            m.winner = m.player2
+            m.status = Match.FINISHED
+            m.save()
+        elif e2:
+            m.winner = m.player1
+            m.status = Match.FINISHED
+            m.save()
+        else:
+            m.status = Match.IN_PROGRESS
+            m.save()
+            auto_assign_table(m)
 
     return (
         Match.objects.filter(tournament=tournament)
@@ -484,14 +569,22 @@ def _slot_feeder(match: Match, slot: int):
     )
 
 
+def _perm_empty_live(nxt: Match, slot: int) -> bool:
+    """A slot is permanently empty if it has no player and its feeder is finished
+    (a bye/ghost that will never deliver) or there is no feeder at all."""
+    cur = nxt.player1 if slot == 1 else nxt.player2
+    if cur is not None:
+        return False
+    feeder = _slot_feeder(nxt, slot)
+    return feeder is None or feeder.status == Match.FINISHED
+
+
 def _resolve_after_fill(nxt: Match) -> None:
     """
-    Decide a match's state after one of its slots was just filled.
-
-    - both slots set → start the match
-    - one slot set, the empty slot PERMANENTLY empty (its feeder is finished and
-      will deliver nothing more) → bye-advance the present player and cascade
-    - otherwise → wait (the opponent is still to be decided live)
+    Re-evaluate a match after one of its feeders finished (whether or not it
+    delivered a player). Resolves to: started (both players), a bye (one player
+    + permanently-empty opponent), a ghost (both permanently empty), or waiting.
+    Cascades downstream so byes/ghosts propagate correctly.
     """
     if nxt.status == Match.FINISHED:
         return
@@ -505,55 +598,68 @@ def _resolve_after_fill(nxt: Match) -> None:
         else:
             nxt.save()
         return
-    if p1 is None and p2 is None:
-        nxt.save()
+
+    pe1, pe2 = _perm_empty_live(nxt, 1), _perm_empty_live(nxt, 2)
+    e1, e2 = p1 is None, p2 is None
+
+    if e1 and e2:
+        if pe1 and pe2:                      # ghost — nobody will ever arrive
+            nxt.status = Match.FINISHED
+            nxt.save()
+            advance_winner_and_loser(nxt, None, None)
+        else:
+            nxt.save()                        # still waiting
         return
 
-    empty_slot = 1 if p1 is None else 2
-    feeder = _slot_feeder(nxt, empty_slot)
-    if feeder is not None and feeder.status == Match.FINISHED:
-        # Opponent will never arrive → bye.
-        bye_winner = p2 if p1 is None else p1
-        nxt.winner = bye_winner
-        nxt.status = Match.FINISHED
-        nxt.save()
-        advance_winner_and_loser(nxt, bye_winner, None)
-    else:
-        nxt.save()  # still waiting for the live opponent
+    if (e1 and not pe1) or (e2 and not pe2):
+        nxt.save()                            # real player waiting for a live opponent
+        return
+
+    # one real player, opponent permanently empty → bye
+    bye_winner = p2 if e1 else p1
+    nxt.winner = bye_winner
+    nxt.status = Match.FINISHED
+    nxt.save()
+    advance_winner_and_loser(nxt, bye_winner, None)
 
 
 def advance_winner_and_loser(match: Match, winner, loser) -> None:
     """
-    After a match finishes, advance winner to winner_next and loser to loser_next.
-    Falls back to round/match-number routing for single-elimination matches
-    (which have no winner_next FK set).
+    After a match finishes, route winner → winner_next and loser → loser_next.
+    Targets are ALWAYS re-resolved (even when winner/loser is None, e.g. a bye or
+    a ghost) so that a feeder finishing without delivering a player still lets a
+    dependent match bye/ghost out instead of waiting forever.
+    Falls back to round/match-number routing for single-elimination matches.
     """
     # ── Winner routing ────────────────────────────────────────────────────────
     if match.winner_next_id:
         nxt = Match.objects.filter(pk=match.winner_next_id).first()
         slot = match.winner_next_slot
+    elif match.place_lo is not None:
+        nxt = None                            # all-places terminal — winner is ranked here
     else:
-        # Legacy round-number routing (single-elim)
-        next_r = match.round_number + 1
+        next_r = match.round_number + 1       # legacy single-elimination routing
         next_m = math.ceil(match.match_number / 2)
         slot = 1 if match.match_number % 2 == 1 else 2
         nxt = Match.objects.filter(
             tournament=match.tournament, round_number=next_r, match_number=next_m,
         ).first()
 
-    if nxt and winner:
-        if slot == 1:
-            nxt.player1 = winner
-        else:
-            nxt.player2 = winner
+    if nxt:
+        if winner:
+            if slot == 1:
+                nxt.player1 = winner
+            else:
+                nxt.player2 = winner
         _resolve_after_fill(nxt)
 
     # ── Loser routing ─────────────────────────────────────────────────────────
-    if match.loser_next_id and loser:
+    if match.loser_next_id:
         loser_match = Match.objects.filter(pk=match.loser_next_id).first()
         if loser_match:
-            if match.loser_next_slot == 1:
-                loser_match.player1 = loser
-            else:
-                loser_match.player2 = loser
+            if loser:
+                if match.loser_next_slot == 1:
+                    loser_match.player1 = loser
+                else:
+                    loser_match.player2 = loser
             _resolve_after_fill(loser_match)

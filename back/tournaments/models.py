@@ -174,6 +174,11 @@ class Match(models.Model):
     )
     loser_next_slot = models.PositiveSmallIntegerField(null=True, blank=True)
     is_consolation = models.BooleanField(default=False, verbose_name="Утешительный")
+    # The range of final places this match's participants can finish in
+    # (e.g. 3..16 for an early consolation match, 3..4 for the bronze final).
+    # Set only for all-places playoff brackets; null for single-elimination.
+    place_lo = models.PositiveIntegerField(null=True, blank=True, verbose_name="Место от")
+    place_hi = models.PositiveIntegerField(null=True, blank=True, verbose_name="Место до")
 
     class Meta:
         verbose_name = "Матч"

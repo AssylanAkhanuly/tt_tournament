@@ -82,6 +82,7 @@ class MatchSerializer(serializers.ModelSerializer):
             "winner", "status", "table_number",
             "is_consolation",
             "winner_next_id", "loser_next_id",
+            "place_lo", "place_hi",
         ]
 
 
