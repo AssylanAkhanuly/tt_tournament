@@ -190,6 +190,9 @@ export default function BracketFlow({ matches, currentUser, isAdmin, onEnterScor
   );
   const maxRound = rounds[rounds.length - 1] ?? 1;
 
+  // Detect consolation bracket format (has any consolation match)
+  const hasConsolation = matches.some((m) => m.is_consolation);
+
   // ── Build nodes ─────────────────────────────────────────────────────────
   const builtNodes: Node[] = useMemo(() => {
     const nodes: Node[] = [];
@@ -197,75 +200,104 @@ export default function BracketFlow({ matches, currentUser, isAdmin, onEnterScor
     rounds.forEach((r, rIdx) => {
       const roundMatches = matches
         .filter((m) => m.round_number === r)
-        .sort((a, b) => a.match_number - b.match_number);
-
-      // Vertical slot height doubles each round so cards stay centred
-      const slotH = BASE_VSPACE * Math.pow(2, rIdx);
-      const cardTopOffset = slotH / 2 - CARD_H / 2; // centre card in slot
+        .sort((a, b) => {
+          // Winners bracket first, then consolation
+          if (a.is_consolation !== b.is_consolation) return a.is_consolation ? 1 : -1;
+          return a.match_number - b.match_number;
+        });
 
       const x = rIdx * (CARD_W + H_GAP);
 
-      // Round label node (sits 36px above the first card)
-      nodes.push({
-        id: `label-${r}`,
-        type: "roundLabel",
-        position: { x, y: -36 },
-        data: { label: roundLabel(r, maxRound) },
-        draggable: false,
-        selectable: false,
-      });
+      if (hasConsolation) {
+        // All-places bracket: fixed slot height per match, no doubling
+        const slotH = CARD_H + 24;
 
-      // Match card nodes
-      roundMatches.forEach((match, idx) => {
         nodes.push({
-          id: `m-${match.id}`,
-          type: "matchNode",
-          position: { x, y: cardTopOffset + idx * slotH },
-          data: { match, currentUser, isAdmin, onEnterScore } satisfies MatchNodeData,
-          draggable: false,
-          selectable: false,
+          id: `label-${r}`,
+          type: "roundLabel",
+          position: { x, y: -36 },
+          data: { label: roundLabel(r, maxRound) },
+          draggable: false, selectable: false,
         });
-      });
+
+        roundMatches.forEach((match, idx) => {
+          nodes.push({
+            id: `m-${match.id}`,
+            type: "matchNode",
+            position: { x, y: idx * slotH },
+            data: { match, currentUser, isAdmin, onEnterScore } satisfies MatchNodeData,
+            draggable: false, selectable: false,
+          });
+        });
+      } else {
+        // Standard single-elimination: slot doubles each round
+        const slotH = BASE_VSPACE * Math.pow(2, rIdx);
+        const cardTopOffset = slotH / 2 - CARD_H / 2;
+
+        nodes.push({
+          id: `label-${r}`,
+          type: "roundLabel",
+          position: { x, y: -36 },
+          data: { label: roundLabel(r, maxRound) },
+          draggable: false, selectable: false,
+        });
+
+        roundMatches.forEach((match, idx) => {
+          nodes.push({
+            id: `m-${match.id}`,
+            type: "matchNode",
+            position: { x, y: cardTopOffset + idx * slotH },
+            data: { match, currentUser, isAdmin, onEnterScore } satisfies MatchNodeData,
+            draggable: false, selectable: false,
+          });
+        });
+      }
     });
 
     return nodes;
-  }, [matches, rounds, maxRound, currentUser, isAdmin, onEnterScore]);
+  }, [matches, rounds, maxRound, currentUser, isAdmin, onEnterScore, hasConsolation]);
 
   // ── Build edges ─────────────────────────────────────────────────────────
   const builtEdges: Edge[] = useMemo(() => {
     const edges: Edge[] = [];
-    for (const match of matches) {
-      if (match.round_number === 1) continue;
-      const prevRound = match.round_number - 1;
-      const src1 = matches.find(
-        (m) => m.round_number === prevRound && m.match_number === match.match_number * 2 - 1
-      );
-      const src2 = matches.find(
-        (m) => m.round_number === prevRound && m.match_number === match.match_number * 2
-      );
-      for (const src of [src1, src2]) {
-        if (!src) continue;
-        const isFinished = src.status === "finished";
-        const isLive     = src.status === "in_progress";
-        edges.push({
-          id: `e-${src.id}-${match.id}`,
-          source: `m-${src.id}`,
-          target: `m-${match.id}`,
-          type: "smoothstep",
-          animated: isLive,
-          style: {
-            stroke: isFinished
-              ? "rgba(34,197,94,0.45)"
-              : isLive
-              ? "rgba(59,130,246,0.60)"
-              : "rgba(255,255,255,0.09)",
-            strokeWidth: isFinished || isLive ? 2 : 1.5,
-          },
-        });
+
+    if (hasConsolation) {
+      // Consolation bracket: no connecting edges — clean column grid
+      // Progression is implied by column order (left = earlier rounds)
+    } else {
+      // Standard single-elimination: match_number * 2 math
+      for (const match of matches) {
+        if (match.round_number === 1) continue;
+        const prevRound = match.round_number - 1;
+        const src1 = matches.find(
+          (m) => m.round_number === prevRound && m.match_number === match.match_number * 2 - 1
+        );
+        const src2 = matches.find(
+          (m) => m.round_number === prevRound && m.match_number === match.match_number * 2
+        );
+        for (const src of [src1, src2]) {
+          if (!src) continue;
+          const isFinished = src.status === "finished";
+          const isLive     = src.status === "in_progress";
+          edges.push({
+            id: `e-${src.id}-${match.id}`,
+            source: `m-${src.id}`,
+            target: `m-${match.id}`,
+            type: "smoothstep",
+            animated: isLive,
+            style: {
+              stroke: isFinished ? "rgba(34,197,94,0.45)"
+                : isLive ? "rgba(59,130,246,0.60)"
+                : "rgba(255,255,255,0.09)",
+              strokeWidth: isFinished || isLive ? 2 : 1.5,
+            },
+          });
+        }
       }
     }
+
     return edges;
-  }, [matches]);
+  }, [matches, hasConsolation]);
 
   // ── Keep state in sync when matches prop changes (e.g. after score submit) ──
   const [nodes, setNodes, onNodesChange] = useNodesState(builtNodes);

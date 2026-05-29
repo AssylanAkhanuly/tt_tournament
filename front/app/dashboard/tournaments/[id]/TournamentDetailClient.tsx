@@ -16,7 +16,8 @@ import AddPlayerModal from "@/components/AddPlayerModal";
 import LiveMatchesPanel from "@/components/LiveMatchesPanel";
 
 const QRCodeDisplay = dynamic(() => import("@/components/QRCodeDisplay"), { ssr: false });
-const BracketFlow   = dynamic(() => import("@/components/BracketFlow"),   { ssr: false });
+const BracketFlow    = dynamic(() => import("@/components/BracketFlow"),    { ssr: false });
+const ClassicBracket = dynamic(() => import("@/components/ClassicBracket"), { ssr: false });
 
 // ─── Avatar gradient ──────────────────────────────────────────────────────────
 const AVATAR_GRADIENTS = [
@@ -452,12 +453,13 @@ export default function TournamentDetailClient({
 
         {/* ── BRACKET ─────────────────────────────────────────────── */}
         {page === "bracket" && (
-          <div className="absolute inset-0 overflow-y-auto">
+          <div className="absolute inset-0 overflow-auto bg-[#050c18]">
             {matches.length > 0 ? (
               tournament.format === "group_playoff" ? (
-                <ConsolationBracketView
+                <ClassicBracket
+                  key={matches.length}
                   matches={matches}
-                  user={user}
+                  currentUser={user}
                   isAdmin={isAdmin}
                   onEnterScore={setScoreMatch}
                 />
@@ -887,7 +889,7 @@ function GroupsTab({
   }
 
   return (
-    <div className="h-full flex flex-col">
+    <div className="h-full flex flex-col bg-[radial-gradient(circle_at_top,rgba(59,130,246,0.08),transparent_38%)]">
       <div className="px-6 py-4 border-b border-white/[0.07] shrink-0 bg-[#070f1d]/60 flex items-center justify-between">
         <div>
           <h2 className="text-[17px] font-bold text-white">Группы</h2>
@@ -1104,6 +1106,26 @@ function OverviewPanel({
   const [centerView, setCenterView] = useState<"bracket" | "groups">(
     tournament.format === "group_playoff" && matches.length === 0 ? "groups" : "bracket"
   );
+  const [autoScoring, setAutoScoring] = useState(false);
+
+  async function handleAutoRandomScores() {
+    setAutoScoring(true);
+    try {
+      const pending = allGroupMatches.filter((m) => m.status !== "finished");
+      for (const m of pending) {
+        const winnerFirst = Math.random() > 0.5;
+        const loserScore  = Math.floor(Math.random() * 3); // 0-2
+        await api.submitGroupScore(
+          tournament.id, m.groupId, m.id,
+          winnerFirst ? 3 : loserScore,
+          winnerFirst ? loserScore : 3,
+        );
+      }
+      const fresh = await api.getGroups(tournament.id);
+      onGroupsChange(fresh);
+    } catch { /* silent */ }
+    finally { setAutoScoring(false); }
+  }
 
   async function assignTable(match: Match, tableNum: number | null) {
     setAssigning(match.id);
@@ -1119,7 +1141,7 @@ function OverviewPanel({
     <div className="h-full flex flex-col">
 
       {/* ── Top bar: stats + table pills ── */}
-      <div className="shrink-0 border-b border-white/[0.07] bg-[#070f1d]/80 px-4 py-2 flex items-center gap-2.5 flex-wrap">
+      <div className="shrink-0 border-b border-white/[0.07] bg-[#070f1d]/90 px-4 py-3 flex items-center gap-2.5 flex-wrap backdrop-blur-xl">
         {[
           { label: "Идут",   value: live.length + groupMatchesLive.length, color: "bg-blue-500/20 text-blue-300 border-blue-500/25" },
           { label: "Ждут",   value: isGroupPhase ? allGroupMatches.filter(m => m.status === "pending").length : pendingReady.length, color: "bg-white/[0.07] text-white/40 border-white/[0.07]" },
@@ -1161,20 +1183,20 @@ function OverviewPanel({
         })}
 
         <button onClick={onRefresh} disabled={refreshing}
-          className="ml-auto flex items-center gap-1.5 text-[11px] text-white/25 hover:text-white/60 transition-colors shrink-0">
+          className="ml-auto flex items-center gap-1.5 rounded-xl border border-white/[0.08] bg-white/[0.03] px-2.5 py-1.5 text-[11px] text-white/35 hover:text-white/75 hover:bg-white/[0.05] transition-colors shrink-0">
           <RefreshCw size={12} className={refreshing ? "animate-spin" : ""} />
         </button>
       </div>
 
       {/* ── 3-column body ── */}
-      <div className="flex-1 min-h-0 flex overflow-hidden">
+      <div className="flex-1 min-h-0 flex flex-col xl:flex-row overflow-hidden">
 
 
         {/* ── Center: bracket OR group matches (toggle) ── */}
         <div className="flex-1 min-w-0 flex flex-col overflow-hidden bg-[#050c18]">
           {/* Toggle when both views available */}
           {hasGroups && (
-            <div className="shrink-0 flex items-center gap-1 px-3 py-2 border-b border-white/[0.06]
+            <div className="shrink-0 flex items-center gap-1 px-4 py-3 border-b border-white/[0.06]
                             bg-[#070f1d]/60">
               {[
                 { v: "groups"  as const, label: "Группы" },
@@ -1189,24 +1211,60 @@ function OverviewPanel({
                   {label}
                 </button>
               ))}
-              {isGroupPhase && isAdmin &&
-               groups.every((g) => g.matches.every((m) => m.status === "finished")) && (
-                <div className="ml-auto">
-                  <StartPlayoffButton
-                    tournamentId={tournament.id}
-                    onStarted={(ms, t) => { onMatchesChange(ms); onTournamentChange(t); setCenterView("bracket"); }}
-                  />
+              {isGroupPhase && isAdmin && (
+                <div className="ml-auto flex items-center gap-2">
+                  {allGroupMatches.some((m) => m.status !== "finished") && (
+                    <button
+                      onClick={handleAutoRandomScores}
+                      disabled={autoScoring}
+                      title="Завершить все матчи случайными счётами"
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-semibold
+                                 bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/30 text-amber-300
+                                 disabled:opacity-40 transition-all"
+                    >
+                      <Zap size={12} />
+                      {autoScoring ? "..." : "Авто-счёт"}
+                    </button>
+                  )}
+                  {groups.every((g) => g.matches.every((m) => m.status === "finished")) && (
+                    <StartPlayoffButton
+                      tournamentId={tournament.id}
+                      onStarted={(ms, t) => { onMatchesChange(ms); onTournamentChange(t); setCenterView("bracket"); }}
+                    />
+                  )}
                 </div>
               )}
             </div>
           )}
 
-          <div className="flex-1 min-h-0 overflow-hidden relative">
+          <div className="flex-1 min-h-0 overflow-hidden relative p-3 sm:p-4">
             {/* ── Bracket view ── */}
             {centerView === "bracket" && (
-              hasBracket ? (
-                <BracketFlow matches={matches} currentUser={user} isAdmin={isAdmin}
-                  onEnterScore={onEnterScore} className="w-full h-full bg-[#050c18]" />
+              <div className="h-full rounded-[24px] border border-white/[0.08] bg-[linear-gradient(180deg,rgba(11,21,38,0.94),rgba(5,12,24,0.98))] shadow-[inset_0_1px_0_rgba(255,255,255,0.03),0_30px_80px_rgba(0,0,0,0.28)] overflow-hidden">
+                <div className="flex items-center justify-between gap-3 border-b border-white/[0.06] px-4 py-3">
+                  <div>
+                    <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-white/30">
+                      {tournament.format === "group_playoff" ? "Плей-офф" : "Турнирная сетка"}
+                    </p>
+                    <p className="mt-1 text-[13px] text-white/55">
+                      {hasBracket ? "Матчи, переходы и активные столы в одном поле." : "Сетка появится после генерации матчей."}
+                    </p>
+                  </div>
+                  {hasBracket && (
+                    <div className="rounded-full border border-white/[0.08] bg-white/[0.03] px-3 py-1 text-[11px] font-semibold text-white/45">
+                      {matches.length} матч.
+                    </div>
+                  )}
+                </div>
+                <div className="h-[calc(100%-76px)]">
+                  {hasBracket ? (
+                tournament.format === "group_playoff" ? (
+                  <ClassicBracket key={matches.length} matches={matches} currentUser={user} isAdmin={isAdmin}
+                    onEnterScore={onEnterScore} className="w-full h-full bg-transparent" />
+                ) : (
+                  <BracketFlow matches={matches} currentUser={user} isAdmin={isAdmin}
+                    onEnterScore={onEnterScore} className="w-full h-full bg-transparent" />
+                )
               ) : (
                 <div className="h-full flex flex-col items-center justify-center gap-3">
                   <Trophy size={40} className="text-white/[0.06]" />
@@ -1214,18 +1272,20 @@ function OverviewPanel({
                     {isGroupPhase ? "Плей-офф ещё не начат" : "Нет матчей"}
                   </p>
                 </div>
-              )
+                  )}
+                </div>
+              </div>
             )}
 
             {/* ── Groups round-robin table view ── */}
             {centerView === "groups" && (
-              <div className="h-full overflow-y-auto px-4 py-4">
+              <div className="h-full overflow-y-auto rounded-[24px] border border-white/[0.08] bg-[linear-gradient(180deg,rgba(11,21,38,0.94),rgba(5,12,24,0.98))] px-4 py-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.03),0_30px_80px_rgba(0,0,0,0.28)]">
                 {groups.length === 0 ? (
                   <div className="flex flex-col items-center justify-center h-40 gap-2">
                     <p className="text-[13px] text-white/20">Группы не созданы</p>
                   </div>
                 ) : (
-                  <div className={`grid gap-4 ${groups.length >= 2 ? "grid-cols-2" : "grid-cols-1"}`}>
+                  <div className={`grid gap-4 ${groups.length >= 2 ? "grid-cols-1 2xl:grid-cols-2" : "grid-cols-1"}`}>
                     {groups.map((g, idx) => (
                       <GroupRoundRobinTable key={g.id} group={g} colorIdx={idx} />
                     ))}
@@ -1238,12 +1298,11 @@ function OverviewPanel({
         </div>
 
         {/* ── Right column: live (top 50%) + pending queue (bottom 50%) ── */}
-        <div className="w-[270px] shrink-0 border-l border-white/[0.07] flex flex-col overflow-hidden"
-             style={{ background: "var(--surface)" }}>
+        <div className="xl:w-[360px] xl:min-w-[360px] shrink-0 border-t xl:border-t-0 xl:border-l border-white/[0.07] flex flex-col overflow-hidden bg-[linear-gradient(180deg,rgba(17,18,40,0.98),rgba(12,14,31,0.98))]">
 
           {/* ── Live — exactly half, independently scrollable ── */}
-          <div className="h-1/2 flex flex-col border-b border-white/[0.07] overflow-hidden">
-            <div className="px-3 py-2.5 border-b border-white/[0.06] shrink-0 flex items-center gap-2">
+          <div className="min-h-[260px] xl:h-1/2 flex flex-col border-b border-white/[0.07] overflow-hidden">
+            <div className="px-4 py-3 border-b border-white/[0.06] shrink-0 flex items-center gap-2">
               <span className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-pulse shrink-0" />
               <span className="text-[10px] font-bold uppercase tracking-[0.12em] text-white/30">Идут сейчас</span>
               {(isGroupPhase ? groupMatchesLive : live).length > 0 && (
@@ -1252,7 +1311,7 @@ function OverviewPanel({
                 </span>
               )}
             </div>
-            <div className="flex-1 min-h-0 overflow-y-auto px-2 py-2 space-y-2">
+            <div className="flex-1 min-h-0 overflow-y-auto px-3 py-3 space-y-2.5">
               {isGroupPhase ? (
                 groupMatchesLive.length === 0 ? (
                   <p className="text-[12px] text-white/20 text-center py-8">Нет активных матчей</p>
@@ -1284,8 +1343,8 @@ function OverviewPanel({
           </div>
 
           {/* ── Pending queue — exactly half, independently scrollable ── */}
-          <div className="h-1/2 flex flex-col overflow-hidden">
-            <div className="px-3 py-2 border-b border-white/[0.05] shrink-0 flex items-center gap-2">
+          <div className="min-h-[280px] xl:h-1/2 flex flex-col overflow-hidden">
+            <div className="px-4 py-3 border-b border-white/[0.05] shrink-0 flex items-center gap-2">
               <Clock size={11} className="text-white/25 shrink-0" />
               <span className="text-[10px] font-bold uppercase tracking-[0.12em] text-white/25">
                 {isGroupPhase ? "Матчи групп" : "Ожидают стола"}
@@ -1302,7 +1361,7 @@ function OverviewPanel({
                 );
               })()}
             </div>
-            <div className="flex-1 min-h-0 overflow-y-auto px-2 py-2 space-y-1.5">
+            <div className="flex-1 min-h-0 overflow-y-auto px-3 py-3 space-y-2">
               {isGroupPhase ? (
                 groupMatchesPending.length === 0 && groupMatchesBlocked.length === 0 ? (
                   <p className="text-[11px] text-white/15 text-center py-3">Все матчи сыграны</p>
@@ -1684,26 +1743,34 @@ function PendingBracketRow({
 }: { match: Match; isAdmin: boolean; freeTables: TournamentTable[]; assigning: boolean; onAssign: (t: number) => void }) {
   const [tableInput, setTableInput] = useState("");
   return (
-    <div className="rounded-xl border border-white/[0.07] bg-white/[0.02] px-3 py-2">
-      <p className="text-[12px] font-semibold text-white/70 truncate">
+    <div className="rounded-2xl border border-white/[0.08] bg-white/[0.03] px-3.5 py-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.02)]">
+      <div className="mb-2 flex items-center justify-between gap-2">
+        <span className="rounded-full border border-white/[0.08] bg-white/[0.03] px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.12em] text-white/35">
+          Р {match.round_number} · М {match.match_number}
+        </span>
+        {!match.player1 || !match.player2 ? (
+          <span className="text-[10px] text-white/20">ожидаем участников</span>
+        ) : null}
+      </div>
+      <p className="text-[13px] font-semibold text-white/70 truncate">
         <span className={match.player1 ? "text-white/85" : "text-white/25 italic"}>{match.player1?.name ?? "???"}</span>
         <span className="text-white/20 mx-1.5 font-normal">vs</span>
         <span className={match.player2 ? "text-white/85" : "text-white/25 italic"}>{match.player2?.name ?? "???"}</span>
       </p>
       <p className="text-[10px] text-white/25 mt-0.5">Р{match.round_number} · М{match.match_number}</p>
       {isAdmin && match.player1 && match.player2 && freeTables.length > 0 && (
-        <div className="flex items-center gap-1.5 mt-1.5">
+        <div className="flex items-center gap-2 mt-3">
           <select value={tableInput} onChange={(e) => setTableInput(e.target.value)}
             style={{ colorScheme: "dark" }}
-            className="flex-1 text-[11px] px-2 py-1 bg-white/[0.07] border border-white/[0.10]
-                       rounded-lg text-white focus:outline-none min-w-0">
+            className="flex-1 text-[11px] px-3 py-2 bg-white/[0.07] border border-white/[0.10]
+                       rounded-xl text-white focus:outline-none min-w-0">
             <option value="">Стол</option>
             {freeTables.map((t) => <option key={t.id} value={t.number}>{t.display_name}</option>)}
           </select>
           <button
             onClick={() => { const n = parseInt(tableInput); if (!isNaN(n)) onAssign(n); }}
             disabled={!tableInput || assigning}
-            className="text-[11px] px-2.5 py-1 rounded-lg bg-blue-600 hover:bg-blue-500
+            className="text-[11px] px-3 py-2 rounded-xl bg-blue-600 hover:bg-blue-500
                        text-white disabled:opacity-40 transition-all shrink-0">
             {assigning ? "…" : "→"}
           </button>
@@ -2029,62 +2096,152 @@ function ConsolationBracketView({
   );
 }
 
-// ── Compact match card for overview right panel ────────────────────────────────
+// ── Compact match card — click row to open score/table modal ─────────────────
 interface CCardProps {
   match: Match; isAdmin: boolean; assigning: boolean;
   freeTables: TournamentTable[]; tableNameMap: Record<number, string>;
   onAssign: (t: number) => void; onClear: () => void; onScore: () => void;
 }
-function CompactMatchCard({ match, isAdmin, assigning, freeTables, tableNameMap, onAssign, onClear, onScore }: CCardProps) {
-  const [tableInput, setTableInput] = useState("");
+function CompactMatchCard({ match, isAdmin, freeTables, tableNameMap, onAssign, onClear, onScore }: CCardProps) {
+  const [showModal, setShowModal] = useState(false);
   const currentName = match.table_number ? (tableNameMap[match.table_number] ?? `Стол ${match.table_number}`) : null;
+  const isLive = match.status === "in_progress";
+
   return (
-    <div className="rounded-xl border border-blue-500/20 overflow-hidden" style={{ background: "rgba(59,130,246,0.04)" }}>
-      <div className="flex items-center justify-between px-2.5 py-1.5 bg-blue-500/[0.08] border-b border-blue-500/15">
-        <span className="text-[10px] font-bold text-blue-300/60 uppercase tracking-wide">
-          ● Р{match.round_number}·М{match.match_number}
-        </span>
-        {currentName
-          ? <span className="text-[10px] font-bold text-blue-300 bg-blue-500/20 px-2 py-0.5 rounded-full">{currentName}</span>
-          : <span className="text-[10px] text-white/20">Без стола</span>
-        }
-      </div>
-      <div className="px-2.5 py-2">
-        <div className="flex items-center justify-between text-[12px] mb-1.5">
-          <span className="truncate text-white/80 font-medium">{match.player1?.name ?? "—"}</span>
-          <span className="text-white/20 text-[10px] mx-1 shrink-0">vs</span>
-          <span className="truncate text-white/80 font-medium text-right">{match.player2?.name ?? "—"}</span>
+    <>
+      <div
+        onClick={() => isAdmin && setShowModal(true)}
+        className={`rounded-xl border overflow-hidden transition-all ${
+          isAdmin ? "cursor-pointer" : ""
+        } border-blue-500/20 hover:border-blue-400/50 hover:shadow-[0_10px_30px_rgba(37,99,235,0.16)]`}
+        style={{ background: "linear-gradient(180deg, rgba(59,130,246,0.10), rgba(59,130,246,0.04))" }}>
+        <div className="flex items-center justify-between px-3 py-2 bg-blue-500/[0.10] border-b border-blue-500/15">
+          <span className="text-[10px] font-bold text-blue-300/60 uppercase tracking-wide">
+            {isLive && <span className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-pulse inline-block mr-1" />}
+            Р{match.round_number}·М{match.match_number}
+          </span>
+          {currentName
+            ? <span className="text-[10px] font-bold text-blue-300 bg-blue-500/20 px-2 py-0.5 rounded-full">{currentName}</span>
+            : isAdmin && <span className="text-[10px] text-white/20">нажмите для назначения</span>
+          }
         </div>
-        <div className="flex items-center gap-1.5 flex-wrap">
-          {isAdmin && (currentName ? (
-            <button onClick={onClear} disabled={assigning}
-              className="text-[11px] px-2 py-1 rounded-lg bg-white/[0.06] hover:bg-white/[0.10]
-                         text-white/40 transition-all disabled:opacity-40 border border-white/[0.06]">
-              Освободить
-            </button>
-          ) : freeTables.length > 0 && (
-            <div className="flex items-center gap-1">
-              <select value={tableInput} onChange={(e) => setTableInput(e.target.value)}
-                style={{ colorScheme: "dark" }}
-                className="text-[11px] px-2 py-1 bg-white/[0.07] border border-white/[0.10]
-                           rounded-lg text-white focus:outline-none">
-                <option value="">Стол</option>
-                {freeTables.map((t) => <option key={t.id} value={t.number}>{t.display_name}</option>)}
-              </select>
-              <button onClick={() => { const n = parseInt(tableInput); if (!isNaN(n)) onAssign(n); }}
-                disabled={!tableInput || assigning}
-                className="text-[11px] px-2 py-1 rounded-lg bg-blue-600 hover:bg-blue-500
-                           text-white disabled:opacity-40 transition-all">
-                {assigning ? "..." : "→"}
-              </button>
-            </div>
-          ))}
-          <button onClick={onScore}
-            className="ml-auto text-[11px] px-3 py-1 rounded-lg bg-emerald-500/20
-                       hover:bg-emerald-500/30 border border-emerald-500/25 text-emerald-300
-                       font-semibold transition-all">
-            Счёт
+        <div className="space-y-1 px-3 py-3">
+          <div className="flex items-center justify-between gap-2">
+            <p className="min-w-0 flex-1 truncate text-[13px] font-semibold text-white/88">
+              {match.player1?.name ?? "???"}
+            </p>
+            {match.score1 !== null && <span className="text-[15px] font-black tabular-nums text-white/85">{match.score1}</span>}
+          </div>
+          <div className="h-px bg-white/[0.06]" />
+          <div className="flex items-center justify-between gap-2">
+            <p className="min-w-0 flex-1 truncate text-[13px] font-semibold text-white/72">
+              {match.player2?.name ?? "???"}
+            </p>
+            {match.score2 !== null && <span className="text-[15px] font-black tabular-nums text-white/70">{match.score2}</span>}
+          </div>
+        </div>
+      </div>
+
+      {showModal && isAdmin && (
+        <BracketMatchModal
+          match={match}
+          freeTables={freeTables}
+          tableNameMap={tableNameMap}
+          onClose={() => setShowModal(false)}
+          onScore={() => { onScore(); setShowModal(false); }}
+          onAssign={onAssign}
+          onClear={onClear}
+        />
+      )}
+    </>
+  );
+}
+
+// ── Bracket match modal (assign table or enter score) ─────────────────────────
+function BracketMatchModal({
+  match, freeTables, tableNameMap, onClose, onScore, onAssign, onClear,
+}: {
+  match: Match; freeTables: TournamentTable[]; tableNameMap: Record<number, string>;
+  onClose: () => void; onScore: () => void;
+  onAssign: (t: number) => void; onClear: () => void;
+}) {
+  const currentName = match.table_number ? (tableNameMap[match.table_number] ?? `Стол ${match.table_number}`) : null;
+  const isLive = match.status === "in_progress";
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/65 backdrop-blur-sm p-4"
+         onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
+      <div className="w-full max-w-sm rounded-2xl border border-white/[0.12] shadow-2xl overflow-hidden"
+           style={{ background: "var(--elevated)" }}>
+        <div className="flex items-center justify-between px-5 py-4 border-b border-white/[0.07]">
+          <div>
+            <p className="text-[15px] font-bold text-white">
+              {isLive ? "Счёт матча" : "Назначить стол"}
+            </p>
+            <p className="text-[12px] text-white/35 mt-0.5">
+              Раунд {match.round_number} · Матч {match.match_number}
+              {currentName ? ` · ${currentName}` : ""}
+            </p>
+          </div>
+          <button onClick={onClose}
+            className="w-7 h-7 rounded-full bg-white/[0.08] hover:bg-white/[0.14]
+                       flex items-center justify-center text-white/40 hover:text-white transition-all">
+            <X size={14} />
           </button>
+        </div>
+
+        <div className="px-5 py-4 border-b border-white/[0.06]">
+          <div className="flex items-center gap-3">
+            <div className="flex-1 flex items-center gap-2">
+              <div className="w-8 h-8 rounded-full bg-white/[0.08] flex items-center justify-center text-[12px] font-bold text-white/50 shrink-0">
+                {(match.player1?.name ?? "?").charAt(0).toUpperCase()}
+              </div>
+              <span className="text-[14px] font-semibold text-white truncate">{match.player1?.name ?? "TBD"}</span>
+            </div>
+            <span className="text-[11px] font-bold text-white/20 shrink-0">vs</span>
+            <div className="flex-1 flex items-center gap-2 justify-end">
+              <span className="text-[14px] font-semibold text-white truncate text-right">{match.player2?.name ?? "TBD"}</span>
+              <div className="w-8 h-8 rounded-full bg-white/[0.08] flex items-center justify-center text-[12px] font-bold text-white/50 shrink-0">
+                {(match.player2?.name ?? "?").charAt(0).toUpperCase()}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="px-5 py-4">
+          {isLive ? (
+            <div className="space-y-2.5">
+              <button onClick={onScore}
+                className="w-full py-3 rounded-xl bg-emerald-600/20 hover:bg-emerald-600/30
+                           border border-emerald-500/30 text-emerald-300 font-semibold text-[14px] transition-all">
+                Ввести счёт
+              </button>
+              {currentName && (
+                <button onClick={() => { onClear(); onClose(); }}
+                  className="w-full py-2.5 rounded-xl bg-white/[0.06] hover:bg-white/[0.10]
+                             border border-white/[0.09] text-white/45 hover:text-white/70
+                             font-medium text-[13px] transition-all">
+                  Освободить {currentName}
+                </button>
+              )}
+            </div>
+          ) : freeTables.length === 0 ? (
+            <p className="text-[13px] text-white/30 text-center py-2">Нет свободных столов</p>
+          ) : (
+            <>
+              <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-white/30 mb-3">Выберите стол</p>
+              <div className="grid grid-cols-4 gap-2">
+                {freeTables.map((t) => (
+                  <button key={t.id}
+                    onClick={() => { onAssign(t.number); onClose(); }}
+                    className="py-3 rounded-xl bg-white/[0.07] hover:bg-blue-600 border border-white/[0.10]
+                               hover:border-blue-500/60 text-[13px] font-bold text-white/60 hover:text-white
+                               transition-all active:scale-[.95]">
+                    {t.display_name}
+                  </button>
+                ))}
+              </div>
+            </>
+          )}
         </div>
       </div>
     </div>

@@ -79,6 +79,8 @@ export interface Match {
   status: "pending" | "in_progress" | "finished";
   table_number: number | null;
   is_consolation: boolean;
+  winner_next_id: number | null;
+  loser_next_id:  number | null;
 }
 
 export interface GroupMatch {

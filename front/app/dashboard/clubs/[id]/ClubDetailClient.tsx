@@ -393,6 +393,7 @@ export default function ClubDetailClient({
   const [page, setPage] = useState<Page>(initialTab);
   const [tournamentView, setTournamentViewState] = useState<"list" | "calendar">(initialView);
   const [showTournamentForm, setShowTournamentForm] = useState(false);
+  const [quickLoading,      setQuickLoading]      = useState(false);
 
   function setTournamentView(view: "list" | "calendar") {
     setTournamentViewState(view);
@@ -458,6 +459,31 @@ export default function ClubDetailClient({
       const e = err as Record<string, string>;
       setAddAdminError(e?.detail ?? "Ошибка.");
     } finally { setAddingAdmin(false); }
+  }
+
+  // ── Quick tournament: create + add all existing users ────────────────────
+  async function handleQuickTournament() {
+    setQuickLoading(true);
+    try {
+      const today = new Date().toLocaleDateString("ru-RU", { day: "numeric", month: "short" });
+      const t = await api.createTournament({
+        name: `Турнир ${today}`,
+        club_id: club.id,
+        format: "group_playoff",
+        group_size: 4,
+      });
+      const users = await api.searchUsers("");
+      let added = 0;
+      for (const u of users) {
+        try { await api.addParticipant(t.id, u.phone); added++; } catch { /* skip */ }
+      }
+      setTournaments((p) => [{ ...t, participant_count: added }, ...p]);
+      setClub((c) => ({ ...c, tournament_count: c.tournament_count + 1 }));
+      toast(`Турнир создан — ${added} игроков добавлено`);
+      router.push(`/dashboard/tournaments/${t.id}`);
+    } catch (err: unknown) {
+      toast((err as Record<string, string>)?.detail ?? "Ошибка", false);
+    } finally { setQuickLoading(false); }
   }
 
   // ── Derived ────────────────────────────────────────────────────────────────
@@ -621,17 +647,31 @@ export default function ClubDetailClient({
                 </p>
               </div>
               {isAdmin && (
-                <button onClick={() => setShowTournamentForm((v) => !v)}
-                  className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl font-bold text-[13px]
-                              transition-all active:scale-[.97] ${
-                    showTournamentForm
-                      ? "bg-white/[0.08] text-white/55 border border-white/[0.10]"
-                      : "bg-blue-600 hover:bg-blue-500 text-white"
-                  }`}
-                  style={showTournamentForm ? undefined : { boxShadow: "0 4px 16px rgba(59,130,246,0.35)" }}>
-                  {showTournamentForm ? <X size={14} /> : <Plus size={14} />}
-                  {showTournamentForm ? "Отмена" : "Создать"}
-                </button>
+                <div className="flex items-center gap-2">
+                  {/* Quick tournament: create + add all existing users */}
+                  <button
+                    onClick={handleQuickTournament}
+                    disabled={quickLoading}
+                    title="Создать турнир и добавить всех игроков"
+                    className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl font-bold text-[13px]
+                               bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/30 text-amber-300
+                               disabled:opacity-40 transition-all active:scale-[.97]"
+                  >
+                    <Zap size={13} />
+                    {quickLoading ? "..." : "Быстрый"}
+                  </button>
+                  <button onClick={() => setShowTournamentForm((v) => !v)}
+                    className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl font-bold text-[13px]
+                                transition-all active:scale-[.97] ${
+                      showTournamentForm
+                        ? "bg-white/[0.08] text-white/55 border border-white/[0.10]"
+                        : "bg-blue-600 hover:bg-blue-500 text-white"
+                    }`}
+                    style={showTournamentForm ? undefined : { boxShadow: "0 4px 16px rgba(59,130,246,0.35)" }}>
+                    {showTournamentForm ? <X size={14} /> : <Plus size={14} />}
+                    {showTournamentForm ? "Отмена" : "Создать"}
+                  </button>
+                </div>
               )}
             </div>
 
