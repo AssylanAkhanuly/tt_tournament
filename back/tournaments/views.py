@@ -12,7 +12,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from users.serializers import RegisterSerializer, UserSerializer
 from users.views import _set_auth_cookies
 
-from .bracket import advance_winner, advance_winner_and_loser, generate_bracket, generate_group_bracket, generate_playoff_from_groups
+from .bracket import advance_winner, advance_winner_and_loser, generate_bracket, generate_group_bracket, generate_playoff_from_groups, reset_match
 from .models import Match, Tournament, TournamentParticipant, TournamentTable, TournamentGroup, GroupMatch
 from .serializers import (
     GroupMatchSerializer,
@@ -191,6 +191,42 @@ class TournamentParticipantsView(generics.ListAPIView):
         return TournamentParticipant.objects.filter(tournament=tournament).select_related("user")
 
 
+def _is_group_stage(tournament):
+    """Group stage = group_playoff with groups created but the playoff bracket
+    not generated yet."""
+    return (
+        tournament.format == Tournament.FORMAT_GROUP
+        and tournament.groups.exists()
+        and not tournament.matches.exists()
+    )
+
+
+def _add_user_to_group_stage(tournament, user):
+    """Drop a late entrant into the smallest group and create their round-robin
+    matches against everyone already in that group."""
+    from django.db.models import Count, Max
+    from .models import TournamentGroup, GroupParticipant, GroupMatch
+
+    group = (
+        TournamentGroup.objects.filter(tournament=tournament)
+        .annotate(n=Count('participants')).order_by('n', 'order').first()
+    )
+    if group is None:
+        return
+    if GroupParticipant.objects.filter(group=group, user=user).exists():
+        return
+    opponents = [gp.user for gp in group.participants.select_related('user')]
+    GroupParticipant.objects.create(group=group, user=user)
+    next_num = (GroupMatch.objects.filter(group=group)
+                .aggregate(m=Max('match_number'))['m'] or 0)
+    for opp in opponents:
+        next_num += 1
+        GroupMatch.objects.create(
+            group=group, match_number=next_num,
+            player1=user, player2=opp, status=GroupMatch.PENDING,
+        )
+
+
 class AddParticipantView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -198,6 +234,17 @@ class AddParticipantView(APIView):
         tournament = get_object_or_404(Tournament.objects.select_related('club'), pk=pk)
         if not _can_manage_tournament(request.user, tournament):
             return Response({"detail": "Нет прав."}, status=status.HTTP_403_FORBIDDEN)
+
+        # Late entries: allowed before start and during the group stage; a started
+        # playoff bracket can't take new players without regenerating it.
+        group_stage = _is_group_stage(tournament)
+        if tournament.status == Tournament.STATUS_FINISHED:
+            return Response({"detail": "Турнир завершён — нельзя добавить игрока."}, status=status.HTTP_400_BAD_REQUEST)
+        if tournament.status == Tournament.STATUS_IN_PROGRESS and not group_stage:
+            return Response(
+                {"detail": "Плей-офф уже идёт — добавить игрока в готовую сетку нельзя."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
         phone = request.data.get("phone", "").strip()
         if not phone:
@@ -220,6 +267,11 @@ class AddParticipantView(APIView):
         participant, joined = TournamentParticipant.objects.get_or_create(
             tournament=tournament, user=user
         )
+        # New entrant during the group stage → seat them in a group and create
+        # their matches against the existing members.
+        if joined and group_stage:
+            _add_user_to_group_stage(tournament, user)
+
         data = ParticipantSerializer(participant).data
         if created_user:
             data["created_user"] = True
@@ -442,6 +494,35 @@ class SubmitScoreView(APIView):
         return Response(MatchSerializer(match).data)
 
 
+class MatchResetView(APIView):
+    """
+    POST /api/tournaments/<pk>/matches/<match_id>/reset/
+    Admin-only: undo a finished bracket match (wrong score). Pulls the
+    propagated players back out and reopens the match for re-scoring.
+    """
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, pk, match_id):
+        tournament = get_object_or_404(Tournament.objects.select_related('club'), pk=pk)
+        if not _can_manage_tournament(request.user, tournament):
+            return Response({"detail": "Нет прав."}, status=status.HTTP_403_FORBIDDEN)
+        match = get_object_or_404(Match, pk=match_id, tournament=tournament)
+
+        was_finished = tournament.status == Tournament.STATUS_FINISHED
+        try:
+            reset_match(match)
+        except ValueError as e:
+            return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+        if was_finished:
+            from .rating import revert_tournament_ratings
+            revert_tournament_ratings(tournament)
+            tournament.status = Tournament.STATUS_IN_PROGRESS
+            tournament.save()
+
+        return Response(MatchSerializer(match).data)
+
+
 # ─── Group stage ─────────────────────────────────────────────────────────────
 
 class GroupListView(generics.ListAPIView):
@@ -512,6 +593,50 @@ class GroupMatchScoreView(APIView):
         except GP.DoesNotExist:
             pass
 
+        return Response(GroupMatchSerializer(match).data)
+
+
+class GroupMatchResetView(APIView):
+    """
+    POST /api/tournaments/<pk>/groups/<group_id>/matches/<match_id>/reset/
+    Admin-only: undo a finished group match (wrong score), rolling back the
+    standings and reopening it for re-entry.
+    """
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, pk, group_id, match_id):
+        tournament = get_object_or_404(Tournament.objects.select_related('club'), pk=pk)
+        if not _can_manage_tournament(request.user, tournament):
+            return Response({"detail": "Нет прав."}, status=status.HTTP_403_FORBIDDEN)
+        group = get_object_or_404(TournamentGroup, pk=group_id, tournament=tournament)
+        match = get_object_or_404(GroupMatch, pk=match_id, group=group)
+
+        if match.status != GroupMatch.FINISHED or match.score1 is None:
+            return Response({"detail": "Матч не сыгран — отменять нечего."}, status=status.HTTP_400_BAD_REQUEST)
+
+        from .models import GroupParticipant as GP
+        diff = abs(match.score1 - match.score2)
+        winner = match.winner
+        loser = match.player2 if match.winner_id == match.player1_id else match.player1
+
+        gp_w = GP.objects.filter(group=group, user=winner).first()
+        if gp_w:
+            gp_w.wins -= 1
+            gp_w.points -= 3
+            gp_w.diff -= diff
+            gp_w.save()
+        gp_l = GP.objects.filter(group=group, user=loser).first()
+        if gp_l:
+            gp_l.losses -= 1
+            gp_l.diff += diff
+            gp_l.save()
+
+        match.score1 = None
+        match.score2 = None
+        match.winner = None
+        match.status = GroupMatch.PENDING
+        match.table_number = None
+        match.save()
         return Response(GroupMatchSerializer(match).data)
 
 

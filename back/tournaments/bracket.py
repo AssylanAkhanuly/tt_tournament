@@ -541,6 +541,55 @@ def generate_playoff_from_groups(tournament, advance_count=None):
     return generate_all_places_bracket(tournament, seeded_players)
 
 
+def reset_match(match: Match) -> None:
+    """
+    Undo a finished bracket match (admin score correction): clear its score and
+    winner, pull the propagated winner/loser back out of the next matches, and
+    reopen it for re-scoring. Refuses if a downstream match was already played,
+    so corrections happen newest-first.
+    """
+    if match.status != Match.FINISHED or match.score1 is None or match.score2 is None:
+        raise ValueError("Этот матч не сыгран — отменять нечего.")
+
+    winner = match.winner
+    loser = match.player1 if match.winner_id == match.player2_id else match.player2
+
+    routes = [
+        (match.winner_next_id, match.winner_next_slot, winner),
+        (match.loser_next_id, match.loser_next_slot, loser),
+    ]
+
+    # A downstream match that has already been played must be reset first.
+    for nid, _slot, _who in routes:
+        if nid:
+            nxt = Match.objects.filter(pk=nid).first()
+            if nxt and nxt.status == Match.FINISHED and nxt.score1 is not None:
+                raise ValueError("Сначала отмените результат следующего матча.")
+
+    # Pull the propagated players back out of their next matches.
+    for nid, slot, who in routes:
+        if not nid or who is None:
+            continue
+        nxt = Match.objects.filter(pk=nid).first()
+        if not nxt:
+            continue
+        if slot == 1 and nxt.player1_id == who.id:
+            nxt.player1 = None
+        elif slot == 2 and nxt.player2_id == who.id:
+            nxt.player2 = None
+        if nxt.status != Match.PENDING:
+            nxt.status = Match.PENDING
+            nxt.table_number = None
+        nxt.save()
+
+    match.winner = None
+    match.score1 = None
+    match.score2 = None
+    match.status = Match.IN_PROGRESS
+    match.save()
+    auto_assign_table(match)
+
+
 def advance_winner(tournament, round_number: int, match_number: int, winner) -> None:
     """Legacy single-elimination advance. Kept for backward compatibility."""
     try:

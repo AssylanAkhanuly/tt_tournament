@@ -90,3 +90,15 @@ def apply_tournament_ratings(tournament) -> None:
         p.user.rating = max(1, before[p.user_id] + change)
         p.user.save(update_fields=["rating"])
         p.save(update_fields=["rating_before", "rating_change"])
+
+
+def revert_tournament_ratings(tournament) -> None:
+    """Roll back the rating changes applied at finish (used when an admin reopens
+    a finished tournament by correcting a score)."""
+    for p in tournament.participants.select_related("user"):
+        if p.rating_change is not None and p.rating_before is not None:
+            p.user.rating = p.rating_before
+            p.user.save(update_fields=["rating"])
+        p.rating_before = None
+        p.rating_change = None
+        p.save(update_fields=["rating_before", "rating_change"])
