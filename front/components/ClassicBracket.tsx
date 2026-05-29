@@ -214,40 +214,40 @@ export default function ClassicBracket({
     const startOf = (m: Match) => m.place_lo ?? 1;
     const endOf   = (m: Match) => m.place_hi ?? playerCount;
 
-    // ── True-phantom detection (slots that will never receive a real player) ──
-    const truePhantoms = (() => {
-      const fedBy = new Map<number, number[]>();
-      for (const m of matches) {
-        for (const nid of [m.winner_next_id, m.loser_next_id]) {
-          if (nid) (fedBy.get(nid) ?? fedBy.set(nid, []).get(nid)!).push(m.id);
+    // ── Show only matches that are (or will become) a real 2-player contest ───
+    // Decided STRUCTURALLY from the round-1 seeding + routing graph, so the set
+    // is stable: a destined bye (only ever 1 real player) or ghost (0) is never
+    // shown — it doesn't appear and then vanish once a live result resolves it.
+    // The lone player of a bye is seated directly in their next contest instead.
+    const feedersByTarget = new Map<number, { s: Match; loser: boolean }[]>();
+    for (const m of matches) {
+      if (m.winner_next_id)
+        (feedersByTarget.get(m.winner_next_id) ?? feedersByTarget.set(m.winner_next_id, []).get(m.winner_next_id)!).push({ s: m, loser: false });
+      if (m.loser_next_id)
+        (feedersByTarget.get(m.loser_next_id) ?? feedersByTarget.set(m.loser_next_id, []).get(m.loser_next_id)!).push({ s: m, loser: true });
+    }
+    const realInputs = new Map<number, number>();   // how many real players ever reach m (0,1,2)
+    const countInputs = (m: Match): number => {
+      const cached = realInputs.get(m.id);
+      if (cached !== undefined) return cached;
+      realInputs.set(m.id, 0); // cycle guard (none expected)
+      const fds = feedersByTarget.get(m.id);
+      let n: number;
+      if (!fds || fds.length === 0) {
+        n = (m.player1 ? 1 : 0) + (m.player2 ? 1 : 0);   // round-1 seeded slots
+      } else {
+        n = 0;
+        for (const { s, loser } of fds) {
+          const ins = countInputs(s);
+          if (loser ? ins >= 2 : ins >= 1) n++;   // a winner exists if ≥1 real; a loser only if 2
         }
       }
-      const phantoms = new Set<number>();
-      const rounds = [...new Set(matches.map((m) => m.round_number))].sort((a, b) => a - b);
-      for (const round of rounds) {
-        for (const m of matches.filter((x) => x.round_number === round)) {
-          const feeders = fedBy.get(m.id) ?? [];
-          if (feeders.length === 0) {
-            if (!m.player1 && !m.player2) phantoms.add(m.id);
-          } else if (feeders.every((id) => phantoms.has(id))) {
-            phantoms.add(m.id);
-          }
-        }
-      }
-      return phantoms;
-    })();
-    const isPhantom = (m: Match) => truePhantoms.has(m.id);
+      realInputs.set(m.id, n);
+      return n;
+    };
+    for (const m of matches) countInputs(m);
 
-    // Hide every match that no real player can ever appear in:
-    //  • byes / ghosts — auto-finished with no score (a bye seats its single
-    //    player directly in the next round, RTTF-style; a ghost had none);
-    //  • unreachable — its whole place range lies beyond the real field
-    //    (e.g. places 21–32 for 20 players), so it only resolves phantom places.
-    const isFinishedEmpty = (m: Match) =>
-      m.status === "finished" && m.score1 == null && m.score2 == null;
-    const isUnreachable = (m: Match) => startOf(m) > playerCount;
-
-    const hidden = (m: Match) => isPhantom(m) || isFinishedEmpty(m) || isUnreachable(m);
+    const hidden = (m: Match) => (realInputs.get(m.id) ?? 0) < 2; // not a real contest → bye/ghost
 
     const visible = matches.filter((m) => !hidden(m));
     if (visible.length === 0) return empty;
