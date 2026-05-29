@@ -30,6 +30,16 @@ function clamp(value: number, min: number, max: number) {
   return Math.min(max, Math.max(min, value));
 }
 
+function hasFinishedScore(match: Match | undefined): boolean {
+  return !!match && match.status === "finished" && match.score1 != null && match.score2 != null;
+}
+
+function canResetMatchScore(match: Match, matchById: Map<number, Match>): boolean {
+  if (!hasFinishedScore(match)) return false;
+  const nextIds = [match.winner_next_id, match.loser_next_id].filter((id): id is number => id != null);
+  return nextIds.every((id) => !hasFinishedScore(matchById.get(id)));
+}
+
 // Round column header: 1/64 … ФИНАЛ relative to the deepest winners round.
 function roundLabel(round: number, maxRound: number): string {
   const fromEnd = maxRound - round;
@@ -73,6 +83,7 @@ function MatchCard({
   seed2,
   currentUser,
   isAdmin,
+  canResetScore,
   onActivate,
 }: {
   match: Match;
@@ -80,6 +91,7 @@ function MatchCard({
   seed2: number | null;
   currentUser: User | null;
   isAdmin: boolean;
+  canResetScore: boolean;
   onActivate: (match: Match) => void;
 }) {
   const isLive     = match.status === "in_progress";
@@ -89,8 +101,10 @@ function MatchCard({
     (isAdmin ||
       currentUser?.id === match.player1?.id ||
       currentUser?.id === match.player2?.id);
-  // Admins can also open a finished match to correct/reset its score.
-  const canOpen = canScore || (isAdmin && isFinished && match.score1 != null);
+  // Admins can also open a finished match to correct/reset its score when no
+  // downstream result depends on it yet.
+  const canOpen = canScore || (isAdmin && canResetScore);
+  const isResetBlocked = isAdmin && hasFinishedScore(match) && !canResetScore;
 
   const p1Winner = !!match.winner && match.winner.id === match.player1?.id;
   const p2Winner = !!match.winner && match.winner.id === match.player2?.id;
@@ -137,8 +151,17 @@ function MatchCard({
   return (
     <div
       style={{ width: CARD_W }}
+      data-no-pan={canOpen ? "true" : undefined}
       onClick={canOpen ? () => onActivate(match) : undefined}
-      title={canOpen ? (canScore ? "Ввести счёт" : "Изменить / сбросить счёт") : undefined}
+      title={
+        canOpen
+          ? canScore
+            ? "Ввести счёт"
+            : "Изменить / сбросить счёт"
+          : isResetBlocked
+          ? "Сначала отмените результат следующего матча"
+          : undefined
+      }
       className={`overflow-hidden border shadow-[0_8px_30px_rgba(0,0,0,0.18)] ${
         canOpen ? "cursor-pointer ring-1 ring-blue-400/40 hover:ring-blue-300/80 hover:border-blue-300/80" : ""
       } ${
@@ -185,6 +208,7 @@ export default function ClassicBracket({
 
   const [pan,   setPan]   = useState(INITIAL_PAN);
   const [scale, setScale] = useState(INITIAL_SCALE);
+  const matchById = useMemo(() => new Map(matches.map((m) => [m.id, m])), [matches]);
 
   // ── Layout ─────────────────────────────────────────────────────────────────
   const layout = useMemo(() => {
@@ -455,9 +479,9 @@ export default function ClassicBracket({
   // ── Pointer drag (pan) ─────────────────────────────────────────────────────
   function handlePointerDown(e: React.PointerEvent<HTMLDivElement>) {
     if (e.button !== 0) return;
+    movedRef.current = false;
     if ((e.target as HTMLElement).closest("[data-no-pan='true']")) return;
     e.currentTarget.setPointerCapture(e.pointerId);
-    movedRef.current = false;
     dragRef.current = { startX: e.clientX, startY: e.clientY, startPanX: pan.x, startPanY: pan.y };
   }
   function handlePointerMove(e: React.PointerEvent<HTMLDivElement>) {
@@ -551,6 +575,7 @@ export default function ClassicBracket({
                 seed2={item.seed2}
                 currentUser={currentUser}
                 isAdmin={isAdmin}
+                canResetScore={canResetMatchScore(item.match, matchById)}
                 onActivate={activate}
               />
             </div>

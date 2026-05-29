@@ -78,7 +78,19 @@ function ToastStack({ toasts }: { toasts: ToastItem[] }) {
   );
 }
 
-// ─── Props ────────────────────────────────────────────────────────────────────
+// Bracket score reset guards.
+function hasFinishedBracketScore(match: Match | null | undefined): match is Match {
+  return !!match && match.status === "finished" && match.score1 != null && match.score2 != null;
+}
+
+function canResetBracketScore(match: Match | null | undefined, matches: Match[]): boolean {
+  if (!hasFinishedBracketScore(match)) return false;
+  const byId = new Map(matches.map((m) => [m.id, m]));
+  const nextIds = [match.winner_next_id, match.loser_next_id].filter((id): id is number => id != null);
+  return nextIds.every((id) => !hasFinishedBracketScore(byId.get(id)));
+}
+
+// Props
 interface Props {
   user: User;
   tournament: Tournament;
@@ -265,6 +277,10 @@ export default function TournamentDetailClient({
 
   async function handleScoreReset() {
     if (!scoreMatch) return;
+    if (!canResetBracketScore(scoreMatch, matches)) {
+      toast("Сначала отмените результат следующего матча", false);
+      return;
+    }
     await api.resetMatch(tournament.id, scoreMatch.id);
     const [fm, ft] = await Promise.all([api.getMatches(tournament.id), api.getTournament(tournament.id)]);
     setMatches(fm); setTournament(ft); setScoreMatch(null);
@@ -785,7 +801,7 @@ export default function TournamentDetailClient({
           match={scoreMatch}
           onClose={() => setScoreMatch(null)}
           onSubmit={handleScoreSubmit}
-          canReset={isAdmin}
+          canReset={isAdmin && canResetBracketScore(scoreMatch, matches)}
           onReset={handleScoreReset}
         />
       )}
@@ -1099,6 +1115,7 @@ function OverviewPanel({
   }
 
   const isGroupPhase = tournament.format === "group_playoff" && groups.length > 0 && matches.length === 0;
+  const playoffStarted = tournament.format === "group_playoff" && matches.length > 0;
 
   // Group phase: live = in_progress group matches; callable = pending matches
   // where NEITHER player is currently at a table (non-conflicting schedule)
@@ -1351,6 +1368,7 @@ function OverviewPanel({
                   <div className={`grid gap-4 ${groups.length >= 2 ? "grid-cols-1 2xl:grid-cols-2" : "grid-cols-1"}`}>
                     {groups.map((g, idx) => (
                       <GroupRoundRobinTable key={g.id} group={g} colorIdx={idx} isAdmin={isAdmin}
+                        canEditScores={!playoffStarted}
                         onEditMatch={(m) => setGroupScoreMatch({ ...m, groupId: g.id, groupName: g.name })} />
                     ))}
                   </div>
@@ -1479,17 +1497,23 @@ function OverviewPanel({
         match={groupScoreMatch}
         onClose={() => setGroupScoreMatch(null)}
         onSubmit={async (s1, s2) => {
+          if (playoffStarted) {
+            throw { detail: "Плей-офф уже начат — групповые результаты заблокированы." };
+          }
           await api.submitGroupScore(tournament.id, groupScoreMatch.groupId, groupScoreMatch.id, s1, s2);
           const updated = await api.getGroups(tournament.id);
           onGroupsChange(updated);
           setGroupScoreMatch(null);
         }}
-        onClear={groupScoreMatch.table_number != null ? async () => {
+        onClear={groupScoreMatch.table_number != null && !playoffStarted ? async () => {
           await assignGroupTable(groupScoreMatch.groupId, groupScoreMatch.id, null);
           setGroupScoreMatch(null);
         } : undefined}
-        canReset={isAdmin}
+        canReset={isAdmin && !playoffStarted}
         onReset={async () => {
+          if (playoffStarted) {
+            throw { detail: "Плей-офф уже начат — групповые результаты заблокированы." };
+          }
           await api.resetGroupMatch(tournament.id, groupScoreMatch.groupId, groupScoreMatch.id);
           const updated = await api.getGroups(tournament.id);
           onGroupsChange(updated);
@@ -1930,8 +1954,8 @@ function StandingsTable({ matches, participants }: { matches: Match[]; participa
 }
 
 // ── Group Round-Robin Table ────────────────────────────────────────────────────
-function GroupRoundRobinTable({ group, colorIdx = 0, isAdmin = false, onEditMatch }: {
-  group: TournamentGroup; colorIdx?: number; isAdmin?: boolean;
+function GroupRoundRobinTable({ group, colorIdx = 0, isAdmin = false, canEditScores = true, onEditMatch }: {
+  group: TournamentGroup; colorIdx?: number; isAdmin?: boolean; canEditScores?: boolean;
   onEditMatch?: (m: GroupMatch) => void;
 }) {
   const players = group.participants;
@@ -2012,7 +2036,7 @@ function GroupRoundRobinTable({ group, colorIdx = 0, isAdmin = false, onEditMatc
                   const cell = matrix[p.user.id]?.[opp.user.id];
                   const scored = cell?.s1 !== null && cell?.s1 !== undefined;
                   const m = matchByPair[`${p.user.id}|${opp.user.id}`];
-                  const editable = isAdmin && scored && !!m && !!onEditMatch;
+                  const editable = isAdmin && canEditScores && scored && !!m && !!onEditMatch;
                   return (
                     <td key={opp.user.id}
                         onClick={editable ? () => onEditMatch!(m) : undefined}
