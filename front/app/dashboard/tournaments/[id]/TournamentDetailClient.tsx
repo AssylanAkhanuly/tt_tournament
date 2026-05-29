@@ -106,7 +106,7 @@ export default function TournamentDetailClient({
   const [tables,       setTables]       = useState<TournamentTable[]>(initTables);
   const [groups,       setGroups]       = useState<TournamentGroup[]>([]);
   const [page, setPage] = useState<Page>(
-    initTournament.status === "in_progress" ? "overview" : "bracket"
+    initTournament.status === "open" ? "bracket" : "overview"
   );
   const [refreshing,   setRefreshing]   = useState(false);
   const lastRefresh = useRef(Date.now());
@@ -139,8 +139,13 @@ export default function TournamentDetailClient({
   const existingIds = new Set(participants.map((p) => p.user.id));
   const totalMatches = matches.length;
 
+  // The champion is the winner of the grand final (places 1–2). In the
+  // all-places ladder the consolation runs deeper than the final, so we must
+  // NOT use the deepest round; fall back to it only for single-elimination
+  // (where place ranges aren't set).
   const finalMatch = matches.length
-    ? matches.find((m) => m.round_number === Math.max(...matches.map((x) => x.round_number)))
+    ? (matches.find((m) => m.place_lo === 1 && m.place_hi === 2) ??
+       matches.find((m) => m.round_number === Math.max(...matches.map((x) => x.round_number))))
     : null;
   const winner = finalMatch?.winner ?? null;
 
@@ -269,8 +274,8 @@ export default function TournamentDetailClient({
 
   // Nav items
   const navItems: { id: Page; label: string; Icon: React.ElementType; badge?: number; show: boolean }[] = [
-    { id: "overview",  label: "Обзор",     Icon: Zap,        badge: liveCount || undefined, show: tournament.status === "in_progress" },
-    { id: "bracket",   label: "Сетка",     Icon: Trophy,     show: tournament.status !== "in_progress" },
+    { id: "overview",  label: "Обзор",     Icon: Zap,        badge: liveCount || undefined, show: tournament.status !== "open" },
+    { id: "bracket",   label: "Сетка",     Icon: Trophy,     show: tournament.status === "open" },
     { id: "players",   label: "Игроки",    Icon: Users,      badge: participants.length, show: true },
     { id: "tables",    label: "Столы",     Icon: LayoutGrid, badge: tables.length || undefined, show: isAdmin },
     { id: "settings",  label: "Настройки", Icon: Settings,   show: isAdmin },
@@ -433,7 +438,7 @@ export default function TournamentDetailClient({
       <main className="flex-1 relative overflow-hidden bg-[#050c18]">
 
         {/* ── OVERVIEW (bracket + groups + live combined) ─────────── */}
-        {page === "overview" && tournament.status === "in_progress" && (
+        {page === "overview" && tournament.status !== "open" && (
           <OverviewPanel
             tournament={tournament}
             matches={matches}
@@ -1103,8 +1108,12 @@ function OverviewPanel({
   // Toggle between groups view and bracket view in center
   // Use format + matches.length (server data, available immediately) so the
   // correct tab is shown on landing before the async groups fetch completes.
-  const [centerView, setCenterView] = useState<"bracket" | "groups">(
-    tournament.format === "group_playoff" && matches.length === 0 ? "groups" : "bracket"
+  const [centerView, setCenterView] = useState<"bracket" | "groups" | "results">(
+    tournament.status === "finished" && matches.length > 0
+      ? "results"
+      : tournament.format === "group_playoff" && matches.length === 0
+      ? "groups"
+      : "bracket"
   );
   const [autoScoring, setAutoScoring] = useState(false);
 
@@ -1194,14 +1203,16 @@ function OverviewPanel({
 
         {/* ── Center: bracket OR group matches (toggle) ── */}
         <div className="flex-1 min-w-0 flex flex-col overflow-hidden bg-[#050c18]">
-          {/* Toggle when both views available */}
-          {hasGroups && (
+          {/* Toggle between the available views */}
+          {(hasGroups || hasBracket) && (
             <div className="shrink-0 flex items-center gap-1 px-4 py-3 border-b border-white/[0.06]
                             bg-[#070f1d]/60">
-              {[
-                { v: "groups"  as const, label: "Группы" },
-                { v: "bracket" as const, label: "Сетка"  },
-              ].map(({ v, label }) => (
+              {([
+                ...(hasGroups ? [{ v: "groups" as const, label: "Группы" }] : []),
+                ...(hasBracket ? [{ v: "bracket" as const, label: "Сетка" }] : []),
+                ...(hasBracket && tournament.status === "finished"
+                  ? [{ v: "results" as const, label: "Результаты" }] : []),
+              ]).map(({ v, label }) => (
                 <button key={v} onClick={() => setCenterView(v)}
                   className={`px-3 py-1 rounded-lg text-[12px] font-semibold transition-all ${
                     centerView === v
@@ -1237,7 +1248,7 @@ function OverviewPanel({
             </div>
           )}
 
-          <div className={`flex-1 min-h-0 overflow-hidden relative ${centerView === "groups" ? "p-3 sm:p-4" : ""}`}>
+          <div className={`flex-1 min-h-0 overflow-hidden relative ${centerView !== "bracket" ? "p-3 sm:p-4" : ""}`}>
             {/* ── Bracket view — full-bleed map, no chrome ── */}
             {centerView === "bracket" && (
               <div className="h-full overflow-hidden">
@@ -1274,6 +1285,13 @@ function OverviewPanel({
                     ))}
                   </div>
                 )}
+              </div>
+            )}
+
+            {/* ── Final standings (places + rating change) ── */}
+            {centerView === "results" && (
+              <div className="h-full overflow-y-auto rounded-[24px] border border-white/[0.08] bg-[linear-gradient(180deg,rgba(11,21,38,0.94),rgba(5,12,24,0.98))] px-4 py-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.03),0_30px_80px_rgba(0,0,0,0.28)]">
+                <StandingsTable matches={matches} />
               </div>
             )}
 
@@ -1750,6 +1768,76 @@ function PendingBracketRow({
           </button>
         </div>
       )}
+    </div>
+  );
+}
+
+// ── Final standings (places + rating change) ────────────────────────────────────
+function StandingsTable({ matches }: { matches: Match[] }) {
+  const finished = matches.filter((m) => m.status === "finished" && m.winner);
+
+  // Place: the winner of a no-winner_next match takes place_lo; the loser of a
+  // no-loser_next match takes place_hi. That assigns every real player a place.
+  const byPlace = new Map<number, User>();
+  for (const m of finished) {
+    if (m.winner_next_id == null && m.winner && m.place_lo != null) byPlace.set(m.place_lo, m.winner);
+    if (m.loser_next_id == null && m.place_hi != null) {
+      const loser = m.winner?.id === m.player1?.id ? m.player2 : m.player1;
+      if (loser) byPlace.set(m.place_hi, loser);
+    }
+  }
+
+  // Rating change — ELO over every played match (zero-sum per match).
+  const K = 20, D = 400;
+  const expected = (a: number, b: number) => 1 / (1 + Math.pow(10, (b - a) / D));
+  const delta = new Map<string, number>();
+  for (const m of finished) {
+    if (!m.player1 || !m.player2 || !m.winner) continue;          // skip byes
+    const w = m.winner;
+    const l = m.winner.id === m.player1.id ? m.player2 : m.player1;
+    const dw = K * (1 - expected(w.rating, l.rating));
+    delta.set(w.id, (delta.get(w.id) ?? 0) + dw);
+    delta.set(l.id, (delta.get(l.id) ?? 0) - dw);
+  }
+
+  const rows = [...byPlace.entries()].sort((a, b) => a[0] - b[0]).map(([place, u]) => {
+    const change = Math.round(delta.get(u.id) ?? 0);
+    return { place, u, change };
+  });
+
+  if (rows.length === 0) {
+    return <p className="text-[13px] text-white/20 text-center py-10">Турнир ещё не завершён</p>;
+  }
+
+  const medal = (p: number) => (p === 1 ? "🥇" : p === 2 ? "🥈" : p === 3 ? "🥉" : null);
+
+  return (
+    <div className="max-w-2xl mx-auto">
+      <div className="mb-3 flex items-center justify-between">
+        <h3 className="text-[13px] font-bold uppercase tracking-[0.14em] text-white/40">Итоговые места</h3>
+        <span className="text-[11px] text-white/25">Δ рейтинг · ELO</span>
+      </div>
+      <div className="rounded-2xl border border-white/[0.08] overflow-hidden divide-y divide-white/[0.05]"
+           style={{ background: "var(--card)" }}>
+        {rows.map(({ place, u, change }) => (
+          <div key={place} className={`grid grid-cols-[2.5rem_1fr_auto_auto] items-center gap-3 px-4 py-2.5 ${
+            place <= 3 ? "bg-amber-400/[0.04]" : ""
+          }`}>
+            <span className="text-center text-[15px] font-black tabular-nums text-white/55">
+              {medal(place) ?? place}
+            </span>
+            <span className="truncate text-[14px] font-semibold text-white">{u.name}</span>
+            <span className="text-right text-[12px] text-white/35 tabular-nums w-14">
+              {u.rating} → {u.rating + change}
+            </span>
+            <span className={`text-right text-[13px] font-bold tabular-nums w-12 ${
+              change > 0 ? "text-emerald-400" : change < 0 ? "text-red-400/80" : "text-white/30"
+            }`}>
+              {change > 0 ? `+${change}` : change}
+            </span>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
