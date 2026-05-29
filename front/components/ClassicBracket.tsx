@@ -199,6 +199,7 @@ export default function ClassicBracket({
         .sort((a, b) => (b.rating ?? 0) - (a.rating ?? 0))
         .forEach((u, i) => seedById.set(u.id, i + 1));
     }
+    const playerCount = seedById.size; // real field size (bracket is padded to 2^n)
 
     // ── Place intervals from the winner_next / loser_next graph ───────────────
     // size(m) = number of final places contested in m's interval.
@@ -337,8 +338,12 @@ export default function ClassicBracket({
         }
       }
 
-      // Section header
-      const [lo, hi] = sectionBounds(key);
+      // Section header. The bracket is padded to a power of two, so structural
+      // place ranges can exceed the real field (e.g. "17–32" for 20 players).
+      // Cap the displayed range at the actual player count — places beyond it
+      // are phantom byes that no real player can finish in.
+      const [lo, hiRaw] = sectionBounds(key);
+      const hi = Math.min(hiRaw, playerCount);
       const headerWidth =
         (rounds[rounds.length - 1] - rounds[0] + 1) * (CARD_W + COL_GAP) - COL_GAP;
       labels.push({
