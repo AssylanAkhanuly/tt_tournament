@@ -253,7 +253,10 @@ export default function ClassicBracket({
     if (visible.length === 0) return empty;
 
     const allRounds = [...new Set(visible.map((m) => m.round_number))].sort((a, b) => a - b);
-    const maxRound  = allRounds[allRounds.length - 1];
+    // Round labels (1/16 … Финал) follow the MAIN bracket depth, not the deeper
+    // consolation ladder — columns past the main final get no 1/N header.
+    const mainRounds = visible.filter((m) => (m.place_lo ?? 1) === 1).map((m) => m.round_number);
+    const mainMaxRound = mainRounds.length ? Math.max(...mainRounds) : allRounds[allRounds.length - 1];
     const colX = (round: number) => LEFT_PADDING + (round - 1) * (CARD_W + COL_GAP);
 
     // ── Group matches into sections by their best reachable place ─────────────
@@ -338,11 +341,12 @@ export default function ClassicBracket({
       cursorY += maxLocal + CARD_H + LABEL_H + SECTION_GAP;
     }
 
-    // ── Round column headers (across the top) ─────────────────────────────────
+    // ── Round column headers (across the top) — main bracket only ─────────────
     for (const round of allRounds) {
+      if (round > mainMaxRound) continue; // consolation-only column: no 1/N header
       labels.push({
         id: `round-${round}`,
-        text: roundLabel(round, maxRound),
+        text: roundLabel(round, mainMaxRound),
         x: colX(round),
         y: TOP_PADDING,
         width: CARD_W,
