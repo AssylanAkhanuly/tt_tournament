@@ -3,6 +3,7 @@ import { Club, ClubAdmin, ClubTable, GroupMatch, Match, Participant, Tournament,
 // Empty base → same-origin requests (/api/...). next.config rewrites proxy these
 // to the real backend, so the auth cookies are first-party to the frontend domain.
 const BASE = "";
+const DIRECT_API_BASE = (process.env.NEXT_PUBLIC_API_URL || "").replace(/\/$/, "");
 
 export type ElevenLabsVoice = {
   voice_id: string;
@@ -295,19 +296,57 @@ export const api = {
       method: "POST",
     }),
 
+  getTournamentStreamToken: (tournamentId: string) =>
+    apiFetch<{ token: string; expires_in: number }>(`/api/tournaments/${tournamentId}/stream-token/`),
+
   subscribeTournamentStream: (tournamentId: string, onEvent: (event: TournamentStreamEvent) => void) => {
-    const eventSource = new EventSource(`${BASE}/api/tournaments/${tournamentId}/stream/`, {
-      withCredentials: true,
-    });
-    eventSource.onmessage = (e) => {
+    let closed = false;
+    let eventSource: EventSource | null = null;
+    let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+
+    const connect = async () => {
       try {
-        const data = JSON.parse(e.data);
-        onEvent(data);
-      } catch (err) {
-        console.error("Failed to parse SSE event:", err);
+        const { token } = await api.getTournamentStreamToken(tournamentId);
+        if (closed) return;
+
+        const url = `${DIRECT_API_BASE || BASE}/api/tournaments/${tournamentId}/stream/?token=${encodeURIComponent(token)}`;
+        eventSource = new EventSource(url);
+        eventSource.onmessage = (e) => {
+          try {
+            const data = JSON.parse(e.data);
+            onEvent(data);
+          } catch (err) {
+            console.error("Failed to parse SSE event:", err);
+          }
+        };
+        eventSource.onerror = () => {
+          eventSource?.close();
+          eventSource = null;
+          if (!closed && reconnectTimer === null) {
+            reconnectTimer = setTimeout(() => {
+              reconnectTimer = null;
+              connect();
+            }, 5_000);
+          }
+        };
+      } catch {
+        if (!closed && reconnectTimer === null) {
+          reconnectTimer = setTimeout(() => {
+            reconnectTimer = null;
+            connect();
+          }, 5_000);
+        }
       }
     };
-    return eventSource;
+
+    connect();
+    return {
+      close: () => {
+        closed = true;
+        if (reconnectTimer) clearTimeout(reconnectTimer);
+        eventSource?.close();
+      },
+    };
   },
 
   // ─── Join flows ────────────────────────────────────────────────────────────

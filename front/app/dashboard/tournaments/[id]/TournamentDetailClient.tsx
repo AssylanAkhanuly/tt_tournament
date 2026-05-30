@@ -393,20 +393,6 @@ export default function TournamentDetailClient({
     finally { if (!silent) setRefreshing(false); }
   }, [tournament.id, tournament.format]);
 
-  useEffect(() => {
-    if (tournament.status !== "in_progress") return;
-    const id = setInterval(() => refresh(true), 30_000);
-    return () => clearInterval(id);
-  }, [tournament.status, refresh]);
-
-  // Registration happens while the tournament is open. SSE is the primary live
-  // path, but this keeps the admin roster fresh even if a proxy buffers streams.
-  useEffect(() => {
-    if (tournament.status !== "open") return;
-    const id = setInterval(() => refresh(true), 3_000);
-    return () => clearInterval(id);
-  }, [tournament.status, refresh]);
-
   // When the tournament finishes, ratings are applied server-side — pull the
   // updated participants (rating_before/rating_change) so the standings show them.
   useEffect(() => {

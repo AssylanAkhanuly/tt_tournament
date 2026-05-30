@@ -438,17 +438,6 @@ export default function ClubDetailClient({
     }
   }, [page, adminsLoaded, isAdmin, club.id]);
 
-  const refreshTournaments = useCallback(async () => {
-    const fresh = await api.getTournaments(club.id).catch(() => null);
-    if (fresh) setTournaments(fresh);
-  }, [club.id]);
-
-  useEffect(() => {
-    if (page !== "tournaments") return;
-    const id = setInterval(refreshTournaments, 5_000);
-    return () => clearInterval(id);
-  }, [page, refreshTournaments]);
-
   // ── Actions ────────────────────────────────────────────────────────────────
   async function handlePhotoChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
