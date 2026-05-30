@@ -14,6 +14,7 @@ from django.db.models import Q
 from django.http import HttpResponse, StreamingHttpResponse
 from django.shortcuts import get_object_or_404
 from rest_framework import generics, status
+from rest_framework.renderers import BaseRenderer
 from rest_framework.permissions import AllowAny, IsAuthenticated, IsAuthenticatedOrReadOnly
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -39,6 +40,15 @@ from .serializers import (
 User = get_user_model()
 STREAM_TOKEN_SALT = "tournament-stream"
 STREAM_TOKEN_MAX_AGE_SECONDS = 8 * 60 * 60
+
+
+class EventStreamRenderer(BaseRenderer):
+    media_type = "text/event-stream"
+    format = "event-stream"
+    charset = "utf-8"
+
+    def render(self, data, accepted_media_type=None, renderer_context=None):
+        return data
 
 
 # ─── Permission helpers ──────────────────────────────────────────────────────
@@ -636,6 +646,7 @@ class TournamentStreamTokenView(APIView):
 class TournamentStreamView(APIView):
     """GET /api/tournaments/<pk>/stream/ - SSE endpoint for real-time updates"""
     permission_classes = [AllowAny]
+    renderer_classes = [EventStreamRenderer]
 
     def get(self, request, pk):
         tournament = get_object_or_404(Tournament, pk=pk)
