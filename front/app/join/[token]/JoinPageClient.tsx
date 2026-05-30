@@ -24,8 +24,35 @@ interface Props {
 
 export default function JoinPageClient({ tournament, joinToken, user, alreadyJoined }: Props) {
   const router = useRouter();
+  // The server render checks /api/auth/me/ with no token refresh, so an expired
+  // access_token (60-min lifetime) makes a still-logged-in user look anonymous.
+  // Fall back to a client-side me() — apiFetch auto-refreshes via the refresh cookie.
+  const [clientUser, setClientUser] = useState<User | null>(user);
+  const [checking, setChecking] = useState(!user);
 
-  if (user && alreadyJoined) {
+  useEffect(() => {
+    if (user) return;
+    let alive = true;
+    api.me()
+      .then((u) => { if (alive) setClientUser(u); })
+      .catch(() => { /* genuinely not logged in */ })
+      .finally(() => { if (alive) setChecking(false); });
+    return () => { alive = false; };
+  }, [user]);
+
+  if (checking) {
+    return (
+      <DarkShell tournament={tournament}>
+        <div className="flex justify-center py-8">
+          <div className="w-6 h-6 border-2 border-blue-500/40 border-t-blue-500 rounded-full animate-spin" />
+        </div>
+      </DarkShell>
+    );
+  }
+
+  const authedUser = user ?? clientUser;
+
+  if (authedUser && alreadyJoined) {
     return (
       <DarkShell tournament={tournament}>
         <div className="text-center space-y-5 py-6">
@@ -38,7 +65,7 @@ export default function JoinPageClient({ tournament, joinToken, user, alreadyJoi
     );
   }
 
-  if (user && !alreadyJoined) {
+  if (authedUser) {
     return (
       <DarkShell tournament={tournament}>
         <JoinConfirmSection tournament={tournament} joinToken={joinToken} />
