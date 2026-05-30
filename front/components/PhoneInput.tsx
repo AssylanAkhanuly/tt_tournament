@@ -112,17 +112,31 @@ export default function PhoneInput({ value, onChange, onComplete, required, auto
 
   function handleInput(e: React.ChangeEvent<HTMLInputElement>) {
     const ie = e.nativeEvent as InputEvent;
-    // Mobile virtual keyboards (Gboard, etc.) don't fire keydown with
-    // key="Backspace". Instead they modify the value and fire the input
-    // event with inputType="deleteContentBackward".
-    // At this point rawDigits is still the OLD value (React hasn't
-    // re-rendered yet), so slicing it gives the correct result regardless
-    // of which character the browser happened to delete from the formatted
-    // string (e.g. the ')' in '(777)').
-    if (ie.inputType === "deleteContentBackward") {
+    const type = ie.inputType ?? "";
+
+    // Deletions — Android virtual keyboards fire deleteContentBackward instead
+    // of a keydown Backspace. rawDigits is the OLD value at this point, so
+    // slicing is always safe regardless of which mask character was deleted.
+    if (type.startsWith("delete")) {
+      // Select-all + delete clears the whole field
+      if (!e.target.value) { onChange(country.code); return; }
       onChange(country.code + rawDigits.slice(0, -1));
       return;
     }
+
+    // Insertions: use ie.data (the raw characters the user actually typed)
+    // instead of e.target.value. e.target.value contains the formatted mask
+    // (parentheses, dashes) so digitsOnly() would double-count existing digits.
+    // ie.data is only the new characters, which may be one digit, a pasted
+    // string, or an autofill value — all safe to pass through digitsOnly().
+    if (ie.data != null) {
+      const added = digitsOnly(ie.data);
+      const combined = (rawDigits + added).slice(0, maxDigits);
+      onChange(country.code + combined);
+      return;
+    }
+
+    // Fallback for browsers that don't populate ie.data (very rare).
     const digits = digitsOnly(e.target.value).slice(0, maxDigits);
     onChange(country.code + digits);
   }
@@ -175,8 +189,11 @@ export default function PhoneInput({ value, onChange, onComplete, required, auto
         </button>
 
         <input
-          type="tel"
+          type="text"
           inputMode="numeric"
+          autoComplete="off"
+          autoCorrect="off"
+          spellCheck={false}
           value={formatted}
           onChange={handleInput}
           onKeyDown={handleKeyDown}
