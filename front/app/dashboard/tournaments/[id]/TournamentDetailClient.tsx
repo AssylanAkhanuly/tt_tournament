@@ -406,6 +406,31 @@ export default function TournamentDetailClient({
     api.getGroups(tournament.id).then(setGroups).catch(() => {});
   }, [tournament.id, tournament.format, tournament.status]);
 
+  // SSE subscription for real-time updates (participant joins, score submissions)
+  useEffect(() => {
+    const eventSource = api.subscribeTournamentStream(tournament.id, (event) => {
+      if (event.type === "participant_joined") {
+        const { participant } = event.data;
+        setParticipants((prev) => {
+          const exists = prev.some((p) => p.id === participant.id);
+          return exists ? prev : [...prev, participant];
+        });
+      } else if (event.type === "match_updated") {
+        const { match } = event.data;
+        setMatches((prev) => prev.map((m) => (m.id === match.id ? match : m)));
+      } else if (event.type === "group_match_updated") {
+        const { match } = event.data;
+        setGroups((prev) =>
+          prev.map((g) => ({
+            ...g,
+            matches: g.matches.map((m) => (m.id === match.id ? match : m)),
+          }))
+        );
+      }
+    });
+    return () => eventSource.close();
+  }, [tournament.id]);
+
   // ── Keyboard shortcut: press 1-9/0 in Overview or Live to open score modal ──
   useEffect(() => {
     if (page !== "overview" && page !== "bracket") return;
