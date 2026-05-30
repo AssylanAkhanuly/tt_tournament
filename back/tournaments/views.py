@@ -1,6 +1,7 @@
 import hashlib
 import json
 import secrets
+import threading
 import urllib.error
 import urllib.request
 from pathlib import Path
@@ -8,7 +9,7 @@ from pathlib import Path
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.db.models import Q
-from django.http import HttpResponse
+from django.http import HttpResponse, StreamingHttpResponse
 from django.shortcuts import get_object_or_404
 from rest_framework import generics, status
 from rest_framework.permissions import AllowAny, IsAuthenticated, IsAuthenticatedOrReadOnly
@@ -291,7 +292,10 @@ class TournamentListCreateView(generics.ListCreateAPIView):
                 for ct in club_tables
             ])
 
-        return Response(TournamentSerializer(tournament).data, status=status.HTTP_201_CREATED)
+        return Response(
+            TournamentSerializer(tournament, context={"request": request}).data,
+            status=status.HTTP_201_CREATED,
+        )
 
 
 class TournamentDetailView(generics.RetrieveAPIView):
@@ -313,7 +317,7 @@ class TournamentUpdateDeleteView(APIView):
         serializer = TournamentUpdateSerializer(tournament, data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
         serializer.save()
-        return Response(TournamentSerializer(tournament).data)
+        return Response(TournamentSerializer(tournament, context={"request": request}).data)
 
     def delete(self, request, pk):
         tournament = self.get_tournament(pk)
@@ -336,7 +340,7 @@ class TournamentJoinView(APIView):
 
     def get(self, request, join_token):
         tournament = self.get_tournament(join_token)
-        return Response(TournamentSerializer(tournament).data)
+        return Response(TournamentSerializer(tournament, context={"request": request}).data)
 
     def post(self, request, join_token):
         tournament = self.get_tournament(join_token)
@@ -348,6 +352,12 @@ class TournamentJoinView(APIView):
         participant, created = TournamentParticipant.objects.get_or_create(
             tournament=tournament, user=request.user,
         )
+        if created:
+            _broadcast_roster_changed(
+                tournament,
+                "participant_joined",
+                {"participant": ParticipantSerializer(participant).data, "groups_changed": False},
+            )
         return Response(
             ParticipantSerializer(participant).data,
             status=status.HTTP_201_CREATED if created else status.HTTP_200_OK,
@@ -377,9 +387,15 @@ class RegisterAndJoinView(APIView):
         serializer = RegisterSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         user = serializer.save()
-        participant, _ = TournamentParticipant.objects.get_or_create(
+        participant, created = TournamentParticipant.objects.get_or_create(
             tournament=tournament, user=user
         )
+        if created:
+            _broadcast_roster_changed(
+                tournament,
+                "participant_joined",
+                {"participant": ParticipantSerializer(participant).data, "groups_changed": False},
+            )
         refresh = RefreshToken.for_user(user)
         data = {
             "user": UserSerializer(user).data,
@@ -483,6 +499,12 @@ class AddParticipantView(APIView):
         if created_user:
             data["created_user"] = True
             data["temp_password"] = temp_password
+        if joined:
+            _broadcast_roster_changed(
+                tournament,
+                "participant_joined",
+                {"participant": ParticipantSerializer(participant).data, "groups_changed": group_stage},
+            )
         return Response(data, status=status.HTTP_201_CREATED if joined else status.HTTP_200_OK)
 
 
@@ -500,6 +522,11 @@ class RemoveParticipantView(APIView):
             )
         participant = get_object_or_404(TournamentParticipant, pk=participant_id, tournament=tournament)
         participant.delete()
+        _broadcast_roster_changed(
+            tournament,
+            "participant_removed",
+            {"participant_id": participant_id, "groups_changed": False},
+        )
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
@@ -509,11 +536,11 @@ class JoinTournamentSelfView(APIView):
 
     def post(self, request, pk):
         tournament = get_object_or_404(Tournament.objects.select_related('club'), pk=pk)
+        group_stage = _is_group_stage(tournament)
 
         if tournament.status == Tournament.STATUS_FINISHED:
             return Response({"detail": "Турнир завершён — нельзя зарегистрироваться."}, status=status.HTTP_400_BAD_REQUEST)
         if tournament.status == Tournament.STATUS_IN_PROGRESS:
-            group_stage = TournamentGroup.objects.filter(tournament=tournament).exists()
             if not group_stage:
                 return Response(
                     {"detail": "Плей-офф уже идёт — присоединиться нельзя."},
@@ -525,29 +552,45 @@ class JoinTournamentSelfView(APIView):
         )
 
         # If joining during group stage, add to a group
-        if joined and TournamentGroup.objects.filter(tournament=tournament).exists():
+        if joined and group_stage:
             _add_user_to_group_stage(tournament, request.user)
 
-        # Broadcast event to SSE clients
-        _broadcast_event(str(pk), "participant_joined", {"participant": ParticipantSerializer(participant).data})
+        if joined:
+            _broadcast_roster_changed(
+                tournament,
+                "participant_joined",
+                {"participant": ParticipantSerializer(participant).data, "groups_changed": group_stage},
+            )
 
         return Response(ParticipantSerializer(participant).data, status=status.HTTP_201_CREATED if joined else status.HTTP_200_OK)
 
 
 # SSE client registry: {tournament_id: [queue objects]}
 _sse_clients = {}
+_sse_lock = threading.RLock()
 
 
 def _broadcast_event(tournament_id: str, event_type: str, data: dict):
     """Broadcast an event to all SSE clients watching this tournament"""
     import queue as queue_module
-    if tournament_id in _sse_clients:
-        event_data = {"type": event_type, "data": data}
-        for q in list(_sse_clients[tournament_id]):
+    event_data = {"type": event_type, "data": data}
+    with _sse_lock:
+        clients = list(_sse_clients.get(tournament_id, []))
+        for q in clients:
             try:
                 q.put_nowait(event_data)
             except queue_module.Full:
-                _sse_clients[tournament_id].remove(q)
+                if q in _sse_clients.get(tournament_id, []):
+                    _sse_clients[tournament_id].remove(q)
+
+
+def _broadcast_roster_changed(tournament, event_type: str, data: dict):
+    payload = {
+        **data,
+        "participant_count": tournament.participants.count(),
+        "tournament": TournamentSerializer(tournament).data,
+    }
+    _broadcast_event(str(tournament.pk), event_type, payload)
 
 
 class TournamentStreamView(APIView):
@@ -561,26 +604,34 @@ class TournamentStreamView(APIView):
         client_queue = queue_module.Queue(maxsize=100)
         tournament_id = str(pk)
 
-        if tournament_id not in _sse_clients:
-            _sse_clients[tournament_id] = []
-        _sse_clients[tournament_id].append(client_queue)
+        with _sse_lock:
+            if tournament_id not in _sse_clients:
+                _sse_clients[tournament_id] = []
+            _sse_clients[tournament_id].append(client_queue)
 
         def event_stream():
+            import json
+
+            yield f"data: {json.dumps({'type': 'connected', 'data': {}}, ensure_ascii=False)}\n\n"
             try:
                 while True:
                     try:
                         event = client_queue.get(timeout=55)
-                        import json
-                        yield f"data: {json.dumps(event)}\n\n"
+                        yield f"data: {json.dumps(event, ensure_ascii=False)}\n\n"
                     except queue_module.Empty:
                         yield ": heartbeat\n\n"
             finally:
-                if tournament_id in _sse_clients and client_queue in _sse_clients[tournament_id]:
-                    _sse_clients[tournament_id].remove(client_queue)
-                if tournament_id in _sse_clients and not _sse_clients[tournament_id]:
-                    del _sse_clients[tournament_id]
+                with _sse_lock:
+                    if tournament_id in _sse_clients and client_queue in _sse_clients[tournament_id]:
+                        _sse_clients[tournament_id].remove(client_queue)
+                    if tournament_id in _sse_clients and not _sse_clients[tournament_id]:
+                        del _sse_clients[tournament_id]
 
-        return HttpResponse(event_stream(), content_type="text/event-stream", charset="utf-8")
+        response = StreamingHttpResponse(event_stream(), content_type="text/event-stream")
+        response["Cache-Control"] = "no-cache"
+        response["Connection"] = "keep-alive"
+        response["X-Accel-Buffering"] = "no"
+        return response
 
 
 class MyTournamentsView(generics.ListAPIView):
@@ -663,19 +714,23 @@ class StartTournamentView(APIView):
         if tournament.format == Tournament.FORMAT_GROUP:
             groups = generate_group_bracket(tournament)
             tournament.refresh_from_db()
-            return Response({
+            payload = {
                 "tournament": TournamentSerializer(tournament).data,
                 "groups": GroupSerializer(groups, many=True).data,
-            })
+            }
+            _broadcast_event(str(pk), "tournament_started", payload)
+            return Response(payload)
 
         matches = generate_bracket(tournament)
         tournament.status = Tournament.STATUS_IN_PROGRESS
         tournament.save()
 
-        return Response({
+        payload = {
             "tournament": TournamentSerializer(tournament).data,
             "matches": MatchSerializer(matches, many=True).data,
-        })
+        }
+        _broadcast_event(str(pk), "tournament_started", payload)
+        return Response(payload)
 
 
 class MatchListView(generics.ListAPIView):
@@ -741,6 +796,7 @@ class AssignTableView(APIView):
         if just_started:
             from notifications.services import notify_match_ready
             notify_match_ready(match, "bracket")
+        _broadcast_event(str(pk), "match_updated", {"match": MatchSerializer(match).data})
         return Response(MatchSerializer(match).data)
 
 
@@ -835,8 +891,11 @@ class SubmitScoreView(APIView):
             from .rating import apply_tournament_ratings
             apply_tournament_ratings(tournament)
 
-        # Broadcast match update to SSE clients
-        _broadcast_event(str(pk), "match_updated", {"match": MatchSerializer(match).data})
+        _broadcast_event(
+            str(pk),
+            "match_updated",
+            {"match": MatchSerializer(match).data, "tournament": TournamentSerializer(tournament).data},
+        )
 
         return Response(MatchSerializer(match).data)
 
@@ -867,6 +926,11 @@ class MatchResetView(APIView):
             tournament.status = Tournament.STATUS_IN_PROGRESS
             tournament.save()
 
+        _broadcast_event(
+            str(pk),
+            "match_updated",
+            {"match": MatchSerializer(match).data, "tournament": TournamentSerializer(tournament).data},
+        )
         return Response(MatchSerializer(match).data)
 
 
@@ -948,8 +1012,11 @@ class GroupMatchScoreView(APIView):
         except GP.DoesNotExist:
             pass
 
-        # Broadcast group match update to SSE clients
-        _broadcast_event(str(pk), "group_match_updated", {"match": GroupMatchSerializer(match).data})
+        _broadcast_event(
+            str(pk),
+            "group_match_updated",
+            {"group_id": group.pk, "match": GroupMatchSerializer(match).data},
+        )
 
         return Response(GroupMatchSerializer(match).data)
 
@@ -997,6 +1064,11 @@ class GroupMatchResetView(APIView):
         match.status = GroupMatch.PENDING
         match.table_number = None
         match.save()
+        _broadcast_event(
+            str(pk),
+            "group_match_updated",
+            {"group_id": group.pk, "match": GroupMatchSerializer(match).data},
+        )
         return Response(GroupMatchSerializer(match).data)
 
 
@@ -1059,6 +1131,11 @@ class GroupMatchTableView(APIView):
             notify_match_ready(match, "group")
 
         from .serializers import GroupMatchSerializer
+        _broadcast_event(
+            str(pk),
+            "group_match_updated",
+            {"group_id": group.pk, "match": GroupMatchSerializer(match).data},
+        )
         return Response(GroupMatchSerializer(match).data)
 
 
@@ -1078,7 +1155,9 @@ class StartPlayoffView(APIView):
         advance_count = int(advance_count_raw) if advance_count_raw is not None else None
         matches = generate_playoff_from_groups(tournament, advance_count=advance_count)
 
-        return Response({
+        payload = {
             "tournament": TournamentSerializer(tournament).data,
             "matches": MatchSerializer(matches, many=True).data,
-        })
+        }
+        _broadcast_event(str(pk), "playoff_started", payload)
+        return Response(payload)
