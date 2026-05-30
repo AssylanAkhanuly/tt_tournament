@@ -1,6 +1,8 @@
 import { Club, ClubAdmin, ClubTable, GroupMatch, Match, Participant, Tournament, TournamentGroup, TournamentTable, User } from "./types";
 
-const BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+// Empty base → same-origin requests (/api/...). next.config rewrites proxy these
+// to the real backend, so the auth cookies are first-party to the frontend domain.
+const BASE = "";
 
 export type ElevenLabsVoice = {
   voice_id: string;
