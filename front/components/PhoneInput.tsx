@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { ChevronDown } from "lucide-react";
 import {
   usePhoneInput,
@@ -14,6 +14,10 @@ import {
 const CIS_ISO = ["kz", "ru", "kg", "uz", "tj", "tm", "az", "am", "ge", "ua", "by"];
 const COUNTRIES = defaultCountries.filter((c) => CIS_ISO.includes(parseCountry(c).iso2));
 
+// TEMP debug marker — bump this string on each deploy so we can confirm the
+// phone is actually running the latest build.
+const BUILD_MARKER = "PI-debug-1";
+
 interface Props {
   value: string;
   onChange: (val: string) => void;
@@ -24,6 +28,8 @@ interface Props {
 }
 
 export default function PhoneInput({ value, onChange, onComplete, required, autoFocus }: Props) {
+  const [dbg, setDbg] = useState("(no input yet)");
+
   // Headless hook from react-international-phone: it owns formatting, cursor
   // management and mobile-keyboard quirks, while we keep our own markup/styles.
   const { inputValue, phone, country, setCountry, handlePhoneValueChange, inputRef } =
@@ -42,48 +48,68 @@ export default function PhoneInput({ value, onChange, onComplete, required, auto
     onComplete?.(maskLen > 0 && national.length >= maskLen);
   }, [phone, country, onComplete]);
 
+  function onInputChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const ie = e.nativeEvent as InputEvent;
+    // Capture what the browser actually delivered, BEFORE the lib transforms it.
+    setDbg(
+      `raw="${e.target.value}" type=${ie.inputType ?? "?"} data=${JSON.stringify(ie.data)}`
+    );
+    handlePhoneValueChange(e);
+  }
+
   return (
-    <div
-      className="flex items-center bg-white/10 border border-white/20 rounded-2xl overflow-hidden
-        focus-within:border-blue-500 focus-within:bg-white/15 transition-all"
-    >
-      {/* Country picker — native <select> overlay so taps work on every mobile OS,
-          driven by the hook's setCountry. */}
-      <div className="relative flex items-center gap-1.5 pl-5 pr-3 py-3.5 shrink-0
-                      border-r border-white/20">
-        <FlagImage iso2={country.iso2} style={{ width: 20, height: 20 }} />
-        <span className="text-white/80 text-sm font-semibold">+{country.dialCode}</span>
-        <ChevronDown size={13} className="text-white/40" />
-        <select
-          aria-label="Код страны"
-          value={country.iso2}
-          onChange={(e) => setCountry(e.target.value)}
-          className="absolute inset-0 w-full h-full opacity-0 cursor-pointer appearance-none"
-        >
-          {COUNTRIES.map((c) => {
-            const p = parseCountry(c);
-            return (
-              <option key={p.iso2} value={p.iso2}>
-                {p.name} (+{p.dialCode})
-              </option>
-            );
-          })}
-        </select>
+    <div className="space-y-1.5">
+      <div
+        className="flex items-center bg-white/10 border border-white/20 rounded-2xl overflow-hidden
+          focus-within:border-blue-500 focus-within:bg-white/15 transition-all"
+      >
+        {/* Country picker — native <select> overlay so taps work on every mobile OS,
+            driven by the hook's setCountry. */}
+        <div className="relative flex items-center gap-1.5 pl-5 pr-3 py-3.5 shrink-0
+                        border-r border-white/20">
+          <FlagImage iso2={country.iso2} style={{ width: 20, height: 20 }} />
+          <span className="text-white/80 text-sm font-semibold">+{country.dialCode}</span>
+          <ChevronDown size={13} className="text-white/40" />
+          <select
+            aria-label="Код страны"
+            value={country.iso2}
+            onChange={(e) => setCountry(e.target.value)}
+            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer appearance-none"
+          >
+            {COUNTRIES.map((c) => {
+              const p = parseCountry(c);
+              return (
+                <option key={p.iso2} value={p.iso2}>
+                  {p.name} (+{p.dialCode})
+                </option>
+              );
+            })}
+          </select>
+        </div>
+
+        <input
+          ref={inputRef}
+          type="tel"
+          inputMode="tel"
+          autoComplete="tel"
+          value={inputValue}
+          onChange={onInputChange}
+          placeholder="+7 (707) 123-45-67"
+          required={required}
+          autoFocus={autoFocus}
+          className="flex-1 min-w-0 bg-transparent px-4 py-3.5
+            text-white placeholder:text-white/25 text-base outline-none"
+        />
       </div>
 
-      <input
-        ref={inputRef}
-        type="tel"
-        inputMode="tel"
-        autoComplete="tel"
-        value={inputValue}
-        onChange={handlePhoneValueChange}
-        placeholder="+7 (707) 123-45-67"
-        required={required}
-        autoFocus={autoFocus}
-        className="flex-1 min-w-0 bg-transparent px-4 py-3.5
-          text-white placeholder:text-white/25 text-base outline-none"
-      />
+      {/* TEMP debug — remove once mobile formatting is confirmed. */}
+      <div className="text-[10px] leading-tight text-amber-300/80 font-mono break-all
+                      bg-black/30 rounded-lg px-2 py-1">
+        <div>build: {BUILD_MARKER}</div>
+        <div>val: {JSON.stringify(inputValue)}</div>
+        <div>phone: {phone}</div>
+        <div>evt: {dbg}</div>
+      </div>
     </div>
   );
 }
