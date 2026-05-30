@@ -1,9 +1,10 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useCallback, useEffect } from "react";
 import Link from "next/link";
 import { ChevronRight, Users, Calendar, Trophy, Clock, Building2, ChevronDown } from "lucide-react";
 import { Club, Tournament } from "@/lib/types";
+import { api } from "@/lib/api";
 
 const AVATAR_GRADIENTS = [
   ["#3b82f6","#6366f1"], ["#06b6d4","#3b82f6"], ["#8b5cf6","#ec4899"],
@@ -22,42 +23,66 @@ const STATUS = {
 
 type SortMode = "time" | "club";
 
-function TournamentCard({ t }: { t: Tournament }) {
+function TournamentCard({ t, onJoin }: { t: Tournament; onJoin?: (tournamentId: string) => void }) {
   const [g1, g2] = avatarGrad(t.name);
   const s = STATUS[t.status];
   const date = t.starts_at
     ? new Date(t.starts_at).toLocaleDateString("ru-RU", { day: "numeric", month: "short", year: "numeric" })
     : null;
+  const [registering, setRegistering] = useState(false);
+
+  const handleRegister = useCallback(async (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setRegistering(true);
+    try {
+      await api.joinTournamentSelf(t.id);
+      onJoin?.(t.id);
+    } catch (err) {
+      console.error("Failed to join tournament:", err);
+    } finally {
+      setRegistering(false);
+    }
+  }, [t.id, onJoin]);
 
   return (
-    <Link href={`/dashboard/tournaments/${t.id}`} prefetch={false}
-      className="group flex items-center gap-3 rounded-2xl border border-white/[0.07]
-                 hover:border-white/[0.14] px-4 py-3.5 transition-all active:scale-[.99]"
-      style={{ background: "var(--card)" }}>
-      <div className="w-11 h-11 rounded-full flex items-center justify-center text-[16px]
-                      font-black text-white shrink-0"
-           style={{ background: `linear-gradient(135deg, ${g1}, ${g2})`, boxShadow: `0 4px 12px ${g1}40` }}>
-        {t.name.charAt(0).toUpperCase()}
-      </div>
-      <div className="min-w-0 flex-1">
-        <div className="flex items-center gap-2 mb-0.5">
-          <p className="text-[15px] font-bold text-white truncate">{t.name}</p>
-          <span className={`shrink-0 text-[10px] font-bold px-2 py-0.5 rounded-full border ${s.pill}`}>
-            {s.label}
-          </span>
+    <div className="group flex items-center gap-3 rounded-2xl border border-white/[0.07]
+                    hover:border-white/[0.14] transition-all"
+         style={{ background: "var(--card)" }}>
+      <Link href={`/dashboard/tournaments/${t.id}`} prefetch={false}
+        className="flex-1 flex items-center gap-3 px-4 py-3.5 active:scale-[.99]">
+        <div className="w-11 h-11 rounded-full flex items-center justify-center text-[16px]
+                        font-black text-white shrink-0"
+             style={{ background: `linear-gradient(135deg, ${g1}, ${g2})`, boxShadow: `0 4px 12px ${g1}40` }}>
+          {t.name.charAt(0).toUpperCase()}
         </div>
-        <div className="flex items-center gap-3 text-[12px] text-white/40">
-          <span className="flex items-center gap-1"><Users size={11} />{t.participant_count}</span>
-          {date && <span className="flex items-center gap-1"><Calendar size={11} />{date}</span>}
-          {t.club_name && (
-            <span className="flex items-center gap-1 truncate max-w-[120px]">
-              <Building2 size={11} className="shrink-0" />{t.club_name}
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2 mb-0.5">
+            <p className="text-[15px] font-bold text-white truncate">{t.name}</p>
+            <span className={`shrink-0 text-[10px] font-bold px-2 py-0.5 rounded-full border ${s.pill}`}>
+              {s.label}
             </span>
-          )}
+          </div>
+          <div className="flex items-center gap-3 text-[12px] text-white/40">
+            <span className="flex items-center gap-1"><Users size={11} />{t.participant_count}</span>
+            {date && <span className="flex items-center gap-1"><Calendar size={11} />{date}</span>}
+            {t.club_name && (
+              <span className="flex items-center gap-1 truncate max-w-[120px]">
+                <Building2 size={11} className="shrink-0" />{t.club_name}
+              </span>
+            )}
+          </div>
         </div>
-      </div>
-      <ChevronRight size={16} className="text-white/25 group-hover:text-white/60 shrink-0 transition-colors" />
-    </Link>
+        <ChevronRight size={16} className="text-white/25 group-hover:text-white/60 shrink-0 transition-colors" />
+      </Link>
+      {t.status === "open" && (
+        <button onClick={handleRegister} disabled={registering}
+          className="px-3 py-1.5 text-[12px] font-bold text-white bg-blue-600 hover:bg-blue-700
+                     disabled:bg-blue-600/50 rounded-lg transition-colors shrink-0 mr-2">
+          {registering ? "..." : "Записаться"}
+        </button>
+      )}
+    </div>
   );
 }
 
@@ -84,11 +109,18 @@ function groupByClub(ts: Tournament[]): { title: string; items: Tournament[] }[]
 
 interface Props { tournaments: Tournament[]; clubs: Club[] }
 
-export default function TournamentsHomeClient({ tournaments, clubs }: Props) {
+export default function TournamentsHomeClient({ tournaments: initialTournaments, clubs }: Props) {
+  const [tournaments, setTournaments] = useState(initialTournaments);
   const [sort, setSort]             = useState<SortMode>("time");
   const [archiveSort, setArchiveSort] = useState<SortMode>("time");
   const [clubFilter, setClubFilter] = useState<string>("all");
   const [archiveOpen, setArchiveOpen] = useState(false);
+
+  const handleTournamentUpdated = useCallback((tournamentId: string) => {
+    setTournaments((prev) =>
+      prev.map((t) => (t.id === tournamentId ? { ...t, participant_count: t.participant_count + 1 } : t))
+    );
+  }, []);
 
   // Apply club filter (used for both active and archive)
   const filterByClub = (ts: Tournament[]) =>
@@ -190,7 +222,7 @@ export default function TournamentsHomeClient({ tournaments, clubs }: Props) {
                 {section.title} · {section.items.length}
               </p>
               <div className="space-y-2">
-                {section.items.map((t) => <TournamentCard key={t.id} t={t} />)}
+                {section.items.map((t) => <TournamentCard key={t.id} t={t} onJoin={handleTournamentUpdated} />)}
               </div>
             </section>
           ))}
@@ -245,7 +277,7 @@ export default function TournamentsHomeClient({ tournaments, clubs }: Props) {
                     </p>
                   )}
                   <div className="space-y-2">
-                    {section.items.map((t) => <TournamentCard key={t.id} t={t} />)}
+                    {section.items.map((t) => <TournamentCard key={t.id} t={t} onJoin={handleTournamentUpdated} />)}
                   </div>
                 </section>
               ))}
