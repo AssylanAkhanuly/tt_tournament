@@ -42,10 +42,10 @@ export type AppNotification = {
 
 export type TournamentStreamEvent =
   | { type: "connected"; data: Record<string, never> }
-  | { type: "participant_joined"; data: { participant?: Participant; participant_count?: number; groups_changed?: boolean } }
-  | { type: "participant_removed"; data: { participant_id?: number; participant_count?: number; groups_changed?: boolean } }
-  | { type: "match_updated"; data: { match?: Match; tournament?: Tournament } }
-  | { type: "group_match_updated"; data: { group_id?: number; match?: GroupMatch } }
+  | { type: "participant_joined"; data: { participant?: Participant; participants?: Participant[]; participant_count?: number; groups?: TournamentGroup[]; groups_changed?: boolean; tournament?: Tournament } }
+  | { type: "participant_removed"; data: { participant_id?: number; participants?: Participant[]; participant_count?: number; groups?: TournamentGroup[]; groups_changed?: boolean; tournament?: Tournament } }
+  | { type: "match_updated"; data: { match?: Match; matches?: Match[]; tournament?: Tournament } }
+  | { type: "group_match_updated"; data: { group_id?: number; match?: GroupMatch; group?: TournamentGroup } }
   | { type: "tournament_started"; data: { tournament?: Tournament; matches?: Match[]; groups?: TournamentGroup[] } }
   | { type: "playoff_started"; data: { tournament?: Tournament; matches?: Match[] } }
   | { type: string; data?: unknown };

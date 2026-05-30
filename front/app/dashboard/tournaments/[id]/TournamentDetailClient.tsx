@@ -425,37 +425,48 @@ export default function TournamentDetailClient({
         tournament?: Tournament;
         match?: Match | GroupMatch;
         matches?: Match[];
+        participants?: Participant[];
+        group?: TournamentGroup;
         groups?: TournamentGroup[];
       };
 
       if (event.type === "participant_joined") {
-        if (data.participant) {
+        if (data.participants) {
+          setParticipants(data.participants);
+        } else if (data.participant) {
           setParticipants((prev) => {
             const exists = prev.some((p) => p.id === data.participant!.id);
             return exists ? prev : [...prev, data.participant!];
           });
         }
+        if (data.groups) setGroups(data.groups);
+        if (data.tournament) setTournament(data.tournament);
         if (data.participant_count != null) {
           setTournament((current) => ({ ...current, participant_count: data.participant_count! }));
         }
-        scheduleRefresh();
       } else if (event.type === "participant_removed") {
-        if (data.participant_id != null) {
+        if (data.participants) {
+          setParticipants(data.participants);
+        } else if (data.participant_id != null) {
           setParticipants((prev) => prev.filter((p) => p.id !== data.participant_id));
         }
+        if (data.groups) setGroups(data.groups);
+        if (data.tournament) setTournament(data.tournament);
         if (data.participant_count != null) {
           setTournament((current) => ({ ...current, participant_count: data.participant_count! }));
         }
-        scheduleRefresh();
       } else if (event.type === "match_updated") {
-        if (data.match) {
+        if (data.matches) {
+          setMatches(data.matches);
+        } else if (data.match) {
           const match = data.match as Match;
           setMatches((prev) => prev.map((m) => (m.id === match.id ? match : m)));
         }
         if (data.tournament) setTournament(data.tournament);
-        scheduleRefresh();
       } else if (event.type === "group_match_updated") {
-        if (data.match) {
+        if (data.group) {
+          setGroups((prev) => prev.map((g) => (g.id === data.group!.id ? data.group! : g)));
+        } else if (data.match) {
           const match = data.match as GroupMatch;
           setGroups((prev) =>
             prev.map((g) => ({
@@ -464,16 +475,13 @@ export default function TournamentDetailClient({
             }))
           );
         }
-        scheduleRefresh();
       } else if (event.type === "tournament_started") {
         if (data.tournament) setTournament(data.tournament);
         if (data.matches) setMatches(data.matches);
         if (data.groups) setGroups(data.groups);
-        scheduleRefresh();
       } else if (event.type === "playoff_started") {
         if (data.tournament) setTournament(data.tournament);
         if (data.matches) setMatches(data.matches);
-        scheduleRefresh();
       } else {
         scheduleRefresh();
       }
