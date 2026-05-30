@@ -25,6 +25,7 @@ def _set_auth_cookies(response, refresh_token: RefreshToken):
         httponly=jwt["AUTH_COOKIE_HTTP_ONLY"],
         samesite=jwt["AUTH_COOKIE_SAMESITE"],
         secure=jwt["AUTH_COOKIE_SECURE"],
+        path="/",
     )
     response.set_cookie(
         key=jwt["AUTH_COOKIE_REFRESH"],
@@ -33,6 +34,7 @@ def _set_auth_cookies(response, refresh_token: RefreshToken):
         httponly=jwt["AUTH_COOKIE_HTTP_ONLY"],
         samesite=jwt["AUTH_COOKIE_SAMESITE"],
         secure=jwt["AUTH_COOKIE_SECURE"],
+        path="/",
     )
     return response
 
