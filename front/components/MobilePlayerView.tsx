@@ -27,8 +27,6 @@ interface Props {
   initialMatches: Match[];
   initialGroups: TournamentGroup[];
   initialParticipants: Participant[];
-  refreshing?: boolean;
-  onRefresh?: () => Promise<void> | void;
 }
 
 const QUICK: [number, number][] = [[3, 0], [3, 1], [3, 2], [0, 3], [1, 3], [2, 3]];
@@ -111,22 +109,21 @@ function ScoreSheet({
 
 export default function MobilePlayerView({
   tournament, user, isAdmin, tables, initialMatches, initialGroups, initialParticipants,
-  refreshing = false,
-  onRefresh,
 }: Props) {
   const router = useRouter();
   // useLayoutEffect fires synchronously before the browser paints, so the mobile
   // portal is in place on the very first paint — no flash of the desktop view.
   const [isMobile, setIsMobile] = useState(false);
 
+  const [matches, setMatches]           = useState<Match[]>(initialMatches);
+  const [groups, setGroups]             = useState<TournamentGroup[]>(initialGroups);
+  const [participants, setParticipants] = useState<Participant[]>(initialParticipants);
+  const [refreshing, setRefreshing]     = useState(false);
+
   const [section, setSection] = useState<Section>("bracket");
   const [bracketScore, setBracketScore] = useState<Match | null>(null);
   const [groupScore, setGroupScore]     = useState<GMatch | null>(null);
   const [sectionPicked, setSectionPicked] = useState(false);
-
-  const matches = initialMatches;
-  const groups = initialGroups;
-  const participants = initialParticipants;
 
   // Detect mobile synchronously before first paint (useLayoutEffect, not useEffect).
   useLayoutEffect(() => {
@@ -140,8 +137,22 @@ export default function MobilePlayerView({
   const active = isMobile && !isAdmin;
 
   const refresh = useCallback(async () => {
-    await onRefresh?.();
-  }, [onRefresh]);
+    setRefreshing(true);
+    try {
+      const [m, p] = await Promise.all([
+        api.getMatches(tournament.id).catch(() => null),
+        api.getParticipants(tournament.id).catch(() => null),
+      ]);
+      if (m) setMatches(m);
+      if (p) setParticipants(p);
+      if (tournament.format === "group_playoff") {
+        const g = await api.getGroups(tournament.id).catch(() => null);
+        if (g) setGroups(g);
+      }
+    } finally { setRefreshing(false); }
+  }, [tournament.id, tournament.format]);
+
+  useEffect(() => { if (active) refresh(); }, [active, refresh]);
 
   // ── Derived ────────────────────────────────────────────────────────────────
   const hasBracket   = matches.length > 0;

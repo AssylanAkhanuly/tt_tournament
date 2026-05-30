@@ -317,7 +317,7 @@ export default function TournamentDetailClient({
     if (typeof window === "undefined") return "dark";
     return window.localStorage.getItem(themeStorageKey) === "light" ? "light" : "dark";
   });
-  const streamRefreshRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastRefresh = useRef(Date.now());
   const audioQueueRef = useRef<Promise<void>>(Promise.resolve());
   const voiceCallingEnabledRef = useRef(voiceCallingEnabled);
   const voiceFallbackNoticeRef = useRef(false);
@@ -376,22 +376,22 @@ export default function TournamentDetailClient({
   const refresh = useCallback(async (silent = true) => {
     if (!silent) setRefreshing(true);
     try {
-      const groupsRequest = tournament.format === "group_playoff"
-        ? api.getGroups(tournament.id).catch(() => null)
-        : Promise.resolve(null);
-      const [fm, ft, fp, fg] = await Promise.all([
-        api.getMatches(tournament.id).catch(() => null),
-        api.getTournament(tournament.id).catch(() => null),
-        api.getParticipants(tournament.id).catch(() => null),
-        groupsRequest,
+      const [fm, ft] = await Promise.all([
+        api.getMatches(tournament.id),
+        api.getTournament(tournament.id),
       ]);
-      if (fm) setMatches(fm);
-      if (ft) setTournament(ft);
-      if (fp) setParticipants(fp);
-      if (fg) setGroups(fg);
+      setMatches(fm);
+      setTournament(ft);
+      lastRefresh.current = Date.now();
     } catch { /* silent */ }
     finally { if (!silent) setRefreshing(false); }
-  }, [tournament.id, tournament.format]);
+  }, [tournament.id]);
+
+  useEffect(() => {
+    if (tournament.status !== "in_progress") return;
+    const id = setInterval(() => refresh(true), 30_000);
+    return () => clearInterval(id);
+  }, [tournament.status, refresh]);
 
   // When the tournament finishes, ratings are applied server-side — pull the
   // updated participants (rating_before/rating_change) so the standings show them.
@@ -408,92 +408,28 @@ export default function TournamentDetailClient({
 
   // SSE subscription for real-time updates (participant joins, score submissions)
   useEffect(() => {
-    const scheduleRefresh = () => {
-      if (streamRefreshRef.current) return;
-      streamRefreshRef.current = setTimeout(() => {
-        streamRefreshRef.current = null;
-        refresh(true);
-      }, 150);
-    };
-
     const eventSource = api.subscribeTournamentStream(tournament.id, (event) => {
-      if (event.type === "connected") return;
-      const data = (event.data ?? {}) as {
-        participant?: Participant;
-        participant_id?: number;
-        participant_count?: number;
-        tournament?: Tournament;
-        match?: Match | GroupMatch;
-        matches?: Match[];
-        participants?: Participant[];
-        group?: TournamentGroup;
-        groups?: TournamentGroup[];
-      };
-
       if (event.type === "participant_joined") {
-        if (data.participants) {
-          setParticipants(data.participants);
-        } else if (data.participant) {
-          setParticipants((prev) => {
-            const exists = prev.some((p) => p.id === data.participant!.id);
-            return exists ? prev : [...prev, data.participant!];
-          });
-        }
-        if (data.groups) setGroups(data.groups);
-        if (data.tournament) setTournament(data.tournament);
-        if (data.participant_count != null) {
-          setTournament((current) => ({ ...current, participant_count: data.participant_count! }));
-        }
-      } else if (event.type === "participant_removed") {
-        if (data.participants) {
-          setParticipants(data.participants);
-        } else if (data.participant_id != null) {
-          setParticipants((prev) => prev.filter((p) => p.id !== data.participant_id));
-        }
-        if (data.groups) setGroups(data.groups);
-        if (data.tournament) setTournament(data.tournament);
-        if (data.participant_count != null) {
-          setTournament((current) => ({ ...current, participant_count: data.participant_count! }));
-        }
+        const { participant } = event.data;
+        setParticipants((prev) => {
+          const exists = prev.some((p) => p.id === participant.id);
+          return exists ? prev : [...prev, participant];
+        });
       } else if (event.type === "match_updated") {
-        if (data.matches) {
-          setMatches(data.matches);
-        } else if (data.match) {
-          const match = data.match as Match;
-          setMatches((prev) => prev.map((m) => (m.id === match.id ? match : m)));
-        }
-        if (data.tournament) setTournament(data.tournament);
+        const { match } = event.data;
+        setMatches((prev) => prev.map((m) => (m.id === match.id ? match : m)));
       } else if (event.type === "group_match_updated") {
-        if (data.group) {
-          setGroups((prev) => prev.map((g) => (g.id === data.group!.id ? data.group! : g)));
-        } else if (data.match) {
-          const match = data.match as GroupMatch;
-          setGroups((prev) =>
-            prev.map((g) => ({
-              ...g,
-              matches: g.matches.map((m) => (m.id === match.id ? match : m)),
-            }))
-          );
-        }
-      } else if (event.type === "tournament_started") {
-        if (data.tournament) setTournament(data.tournament);
-        if (data.matches) setMatches(data.matches);
-        if (data.groups) setGroups(data.groups);
-      } else if (event.type === "playoff_started") {
-        if (data.tournament) setTournament(data.tournament);
-        if (data.matches) setMatches(data.matches);
-      } else {
-        scheduleRefresh();
+        const { match } = event.data;
+        setGroups((prev) =>
+          prev.map((g) => ({
+            ...g,
+            matches: g.matches.map((m) => (m.id === match.id ? match : m)),
+          }))
+        );
       }
     });
-    return () => {
-      if (streamRefreshRef.current) {
-        clearTimeout(streamRefreshRef.current);
-        streamRefreshRef.current = null;
-      }
-      eventSource.close();
-    };
-  }, [tournament.id, refresh]);
+    return () => eventSource.close();
+  }, [tournament.id]);
 
   // ── Keyboard shortcut: press 1-9/0 in Overview or Live to open score modal ──
   useEffect(() => {
@@ -768,8 +704,6 @@ export default function TournamentDetailClient({
         initialMatches={matches}
         initialGroups={groups}
         initialParticipants={participants}
-        refreshing={refreshing}
-        onRefresh={() => refresh(false)}
       />
 
       {/* ════════════════════════════════════════════════════════════════

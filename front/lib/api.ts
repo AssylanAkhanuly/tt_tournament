@@ -3,7 +3,6 @@ import { Club, ClubAdmin, ClubTable, GroupMatch, Match, Participant, Tournament,
 // Empty base → same-origin requests (/api/...). next.config rewrites proxy these
 // to the real backend, so the auth cookies are first-party to the frontend domain.
 const BASE = "";
-const DIRECT_API_BASE = (process.env.NEXT_PUBLIC_API_URL || "").replace(/\/$/, "");
 
 export type ElevenLabsVoice = {
   voice_id: string;
@@ -39,16 +38,6 @@ export type AppNotification = {
   is_read: boolean;
   created_at: string;
 };
-
-export type TournamentStreamEvent =
-  | { type: "connected"; data: Record<string, never> }
-  | { type: "participant_joined"; data: { participant?: Participant; participants?: Participant[]; participant_count?: number; groups?: TournamentGroup[]; groups_changed?: boolean; tournament?: Tournament } }
-  | { type: "participant_removed"; data: { participant_id?: number; participants?: Participant[]; participant_count?: number; groups?: TournamentGroup[]; groups_changed?: boolean; tournament?: Tournament } }
-  | { type: "match_updated"; data: { match?: Match; matches?: Match[]; tournament?: Tournament } }
-  | { type: "group_match_updated"; data: { group_id?: number; match?: GroupMatch; group?: TournamentGroup } }
-  | { type: "tournament_started"; data: { tournament?: Tournament; matches?: Match[]; groups?: TournamentGroup[] } }
-  | { type: "playoff_started"; data: { tournament?: Tournament; matches?: Match[] } }
-  | { type: string; data?: unknown };
 
 function buildHeaders(options: RequestInit): HeadersInit {
   // Don't set Content-Type for FormData — the browser sets it with the boundary.
@@ -296,57 +285,20 @@ export const api = {
       method: "POST",
     }),
 
-  getTournamentStreamToken: (tournamentId: string) =>
-    apiFetch<{ token: string; expires_in: number }>(`/api/tournaments/${tournamentId}/stream-token/`),
-
-  subscribeTournamentStream: (tournamentId: string, onEvent: (event: TournamentStreamEvent) => void) => {
-    let closed = false;
-    let eventSource: EventSource | null = null;
-    let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
-
-    const connect = async () => {
+  subscribeTournamentStream: (tournamentId: string, onEvent: (event: any) => void) => {
+    const eventSource = new EventSource(`${BASE}/api/tournaments/${tournamentId}/stream/`, {
+      withCredentials: true,
+    });
+    eventSource.onmessage = (e) => {
       try {
-        const { token } = await api.getTournamentStreamToken(tournamentId);
-        if (closed) return;
-
-        const url = `${DIRECT_API_BASE || BASE}/api/tournaments/${tournamentId}/stream/?token=${encodeURIComponent(token)}`;
-        eventSource = new EventSource(url);
-        eventSource.onmessage = (e) => {
-          try {
-            const data = JSON.parse(e.data);
-            onEvent(data);
-          } catch (err) {
-            console.error("Failed to parse SSE event:", err);
-          }
-        };
-        eventSource.onerror = () => {
-          eventSource?.close();
-          eventSource = null;
-          if (!closed && reconnectTimer === null) {
-            reconnectTimer = setTimeout(() => {
-              reconnectTimer = null;
-              connect();
-            }, 5_000);
-          }
-        };
-      } catch {
-        if (!closed && reconnectTimer === null) {
-          reconnectTimer = setTimeout(() => {
-            reconnectTimer = null;
-            connect();
-          }, 5_000);
-        }
+        const data = JSON.parse(e.data);
+        onEvent(data);
+      } catch (err) {
+        console.error("Failed to parse SSE event:", err);
       }
     };
-
-    connect();
-    return {
-      close: () => {
-        closed = true;
-        if (reconnectTimer) clearTimeout(reconnectTimer);
-        eventSource?.close();
-      },
-    };
+    eventSource.onerror = () => eventSource.close();
+    return eventSource;
   },
 
   // ─── Join flows ────────────────────────────────────────────────────────────
