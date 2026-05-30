@@ -503,6 +503,86 @@ class RemoveParticipantView(APIView):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
+class JoinTournamentSelfView(APIView):
+    """POST /api/tournaments/<pk>/join-self/ - User self-registers for an open tournament"""
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, pk):
+        tournament = get_object_or_404(Tournament.objects.select_related('club'), pk=pk)
+
+        if tournament.status == Tournament.STATUS_FINISHED:
+            return Response({"detail": "Турнир завершён — нельзя зарегистрироваться."}, status=status.HTTP_400_BAD_REQUEST)
+        if tournament.status == Tournament.STATUS_IN_PROGRESS:
+            group_stage = TournamentGroup.objects.filter(tournament=tournament).exists()
+            if not group_stage:
+                return Response(
+                    {"detail": "Плей-офф уже идёт — присоединиться нельзя."},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+        participant, joined = TournamentParticipant.objects.get_or_create(
+            tournament=tournament, user=request.user
+        )
+
+        # If joining during group stage, add to a group
+        if joined and TournamentGroup.objects.filter(tournament=tournament).exists():
+            _add_user_to_group_stage(tournament, request.user)
+
+        # Broadcast event to SSE clients
+        _broadcast_event(str(pk), "participant_joined", {"participant": ParticipantSerializer(participant).data})
+
+        return Response(ParticipantSerializer(participant).data, status=status.HTTP_201_CREATED if joined else status.HTTP_200_OK)
+
+
+# SSE client registry: {tournament_id: [queue objects]}
+_sse_clients = {}
+
+
+def _broadcast_event(tournament_id: str, event_type: str, data: dict):
+    """Broadcast an event to all SSE clients watching this tournament"""
+    import queue as queue_module
+    if tournament_id in _sse_clients:
+        event_data = {"type": event_type, "data": data}
+        for q in list(_sse_clients[tournament_id]):
+            try:
+                q.put_nowait(event_data)
+            except queue_module.Full:
+                _sse_clients[tournament_id].remove(q)
+
+
+class TournamentStreamView(APIView):
+    """GET /api/tournaments/<pk>/stream/ - SSE endpoint for real-time updates"""
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, pk):
+        tournament = get_object_or_404(Tournament, pk=pk)
+        import queue as queue_module
+
+        client_queue = queue_module.Queue(maxsize=100)
+        tournament_id = str(pk)
+
+        if tournament_id not in _sse_clients:
+            _sse_clients[tournament_id] = []
+        _sse_clients[tournament_id].append(client_queue)
+
+        def event_stream():
+            try:
+                while True:
+                    try:
+                        event = client_queue.get(timeout=55)
+                        import json
+                        yield f"data: {json.dumps(event)}\n\n"
+                    except queue_module.Empty:
+                        yield ": heartbeat\n\n"
+            finally:
+                if tournament_id in _sse_clients and client_queue in _sse_clients[tournament_id]:
+                    _sse_clients[tournament_id].remove(client_queue)
+                if tournament_id in _sse_clients and not _sse_clients[tournament_id]:
+                    del _sse_clients[tournament_id]
+
+        return HttpResponse(event_stream(), content_type="text/event-stream", charset="utf-8")
+
+
 class MyTournamentsView(generics.ListAPIView):
     serializer_class   = TournamentSerializer
     permission_classes = [IsAuthenticated]
@@ -755,6 +835,9 @@ class SubmitScoreView(APIView):
             from .rating import apply_tournament_ratings
             apply_tournament_ratings(tournament)
 
+        # Broadcast match update to SSE clients
+        _broadcast_event(str(pk), "match_updated", {"match": MatchSerializer(match).data})
+
         return Response(MatchSerializer(match).data)
 
 
@@ -864,6 +947,9 @@ class GroupMatchScoreView(APIView):
             gp_loser.save()
         except GP.DoesNotExist:
             pass
+
+        # Broadcast group match update to SSE clients
+        _broadcast_event(str(pk), "group_match_updated", {"match": GroupMatchSerializer(match).data})
 
         return Response(GroupMatchSerializer(match).data)
 
