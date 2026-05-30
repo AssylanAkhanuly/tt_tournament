@@ -53,6 +53,7 @@ export interface Tournament {
   created_at: string;
   starts_at: string | null;
   participant_count: number;
+  is_registered: boolean;
   status: "open" | "in_progress" | "finished";
   club_id: string | null;
   club_name: string | null;

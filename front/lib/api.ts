@@ -39,6 +39,16 @@ export type AppNotification = {
   created_at: string;
 };
 
+export type TournamentStreamEvent =
+  | { type: "connected"; data: Record<string, never> }
+  | { type: "participant_joined"; data: { participant?: Participant; participant_count?: number; groups_changed?: boolean } }
+  | { type: "participant_removed"; data: { participant_id?: number; participant_count?: number; groups_changed?: boolean } }
+  | { type: "match_updated"; data: { match?: Match; tournament?: Tournament } }
+  | { type: "group_match_updated"; data: { group_id?: number; match?: GroupMatch } }
+  | { type: "tournament_started"; data: { tournament?: Tournament; matches?: Match[]; groups?: TournamentGroup[] } }
+  | { type: "playoff_started"; data: { tournament?: Tournament; matches?: Match[] } }
+  | { type: string; data?: unknown };
+
 function buildHeaders(options: RequestInit): HeadersInit {
   // Don't set Content-Type for FormData — the browser sets it with the boundary.
   if (options.body instanceof FormData) return { ...options.headers };
@@ -285,7 +295,7 @@ export const api = {
       method: "POST",
     }),
 
-  subscribeTournamentStream: (tournamentId: string, onEvent: (event: any) => void) => {
+  subscribeTournamentStream: (tournamentId: string, onEvent: (event: TournamentStreamEvent) => void) => {
     const eventSource = new EventSource(`${BASE}/api/tournaments/${tournamentId}/stream/`, {
       withCredentials: true,
     });
@@ -297,7 +307,6 @@ export const api = {
         console.error("Failed to parse SSE event:", err);
       }
     };
-    eventSource.onerror = () => eventSource.close();
     return eventSource;
   },
 

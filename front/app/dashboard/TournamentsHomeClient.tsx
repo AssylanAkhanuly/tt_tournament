@@ -1,8 +1,8 @@
 "use client";
 
-import { useMemo, useState, useCallback, useEffect } from "react";
+import { useMemo, useState, useCallback } from "react";
 import Link from "next/link";
-import { ChevronRight, Users, Calendar, Trophy, Clock, Building2, ChevronDown } from "lucide-react";
+import { Check, ChevronRight, Users, Calendar, Trophy, Clock, Building2, ChevronDown } from "lucide-react";
 import { Club, Tournament } from "@/lib/types";
 import { api } from "@/lib/api";
 
@@ -23,27 +23,37 @@ const STATUS = {
 
 type SortMode = "time" | "club";
 
-function TournamentCard({ t, onJoin }: { t: Tournament; onJoin?: (tournamentId: string) => void }) {
+function TournamentCard({ t, onJoin }: { t: Tournament; onJoin?: (tournament: Tournament) => void }) {
   const [g1, g2] = avatarGrad(t.name);
   const s = STATUS[t.status];
   const date = t.starts_at
     ? new Date(t.starts_at).toLocaleDateString("ru-RU", { day: "numeric", month: "short", year: "numeric" })
     : null;
   const [registering, setRegistering] = useState(false);
+  const [joinError, setJoinError] = useState<string | null>(null);
+  const joined = !!t.is_registered;
 
   const handleRegister = useCallback(async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
+    if (joined) return;
     setRegistering(true);
+    setJoinError(null);
     try {
       await api.joinTournamentSelf(t.id);
-      onJoin?.(t.id);
-    } catch (err) {
+      const updated = await api.getTournament(t.id).catch(() => ({
+        ...t,
+        is_registered: true,
+        participant_count: t.participant_count + 1,
+      }));
+      onJoin?.(updated);
+    } catch (err: unknown) {
       console.error("Failed to join tournament:", err);
+      setJoinError((err as Record<string, string>)?.detail ?? "Ошибка");
     } finally {
       setRegistering(false);
     }
-  }, [t.id, onJoin]);
+  }, [joined, t, onJoin]);
 
   return (
     <div className="group flex items-center gap-3 rounded-2xl border border-white/[0.07]
@@ -76,10 +86,18 @@ function TournamentCard({ t, onJoin }: { t: Tournament; onJoin?: (tournamentId: 
         <ChevronRight size={16} className="text-white/25 group-hover:text-white/60 shrink-0 transition-colors" />
       </Link>
       {t.status === "open" && (
-        <button onClick={handleRegister} disabled={registering}
-          className="px-3 py-1.5 text-[12px] font-bold text-white bg-blue-600 hover:bg-blue-700
-                     disabled:bg-blue-600/50 rounded-lg transition-colors shrink-0 mr-2">
-          {registering ? "..." : "Записаться"}
+        <button onClick={handleRegister} disabled={registering || joined}
+          title={joinError ?? (joined ? "Вы уже зарегистрированы" : "Записаться")}
+          className={`px-3 py-1.5 text-[12px] font-bold rounded-lg transition-colors shrink-0 mr-2
+                     inline-flex items-center gap-1.5 ${
+            joined
+              ? "text-emerald-200 bg-emerald-500/15 border border-emerald-500/25"
+              : joinError
+              ? "text-red-200 bg-red-500/15 border border-red-500/25"
+              : "text-white bg-blue-600 hover:bg-blue-700 disabled:bg-blue-600/50"
+          }`}>
+          {joined && <Check size={12} />}
+          {registering ? "..." : joined ? "Вы участвуете" : joinError ? "Ошибка" : "Записаться"}
         </button>
       )}
     </div>
@@ -116,9 +134,9 @@ export default function TournamentsHomeClient({ tournaments: initialTournaments,
   const [clubFilter, setClubFilter] = useState<string>("all");
   const [archiveOpen, setArchiveOpen] = useState(false);
 
-  const handleTournamentUpdated = useCallback((tournamentId: string) => {
+  const handleTournamentUpdated = useCallback((updated: Tournament) => {
     setTournaments((prev) =>
-      prev.map((t) => (t.id === tournamentId ? { ...t, participant_count: t.participant_count + 1 } : t))
+      prev.map((t) => (t.id === updated.id ? { ...t, ...updated } : t))
     );
   }, []);
 
