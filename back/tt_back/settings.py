@@ -11,7 +11,7 @@ SECRET_KEY = os.getenv("SECRET_KEY", "change-me-in-production")
 
 DEBUG = os.getenv("DEBUG", "True") == "True"
 
-ALLOWED_HOSTS = os.getenv("ALLOWED_HOSTS", "localhost,127.0.0.1").split(",")
+ALLOWED_HOSTS = os.getenv("ALLOWED_HOSTS", "localhost,127.0.0.1,10.101.51.49").split(",")
 
 INSTALLED_APPS = [
     "django.contrib.admin",
@@ -93,7 +93,7 @@ ELABS_MODEL_ID = os.getenv("ELABS_MODEL_ID", "eleven_flash_v2_5")
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 CORS_ALLOWED_ORIGINS = os.getenv(
-    "CORS_ALLOWED_ORIGINS", "http://localhost:3000"
+    "CORS_ALLOWED_ORIGINS", "http://localhost:3000,http://10.101.51.49:3000"
 ).split(",")
 CORS_ALLOW_CREDENTIALS = True
 
