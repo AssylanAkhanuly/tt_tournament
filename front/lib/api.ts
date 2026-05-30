@@ -280,6 +280,27 @@ export const api = {
       method: "DELETE",
     }),
 
+  joinTournamentSelf: (tournamentId: string) =>
+    apiFetch<Participant>(`/api/tournaments/${tournamentId}/participants/join/`, {
+      method: "POST",
+    }),
+
+  subscribeTournamentStream: (tournamentId: string, onEvent: (event: any) => void) => {
+    const eventSource = new EventSource(`${BASE}/api/tournaments/${tournamentId}/stream/`, {
+      withCredentials: true,
+    });
+    eventSource.onmessage = (e) => {
+      try {
+        const data = JSON.parse(e.data);
+        onEvent(data);
+      } catch (err) {
+        console.error("Failed to parse SSE event:", err);
+      }
+    };
+    eventSource.onerror = () => eventSource.close();
+    return eventSource;
+  },
+
   // ─── Join flows ────────────────────────────────────────────────────────────
 
   joinByToken: (token: string) =>
