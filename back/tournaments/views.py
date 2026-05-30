@@ -599,11 +599,18 @@ def _broadcast_event(tournament_id: str, event_type: str, data: dict):
 
 
 def _broadcast_roster_changed(tournament, event_type: str, data: dict):
+    participants = TournamentParticipant.objects.filter(tournament=tournament).select_related("user")
     payload = {
         **data,
         "participant_count": tournament.participants.count(),
+        "participants": ParticipantSerializer(participants, many=True).data,
         "tournament": TournamentSerializer(tournament).data,
     }
+    if data.get("groups_changed"):
+        groups = TournamentGroup.objects.filter(tournament=tournament).prefetch_related(
+            'participants__user', 'matches__player1', 'matches__player2', 'matches__winner'
+        )
+        payload["groups"] = GroupSerializer(groups, many=True).data
     _broadcast_event(str(tournament.pk), event_type, payload)
 
 
@@ -952,7 +959,14 @@ class SubmitScoreView(APIView):
         _broadcast_event(
             str(pk),
             "match_updated",
-            {"match": MatchSerializer(match).data, "tournament": TournamentSerializer(tournament).data},
+            {
+                "match": MatchSerializer(match).data,
+                "matches": MatchSerializer(
+                    tournament.matches.select_related("player1", "player2", "winner").order_by("round_number", "match_number"),
+                    many=True,
+                ).data,
+                "tournament": TournamentSerializer(tournament).data,
+            },
         )
 
         return Response(MatchSerializer(match).data)
@@ -987,7 +1001,14 @@ class MatchResetView(APIView):
         _broadcast_event(
             str(pk),
             "match_updated",
-            {"match": MatchSerializer(match).data, "tournament": TournamentSerializer(tournament).data},
+            {
+                "match": MatchSerializer(match).data,
+                "matches": MatchSerializer(
+                    tournament.matches.select_related("player1", "player2", "winner").order_by("round_number", "match_number"),
+                    many=True,
+                ).data,
+                "tournament": TournamentSerializer(tournament).data,
+            },
         )
         return Response(MatchSerializer(match).data)
 
@@ -1073,7 +1094,11 @@ class GroupMatchScoreView(APIView):
         _broadcast_event(
             str(pk),
             "group_match_updated",
-            {"group_id": group.pk, "match": GroupMatchSerializer(match).data},
+            {
+                "group_id": group.pk,
+                "match": GroupMatchSerializer(match).data,
+                "group": GroupSerializer(group).data,
+            },
         )
 
         return Response(GroupMatchSerializer(match).data)
@@ -1125,7 +1150,11 @@ class GroupMatchResetView(APIView):
         _broadcast_event(
             str(pk),
             "group_match_updated",
-            {"group_id": group.pk, "match": GroupMatchSerializer(match).data},
+            {
+                "group_id": group.pk,
+                "match": GroupMatchSerializer(match).data,
+                "group": GroupSerializer(group).data,
+            },
         )
         return Response(GroupMatchSerializer(match).data)
 
@@ -1192,7 +1221,11 @@ class GroupMatchTableView(APIView):
         _broadcast_event(
             str(pk),
             "group_match_updated",
-            {"group_id": group.pk, "match": GroupMatchSerializer(match).data},
+            {
+                "group_id": group.pk,
+                "match": GroupMatchSerializer(match).data,
+                "group": GroupSerializer(group).data,
+            },
         )
         return Response(GroupMatchSerializer(match).data)
 
