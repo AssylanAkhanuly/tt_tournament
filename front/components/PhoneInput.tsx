@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ChevronDown } from "lucide-react";
 
 interface Country {
@@ -54,6 +54,7 @@ interface Props {
 
 export default function PhoneInput({ value, onChange, onComplete, required, autoFocus }: Props) {
   const [country, setCountry] = useState<Country>(COUNTRIES[0]);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   const maxDigits = country.groups.reduce((s, n) => s + n, 0);
   const rawDigits = (value.startsWith(country.code)
@@ -67,35 +68,54 @@ export default function PhoneInput({ value, onChange, onComplete, required, auto
     onComplete?.(rawDigits.length === maxDigits);
   }, [rawDigits.length, maxDigits, onComplete]);
 
+  // The input is UNCONTROLLED — we own its DOM value imperatively. This is the
+  // only approach that reliably formats on mobile: a controlled value={...}
+  // input lets React skip DOM updates when the transformed value equals the
+  // previous state (e.g. typing past max length), leaving the user's raw text
+  // in the field with no mask. By writing inputRef.value ourselves we always
+  // win, and the native input event (onChange) still fires on every keystroke.
+  useEffect(() => {
+    if (inputRef.current && inputRef.current.value !== formatted) {
+      inputRef.current.value = formatted;
+    }
+  }, [formatted]);
+
+  function applyDigits(digits: string) {
+    const limited = digits.slice(0, maxDigits);
+    const next = formatDigits(limited, country.groups);
+    if (inputRef.current) {
+      inputRef.current.value = next;
+      try { inputRef.current.setSelectionRange(next.length, next.length); } catch {}
+    }
+    onChange(country.code + limited);
+  }
+
   function handleKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
-    // Desktop precise deletion: drop exactly one digit regardless of mask char.
     if (e.key === "Backspace") {
       e.preventDefault();
-      onChange(country.code + rawDigits.slice(0, -1));
+      applyDigits(rawDigits.slice(0, -1));
     }
   }
 
-  function handleInput(e: React.ChangeEvent<HTMLInputElement>) {
+  function handleInput(e: React.FormEvent<HTMLInputElement>) {
     const ie = e.nativeEvent as InputEvent;
-    // Mobile virtual keyboards fire deleteContentBackward instead of a keydown
-    // Backspace. rawDigits reflects the OLD value here, so slice(-1) removes
-    // exactly one digit even when the browser deleted a mask char like ')'.
+    // Mobile keyboards fire deleteContentBackward instead of a keydown
+    // Backspace. rawDigits is the committed value, so drop exactly one digit.
     if ((ie.inputType ?? "").startsWith("delete")) {
-      onChange(country.code + rawDigits.slice(0, -1));
+      applyDigits(rawDigits.slice(0, -1));
       return;
     }
-    // Pure controlled: re-derive digits from the full input value. NO manual
-    // DOM mutation — that desyncs React's value tracker and lets the field
-    // accept unlimited unformatted input (the Android bug).
-    const digits = digitsOnly(e.target.value).slice(0, maxDigits);
-    onChange(country.code + digits);
+    // Insert / paste / autofill: derive digits from the live DOM value.
+    applyDigits(digitsOnly(e.currentTarget.value));
   }
 
   function selectCountry(iso: string) {
     const c = COUNTRIES.find((x) => x.iso === iso) ?? COUNTRIES[0];
     setCountry(c);
     const newMax = c.groups.reduce((s, n) => s + n, 0);
-    onChange(c.code + rawDigits.slice(0, newMax));
+    const limited = rawDigits.slice(0, newMax);
+    if (inputRef.current) inputRef.current.value = formatDigits(limited, c.groups);
+    onChange(c.code + limited);
   }
 
   return (
@@ -124,13 +144,14 @@ export default function PhoneInput({ value, onChange, onComplete, required, auto
       </div>
 
       <input
+        ref={inputRef}
         type="text"
         inputMode="numeric"
         autoComplete="off"
         autoCorrect="off"
         spellCheck={false}
-        value={formatted}
-        onChange={handleInput}
+        defaultValue={formatted}
+        onInput={handleInput}
         onKeyDown={handleKeyDown}
         placeholder={formatDigits("0".repeat(maxDigits), country.groups)}
         required={required}
