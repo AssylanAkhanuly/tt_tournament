@@ -27,6 +27,7 @@ INSTALLED_APPS = [
     "users",
     "tournaments",
     "clubs",
+    "notifications",
 ]
 
 MIDDLEWARE = [
@@ -87,6 +88,12 @@ STATIC_ROOT = BASE_DIR / "staticfiles"
 
 MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
+
+# Web Push (VAPID). Generate a keypair once and set these in the environment.
+# If unset, web-push is skipped gracefully (in-app notifications still work).
+VAPID_PUBLIC_KEY = os.getenv("VAPID_PUBLIC_KEY", "")
+VAPID_PRIVATE_KEY = os.getenv("VAPID_PRIVATE_KEY", "")
+VAPID_ADMIN_EMAIL = os.getenv("VAPID_ADMIN_EMAIL", "admin@spincoach.app")
 
 ELABS_KEY = os.getenv("ELABS_KEY", "")
 ELABS_VOICE_ID = os.getenv("ELABS_VOICE_ID", "pNInz6obpgDQGcFmaJgB")

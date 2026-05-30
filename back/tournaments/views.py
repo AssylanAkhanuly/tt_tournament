@@ -340,6 +340,11 @@ class TournamentJoinView(APIView):
 
     def post(self, request, join_token):
         tournament = self.get_tournament(join_token)
+        if tournament.status != Tournament.STATUS_OPEN:
+            return Response(
+                {"detail": "Регистрация закрыта — турнир уже начался."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
         participant, created = TournamentParticipant.objects.get_or_create(
             tournament=tournament, user=request.user,
         )
@@ -354,10 +359,27 @@ class RegisterAndJoinView(APIView):
 
     def post(self, request, join_token):
         tournament = get_object_or_404(Tournament, join_token=join_token)
+        if tournament.status != Tournament.STATUS_OPEN:
+            return Response(
+                {"detail": "Регистрация закрыта — турнир уже начался."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        # An existing phone can't register again — tell the frontend to switch
+        # to the login-and-join flow instead of failing on the unique constraint.
+        phone = (request.data.get("phone") or "").strip()
+        if phone and User.objects.filter(phone=phone).exists():
+            return Response(
+                {"detail": "Этот номер уже зарегистрирован — войдите в аккаунт.", "phone_exists": True},
+                status=status.HTTP_409_CONFLICT,
+            )
+
         serializer = RegisterSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         user = serializer.save()
-        participant = TournamentParticipant.objects.create(tournament=tournament, user=user)
+        participant, _ = TournamentParticipant.objects.get_or_create(
+            tournament=tournament, user=user
+        )
         refresh = RefreshToken.for_user(user)
         data = {
             "user": UserSerializer(user).data,
@@ -492,6 +514,58 @@ class MyTournamentsView(generics.ListAPIView):
         return Tournament.objects.filter(id__in=joined_ids).select_related('club')
 
 
+class MyActiveMatchView(APIView):
+    """
+    GET /api/tournaments/my/active-match/
+    The match the current user should be at right now (in_progress, theirs),
+    across all their tournaments. Lets Home deep-link straight to the table.
+    Returns {"active_match": {...}} or {"active_match": null}.
+    """
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        user = request.user
+
+        bracket = (
+            Match.objects.filter(status=Match.IN_PROGRESS)
+            .filter(Q(player1=user) | Q(player2=user))
+            .select_related("tournament", "player1", "player2")
+            .order_by("table_number", "pk")
+            .first()
+        )
+        if bracket:
+            opponent = bracket.player2 if bracket.player1_id == user.id else bracket.player1
+            return Response({"active_match": {
+                "kind": "bracket",
+                "tournament_id": str(bracket.tournament_id),
+                "tournament_name": bracket.tournament.name,
+                "match_id": bracket.pk,
+                "table_number": bracket.table_number,
+                "opponent_name": opponent.name if opponent else None,
+            }})
+
+        group = (
+            GroupMatch.objects.filter(status=GroupMatch.IN_PROGRESS)
+            .filter(Q(player1=user) | Q(player2=user))
+            .select_related("group", "group__tournament", "player1", "player2")
+            .order_by("table_number", "pk")
+            .first()
+        )
+        if group:
+            opponent = group.player2 if group.player1_id == user.id else group.player1
+            return Response({"active_match": {
+                "kind": "group",
+                "tournament_id": str(group.group.tournament_id),
+                "tournament_name": group.group.tournament.name,
+                "match_id": group.pk,
+                "group_id": group.group_id,
+                "table_number": group.table_number,
+                "opponent_name": opponent.name if opponent else None,
+            }})
+
+        return Response({"active_match": None})
+
+
 # ─── Bracket ──────────────────────────────────────────────────────────────────
 
 class StartTournamentView(APIView):
@@ -577,11 +651,16 @@ class AssignTableView(APIView):
 
         match.table_number = table_number
         # Starting match when table assigned, clearing when released
+        just_started = False
         if table_number is not None and match.status == Match.PENDING:
             match.status = Match.IN_PROGRESS
+            just_started = True
         elif table_number is None and match.status == Match.IN_PROGRESS:
             match.status = Match.PENDING
         match.save()
+        if just_started:
+            from notifications.services import notify_match_ready
+            notify_match_ready(match, "bracket")
         return Response(MatchSerializer(match).data)
 
 
@@ -882,11 +961,16 @@ class GroupMatchTableView(APIView):
                 )
 
         match.table_number = table_number
+        just_started = False
         if table_number is not None and match.status == GroupMatch.PENDING:
             match.status = GroupMatch.IN_PROGRESS
+            just_started = True
         elif table_number is None and match.status == GroupMatch.IN_PROGRESS:
             match.status = GroupMatch.PENDING
         match.save()
+        if just_started:
+            from notifications.services import notify_match_ready
+            notify_match_ready(match, "group")
 
         from .serializers import GroupMatchSerializer
         return Response(GroupMatchSerializer(match).data)

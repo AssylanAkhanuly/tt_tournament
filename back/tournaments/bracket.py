@@ -61,6 +61,8 @@ def auto_assign_table(match: Match) -> None:
         if table.number not in used:
             match.table_number = table.number
             match.save(update_fields=['table_number'])
+            from notifications.services import notify_match_ready
+            notify_match_ready(match, "bracket")
             return
 
 

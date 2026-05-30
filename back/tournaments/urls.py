@@ -9,6 +9,7 @@ from .views import (
     GroupMatchTableView,
     MatchListView,
     MatchResetView,
+    MyActiveMatchView,
     MyTournamentsView,
     RegisterAndJoinView,
     RemoveParticipantView,
@@ -28,6 +29,7 @@ from .views import (
 urlpatterns = [
     path("", TournamentListCreateView.as_view(), name="tournament-list-create"),
     path("my/", MyTournamentsView.as_view(), name="tournament-my"),
+    path("my/active-match/", MyActiveMatchView.as_view(), name="tournament-my-active-match"),
     path("<uuid:pk>/", TournamentDetailView.as_view(), name="tournament-detail"),
     path("<uuid:pk>/update/", TournamentUpdateDeleteView.as_view(), name="tournament-update-delete"),
     path("<uuid:pk>/participants/", TournamentParticipantsView.as_view(), name="tournament-participants"),
