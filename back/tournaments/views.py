@@ -8,6 +8,8 @@ from pathlib import Path
 
 from django.conf import settings
 from django.contrib.auth import get_user_model
+from django.core import signing
+from django.core.signing import BadSignature, SignatureExpired
 from django.db.models import Q
 from django.http import HttpResponse, StreamingHttpResponse
 from django.shortcuts import get_object_or_404
@@ -35,6 +37,8 @@ from .serializers import (
 )
 
 User = get_user_model()
+STREAM_TOKEN_SALT = "tournament-stream"
+STREAM_TOKEN_MAX_AGE_SECONDS = 8 * 60 * 60
 
 
 # ─── Permission helpers ──────────────────────────────────────────────────────
@@ -593,12 +597,55 @@ def _broadcast_roster_changed(tournament, event_type: str, data: dict):
     _broadcast_event(str(tournament.pk), event_type, payload)
 
 
-class TournamentStreamView(APIView):
-    """GET /api/tournaments/<pk>/stream/ - SSE endpoint for real-time updates"""
+def _make_stream_token(tournament_id, user_id):
+    return signing.dumps(
+        {"tournament_id": str(tournament_id), "user_id": str(user_id)},
+        salt=STREAM_TOKEN_SALT,
+    )
+
+
+def _user_from_stream_token(token, tournament_id):
+    if not token:
+        return None
+    try:
+        data = signing.loads(
+            token,
+            salt=STREAM_TOKEN_SALT,
+            max_age=STREAM_TOKEN_MAX_AGE_SECONDS,
+        )
+    except (BadSignature, SignatureExpired, TypeError, ValueError):
+        return None
+
+    if data.get("tournament_id") != str(tournament_id):
+        return None
+    return User.objects.filter(pk=data.get("user_id"), is_active=True).first()
+
+
+class TournamentStreamTokenView(APIView):
+    """GET /api/tournaments/<pk>/stream-token/ - short-lived token for direct SSE."""
     permission_classes = [IsAuthenticated]
 
     def get(self, request, pk):
+        get_object_or_404(Tournament, pk=pk)
+        return Response({
+            "token": _make_stream_token(pk, request.user.pk),
+            "expires_in": STREAM_TOKEN_MAX_AGE_SECONDS,
+        })
+
+
+class TournamentStreamView(APIView):
+    """GET /api/tournaments/<pk>/stream/ - SSE endpoint for real-time updates"""
+    permission_classes = [AllowAny]
+
+    def get(self, request, pk):
         tournament = get_object_or_404(Tournament, pk=pk)
+        user = request.user if request.user.is_authenticated else _user_from_stream_token(
+            request.query_params.get("token"),
+            pk,
+        )
+        if not user:
+            return Response({"detail": "Invalid stream token."}, status=status.HTTP_403_FORBIDDEN)
+
         import queue as queue_module
 
         client_queue = queue_module.Queue(maxsize=100)
