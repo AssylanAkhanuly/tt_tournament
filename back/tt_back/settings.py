@@ -125,12 +125,7 @@ SIMPLE_JWT = {
     "ROTATE_REFRESH_TOKENS": True,
     "AUTH_COOKIE": "access_token",
     "AUTH_COOKIE_REFRESH": "refresh_token",
-    "AUTH_COOKIE_HTTP_ONLY": True,
-    # In production (cross-origin frontend/backend) set:
-    #   AUTH_COOKIE_SAMESITE=None
-    #   AUTH_COOKIE_SECURE=True
-    # SameSite=None requires Secure=True and HTTPS on the backend.
-    # SameSite=Lax works fine for localhost (same registered domain).
-    "AUTH_COOKIE_SAMESITE": os.getenv("AUTH_COOKIE_SAMESITE", "Lax"),
-    "AUTH_COOKIE_SECURE": os.getenv("AUTH_COOKIE_SECURE", "False") == "True",
+    "AUTH_COOKIE_HTTP_ONLY": False,
+    "AUTH_COOKIE_SAMESITE": os.getenv("AUTH_COOKIE_SAMESITE", "None"),
+    "AUTH_COOKIE_SECURE": os.getenv("AUTH_COOKIE_SECURE", "True") == "True",
 }
