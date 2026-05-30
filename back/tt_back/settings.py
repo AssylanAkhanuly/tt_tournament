@@ -93,6 +93,10 @@ ELABS_MODEL_ID = os.getenv("ELABS_MODEL_ID", "eleven_flash_v2_5")
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
+CSRF_TRUSTED_ORIGINS = os.getenv(
+    "CSRF_TRUSTED_ORIGINS", "http://localhost:8000"
+).split(",")
+
 CORS_ALLOWED_ORIGINS = os.getenv(
     "CORS_ALLOWED_ORIGINS", "http://localhost:3000,http://10.101.51.49:3000"
 ).split(",")
