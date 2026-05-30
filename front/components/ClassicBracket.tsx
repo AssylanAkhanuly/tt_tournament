@@ -511,7 +511,7 @@ export default function ClassicBracket({
         {/* Zoom / reset controls */}
         <div
           data-no-pan="true"
-          className="absolute left-3 top-3 z-20 flex flex-col overflow-hidden rounded-xl border border-white/[0.08] bg-[#0b1524]/92 shadow-[0_16px_40px_rgba(0,0,0,0.28)]"
+          className="absolute left-3 bottom-3 z-20 flex flex-col overflow-hidden rounded-xl border border-white/[0.08] bg-[#0b1524]/92 shadow-[0_16px_40px_rgba(0,0,0,0.28)]"
           onPointerDown={(e) => e.stopPropagation()}
         >
           {[

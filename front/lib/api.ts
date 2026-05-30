@@ -14,16 +14,19 @@ export type ElevenLabsVoice = {
 
 const NETWORK_ERROR = { detail: "Сервер недоступен. Проверьте подключение и попробуйте позже." };
 
+function buildHeaders(options: RequestInit): HeadersInit {
+  // Don't set Content-Type for FormData — the browser sets it with the boundary.
+  if (options.body instanceof FormData) return { ...options.headers };
+  return { "Content-Type": "application/json", ...options.headers };
+}
+
 async function apiFetch<T>(path: string, options: RequestInit = {}): Promise<T> {
   let res: Response;
   try {
     res = await fetch(`${BASE}${path}`, {
       ...options,
       credentials: "include",
-      headers: {
-        "Content-Type": "application/json",
-        ...options.headers,
-      },
+      headers: buildHeaders(options),
     });
   } catch {
     throw NETWORK_ERROR;
@@ -39,7 +42,7 @@ async function apiFetch<T>(path: string, options: RequestInit = {}): Promise<T> 
       const retry = await fetch(`${BASE}${path}`, {
         ...options,
         credentials: "include",
-        headers: { "Content-Type": "application/json", ...options.headers },
+        headers: buildHeaders(options),
       });
       if (!retry.ok) throw await retry.json();
       if (retry.status === 204) return undefined as T;
@@ -181,6 +184,21 @@ export const api = {
 
   removeClubAdmin: (clubId: string, adminId: number) =>
     apiFetch<void>(`/api/clubs/${clubId}/admins/${adminId}/`, { method: "DELETE" }),
+
+  uploadClubPhoto: (clubId: string, file: File) => {
+    const form = new FormData();
+    form.append("photo", file);
+    return apiFetch<import("./types").Club>(`/api/clubs/${clubId}/photo/`, { method: "POST", body: form });
+  },
+
+  uploadAvatar: (file: File) => {
+    const form = new FormData();
+    form.append("avatar", file);
+    return apiFetch<import("./types").User>(`/api/auth/me/avatar/`, { method: "POST", body: form });
+  },
+
+  deleteAvatar: () =>
+    apiFetch<import("./types").User>(`/api/auth/me/avatar/`, { method: "DELETE" }),
 
   // ─── Tournaments ───────────────────────────────────────────────────────────
 

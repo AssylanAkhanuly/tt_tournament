@@ -1,17 +1,19 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
-  ArrowLeft, Plus, X, Pencil, Check, Trash2,
+  Plus, X, Pencil, Check, Trash2,
   Trophy, Building2, Users, Settings, ChevronRight,
   UserPlus, Hash, Clock, Zap, Calendar,
-  LayoutList, CalendarDays,
+  LayoutList, CalendarDays, Camera,
 } from "lucide-react";
 import { Club, ClubAdmin, ClubTable, Tournament, User } from "@/lib/types";
 import { api } from "@/lib/api";
+import { useLang } from "@/lib/i18n";
+import LanguageSwitcher from "@/components/LanguageSwitcher";
 
 const TournamentCalendar = dynamic(
   () => import("@/components/TournamentCalendar"),
@@ -383,6 +385,7 @@ export default function ClubDetailClient({
   const router   = useRouter();
   const pathname = usePathname();
   const { toasts, show: toast } = useToast();
+  const { t } = useLang();
 
   const [club,        setClub]        = useState<Club>(initClub);
   const [tournaments, setTournaments] = useState<Tournament[]>(initialTournaments);
@@ -413,11 +416,13 @@ export default function ClubDetailClient({
   }
 
   // Edit club
-  const [editing,      setEditing]      = useState(false);
-  const [editName,     setEditName]     = useState(club.name);
-  const [editDesc,     setEditDesc]     = useState(club.description);
-  const [saving,       setSaving]       = useState(false);
-  const [editError,    setEditError]    = useState<string | null>(null);
+  const [editing,         setEditing]         = useState(false);
+  const [editName,        setEditName]        = useState(club.name);
+  const [editDesc,        setEditDesc]        = useState(club.description);
+  const [saving,          setSaving]          = useState(false);
+  const [editError,       setEditError]       = useState<string | null>(null);
+  const [photoUploading,  setPhotoUploading]  = useState(false);
+  const photoFileRef = useRef<HTMLInputElement>(null);
 
   // Add admin
   const [addAdminPhone, setAddAdminPhone] = useState("");
@@ -434,12 +439,24 @@ export default function ClubDetailClient({
   }, [page, adminsLoaded, isAdmin, club.id]);
 
   // ── Actions ────────────────────────────────────────────────────────────────
+  async function handlePhotoChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setPhotoUploading(true);
+    try {
+      const updated = await api.uploadClubPhoto(club.id, file);
+      setClub(updated);
+      toast(t.photo_updated);
+    } catch { toast(t.photo_error, false); }
+    finally { setPhotoUploading(false); if (photoFileRef.current) photoFileRef.current.value = ""; }
+  }
+
   async function handleSaveClub() {
     setSaving(true); setEditError(null);
     try {
       const updated = await api.updateClub(club.id, { name: editName, description: editDesc });
       setClub(updated); setEditing(false);
-      toast("Клуб обновлён");
+      toast(t.club_updated);
     } catch (err: unknown) {
       setEditError((err as Record<string, string>)?.detail ?? "Ошибка.");
     } finally { setSaving(false); }
@@ -518,10 +535,10 @@ export default function ClubDetailClient({
   }, [live, open, finished]);
 
   const navItems: { id: Page; label: string; Icon: React.ElementType; badge?: number; show: boolean }[] = [
-    { id: "tournaments", label: "Турниры",    Icon: Trophy,     badge: live.length || undefined, show: true },
-    { id: "tables",      label: "Столы",      Icon: Building2,  badge: tables.length,             show: true },
-    { id: "admins",      label: "Админы",     Icon: Users,      badge: club.admin_count,          show: isAdmin },
-    { id: "settings",    label: "Настройки",  Icon: Settings,                                     show: isAdmin },
+    { id: "tournaments", label: t.tournaments, Icon: Trophy,    badge: live.length || undefined, show: true },
+    { id: "tables",      label: t.tables,      Icon: Building2, badge: tables.length,             show: true },
+    { id: "admins",      label: t.admins,      Icon: Users,     badge: club.admin_count,          show: isAdmin },
+    { id: "settings",    label: t.settings,    Icon: Settings,                                    show: isAdmin },
   ];
 
   return (
@@ -532,23 +549,19 @@ export default function ClubDetailClient({
                         border-r border-white/[0.07] shrink-0 overflow-hidden"
              style={{ background: "var(--surface)" }}>
 
-        {/* Back */}
-        <Link href="/dashboard"
-          className="flex items-center gap-3 px-4 py-4
-                     text-white/40 hover:text-white hover:bg-white/[0.04]
-                     transition-all border-b border-white/[0.06] shrink-0 group">
-          <ArrowLeft size={17} className="shrink-0 group-hover:-translate-x-0.5 transition-transform" />
-          <span className="hidden sm:block text-[13px] font-medium">Клубы</span>
-        </Link>
-
         {/* Club info */}
         <div className="hidden sm:block px-4 py-4 border-b border-white/[0.06] shrink-0">
           <div className="flex items-center gap-2.5 mb-2">
-            <div className="w-8 h-8 rounded-lg flex items-center justify-center text-[13px]
-                            font-black text-white shrink-0"
-                 style={{ background: `linear-gradient(135deg, ${g1}, ${g2})`, boxShadow: `0 3px 8px ${g1}50` }}>
-              {club.name.charAt(0).toUpperCase()}
-            </div>
+            {club.photo ? (
+              <img src={club.photo} alt={club.name}
+                className="w-8 h-8 rounded-lg object-cover shrink-0" />
+            ) : (
+              <div className="w-8 h-8 rounded-lg flex items-center justify-center text-[13px]
+                              font-black text-white shrink-0"
+                   style={{ background: `linear-gradient(135deg, ${g1}, ${g2})`, boxShadow: `0 3px 8px ${g1}50` }}>
+                {club.name.charAt(0).toUpperCase()}
+              </div>
+            )}
             <p className="text-[13px] font-bold text-white truncate">{club.name}</p>
           </div>
           <div className="flex items-center gap-3 text-[11px] text-white/30">
@@ -568,19 +581,19 @@ export default function ClubDetailClient({
                   className={`w-full flex items-center gap-3 px-4 py-3 text-left transition-all relative group ${
                     active
                       ? "bg-blue-600/[0.14] text-white"
-                      : "text-white/35 hover:text-white/75 hover:bg-white/[0.04]"
+                      : "text-white/60 hover:text-white/90 hover:bg-white/[0.04]"
                   }`}>
                   {active && (
                     <span className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-7 bg-blue-500 rounded-r-full" />
                   )}
-                  <Icon size={18} className={`shrink-0 transition-colors ${active ? "text-blue-400" : "group-hover:text-white/60"}`} />
+                  <Icon size={18} className={`shrink-0 transition-colors ${active ? "text-blue-400" : "text-white/50 group-hover:text-white/80"}`} />
                   <span className="hidden sm:block text-[14px] font-semibold flex-1">{label}</span>
                   {badge !== undefined && badge > 0 && (
                     <span className={`hidden sm:flex h-5 min-w-[20px] px-1.5 rounded-full text-[11px]
                                       font-bold items-center justify-center ${
                       id === "tournaments" && live.length > 0
                         ? "bg-cyan-500/30 text-cyan-200"
-                        : "bg-white/[0.10] text-white/45"
+                        : "bg-white/[0.10] text-white/65"
                     }`}>{badge}</span>
                   )}
                 </button>
@@ -589,8 +602,8 @@ export default function ClubDetailClient({
                 {id === "tournaments" && active && (
                   <div className="hidden sm:block border-b border-white/[0.05]">
                     {([
-                      { view: "list"     as const, label: "Список",     Icon: LayoutList   },
-                      { view: "calendar" as const, label: "Календарь",  Icon: CalendarDays },
+                      { view: "list"     as const, label: t.list_view,     Icon: LayoutList   },
+                      { view: "calendar" as const, label: t.calendar_view, Icon: CalendarDays },
                     ]).map(({ view, label: vLabel, Icon: VIcon }) => (
                       <button key={view} onClick={() => setTournamentView(view)}
                         className={`w-full flex items-center gap-2.5 pl-11 pr-4 py-2 text-left
@@ -639,7 +652,7 @@ export default function ClubDetailClient({
             {/* Header */}
             <div className="flex items-center justify-between px-6 py-4
                             border-b border-white/[0.07] shrink-0"
-                 style={{ background: "rgba(17,18,40,0.6)" }}>
+                 style={{ background: "var(--surface)" }}>
               <div>
                 <h2 className="text-[17px] font-bold text-white">Турниры</h2>
                 <p className="text-[12px] text-white/30 mt-0.5">
@@ -757,7 +770,7 @@ export default function ClubDetailClient({
           <div className="h-full flex flex-col">
             <div className="flex items-center justify-between px-6 py-4
                             border-b border-white/[0.07] shrink-0"
-                 style={{ background: "rgba(17,18,40,0.6)" }}>
+                 style={{ background: "var(--surface)" }}>
               <div>
                 <h2 className="text-[17px] font-bold text-white">Столы</h2>
                 <p className="text-[12px] text-white/30 mt-0.5">
@@ -818,7 +831,7 @@ export default function ClubDetailClient({
         {page === "admins" && isAdmin && (
           <div className="h-full flex flex-col">
             <div className="px-6 py-4 border-b border-white/[0.07] shrink-0"
-                 style={{ background: "rgba(17,18,40,0.6)" }}>
+                 style={{ background: "var(--surface)" }}>
               <h2 className="text-[17px] font-bold text-white">Администраторы</h2>
               <p className="text-[12px] text-white/30 mt-0.5">{club.admin_count} чел.</p>
             </div>
@@ -887,25 +900,57 @@ export default function ClubDetailClient({
           <div className="h-full overflow-y-auto">
             <div className="max-w-2xl mx-auto px-4 py-6 space-y-6">
 
+              {/* Club photo */}
+              <section>
+                <p className={LABEL + " mb-3"}>{t.club_photo}</p>
+                <div className="flex items-center gap-5 p-5 rounded-2xl border border-white/[0.08]"
+                     style={{ background: "var(--card)" }}>
+                  <div className="relative w-20 h-20 shrink-0 group">
+                    {club.photo ? (
+                      <img src={club.photo} alt={club.name}
+                        className="w-20 h-20 rounded-2xl object-cover" />
+                    ) : (
+                      <div className="w-20 h-20 rounded-2xl flex items-center justify-center text-[28px]
+                                      font-black text-white"
+                           style={{ background: `linear-gradient(135deg, ${avatarGrad(club.name)[0]}, ${avatarGrad(club.name)[1]})` }}>
+                        {club.name.charAt(0).toUpperCase()}
+                      </div>
+                    )}
+                    <button onClick={() => photoFileRef.current?.click()} disabled={photoUploading}
+                      className="absolute inset-0 rounded-2xl flex items-center justify-center
+                                 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity">
+                      {photoUploading
+                        ? <div className="w-5 h-5 border-2 border-white/40 border-t-white rounded-full animate-spin" />
+                        : <Camera size={18} className="text-white" />}
+                    </button>
+                    <input ref={photoFileRef} type="file" accept="image/*" className="hidden" onChange={handlePhotoChange} />
+                  </div>
+                  <div>
+                    <p className="text-[14px] font-semibold text-white">{t.club_logo}</p>
+                    <p className="text-[12px] text-white/35 mt-0.5">{t.hover_camera_hint}</p>
+                  </div>
+                </div>
+              </section>
+
               {/* Club info edit */}
               <section>
-                <p className={LABEL + " mb-3"}>Информация о клубе</p>
+                <p className={LABEL + " mb-3"}>{t.club_info}</p>
                 {editing ? (
                   <div className="space-y-3 rounded-2xl border border-white/[0.08] p-5"
                        style={{ background: "var(--card)" }}>
                     <input value={editName} onChange={(e) => setEditName(e.target.value)}
-                      placeholder="Название" autoFocus className={INPUT} />
+                      placeholder={t.club_name_placeholder} autoFocus className={INPUT} />
                     <textarea value={editDesc} onChange={(e) => setEditDesc(e.target.value)}
-                      placeholder="Описание" rows={3} className={INPUT + " resize-none"} />
+                      placeholder={t.club_desc_placeholder} rows={3} className={INPUT + " resize-none"} />
                     {editError && (
                       <p className="text-[13px] text-red-400 bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-2.5">{editError}</p>
                     )}
                     <div className="flex gap-2.5">
                       <button onClick={handleSaveClub} disabled={saving || !editName.trim()} className={BTN_P}>
-                        <Check size={15} />{saving ? "Сохранение..." : "Сохранить"}
+                        <Check size={15} />{saving ? t.saving : t.save}
                       </button>
                       <button onClick={() => { setEditing(false); setEditName(club.name); setEditDesc(club.description); }} className={BTN_G}>
-                        <X size={15} />Отмена
+                        <X size={15} />{t.cancel}
                       </button>
                     </div>
                   </div>
@@ -927,12 +972,12 @@ export default function ClubDetailClient({
 
               {/* Stats */}
               <section>
-                <p className={LABEL + " mb-3"}>Статистика</p>
+                <p className={LABEL + " mb-3"}>{t.statistics}</p>
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                   {[
-                    { label: "Турниров",  value: club.tournament_count, color: "text-white/80", icon: <Trophy size={14} /> },
-                    { label: "Столов",    value: club.table_count,      color: "text-blue-300", icon: <Building2 size={14} /> },
-                    { label: "Админов",   value: club.admin_count,      color: "text-violet-400", icon: <Users size={14} /> },
+                    { label: t.stat_tournaments, value: club.tournament_count, color: "text-white/80",    icon: <Trophy size={14} /> },
+                    { label: t.stat_tables,       value: club.table_count,      color: "text-blue-300",   icon: <Building2 size={14} /> },
+                    { label: t.stat_admins,       value: club.admin_count,      color: "text-violet-400", icon: <Users size={14} /> },
                   ].map(({ label, value, color, icon }) => (
                     <div key={label} className="border border-white/[0.07] rounded-2xl p-4 text-center"
                          style={{ background: "var(--elevated)" }}>
@@ -944,21 +989,47 @@ export default function ClubDetailClient({
                 </div>
               </section>
 
+              {/* Language */}
+              <section>
+                <p className={LABEL + " mb-3"}>{t.language}</p>
+                <div className="p-5 rounded-2xl border border-white/[0.08]"
+                     style={{ background: "var(--card)" }}>
+                  <div className="flex items-center justify-between">
+                    <p className="text-[13px] text-white/50">{t.language_desc}</p>
+                    <LanguageSwitcher />
+                  </div>
+                </div>
+              </section>
+
+              {/* Logout */}
+              <section>
+                <p className={LABEL + " mb-3"}>{t.logout}</p>
+                <div className="rounded-2xl border border-white/[0.08] overflow-hidden"
+                     style={{ background: "var(--card)" }}>
+                  <div className="px-5 py-4 flex items-center justify-between">
+                    <p className="text-[13px] text-white/50">{t.logout_desc}</p>
+                    <button
+                      onClick={async () => { try { await api.logout(); } finally { window.location.href = "/login"; } }}
+                      className={BTN_D + " shrink-0"}>
+                      {t.logout_btn}
+                    </button>
+                  </div>
+                </div>
+              </section>
+
               {/* Danger zone — only for superadmins */}
               {user.is_staff && (
                 <section>
-                  <p className={LABEL + " mb-3"}>Опасная зона</p>
+                  <p className={LABEL + " mb-3"}>{t.danger_zone}</p>
                   <div className="rounded-2xl border border-red-500/20 overflow-hidden"
                        style={{ background: "var(--card)" }}>
                     <div className="px-5 py-4 flex items-center justify-between">
                       <div>
-                        <p className="text-[14px] font-semibold text-white">Удалить клуб</p>
-                        <p className="text-[12px] text-white/35 mt-0.5">
-                          Удалит все турниры и данные клуба навсегда.
-                        </p>
+                        <p className="text-[14px] font-semibold text-white">{t.delete_club}</p>
+                        <p className="text-[12px] text-white/35 mt-0.5">{t.delete_club_desc}</p>
                       </div>
                       <button className={BTN_D + " shrink-0"}>
-                        <Trash2 size={14} />Удалить
+                        <Trash2 size={14} />{t.delete_btn}
                       </button>
                     </div>
                   </div>

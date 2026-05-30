@@ -5,9 +5,11 @@ import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { api } from "@/lib/api";
 import { ApiError, User } from "@/lib/types";
+import { useLang } from "@/lib/i18n";
 import PhoneInput from "./PhoneInput";
 import PinInput, { PinInputHandle } from "./PinInput";
 import SpinCoachLogo from "./SpinCoachLogo";
+import LanguageSwitcher from "./LanguageSwitcher";
 
 const INPUT = `w-full px-4 py-3.5 rounded-2xl bg-white/10 border border-white/20
   text-white placeholder:text-white/35 text-base outline-none
@@ -23,6 +25,7 @@ interface Props {
 }
 
 export default function RegisterForm({ onSuccess }: Props) {
+  const { t } = useLang();
   const [step, setStep]           = useState<Step>(1);
   const [dir, setDir]             = useState<"forward" | "back">("forward");
 
@@ -39,7 +42,6 @@ export default function RegisterForm({ onSuccess }: Props) {
 
   // ── Browser back interception ──────────────────────────────────────────────
   useEffect(() => {
-    // Push a history entry every time we advance past step 1
     if (step > 1) {
       window.history.pushState({ registerStep: step }, "");
     }
@@ -66,7 +68,7 @@ export default function RegisterForm({ onSuccess }: Props) {
     if (pin === confirmPin && !loading) {
       submit();
     } else if (pin !== confirmPin) {
-      setFE("PIN-коды не совпадают.");
+      setFE(t.pins_mismatch);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [confirmPin]);
@@ -82,7 +84,7 @@ export default function RegisterForm({ onSuccess }: Props) {
       if (e.phone)         { setFE(Array.isArray(e.phone)    ? e.phone[0]    : e.phone as string);    go(1); }
       else if (e.name)     { setFE(Array.isArray(e.name)     ? e.name[0]     : e.name as string);     go(2); }
       else if (e.password) { setFE(Array.isArray(e.password) ? e.password[0] : e.password as string); go(3); }
-      else { setError((e.detail as string) ?? "Ошибка регистрации."); }
+      else { setError((e.detail as string) ?? t.reg_error); }
     } finally {
       setLoading(false);
     }
@@ -98,26 +100,26 @@ export default function RegisterForm({ onSuccess }: Props) {
     e.preventDefault();
     setError(null); setFE(null);
     if (step === 1) {
-      if (!phoneComplete) { setFE("Введите полный номер телефона."); return; }
+      if (!phoneComplete) { setFE(t.full_phone_required); return; }
       setLoading(true);
       try {
         const { exists } = await api.checkPhone(phone);
-        if (exists) { setFE("Этот номер уже зарегистрирован. Войдите в аккаунт."); return; }
+        if (exists) { setFE(t.phone_taken); return; }
         go(2);
       } catch (err) {
         const e = err as { detail?: string };
-        setFE(e?.detail ?? "Сервер недоступен. Попробуйте позже.");
+        setFE(e?.detail ?? t.server_error);
       } finally { setLoading(false); }
     } else if (step === 2) {
-      if (name.trim().length < 2) { setFE("Имя должно содержать минимум 2 символа."); return; }
+      if (name.trim().length < 2) { setFE(t.name_min); return; }
       setPin("");
       go(3);
     } else if (step === 3) {
-      if (pin.length < 6) { setFE("Введите 6-значный PIN-код."); return; }
+      if (pin.length < 6) { setFE(t.pin_6_required); return; }
       setConfirm("");
       go(4);
     } else if (step === 4) {
-      if (pin !== confirmPin) { setFE("PIN-коды не совпадают."); return; }
+      if (pin !== confirmPin) { setFE(t.pins_mismatch); return; }
       submit();
     }
   }
@@ -135,7 +137,10 @@ export default function RegisterForm({ onSuccess }: Props) {
         ) : (
           <SpinCoachLogo size="sm" />
         )}
-        <span className="text-white/35 text-xs">Шаг {step} / 4</span>
+        <div className="flex items-center gap-3">
+          <LanguageSwitcher />
+          <span className="text-white/35 text-xs">{t.step} {step} {t.step_of} 4</span>
+        </div>
       </div>
 
       <div className="flex-1 flex flex-col justify-center max-w-sm mx-auto w-full">
@@ -145,12 +150,12 @@ export default function RegisterForm({ onSuccess }: Props) {
           {step === 1 && (
             <>
               <div>
-                <h1 className="text-3xl font-extrabold text-white leading-tight">Ваш номер телефона?</h1>
-                <p className="text-white/55 mt-2 text-sm">Создайте аккаунт, чтобы участвовать в турнирах.</p>
+                <h1 className="text-3xl font-extrabold text-white leading-tight">{t.your_phone_q}</h1>
+                <p className="text-white/55 mt-2 text-sm">{t.create_account_hint}</p>
               </div>
               <form onSubmit={handleNext} className="space-y-4">
                 <div className="space-y-1.5">
-                  <label className="text-white/60 text-xs font-semibold uppercase tracking-wider">Номер телефона</label>
+                  <label className="text-white/60 text-xs font-semibold uppercase tracking-wider">{t.phone_number}</label>
                   <PhoneInput
                     value={phone}
                     onChange={setPhone}
@@ -161,12 +166,12 @@ export default function RegisterForm({ onSuccess }: Props) {
                   {fieldError && <p className="text-red-300 text-xs">{fieldError}</p>}
                 </div>
                 <button type="submit" disabled={!phoneComplete || loading} className={BTN}>
-                  {loading ? "Проверяем..." : "Продолжить"}
+                  {loading ? t.checking : t.continue}
                 </button>
               </form>
               <p className="text-center text-sm text-white/40">
-                Уже есть аккаунт?{" "}
-                <Link href="/login" className="text-blue-400 hover:underline font-medium">Войти</Link>
+                {t.already_account}{" "}
+                <Link href="/login" className="text-blue-400 hover:underline font-medium">{t.sign_in_link}</Link>
               </p>
             </>
           )}
@@ -175,24 +180,24 @@ export default function RegisterForm({ onSuccess }: Props) {
           {step === 2 && (
             <>
               <div>
-                <h1 className="text-3xl font-extrabold text-white leading-tight">Как вас зовут?</h1>
-                <p className="text-white/55 mt-2 text-sm">Имя увидят другие участники.</p>
+                <h1 className="text-3xl font-extrabold text-white leading-tight">{t.your_name_q}</h1>
+                <p className="text-white/55 mt-2 text-sm">{t.name_subtitle}</p>
               </div>
               <form onSubmit={handleNext} className="space-y-4">
                 <div className="space-y-1.5">
-                  <label className="text-white/60 text-xs font-semibold uppercase tracking-wider">Ваше имя</label>
+                  <label className="text-white/60 text-xs font-semibold uppercase tracking-wider">{t.your_name_label}</label>
                   <input
                     type="text"
                     value={name}
                     onChange={(e) => setName(e.target.value)}
-                    placeholder="Алан Смагулов"
+                    placeholder={t.name_placeholder}
                     required
                     autoFocus
                     className={INPUT}
                   />
                   {fieldError && <p className="text-red-300 text-xs">{fieldError}</p>}
                 </div>
-                <button type="submit" className={BTN}>Продолжить</button>
+                <button type="submit" className={BTN}>{t.continue}</button>
               </form>
             </>
           )}
@@ -201,8 +206,8 @@ export default function RegisterForm({ onSuccess }: Props) {
           {step === 3 && (
             <>
               <div>
-                <h1 className="text-3xl font-extrabold text-white leading-tight">Придумайте PIN-код</h1>
-                <p className="text-white/55 mt-2 text-sm">6 цифр — запомните для входа.</p>
+                <h1 className="text-3xl font-extrabold text-white leading-tight">{t.create_pin_title}</h1>
+                <p className="text-white/55 mt-2 text-sm">{t.create_pin_hint}</p>
               </div>
               <form onSubmit={handleNext} className="space-y-8">
                 <PinInput ref={pinRef} value={pin} onChange={setPin} autoFocus />
@@ -211,7 +216,7 @@ export default function RegisterForm({ onSuccess }: Props) {
                     <p className="text-red-200 text-sm">{fieldError}</p>
                   </div>
                 )}
-                <button type="submit" disabled={pin.length < 6} className={BTN}>Продолжить</button>
+                <button type="submit" disabled={pin.length < 6} className={BTN}>{t.continue}</button>
               </form>
             </>
           )}
@@ -220,8 +225,8 @@ export default function RegisterForm({ onSuccess }: Props) {
           {step === 4 && (
             <>
               <div>
-                <h1 className="text-3xl font-extrabold text-white leading-tight">Подтвердите PIN-код</h1>
-                <p className="text-white/55 mt-2 text-sm">Введите PIN-код ещё раз.</p>
+                <h1 className="text-3xl font-extrabold text-white leading-tight">{t.confirm_pin_title}</h1>
+                <p className="text-white/55 mt-2 text-sm">{t.confirm_pin_hint}</p>
               </div>
               <form onSubmit={handleNext} className="space-y-8">
                 <PinInput
@@ -235,7 +240,7 @@ export default function RegisterForm({ onSuccess }: Props) {
                     <p className="text-red-200 text-sm">{fieldError ?? error}</p>
                   </div>
                 )}
-                {loading && <p className="text-center text-white/50 text-sm">Создание аккаунта...</p>}
+                {loading && <p className="text-center text-white/50 text-sm">{t.creating}</p>}
               </form>
             </>
           )}

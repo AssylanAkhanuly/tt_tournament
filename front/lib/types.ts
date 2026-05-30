@@ -6,6 +6,7 @@ export interface User {
   is_staff: boolean;
   /** Club IDs where this user has ClubAdmin role */
   club_ids_admin: string[];
+  avatar: string | null;
 }
 
 export interface Club {
@@ -13,6 +14,7 @@ export interface Club {
   name: string;
   description: string;
   created_at: string;
+  photo: string | null;
   table_count: number;
   tournament_count: number;
   admin_count: number;

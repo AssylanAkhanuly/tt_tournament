@@ -94,12 +94,18 @@ function ClubCard({ club }: { club: Club }) {
         {/* Name + admin badge */}
         <div className="flex items-start justify-between gap-3 mb-3">
           <div className="flex items-center gap-2.5 min-w-0">
-            <div className="w-10 h-10 rounded-xl flex items-center justify-center text-[15px]
-                            font-black text-white shrink-0"
-                 style={{ background: `linear-gradient(135deg, ${g1}, ${g2})`,
-                          boxShadow: `0 4px 12px ${g1}40` }}>
-              {club.name.charAt(0).toUpperCase()}
-            </div>
+            {club.photo ? (
+              <img src={club.photo} alt={club.name}
+                className="w-10 h-10 rounded-full object-cover shrink-0"
+                style={{ boxShadow: `0 4px 12px ${g1}40` }} />
+            ) : (
+              <div className="w-10 h-10 rounded-full flex items-center justify-center text-[15px]
+                              font-black text-white shrink-0"
+                   style={{ background: `linear-gradient(135deg, ${g1}, ${g2})`,
+                            boxShadow: `0 4px 12px ${g1}40` }}>
+                {club.name.charAt(0).toUpperCase()}
+              </div>
+            )}
             <div className="min-w-0">
               <p className="text-[15px] font-bold text-white/95 truncate group-hover:text-white transition-colors">
                 {club.name}

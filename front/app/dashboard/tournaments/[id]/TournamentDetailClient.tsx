@@ -7,7 +7,7 @@ import {
   ArrowLeft, Pencil, Check, X, Trash2, UserPlus,
   Zap, Users, Trophy, Clock, Settings, Minus,
   RefreshCw, Calendar, LayoutGrid, Plus, ToggleLeft, ToggleRight, Layers,
-  ChevronDown, Moon, Sun, Volume2, VolumeX,
+  ChevronDown, Volume2, VolumeX,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { GroupMatch, Match, Participant, Tournament, TournamentGroup, TournamentTable, User } from "@/lib/types";
@@ -15,6 +15,7 @@ import { api, type ElevenLabsVoice } from "@/lib/api";
 import ScoreModal from "@/components/ScoreModal";
 import AddPlayerModal from "@/components/AddPlayerModal";
 import LiveMatchesPanel from "@/components/LiveMatchesPanel";
+import MobilePlayerView from "@/components/MobilePlayerView";
 
 const QRCodeDisplay = dynamic(() => import("@/components/QRCodeDisplay"), { ssr: false });
 const BracketFlow    = dynamic(() => import("@/components/BracketFlow"),    { ssr: false });
@@ -414,11 +415,13 @@ export default function TournamentDetailClient({
       const n = e.key === "0" ? 10 : parseInt(e.key);
       if (isNaN(n) || n < 1 || n > 10) return;
       const m = matches.find((x) => x.status === "in_progress" && x.table_number === n);
-      if (m) setScoreMatch(m);
+      // Only admins may open any table's match; a player may open only their own.
+      const mine = !!m && (m.player1?.id === user.id || m.player2?.id === user.id);
+      if (m && (isAdmin || mine)) setScoreMatch(m);
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [page, matches]);
+  }, [page, matches, isAdmin, user]);
 
   useEffect(() => {
     voiceCallingEnabledRef.current = voiceCallingEnabled;
@@ -489,8 +492,16 @@ export default function TournamentDetailClient({
 
   useEffect(() => {
     document.documentElement.dataset.theme = themeMode;
-    window.localStorage.setItem(themeStorageKey, themeMode);
-  }, [themeMode, themeStorageKey]);
+  }, [themeMode]);
+
+  // Keep in sync when theme is changed from the dashboard header
+  useEffect(() => {
+    function onThemeChange(e: Event) {
+      setThemeMode((e as CustomEvent<ThemeMode>).detail);
+    }
+    window.addEventListener("tt_theme_change", onThemeChange);
+    return () => window.removeEventListener("tt_theme_change", onThemeChange);
+  }, []);
 
   // ── Actions ───────────────────────────────────────────────────────────────
   const queueTableCall = useCallback((
@@ -659,6 +670,17 @@ export default function TournamentDetailClient({
   return (
     <div className={`tt-tournament-theme ${themeMode === "light" ? "tt-theme-light" : "tt-theme-dark"} fixed inset-x-0 bottom-0 top-[52px] flex overflow-hidden`}>
 
+      {/* Phone-only stripped-down player experience (renders null on desktop / for admins) */}
+      <MobilePlayerView
+        tournament={tournament}
+        user={user}
+        isAdmin={isAdmin}
+        tables={tables}
+        initialMatches={matches}
+        initialGroups={groups}
+        initialParticipants={participants}
+      />
+
       {/* ════════════════════════════════════════════════════════════════
           SIDEBAR
       ════════════════════════════════════════════════════════════════ */}
@@ -666,14 +688,15 @@ export default function TournamentDetailClient({
                         bg-[#070f1d] border-r border-white/[0.07] shrink-0
                         overflow-hidden">
 
-        {/* Back — goes to club page if club exists, else dashboard */}
-        <Link href={tournament.club_id ? `/dashboard/clubs/${tournament.club_id}` : "/dashboard"}
+        {/* Back — admins go to their club page; players go to dashboard */}
+        <Link href={isAdmin && tournament.club_id ? `/dashboard/clubs/${tournament.club_id}` : "/dashboard"}
+          prefetch={false}
           className="flex items-center gap-3 px-4 py-4
                      text-white/40 hover:text-white hover:bg-white/[0.04]
                      transition-all border-b border-white/[0.06] shrink-0 group">
           <ArrowLeft size={17} className="shrink-0 group-hover:-translate-x-0.5 transition-transform" />
           <span className="hidden sm:block text-[13px] font-medium">
-            {tournament.club_name ?? "Назад"}
+            {isAdmin ? (tournament.club_name ?? "Назад") : "Назад"}
           </span>
         </Link>
 
@@ -1077,36 +1100,6 @@ export default function TournamentDetailClient({
                       <Pencil size={15} className="text-white/20 group-hover:text-white/50 shrink-0 transition-colors" />
                     </button>
                   )}
-                </section>
-
-                {/* Appearance */}
-                <section>
-                  <p className={LABEL + " mb-3"}>Внешний вид</p>
-                  <div className="grid grid-cols-2 gap-2.5">
-                    {([
-                      { mode: "dark" as const, label: "Темная", Icon: Moon },
-                      { mode: "light" as const, label: "Светлая", Icon: Sun },
-                    ]).map(({ mode, label, Icon }) => {
-                      const active = themeMode === mode;
-                      return (
-                        <button
-                          key={mode}
-                          type="button"
-                          onClick={() => setThemeMode(mode)}
-                          aria-pressed={active}
-                          className={`flex items-center justify-center gap-2.5 h-[44px] rounded-xl border
-                                      text-[14px] font-bold transition-all ${
-                            active
-                              ? "border-blue-500/35 bg-blue-500/[0.14] text-blue-100"
-                              : "border-white/[0.08] bg-white/[0.03] text-white/55 hover:bg-white/[0.06] hover:text-white"
-                          }`}
-                        >
-                          <Icon size={16} />
-                          {label}
-                        </button>
-                      );
-                    })}
-                  </div>
                 </section>
 
                 {/* Voice calls */}
@@ -1831,7 +1824,9 @@ function OverviewPanel({
                 ) : (
                   groupMatchesLive.map((m) => (
                     <GroupMatchRow key={m.id} match={m} label="live"
-                      isAdmin={isAdmin} freeTables={freeTables} tableNameMap={tableNameMap}
+                      isAdmin={isAdmin}
+                      canScore={isAdmin || m.player1?.id === user.id || m.player2?.id === user.id}
+                      freeTables={freeTables} tableNameMap={tableNameMap}
                       assigning={groupAssigning === m.id}
                       onClear={() => assignGroupTable(m.groupId, m.id, null)}
                       onScore={() => setGroupScoreMatch(m)}
@@ -1844,6 +1839,7 @@ function OverviewPanel({
                 ) : (
                   live.map((m) => (
                     <CompactMatchCard key={m.id} match={m} isAdmin={isAdmin}
+                      canScore={isAdmin || m.player1?.id === user.id || m.player2?.id === user.id}
                       assigning={assigning === m.id} freeTables={freeTables} tableNameMap={tableNameMap}
                       onAssign={(t) => assignTable(m, t)}
                       onClear={() => assignTable(m, null)}
@@ -1929,7 +1925,7 @@ function OverviewPanel({
           onGroupsChange(updated);
           setGroupScoreMatch(null);
         }}
-        onClear={groupScoreMatch.table_number != null && !playoffStarted ? async () => {
+        onClear={isAdmin && groupScoreMatch.table_number != null && !playoffStarted ? async () => {
           await assignGroupTable(groupScoreMatch.groupId, groupScoreMatch.id, null);
           setGroupScoreMatch(null);
         } : undefined}
@@ -2133,6 +2129,7 @@ interface GroupMatchRowProps {
   match: GroupMatch & { groupId?: number; groupName?: string };
   label: "live" | "pending";
   isAdmin?: boolean;
+  canScore?: boolean;
   freeTables?: TournamentTable[];
   tableNameMap?: Record<number, string>;
   assigning?: boolean;
@@ -2140,15 +2137,18 @@ interface GroupMatchRowProps {
   onClear?: () => void;
   onScore?: () => void;
 }
-function GroupMatchRow({ match, label, isAdmin, freeTables = [], tableNameMap = {}, assigning, onAssign, onClear, onScore }: GroupMatchRowProps) {
+function GroupMatchRow({ match, label, isAdmin, canScore, freeTables = [], tableNameMap = {}, assigning, onAssign, onClear, onScore }: GroupMatchRowProps) {
   const [showModal, setShowModal] = useState(false);
   const isLive = label === "live";
   const currentTableName = match.table_number ? (tableNameMap[match.table_number] ?? `Стол ${match.table_number}`) : null;
   const canAssign = isAdmin && !isLive && freeTables.length > 0;
   const canClear  = isAdmin && isLive && !!currentTableName;
+  // A player may score only their own live group match (no table controls).
+  const playerCanScore = !isAdmin && !!canScore && isLive;
 
   // For live matches: skip the intermediate modal, open score directly
   function handleClick() {
+    if (playerCanScore && onScore) { onScore(); return; }
     if (!isAdmin) return;
     if (isLive && onScore) { onScore(); return; }
     setShowModal(true);
@@ -2159,7 +2159,7 @@ function GroupMatchRow({ match, label, isAdmin, freeTables = [], tableNameMap = 
       <div
         onClick={handleClick}
         className={`rounded-xl border overflow-hidden transition-all ${
-          isAdmin ? "cursor-pointer" : ""
+          isAdmin || playerCanScore ? "cursor-pointer" : ""
         } ${
           isLive
             ? "border-blue-500/25 bg-blue-500/[0.05] hover:border-blue-500/40"
@@ -2707,21 +2707,24 @@ function ConsolationBracketView({
 
 // ── Compact match card — click row to open score/table modal ─────────────────
 interface CCardProps {
-  match: Match; isAdmin: boolean; assigning: boolean;
+  match: Match; isAdmin: boolean; canScore?: boolean; assigning: boolean;
   freeTables: TournamentTable[]; tableNameMap: Record<number, string>;
   onAssign: (t: number) => void; onClear: () => void; onScore: () => void;
 }
-function CompactMatchCard({ match, isAdmin, freeTables, tableNameMap, onAssign, onClear, onScore }: CCardProps) {
+function CompactMatchCard({ match, isAdmin, canScore, freeTables, tableNameMap, onAssign, onClear, onScore }: CCardProps) {
   const [showModal, setShowModal] = useState(false);
   const currentName = match.table_number ? (tableNameMap[match.table_number] ?? `Стол ${match.table_number}`) : null;
   const isLive = match.status === "in_progress";
+  // Admins open the assign/score modal; a player may score only their own live match.
+  const playerCanScore = !isAdmin && !!canScore && isLive;
+  const clickable = isAdmin || playerCanScore;
 
   return (
     <>
       <div
-        onClick={() => isAdmin && setShowModal(true)}
+        onClick={() => { if (isAdmin) setShowModal(true); else if (playerCanScore) onScore(); }}
         className={`rounded-xl border overflow-hidden transition-all ${
-          isAdmin ? "cursor-pointer" : ""
+          clickable ? "cursor-pointer" : ""
         } border-blue-500/20 hover:border-blue-400/50 hover:shadow-[0_10px_30px_rgba(37,99,235,0.16)]`}
         style={{ background: "linear-gradient(180deg, rgba(59,130,246,0.10), rgba(59,130,246,0.04))" }}>
         <div className="px-3 py-2.5 flex items-center gap-2">

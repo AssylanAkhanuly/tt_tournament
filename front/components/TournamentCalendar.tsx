@@ -36,9 +36,9 @@ function toFCEvents(ts: Tournament[]) {
 
 // ── Status → FullCalendar event colors ───────────────────────────────────────
 const STATUS_FC = {
-  open:        { bg: "rgba(34,197,94,0.22)",   border: "#22c55e", text: "#86efac" },
-  in_progress: { bg: "rgba(6,182,212,0.22)",   border: "#06b6d4", text: "#67e8f9" },
-  finished:    { bg: "rgba(255,255,255,0.06)", border: "rgba(255,255,255,0.18)", text: "rgba(255,255,255,0.32)" },
+  open:        { bg: "rgba(34,197,94,0.22)",  border: "var(--success)", text: "var(--success)" },
+  in_progress: { bg: "rgba(6,182,212,0.22)",  border: "var(--live)",    text: "var(--live)" },
+  finished:    { bg: "var(--border)",          border: "var(--border-hi)", text: "var(--text-2)" },
 };
 
 // ── Custom event content ──────────────────────────────────────────────────────
@@ -280,6 +280,17 @@ export default function TournamentCalendar({
   const [createDate,  setCreateDate]  = useState<string | null>(null);
   const [popover,     setPopover]     = useState<{ t: Tournament; x: number; y: number } | null>(null);
   const [savingId,    setSavingId]    = useState<string | null>(null);
+  const [isDark, setIsDark] = useState(() =>
+    typeof window === "undefined" || localStorage.getItem("tt_theme_mode") !== "light"
+  );
+
+  useEffect(() => {
+    function onThemeChange(e: Event) {
+      setIsDark((e as CustomEvent<string>).detail !== "light");
+    }
+    window.addEventListener("tt_theme_change", onThemeChange);
+    return () => window.removeEventListener("tt_theme_change", onThemeChange);
+  }, []);
 
   // Local FC events — decoupled from parent tournaments so a prop change
   // after a successful drop doesn't re-position an event FullCalendar already moved.
@@ -365,7 +376,7 @@ export default function TournamentCalendar({
     <div className="flex h-full min-h-0 gap-0">
 
       {/* ── Calendar ── */}
-      <div className="flex-1 min-w-0 fc-dark relative">
+      <div className={`flex-1 min-w-0 relative ${isDark ? "fc-dark" : "fc-light"}`}>
         {savingId && (
           <div className="absolute top-3 right-3 z-10 flex items-center gap-2 px-3 py-1.5
                           rounded-xl bg-blue-600/90 text-white text-[12px] font-semibold

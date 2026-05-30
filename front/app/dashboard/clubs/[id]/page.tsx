@@ -1,5 +1,5 @@
 import { cookies } from "next/headers";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { serverFetch } from "@/lib/server-auth";
 import ClubDetailClient from "./ClubDetailClient";
 
@@ -24,6 +24,10 @@ export default async function ClubPage({ params, searchParams }: Props) {
   ]);
 
   if (!club) notFound();
+
+  // Players (non-admin) are not allowed to browse the club detail page.
+  const isAdmin = user?.is_staff || user?.club_ids_admin?.includes(id);
+  if (!isAdmin) redirect("/dashboard");
 
   const initialView = view === "calendar" ? "calendar" : "list";
   const initialTab  = (["tournaments", "tables", "admins", "settings"].includes(tab ?? "")
