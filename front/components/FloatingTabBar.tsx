@@ -11,7 +11,7 @@ const TABS = [
   { href: "/dashboard/profile", label: "Профиль",     Icon: User },
 ] as const;
 
-export default function FloatingTabBar() {
+export default function FloatingTabBar({ hasActiveMatch = false }: { hasActiveMatch?: boolean }) {
   const pathname = usePathname();
   const [isDark, setIsDark] = useState(true);
 
@@ -42,6 +42,7 @@ export default function FloatingTabBar() {
 
       {TABS.map(({ href, label, Icon }) => {
         const active = pathname === href;
+        const showDot = hasActiveMatch && href === "/dashboard/my" && !active;
         return (
           <Link
             key={href}
@@ -55,7 +56,12 @@ export default function FloatingTabBar() {
                 : isDark ? "text-white/45 hover:text-white/75" : "text-[#0f172a]/45 hover:text-[#0f172a]/80"
             }`}
           >
-            <Icon size={20} strokeWidth={active ? 2.5 : 2} />
+            <span className="relative">
+              <Icon size={20} strokeWidth={active ? 2.5 : 2} />
+              {showDot && (
+                <span className="absolute -top-1 -right-1.5 w-2.5 h-2.5 rounded-full bg-blue-400 ring-2 ring-[var(--surface)] animate-pulse" />
+              )}
+            </span>
             <span className="text-[10px] font-bold tracking-tight">{label}</span>
           </Link>
         );

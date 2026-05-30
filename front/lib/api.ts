@@ -16,6 +16,29 @@ export type ElevenLabsVoice = {
 
 const NETWORK_ERROR = { detail: "Сервер недоступен. Проверьте подключение и попробуйте позже." };
 
+export type ActiveMatch = {
+  kind: "bracket" | "group";
+  tournament_id: string;
+  tournament_name: string;
+  match_id: number;
+  group_id?: number;
+  table_number: number | null;
+  opponent_name: string | null;
+};
+
+export type AppNotification = {
+  id: number;
+  type: string;
+  title: string;
+  body: string;
+  tournament: string | null;
+  match_kind: string;
+  match_id: number | null;
+  table_number: number | null;
+  is_read: boolean;
+  created_at: string;
+};
+
 function buildHeaders(options: RequestInit): HeadersInit {
   // Don't set Content-Type for FormData — the browser sets it with the boundary.
   if (options.body instanceof FormData) return { ...options.headers };
@@ -342,5 +365,36 @@ export const api = {
     apiFetch<Match>(`/api/tournaments/${tournamentId}/matches/${matchId}/table/`, {
       method: "PATCH",
       body: JSON.stringify({ table_number: tableNumber }),
+    }),
+
+  // ─── Active match + notifications ────────────────────────────────────────────
+
+  getMyActiveMatch: () =>
+    apiFetch<{ active_match: ActiveMatch | null }>("/api/tournaments/my/active-match/"),
+
+  getNotifications: (unreadOnly = false) =>
+    apiFetch<{ notifications: AppNotification[]; unread_count: number }>(
+      `/api/notifications/${unreadOnly ? "?unread=1" : ""}`
+    ),
+
+  markNotificationsRead: (ids?: number[]) =>
+    apiFetch<{ marked: number }>("/api/notifications/read/", {
+      method: "POST",
+      body: JSON.stringify(ids ? { ids } : { all: true }),
+    }),
+
+  getVapidPublicKey: () =>
+    apiFetch<{ public_key: string }>("/api/notifications/vapid-public-key/"),
+
+  subscribePush: (sub: { endpoint: string; keys: { p256dh: string; auth: string } }) =>
+    apiFetch<{ detail: string }>("/api/notifications/subscribe/", {
+      method: "POST",
+      body: JSON.stringify(sub),
+    }),
+
+  unsubscribePush: (endpoint: string) =>
+    apiFetch<{ detail: string }>("/api/notifications/unsubscribe/", {
+      method: "POST",
+      body: JSON.stringify({ endpoint }),
     }),
 };

@@ -53,6 +53,15 @@ export default function JoinPageClient({ tournament, joinToken, user, alreadyJoi
 
 function UnauthFlow({ tournament, joinToken }: { tournament: Tournament; joinToken: string }) {
   const [tab, setTab] = useState<"register" | "login">("register");
+  const [done, setDone] = useState(false);
+
+  if (done) {
+    return (
+      <DarkShell tournament={tournament}>
+        <JoinedSuccess tournament={tournament} />
+      </DarkShell>
+    );
+  }
 
   return (
     <div className="h-[100dvh] flex flex-col overflow-hidden" style={{ background: "var(--bg)" }}>
@@ -64,8 +73,8 @@ function UnauthFlow({ tournament, joinToken }: { tournament: Tournament; joinTok
       </div>
       <div className="flex-1 overflow-y-auto">
         {tab === "register"
-          ? <RegisterAndJoinSteps joinToken={joinToken} />
-          : <LoginAndJoinForm joinToken={joinToken} />
+          ? <RegisterAndJoinSteps joinToken={joinToken} onJoined={() => setDone(true)} onSwitchToLogin={() => setTab("login")} />
+          : <LoginAndJoinForm joinToken={joinToken} onJoined={() => setDone(true)} />
         }
       </div>
     </div>
@@ -76,7 +85,7 @@ function UnauthFlow({ tournament, joinToken }: { tournament: Tournament; joinTok
 
 type JStep = 1 | 2 | 3 | 4;
 
-function RegisterAndJoinSteps({ joinToken }: { joinToken: string }) {
+function RegisterAndJoinSteps({ joinToken, onJoined, onSwitchToLogin }: { joinToken: string; onJoined: () => void; onSwitchToLogin: () => void }) {
   const [step, setStep]          = useState<JStep>(1);
   const [dir, setDir]            = useState<"forward" | "back">("forward");
   const [phone, setPhone]        = useState("");
@@ -126,11 +135,12 @@ function RegisterAndJoinSteps({ joinToken }: { joinToken: string }) {
     setLoading(true);
     try {
       await api.registerAndJoin(joinToken, { phone, name: name.trim(), password: pin, confirm_password: pin });
-      window.location.href = "/dashboard";
+      onJoined();
     } catch (err) {
-      const e = err as Record<string, string | string[]>;
-      if (e.phone)     { setFE(Array.isArray(e.phone) ? e.phone[0] : e.phone as string); go(1); }
-      else if (e.name) { setFE(Array.isArray(e.name)  ? e.name[0]  : e.name  as string); go(2); }
+      const e = err as Record<string, string | string[] | boolean>;
+      if (e.phone_exists) { onSwitchToLogin(); }
+      else if (e.phone)   { setFE(Array.isArray(e.phone) ? e.phone[0] : e.phone as string); go(1); }
+      else if (e.name)    { setFE(Array.isArray(e.name)  ? e.name[0]  : e.name  as string); go(2); }
       else { setError((e.detail as string) ?? "Ошибка регистрации."); }
     } finally {
       setLoading(false);
@@ -251,7 +261,7 @@ function RegisterAndJoinSteps({ joinToken }: { joinToken: string }) {
 
 // ─── Login + auto-join (2-step) ───────────────────────────────────────────────
 
-function LoginAndJoinForm({ joinToken }: { joinToken: string }) {
+function LoginAndJoinForm({ joinToken, onJoined }: { joinToken: string; onJoined: () => void }) {
   const [step, setStep]       = useState<1 | 2>(1);
   const [dir, setDir]         = useState<"forward" | "back">("forward");
   const [phone, setPhone]     = useState("");
@@ -291,7 +301,7 @@ function LoginAndJoinForm({ joinToken }: { joinToken: string }) {
     try {
       await api.login(phone, pin);
       try { await api.joinByToken(joinToken); } catch { /* already joined */ }
-      window.location.href = "/dashboard";
+      onJoined();
     } catch (err) {
       const e = err as Record<string, string>;
       setError(e?.detail ?? "Неверный номер или PIN-код.");
@@ -348,15 +358,15 @@ function LoginAndJoinForm({ joinToken }: { joinToken: string }) {
 // ─── Confirm join ─────────────────────────────────────────────────────────────
 
 function JoinConfirmSection({ tournament, joinToken }: { tournament: Tournament; joinToken: string }) {
-  const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [done, setDone] = useState(false);
 
   async function handleJoin() {
     setLoading(true); setError(null);
     try {
       await api.joinByToken(joinToken);
-      router.push("/dashboard");
+      setDone(true);
     } catch (err) {
       const e = err as Record<string, string>;
       setError(e?.detail ?? "Не удалось вступить.");
@@ -364,6 +374,8 @@ function JoinConfirmSection({ tournament, joinToken }: { tournament: Tournament;
       setLoading(false);
     }
   }
+
+  if (done) return <JoinedSuccess tournament={tournament} />;
 
   return (
     <div className="text-center space-y-5 py-4">
@@ -373,6 +385,21 @@ function JoinConfirmSection({ tournament, joinToken }: { tournament: Tournament;
       {error && <p className="text-red-300 text-sm">{error}</p>}
       <button onClick={handleJoin} disabled={loading} className={BTN_PRIMARY}>
         {loading ? "Вступаем..." : "Вступить"}
+      </button>
+    </div>
+  );
+}
+
+// ─── Shared success screen ────────────────────────────────────────────────────
+
+function JoinedSuccess({ tournament }: { tournament: Tournament }) {
+  return (
+    <div className="text-center space-y-5 py-6">
+      <div className="text-6xl">✅</div>
+      <h2 className="text-xl font-bold text-white">Вы зарегистрированы!</h2>
+      <p className="text-white/60 text-sm">Вы участник турнира «{tournament.name}».</p>
+      <button onClick={() => { window.location.href = "/dashboard"; }} className={BTN_PRIMARY}>
+        Перейти в кабинет
       </button>
     </div>
   );

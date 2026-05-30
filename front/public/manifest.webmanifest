@@ -1,0 +1,8 @@
+{
+  "name": "SpinCoach",
+  "short_name": "SpinCoach",
+  "start_url": "/dashboard",
+  "display": "standalone",
+  "background_color": "#09091a",
+  "theme_color": "#09091a"
+}

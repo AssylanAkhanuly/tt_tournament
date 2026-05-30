@@ -1541,6 +1541,17 @@ function OverviewPanel({
   groupMatchesLive.forEach((m) => { if (m.table_number) usedNums.add(m.table_number); });
   const freeTables = activeTables.filter((t) => !usedNums.has(t.number));
 
+  // The viewer's own live match — a discoverable "enter my score" CTA for players
+  // (desktop has no equivalent of the mobile player view).
+  const myBracketLive = live.find((m) => m.player1?.id === user.id || m.player2?.id === user.id);
+  const myGroupLive   = groupMatchesLive.find((m) => m.player1.id === user.id || m.player2.id === user.id);
+  const myOpponent = myBracketLive
+    ? (myBracketLive.player1?.id === user.id ? myBracketLive.player2 : myBracketLive.player1)
+    : myGroupLive
+    ? (myGroupLive.player1.id === user.id ? myGroupLive.player2 : myGroupLive.player1)
+    : null;
+  const myLiveTable = myBracketLive?.table_number ?? myGroupLive?.table_number ?? null;
+
   // Players currently at a table (bracket or group match in_progress)
   const atTableIds = new Set<string>([
     ...groupMatchesLive.flatMap((m) => [m.player1.id, m.player2.id]),
@@ -1638,6 +1649,28 @@ function OverviewPanel({
   return (
     <>
     <div className="h-full flex flex-col">
+
+      {/* ── Player CTA: enter the score of your own live match ── */}
+      {!isAdmin && (myBracketLive || myGroupLive) && (
+        <button
+          onClick={() => {
+            if (myBracketLive) onEnterScore(myBracketLive);
+            else if (myGroupLive) setGroupScoreMatch(myGroupLive);
+          }}
+          className="shrink-0 m-3 mb-0 rounded-2xl border border-blue-500/30 bg-gradient-to-r
+                     from-blue-600/25 to-cyan-500/10 hover:from-blue-600/35 transition-all
+                     px-4 py-3 flex items-center gap-3 text-left active:scale-[.99]"
+        >
+          <span className="w-9 h-9 rounded-full bg-blue-500/25 flex items-center justify-center shrink-0 text-lg">🏓</span>
+          <span className="min-w-0 flex-1">
+            <span className="block text-[11px] font-bold text-blue-300 uppercase tracking-wide">Ваш матч идёт</span>
+            <span className="block text-[14px] font-semibold text-white truncate">
+              {myLiveTable ? `Стол ${myLiveTable} · ` : ""}против {myOpponent?.name ?? "соперник"}
+            </span>
+          </span>
+          <span className="text-[12px] font-bold text-blue-300 shrink-0">Ввести счёт →</span>
+        </button>
+      )}
 
       {/* ── Top bar: stats + table pills ── */}
       <div className="shrink-0 border-b border-white/[0.07] bg-[#070f1d]/90 px-4 py-3 flex items-center gap-2.5 flex-wrap backdrop-blur-xl">

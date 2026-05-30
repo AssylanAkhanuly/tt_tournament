@@ -10,6 +10,9 @@ import { useLang } from "@/lib/i18n";
 import SpinCoachLogo from "@/components/SpinCoachLogo";
 import FloatingTabBar from "@/components/FloatingTabBar";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
+import NotificationBell from "@/components/NotificationBell";
+import ActiveMatchBanner from "@/components/ActiveMatchBanner";
+import { useActiveMatch } from "@/lib/useActiveMatch";
 
 const TAB_PATHS = ["/dashboard", "/dashboard/my", "/dashboard/profile"];
 
@@ -22,14 +25,14 @@ function isClubAdminOnly(user: User) {
 }
 
 // ── Desktop sidebar ───────────────────────────────────────────────────────────
-function DesktopSidebar({ pathname, user }: { pathname: string; user: User }) {
+function DesktopSidebar({ pathname, user, hasActiveMatch }: { pathname: string; user: User; hasActiveMatch: boolean }) {
   const { t } = useLang();
   const adminOnly = isClubAdminOnly(user);
 
   const NAV = [
-    { href: "/dashboard",         label: t.home,           Icon: Home,     show: true },
-    { href: "/dashboard/my",      label: t.my_tournaments, Icon: Trophy,   show: !adminOnly },
-    { href: "/dashboard/profile", label: t.profile,        Icon: UserIcon, show: !adminOnly },
+    { href: "/dashboard",         label: t.home,           Icon: Home,     show: true,       dot: false },
+    { href: "/dashboard/my",      label: t.my_tournaments, Icon: Trophy,   show: !adminOnly, dot: hasActiveMatch },
+    { href: "/dashboard/profile", label: t.profile,        Icon: UserIcon, show: !adminOnly, dot: false },
   ].filter((n) => n.show);
 
   const AVATAR_GRADIENTS = [
@@ -42,7 +45,7 @@ function DesktopSidebar({ pathname, user }: { pathname: string; user: User }) {
   return (
     <aside className="hidden sm:flex flex-col w-[200px] xl:w-[220px] shrink-0 border-r border-white/[0.06] py-4 overflow-y-auto">
       <nav className="flex-1 px-2 space-y-0.5">
-        {NAV.map(({ href, label, Icon }) => {
+        {NAV.map(({ href, label, Icon, dot }) => {
           const active = pathname === href;
           return (
             <Link key={href} href={href}
@@ -54,7 +57,12 @@ function DesktopSidebar({ pathname, user }: { pathname: string; user: User }) {
               {active && (
                 <span className="absolute left-0 w-[3px] h-5 bg-blue-500 rounded-r-full" />
               )}
-              <Icon size={17} className={`shrink-0 ${active ? "text-blue-400" : "text-white/50"}`} />
+              <span className="relative shrink-0">
+                <Icon size={17} className={active ? "text-blue-400" : "text-white/50"} />
+                {dot && (
+                  <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-blue-400 ring-2 ring-[var(--bg)] animate-pulse" />
+                )}
+              </span>
               <span className="text-[14px] font-semibold">{label}</span>
             </Link>
           );
@@ -94,6 +102,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const showNav = TAB_PATHS.includes(pathname);
   const menuRef = useRef<HTMLDivElement>(null);
   const [menuOpen, setMenuOpen] = useState(false);
+  const activeMatch = useActiveMatch(user ? !isClubAdminOnly(user) : false);
 
   useEffect(() => {
     const stored = localStorage.getItem(THEME_KEY);
@@ -148,6 +157,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           <SpinCoachLogo size="sm" variant={themeMode === "light" ? "light" : "dark"} />
 
           <div className="flex items-center gap-2">
+            {/* Notifications */}
+            <NotificationBell />
+
             {/* Language dropdown */}
             <LanguageSwitcher variant="select" />
 
@@ -208,8 +220,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       {/* ── Body ────────────────────────────────────────────────────────────── */}
       {showNav ? (
         <div className="flex flex-1 min-h-0 overflow-hidden">
-          <DesktopSidebar pathname={pathname} user={user} />
+          <DesktopSidebar pathname={pathname} user={user} hasActiveMatch={!!activeMatch} />
           <main className="flex-1 overflow-y-auto px-5 py-6 pb-28 sm:px-8 sm:py-8 sm:pb-8">
+            {activeMatch && <ActiveMatchBanner match={activeMatch} />}
             {children}
           </main>
         </div>
@@ -221,7 +234,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
       {showNav && (
         <div className="sm:hidden">
-          <FloatingTabBar />
+          <FloatingTabBar hasActiveMatch={!!activeMatch} />
         </div>
       )}
     </div>
