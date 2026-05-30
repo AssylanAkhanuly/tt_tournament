@@ -47,7 +47,6 @@ function digitsOnly(s: string) { return s.replace(/\D/g, ""); }
 interface Props {
   value: string;
   onChange: (val: string) => void;
-  /** Called with true when digit count equals country max, false otherwise */
   onComplete?: (complete: boolean) => void;
   required?: boolean;
   autoFocus?: boolean;
@@ -58,6 +57,7 @@ export default function PhoneInput({ value, onChange, onComplete, required, auto
   const [open, setOpen]       = useState(false);
   const [dropPos, setDropPos] = useState({ top: 0, left: 0, width: 0 });
   const wrapperRef            = useRef<HTMLDivElement>(null);
+  const inputRef              = useRef<HTMLInputElement>(null);
 
   const maxDigits = country.groups.reduce((s, n) => s + n, 0);
   const rawDigits = value.startsWith(country.code)
@@ -66,7 +66,6 @@ export default function PhoneInput({ value, onChange, onComplete, required, auto
 
   const formatted = formatDigits(rawDigits, country.groups);
 
-  // Notify parent whenever completeness changes
   useEffect(() => {
     onComplete?.(rawDigits.length === maxDigits);
   }, [rawDigits.length, maxDigits, onComplete]);
@@ -78,18 +77,23 @@ export default function PhoneInput({ value, onChange, onComplete, required, auto
     }
   }, []);
 
+  // Close dropdown on click/touch outside — listen for both mousedown and touchstart
   useEffect(() => {
     if (!open) return;
-    function onDown(e: MouseEvent) {
-      const target = e.target as Node;
-      if (wrapperRef.current && !wrapperRef.current.contains(target)) {
-        const portal = document.getElementById("phone-dropdown-portal");
-        if (portal && portal.contains(target)) return;
-        setOpen(false);
-      }
+    function onOutside(e: MouseEvent | TouchEvent) {
+      const target = (e instanceof TouchEvent ? e.touches[0]?.target : e.target) as Node | null;
+      if (!target) return;
+      if (wrapperRef.current?.contains(target)) return;
+      const portal = document.getElementById("phone-dropdown-portal");
+      if (portal?.contains(target)) return;
+      setOpen(false);
     }
-    document.addEventListener("mousedown", onDown);
-    return () => document.removeEventListener("mousedown", onDown);
+    document.addEventListener("mousedown", onOutside);
+    document.addEventListener("touchstart", onOutside, { passive: true });
+    return () => {
+      document.removeEventListener("mousedown", onOutside);
+      document.removeEventListener("touchstart", onOutside);
+    };
   }, [open]);
 
   useEffect(() => {
@@ -102,11 +106,23 @@ export default function PhoneInput({ value, onChange, onComplete, required, auto
     };
   }, [open, updatePos]);
 
-  // Desktop: intercept Backspace before the browser touches the value.
+  // Sync the DOM value immediately — critical for Android Chrome's IME.
+  // Without this, React's async VDOM update races with the soft keyboard's
+  // composing state, causing typed characters to be swallowed or the
+  // formatter to not appear.
+  function syncDOM(newDigits: string) {
+    const newFormatted = formatDigits(newDigits, country.groups);
+    if (inputRef.current) {
+      inputRef.current.value = newFormatted;
+      try { inputRef.current.setSelectionRange(newFormatted.length, newFormatted.length); } catch {}
+    }
+    onChange(country.code + newDigits);
+  }
+
   function handleKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
     if (e.key === "Backspace") {
       e.preventDefault();
-      onChange(country.code + rawDigits.slice(0, -1));
+      syncDOM(rawDigits.slice(0, -1));
     }
   }
 
@@ -114,37 +130,30 @@ export default function PhoneInput({ value, onChange, onComplete, required, auto
     const ie = e.nativeEvent as InputEvent;
     const type = ie.inputType ?? "";
 
-    // Deletions — Android virtual keyboards fire deleteContentBackward instead
-    // of a keydown Backspace. rawDigits is the OLD value at this point, so
-    // slicing is always safe regardless of which mask character was deleted.
+    // Deletions (mobile fires deleteContentBackward, not a keydown Backspace)
     if (type.startsWith("delete")) {
-      // Select-all + delete clears the whole field
-      if (!e.target.value) { onChange(country.code); return; }
-      onChange(country.code + rawDigits.slice(0, -1));
+      syncDOM(e.target.value ? rawDigits.slice(0, -1) : "");
       return;
     }
 
-    // Insertions: use ie.data (the raw characters the user actually typed)
-    // instead of e.target.value. e.target.value contains the formatted mask
-    // (parentheses, dashes) so digitsOnly() would double-count existing digits.
-    // ie.data is only the new characters, which may be one digit, a pasted
-    // string, or an autofill value — all safe to pass through digitsOnly().
+    // Use ie.data (newly inserted chars only) when available so we don't
+    // accidentally re-extract digits from the mask chars already in the input.
     if (ie.data != null) {
       const added = digitsOnly(ie.data);
-      const combined = (rawDigits + added).slice(0, maxDigits);
-      onChange(country.code + combined);
+      syncDOM((rawDigits + added).slice(0, maxDigits));
       return;
     }
 
-    // Fallback for browsers that don't populate ie.data (very rare).
-    const digits = digitsOnly(e.target.value).slice(0, maxDigits);
-    onChange(country.code + digits);
+    // Fallback: paste / autofill / browsers without ie.data
+    syncDOM(digitsOnly(e.target.value).slice(0, maxDigits));
   }
 
   function selectCountry(c: Country) {
     setCountry(c);
     onChange(c.code);
     setOpen(false);
+    // Re-focus the text input after selection
+    setTimeout(() => inputRef.current?.focus(), 0);
   }
 
   const dropdown = open ? (
@@ -157,9 +166,11 @@ export default function PhoneInput({ value, onChange, onComplete, required, auto
         <button
           key={c.iso}
           type="button"
-          onMouseDown={(e) => { e.preventDefault(); selectCountry(c); }}
-          className={`w-full flex items-center gap-3 px-4 py-2.5 text-left
-            hover:bg-white/10 transition-colors
+          // onPointerDown works for both mouse and touch; preventDefault stops
+          // the text input from losing focus when the dropdown is tapped.
+          onPointerDown={(e) => { e.preventDefault(); selectCountry(c); }}
+          className={`w-full flex items-center gap-3 px-4 py-3 text-left
+            hover:bg-white/10 active:bg-white/15 transition-colors
             ${country.iso === c.iso ? "bg-blue-600/20" : ""}`}
         >
           <span className="text-lg leading-none">{c.flag}</span>
@@ -179,9 +190,13 @@ export default function PhoneInput({ value, onChange, onComplete, required, auto
       >
         <button
           type="button"
-          onClick={() => { updatePos(); setOpen(v => !v); }}
+          onPointerDown={(e) => {
+            e.preventDefault(); // keep text-input focus
+            updatePos();
+            setOpen(v => !v);
+          }}
           className="flex items-center gap-1.5 pl-5 pr-3 py-3.5 shrink-0 border-r border-white/20
-            hover:bg-white/5 transition-colors select-none"
+            hover:bg-white/5 active:bg-white/10 transition-colors select-none touch-manipulation"
         >
           <span className="text-base leading-none">{country.flag}</span>
           <span className="text-white/80 text-sm font-semibold">{country.code}</span>
@@ -189,6 +204,7 @@ export default function PhoneInput({ value, onChange, onComplete, required, auto
         </button>
 
         <input
+          ref={inputRef}
           type="text"
           inputMode="numeric"
           autoComplete="off"

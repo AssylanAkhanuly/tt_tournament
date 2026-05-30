@@ -88,7 +88,7 @@ export default function LoginForm({ onSuccess }: Props) {
           <SpinCoachLogo size="sm" />
         )}
         <div className="flex items-center gap-3">
-          <LanguageSwitcher />
+          <LanguageSwitcher variant="select" />
           <span className="text-white/35 text-xs">{t.step} {step} {t.step_of} 2</span>
         </div>
       </div>
