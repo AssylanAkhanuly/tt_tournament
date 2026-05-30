@@ -23,12 +23,40 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  // TEMP diagnostic: dependency-free, old-syntax error reporter injected before
+  // the app bundle. Catches uncaught errors (incl. bundle parse failures) and
+  // shows them on-screen so we can read mobile JS errors without a console.
+  const errReporter = `
+(function(){
+  function show(msg){
+    try{
+      var el=document.getElementById('__err_box');
+      if(!el){
+        el=document.createElement('div');
+        el.id='__err_box';
+        el.style.cssText='position:fixed;left:0;right:0;bottom:0;z-index:99999;max-height:45vh;overflow:auto;background:rgba(120,0,0,.95);color:#fff;font:11px/1.4 monospace;padding:8px;white-space:pre-wrap;word-break:break-all';
+        document.body.appendChild(el);
+      }
+      el.textContent += msg + '\\n\\n';
+    }catch(e){}
+  }
+  window.addEventListener('error',function(e){
+    show('ERROR: '+(e.message||'')+'\\n@ '+(e.filename||'')+':'+(e.lineno||'')+':'+(e.colno||''));
+  });
+  window.addEventListener('unhandledrejection',function(e){
+    var r=e.reason; show('PROMISE: '+((r&&(r.stack||r.message))||String(r)));
+  });
+})();`;
+
   return (
     <html
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col"><Providers>{children}</Providers></body>
+      <body className="min-h-full flex flex-col">
+        <script dangerouslySetInnerHTML={{ __html: errReporter }} />
+        <Providers>{children}</Providers>
+      </body>
     </html>
   );
 }
