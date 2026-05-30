@@ -1,6 +1,7 @@
 from django.contrib.auth import get_user_model
 from django.shortcuts import get_object_or_404
 from rest_framework import generics, status
+from rest_framework.parsers import FormParser, MultiPartParser
 from rest_framework.permissions import AllowAny, IsAuthenticated, IsAuthenticatedOrReadOnly
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -217,6 +218,35 @@ class MyClubsView(generics.ListAPIView):
             return Club.objects.all()
         club_ids = user.club_admin_roles.values_list('club_id', flat=True)
         return Club.objects.filter(id__in=club_ids)
+
+
+class UploadClubPhotoView(APIView):
+    """POST /api/clubs/<pk>/photo/ — upload club photo (admins only)"""
+    permission_classes = [IsAuthenticated]
+    parser_classes = [MultiPartParser, FormParser]
+
+    def post(self, request, pk):
+        club = get_object_or_404(Club, pk=pk)
+        if not _is_club_admin(request.user, club):
+            return Response({"detail": "Нет прав."}, status=status.HTTP_403_FORBIDDEN)
+        file = request.FILES.get("photo")
+        if not file:
+            return Response({"detail": "Файл не передан."}, status=status.HTTP_400_BAD_REQUEST)
+        if club.photo:
+            club.photo.delete(save=False)
+        club.photo = file
+        club.save(update_fields=["photo"])
+        return Response(ClubSerializer(club, context={"request": request}).data)
+
+    def delete(self, request, pk):
+        club = get_object_or_404(Club, pk=pk)
+        if not _is_club_admin(request.user, club):
+            return Response({"detail": "Нет прав."}, status=status.HTTP_403_FORBIDDEN)
+        if club.photo:
+            club.photo.delete(save=False)
+            club.photo = None
+            club.save(update_fields=["photo"])
+        return Response(ClubSerializer(club, context={"request": request}).data)
 
     def get_serializer_context(self):
         ctx = super().get_serializer_context()

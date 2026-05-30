@@ -7,6 +7,7 @@ class Club(models.Model):
     id          = models.UUIDField(primary_key=True, default=uuid4, editable=False)
     name        = models.CharField(max_length=200)
     description = models.TextField(blank=True)
+    photo       = models.ImageField(upload_to="club_photos/", null=True, blank=True)
     created_by  = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,

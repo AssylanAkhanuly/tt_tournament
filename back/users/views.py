@@ -2,6 +2,7 @@ from django.conf import settings
 from django.contrib.auth import authenticate, get_user_model
 from django.db.models import Q
 from rest_framework import status
+from rest_framework.parsers import FormParser, MultiPartParser
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -89,7 +90,29 @@ class MeView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        return Response(UserSerializer(request.user).data)
+        return Response(UserSerializer(request.user, context={"request": request}).data)
+
+
+class UploadAvatarView(APIView):
+    permission_classes = [IsAuthenticated]
+    parser_classes = [MultiPartParser, FormParser]
+
+    def post(self, request):
+        file = request.FILES.get("avatar")
+        if not file:
+            return Response({"detail": "Файл не передан."}, status=status.HTTP_400_BAD_REQUEST)
+        if request.user.avatar:
+            request.user.avatar.delete(save=False)
+        request.user.avatar = file
+        request.user.save(update_fields=["avatar"])
+        return Response(UserSerializer(request.user, context={"request": request}).data)
+
+    def delete(self, request):
+        if request.user.avatar:
+            request.user.avatar.delete(save=False)
+            request.user.avatar = None
+            request.user.save(update_fields=["avatar"])
+        return Response(UserSerializer(request.user, context={"request": request}).data)
 
 
 class UserSearchView(APIView):

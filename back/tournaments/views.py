@@ -728,13 +728,19 @@ class GroupMatchScoreView(APIView):
 
     def post(self, request, pk, group_id, match_id):
         tournament = get_object_or_404(Tournament.objects.select_related('club'), pk=pk)
-        if not _can_manage_tournament(request.user, tournament):
-            return Response({"detail": "Нет прав."}, status=status.HTTP_403_FORBIDDEN)
-        if _playoff_started(tournament):
-            return Response({"detail": "Плей-офф уже начат — групповые результаты заблокированы."}, status=status.HTTP_400_BAD_REQUEST)
-
         group = get_object_or_404(TournamentGroup, pk=group_id, tournament=tournament)
         match = get_object_or_404(GroupMatch, pk=match_id, group=group)
+
+        # Permission: club admin or one of the two players (own match only)
+        if not _can_manage_tournament(request.user, tournament):
+            if request.user != match.player1 and request.user != match.player2:
+                return Response({"detail": "Нет прав."}, status=status.HTTP_403_FORBIDDEN)
+            # Players may only score a match that is actually in progress.
+            if match.status != GroupMatch.IN_PROGRESS:
+                return Response({"detail": "Матч ещё не начался."}, status=status.HTTP_400_BAD_REQUEST)
+
+        if _playoff_started(tournament):
+            return Response({"detail": "Плей-офф уже начат — групповые результаты заблокированы."}, status=status.HTTP_400_BAD_REQUEST)
 
         if match.status == GroupMatch.FINISHED:
             return Response({"detail": "Матч уже завершён."}, status=status.HTTP_400_BAD_REQUEST)

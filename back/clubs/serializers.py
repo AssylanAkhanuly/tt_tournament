@@ -24,14 +24,23 @@ class ClubSerializer(serializers.ModelSerializer):
     tournament_count = serializers.SerializerMethodField()
     admin_count      = serializers.SerializerMethodField()
     is_admin         = serializers.SerializerMethodField()
+    photo            = serializers.SerializerMethodField()
 
     class Meta:
         model  = Club
         fields = [
-            'id', 'name', 'description', 'created_at',
+            'id', 'name', 'description', 'created_at', 'photo',
             'table_count', 'tournament_count', 'admin_count', 'is_admin',
         ]
-        read_only_fields = ['id', 'created_at']
+        read_only_fields = ['id', 'created_at', 'photo']
+
+    def get_photo(self, obj):
+        if not obj.photo:
+            return None
+        request = self.context.get("request")
+        if request:
+            return request.build_absolute_uri(obj.photo.url)
+        return obj.photo.url
 
     def get_table_count(self, obj):
         return obj.tables.filter(is_active=True).count()
