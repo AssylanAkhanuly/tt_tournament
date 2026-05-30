@@ -1,159 +1,84 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect } from "react";
 import { ChevronDown } from "lucide-react";
+import {
+  usePhoneInput,
+  defaultCountries,
+  parseCountry,
+  getActiveFormattingMask,
+  FlagImage,
+} from "react-international-phone";
 
-interface Country {
-  code: string;
-  iso: string;
-  flag: string;
-  name: string;
-  groups: number[];
-}
-
-const COUNTRIES: Country[] = [
-  { code: "+7",   iso: "KZ", flag: "🇰🇿", name: "Казахстан",    groups: [3, 3, 2, 2] },
-  { code: "+7",   iso: "RU", flag: "🇷🇺", name: "Россия",        groups: [3, 3, 2, 2] },
-  { code: "+996", iso: "KG", flag: "🇰🇬", name: "Кыргызстан",   groups: [3, 2, 2, 2] },
-  { code: "+998", iso: "UZ", flag: "🇺🇿", name: "Узбекистан",   groups: [2, 3, 2, 2] },
-  { code: "+992", iso: "TJ", flag: "🇹🇯", name: "Таджикистан",  groups: [3, 2, 2, 2] },
-  { code: "+993", iso: "TM", flag: "🇹🇲", name: "Туркменистан", groups: [2, 2, 2, 2] },
-  { code: "+994", iso: "AZ", flag: "🇦🇿", name: "Азербайджан",  groups: [2, 3, 2, 2] },
-  { code: "+374", iso: "AM", flag: "🇦🇲", name: "Армения",      groups: [2, 6]       },
-  { code: "+995", iso: "GE", flag: "🇬🇪", name: "Грузия",       groups: [3, 2, 2, 2] },
-  { code: "+380", iso: "UA", flag: "🇺🇦", name: "Украина",      groups: [2, 3, 2, 2] },
-  { code: "+375", iso: "BY", flag: "🇧🇾", name: "Беларусь",     groups: [2, 3, 2, 2] },
-];
-
-function formatDigits(digits: string, groups: number[]): string {
-  const max = groups.reduce((s, n) => s + n, 0);
-  const d = digits.slice(0, max);
-  const parts: string[] = [];
-  let pos = 0;
-  for (const g of groups) {
-    const chunk = d.slice(pos, pos + g);
-    if (!chunk) break;
-    parts.push(chunk);
-    pos += g;
-  }
-  if (parts.length === 0) return "";
-  const [first, ...rest] = parts;
-  return `(${first})` + (rest.length ? " " + rest.join("-") : "");
-}
-
-function digitsOnly(s: string) { return s.replace(/\D/g, ""); }
+// Limit the picker to the CIS countries the clubs operate in (matches prior UX).
+const CIS_ISO = ["kz", "ru", "kg", "uz", "tj", "tm", "az", "am", "ge", "ua", "by"];
+const COUNTRIES = defaultCountries.filter((c) => CIS_ISO.includes(parseCountry(c).iso2));
 
 interface Props {
   value: string;
   onChange: (val: string) => void;
-  /** Called with true when digit count equals country max, false otherwise */
+  /** Called with true when the number matches the country's full mask length */
   onComplete?: (complete: boolean) => void;
   required?: boolean;
   autoFocus?: boolean;
 }
 
 export default function PhoneInput({ value, onChange, onComplete, required, autoFocus }: Props) {
-  const [country, setCountry] = useState<Country>(COUNTRIES[0]);
-  const inputRef = useRef<HTMLInputElement>(null);
+  // Headless hook from react-international-phone: it owns formatting, cursor
+  // management and mobile-keyboard quirks, while we keep our own markup/styles.
+  const { inputValue, phone, country, setCountry, handlePhoneValueChange, inputRef } =
+    usePhoneInput({
+      defaultCountry: "kz",
+      value,
+      countries: COUNTRIES,
+      onChange: (data) => onChange(data.phone), // data.phone is E.164 (+77071234567)
+    });
 
-  const maxDigits = country.groups.reduce((s, n) => s + n, 0);
-  const rawDigits = (value.startsWith(country.code)
-    ? digitsOnly(value.slice(country.code.length))
-    : digitsOnly(value)
-  ).slice(0, maxDigits);
-
-  const formatted = formatDigits(rawDigits, country.groups);
-
+  // Completeness: national digit count reaches the active mask's length.
   useEffect(() => {
-    onComplete?.(rawDigits.length === maxDigits);
-  }, [rawDigits.length, maxDigits, onComplete]);
-
-  // The input is UNCONTROLLED — we own its DOM value imperatively. This is the
-  // only approach that reliably formats on mobile: a controlled value={...}
-  // input lets React skip DOM updates when the transformed value equals the
-  // previous state (e.g. typing past max length), leaving the user's raw text
-  // in the field with no mask. By writing inputRef.value ourselves we always
-  // win, and the native input event (onChange) still fires on every keystroke.
-  useEffect(() => {
-    if (inputRef.current && inputRef.current.value !== formatted) {
-      inputRef.current.value = formatted;
-    }
-  }, [formatted]);
-
-  function applyDigits(digits: string) {
-    const limited = digits.slice(0, maxDigits);
-    const next = formatDigits(limited, country.groups);
-    if (inputRef.current) {
-      inputRef.current.value = next;
-      try { inputRef.current.setSelectionRange(next.length, next.length); } catch {}
-    }
-    onChange(country.code + limited);
-  }
-
-  function handleKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
-    if (e.key === "Backspace") {
-      e.preventDefault();
-      applyDigits(rawDigits.slice(0, -1));
-    }
-  }
-
-  function handleInput(e: React.FormEvent<HTMLInputElement>) {
-    const ie = e.nativeEvent as InputEvent;
-    // Mobile keyboards fire deleteContentBackward instead of a keydown
-    // Backspace. rawDigits is the committed value, so drop exactly one digit.
-    if ((ie.inputType ?? "").startsWith("delete")) {
-      applyDigits(rawDigits.slice(0, -1));
-      return;
-    }
-    // Insert / paste / autofill: derive digits from the live DOM value.
-    applyDigits(digitsOnly(e.currentTarget.value));
-  }
-
-  function selectCountry(iso: string) {
-    const c = COUNTRIES.find((x) => x.iso === iso) ?? COUNTRIES[0];
-    setCountry(c);
-    const newMax = c.groups.reduce((s, n) => s + n, 0);
-    const limited = rawDigits.slice(0, newMax);
-    if (inputRef.current) inputRef.current.value = formatDigits(limited, c.groups);
-    onChange(c.code + limited);
-  }
+    const mask = getActiveFormattingMask({ phone, country });
+    const maskLen = (mask.match(/\./g) || []).length;
+    const national = phone.replace(/\D/g, "").slice(country.dialCode.length);
+    onComplete?.(maskLen > 0 && national.length >= maskLen);
+  }, [phone, country, onComplete]);
 
   return (
     <div
       className="flex items-center bg-white/10 border border-white/20 rounded-2xl overflow-hidden
         focus-within:border-blue-500 focus-within:bg-white/15 transition-all"
     >
-      {/* Country picker — native <select> overlay. Taps work on every mobile OS. */}
+      {/* Country picker — native <select> overlay so taps work on every mobile OS,
+          driven by the hook's setCountry. */}
       <div className="relative flex items-center gap-1.5 pl-5 pr-3 py-3.5 shrink-0
                       border-r border-white/20">
-        <span className="text-base leading-none">{country.flag}</span>
-        <span className="text-white/80 text-sm font-semibold">{country.code}</span>
+        <FlagImage iso2={country.iso2} style={{ width: 20, height: 20 }} />
+        <span className="text-white/80 text-sm font-semibold">+{country.dialCode}</span>
         <ChevronDown size={13} className="text-white/40" />
         <select
           aria-label="Код страны"
-          value={country.iso}
-          onChange={(e) => selectCountry(e.target.value)}
+          value={country.iso2}
+          onChange={(e) => setCountry(e.target.value)}
           className="absolute inset-0 w-full h-full opacity-0 cursor-pointer appearance-none"
         >
-          {COUNTRIES.map((c) => (
-            <option key={c.iso} value={c.iso}>
-              {c.flag} {c.name} ({c.code})
-            </option>
-          ))}
+          {COUNTRIES.map((c) => {
+            const p = parseCountry(c);
+            return (
+              <option key={p.iso2} value={p.iso2}>
+                {p.name} (+{p.dialCode})
+              </option>
+            );
+          })}
         </select>
       </div>
 
       <input
         ref={inputRef}
-        type="text"
-        inputMode="numeric"
-        autoComplete="off"
-        autoCorrect="off"
-        spellCheck={false}
-        defaultValue={formatted}
-        onInput={handleInput}
-        onKeyDown={handleKeyDown}
-        placeholder={formatDigits("0".repeat(maxDigits), country.groups)}
+        type="tel"
+        inputMode="tel"
+        autoComplete="tel"
+        value={inputValue}
+        onChange={handlePhoneValueChange}
+        placeholder="+7 (707) 123-45-67"
         required={required}
         autoFocus={autoFocus}
         className="flex-1 min-w-0 bg-transparent px-4 py-3.5
