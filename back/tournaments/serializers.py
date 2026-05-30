@@ -6,7 +6,6 @@ from users.serializers import UserSerializer
 class TournamentSerializer(serializers.ModelSerializer):
     created_by        = UserSerializer(read_only=True)
     participant_count = serializers.SerializerMethodField()
-    is_registered     = serializers.SerializerMethodField()
     club_id           = serializers.SerializerMethodField()
     club_name         = serializers.SerializerMethodField()
 
@@ -15,21 +14,14 @@ class TournamentSerializer(serializers.ModelSerializer):
         fields = [
             "id", "name", "description", "join_token",
             "created_by", "created_at", "starts_at",
-            "participant_count", "is_registered", "status",
+            "participant_count", "status",
             "club_id", "club_name",
             "format", "group_size",
         ]
-        read_only_fields = ["id", "join_token", "created_by", "created_at", "participant_count", "is_registered", "status"]
+        read_only_fields = ["id", "join_token", "created_by", "created_at", "participant_count", "status"]
 
     def get_participant_count(self, obj):
         return obj.participants.count()
-
-    def get_is_registered(self, obj):
-        request = self.context.get("request")
-        user = getattr(request, "user", None)
-        if not user or not user.is_authenticated:
-            return False
-        return obj.participants.filter(user=user).exists()
 
     def get_club_id(self, obj):
         return str(obj.club_id) if obj.club_id else None

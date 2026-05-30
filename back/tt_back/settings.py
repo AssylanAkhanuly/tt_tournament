@@ -108,13 +108,6 @@ CSRF_TRUSTED_ORIGINS = os.getenv(
 CORS_ALLOWED_ORIGINS = os.getenv(
     "CORS_ALLOWED_ORIGINS", "http://localhost:3000,http://10.101.51.49:3000"
 ).split(",")
-CORS_ALLOWED_ORIGIN_REGEXES = [
-    value for value in os.getenv(
-        "CORS_ALLOWED_ORIGIN_REGEXES",
-        r"^https://tt-front.*\.vercel\.app$",
-    ).split(",")
-    if value
-]
 CORS_ALLOW_CREDENTIALS = True
 
 REST_FRAMEWORK = {

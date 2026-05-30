@@ -5,4 +5,4 @@ cmds = [
 ]
 
 [start]
-cmd = "python manage.py migrate --noinput && gunicorn tt_back.wsgi:application --bind 0.0.0.0:$PORT --workers 1 --threads 32 --timeout 120"
+cmd = "python manage.py migrate --noinput && gunicorn tt_back.wsgi:application --bind 0.0.0.0:$PORT"
