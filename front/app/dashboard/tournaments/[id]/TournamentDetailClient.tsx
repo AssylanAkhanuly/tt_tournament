@@ -1252,6 +1252,12 @@ export default function TournamentDetailClient({
                       : <ToggleLeft size={24} className="text-white/30 shrink-0" />
                     }
                   </button>
+                  {autoAssignEnabled && tables.filter((t) => t.is_active).length === 0 && (
+                    <p className="mt-2.5 text-[12px] text-amber-300/90 flex items-start gap-1.5">
+                      <span className="shrink-0">⚠️</span>
+                      Нет активных столов — добавьте их во вкладке «Столы», иначе назначать матчи некуда.
+                    </p>
+                  )}
                 </section>
 
                 {/* Stats */}
@@ -1773,6 +1779,12 @@ function OverviewPanel({
           await assignTable(pending[i] as Match, table);
         }
       }
+      // The per-call optimistic updates run off a stale closure, so refetch once
+      // to reflect every seated match immediately (not only after the next poll).
+      try {
+        if (isGroupPhase) onGroupsChange(await api.getGroups(tournament.id));
+        else onMatchesChange(await api.getMatches(tournament.id));
+      } catch { /* the live poll will reconcile */ }
     })().finally(() => { autoAssignBusy.current = false; });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [autoAssignEnabled, isAdmin, isGroupPhase, freeTables.length, pendingReady.length, groupMatchesPending.length]);
