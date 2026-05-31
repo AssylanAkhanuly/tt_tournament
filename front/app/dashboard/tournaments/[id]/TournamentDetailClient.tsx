@@ -273,6 +273,7 @@ interface Props {
   participants: Participant[];
   initialMatches: Match[];
   tournamentTables?: TournamentTable[];
+  initialGroups?: TournamentGroup[];
 }
 
 export default function TournamentDetailClient({
@@ -281,6 +282,7 @@ export default function TournamentDetailClient({
   participants: initParticipants,
   initialMatches,
   tournamentTables: initTables = [],
+  initialGroups = [],
 }: Props) {
   const router  = useRouter();
   // Club admin OR superuser can manage this tournament
@@ -290,13 +292,14 @@ export default function TournamentDetailClient({
   const voiceStorageKey = `tt_voice_calling_${initTournament.id}`;
   const voiceChoiceStorageKey = `tt_voice_uri_${initTournament.id}`;
   const naturalVoiceStorageKey = `tt_elabs_voice_id_${initTournament.id}`;
+  const autoAssignStorageKey = `tt_auto_assign_${initTournament.id}`;
   const themeStorageKey = "tt_theme_mode";
 
   const [tournament,   setTournament]   = useState<Tournament>(initTournament);
   const [participants, setParticipants] = useState<Participant[]>(initParticipants);
   const [matches,      setMatches]      = useState<Match[]>(initialMatches);
   const [tables,       setTables]       = useState<TournamentTable[]>(initTables);
-  const [groups,       setGroups]       = useState<TournamentGroup[]>([]);
+  const [groups,       setGroups]       = useState<TournamentGroup[]>(initialGroups);
   const [page, setPage] = useState<Page>(
     initTournament.status === "open" ? "bracket" : "overview"
   );
@@ -305,6 +308,13 @@ export default function TournamentDetailClient({
     if (typeof window === "undefined") return false;
     return window.localStorage.getItem(voiceStorageKey) === "1";
   });
+  const [autoAssignEnabled, setAutoAssignEnabled] = useState(() => {
+    if (typeof window === "undefined") return false;
+    return window.localStorage.getItem(autoAssignStorageKey) === "1";
+  });
+  // Table number whose voice call is currently being prepared/played (for the
+  // "calling…" indicator on that match's card).
+  const [voiceLoadingTable, setVoiceLoadingTable] = useState<number | null>(null);
   const [selectedVoiceURI, setSelectedVoiceURI] = useState(() => {
     if (typeof window === "undefined") return "";
     return window.localStorage.getItem(voiceChoiceStorageKey) ?? "";
@@ -321,6 +331,7 @@ export default function TournamentDetailClient({
   const lastRefresh = useRef(Date.now());
   const audioQueueRef = useRef<Promise<void>>(Promise.resolve());
   const voiceCallingEnabledRef = useRef(voiceCallingEnabled);
+  const autoAssignEnabledRef = useRef(autoAssignEnabled);
   const voiceFallbackNoticeRef = useRef(false);
 
   // Edit
@@ -445,6 +456,11 @@ export default function TournamentDetailClient({
   }, [voiceStorageKey, voiceCallingEnabled]);
 
   useEffect(() => {
+    autoAssignEnabledRef.current = autoAssignEnabled;
+    window.localStorage.setItem(autoAssignStorageKey, autoAssignEnabled ? "1" : "0");
+  }, [autoAssignStorageKey, autoAssignEnabled]);
+
+  useEffect(() => {
     if (typeof window === "undefined" || !("speechSynthesis" in window)) return;
 
     function loadVoices() {
@@ -525,6 +541,7 @@ export default function TournamentDetailClient({
   ) => {
     audioQueueRef.current = audioQueueRef.current.catch(() => undefined).then(async () => {
       if (!force && !voiceCallingEnabledRef.current) return;
+      setVoiceLoadingTable(tableNumber); // card shows "calling…" while we fetch + play
       try {
         const audio = await api.tableCallAudio(tournament.id, {
           player1,
@@ -540,6 +557,8 @@ export default function TournamentDetailClient({
           toast(errorDetail(err, "Не удалось воспроизвести голосовой вызов"), false);
           voiceFallbackNoticeRef.current = true;
         }
+      } finally {
+        setVoiceLoadingTable((cur) => (cur === tableNumber ? null : cur));
       }
     });
   }, [selectedElevenVoiceId, selectedVoiceURI, toast, tournament.id]);
@@ -553,12 +572,14 @@ export default function TournamentDetailClient({
   }
 
   const callPlayersToTable = useCallback((player1: string, player2: string, tableNumber: number) => {
-    if (!voiceCallingEnabled) return;
-    queueTableCall(player1, player2, tableNumber);
-  }, [queueTableCall, voiceCallingEnabled]);
+    // Announce when EITHER voice calling or auto-assign is on (auto-assign always
+    // calls the names of the opponents it seats). force=true: we've already decided.
+    if (!voiceCallingEnabledRef.current && !autoAssignEnabledRef.current) return;
+    queueTableCall(player1, player2, tableNumber, true);
+  }, [queueTableCall]);
 
   const callNewlyAssignedMatches = useCallback((previous: Match[], next: Match[]) => {
-    if (!voiceCallingEnabled) return;
+    if (!voiceCallingEnabledRef.current && !autoAssignEnabledRef.current) return;
     const previousCalls = new Set(
       previous
         .filter((m) => m.status === "in_progress" && m.table_number != null)
@@ -895,6 +916,8 @@ export default function TournamentDetailClient({
             onMatchesChange={setMatches}
             onTournamentChange={setTournament}
             voiceCallingEnabled={voiceCallingEnabled}
+            autoAssignEnabled={autoAssignEnabled}
+            voiceLoadingTable={voiceLoadingTable}
             onCallTable={callPlayersToTable}
           />
         )}
@@ -1195,6 +1218,40 @@ export default function TournamentDetailClient({
                       <Volume2 size={15} />Проверить
                     </button>
                   </div>
+                </section>
+
+                {/* Auto-assign tables */}
+                <section>
+                  <p className={LABEL + " mb-3"}>Автоназначение столов</p>
+                  <button
+                    type="button"
+                    onClick={() => setAutoAssignEnabled((v) => !v)}
+                    aria-pressed={autoAssignEnabled}
+                    className={`w-full flex items-center gap-4 px-5 py-4 rounded-2xl
+                                border transition-all text-left ${
+                      autoAssignEnabled
+                        ? "border-emerald-500/35 bg-emerald-500/[0.10]"
+                        : "border-white/[0.08] bg-white/[0.03] hover:bg-white/[0.05]"
+                    }`}
+                  >
+                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${
+                      autoAssignEnabled ? "bg-emerald-500/20 text-emerald-300" : "bg-white/[0.07] text-white/35"
+                    }`}>
+                      <LayoutGrid size={18} />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[15px] font-bold text-white">Назначать столы автоматически</p>
+                      <p className="text-[12px] text-white/35 mt-0.5">
+                        {autoAssignEnabled
+                          ? "Свободные столы раздаются ожидающим матчам, имена соперников объявляются"
+                          : "Выключено — назначайте столы вручную"}
+                      </p>
+                    </div>
+                    {autoAssignEnabled
+                      ? <ToggleRight size={24} className="text-emerald-300 shrink-0" />
+                      : <ToggleLeft size={24} className="text-white/30 shrink-0" />
+                    }
+                  </button>
                 </section>
 
                 {/* Stats */}
@@ -1533,6 +1590,8 @@ interface OverviewProps {
   onMatchesChange: (m: Match[]) => void;
   onTournamentChange: (t: Tournament) => void;
   voiceCallingEnabled: boolean;
+  autoAssignEnabled: boolean;
+  voiceLoadingTable: number | null;
   onCallTable: (player1: string, player2: string, tableNumber: number) => void;
 }
 
@@ -1540,7 +1599,7 @@ function OverviewPanel({
   tournament, matches, participants, tables, groups, user, isAdmin,
   refreshing, onRefresh, onEnterScore, onMatchUpdated,
   onGroupsChange, onMatchesChange, onTournamentChange,
-  voiceCallingEnabled, onCallTable,
+  voiceCallingEnabled, autoAssignEnabled, voiceLoadingTable, onCallTable,
 }: OverviewProps) {
   const activeTables = tables.filter((t) => t.is_active);
   const live         = matches.filter((m) => m.status === "in_progress");
@@ -1566,7 +1625,7 @@ function OverviewPanel({
         ? { ...g, matches: g.matches.map((m) => m.id === matchId ? updated : m) }
         : g
       ));
-      if (voiceCallingEnabled && updated.table_number != null) {
+      if ((voiceCallingEnabled || autoAssignEnabled) && updated.table_number != null) {
         onCallTable(updated.player1.name, updated.player2.name, updated.table_number);
       }
     } catch { /* silent */ }
@@ -1684,12 +1743,39 @@ function OverviewPanel({
     try {
       const updated = await api.assignTable(tournament.id, match.id, tableNum);
       onMatchUpdated(updated);
-      if (voiceCallingEnabled && updated.table_number != null && updated.player1 && updated.player2) {
+      if ((voiceCallingEnabled || autoAssignEnabled) && updated.table_number != null && updated.player1 && updated.player2) {
         onCallTable(updated.player1.name, updated.player2.name, updated.table_number);
       }
     } catch { /* silent */ }
     finally { setAssigning(null); }
   }
+
+  // ── Auto-assign: hand free tables to ready pending matches (the assign helpers
+  // announce the opponents). A busy-guard prevents overlapping passes; it
+  // converges because assigned matches leave the pending set / occupy tables, and
+  // a failed assign leaves deps unchanged so it won't spin. ──
+  const autoAssignBusy = useRef(false);
+  useEffect(() => {
+    if (!autoAssignEnabled || !isAdmin || autoAssignBusy.current) return;
+    if (freeTables.length === 0) return;
+    const pending = isGroupPhase ? groupMatchesPending : pendingReady;
+    if (pending.length === 0) return;
+    autoAssignBusy.current = true;
+    (async () => {
+      const free = [...freeTables].sort((a, b) => a.number - b.number);
+      const n = Math.min(free.length, pending.length);
+      for (let i = 0; i < n; i++) {
+        const table = free[i].number;
+        if (isGroupPhase) {
+          const m = pending[i] as (typeof groupMatchesPending)[number];
+          await assignGroupTable(m.groupId, m.id, table);
+        } else {
+          await assignTable(pending[i] as Match, table);
+        }
+      }
+    })().finally(() => { autoAssignBusy.current = false; });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoAssignEnabled, isAdmin, isGroupPhase, freeTables.length, pendingReady.length, groupMatchesPending.length]);
 
   return (
     <>
@@ -1906,6 +1992,7 @@ function OverviewPanel({
                       canScore={isAdmin || m.player1?.id === user.id || m.player2?.id === user.id}
                       freeTables={freeTables} tableNameMap={tableNameMap}
                       assigning={groupAssigning === m.id}
+                      voiceLoading={voiceLoadingTable != null && m.table_number === voiceLoadingTable}
                       onClear={() => assignGroupTable(m.groupId, m.id, null)}
                       onScore={() => setGroupScoreMatch(m)}
                     />
@@ -1919,6 +2006,7 @@ function OverviewPanel({
                     <CompactMatchCard key={m.id} match={m} isAdmin={isAdmin}
                       canScore={isAdmin || m.player1?.id === user.id || m.player2?.id === user.id}
                       assigning={assigning === m.id} freeTables={freeTables} tableNameMap={tableNameMap}
+                      voiceLoading={voiceLoadingTable != null && m.table_number === voiceLoadingTable}
                       onAssign={(t) => assignTable(m, t)}
                       onClear={() => assignTable(m, null)}
                       onScore={() => onEnterScore(m)}
@@ -2211,11 +2299,12 @@ interface GroupMatchRowProps {
   freeTables?: TournamentTable[];
   tableNameMap?: Record<number, string>;
   assigning?: boolean;
+  voiceLoading?: boolean;
   onAssign?: (t: number) => void;
   onClear?: () => void;
   onScore?: () => void;
 }
-function GroupMatchRow({ match, label, isAdmin, canScore, freeTables = [], tableNameMap = {}, assigning, onAssign, onClear, onScore }: GroupMatchRowProps) {
+function GroupMatchRow({ match, label, isAdmin, canScore, freeTables = [], tableNameMap = {}, assigning, voiceLoading, onAssign, onClear, onScore }: GroupMatchRowProps) {
   const [showModal, setShowModal] = useState(false);
   const isLive = label === "live";
   const currentTableName = match.table_number ? (tableNameMap[match.table_number] ?? `Стол ${match.table_number}`) : null;
@@ -2254,7 +2343,11 @@ function GroupMatchRow({ match, label, isAdmin, canScore, freeTables = [], table
               {match.groupName ? `Гр.${match.groupName} · ` : ""}М{match.match_number}
             </span>
           </div>
-          {currentTableName
+          {voiceLoading
+            ? <span className="inline-flex items-center gap-1 text-[10px] font-bold text-amber-300 bg-amber-500/15 px-2 py-0.5 rounded-full">
+                <span className="w-2.5 h-2.5 border-[1.5px] border-amber-300/40 border-t-amber-300 rounded-full animate-spin" />вызов…
+              </span>
+            : currentTableName
             ? <span className="text-[10px] font-bold text-blue-300 bg-blue-500/20 px-2 py-0.5 rounded-full">{currentTableName}</span>
             : canAssign && <span className="text-[10px] text-white/20">нажмите для назначения</span>
           }
@@ -2785,11 +2878,11 @@ function ConsolationBracketView({
 
 // ── Compact match card — click row to open score/table modal ─────────────────
 interface CCardProps {
-  match: Match; isAdmin: boolean; canScore?: boolean; assigning: boolean;
+  match: Match; isAdmin: boolean; canScore?: boolean; assigning: boolean; voiceLoading?: boolean;
   freeTables: TournamentTable[]; tableNameMap: Record<number, string>;
   onAssign: (t: number) => void; onClear: () => void; onScore: () => void;
 }
-function CompactMatchCard({ match, isAdmin, canScore, freeTables, tableNameMap, onAssign, onClear, onScore }: CCardProps) {
+function CompactMatchCard({ match, isAdmin, canScore, freeTables, tableNameMap, voiceLoading, onAssign, onClear, onScore }: CCardProps) {
   const [showModal, setShowModal] = useState(false);
   const currentName = match.table_number ? (tableNameMap[match.table_number] ?? `Стол ${match.table_number}`) : null;
   const isLive = match.status === "in_progress";
@@ -2822,9 +2915,16 @@ function CompactMatchCard({ match, isAdmin, canScore, freeTables, tableNameMap, 
             </div>
           </div>
           {isLive && (
-            <span className="shrink-0 text-[10px] font-bold text-blue-300 bg-blue-500/20 px-2 py-0.5 rounded-full">
-              {currentName ?? "live"}
-            </span>
+            voiceLoading ? (
+              <span className="shrink-0 inline-flex items-center gap-1 text-[10px] font-bold text-amber-300 bg-amber-500/15 px-2 py-0.5 rounded-full">
+                <span className="w-2.5 h-2.5 border-[1.5px] border-amber-300/40 border-t-amber-300 rounded-full animate-spin" />
+                вызов…
+              </span>
+            ) : (
+              <span className="shrink-0 text-[10px] font-bold text-blue-300 bg-blue-500/20 px-2 py-0.5 rounded-full">
+                {currentName ?? "live"}
+              </span>
+            )
           )}
         </div>
       </div>

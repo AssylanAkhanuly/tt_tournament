@@ -20,8 +20,9 @@ export default async function TournamentDetailPage({ params }: Props) {
 
   if (!tournament) notFound();
 
-  // Fetch matches and tournament-specific tables in parallel
-  const [matchesRes, tablesRes] = await Promise.all([
+  // Fetch matches, tables, and groups server-side so the bracket/group stage
+  // render on first paint (no empty flash while the client fetches).
+  const [matchesRes, tablesRes, groupsRes] = await Promise.all([
     globalThis.fetch(`${base}/api/tournaments/${id}/matches/`, {
       headers: { Cookie: cookieHeader },
       cache: "no-store",
@@ -30,10 +31,15 @@ export default async function TournamentDetailPage({ params }: Props) {
       headers: { Cookie: cookieHeader },
       cache: "no-store",
     }),
+    globalThis.fetch(`${base}/api/tournaments/${id}/groups/`, {
+      headers: { Cookie: cookieHeader },
+      cache: "no-store",
+    }),
   ]);
 
   const initialMatches = matchesRes.ok ? await matchesRes.json() : [];
   const tournamentTables = tablesRes.ok ? await tablesRes.json() : [];
+  const initialGroups = groupsRes.ok ? await groupsRes.json() : [];
 
   return (
     <TournamentDetailClient
@@ -42,6 +48,7 @@ export default async function TournamentDetailPage({ params }: Props) {
       participants={participants ?? []}
       initialMatches={initialMatches}
       tournamentTables={tournamentTables}
+      initialGroups={initialGroups}
     />
   );
 }
