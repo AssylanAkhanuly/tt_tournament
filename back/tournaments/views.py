@@ -671,6 +671,9 @@ class MyActiveMatchView(APIView):
                 "match_id": bracket.pk,
                 "table_number": bracket.table_number,
                 "opponent_name": opponent.name if opponent else None,
+                "your_name": user.name,
+                # Maps the drawer's "you / opponent" scores onto score1/score2.
+                "you_is_player1": bracket.player1_id == user.id,
             }})
 
         group = (
@@ -690,6 +693,8 @@ class MyActiveMatchView(APIView):
                 "group_id": group.group_id,
                 "table_number": group.table_number,
                 "opponent_name": opponent.name if opponent else None,
+                "your_name": user.name,
+                "you_is_player1": group.player1_id == user.id,
             }})
 
         return Response({"active_match": None})
