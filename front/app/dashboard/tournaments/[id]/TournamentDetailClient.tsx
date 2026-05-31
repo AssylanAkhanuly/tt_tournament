@@ -12,6 +12,7 @@ import {
 import { useRouter } from "next/navigation";
 import { GroupMatch, Match, Participant, Tournament, TournamentGroup, TournamentTable, User } from "@/lib/types";
 import { api, type ElevenLabsVoice } from "@/lib/api";
+import { useTournamentLive } from "@/lib/useTournamentLive";
 import ScoreModal from "@/components/ScoreModal";
 import AddPlayerModal from "@/components/AddPlayerModal";
 import LiveMatchesPanel from "@/components/LiveMatchesPanel";
@@ -342,6 +343,9 @@ export default function TournamentDetailClient({
   // Remove
   const [removingId, setRemovingId] = useState<number | null>(null);
 
+  // Self-registration (a player joining an open tournament from this page)
+  const [joining, setJoining] = useState(false);
+
   // ── Derived ───────────────────────────────────────────────────────────────
   const liveCount   = matches.filter((m) => m.status === "in_progress").length;
   const finishedCnt = matches.filter((m) => m.status === "finished").length;
@@ -387,11 +391,20 @@ export default function TournamentDetailClient({
     finally { if (!silent) setRefreshing(false); }
   }, [tournament.id]);
 
-  useEffect(() => {
-    if (tournament.status !== "in_progress") return;
-    const id = setInterval(() => refresh(true), 30_000);
-    return () => clearInterval(id);
-  }, [tournament.status, refresh]);
+  // ── Live updates: poll the consolidated state endpoint while the tournament
+  // is open (roster fills up) or in progress (scores land). Pauses when the tab
+  // is hidden; updates the whole page atomically when anything changes.
+  useTournamentLive({
+    tournamentId: tournament.id,
+    enabled: tournament.status !== "finished",
+    onUpdate: (st) => {
+      if (st.tournament) setTournament(st.tournament);
+      if (st.participants) setParticipants(st.participants);
+      if (st.matches) setMatches(st.matches);
+      if (st.groups) setGroups(st.groups);
+      lastRefresh.current = Date.now();
+    },
+  });
 
   // When the tournament finishes, ratings are applied server-side — pull the
   // updated participants (rating_before/rating_change) so the standings show them.
@@ -405,31 +418,6 @@ export default function TournamentDetailClient({
     if (tournament.format !== "group_playoff" || tournament.status === "open") return;
     api.getGroups(tournament.id).then(setGroups).catch(() => {});
   }, [tournament.id, tournament.format, tournament.status]);
-
-  // SSE subscription for real-time updates (participant joins, score submissions)
-  useEffect(() => {
-    const eventSource = api.subscribeTournamentStream(tournament.id, (event) => {
-      if (event.type === "participant_joined") {
-        const { participant } = event.data;
-        setParticipants((prev) => {
-          const exists = prev.some((p) => p.id === participant.id);
-          return exists ? prev : [...prev, participant];
-        });
-      } else if (event.type === "match_updated") {
-        const { match } = event.data;
-        setMatches((prev) => prev.map((m) => (m.id === match.id ? match : m)));
-      } else if (event.type === "group_match_updated") {
-        const { match } = event.data;
-        setGroups((prev) =>
-          prev.map((g) => ({
-            ...g,
-            matches: g.matches.map((m) => (m.id === match.id ? match : m)),
-          }))
-        );
-      }
-    });
-    return () => eventSource.close();
-  }, [tournament.id]);
 
   // ── Keyboard shortcut: press 1-9/0 in Overview or Live to open score modal ──
   useEffect(() => {
@@ -678,6 +666,20 @@ export default function TournamentDetailClient({
 
   function handleMatchUpdated(updated: Match) {
     setMatches((m) => m.map((x) => (x.id === updated.id ? updated : x)));
+  }
+
+  async function handleSelfRegister() {
+    setJoining(true);
+    try {
+      const p = await api.joinTournamentSelf(tournament.id);
+      setParticipants((prev) => (prev.find((x) => x.id === p.id) ? prev : [...prev, p]));
+      setTournament((t) => ({ ...t, is_registered: true, participant_count: t.participant_count + 1 }));
+      toast("Вы записаны на турнир!");
+    } catch (err: unknown) {
+      toast((err as Record<string, string>)?.detail ?? "Не удалось записаться", false);
+    } finally {
+      setJoining(false);
+    }
   }
 
   // Nav items
@@ -966,6 +968,18 @@ export default function TournamentDetailClient({
                 <button onClick={() => setShowAddPlayer(true)} className={BTN_P}>
                   <UserPlus size={15} />Добавить{isGroupStage ? " в группу" : ""}
                 </button>
+              )}
+              {!isAdmin && tournament.status === "open" && (
+                tournament.is_registered ? (
+                  <span className="flex items-center gap-1.5 px-3 py-2 text-[13px] font-bold text-emerald-300
+                                   bg-emerald-400/15 border border-emerald-500/20 rounded-xl">
+                    <Check size={15} />Вы участвуете
+                  </span>
+                ) : (
+                  <button onClick={handleSelfRegister} disabled={joining} className={BTN_P}>
+                    <UserPlus size={15} />{joining ? "Запись…" : "Записаться"}
+                  </button>
+                )
               )}
             </div>
 

@@ -58,6 +58,8 @@ export interface Tournament {
   club_name: string | null;
   format: "single_elimination" | "group_playoff";
   group_size: number;
+  /** True if the current authenticated user is already a participant. */
+  is_registered: boolean;
 }
 
 export interface Participant {

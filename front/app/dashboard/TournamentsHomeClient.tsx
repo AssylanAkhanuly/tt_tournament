@@ -2,7 +2,7 @@
 
 import { useMemo, useState, useCallback, useEffect } from "react";
 import Link from "next/link";
-import { ChevronRight, Users, Calendar, Trophy, Clock, Building2, ChevronDown } from "lucide-react";
+import { ChevronRight, Users, Calendar, Trophy, Clock, Building2, ChevronDown, Check } from "lucide-react";
 import { Club, Tournament } from "@/lib/types";
 import { api } from "@/lib/api";
 
@@ -23,7 +23,7 @@ const STATUS = {
 
 type SortMode = "time" | "club";
 
-function TournamentCard({ t, onJoin }: { t: Tournament; onJoin?: (tournamentId: string) => void }) {
+function TournamentCard({ t, onRegister }: { t: Tournament; onRegister: (tournamentId: string, registered: boolean) => void }) {
   const [g1, g2] = avatarGrad(t.name);
   const s = STATUS[t.status];
   const date = t.starts_at
@@ -34,16 +34,18 @@ function TournamentCard({ t, onJoin }: { t: Tournament; onJoin?: (tournamentId: 
   const handleRegister = useCallback(async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
+    if (t.is_registered || registering) return;
     setRegistering(true);
+    onRegister(t.id, true); // optimistic — flip to "registered" instantly
     try {
       await api.joinTournamentSelf(t.id);
-      onJoin?.(t.id);
     } catch (err) {
+      onRegister(t.id, false); // revert on failure
       console.error("Failed to join tournament:", err);
     } finally {
       setRegistering(false);
     }
-  }, [t.id, onJoin]);
+  }, [t.id, t.is_registered, registering, onRegister]);
 
   return (
     <div className="group flex items-center gap-3 rounded-2xl border border-white/[0.07]
@@ -76,11 +78,18 @@ function TournamentCard({ t, onJoin }: { t: Tournament; onJoin?: (tournamentId: 
         <ChevronRight size={16} className="text-white/25 group-hover:text-white/60 shrink-0 transition-colors" />
       </Link>
       {t.status === "open" && (
-        <button onClick={handleRegister} disabled={registering}
-          className="px-3 py-1.5 text-[12px] font-bold text-white bg-blue-600 hover:bg-blue-700
-                     disabled:bg-blue-600/50 rounded-lg transition-colors shrink-0 mr-2">
-          {registering ? "..." : "Записаться"}
-        </button>
+        t.is_registered ? (
+          <span className="flex items-center gap-1 px-3 py-1.5 text-[12px] font-bold text-emerald-300
+                           bg-emerald-400/15 border border-emerald-500/20 rounded-lg shrink-0 mr-2">
+            <Check size={13} /> Вы в списке
+          </span>
+        ) : (
+          <button onClick={handleRegister} disabled={registering}
+            className="px-3 py-1.5 text-[12px] font-bold text-white bg-blue-600 hover:bg-blue-700
+                       disabled:bg-blue-600/50 rounded-lg transition-colors shrink-0 mr-2">
+            {registering ? "..." : "Записаться"}
+          </button>
+        )
       )}
     </div>
   );
@@ -116,10 +125,38 @@ export default function TournamentsHomeClient({ tournaments: initialTournaments,
   const [clubFilter, setClubFilter] = useState<string>("all");
   const [archiveOpen, setArchiveOpen] = useState(false);
 
-  const handleTournamentUpdated = useCallback((tournamentId: string) => {
+  const handleRegister = useCallback((tournamentId: string, registered: boolean) => {
     setTournaments((prev) =>
-      prev.map((t) => (t.id === tournamentId ? { ...t, participant_count: t.participant_count + 1 } : t))
+      prev.map((t) =>
+        t.id === tournamentId && t.is_registered !== registered
+          ? {
+              ...t,
+              is_registered: registered,
+              participant_count: Math.max(0, t.participant_count + (registered ? 1 : -1)),
+            }
+          : t
+      )
     );
+  }, []);
+
+  // Keep the list live (participant counts, statuses, who's registered) without a
+  // manual refresh. Polls only while the tab is visible; refetches on focus.
+  useEffect(() => {
+    let alive = true;
+    const load = () => {
+      if (typeof document !== "undefined" && document.hidden) return;
+      api.getTournaments()
+        .then((fresh) => { if (alive) setTournaments(fresh); })
+        .catch(() => { /* keep last state on error */ });
+    };
+    const id = setInterval(load, 12_000);
+    const onVisible = () => { if (!document.hidden) load(); };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => {
+      alive = false;
+      clearInterval(id);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
   }, []);
 
   // Apply club filter (used for both active and archive)
@@ -222,7 +259,7 @@ export default function TournamentsHomeClient({ tournaments: initialTournaments,
                 {section.title} · {section.items.length}
               </p>
               <div className="space-y-2">
-                {section.items.map((t) => <TournamentCard key={t.id} t={t} onJoin={handleTournamentUpdated} />)}
+                {section.items.map((t) => <TournamentCard key={t.id} t={t} onRegister={handleRegister} />)}
               </div>
             </section>
           ))}
@@ -277,7 +314,7 @@ export default function TournamentsHomeClient({ tournaments: initialTournaments,
                     </p>
                   )}
                   <div className="space-y-2">
-                    {section.items.map((t) => <TournamentCard key={t.id} t={t} onJoin={handleTournamentUpdated} />)}
+                    {section.items.map((t) => <TournamentCard key={t.id} t={t} onRegister={handleRegister} />)}
                   </div>
                 </section>
               ))}

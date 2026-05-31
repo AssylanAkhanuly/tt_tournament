@@ -26,6 +26,17 @@ export type ActiveMatch = {
   opponent_name: string | null;
 };
 
+// Snapshot returned by GET /api/tournaments/<id>/state/. `changed` is false
+// (and the data fields omitted) when the caller's `rev` is already current.
+export type TournamentState = {
+  rev: string;
+  changed: boolean;
+  tournament?: Tournament;
+  participants?: Participant[];
+  matches?: Match[];
+  groups?: TournamentGroup[];
+};
+
 export type AppNotification = {
   id: number;
   type: string;
@@ -285,21 +296,13 @@ export const api = {
       method: "POST",
     }),
 
-  subscribeTournamentStream: (tournamentId: string, onEvent: (event: any) => void) => {
-    const eventSource = new EventSource(`${BASE}/api/tournaments/${tournamentId}/stream/`, {
-      withCredentials: true,
-    });
-    eventSource.onmessage = (e) => {
-      try {
-        const data = JSON.parse(e.data);
-        onEvent(data);
-      } catch (err) {
-        console.error("Failed to parse SSE event:", err);
-      }
-    };
-    eventSource.onerror = () => eventSource.close();
-    return eventSource;
-  },
+  // Consolidated live snapshot used by useTournamentLive polling. Pass the last
+  // seen `rev`; the server returns `{changed:false}` when nothing changed, so
+  // the frequent poll stays cheap.
+  getTournamentState: (tournamentId: string, rev?: string) =>
+    apiFetch<TournamentState>(
+      `/api/tournaments/${tournamentId}/state/${rev ? `?rev=${encodeURIComponent(rev)}` : ""}`
+    ),
 
   // ─── Join flows ────────────────────────────────────────────────────────────
 

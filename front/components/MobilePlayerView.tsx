@@ -6,7 +6,7 @@ import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 import {
   ArrowLeft, Trophy, LayoutGrid, Zap, Users, RefreshCw,
-  Minus, Plus, X, Clock,
+  Minus, Plus, X, Clock, UserPlus, Check,
 } from "lucide-react";
 import {
   Match, GroupMatch, Tournament, TournamentGroup, TournamentTable, Participant, User,
@@ -125,6 +125,19 @@ export default function MobilePlayerView({
   const [groupScore, setGroupScore]     = useState<GMatch | null>(null);
   const [sectionPicked, setSectionPicked] = useState(false);
 
+  // The parent (TournamentDetailClient) polls the live-state endpoint and passes
+  // fresh data down as props. Mirror it into local state so phone players get a
+  // live roster and scores without running their own polling loop. Local
+  // mutations (score entry, manual refresh) still apply instantly; the next
+  // parent poll reconciles.
+  useEffect(() => { setMatches(initialMatches); }, [initialMatches]);
+  useEffect(() => { setGroups(initialGroups); }, [initialGroups]);
+  useEffect(() => { setParticipants(initialParticipants); }, [initialParticipants]);
+
+  // Self-registration straight from the tournament view (open tournaments only).
+  const [joining, setJoining] = useState(false);
+  const [joinedLocal, setJoinedLocal] = useState(false);
+
   // Detect mobile synchronously before first paint (useLayoutEffect, not useEffect).
   useLayoutEffect(() => {
     const mq = window.matchMedia("(max-width: 640px)");
@@ -153,6 +166,19 @@ export default function MobilePlayerView({
   }, [tournament.id, tournament.format]);
 
   useEffect(() => { if (active) refresh(); }, [active, refresh]);
+
+  const handleJoin = useCallback(async () => {
+    setJoining(true);
+    try {
+      const p = await api.joinTournamentSelf(tournament.id);
+      setParticipants((prev) => (prev.find((x) => x.id === p.id) ? prev : [...prev, p]));
+      setJoinedLocal(true); // instant feedback; parent poll confirms is_registered
+    } catch {
+      /* keep the CTA so the player can retry */
+    } finally {
+      setJoining(false);
+    }
+  }, [tournament.id]);
 
   // ── Derived ────────────────────────────────────────────────────────────────
   const hasBracket   = matches.length > 0;
@@ -193,6 +219,9 @@ export default function MobilePlayerView({
     { id: "players", label: "Игроки", Icon: Users,      show: true, badge: participants.length || undefined },
   ];
   const tabs = allTabs.filter((t) => t.show);
+
+  const isRegistered = tournament.is_registered || joinedLocal;
+  const showJoinCta = tournament.status === "open" && !isRegistered;
 
   // Players cannot access the club page — always go to dashboard.
   // Admins also go to dashboard (they get auto-redirected to their club from there).
@@ -268,6 +297,20 @@ export default function MobilePlayerView({
         {/* Игроки */}
         {section === "players" && (
           <div className="absolute inset-0 overflow-y-auto px-3 pt-20 pb-32">
+            {showJoinCta && (
+              <button onClick={handleJoin} disabled={joining}
+                className="w-full mb-3 flex items-center justify-center gap-2 px-4 py-3.5 rounded-2xl
+                           text-[15px] font-bold text-white bg-blue-600 active:scale-[.99] disabled:opacity-60
+                           shadow-[0_8px_24px_rgba(37,99,235,0.4)]">
+                <UserPlus size={18} />{joining ? "Запись…" : "Записаться на турнир"}
+              </button>
+            )}
+            {tournament.status === "open" && isRegistered && (
+              <div className="w-full mb-3 flex items-center justify-center gap-2 px-4 py-3 rounded-2xl
+                              text-[14px] font-bold text-emerald-300 bg-emerald-400/15 border border-emerald-500/20">
+                <Check size={16} />Вы в списке участников
+              </div>
+            )}
             <PlayersList participants={participants} youId={user.id} />
           </div>
         )}
