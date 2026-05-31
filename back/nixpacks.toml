@@ -9,4 +9,4 @@ cmds = [
 # trips), so threads let other requests run while one waits on Postgres — without
 # this (gunicorn's 1-worker/1-thread default) every request is served serially and
 # the polling load saturates the single thread.
-cmd = "python manage.py migrate --noinput && gunicorn tt_back.wsgi:application --bind 0.0.0.0:$PORT --workers 2 --threads 4 --timeout 60"
+cmd = "python manage.py migrate --noinput && python manage.py collectstatic --noinput && gunicorn tt_back.wsgi:application --bind 0.0.0.0:$PORT --workers 2 --threads 4 --timeout 60"
