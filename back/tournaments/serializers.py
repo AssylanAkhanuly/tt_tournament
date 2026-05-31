@@ -8,6 +8,7 @@ class TournamentSerializer(serializers.ModelSerializer):
     participant_count = serializers.SerializerMethodField()
     club_id           = serializers.SerializerMethodField()
     club_name         = serializers.SerializerMethodField()
+    is_registered     = serializers.SerializerMethodField()
 
     class Meta:
         model  = Tournament
@@ -17,8 +18,9 @@ class TournamentSerializer(serializers.ModelSerializer):
             "participant_count", "status",
             "club_id", "club_name",
             "format", "group_size",
+            "is_registered",
         ]
-        read_only_fields = ["id", "join_token", "created_by", "created_at", "participant_count", "status"]
+        read_only_fields = ["id", "join_token", "created_by", "created_at", "participant_count", "status", "is_registered"]
 
     def get_participant_count(self, obj):
         return obj.participants.count()
@@ -28,6 +30,19 @@ class TournamentSerializer(serializers.ModelSerializer):
 
     def get_club_name(self, obj):
         return obj.club.name if obj.club else None
+
+    def get_is_registered(self, obj):
+        """Whether the requesting user is already a participant. Lets the
+        tournament list/detail render a 'registered' state instead of a join
+        button. The list view pre-loads ``joined_tournament_ids`` into context
+        to avoid an N+1 query."""
+        request = self.context.get("request")
+        if not request or not request.user.is_authenticated:
+            return False
+        joined = self.context.get("joined_tournament_ids")
+        if joined is not None:
+            return obj.id in joined
+        return obj.participants.filter(user=request.user).exists()
 
 
 class TournamentCreateSerializer(serializers.ModelSerializer):
