@@ -248,3 +248,29 @@ class GroupMatch(models.Model):
 
     def __str__(self):
         return f"Группа {self.group.name}, матч {self.match_number}"
+
+
+class ScoreLog(models.Model):
+    """Audit trail of who entered/changed a match score and when. Display fields
+    are denormalized so the log stays a stable historical record."""
+    ACTION_SCORE = "score"
+    ACTION_RESET = "reset"
+
+    tournament      = models.ForeignKey(Tournament, on_delete=models.CASCADE, related_name="score_logs")
+    entered_by      = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name="+")
+    entered_by_name = models.CharField(max_length=150, blank=True)
+    kind            = models.CharField(max_length=12)            # "bracket" | "group"
+    match_label     = models.CharField(max_length=80, blank=True)
+    player1_name    = models.CharField(max_length=150, blank=True)
+    player2_name    = models.CharField(max_length=150, blank=True)
+    score1          = models.IntegerField(null=True, blank=True)
+    score2          = models.IntegerField(null=True, blank=True)
+    winner_name     = models.CharField(max_length=150, blank=True)
+    action          = models.CharField(max_length=12, default=ACTION_SCORE)
+    created_at      = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"{self.entered_by_name}: {self.player1_name} {self.score1}:{self.score2} {self.player2_name}"

@@ -20,13 +20,14 @@ from users.serializers import RegisterSerializer, UserSerializer
 from users.views import _set_auth_cookies
 
 from .bracket import advance_winner, advance_winner_and_loser, generate_bracket, generate_group_bracket, generate_playoff_from_groups, reset_match
-from .models import Match, Tournament, TournamentParticipant, TournamentTable, TournamentGroup, GroupMatch
+from .models import Match, Tournament, TournamentParticipant, TournamentTable, TournamentGroup, GroupMatch, ScoreLog
 from .serializers import (
     GroupMatchSerializer,
     GroupParticipantSerializer,
     GroupSerializer,
     MatchSerializer,
     ParticipantSerializer,
+    ScoreLogSerializer,
     TournamentCreateSerializer,
     TournamentSerializer,
     TournamentTableSerializer,
@@ -700,6 +701,34 @@ class MyActiveMatchView(APIView):
         return Response({"active_match": None})
 
 
+class ScoreLogView(APIView):
+    """GET /api/tournaments/score-log/?club_id=<id>[&tournament_id=<id>]
+    Who entered/changed which scores, newest first. Staff or club admin only."""
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        from clubs.models import Club
+        club_id = request.query_params.get("club_id")
+        tournament_id = request.query_params.get("tournament_id")
+        if not club_id and not tournament_id:
+            return Response({"detail": "Укажите club_id."}, status=status.HTTP_400_BAD_REQUEST)
+
+        qs = ScoreLog.objects.select_related("tournament")
+        club = None
+        if tournament_id:
+            t = get_object_or_404(Tournament.objects.select_related("club"), pk=tournament_id)
+            club = t.club
+            qs = qs.filter(tournament_id=tournament_id)
+        else:
+            club = Club.objects.filter(pk=club_id).first()
+            qs = qs.filter(tournament__club_id=club_id)
+
+        if not request.user.is_staff and not (club and club.is_admin(request.user)):
+            return Response({"detail": "Нет прав."}, status=status.HTTP_403_FORBIDDEN)
+
+        return Response(ScoreLogSerializer(qs[:200], many=True).data)
+
+
 # ─── Bracket ──────────────────────────────────────────────────────────────────
 
 class StartTournamentView(APIView):
@@ -843,6 +872,26 @@ class TournamentTableDetailView(APIView):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
+def _log_score(tournament, user, match, kind, label, action=ScoreLog.ACTION_SCORE):
+    """Record who entered/changed a score. Never let logging break scoring."""
+    try:
+        ScoreLog.objects.create(
+            tournament=tournament,
+            entered_by=user if getattr(user, "is_authenticated", False) else None,
+            entered_by_name=getattr(user, "name", "") or "",
+            kind=kind,
+            match_label=label,
+            player1_name=match.player1.name if match.player1_id else "",
+            player2_name=match.player2.name if match.player2_id else "",
+            score1=match.score1,
+            score2=match.score2,
+            winner_name=match.winner.name if match.winner_id else "",
+            action=action,
+        )
+    except Exception:
+        pass
+
+
 class SubmitScoreView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -881,6 +930,8 @@ class SubmitScoreView(APIView):
         loser = match.player1 if match.winner == match.player2 else match.player2
         advance_winner_and_loser(match, match.winner, loser)
 
+        _log_score(tournament, request.user, match, "bracket", f"Р{match.round_number} · М{match.match_number}")
+
         total_matches = tournament.matches.count()
         finished_matches = tournament.matches.filter(status=Match.FINISHED).count()
         if total_matches > 0 and total_matches == finished_matches:
@@ -905,6 +956,9 @@ class MatchResetView(APIView):
         if not _can_manage_tournament(request.user, tournament):
             return Response({"detail": "Нет прав."}, status=status.HTTP_403_FORBIDDEN)
         match = get_object_or_404(Match, pk=match_id, tournament=tournament)
+
+        # Log the reset with the score being undone (before reset_match clears it).
+        _log_score(tournament, request.user, match, "bracket", f"Р{match.round_number} · М{match.match_number}", action=ScoreLog.ACTION_RESET)
 
         was_finished = tournament.status == Tournament.STATUS_FINISHED
         try:
@@ -999,6 +1053,8 @@ class GroupMatchScoreView(APIView):
         except GP.DoesNotExist:
             pass
 
+        _log_score(tournament, request.user, match, "group", f"{group.name} · М{match.match_number}")
+
         return Response(GroupMatchSerializer(match).data)
 
 
@@ -1021,6 +1077,9 @@ class GroupMatchResetView(APIView):
 
         if match.status != GroupMatch.FINISHED or match.score1 is None:
             return Response({"detail": "Матч не сыгран — отменять нечего."}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Log the reset with the score being undone (before it's cleared below).
+        _log_score(tournament, request.user, match, "group", f"{group.name} · М{match.match_number}", action=ScoreLog.ACTION_RESET)
 
         from .models import GroupParticipant as GP
         diff = abs(match.score1 - match.score2)

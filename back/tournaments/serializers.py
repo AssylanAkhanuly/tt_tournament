@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Match, Tournament, TournamentParticipant, TournamentTable, TournamentGroup, GroupParticipant, GroupMatch
+from .models import Match, Tournament, TournamentParticipant, TournamentTable, TournamentGroup, GroupParticipant, GroupMatch, ScoreLog
 from users.serializers import UserSerializer
 
 
@@ -126,3 +126,15 @@ class GroupSerializer(serializers.ModelSerializer):
     class Meta:
         model  = TournamentGroup
         fields = ["id", "name", "order", "participants", "matches"]
+
+
+class ScoreLogSerializer(serializers.ModelSerializer):
+    tournament_name = serializers.CharField(source="tournament.name", read_only=True)
+
+    class Meta:
+        model  = ScoreLog
+        fields = [
+            "id", "tournament", "tournament_name", "kind", "match_label",
+            "player1_name", "player2_name", "score1", "score2",
+            "winner_name", "entered_by_name", "action", "created_at",
+        ]
