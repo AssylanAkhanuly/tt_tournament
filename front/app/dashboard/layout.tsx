@@ -1,24 +1,20 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Sun, Moon, Home, Trophy, User as UserIcon } from "lucide-react";
+import { Home, Trophy, User as UserIcon } from "lucide-react";
 import { User } from "@/lib/types";
 import { api } from "@/lib/api";
 import { useLang } from "@/lib/i18n";
+import { useThemeMode } from "@/lib/useThemeMode";
 import SpinCoachLogo from "@/components/SpinCoachLogo";
 import FloatingTabBar from "@/components/FloatingTabBar";
-import LanguageSwitcher from "@/components/LanguageSwitcher";
 import NotificationBell from "@/components/NotificationBell";
 import ActiveMatchBanner from "@/components/ActiveMatchBanner";
 import { useActiveMatch } from "@/lib/useActiveMatch";
 
 const TAB_PATHS = ["/dashboard", "/dashboard/my", "/dashboard/profile"];
-
-type ThemeMode = "dark" | "light";
-const THEME_KEY   = "tt_theme_mode";
-export const THEME_EVENT = "tt_theme_change";
 
 function isClubAdminOnly(user: User) {
   return !user.is_staff && user.club_ids_admin.length > 0;
@@ -94,27 +90,12 @@ function DesktopSidebar({ pathname, user, hasActiveMatch }: { pathname: string; 
 }
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
-  const { t } = useLang();
+  const { theme: themeMode } = useThemeMode();
   const [user, setUser]   = useState<User | null>(null);
   const [ready, setReady] = useState(false);
-  const [themeMode, setThemeMode] = useState<ThemeMode>("dark");
   const pathname = usePathname();
   const showNav = TAB_PATHS.includes(pathname);
-  const menuRef = useRef<HTMLDivElement>(null);
-  const [menuOpen, setMenuOpen] = useState(false);
   const activeMatch = useActiveMatch(user ? !isClubAdminOnly(user) : false);
-
-  useEffect(() => {
-    const stored = localStorage.getItem(THEME_KEY);
-    setThemeMode(stored === "light" ? "light" : "dark");
-  }, []);
-
-  useEffect(() => {
-    document.documentElement.dataset.theme = themeMode;
-    document.body.classList.toggle("tt-theme-light", themeMode === "light");
-    localStorage.setItem(THEME_KEY, themeMode);
-    window.dispatchEvent(new CustomEvent(THEME_EVENT, { detail: themeMode }));
-  }, [themeMode]);
 
   useEffect(() => {
     api.me()
@@ -122,16 +103,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       .catch(() => { window.location.href = "/login"; })
       .finally(() => setReady(true));
   }, []);
-
-  useEffect(() => {
-    function onClickOutside(e: MouseEvent) {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
-        setMenuOpen(false);
-      }
-    }
-    if (menuOpen) document.addEventListener("mousedown", onClickOutside);
-    return () => document.removeEventListener("mousedown", onClickOutside);
-  }, [menuOpen]);
 
   if (!ready || !user) {
     return (
@@ -141,8 +112,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       </div>
     );
   }
-
-  const adminOnly = isClubAdminOnly(user);
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -157,62 +126,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           <SpinCoachLogo size="sm" variant={themeMode === "light" ? "light" : "dark"} />
 
           <div className="flex items-center gap-2">
-            {/* Notifications */}
             <NotificationBell />
-
-            {/* Language dropdown */}
-            <LanguageSwitcher variant="select" />
-
-            {/* Theme toggle */}
-            <button type="button" onClick={() => setThemeMode((m) => (m === "dark" ? "light" : "dark"))}
-              className="w-8 h-8 rounded-full flex items-center justify-center
-                         bg-white/[0.07] hover:bg-white/[0.13] text-white/50 hover:text-white transition-all"
-              title={themeMode === "dark" ? t.dark_theme : t.light_theme}>
-              {themeMode === "dark" ? <Sun size={15} /> : <Moon size={15} />}
-            </button>
-
-            {/* User menu */}
-            <div ref={menuRef} className="relative">
-              <button onClick={() => setMenuOpen((o) => !o)}
-                className="flex items-center gap-2 px-2 py-1 rounded-xl hover:bg-white/[0.07] transition-all">
-                {user.avatar ? (
-                  <img src={user.avatar} alt={user.name}
-                    className="w-7 h-7 rounded-full object-cover shrink-0" />
-                ) : (
-                  <div className="w-7 h-7 rounded-full flex items-center justify-center text-[12px]
-                                  font-black text-white select-none shrink-0"
-                       style={{ background: "linear-gradient(135deg, #3b82f6, #6366f1)" }}>
-                    {user.name.charAt(0).toUpperCase()}
-                  </div>
-                )}
-                <div className="hidden sm:block text-left leading-none">
-                  <p className="text-[13px] font-semibold text-white/90">{user.name}</p>
-                  {user.is_staff && <p className="text-[10px] text-blue-400 font-medium mt-0.5">{t.administrator}</p>}
-                </div>
-              </button>
-
-              {menuOpen && (
-                <div className="absolute right-0 top-[calc(100%+8px)] w-52 rounded-2xl border border-white/[0.09]
-                                shadow-2xl overflow-hidden z-50"
-                     style={{ background: "var(--elevated)" }}>
-                  <div className="px-4 py-3 border-b border-white/[0.06]">
-                    <p className="text-[13px] font-bold text-white truncate">{user.name}</p>
-                    {!adminOnly && (
-                      <p className="text-[11px] text-white/40 mt-0.5">R{user.rating}</p>
-                    )}
-                  </div>
-                  {!adminOnly && (
-                    <div className="py-1.5">
-                      <Link href="/dashboard/profile" onClick={() => setMenuOpen(false)}
-                        className="flex items-center gap-2.5 px-4 py-2.5 text-[13px] font-medium
-                                   text-white/70 hover:text-white hover:bg-white/[0.06] transition-colors">
-                        <UserIcon size={14} className="shrink-0" />{t.profile}
-                      </Link>
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
           </div>
         </div>
       </header>

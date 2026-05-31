@@ -5,6 +5,7 @@ import Link from "next/link";
 import { ChevronRight, Users, Calendar, Trophy, Clock, Building2, ChevronDown, Check } from "lucide-react";
 import { Club, Tournament } from "@/lib/types";
 import { api } from "@/lib/api";
+import { useLang } from "@/lib/i18n";
 
 const AVATAR_GRADIENTS = [
   ["#3b82f6","#6366f1"], ["#06b6d4","#3b82f6"], ["#8b5cf6","#ec4899"],
@@ -24,11 +25,14 @@ const STATUS = {
 type SortMode = "time" | "club";
 
 function TournamentCard({ t, onRegister }: { t: Tournament; onRegister: (tournamentId: string, registered: boolean) => void }) {
+  const { t: tr } = useLang();
   const [g1, g2] = avatarGrad(t.name);
-  const s = STATUS[t.status];
+  const pill = STATUS[t.status].pill;
+  const statusLabel = { open: tr.status_open, in_progress: tr.status_live, finished: tr.status_finished }[t.status];
   const date = t.starts_at
     ? new Date(t.starts_at).toLocaleDateString("ru-RU", { day: "numeric", month: "short", year: "numeric" })
     : null;
+  const registered = t.is_registered;
   const [registering, setRegistering] = useState(false);
 
   const handleRegister = useCallback(async (e: React.MouseEvent) => {
@@ -48,22 +52,31 @@ function TournamentCard({ t, onRegister }: { t: Tournament; onRegister: (tournam
   }, [t.id, t.is_registered, registering, onRegister]);
 
   return (
-    <div className="group flex items-center gap-3 rounded-2xl border border-white/[0.07]
-                    hover:border-white/[0.14] transition-all"
-         style={{ background: "var(--card)" }}>
+    <div className={`group flex items-center gap-3 rounded-2xl border transition-all ${
+      registered ? "border-emerald-500/40 hover:border-emerald-500/60" : "border-white/[0.07] hover:border-white/[0.14]"
+    }`}
+         style={{ background: registered
+           ? "linear-gradient(135deg, rgba(16,185,129,0.13), transparent 62%), var(--card)"
+           : "var(--card)" }}>
       <Link href={`/dashboard/tournaments/${t.id}`} prefetch={false}
-        className="flex-1 flex items-center gap-3 px-4 py-3.5 active:scale-[.99]">
+        className="min-w-0 flex-1 flex items-center gap-3 px-4 py-3.5 active:scale-[.99]">
         <div className="w-11 h-11 rounded-full flex items-center justify-center text-[16px]
                         font-black text-white shrink-0"
              style={{ background: `linear-gradient(135deg, ${g1}, ${g2})`, boxShadow: `0 4px 12px ${g1}40` }}>
           {t.name.charAt(0).toUpperCase()}
         </div>
         <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-2 mb-0.5">
+          <div className="flex items-center gap-1.5 mb-0.5">
             <p className="text-[15px] font-bold text-white truncate">{t.name}</p>
-            <span className={`shrink-0 text-[10px] font-bold px-2 py-0.5 rounded-full border ${s.pill}`}>
-              {s.label}
+            <span className={`shrink-0 text-[10px] font-bold px-2 py-0.5 rounded-full border ${pill}`}>
+              {statusLabel}
             </span>
+            {registered && (
+              <span className="shrink-0 inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full
+                               bg-emerald-400/15 text-emerald-300 border border-emerald-500/25">
+                <Check size={10} />{tr.youre_in}
+              </span>
+            )}
           </div>
           <div className="flex items-center gap-3 text-[12px] text-white/40">
             <span className="flex items-center gap-1"><Users size={11} />{t.participant_count}</span>
@@ -77,19 +90,12 @@ function TournamentCard({ t, onRegister }: { t: Tournament; onRegister: (tournam
         </div>
         <ChevronRight size={16} className="text-white/25 group-hover:text-white/60 shrink-0 transition-colors" />
       </Link>
-      {t.status === "open" && (
-        t.is_registered ? (
-          <span className="flex items-center gap-1 px-3 py-1.5 text-[12px] font-bold text-emerald-300
-                           bg-emerald-400/15 border border-emerald-500/20 rounded-lg shrink-0 mr-2">
-            <Check size={13} /> Вы в списке
-          </span>
-        ) : (
-          <button onClick={handleRegister} disabled={registering}
-            className="px-3 py-1.5 text-[12px] font-bold text-white bg-blue-600 hover:bg-blue-700
-                       disabled:bg-blue-600/50 rounded-lg transition-colors shrink-0 mr-2">
-            {registering ? "..." : "Записаться"}
-          </button>
-        )
+      {t.status === "open" && !registered && (
+        <button onClick={handleRegister} disabled={registering}
+          className="px-3 py-1.5 text-[12px] font-bold text-white bg-blue-600 hover:bg-blue-700
+                     disabled:bg-blue-600/50 rounded-lg transition-colors shrink-0 mr-2">
+          {registering ? "..." : tr.register_btn}
+        </button>
       )}
     </div>
   );
@@ -119,6 +125,7 @@ function groupByClub(ts: Tournament[]): { title: string; items: Tournament[] }[]
 interface Props { tournaments: Tournament[]; clubs: Club[] }
 
 export default function TournamentsHomeClient({ tournaments: initialTournaments, clubs }: Props) {
+  const { t: tr } = useLang();
   const [tournaments, setTournaments] = useState(initialTournaments);
   const [sort, setSort]             = useState<SortMode>("time");
   const [archiveSort, setArchiveSort] = useState<SortMode>("time");
@@ -172,20 +179,20 @@ export default function TournamentsHomeClient({ tournaments: initialTournaments,
       const live = active.filter((t) => t.status === "in_progress").sort(byDate);
       const open = active.filter((t) => t.status === "open").sort(byDate);
       return [
-        { title: "Идут сейчас", items: live },
-        { title: "Предстоящие", items: open },
+        { title: tr.section_live_now, items: live },
+        { title: tr.section_upcoming, items: open },
       ].filter((s) => s.items.length > 0);
     }
     return groupByClub(active);
-  }, [active, sort]);
+  }, [active, sort, tr]);
 
   // ── Archive sections ───────────────────────────────────────────────────────
   const archiveSections = useMemo(() => {
     if (archiveSort === "time") {
-      return [{ title: "По дате", items: [...finished].sort(byDate) }];
+      return [{ title: tr.by_date, items: [...finished].sort(byDate) }];
     }
     return groupByClub(finished);
-  }, [finished, archiveSort]);
+  }, [finished, archiveSort, tr]);
 
   const liveCount = tournaments.filter((t) => t.status === "in_progress").length;
 
@@ -195,7 +202,7 @@ export default function TournamentsHomeClient({ tournaments: initialTournaments,
       {/* Header */}
       <div>
         <div className="flex items-center gap-2">
-          <h1 className="text-[28px] font-black text-white leading-tight tracking-tight">Турниры</h1>
+          <h1 className="text-[28px] font-black text-white leading-tight tracking-tight">{tr.tournaments}</h1>
           {liveCount > 0 && (
             <span className="flex items-center gap-1.5 text-[12px] font-bold text-blue-300
                              bg-blue-500/20 border border-blue-500/25 px-2.5 py-1 rounded-full">
@@ -203,7 +210,7 @@ export default function TournamentsHomeClient({ tournaments: initialTournaments,
             </span>
           )}
         </div>
-        <p className="text-[13px] text-white/40 mt-1">{active.length} активных · {finished.length} завершённых</p>
+        <p className="text-[13px] text-white/40 mt-1">{active.length} {tr.active_count} · {finished.length} {tr.finished_count}</p>
       </div>
 
       {/* Sort + club filter */}
@@ -211,8 +218,8 @@ export default function TournamentsHomeClient({ tournaments: initialTournaments,
         <div className="flex items-center gap-1 p-1 rounded-xl border border-white/[0.08]"
              style={{ background: "var(--card)" }}>
           {([
-            { id: "time" as SortMode, label: "По времени", Icon: Clock },
-            { id: "club" as SortMode, label: "По клубу",   Icon: Building2 },
+            { id: "time" as SortMode, label: tr.sort_by_time, Icon: Clock },
+            { id: "club" as SortMode, label: tr.sort_by_club, Icon: Building2 },
           ]).map(({ id, label, Icon }) => (
             <button key={id} onClick={() => setSort(id)}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-bold transition-all ${
@@ -227,7 +234,7 @@ export default function TournamentsHomeClient({ tournaments: initialTournaments,
 
         {clubs.length > 1 && (
           <div className="flex items-center gap-1.5 flex-wrap">
-            {[{ id: "all", name: "Все" }, ...clubs.map((c) => ({ id: c.id, name: c.name }))].map((c) => (
+            {[{ id: "all", name: tr.filter_all }, ...clubs.map((c) => ({ id: c.id, name: c.name }))].map((c) => (
               <button key={c.id} onClick={() => setClubFilter(c.id)}
                 className={`text-[12px] font-bold px-3 py-1.5 rounded-xl border transition-all ${
                   clubFilter === c.id
@@ -246,11 +253,11 @@ export default function TournamentsHomeClient({ tournaments: initialTournaments,
         <div className="rounded-2xl border border-white/[0.08] py-20 text-center"
              style={{ background: "var(--card)" }}>
           <Trophy size={32} className="text-white/[0.12] mx-auto mb-3" />
-          <p className="text-[15px] font-bold text-white">Турниров пока нет</p>
-          <p className="text-[13px] text-white/40 mt-1">Здесь появятся доступные турниры</p>
+          <p className="text-[15px] font-bold text-white">{tr.no_tournaments_yet}</p>
+          <p className="text-[13px] text-white/40 mt-1">{tr.no_tournaments_hint}</p>
         </div>
       ) : active.length === 0 ? (
-        <p className="text-[13px] text-white/30 text-center py-6">Нет активных турниров</p>
+        <p className="text-[13px] text-white/30 text-center py-6">{tr.no_active_tournaments}</p>
       ) : (
         <div className="space-y-6">
           {activeSections.map((section) => (
@@ -274,7 +281,7 @@ export default function TournamentsHomeClient({ tournaments: initialTournaments,
           <button onClick={() => setArchiveOpen((v) => !v)}
             className="w-full flex items-center gap-3 px-4 py-3.5 hover:bg-white/[0.03] transition-colors">
             <span className="text-[12px] font-bold uppercase tracking-[0.12em] text-white/40">
-              Архив
+              {tr.archive}
             </span>
             <span className="text-[11px] font-bold text-white/25 bg-white/[0.06] px-2 py-0.5 rounded-full">
               {finished.length}

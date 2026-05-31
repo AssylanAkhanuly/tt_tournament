@@ -3,10 +3,13 @@
 import { useEffect, useRef, useState } from "react";
 import {
   Phone, Trophy, TrendingUp, TrendingDown,
-  Award, Activity, Swords, Crown, Camera,
+  Award, Activity, Swords, Crown, Camera, Sun, Moon, Settings as SettingsIcon,
 } from "lucide-react";
 import { User, Tournament, Participant } from "@/lib/types";
 import { api } from "@/lib/api";
+import { useLang } from "@/lib/i18n";
+import { useThemeMode } from "@/lib/useThemeMode";
+import LanguageSwitcher from "@/components/LanguageSwitcher";
 import LogoutButton from "@/components/LogoutButton";
 
 const AVATAR_GRADIENTS = [
@@ -31,10 +34,10 @@ interface Data {
 }
 
 // ── Rating chart (inline SVG, no deps) ───────────────────────────────────────
-function RatingChart({ points }: { points: RatingPoint[] }) {
+function RatingChart({ points, emptyLabel }: { points: RatingPoint[]; emptyLabel: string }) {
   if (points.length < 2) return (
     <div className="h-[160px] flex items-center justify-center text-[13px] text-white/30">
-      Недостаточно данных для графика
+      {emptyLabel}
     </div>
   );
   const W = 640, H = 180;
@@ -77,6 +80,8 @@ function RatingChart({ points }: { points: RatingPoint[] }) {
 }
 
 export default function ProfileClient({ user: initialUser }: { user: User }) {
+  const { t } = useLang();
+  const { theme, setTheme } = useThemeMode();
   const [user, setUser]       = useState<User>(initialUser);
   const [data, setData]       = useState<Data | null>(null);
   const [loading, setLoading] = useState(true);
@@ -158,12 +163,12 @@ export default function ProfileClient({ user: initialUser }: { user: User }) {
   const ratingDelta = user.rating - startRating;
 
   const statCards = [
-    { label: "Турниры",      value: data?.tournaments ?? 0, Icon: Trophy,     color: "text-blue-400" },
-    { label: "Матчи",        value: totalMatches,            Icon: Swords,     color: "text-violet-400" },
-    { label: "Победы",       value: data?.wins ?? 0,         Icon: Award,      color: "text-emerald-400" },
-    { label: "Поражения",    value: data?.losses ?? 0,       Icon: Activity,   color: "text-red-400" },
-    { label: "Винрейт",      value: `${winRate}%`,           Icon: TrendingUp, color: "text-amber-400" },
-    { label: "Пик рейтинга", value: data?.peak ?? user.rating, Icon: Crown,   color: "text-cyan-400" },
+    { label: t.stat_tournaments_pl, value: data?.tournaments ?? 0,    Icon: Trophy,     color: "text-blue-400" },
+    { label: t.stat_matches,        value: totalMatches,              Icon: Swords,     color: "text-violet-400" },
+    { label: t.stat_wins,           value: data?.wins ?? 0,           Icon: Award,      color: "text-emerald-400" },
+    { label: t.stat_losses,         value: data?.losses ?? 0,         Icon: Activity,   color: "text-red-400" },
+    { label: t.stat_winrate,        value: `${winRate}%`,             Icon: TrendingUp, color: "text-amber-400" },
+    { label: t.stat_peak,           value: data?.peak ?? user.rating, Icon: Crown,      color: "text-cyan-400" },
   ];
 
   return (
@@ -201,7 +206,7 @@ export default function ProfileClient({ user: initialUser }: { user: User }) {
           </p>
           <div className="mt-4 inline-flex items-center gap-2 px-4 py-2 rounded-2xl bg-blue-500/[0.12] border border-blue-500/25">
             <TrendingUp size={16} className="text-blue-400" />
-            <span className="text-[13px] text-white/55 font-medium">Рейтинг</span>
+            <span className="text-[13px] text-white/55 font-medium">{t.rating}</span>
             <span className="text-[18px] font-black text-white tabular-nums">{user.rating}</span>
             {!loading && ratingDelta !== 0 && (
               <span className={`text-[12px] font-bold flex items-center gap-0.5 ${ratingDelta > 0 ? "text-emerald-400" : "text-red-400"}`}>
@@ -217,13 +222,13 @@ export default function ProfileClient({ user: initialUser }: { user: User }) {
       <div className="rounded-2xl border border-white/[0.08] p-5" style={{ background: "var(--card)" }}>
         <div className="flex items-center gap-2 mb-3">
           <TrendingUp size={15} className="text-blue-400" />
-          <p className="text-[13px] font-bold text-white">Динамика рейтинга</p>
+          <p className="text-[13px] font-bold text-white">{t.rating_dynamics}</p>
         </div>
         {loading
           ? <div className="h-[160px] flex items-center justify-center">
               <div className="w-5 h-5 border-2 border-blue-500/40 border-t-blue-500 rounded-full animate-spin" />
             </div>
-          : <RatingChart points={data?.ratingSeries ?? []} />}
+          : <RatingChart points={data?.ratingSeries ?? []} emptyLabel={t.not_enough_data} />}
       </div>
 
       {/* ── Stats grid ── */}
@@ -246,9 +251,9 @@ export default function ProfileClient({ user: initialUser }: { user: User }) {
       <div className="rounded-2xl border border-white/[0.08] p-5" style={{ background: "var(--card)" }}>
         <div className="flex items-center gap-2 mb-4">
           <Swords size={15} className="text-violet-400" />
-          <p className="text-[13px] font-bold text-white">Личные встречи</p>
+          <p className="text-[13px] font-bold text-white">{t.head_to_head}</p>
           {!loading && data && data.head2head.length > 0 && (
-            <span className="ml-auto text-[11px] text-white/35">{data.head2head.length} соперников</span>
+            <span className="ml-auto text-[11px] text-white/35">{data.head2head.length} {t.opponents_count}</span>
           )}
         </div>
         {loading ? (
@@ -256,7 +261,7 @@ export default function ProfileClient({ user: initialUser }: { user: User }) {
             <div className="w-5 h-5 border-2 border-blue-500/40 border-t-blue-500 rounded-full animate-spin" />
           </div>
         ) : !data || data.head2head.length === 0 ? (
-          <p className="text-[13px] text-white/30 text-center py-4">Сыгранных матчей пока нет</p>
+          <p className="text-[13px] text-white/30 text-center py-4">{t.no_matches_yet}</p>
         ) : (
           <div className="space-y-2.5">
             {data.head2head.map((h) => {
@@ -285,10 +290,45 @@ export default function ProfileClient({ user: initialUser }: { user: User }) {
         )}
       </div>
 
+      {/* ── Settings (theme + language) ── */}
+      <div className="rounded-2xl border border-white/[0.08] overflow-hidden" style={{ background: "var(--card)" }}>
+        <div className="px-5 py-4 border-b border-white/[0.06] flex items-center gap-2">
+          <SettingsIcon size={15} className="text-white/40" />
+          <p className="text-[13px] font-bold text-white">{t.settings}</p>
+        </div>
+
+        {/* Theme */}
+        <div className="px-5 py-4 flex items-center justify-between gap-3 border-b border-white/[0.06]">
+          <span className="text-[13px] font-medium text-white/75">{t.theme}</span>
+          <div className="flex items-center gap-1 p-1 rounded-xl border border-white/[0.08]"
+               style={{ background: "var(--elevated)" }}>
+            {([
+              { mode: "dark"  as const, label: t.theme_dark_opt,  Icon: Moon },
+              { mode: "light" as const, label: t.theme_light_opt, Icon: Sun  },
+            ]).map(({ mode, label, Icon }) => (
+              <button key={mode} onClick={() => setTheme(mode)}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-bold transition-all ${
+                  theme === mode
+                    ? "bg-blue-600 text-white shadow-[0_2px_8px_rgba(59,130,246,0.4)]"
+                    : "text-white/45 hover:text-white/75"
+                }`}>
+                <Icon size={13} />{label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Language */}
+        <div className="px-5 py-4 flex items-center justify-between gap-3">
+          <span className="text-[13px] font-medium text-white/75">{t.language}</span>
+          <LanguageSwitcher variant="pills" />
+        </div>
+      </div>
+
       {/* ── Logout ── */}
       <div className="rounded-2xl border border-white/[0.08] px-5 py-4 flex items-center justify-between"
            style={{ background: "var(--card)" }}>
-        <p className="text-[13px] text-white/45">Выйти из аккаунта</p>
+        <p className="text-[13px] text-white/45">{t.logout_btn}</p>
         <LogoutButton />
       </div>
     </div>

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { ChevronRight, Users, Calendar, Trophy } from "lucide-react";
 import { Tournament } from "@/lib/types";
+import { useLang } from "@/lib/i18n";
 
 const AVATAR_GRADIENTS = [
   ["#3b82f6", "#6366f1"], ["#06b6d4", "#3b82f6"], ["#8b5cf6", "#ec4899"],
@@ -20,8 +21,10 @@ const STATUS = {
 } as const;
 
 function TournamentRow({ t }: { t: Tournament }) {
+  const { t: tr } = useLang();
   const [g1, g2] = avatarGrad(t.name);
   const s = STATUS[t.status];
+  const statusLabel = { open: tr.status_open, in_progress: tr.status_live, finished: tr.status_finished }[t.status];
   const date = t.starts_at
     ? new Date(t.starts_at).toLocaleDateString("ru-RU", { day: "numeric", month: "short" })
     : null;
@@ -40,7 +43,7 @@ function TournamentRow({ t }: { t: Tournament }) {
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2">
           <p className="text-[15px] font-bold text-white truncate group-hover:text-white">{t.name}</p>
-          <span className={`shrink-0 text-[10px] font-bold px-2 py-0.5 rounded-full ${s.pill}`}>{s.label}</span>
+          <span className={`shrink-0 text-[10px] font-bold px-2 py-0.5 rounded-full ${s.pill}`}>{statusLabel}</span>
         </div>
         <div className="flex items-center gap-3 text-[12px] text-white/40 mt-1">
           <span className="flex items-center gap-1"><Users size={11} />{t.participant_count}</span>
@@ -55,29 +58,30 @@ function TournamentRow({ t }: { t: Tournament }) {
 }
 
 export default function MyTournamentsClient({ tournaments }: { tournaments: Tournament[] }) {
+  const { t: tr } = useLang();
   const live     = tournaments.filter((t) => t.status === "in_progress");
   const upcoming = tournaments.filter((t) => t.status === "open");
   const past     = tournaments.filter((t) => t.status === "finished");
 
   const sections = [
-    { title: "Идут сейчас", items: live },
-    { title: "Предстоящие", items: upcoming },
-    { title: "Завершённые", items: past },
+    { title: tr.section_live_now, items: live },
+    { title: tr.section_upcoming, items: upcoming },
+    { title: tr.section_finished_pl, items: past },
   ].filter((s) => s.items.length > 0);
 
   return (
     <div className="max-w-2xl mx-auto space-y-7">
       <div>
-        <h1 className="text-[28px] font-black text-white leading-tight tracking-tight">Мои турниры</h1>
-        <p className="text-[13px] text-white/40 mt-1">{tournaments.length} всего</p>
+        <h1 className="text-[28px] font-black text-white leading-tight tracking-tight">{tr.my_tournaments}</h1>
+        <p className="text-[13px] text-white/40 mt-1">{tournaments.length} {tr.total_count}</p>
       </div>
 
       {tournaments.length === 0 ? (
         <div className="rounded-2xl border border-white/[0.08] py-20 text-center"
              style={{ background: "var(--card)" }}>
           <Trophy size={32} className="text-white/[0.12] mx-auto mb-3" />
-          <p className="text-[15px] font-bold text-white">Турниров пока нет</p>
-          <p className="text-[13px] text-white/40 mt-1">Вы ещё не участвуете ни в одном турнире</p>
+          <p className="text-[15px] font-bold text-white">{tr.no_tournaments_yet}</p>
+          <p className="text-[13px] text-white/40 mt-1">{tr.my_no_tournaments_hint}</p>
         </div>
       ) : (
         sections.map((section) => (

@@ -4,14 +4,16 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Home, Trophy, User } from "lucide-react";
+import { useLang } from "@/lib/i18n";
 
 const TABS = [
-  { href: "/dashboard",         label: "Главная",     Icon: Home },
-  { href: "/dashboard/my",      label: "Турниры",     Icon: Trophy },
-  { href: "/dashboard/profile", label: "Профиль",     Icon: User },
+  { href: "/dashboard",         key: "home" as const,        Icon: Home },
+  { href: "/dashboard/my",      key: "tournaments" as const, Icon: Trophy },
+  { href: "/dashboard/profile", key: "profile" as const,     Icon: User },
 ] as const;
 
 export default function FloatingTabBar({ hasActiveMatch = false }: { hasActiveMatch?: boolean }) {
+  const { t } = useLang();
   const pathname = usePathname();
   const [isDark, setIsDark] = useState(true);
 
@@ -40,7 +42,8 @@ export default function FloatingTabBar({ hasActiveMatch = false }: { hasActiveMa
       <div className="pointer-events-none absolute inset-x-0 top-0 h-px rounded-full"
            style={{ background: "linear-gradient(90deg, transparent, rgba(255,255,255,0.40), transparent)" }} />
 
-      {TABS.map(({ href, label, Icon }) => {
+      {TABS.map(({ href, key, Icon }) => {
+        const label = t[key];
         const active = pathname === href;
         const showDot = hasActiveMatch && href === "/dashboard/my" && !active;
         return (

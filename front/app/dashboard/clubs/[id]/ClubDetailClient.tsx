@@ -8,11 +8,12 @@ import {
   Plus, X, Pencil, Check, Trash2,
   Trophy, Building2, Users, Settings, ChevronRight,
   UserPlus, Hash, Clock, Zap, Calendar,
-  LayoutList, CalendarDays, Camera,
+  LayoutList, CalendarDays, Camera, Sun, Moon,
 } from "lucide-react";
 import { Club, ClubAdmin, ClubTable, Tournament, User } from "@/lib/types";
 import { api } from "@/lib/api";
 import { useLang } from "@/lib/i18n";
+import { useThemeMode } from "@/lib/useThemeMode";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
 
 const TournamentCalendar = dynamic(
@@ -386,6 +387,7 @@ export default function ClubDetailClient({
   const pathname = usePathname();
   const { toasts, show: toast } = useToast();
   const { t } = useLang();
+  const { theme, setTheme } = useThemeMode();
 
   const [club,        setClub]        = useState<Club>(initClub);
   const [tournaments, setTournaments] = useState<Tournament[]>(initialTournaments);
@@ -986,6 +988,31 @@ export default function ClubDetailClient({
                       <p className="text-[11px] text-white/25 mt-1.5 font-medium">{label}</p>
                     </div>
                   ))}
+                </div>
+              </section>
+
+              {/* Theme */}
+              <section>
+                <p className={LABEL + " mb-3"}>{t.theme}</p>
+                <div className="p-5 rounded-2xl border border-white/[0.08]"
+                     style={{ background: "var(--card)" }}>
+                  <div className="flex items-center justify-between gap-3">
+                    <p className="text-[13px] text-white/50">{t.appearance}</p>
+                    <div className="flex items-center gap-1 p-1 rounded-xl border border-white/[0.08]"
+                         style={{ background: "var(--elevated)" }}>
+                      {([
+                        { mode: "dark"  as const, label: t.theme_dark_opt,  Icon: Moon },
+                        { mode: "light" as const, label: t.theme_light_opt, Icon: Sun  },
+                      ]).map(({ mode, label, Icon }) => (
+                        <button key={mode} onClick={() => setTheme(mode)}
+                          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-bold transition-all ${
+                            theme === mode ? "bg-blue-600 text-white" : "text-white/45 hover:text-white/75"
+                          }`}>
+                          <Icon size={13} />{label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
                 </div>
               </section>
 
