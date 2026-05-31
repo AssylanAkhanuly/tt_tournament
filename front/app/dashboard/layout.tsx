@@ -119,8 +119,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       {/* ── Header ──────────────────────────────────────────────────────────── */}
       <header className="sticky top-0 z-20 h-[52px] flex items-center border-b border-white/[0.06]"
               style={{
-                background: themeMode === "light" ? "rgba(255,255,255,0.92)" : "rgba(9,9,26,0.85)",
-                backdropFilter: "blur(20px)",
+                // No backdrop-filter: blur corrupts scrolling content on Mali GPUs
+                // (Honor/Huawei and many other Android phones). A near-opaque
+                // background gives the same look without the rendering bug.
+                background: themeMode === "light" ? "rgba(255,255,255,0.97)" : "rgba(9,9,26,0.97)",
               }}>
         <div className="w-full max-w-screen-xl mx-auto px-5 flex items-center justify-between">
           <SpinCoachLogo size="sm" variant={themeMode === "light" ? "light" : "dark"} />

@@ -24,7 +24,9 @@ export default function FloatingTabBar({ hasActiveMatch = false }: { hasActiveMa
     return () => window.removeEventListener("tt_theme_change", onChange);
   }, []);
 
-  const bg     = isDark ? "rgba(16,18,34,0.80)" : "rgba(255,255,255,0.80)";
+  // Near-opaque (not blurred): backdrop-filter corrupts scrolling content under
+  // the bar on Mali GPUs (Honor/Huawei/many Android phones).
+  const bg     = isDark ? "rgba(16,18,34,0.96)" : "rgba(255,255,255,0.96)";
   const border = isDark ? "rgba(255,255,255,0.11)" : "rgba(15,23,42,0.10)";
 
   return (
@@ -33,8 +35,6 @@ export default function FloatingTabBar({ hasActiveMatch = false }: { hasActiveMa
                  rounded-[26px] border shadow-[0_16px_48px_rgba(0,0,0,0.45)]"
       style={{
         background: bg,
-        backdropFilter: "blur(28px) saturate(180%)",
-        WebkitBackdropFilter: "blur(28px) saturate(180%)",
         borderColor: border,
       }}
     >

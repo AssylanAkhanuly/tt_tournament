@@ -235,7 +235,7 @@ export default function MobilePlayerView({
       <button onClick={back}
         className="fixed top-4 left-4 z-[70] w-11 h-11 rounded-full flex items-center justify-center
                    border border-white/[0.12] text-white shadow-[0_8px_24px_rgba(0,0,0,0.4)] active:scale-90"
-        style={{ background: "var(--elevated)", backdropFilter: "blur(20px)" }}>
+        style={{ background: "var(--elevated)" }}>
         <ArrowLeft size={19} />
       </button>
 
@@ -243,7 +243,7 @@ export default function MobilePlayerView({
       <button onClick={refresh}
         className="fixed top-4 right-4 z-[70] w-11 h-11 rounded-full flex items-center justify-center
                    border border-white/[0.12] text-white/70 shadow-[0_8px_24px_rgba(0,0,0,0.4)] active:scale-90"
-        style={{ background: "var(--elevated)", backdropFilter: "blur(20px)" }}>
+        style={{ background: "var(--elevated)" }}>
         <RefreshCw size={17} className={refreshing ? "animate-spin" : ""} />
       </button>
 
@@ -475,7 +475,7 @@ function BottomPill({ tabs, section, onPick }: {
   return (
     <nav className="fixed bottom-5 left-1/2 -translate-x-1/2 z-[70] flex items-center gap-1 p-1.5
                     rounded-[24px] border border-white/[0.12] shadow-[0_16px_48px_rgba(0,0,0,0.5)]"
-         style={{ background: "var(--elevated)", backdropFilter: "blur(28px) saturate(180%)" }}>
+         style={{ background: "var(--elevated)" }}>
       {tabs.map(({ id, label, Icon, badge }) => {
         const on = section === id;
         return (
