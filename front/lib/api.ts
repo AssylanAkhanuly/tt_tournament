@@ -24,6 +24,9 @@ export type ActiveMatch = {
   group_id?: number;
   table_number: number | null;
   opponent_name: string | null;
+  your_name: string;
+  /** True if the current user is player1 — maps the drawer's you/opponent scores onto score1/score2. */
+  you_is_player1: boolean;
 };
 
 // Snapshot returned by GET /api/tournaments/<id>/state/. `changed` is false

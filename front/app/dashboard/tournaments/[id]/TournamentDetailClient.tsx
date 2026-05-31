@@ -708,6 +708,24 @@ export default function TournamentDetailClient({
         initialParticipants={participants}
       />
 
+      {/* Desktop sticky register button (mobile players use MobilePlayerView's own). */}
+      {!isAdmin && tournament.status === "open" && (
+        <div className="hidden sm:flex fixed bottom-6 left-1/2 -translate-x-1/2 z-30">
+          {tournament.is_registered ? (
+            <div className="flex items-center gap-2 px-6 py-3 rounded-2xl text-[15px] font-bold text-emerald-300
+                            bg-emerald-500/15 border border-emerald-500/35 shadow-[0_8px_28px_rgba(0,0,0,0.5)]">
+              <Check size={17} />Вы зарегистрированы
+            </div>
+          ) : (
+            <button onClick={handleSelfRegister} disabled={joining}
+              className="flex items-center gap-2 px-7 py-3 rounded-2xl text-[15px] font-bold text-white bg-blue-600
+                         hover:bg-blue-500 active:scale-[.97] disabled:opacity-60 shadow-[0_8px_28px_rgba(37,99,235,0.5)]">
+              <UserPlus size={18} />{joining ? "Запись…" : "Записаться"}
+            </button>
+          )}
+        </div>
+      )}
+
       {/* ════════════════════════════════════════════════════════════════
           SIDEBAR
       ════════════════════════════════════════════════════════════════ */}
@@ -968,18 +986,6 @@ export default function TournamentDetailClient({
                 <button onClick={() => setShowAddPlayer(true)} className={BTN_P}>
                   <UserPlus size={15} />Добавить{isGroupStage ? " в группу" : ""}
                 </button>
-              )}
-              {!isAdmin && tournament.status === "open" && (
-                tournament.is_registered ? (
-                  <span className="flex items-center gap-1.5 px-3 py-2 text-[13px] font-bold text-emerald-300
-                                   bg-emerald-400/15 border border-emerald-500/20 rounded-xl">
-                    <Check size={15} />Вы участвуете
-                  </span>
-                ) : (
-                  <button onClick={handleSelfRegister} disabled={joining} className={BTN_P}>
-                    <UserPlus size={15} />{joining ? "Запись…" : "Записаться"}
-                  </button>
-                )
               )}
             </div>
 

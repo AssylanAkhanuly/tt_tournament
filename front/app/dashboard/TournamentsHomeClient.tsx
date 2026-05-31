@@ -1,8 +1,8 @@
 "use client";
 
-import { useMemo, useState, useCallback, useEffect } from "react";
+import { useMemo, useState, useEffect } from "react";
 import Link from "next/link";
-import { ChevronRight, Users, Calendar, Trophy, Clock, Building2, ChevronDown, Check } from "lucide-react";
+import { ChevronRight, Users, Calendar, Trophy, Clock, Building2, ChevronDown } from "lucide-react";
 import { Club, Tournament } from "@/lib/types";
 import { api } from "@/lib/api";
 import { useLang } from "@/lib/i18n";
@@ -24,7 +24,7 @@ const STATUS = {
 
 type SortMode = "time" | "club";
 
-function TournamentCard({ t, onRegister }: { t: Tournament; onRegister: (tournamentId: string, registered: boolean) => void }) {
+function TournamentCard({ t }: { t: Tournament }) {
   const { t: tr } = useLang();
   const [g1, g2] = avatarGrad(t.name);
   const pill = STATUS[t.status].pill;
@@ -33,71 +33,41 @@ function TournamentCard({ t, onRegister }: { t: Tournament; onRegister: (tournam
     ? new Date(t.starts_at).toLocaleDateString("ru-RU", { day: "numeric", month: "short", year: "numeric" })
     : null;
   const registered = t.is_registered;
-  const [registering, setRegistering] = useState(false);
 
-  const handleRegister = useCallback(async (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (t.is_registered || registering) return;
-    setRegistering(true);
-    onRegister(t.id, true); // optimistic — flip to "registered" instantly
-    try {
-      await api.joinTournamentSelf(t.id);
-    } catch (err) {
-      onRegister(t.id, false); // revert on failure
-      console.error("Failed to join tournament:", err);
-    } finally {
-      setRegistering(false);
-    }
-  }, [t.id, t.is_registered, registering, onRegister]);
-
+  // The whole card is the link — registration happens on the detail page now
+  // (sticky button), not inline. Registered tournaments keep a green highlight.
   return (
-    <div className={`group flex items-center gap-3 rounded-2xl border transition-all ${
-      registered ? "border-emerald-500/40 hover:border-emerald-500/60" : "border-white/[0.07] hover:border-white/[0.14]"
-    }`}
-         style={{ background: registered
-           ? "linear-gradient(135deg, rgba(16,185,129,0.13), transparent 62%), var(--card)"
-           : "var(--card)" }}>
-      <Link href={`/dashboard/tournaments/${t.id}`} prefetch={false}
-        className="min-w-0 flex-1 flex items-center gap-3 px-4 py-3.5 active:scale-[.99]">
-        <div className="w-11 h-11 rounded-full flex items-center justify-center text-[16px]
-                        font-black text-white shrink-0"
-             style={{ background: `linear-gradient(135deg, ${g1}, ${g2})`, boxShadow: `0 4px 12px ${g1}40` }}>
-          {t.name.charAt(0).toUpperCase()}
+    <Link href={`/dashboard/tournaments/${t.id}`} prefetch={false}
+      className={`group flex items-center gap-3 rounded-2xl border px-4 py-3.5 transition-all active:scale-[.99] ${
+        registered ? "border-emerald-500/40 hover:border-emerald-500/60" : "border-white/[0.07] hover:border-white/[0.14]"
+      }`}
+      style={{ background: registered
+        ? "linear-gradient(135deg, rgba(16,185,129,0.13), transparent 62%), var(--card)"
+        : "var(--card)" }}>
+      <div className="w-11 h-11 rounded-full flex items-center justify-center text-[16px]
+                      font-black text-white shrink-0"
+           style={{ background: `linear-gradient(135deg, ${g1}, ${g2})`, boxShadow: `0 4px 12px ${g1}40` }}>
+        {t.name.charAt(0).toUpperCase()}
+      </div>
+      <div className="min-w-0 flex-1">
+        <div className="flex items-center gap-1.5 mb-0.5">
+          <p className="text-[15px] font-bold text-white truncate">{t.name}</p>
+          <span className={`shrink-0 text-[10px] font-bold px-2 py-0.5 rounded-full border ${pill}`}>
+            {statusLabel}
+          </span>
         </div>
-        <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-1.5 mb-0.5">
-            <p className="text-[15px] font-bold text-white truncate">{t.name}</p>
-            <span className={`shrink-0 text-[10px] font-bold px-2 py-0.5 rounded-full border ${pill}`}>
-              {statusLabel}
+        <div className="flex items-center gap-3 text-[12px] text-white/40">
+          <span className="flex items-center gap-1"><Users size={11} />{t.participant_count}</span>
+          {date && <span className="flex items-center gap-1"><Calendar size={11} />{date}</span>}
+          {t.club_name && (
+            <span className="flex items-center gap-1 truncate max-w-[120px]">
+              <Building2 size={11} className="shrink-0" />{t.club_name}
             </span>
-            {registered && (
-              <span className="shrink-0 inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full
-                               bg-emerald-400/15 text-emerald-300 border border-emerald-500/25">
-                <Check size={10} />{tr.youre_in}
-              </span>
-            )}
-          </div>
-          <div className="flex items-center gap-3 text-[12px] text-white/40">
-            <span className="flex items-center gap-1"><Users size={11} />{t.participant_count}</span>
-            {date && <span className="flex items-center gap-1"><Calendar size={11} />{date}</span>}
-            {t.club_name && (
-              <span className="flex items-center gap-1 truncate max-w-[120px]">
-                <Building2 size={11} className="shrink-0" />{t.club_name}
-              </span>
-            )}
-          </div>
+          )}
         </div>
-        <ChevronRight size={16} className="text-white/25 group-hover:text-white/60 shrink-0 transition-colors" />
-      </Link>
-      {t.status === "open" && !registered && (
-        <button onClick={handleRegister} disabled={registering}
-          className="px-3 py-1.5 text-[12px] font-bold text-white bg-blue-600 hover:bg-blue-700
-                     disabled:bg-blue-600/50 rounded-lg transition-colors shrink-0 mr-2">
-          {registering ? "..." : tr.register_btn}
-        </button>
-      )}
-    </div>
+      </div>
+      <ChevronRight size={16} className="text-white/25 group-hover:text-white/60 shrink-0 transition-colors" />
+    </Link>
   );
 }
 
@@ -127,24 +97,9 @@ interface Props { tournaments: Tournament[]; clubs: Club[] }
 export default function TournamentsHomeClient({ tournaments: initialTournaments, clubs }: Props) {
   const { t: tr } = useLang();
   const [tournaments, setTournaments] = useState(initialTournaments);
-  const [sort, setSort]             = useState<SortMode>("time");
   const [archiveSort, setArchiveSort] = useState<SortMode>("time");
   const [clubFilter, setClubFilter] = useState<string>("all");
   const [archiveOpen, setArchiveOpen] = useState(false);
-
-  const handleRegister = useCallback((tournamentId: string, registered: boolean) => {
-    setTournaments((prev) =>
-      prev.map((t) =>
-        t.id === tournamentId && t.is_registered !== registered
-          ? {
-              ...t,
-              is_registered: registered,
-              participant_count: Math.max(0, t.participant_count + (registered ? 1 : -1)),
-            }
-          : t
-      )
-    );
-  }, []);
 
   // Keep the list live (participant counts, statuses, who's registered) without a
   // manual refresh. Polls only while the tab is visible; refetches on focus.
@@ -173,18 +128,15 @@ export default function TournamentsHomeClient({ tournaments: initialTournaments,
   const active   = useMemo(() => filterByClub(tournaments.filter((t) => t.status !== "finished")), [tournaments, clubFilter]);
   const finished = useMemo(() => filterByClub(tournaments.filter((t) => t.status === "finished")), [tournaments, clubFilter]);
 
-  // ── Active sections ────────────────────────────────────────────────────────
+  // ── Active sections: tournaments you're registered for first, then the rest ──
   const activeSections = useMemo(() => {
-    if (sort === "time") {
-      const live = active.filter((t) => t.status === "in_progress").sort(byDate);
-      const open = active.filter((t) => t.status === "open").sort(byDate);
-      return [
-        { title: tr.section_live_now, items: live },
-        { title: tr.section_upcoming, items: open },
-      ].filter((s) => s.items.length > 0);
-    }
-    return groupByClub(active);
-  }, [active, sort, tr]);
+    const registered = sortByTime(active.filter((t) => t.is_registered));
+    const available  = sortByTime(active.filter((t) => !t.is_registered));
+    return [
+      { title: tr.youre_registered, items: registered },
+      { title: tr.available_tournaments, items: available },
+    ].filter((s) => s.items.length > 0);
+  }, [active, tr]);
 
   // ── Archive sections ───────────────────────────────────────────────────────
   const archiveSections = useMemo(() => {
@@ -213,40 +165,21 @@ export default function TournamentsHomeClient({ tournaments: initialTournaments,
         <p className="text-[13px] text-white/40 mt-1">{active.length} {tr.active_count} · {finished.length} {tr.finished_count}</p>
       </div>
 
-      {/* Sort + club filter */}
-      <div className="flex items-center gap-2 flex-wrap">
-        <div className="flex items-center gap-1 p-1 rounded-xl border border-white/[0.08]"
-             style={{ background: "var(--card)" }}>
-          {([
-            { id: "time" as SortMode, label: tr.sort_by_time, Icon: Clock },
-            { id: "club" as SortMode, label: tr.sort_by_club, Icon: Building2 },
-          ]).map(({ id, label, Icon }) => (
-            <button key={id} onClick={() => setSort(id)}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-bold transition-all ${
-                sort === id
-                  ? "bg-blue-600 text-white shadow-[0_2px_8px_rgba(59,130,246,0.4)]"
-                  : "text-white/45 hover:text-white/75"
+      {/* Club filter */}
+      {clubs.length > 1 && (
+        <div className="flex items-center gap-1.5 flex-wrap">
+          {[{ id: "all", name: tr.filter_all }, ...clubs.map((c) => ({ id: c.id, name: c.name }))].map((c) => (
+            <button key={c.id} onClick={() => setClubFilter(c.id)}
+              className={`text-[12px] font-bold px-3 py-1.5 rounded-xl border transition-all ${
+                clubFilter === c.id
+                  ? "bg-white/[0.12] text-white border-white/[0.20]"
+                  : "text-white/40 border-white/[0.08] hover:text-white/70 hover:border-white/[0.14]"
               }`}>
-              <Icon size={12} />{label}
+              {c.name}
             </button>
           ))}
         </div>
-
-        {clubs.length > 1 && (
-          <div className="flex items-center gap-1.5 flex-wrap">
-            {[{ id: "all", name: tr.filter_all }, ...clubs.map((c) => ({ id: c.id, name: c.name }))].map((c) => (
-              <button key={c.id} onClick={() => setClubFilter(c.id)}
-                className={`text-[12px] font-bold px-3 py-1.5 rounded-xl border transition-all ${
-                  clubFilter === c.id
-                    ? "bg-white/[0.12] text-white border-white/[0.20]"
-                    : "text-white/40 border-white/[0.08] hover:text-white/70 hover:border-white/[0.14]"
-                }`}>
-                {c.name}
-              </button>
-            ))}
-          </div>
-        )}
-      </div>
+      )}
 
       {/* Active tournaments */}
       {active.length === 0 && finished.length === 0 ? (
@@ -266,7 +199,7 @@ export default function TournamentsHomeClient({ tournaments: initialTournaments,
                 {section.title} · {section.items.length}
               </p>
               <div className="space-y-2">
-                {section.items.map((t) => <TournamentCard key={t.id} t={t} onRegister={handleRegister} />)}
+                {section.items.map((t) => <TournamentCard key={t.id} t={t} />)}
               </div>
             </section>
           ))}
@@ -321,7 +254,7 @@ export default function TournamentsHomeClient({ tournaments: initialTournaments,
                     </p>
                   )}
                   <div className="space-y-2">
-                    {section.items.map((t) => <TournamentCard key={t.id} t={t} onRegister={handleRegister} />)}
+                    {section.items.map((t) => <TournamentCard key={t.id} t={t} />)}
                   </div>
                 </section>
               ))}

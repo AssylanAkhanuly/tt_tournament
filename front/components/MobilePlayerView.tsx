@@ -221,7 +221,6 @@ export default function MobilePlayerView({
   const tabs = allTabs.filter((t) => t.show);
 
   const isRegistered = tournament.is_registered || joinedLocal;
-  const showJoinCta = tournament.status === "open" && !isRegistered;
 
   // Players cannot access the club page — always go to dashboard.
   // Admins also go to dashboard (they get auto-redirected to their club from there).
@@ -296,25 +295,29 @@ export default function MobilePlayerView({
 
         {/* Игроки */}
         {section === "players" && (
-          <div className="absolute inset-0 overflow-y-auto px-3 pt-20 pb-32">
-            {showJoinCta && (
-              <button onClick={handleJoin} disabled={joining}
-                className="w-full mb-3 flex items-center justify-center gap-2 px-4 py-3.5 rounded-2xl
-                           text-[15px] font-bold text-white bg-blue-600 active:scale-[.99] disabled:opacity-60
-                           shadow-[0_8px_24px_rgba(37,99,235,0.4)]">
-                <UserPlus size={18} />{joining ? "Запись…" : "Записаться на турнир"}
-              </button>
-            )}
-            {tournament.status === "open" && isRegistered && (
-              <div className="w-full mb-3 flex items-center justify-center gap-2 px-4 py-3 rounded-2xl
-                              text-[14px] font-bold text-emerald-300 bg-emerald-400/15 border border-emerald-500/20">
-                <Check size={16} />Вы в списке участников
-              </div>
-            )}
+          <div className="absolute inset-0 overflow-y-auto px-3 pt-20 pb-44">
             <PlayersList participants={participants} youId={user.id} />
           </div>
         )}
       </div>
+
+      {/* ── Sticky register button (open tournaments) — sits above the nav pill ── */}
+      {tournament.status === "open" && (
+        isRegistered ? (
+          <div className="fixed bottom-[86px] left-1/2 -translate-x-1/2 z-[78] flex items-center gap-2
+                          px-5 py-3 rounded-2xl text-[14px] font-bold text-emerald-300
+                          bg-emerald-500/15 border border-emerald-500/35 shadow-[0_8px_24px_rgba(0,0,0,0.45)]">
+            <Check size={16} />Вы зарегистрированы
+          </div>
+        ) : (
+          <button onClick={handleJoin} disabled={joining}
+            className="fixed bottom-[86px] left-1/2 -translate-x-1/2 z-[78] flex items-center gap-2
+                       px-6 py-3 rounded-2xl text-[15px] font-bold text-white bg-blue-600 active:scale-[.97]
+                       disabled:opacity-60 shadow-[0_8px_24px_rgba(37,99,235,0.5)]">
+            <UserPlus size={18} />{joining ? "Запись…" : "Записаться"}
+          </button>
+        )
+      )}
 
       {/* ── Floating bottom pill nav (liquid glass) ── */}
       <BottomPill tabs={tabs} section={section}
