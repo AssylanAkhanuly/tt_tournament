@@ -254,7 +254,9 @@ class TournamentListCreateView(generics.ListCreateAPIView):
         return TournamentSerializer
 
     def get_queryset(self):
-        qs = Tournament.objects.select_related('club')
+        qs = Tournament.objects.select_related('club', 'created_by').prefetch_related(
+            'created_by__club_admin_roles'
+        ).annotate(participant_count_anno=Count('participants'))
         club_id = self.request.query_params.get('club_id')
         if club_id:
             qs = qs.filter(club_id=club_id)
@@ -308,7 +310,7 @@ class TournamentListCreateView(generics.ListCreateAPIView):
 
 
 class TournamentDetailView(generics.RetrieveAPIView):
-    queryset = Tournament.objects.select_related('club')
+    queryset = Tournament.objects.select_related('club', 'created_by')
     serializer_class = TournamentSerializer
     permission_classes = [AllowAny]
 
@@ -408,7 +410,10 @@ class TournamentParticipantsView(generics.ListAPIView):
 
     def get_queryset(self):
         tournament = get_object_or_404(Tournament, pk=self.kwargs["pk"])
-        return TournamentParticipant.objects.filter(tournament=tournament).select_related("user")
+        return (
+            TournamentParticipant.objects.filter(tournament=tournament)
+            .select_related("user").prefetch_related("user__club_admin_roles")
+        )
 
 
 def _is_group_stage(tournament):
@@ -598,22 +603,32 @@ class TournamentStateView(APIView):
     permission_classes = [AllowAny]
 
     def get(self, request, pk):
-        tournament = get_object_or_404(Tournament.objects.select_related("club"), pk=pk)
+        tournament = get_object_or_404(Tournament.objects.select_related("club", "created_by"), pk=pk)
         rev = _tournament_revision(tournament)
         if request.query_params.get("rev") == rev:
             return Response({"rev": rev, "changed": False})
 
         ctx = {"request": request}
+        # Prefetch club_admin_roles on every nested user — UserSerializer computes
+        # club_ids_admin per user, which would otherwise be one query per
+        # participant/player (hundreds per poll on a big bracket).
         participants = (
             TournamentParticipant.objects.filter(tournament=tournament)
-            .select_related("user").order_by("joined_at", "id")
+            .select_related("user").prefetch_related("user__club_admin_roles")
+            .order_by("joined_at", "id")
         )
         matches = (
             tournament.matches.select_related("player1", "player2", "winner")
+            .prefetch_related(
+                "player1__club_admin_roles", "player2__club_admin_roles", "winner__club_admin_roles"
+            )
             .order_by("round_number", "match_number")
         )
         groups = TournamentGroup.objects.filter(tournament=tournament).prefetch_related(
-            "participants__user", "matches__player1", "matches__player2", "matches__winner"
+            "participants__user", "participants__user__club_admin_roles",
+            "matches__player1", "matches__player2", "matches__winner",
+            "matches__player1__club_admin_roles", "matches__player2__club_admin_roles",
+            "matches__winner__club_admin_roles",
         )
         return Response({
             "rev": rev,
@@ -633,7 +648,12 @@ class MyTournamentsView(generics.ListAPIView):
         joined_ids = TournamentParticipant.objects.filter(
             user=self.request.user
         ).values_list("tournament_id", flat=True)
-        return Tournament.objects.filter(id__in=joined_ids).select_related('club')
+        return (
+            Tournament.objects.filter(id__in=joined_ids)
+            .select_related('club', 'created_by')
+            .prefetch_related('created_by__club_admin_roles')
+            .annotate(participant_count_anno=Count('participants'))
+        )
 
     def get_serializer_context(self):
         ctx = super().get_serializer_context()
@@ -770,6 +790,9 @@ class MatchListView(generics.ListAPIView):
         return (
             tournament.matches
             .select_related("player1", "player2", "winner")
+            .prefetch_related(
+                "player1__club_admin_roles", "player2__club_admin_roles", "winner__club_admin_roles"
+            )
             .order_by("round_number", "match_number")
         )
 
@@ -985,7 +1008,10 @@ class GroupListView(generics.ListAPIView):
     def get_queryset(self):
         tournament = get_object_or_404(Tournament, pk=self.kwargs["pk"])
         return TournamentGroup.objects.filter(tournament=tournament).prefetch_related(
-            'participants__user', 'matches__player1', 'matches__player2', 'matches__winner'
+            'participants__user', 'participants__user__club_admin_roles',
+            'matches__player1', 'matches__player2', 'matches__winner',
+            'matches__player1__club_admin_roles', 'matches__player2__club_admin_roles',
+            'matches__winner__club_admin_roles',
         )
 
 

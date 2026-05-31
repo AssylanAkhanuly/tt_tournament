@@ -23,7 +23,10 @@ class TournamentSerializer(serializers.ModelSerializer):
         read_only_fields = ["id", "join_token", "created_by", "created_at", "participant_count", "status", "is_registered"]
 
     def get_participant_count(self, obj):
-        return obj.participants.count()
+        # List views annotate this to avoid an N+1 COUNT per tournament; single-
+        # object views fall back to a direct count.
+        anno = getattr(obj, "participant_count_anno", None)
+        return anno if anno is not None else obj.participants.count()
 
     def get_club_id(self, obj):
         return str(obj.club_id) if obj.club_id else None
