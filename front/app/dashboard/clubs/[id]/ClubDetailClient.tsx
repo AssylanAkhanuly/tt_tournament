@@ -8,10 +8,10 @@ import {
   Plus, X, Pencil, Check, Trash2,
   Trophy, Building2, Users, Settings, ChevronRight,
   UserPlus, Hash, Clock, Zap, Calendar,
-  LayoutList, CalendarDays, Camera, Sun, Moon,
+  LayoutList, CalendarDays, Camera, Sun, Moon, ScrollText,
 } from "lucide-react";
 import { Club, ClubAdmin, ClubTable, Tournament, User } from "@/lib/types";
-import { api } from "@/lib/api";
+import { api, ScoreLogEntry } from "@/lib/api";
 import { useLang } from "@/lib/i18n";
 import { useThemeMode } from "@/lib/useThemeMode";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
@@ -45,7 +45,7 @@ function avatarGrad(name: string) {
   return AVATAR_GRADIENTS[Math.abs(h) % AVATAR_GRADIENTS.length];
 }
 
-type Page = "tournaments" | "tables" | "admins" | "settings";
+type Page = "tournaments" | "tables" | "admins" | "settings" | "activity";
 
 interface Props {
   user: User;
@@ -394,6 +394,8 @@ export default function ClubDetailClient({
   const [tables,      setTables]      = useState<ClubTable[]>(initialTables);
   const [admins,      setAdmins]      = useState<ClubAdmin[]>([]);
   const [adminsLoaded, setAdminsLoaded] = useState(false);
+  const [scoreLog,    setScoreLog]    = useState<ScoreLogEntry[]>([]);
+  const [logLoading,  setLogLoading]  = useState(false);
 
   const [page, setPage] = useState<Page>(initialTab);
   const [tournamentView, setTournamentViewState] = useState<"list" | "calendar">(initialView);
@@ -439,6 +441,18 @@ export default function ClubDetailClient({
         .catch(() => {});
     }
   }, [page, adminsLoaded, isAdmin, club.id]);
+
+  // (Re)load the score log each time the activity tab is opened.
+  useEffect(() => {
+    if (page !== "activity" || !isAdmin) return;
+    let alive = true;
+    setLogLoading(true);
+    api.getScoreLog(club.id)
+      .then((d) => { if (alive) setScoreLog(d); })
+      .catch(() => {})
+      .finally(() => { if (alive) setLogLoading(false); });
+    return () => { alive = false; };
+  }, [page, isAdmin, club.id]);
 
   // ── Actions ────────────────────────────────────────────────────────────────
   async function handlePhotoChange(e: React.ChangeEvent<HTMLInputElement>) {
@@ -540,6 +554,7 @@ export default function ClubDetailClient({
     { id: "tournaments", label: t.tournaments, Icon: Trophy,    badge: live.length || undefined, show: true },
     { id: "tables",      label: t.tables,      Icon: Building2, badge: tables.length,             show: true },
     { id: "admins",      label: t.admins,      Icon: Users,     badge: club.admin_count,          show: isAdmin },
+    { id: "activity",    label: t.activity_log, Icon: ScrollText,                                 show: isAdmin },
     { id: "settings",    label: t.settings,    Icon: Settings,                                    show: isAdmin },
   ];
 
@@ -898,6 +913,46 @@ export default function ClubDetailClient({
         )}
 
         {/* ── SETTINGS ──────────────────────────────────────────────────── */}
+        {page === "activity" && isAdmin && (
+          <div className="h-full overflow-y-auto">
+            <div className="max-w-2xl mx-auto px-5 py-6">
+              <div className="flex items-center gap-2 mb-4">
+                <ScrollText size={16} className="text-white/40" />
+                <h2 className="text-[17px] font-bold text-white">{t.activity_log}</h2>
+              </div>
+              {logLoading && scoreLog.length === 0 ? (
+                <div className="py-12 flex justify-center">
+                  <div className="w-5 h-5 border-2 border-blue-500/40 border-t-blue-500 rounded-full animate-spin" />
+                </div>
+              ) : scoreLog.length === 0 ? (
+                <p className="text-[13px] text-white/35 text-center py-12">{t.log_empty}</p>
+              ) : (
+                <div className="rounded-2xl border border-white/[0.08] overflow-hidden" style={{ background: "var(--card)" }}>
+                  {scoreLog.map((e) => (
+                    <div key={e.id} className="px-4 py-3 border-b border-white/[0.05] last:border-0">
+                      <div className="flex items-center justify-between gap-2">
+                        <p className="text-[13px] font-semibold text-white truncate">
+                          {e.entered_by_name || "—"}{" "}
+                          <span className={`font-medium ${e.action === "reset" ? "text-amber-300/80" : "text-white/40"}`}>
+                            {e.action === "reset" ? t.log_reset : t.log_entered}
+                          </span>
+                        </p>
+                        <span className="text-[11px] text-white/30 shrink-0 tabular-nums">
+                          {new Date(e.created_at).toLocaleString("ru-RU", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}
+                        </span>
+                      </div>
+                      <p className="text-[13px] text-white/70 mt-0.5 truncate">
+                        {e.player1_name} <span className="font-black tabular-nums text-white">{e.score1 ?? "–"}:{e.score2 ?? "–"}</span> {e.player2_name}
+                      </p>
+                      <p className="text-[11px] text-white/30 mt-0.5 truncate">{e.tournament_name} · {e.match_label}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
         {page === "settings" && isAdmin && (
           <div className="h-full overflow-y-auto">
             <div className="max-w-2xl mx-auto px-4 py-6 space-y-6">

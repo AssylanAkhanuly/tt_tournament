@@ -9,6 +9,7 @@ import { User, Tournament, Participant } from "@/lib/types";
 import { api } from "@/lib/api";
 import { useLang } from "@/lib/i18n";
 import { useThemeMode } from "@/lib/useThemeMode";
+import { usePushState } from "@/lib/usePushState";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
 import LogoutButton from "@/components/LogoutButton";
 
@@ -82,6 +83,7 @@ function RatingChart({ points, emptyLabel }: { points: RatingPoint[]; emptyLabel
 export default function ProfileClient({ user: initialUser }: { user: User }) {
   const { t } = useLang();
   const { theme, setTheme } = useThemeMode();
+  const push = usePushState();
   const [user, setUser]       = useState<User>(initialUser);
   const [data, setData]       = useState<Data | null>(null);
   const [loading, setLoading] = useState(true);
@@ -295,6 +297,31 @@ export default function ProfileClient({ user: initialUser }: { user: User }) {
         <div className="px-5 py-4 border-b border-white/[0.06] flex items-center gap-2">
           <SettingsIcon size={15} className="text-white/40" />
           <p className="text-[13px] font-bold text-white">{t.settings}</p>
+        </div>
+
+        {/* Notifications */}
+        <div className="px-5 py-4 flex items-center justify-between gap-3 border-b border-white/[0.06]">
+          <div className="min-w-0">
+            <p className="text-[13px] font-medium text-white/75">{t.notifications}</p>
+            <p className="text-[12px] text-white/35 mt-0.5">{t.notifications_desc}</p>
+          </div>
+          {push.blocked ? (
+            <span className="text-[12px] font-semibold text-amber-300/80 shrink-0 text-right">{t.notif_blocked}</span>
+          ) : !push.supported ? (
+            <span className="text-[12px] text-white/30 shrink-0">{t.notif_unsupported}</span>
+          ) : (
+            <button
+              onClick={() => (push.enabled ? push.disable() : push.enable())}
+              disabled={push.busy}
+              aria-label={t.notifications}
+              className={`relative w-12 h-7 rounded-full shrink-0 transition-colors disabled:opacity-60 ${
+                push.enabled ? "bg-emerald-500" : "bg-white/[0.15]"
+              }`}>
+              <span className={`absolute top-1 w-5 h-5 rounded-full bg-white shadow transition-all ${
+                push.enabled ? "left-6" : "left-1"
+              }`} />
+            </button>
+          )}
         </div>
 
         {/* Theme */}

@@ -1,6 +1,7 @@
 "use client";
 
 import { useLang } from "@/lib/i18n";
+import { usePushState } from "@/lib/usePushState";
 import { Home, Trophy, User } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -18,6 +19,7 @@ export default function FloatingTabBar({
   hasActiveMatch?: boolean;
 }) {
   const { t } = useLang();
+  const { needsAttention: pushWarn } = usePushState();
   const pathname = usePathname();
   const [isDark, setIsDark] = useState(true);
 
@@ -63,6 +65,7 @@ export default function FloatingTabBar({
         const label = t[key];
         const active = pathname === href;
         const showDot = hasActiveMatch && href === "/dashboard/my" && !active;
+        const showWarn = pushWarn && href === "/dashboard/profile" && !active;
         return (
           <Link
             key={href}
@@ -82,6 +85,9 @@ export default function FloatingTabBar({
               <Icon size={20} strokeWidth={active ? 2.5 : 2} />
               {showDot && (
                 <span className="absolute -top-1 -right-1.5 w-2.5 h-2.5 rounded-full bg-blue-400 ring-2 ring-[var(--surface)] animate-pulse" />
+              )}
+              {showWarn && (
+                <span className="absolute -top-1 -right-1.5 w-2.5 h-2.5 rounded-full bg-amber-400 ring-2 ring-[var(--surface)]" />
               )}
             </span>
             <span className="text-[10px] font-bold tracking-tight">

@@ -40,6 +40,22 @@ export type TournamentState = {
   groups?: TournamentGroup[];
 };
 
+export type ScoreLogEntry = {
+  id: number;
+  tournament: string;
+  tournament_name: string;
+  kind: "bracket" | "group";
+  match_label: string;
+  player1_name: string;
+  player2_name: string;
+  score1: number | null;
+  score2: number | null;
+  winner_name: string;
+  entered_by_name: string;
+  action: "score" | "reset";
+  created_at: string;
+};
+
 export type AppNotification = {
   id: number;
   type: string;
@@ -245,6 +261,9 @@ export const api = {
     apiFetch<Tournament[]>(clubId ? `/api/tournaments/?club_id=${clubId}` : "/api/tournaments/"),
 
   getMyTournaments: () => apiFetch<Tournament[]>("/api/tournaments/my/"),
+
+  getScoreLog: (clubId: string) =>
+    apiFetch<ScoreLogEntry[]>(`/api/tournaments/score-log/?club_id=${clubId}`),
 
   createTournament: (data: { name: string; description?: string; starts_at?: string; club_id?: string; format?: string; group_size?: number }) =>
     apiFetch<Tournament>("/api/tournaments/", {

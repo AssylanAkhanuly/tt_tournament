@@ -3,11 +3,13 @@
 import ActiveMatchBanner from "@/components/ActiveMatchBanner";
 import FloatingTabBar from "@/components/FloatingTabBar";
 import NotificationBell from "@/components/NotificationBell";
+import NotificationPrompt from "@/components/NotificationPrompt";
 import SpinCoachLogo from "@/components/SpinCoachLogo";
 import { api } from "@/lib/api";
 import { useLang } from "@/lib/i18n";
 import { User } from "@/lib/types";
 import { useActiveMatch } from "@/lib/useActiveMatch";
+import { usePushState } from "@/lib/usePushState";
 import { useThemeMode } from "@/lib/useThemeMode";
 import { Home, Trophy, User as UserIcon } from "lucide-react";
 import Link from "next/link";
@@ -31,16 +33,18 @@ function DesktopSidebar({
   hasActiveMatch: boolean;
 }) {
   const { t } = useLang();
+  const { needsAttention: pushWarn } = usePushState();
   const adminOnly = isClubAdminOnly(user);
 
   const NAV = [
-    { href: "/dashboard", label: t.home, Icon: Home, show: true, dot: false },
+    { href: "/dashboard", label: t.home, Icon: Home, show: true, dot: false, warn: false },
     {
       href: "/dashboard/my",
       label: t.my_tournaments,
       Icon: Trophy,
       show: !adminOnly,
       dot: hasActiveMatch,
+      warn: false,
     },
     {
       href: "/dashboard/profile",
@@ -48,6 +52,7 @@ function DesktopSidebar({
       Icon: UserIcon,
       show: !adminOnly,
       dot: false,
+      warn: pushWarn,
     },
   ].filter((n) => n.show);
 
@@ -66,7 +71,7 @@ function DesktopSidebar({
   return (
     <aside className="hidden sm:flex flex-col w-[200px] xl:w-[220px] shrink-0 border-r border-white/[0.06] py-4 overflow-y-auto">
       <nav className="flex-1 px-2 space-y-0.5">
-        {NAV.map(({ href, label, Icon, dot }) => {
+        {NAV.map(({ href, label, Icon, dot, warn }) => {
           const active = pathname === href;
           return (
             <Link
@@ -88,6 +93,9 @@ function DesktopSidebar({
                 />
                 {dot && (
                   <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-blue-400 ring-2 ring-[var(--bg)] animate-pulse" />
+                )}
+                {!dot && warn && (
+                  <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-amber-400 ring-2 ring-[var(--bg)]" />
                 )}
               </span>
               <span className="text-[14px] font-semibold">{label}</span>
@@ -200,6 +208,7 @@ export default function DashboardLayout({
             hasActiveMatch={!!activeMatch}
           />
           <main className="flex-1 overflow-y-auto px-5 py-6 pb-28 sm:px-8 sm:py-8 sm:pb-8">
+            <NotificationPrompt />
             {activeMatch && <ActiveMatchBanner match={activeMatch} />}
             {children}
           </main>

@@ -131,7 +131,10 @@ export default function MobilePlayerView({
   // mutations (score entry, manual refresh) still apply instantly; the next
   // parent poll reconciles.
   useEffect(() => { setMatches(initialMatches); }, [initialMatches]);
-  useEffect(() => { setGroups(initialGroups); }, [initialGroups]);
+  // The parent loads groups lazily, so its prop starts empty — only mirror
+  // non-empty updates, otherwise an empty parent prop wipes groups we already
+  // fetched (which hid the "Группы" tab until the bracket tab was opened).
+  useEffect(() => { if (initialGroups.length) setGroups(initialGroups); }, [initialGroups]);
   useEffect(() => { setParticipants(initialParticipants); }, [initialParticipants]);
 
   // Self-registration straight from the tournament view (open tournaments only).
@@ -166,6 +169,14 @@ export default function MobilePlayerView({
   }, [tournament.id, tournament.format]);
 
   useEffect(() => { if (active) refresh(); }, [active, refresh]);
+
+  // Eagerly load groups the moment a group tournament is opened, so the
+  // "Группы" tab is present right away (not only after visiting the bracket tab).
+  useEffect(() => {
+    if (active && tournament.format === "group_playoff") {
+      api.getGroups(tournament.id).then((g) => { if (g?.length) setGroups(g); }).catch(() => {});
+    }
+  }, [active, tournament.id, tournament.format]);
 
   const handleJoin = useCallback(async () => {
     setJoining(true);
