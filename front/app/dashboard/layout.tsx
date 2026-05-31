@@ -193,7 +193,7 @@ export default function DashboardLayout({
 
       {/* ── Body ────────────────────────────────────────────────────────────── */}
       {showNav ? (
-        <div className="flex flex-1 min-h-0 ">
+        <div className="flex flex-1 min-h-0 overflow-hidden">
           <DesktopSidebar
             pathname={pathname}
             user={user}
