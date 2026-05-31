@@ -36,7 +36,7 @@ export default function FloatingTabBar({
 
   return (
     <nav
-      className="fixed bottom-5 left-1/2 z-40 flex items-center gap-1 p-1.5
+      className="fixed bottom-5 left-4 right-4 z-40 flex items-center gap-1 p-1.5
                  rounded-[26px] border "
       style={{
         background: bg,
@@ -45,9 +45,6 @@ export default function FloatingTabBar({
         // (Honor/Huawei) leave a corrupted "trail" in the scrolling content the
         // bar passes over. translateX(-50%) keeps it centred (it replaces the
         // -translate-x-1/2 class, which inline transform would otherwise clobber).
-        transform: "translateX(-50%) translateZ(0)",
-        willChange: "transform",
-        backfaceVisibility: "hidden",
       }}
     >
       {/* top sheen */}
