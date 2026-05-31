@@ -31,11 +31,18 @@ export default function FloatingTabBar({ hasActiveMatch = false }: { hasActiveMa
 
   return (
     <nav
-      className="fixed bottom-5 left-1/2 -translate-x-1/2 z-40 flex items-center gap-1 p-1.5
+      className="fixed bottom-5 left-1/2 z-40 flex items-center gap-1 p-1.5
                  rounded-[26px] border shadow-[0_16px_48px_rgba(0,0,0,0.45)]"
       style={{
         background: bg,
         borderColor: border,
+        // Promote the fixed bar onto its own GPU layer. Without this, Mali GPUs
+        // (Honor/Huawei) leave a corrupted "trail" in the scrolling content the
+        // bar passes over. translateX(-50%) keeps it centred (it replaces the
+        // -translate-x-1/2 class, which inline transform would otherwise clobber).
+        transform: "translateX(-50%) translateZ(0)",
+        willChange: "transform",
+        backfaceVisibility: "hidden",
       }}
     >
       {/* top sheen */}
