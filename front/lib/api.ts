@@ -313,6 +313,12 @@ export const api = {
       method: "DELETE",
     }),
 
+  setParticipantAbsent: (tournamentId: string, participantId: number, isAbsent: boolean) =>
+    apiFetch<Participant>(`/api/tournaments/${tournamentId}/participants/${participantId}/absent/`, {
+      method: "PATCH",
+      body: JSON.stringify({ is_absent: isAbsent }),
+    }),
+
   joinTournamentSelf: (tournamentId: string) =>
     apiFetch<Participant>(`/api/tournaments/${tournamentId}/participants/join/`, {
       method: "POST",

@@ -66,6 +66,8 @@ export interface Participant {
   id: number;
   user: User;
   joined_at: string;
+  /** No-show: matches excluded from rating, 0 group points, unplayed matches forfeited */
+  is_absent: boolean;
   /** RTTF rating snapshot, set when the tournament finishes */
   rating_before: number | null;
   rating_change: number | null;
@@ -103,15 +105,23 @@ export interface GroupMatch {
   winner: User | null;
   status: "pending" | "in_progress" | "finished";
   table_number: number | null;
+  /** Auto-recorded forfeit because an opponent was marked absent */
+  is_walkover: boolean;
 }
 
 export interface GroupParticipant {
   id: number;
   user: User;
+  /** Fixed seed position within the group (snake-seed order) */
+  seed: number;
   points: number;
   wins: number;
   losses: number;
   diff: number;
+  /** Standings rank (1 = top); changes with results, rows stay in seed order */
+  place: number;
+  /** No-show: 0 points, matches excluded from rating */
+  is_absent: boolean;
 }
 
 export interface TournamentGroup {

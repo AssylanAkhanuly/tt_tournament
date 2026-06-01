@@ -7,7 +7,7 @@ import {
   ArrowLeft, Pencil, Check, X, Trash2, UserPlus,
   Zap, Users, Trophy, Clock, Settings, Minus,
   RefreshCw, Calendar, LayoutGrid, Plus, ToggleLeft, ToggleRight, Layers,
-  ChevronDown, Volume2, VolumeX,
+  ChevronDown, Volume2, VolumeX, UserX, UserCheck,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { GroupMatch, Match, Participant, Tournament, TournamentGroup, TournamentTable, User } from "@/lib/types";
@@ -353,6 +353,8 @@ export default function TournamentDetailClient({
 
   // Remove
   const [removingId, setRemovingId] = useState<number | null>(null);
+  // Absent toggle (in-flight participant id)
+  const [absentId, setAbsentId] = useState<number | null>(null);
 
   // Self-registration (a player joining an open tournament from this page)
   const [joining, setJoining] = useState(false);
@@ -702,6 +704,19 @@ export default function TournamentDetailClient({
     // A late entry during the group stage gets seated in a group server-side —
     // refresh the groups so the new player and their matches appear.
     if (isGroupStage) api.getGroups(tournament.id).then(setGroups).catch(() => {});
+  }
+
+  async function handleToggleAbsent(p: Participant) {
+    const next = !p.is_absent;
+    setAbsentId(p.id);
+    try {
+      await api.setParticipantAbsent(tournament.id, p.id, next);
+      setParticipants((list) => list.map((x) => (x.id === p.id ? { ...x, is_absent: next } : x)));
+      // Forfeits + standings changed server-side — pull fresh groups.
+      if (isGroupStage) api.getGroups(tournament.id).then(setGroups).catch(() => {});
+      toast(next ? `${p.user.name} отмечен отсутствующим` : `${p.user.name} снова в игре`);
+    } catch (err: unknown) { toast((err as Record<string, string>)?.detail ?? "Ошибка", false); }
+    finally { setAbsentId(null); }
   }
 
   function handleMatchUpdated(updated: Match) {
@@ -1058,7 +1073,7 @@ export default function TournamentDetailClient({
                         <div key={p.id}>
                           <div className={`flex items-center gap-4 px-5 py-3.5 transition-colors ${
                             isWinner ? "bg-amber-400/[0.04]" : "hover:bg-white/[0.02]"
-                          }`}>
+                          } ${p.is_absent ? "opacity-50" : ""}`}>
                             {/* Rank */}
                             <div className="w-7 h-7 rounded-full bg-white/[0.05]
                                             flex items-center justify-center text-[12px] font-bold
@@ -1086,6 +1101,13 @@ export default function TournamentDetailClient({
                                     🏆 Победитель
                                   </span>
                                 )}
+                                {p.is_absent && (
+                                  <span className="text-[11px] font-bold text-amber-300/90
+                                                   bg-amber-500/10 px-2 py-0.5 rounded-full
+                                                   border border-amber-500/25 shrink-0">
+                                    Отсутствует
+                                  </span>
+                                )}
                               </div>
                               <div className="flex items-center gap-2 mt-0.5">
                                 <p className="text-[12px] text-white/25">{p.user.phone}</p>
@@ -1099,6 +1121,18 @@ export default function TournamentDetailClient({
                               <Calendar size={10} />
                               {new Date(p.joined_at).toLocaleDateString("ru-RU")}
                             </div>
+                            {isAdmin && tournament.status !== "finished" && (
+                              <button onClick={() => handleToggleAbsent(p)} disabled={absentId === p.id}
+                                title={p.is_absent ? "Вернуть в игру" : "Отметить отсутствующим"}
+                                className={`w-7 h-7 rounded-full flex items-center justify-center
+                                           disabled:opacity-40 transition-all shrink-0 ${
+                                  p.is_absent
+                                    ? "text-amber-300/80 hover:bg-emerald-500/15 hover:text-emerald-400"
+                                    : "text-white/15 hover:bg-amber-500/15 hover:text-amber-400"
+                                }`}>
+                                {p.is_absent ? <UserCheck size={14} /> : <UserX size={14} />}
+                              </button>
+                            )}
                             {isAdmin && tournament.status === "open" && (
                               <button onClick={() => handleRemove(p.id)} disabled={removingId === p.id}
                                 className="w-7 h-7 rounded-full hover:bg-red-500/15 flex items-center
@@ -1505,7 +1539,8 @@ function GroupsTab({
               {/* Standings table */}
               <div className="rounded-2xl border border-white/[0.08] overflow-hidden"
                    style={{ background: "var(--card)" }}>
-                <div className="grid grid-cols-[1fr_auto_auto_auto_auto_auto] gap-0 text-[11px] font-bold uppercase tracking-wider text-white/30 px-5 py-2.5 border-b border-white/[0.06]">
+                <div className="grid grid-cols-[2rem_1fr_auto_auto_auto_auto_auto] gap-0 text-[11px] font-bold uppercase tracking-wider text-white/30 px-5 py-2.5 border-b border-white/[0.06]">
+                  <span className="text-center">М</span>
                   <span>Игрок</span>
                   <span className="w-10 text-center">Рейт.</span>
                   <span className="w-8 text-center">В</span>
@@ -1513,13 +1548,17 @@ function GroupsTab({
                   <span className="w-8 text-center">О</span>
                   <span className="w-12 text-center">Разн.</span>
                 </div>
-                {group.participants.map((gp, idx) => (
+                {[...group.participants].sort((a, b) => a.seed - b.seed).map((gp, idx, arr) => (
                   <div key={gp.id}
-                    className={`grid grid-cols-[1fr_auto_auto_auto_auto_auto] items-center gap-0 px-5 py-3 ${
-                      idx < group.participants.length - 1 ? "border-b border-white/[0.04]" : ""
-                    }`}
+                    className={`grid grid-cols-[2rem_1fr_auto_auto_auto_auto_auto] items-center gap-0 px-5 py-3 ${
+                      idx < arr.length - 1 ? "border-b border-white/[0.04]" : ""
+                    } ${gp.is_absent ? "opacity-45" : ""}`}
                   >
-                    <span className="text-[14px] font-semibold text-white truncate pr-3">{gp.user.name}</span>
+                    <span className="text-center text-[13px] font-bold text-white/50 tabular-nums">{gp.place ?? idx + 1}</span>
+                    <span className="text-[14px] font-semibold text-white truncate pr-3">
+                      {gp.user.name}
+                      {gp.is_absent && <span className="ml-1.5 text-[10px] font-bold text-amber-300/80 uppercase">н/я</span>}
+                    </span>
                     <span className="w-10 text-center text-[12px] text-blue-300/60">{gp.user.rating}</span>
                     <span className="w-8 text-center text-[13px] text-emerald-400">{gp.wins}</span>
                     <span className="w-8 text-center text-[13px] text-red-400/70">{gp.losses}</span>
@@ -2626,7 +2665,8 @@ function GroupRoundRobinTable({ group, colorIdx = 0, isAdmin = false, canEditSco
   group: TournamentGroup; colorIdx?: number; isAdmin?: boolean; canEditScores?: boolean;
   onEditMatch?: (m: GroupMatch) => void;
 }) {
-  const players = group.participants;
+  // Rows stay in fixed seed order; the place number (М) moves with results.
+  const players = [...group.participants].sort((a, b) => a.seed - b.seed);
   const color   = GROUP_COLORS[colorIdx % GROUP_COLORS.length];
 
   // Build matrix + a lookup of the match for a given (rowId, colId) pair.
@@ -2689,8 +2729,11 @@ function GroupRoundRobinTable({ group, colorIdx = 0, isAdmin = false, canEditSco
                   {rowIdx + 1}
                 </td>
                 {/* Player + rating */}
-                <td className="px-3 py-2.5 max-w-[140px]">
-                  <span className="text-[12px] font-semibold text-white/85 truncate block">{p.user.name}</span>
+                <td className={`px-3 py-2.5 max-w-[140px] ${p.is_absent ? "opacity-45" : ""}`}>
+                  <span className="text-[12px] font-semibold text-white/85 truncate block">
+                    {p.user.name}
+                    {p.is_absent && <span className="ml-1 text-[9px] font-bold text-amber-300/80 uppercase">н/я</span>}
+                  </span>
                   <span className="text-[10px] text-red-400/60 font-bold">R:{p.user.rating}</span>
                 </td>
                 {/* Head-to-head cells */}
@@ -2736,10 +2779,10 @@ function GroupRoundRobinTable({ group, colorIdx = 0, isAdmin = false, canEditSco
                     style={{ borderLeft: `1px solid ${color.border}`, background: color.accent }}>
                   {p.points}
                 </td>
-                {/* Place */}
+                {/* Place (standings rank — moves independently of the row) */}
                 <td className="text-center py-2.5 text-[13px] font-bold text-white/50 tabular-nums"
                     style={{ borderLeft: `1px solid rgba(255,255,255,0.07)` }}>
-                  {rowIdx + 1}
+                  {p.place ?? rowIdx + 1}
                 </td>
               </tr>
             ))}
