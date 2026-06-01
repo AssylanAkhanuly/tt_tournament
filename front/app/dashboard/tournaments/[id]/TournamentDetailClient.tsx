@@ -652,7 +652,7 @@ export default function TournamentDetailClient({
   async function handleScoreSubmit(s1: number, s2: number) {
     if (!scoreMatch) return;
     const previousMatches = matches;
-    await api.submitScore(tournament.id, scoreMatch.id, s1, s2);
+    await api.submitScore(tournament.id, scoreMatch.id, s1, s2, { autoForfeit: autoAssignEnabled });
     const [fm, ft] = await Promise.all([api.getMatches(tournament.id), api.getTournament(tournament.id)]);
     callNewlyAssignedMatches(previousMatches, fm);
     setMatches(fm); setTournament(ft); setScoreMatch(null);
@@ -683,7 +683,7 @@ export default function TournamentDetailClient({
     }
     const previousMatches = matches;
     await api.resetMatch(tournament.id, scoreMatch.id);
-    await api.submitScore(tournament.id, scoreMatch.id, s1, s2);
+    await api.submitScore(tournament.id, scoreMatch.id, s1, s2, { autoForfeit: autoAssignEnabled });
     const [fm, ft] = await Promise.all([api.getMatches(tournament.id), api.getTournament(tournament.id)]);
     callNewlyAssignedMatches(previousMatches, fm);
     setMatches(fm); setTournament(ft); setScoreMatch(null);
@@ -695,7 +695,7 @@ export default function TournamentDetailClient({
   async function handleScoreForfeit(winnerIsP1: boolean) {
     if (!scoreMatch) return;
     const previousMatches = matches;
-    await api.submitScore(tournament.id, scoreMatch.id, 0, 0, true, winnerIsP1 ? 1 : 2);
+    await api.submitScore(tournament.id, scoreMatch.id, 0, 0, { walkover: true, winner: winnerIsP1 ? 1 : 2, autoForfeit: autoAssignEnabled });
     const [fm, ft] = await Promise.all([api.getMatches(tournament.id), api.getTournament(tournament.id)]);
     callNewlyAssignedMatches(previousMatches, fm);
     setMatches(fm); setTournament(ft); setScoreMatch(null);
@@ -727,7 +727,7 @@ export default function TournamentDetailClient({
     const next = !p.is_absent;
     setAbsentId(p.id);
     try {
-      await api.setParticipantAbsent(tournament.id, p.id, next);
+      await api.setParticipantAbsent(tournament.id, p.id, next, autoAssignEnabled);
       setParticipants((list) => list.map((x) => (x.id === p.id ? { ...x, is_absent: next } : x)));
       // Marking absent forfeits their unplayed group + bracket matches and may
       // advance opponents — pull fresh groups, matches and tournament status.

@@ -313,10 +313,10 @@ export const api = {
       method: "DELETE",
     }),
 
-  setParticipantAbsent: (tournamentId: string, participantId: number, isAbsent: boolean) =>
+  setParticipantAbsent: (tournamentId: string, participantId: number, isAbsent: boolean, autoForfeit = false) =>
     apiFetch<Participant>(`/api/tournaments/${tournamentId}/participants/${participantId}/absent/`, {
       method: "PATCH",
-      body: JSON.stringify({ is_absent: isAbsent }),
+      body: JSON.stringify({ is_absent: isAbsent, auto_forfeit: autoForfeit }),
     }),
 
   joinTournamentSelf: (tournamentId: string) =>
@@ -402,10 +402,18 @@ export const api = {
   getMatches: (id: string) =>
     apiFetch<Match[]>(`/api/tournaments/${id}/matches/`),
 
-  submitScore: (tournamentId: string, matchId: number, score1: number, score2: number, walkover = false, winner?: 1 | 2) =>
+  submitScore: (
+    tournamentId: string, matchId: number, score1: number, score2: number,
+    opts: { walkover?: boolean; winner?: 1 | 2; autoForfeit?: boolean } = {},
+  ) =>
     apiFetch<Match>(`/api/tournaments/${tournamentId}/matches/${matchId}/score/`, {
       method: "POST",
-      body: JSON.stringify({ score1, score2, walkover, winner }),
+      body: JSON.stringify({
+        score1, score2,
+        walkover: opts.walkover ?? false,
+        winner: opts.winner,
+        auto_forfeit: opts.autoForfeit ?? false,
+      }),
     }),
 
   resetMatch: (tournamentId: string, matchId: number) =>
