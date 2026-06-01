@@ -2266,24 +2266,26 @@ function GroupScoreModal({
   const [s2, setS2]       = useState(match.score2 ?? 0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [wo, setWo]       = useState<0 | 1 | 2>(0);  // selected walkover winner
 
   const p1wins = s1 > s2, p2wins = s2 > s1;
   const unchanged = s1 === match.score1 && s2 === match.score2;
 
-  function pick(a: number, b: number) { setS1(a); setS2(b); setError(null); }
-
-  async function forfeit(winnerIsP1: boolean) {
-    if (!onForfeit) return;
-    setLoading(true); setError(null);
-    try { await onForfeit(winnerIsP1); }
-    catch (err: unknown) { setError((err as Record<string, string>)?.detail ?? "Не удалось сохранить."); setLoading(false); }
+  function pick(a: number, b: number) { setS1(a); setS2(b); setWo(0); setError(null); }
+  function bump(setScore: (n: number) => void, n: number) { setScore(n); setWo(0); setError(null); }
+  function pickWalkover(winnerIsP1: boolean) {
+    setWo(winnerIsP1 ? 1 : 2);
+    setS1(winnerIsP1 ? 3 : 0); setS2(winnerIsP1 ? 0 : 3);
+    setError(null);
   }
 
   async function save() {
     if (s1 === s2) { setError("Ничья недопустима."); return; }
     setLoading(true); setError(null);
-    try { await onSubmit(s1, s2); }
-    catch (err: unknown) { setError((err as Record<string, string>)?.detail ?? "Не удалось сохранить."); }
+    try {
+      if (wo && onForfeit) await onForfeit(wo === 1);
+      else await onSubmit(s1, s2);
+    } catch (err: unknown) { setError((err as Record<string, string>)?.detail ?? "Не удалось сохранить."); }
     finally { setLoading(false); }
   }
 
@@ -2346,7 +2348,7 @@ function GroupScoreModal({
                   {absent && <span className="ml-1.5 text-[10px] font-bold text-amber-300/90 uppercase">отсутствует</span>}
                 </span>
                 <div className="flex items-center gap-1 shrink-0">
-                  <button onClick={() => { setScore(Math.max(0, score - 1)); setError(null); }}
+                  <button onClick={() => bump(setScore, Math.max(0, score - 1))}
                     className="w-8 h-8 rounded-xl bg-white/[0.07] hover:bg-white/[0.14] flex items-center
                                justify-center text-white/50 hover:text-white transition-all active:scale-[.90]">
                     <Minus size={13} />
@@ -2354,7 +2356,7 @@ function GroupScoreModal({
                   <span className={`w-10 text-center text-[28px] font-black tabular-nums leading-none ${
                     wins ? "text-emerald-300" : "text-white/80"
                   }`}>{score}</span>
-                  <button onClick={() => { setScore(score + 1); setError(null); }}
+                  <button onClick={() => bump(setScore, score + 1)}
                     className="w-8 h-8 rounded-xl bg-white/[0.07] hover:bg-white/[0.14] flex items-center
                                justify-center text-white/50 hover:text-white transition-all active:scale-[.90]">
                     <Plus size={13} />
@@ -2369,7 +2371,7 @@ function GroupScoreModal({
             <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-white/25 mb-2">Быстрый результат</p>
             <div className="grid grid-cols-3 gap-1.5">
               {GROUP_QUICK.map(([a, b]) => {
-                const active = s1 === a && s2 === b;
+                const active = !wo && s1 === a && s2 === b;
                 return (
                   <button key={`${a}:${b}`} onClick={() => pick(a, b)}
                     className={`py-2 rounded-xl text-[13px] font-bold transition-all active:scale-[.95] ${
@@ -2389,19 +2391,25 @@ function GroupScoreModal({
             </p>
           </div>
 
-          {/* Walkover / no-show (manual technical win, no rating) */}
+          {/* Walkover / no-show — select like a quick result, then Save */}
           {!isFinished && onForfeit && (
             <div>
               <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-white/25 mb-2">Неявка — техническая победа</p>
               <div className="grid grid-cols-2 gap-1.5">
-                <button onClick={() => forfeit(true)} disabled={loading}
-                  className="py-2 rounded-xl text-[12px] font-bold bg-amber-500/[0.10] hover:bg-amber-500/20
-                             border border-amber-500/25 text-amber-200 disabled:opacity-40 transition-all active:scale-[.97] truncate">
+                <button onClick={() => pickWalkover(true)}
+                  className={`py-2 rounded-xl text-[12px] font-bold transition-all active:scale-[.95] truncate ${
+                    wo === 1
+                      ? "bg-amber-500 text-white shadow-[0_0_12px_rgba(245,158,11,0.4)]"
+                      : "bg-amber-500/[0.08] hover:bg-amber-500/[0.16] text-amber-200/80"
+                  }`}>
                   ✓ {match.player1.name}
                 </button>
-                <button onClick={() => forfeit(false)} disabled={loading}
-                  className="py-2 rounded-xl text-[12px] font-bold bg-amber-500/[0.10] hover:bg-amber-500/20
-                             border border-amber-500/25 text-amber-200 disabled:opacity-40 transition-all active:scale-[.97] truncate">
+                <button onClick={() => pickWalkover(false)}
+                  className={`py-2 rounded-xl text-[12px] font-bold transition-all active:scale-[.95] truncate ${
+                    wo === 2
+                      ? "bg-amber-500 text-white shadow-[0_0_12px_rgba(245,158,11,0.4)]"
+                      : "bg-amber-500/[0.08] hover:bg-amber-500/[0.16] text-amber-200/80"
+                  }`}>
                   ✓ {match.player2.name}
                 </button>
               </div>
@@ -2452,10 +2460,13 @@ function GroupScoreModal({
                 </button>
               )}
               <button onClick={save} disabled={loading || s1 === s2 || isFinished}
-                className="flex-1 py-3 rounded-xl font-bold text-[15px] transition-all active:scale-[.98]
-                           disabled:opacity-35 bg-blue-600 hover:bg-blue-500 text-white
-                           shadow-[0_4px_16px_rgba(59,130,246,0.35)]">
-                {loading ? "..." : `${s1}:${s2} Сохранить`}
+                className={`flex-1 py-3 rounded-xl font-bold text-[15px] transition-all active:scale-[.98]
+                           disabled:opacity-35 text-white ${
+                  wo
+                    ? "bg-amber-500 hover:bg-amber-400 shadow-[0_4px_16px_rgba(245,158,11,0.35)]"
+                    : "bg-blue-600 hover:bg-blue-500 shadow-[0_4px_16px_rgba(59,130,246,0.35)]"
+                }`}>
+                {loading ? "..." : wo ? "Неявка — Сохранить" : `${s1}:${s2} Сохранить`}
               </button>
               <button onClick={onClose}
                 className="flex-1 py-3 rounded-xl font-semibold text-[14px] transition-all

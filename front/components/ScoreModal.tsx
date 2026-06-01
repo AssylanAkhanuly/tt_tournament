@@ -32,6 +32,9 @@ export default function ScoreModal({ match, onClose, onSubmit, canReset, onReset
   const [s2, setS2]         = useState(match.score2 ?? 0);
   const [loading, setLoading] = useState(false);
   const [error, setError]   = useState<string | null>(null);
+  // Selected walkover winner (0 = none, 1 = player1, 2 = player2). Picking a
+  // real score clears it; saving commits a walkover via onForfeit instead.
+  const [wo, setWo]         = useState<0 | 1 | 2>(0);
 
   async function reset() {
     if (!onReset) return;
@@ -55,13 +58,22 @@ export default function ScoreModal({ match, onClose, onSubmit, canReset, onReset
     return () => window.removeEventListener("keydown", onKey);
   }, [onClose]);
 
-  function pick(a: number, b: number) { setS1(a); setS2(b); setError(null); }
+  function pick(a: number, b: number) { setS1(a); setS2(b); setWo(0); setError(null); }
+  function bump(setScore: (n: number) => void, n: number) { setScore(n); setWo(0); setError(null); }
+  // Select (don't submit) a walkover; the main Save button commits it.
+  function pickWalkover(winnerIsP1: boolean) {
+    setWo(winnerIsP1 ? 1 : 2);
+    setS1(winnerIsP1 ? 3 : 0); setS2(winnerIsP1 ? 0 : 3);
+    setError(null);
+  }
 
   async function save() {
     if (s1 === s2) { setError("Ничья недопустима."); return; }
     setLoading(true); setError(null);
-    try { await onSubmit(s1, s2); }
-    catch (err: unknown) {
+    try {
+      if (wo && onForfeit) await onForfeit(wo === 1);
+      else await onSubmit(s1, s2);
+    } catch (err: unknown) {
       setError((err as Record<string, string>)?.detail ?? "Не удалось сохранить.");
     } finally { setLoading(false); }
   }
@@ -73,17 +85,6 @@ export default function ScoreModal({ match, onClose, onSubmit, canReset, onReset
     if (s1 === s2) { setError("Ничья недопустима."); return; }
     setLoading(true); setError(null);
     try { await onEdit(s1, s2); }
-    catch (err: unknown) {
-      setError((err as Record<string, string>)?.detail ?? "Не удалось сохранить.");
-      setLoading(false);
-    }
-  }
-
-  // Declare a no-show walkover (no real score). Parent closes on success.
-  async function forfeit(winnerIsP1: boolean) {
-    if (!onForfeit) return;
-    setLoading(true); setError(null);
-    try { await onForfeit(winnerIsP1); }
     catch (err: unknown) {
       setError((err as Record<string, string>)?.detail ?? "Не удалось сохранить.");
       setLoading(false);
@@ -158,7 +159,7 @@ export default function ScoreModal({ match, onClose, onSubmit, canReset, onReset
                 {/* Stepper */}
                 <div className="flex items-center gap-1 shrink-0">
                   <button
-                    onClick={() => { setScore(Math.max(0, score - 1)); setError(null); }}
+                    onClick={() => bump(setScore, Math.max(0, score - 1))}
                     className="w-8 h-8 rounded-xl bg-white/[0.07] hover:bg-white/[0.14]
                                flex items-center justify-center text-white/50 hover:text-white
                                transition-all active:scale-[.90]"
@@ -172,7 +173,7 @@ export default function ScoreModal({ match, onClose, onSubmit, canReset, onReset
                     {score}
                   </span>
                   <button
-                    onClick={() => { setScore(score + 1); setError(null); }}
+                    onClick={() => bump(setScore, score + 1)}
                     className="w-8 h-8 rounded-xl bg-white/[0.07] hover:bg-white/[0.14]
                                flex items-center justify-center text-white/50 hover:text-white
                                transition-all active:scale-[.90]"
@@ -191,7 +192,7 @@ export default function ScoreModal({ match, onClose, onSubmit, canReset, onReset
             </p>
             <div className="grid grid-cols-3 gap-1.5">
               {QUICK.map(([a, b]) => {
-                const active = s1 === a && s2 === b;
+                const active = !wo && s1 === a && s2 === b;
                 const p1Win  = a > b;
                 return (
                   <button
@@ -215,21 +216,27 @@ export default function ScoreModal({ match, onClose, onSubmit, canReset, onReset
             </p>
           </div>
 
-          {/* ── Walkover / no-show (manual technical win, no rating) ───── */}
+          {/* ── Walkover / no-show — select like a quick result, then Save ── */}
           {!isFinished && onForfeit && (
             <div>
               <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-white/25 mb-2">
                 Неявка — техническая победа
               </p>
               <div className="grid grid-cols-2 gap-1.5">
-                <button onClick={() => forfeit(true)} disabled={loading}
-                  className="py-2 rounded-xl text-[12px] font-bold bg-amber-500/[0.10] hover:bg-amber-500/20
-                             border border-amber-500/25 text-amber-200 disabled:opacity-40 transition-all active:scale-[.97] truncate">
+                <button onClick={() => pickWalkover(true)}
+                  className={`py-2 rounded-xl text-[12px] font-bold transition-all active:scale-[.95] truncate ${
+                    wo === 1
+                      ? "bg-amber-500 text-white shadow-[0_0_12px_rgba(245,158,11,0.4)]"
+                      : "bg-amber-500/[0.08] hover:bg-amber-500/[0.16] text-amber-200/80"
+                  }`}>
                   ✓ {p1}
                 </button>
-                <button onClick={() => forfeit(false)} disabled={loading}
-                  className="py-2 rounded-xl text-[12px] font-bold bg-amber-500/[0.10] hover:bg-amber-500/20
-                             border border-amber-500/25 text-amber-200 disabled:opacity-40 transition-all active:scale-[.97] truncate">
+                <button onClick={() => pickWalkover(false)}
+                  className={`py-2 rounded-xl text-[12px] font-bold transition-all active:scale-[.95] truncate ${
+                    wo === 2
+                      ? "bg-amber-500 text-white shadow-[0_0_12px_rgba(245,158,11,0.4)]"
+                      : "bg-amber-500/[0.08] hover:bg-amber-500/[0.16] text-amber-200/80"
+                  }`}>
                   ✓ {p2}
                 </button>
               </div>
@@ -252,12 +259,18 @@ export default function ScoreModal({ match, onClose, onSubmit, canReset, onReset
             <button
               onClick={save}
               disabled={loading || s1 === s2}
-              className="w-full py-3.5 rounded-xl font-bold text-[16px] transition-all
-                         active:scale-[.98] disabled:opacity-35
-                         bg-blue-600 hover:bg-blue-500 text-white
-                         shadow-[0_4px_20px_rgba(59,130,246,0.35)]"
+              className={`w-full py-3.5 rounded-xl font-bold text-[16px] transition-all
+                         active:scale-[.98] disabled:opacity-35 text-white ${
+                wo
+                  ? "bg-amber-500 hover:bg-amber-400 shadow-[0_4px_20px_rgba(245,158,11,0.35)]"
+                  : "bg-blue-600 hover:bg-blue-500 shadow-[0_4px_20px_rgba(59,130,246,0.35)]"
+              }`}
             >
-              {loading ? "Сохранение..." : `${s1} : ${s2} — Сохранить`}
+              {loading
+                ? "Сохранение..."
+                : wo
+                ? `Неявка: ${wo === 1 ? p1 : p2} — Сохранить`
+                : `${s1} : ${s2} — Сохранить`}
             </button>
           )}
 

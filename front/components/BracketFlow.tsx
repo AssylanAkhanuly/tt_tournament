@@ -120,24 +120,29 @@ function MatchNode({ data }: NodeProps) {
           { player: match.player1, score: match.score1, isWinner: isW1 },
           { player: match.player2, score: match.score2, isWinner: isW2 },
         ].map(({ player, score, isWinner }, i) => {
-          const absent = !!player && !!absentIds?.has(player.id);
+          // Yellow when currently absent, or when this player was the no-show in
+          // this match (the loser of a walkover) — so past forfeits read clearly.
+          const absent = (!!player && !!absentIds?.has(player.id)) ||
+            (match.is_walkover && !!player && !!match.winner && player.id !== match.winner.id);
           return (
           <div key={i}>
             <div className={`flex items-center gap-2 px-3 py-[7px] ${
-              isWinner ? "bg-emerald-500/[0.11]" : ""
-            } ${absent ? "opacity-50" : ""}`}>
+              isWinner ? "bg-emerald-500/[0.11]" : absent ? "bg-amber-500/[0.07]" : ""
+            }`}>
               <span className="w-3.5 shrink-0 text-[11px] text-center">
                 {isWinner ? "🏆" : ""}
               </span>
               <span className={`flex-1 text-[13px] truncate leading-tight ${
                 isWinner
                   ? "font-semibold text-emerald-300"
+                  : absent
+                  ? "font-semibold text-amber-300"
                   : player
                   ? "text-white/75"
                   : "text-white/20 italic"
               }`}>
                 {player ? player.name : "TBD"}
-                {absent && <span className="ml-1 text-[9px] font-bold text-amber-300/80 uppercase">н/я</span>}
+                {absent && <span className="ml-1 text-[9px] font-bold text-amber-300 uppercase">н/я</span>}
               </span>
               {score !== null && score !== undefined && (
                 <span className={`text-[16px] font-black tabular-nums leading-none ${
