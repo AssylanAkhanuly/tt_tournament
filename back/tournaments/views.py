@@ -538,8 +538,12 @@ class ParticipantAbsentView(APIView):
         participant = get_object_or_404(TournamentParticipant, pk=participant_id, tournament=tournament)
 
         is_absent = bool(request.data.get("is_absent", True))
+        # auto_forfeit mirrors the client's "auto-assign tables" setting: when on,
+        # the no-show's unplayed matches are forfeited automatically; when off the
+        # admin records each one manually (0:0 win/lose).
+        auto_forfeit = bool(request.data.get("auto_forfeit", False))
         from .standings import apply_absence
-        apply_absence(tournament, participant.user_id, is_absent)
+        apply_absence(tournament, participant.user_id, is_absent, auto_forfeit)
 
         participant.refresh_from_db()
         return Response(ParticipantSerializer(participant).data)
@@ -988,10 +992,11 @@ class SubmitScoreView(APIView):
         loser = match.player1 if winner.id == match.player2_id else match.player2
         advance_winner_and_loser(match, winner, loser)
 
-        # If the winner advanced into a match against an absent player, that match
-        # is now a walkover too — resolve the cascade.
-        from .standings import forfeit_ready_bracket_matches
-        forfeit_ready_bracket_matches(tournament)
+        # If the winner advanced into a match against an absent player, auto-forfeit
+        # it too — but only when auto-assign is on (otherwise the admin handles it).
+        if bool(request.data.get("auto_forfeit", False)):
+            from .standings import forfeit_ready_bracket_matches
+            forfeit_ready_bracket_matches(tournament)
 
         _log_score(tournament, request.user, match, "bracket", f"Р{match.round_number} · М{match.match_number}")
 

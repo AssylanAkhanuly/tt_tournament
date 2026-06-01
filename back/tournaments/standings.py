@@ -148,21 +148,25 @@ def _unforfeit_bracket_matches(tournament, user_id) -> None:
         m.save(update_fields=["is_walkover"])
 
 
-def apply_absence(tournament, user_id, is_absent: bool) -> None:
+def apply_absence(tournament, user_id, is_absent: bool, auto_forfeit: bool = True) -> None:
     """Mark/unmark a participant absent and reconcile their unfinished matches.
 
-    Absent: forfeit their not-yet-played group + bracket matches (opponent
-    advances 3:0, flagged walkover). Present again: revert those walkovers where
-    safe. Already-played matches are never touched. Rating is applied at finish
-    and simply skips walkover matches.
+    Absent + ``auto_forfeit``: forfeit their not-yet-played group + bracket
+    matches as 0:0 technical wins for the opponent (flagged walkover). Absent
+    without auto_forfeit (auto-assign off): only set the flag — the admin records
+    each no-show manually with the 0:0 win/lose buttons. Present again: always
+    revert any existing walkovers where safe. Already-played matches are never
+    touched; rating skips walkover matches at finish.
     """
     TournamentParticipant.objects.filter(
         tournament=tournament, user_id=user_id
     ).update(is_absent=is_absent)
 
     if is_absent:
-        affected = _forfeit_group_matches(tournament, user_id)
-        forfeit_ready_bracket_matches(tournament, {user_id} | absent_user_ids(tournament.id))
+        affected = set()
+        if auto_forfeit:
+            affected = _forfeit_group_matches(tournament, user_id)
+            forfeit_ready_bracket_matches(tournament, {user_id} | absent_user_ids(tournament.id))
     else:
         affected = _unforfeit_group_matches(tournament, user_id)
         _unforfeit_bracket_matches(tournament, user_id)
