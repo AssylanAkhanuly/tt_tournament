@@ -566,12 +566,15 @@ def generate_playoff_from_groups(tournament, advance_count=None):
     return generate_all_places_bracket(tournament, seeded_players)
 
 
-def reset_match(match: Match) -> None:
+def reset_match(match: Match, *, _cascade: bool = False) -> None:
     """
     Undo a finished bracket match (admin score correction): clear its score and
     winner, pull the propagated winner/loser back out of the next matches, and
-    reopen it for re-scoring. Refuses if a downstream match was already played,
-    so corrections happen newest-first.
+    reopen it for re-scoring.
+
+    Downstream matches played as real games must be reset first (newest-first).
+    Downstream walkover matches (absent-player auto-forfeits) are cascade-reset
+    automatically, so one click unwinds the entire forfeit chain.
     """
     if match.status != Match.FINISHED or match.score1 is None or match.score2 is None:
         raise ValueError("Этот матч не сыгран — отменять нечего.")
@@ -584,12 +587,16 @@ def reset_match(match: Match) -> None:
         (match.loser_next_id, match.loser_next_slot, loser),
     ]
 
-    # A downstream match that has already been played must be reset first.
+    # Downstream walkover matches are cascade-reset automatically.
+    # A real (non-walkover) finished downstream match blocks the reset.
     for nid, _slot, _who in routes:
         if nid:
             nxt = Match.objects.filter(pk=nid).first()
             if nxt and nxt.status == Match.FINISHED and nxt.score1 is not None:
-                raise ValueError("Сначала отмените результат следующего матча.")
+                if nxt.is_walkover:
+                    reset_match(nxt, _cascade=True)
+                else:
+                    raise ValueError("Сначала отмените результат следующего матча.")
 
     # Pull the propagated players back out of their next matches.
     for nid, slot, who in routes:
@@ -611,8 +618,10 @@ def reset_match(match: Match) -> None:
     match.score1 = None
     match.score2 = None
     match.status = Match.IN_PROGRESS
+    match.is_walkover = False
     match.save()
-    auto_assign_table(match)
+    if not _cascade:
+        auto_assign_table(match)
 
 
 def advance_winner(tournament, round_number: int, match_number: int, winner) -> None:
