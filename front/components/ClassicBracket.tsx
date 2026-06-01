@@ -220,6 +220,12 @@ export default function ClassicBracket({
   const containerRef = useRef<HTMLDivElement | null>(null);
   const dragRef = useRef<{ startX: number; startY: number; startPanX: number; startPanY: number } | null>(null);
   const movedRef = useRef(false); // distinguishes a card click from a pan drag
+  // Active touch/pen/mouse pointers, keyed by id — drives two-finger pinch-zoom.
+  const pointersRef = useRef<Map<number, { x: number; y: number }>>(new Map());
+  // Pinch baseline captured when the 2nd finger lands: finger distance, the
+  // scale at that moment, and the world point under the pinch midpoint (kept
+  // fixed under the fingers as they spread/close).
+  const pinchRef = useRef<{ startDist: number; startScale: number; worldX: number; worldY: number } | null>(null);
 
   const [pan,   setPan]   = useState(INITIAL_PAN);
   const [scale, setScale] = useState(INITIAL_SCALE);
@@ -491,22 +497,75 @@ export default function ClassicBracket({
     return () => el.removeEventListener("wheel", onWheel);
   }, []);
 
-  // ── Pointer drag (pan) ─────────────────────────────────────────────────────
+  // ── Pointer drag (pan) + two-finger pinch (zoom) ────────────────────────────
   function handlePointerDown(e: React.PointerEvent<HTMLDivElement>) {
-    if (e.button !== 0) return;
+    // Ignore non-primary mouse buttons; allow every touch/pen contact.
+    if (e.pointerType === "mouse" && e.button !== 0) return;
+    pointersRef.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
+
+    // Second finger down → start a pinch-zoom, cancelling any single-finger pan.
+    if (pointersRef.current.size === 2) {
+      dragRef.current = null;
+      movedRef.current = true;
+      const rect = containerRef.current?.getBoundingClientRect();
+      const [a, b] = [...pointersRef.current.values()];
+      const midX = (a.x + b.x) / 2 - (rect?.left ?? 0);
+      const midY = (a.y + b.y) / 2 - (rect?.top ?? 0);
+      pinchRef.current = {
+        startDist: Math.hypot(b.x - a.x, b.y - a.y) || 1,
+        startScale: scaleRef.current,
+        worldX: (midX - panRef.current.x) / scaleRef.current,
+        worldY: (midY - panRef.current.y) / scaleRef.current,
+      };
+      try { e.currentTarget.setPointerCapture(e.pointerId); } catch { /* capture is best-effort */ }
+      return;
+    }
+
+    // Single pointer → pan, unless the target is a card/control (let the tap through).
     movedRef.current = false;
     if ((e.target as HTMLElement).closest("[data-no-pan='true']")) return;
     e.currentTarget.setPointerCapture(e.pointerId);
-    dragRef.current = { startX: e.clientX, startY: e.clientY, startPanX: pan.x, startPanY: pan.y };
+    dragRef.current = { startX: e.clientX, startY: e.clientY, startPanX: panRef.current.x, startPanY: panRef.current.y };
   }
   function handlePointerMove(e: React.PointerEvent<HTMLDivElement>) {
+    if (pointersRef.current.has(e.pointerId))
+      pointersRef.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
+
+    // Pinch: rescale around the fingers' midpoint and pan so the world point
+    // first pinched stays pinned under them (natural zoom + two-finger pan).
+    if (pinchRef.current && pointersRef.current.size >= 2) {
+      const [a, b] = [...pointersRef.current.values()];
+      const dist = Math.hypot(b.x - a.x, b.y - a.y);
+      if (dist > 0) {
+        const rect = containerRef.current?.getBoundingClientRect();
+        const midX = (a.x + b.x) / 2 - (rect?.left ?? 0);
+        const midY = (a.y + b.y) / 2 - (rect?.top ?? 0);
+        const next = clamp(pinchRef.current.startScale * (dist / pinchRef.current.startDist), 0.2, 2.0);
+        setScale(next);
+        setPan({ x: midX - pinchRef.current.worldX * next, y: midY - pinchRef.current.worldY * next });
+        movedRef.current = true;
+      }
+      return;
+    }
+
     if (!dragRef.current) return;
     const dx = e.clientX - dragRef.current.startX;
     const dy = e.clientY - dragRef.current.startY;
     if (Math.abs(dx) + Math.abs(dy) > 4) movedRef.current = true;
     setPan({ x: dragRef.current.startPanX + dx, y: dragRef.current.startPanY + dy });
   }
-  function endDrag() { dragRef.current = null; }
+  function handlePointerUp(e: React.PointerEvent<HTMLDivElement>) {
+    pointersRef.current.delete(e.pointerId);
+    if (pointersRef.current.size < 2) {
+      pinchRef.current = null;
+      // One finger still down after a pinch → resume panning from it seamlessly.
+      if (pointersRef.current.size === 1) {
+        const [only] = [...pointersRef.current.values()];
+        dragRef.current = { startX: only.x, startY: only.y, startPanX: panRef.current.x, startPanY: panRef.current.y };
+      }
+    }
+    if (pointersRef.current.size === 0) dragRef.current = null;
+  }
 
   // Open the score modal only on a genuine click (not at the end of a pan drag).
   const activate = (m: Match) => { if (!movedRef.current) onEnterScore(m); };
@@ -520,8 +579,8 @@ export default function ClassicBracket({
         className="relative h-full w-full cursor-grab overflow-hidden bg-[#07111d] touch-none select-none active:cursor-grabbing"
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
-        onPointerUp={endDrag}
-        onPointerCancel={endDrag}
+        onPointerUp={handlePointerUp}
+        onPointerCancel={handlePointerUp}
       >
         {/* Zoom / reset controls */}
         <div
