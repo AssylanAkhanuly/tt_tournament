@@ -2814,11 +2814,12 @@ function GroupRoundRobinTable({ group, colorIdx = 0, isAdmin = false, canEditSco
                 <td className="px-2.5 py-2.5 text-center text-[11px] text-white/30 font-semibold">
                   {rowIdx + 1}
                 </td>
-                {/* Player + rating */}
-                <td className={`px-3 py-2.5 max-w-[140px] ${p.is_absent ? "opacity-45" : ""}`}>
+                {/* Player + rating — absence is shown per-match in the cells below,
+                    not as a blanket label, so a player present for some matches
+                    isn't wrongly tagged absent for all of them. */}
+                <td className="px-3 py-2.5 max-w-[140px]">
                   <span className="text-[12px] font-semibold text-white/85 truncate block">
                     {p.user.name}
-                    {p.is_absent && <span className="ml-1 text-[9px] font-bold text-amber-300/80 uppercase">н/я</span>}
                   </span>
                   <span className="text-[10px] text-red-400/60 font-bold">R:{p.user.rating}</span>
                 </td>
@@ -2834,21 +2835,28 @@ function GroupRoundRobinTable({ group, colorIdx = 0, isAdmin = false, canEditSco
                   const scored = cell?.s1 !== null && cell?.s1 !== undefined;
                   const m = matchByPair[`${p.user.id}|${opp.user.id}`];
                   const editable = isAdmin && canEditScores && scored && !!m && !!onEditMatch;
+                  // No-show for THIS match: the row player lost a walkover (didn't
+                  // show up). Highlighted amber so the admin sees exactly which
+                  // matches were forfeited, instead of a blanket label on the name.
+                  const absentHere = scored && !!m?.is_walkover && cell.won === false;
                   return (
                     <td key={opp.user.id}
                         onClick={editable ? () => onEditMatch!(m) : undefined}
-                        title={editable ? "Изменить / сбросить счёт" : undefined}
+                        title={absentHere ? "Неявка — техническое поражение" : editable ? "Изменить / сбросить счёт" : undefined}
                         className={`text-center py-2.5 text-[12px] font-black tabular-nums ${
                           editable ? "cursor-pointer hover:brightness-150" : ""
                         } ${
-                          !scored           ? "text-white/15" :
+                          !scored            ? "text-white/15" :
+                          absentHere         ? "text-amber-300" :
                           cell.won === true  ? "text-emerald-200" :
                           cell.won === false ? "text-red-300" :
                           "text-white/40"
                         }`}
                         style={{
                           borderLeft: `1px solid rgba(255,255,255,0.05)`,
-                          background: scored
+                          background: absentHere
+                            ? "rgba(245,158,11,0.22)"
+                            : scored
                             ? cell.won === true
                               ? "rgba(16,185,129,0.22)"
                               : cell.won === false
@@ -2856,7 +2864,7 @@ function GroupRoundRobinTable({ group, colorIdx = 0, isAdmin = false, canEditSco
                               : undefined
                             : undefined,
                         }}>
-                      {scored ? `${cell.s1}:${cell.s2}` : "·"}
+                      {absentHere ? "н/я" : scored ? `${cell.s1}:${cell.s2}` : "·"}
                     </td>
                   );
                 })}
