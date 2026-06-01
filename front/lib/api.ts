@@ -27,6 +27,14 @@ export type ActiveMatch = {
   your_name: string;
   /** True if the current user is player1 — maps the drawer's you/opponent scores onto score1/score2. */
   you_is_player1: boolean;
+  /** "in_progress" while playing, "score_proposed" while a score awaits confirmation. */
+  status?: "in_progress" | "score_proposed";
+  /** I entered a score and am waiting on the opponent to confirm it. */
+  i_proposed?: boolean;
+  /** The opponent entered a score that I must confirm or reject. */
+  awaiting_my_confirmation?: boolean;
+  proposed_score1?: number | null;
+  proposed_score2?: number | null;
 };
 
 // Snapshot returned by GET /api/tournaments/<id>/state/. `changed` is false

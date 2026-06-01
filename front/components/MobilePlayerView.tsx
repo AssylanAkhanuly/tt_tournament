@@ -271,18 +271,9 @@ export default function MobilePlayerView({
   const liveGroup    = groupMatches.filter((m) => isLiveStatus(m.status));
   const live         = isGroupPhase ? liveGroup : liveBracket;
 
-  // Matches where the OPPONENT proposed a score and I must confirm/reject it.
-  // Surfaced as a pinned priority card (any tab) + an amber CTA in the live list.
-  const myPendingConfirm = useMemo(() => {
-    const out: ({ kind: "bracket"; m: Match } | { kind: "group"; m: GMatch })[] = [];
-    for (const m of matches)
-      if (m.status === "score_proposed" && (m.player1?.id === user.id || m.player2?.id === user.id) && m.proposed_by?.id !== user.id)
-        out.push({ kind: "bracket", m });
-    for (const m of groupMatches)
-      if (m.status === "score_proposed" && (m.player1?.id === user.id || m.player2?.id === user.id) && m.proposed_by?.id !== user.id)
-        out.push({ kind: "group", m });
-    return out;
-  }, [matches, groupMatches, user.id]);
+  // The opponent's proposed score is surfaced app-wide via the global Sonner
+  // toast (see MatchPrompts); in-context here it's the amber CTA on the live row
+  // (opens the confirm sheet below).
   const pendingBracket = matches.filter((m) => m.status === "pending" && m.player1 && m.player2);
   const pendingGroup   = groupMatches.filter((m) => m.status === "pending");
   const pending      = isGroupPhase ? pendingGroup : pendingBracket;
@@ -450,32 +441,6 @@ export default function MobilePlayerView({
       {/* ── Floating bottom pill nav (liquid glass) ── */}
       <BottomPill tabs={tabs} section={section}
         onPick={(s) => { setSection(s); setSectionPicked(true); }} />
-
-      {/* ── Pinned priority card: a score awaits my confirmation (any tab) ── */}
-      {myPendingConfirm.length > 0 && !confirm && !bracketScore && !groupScore && (() => {
-        const first = myPendingConfirm[0];
-        const m = first.m;
-        const a = m.proposed_score1 ?? 0, b = m.proposed_score2 ?? 0;
-        const extra = myPendingConfirm.length - 1;
-        return (
-          <button onClick={() => setConfirm(first)}
-            className="fixed top-[70px] left-1/2 -translate-x-1/2 z-[79] w-[92vw] max-w-[440px]
-                       flex items-center gap-3 px-4 py-3 rounded-2xl text-left backdrop-blur-md
-                       bg-amber-500/[0.16] border border-amber-500/45 shadow-[0_12px_34px_rgba(0,0,0,0.55)]
-                       active:scale-[.99]">
-            <span className="text-[22px] shrink-0">🏓</span>
-            <div className="min-w-0 flex-1">
-              <p className="text-[13px] font-bold text-amber-200">
-                Подтвердите счёт{extra > 0 ? ` (+${extra})` : ""}
-              </p>
-              <p className="text-[12px] text-white/75 truncate">
-                {m.player1?.name ?? "?"} {a} : {b} {m.player2?.name ?? "?"}
-              </p>
-            </div>
-            <span className="text-[12px] font-bold text-amber-300 shrink-0">Ответить →</span>
-          </button>
-        );
-      })()}
 
       {/* ── Score sheets ── */}
       {bracketScore && (

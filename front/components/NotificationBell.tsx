@@ -4,7 +4,7 @@ import { useEffect, useRef, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { Bell, BellRing, Check } from "lucide-react";
 import { api, AppNotification } from "@/lib/api";
-import { currentPushState, enablePush, pushSupported, PushState } from "@/lib/push";
+import { currentPushState, enablePush, iosNeedsInstall, pushSupported, PushState } from "@/lib/push";
 
 const POLL_MS = 15000;
 
@@ -14,6 +14,7 @@ export default function NotificationBell() {
   const [unread, setUnread] = useState(0);
   const [open, setOpen] = useState(false);
   const [pushState, setPushState] = useState<PushState>("default");
+  const [iosInstall, setIosInstall] = useState(false);
   const [busy, setBusy] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
@@ -33,6 +34,7 @@ export default function NotificationBell() {
 
   useEffect(() => {
     if (pushSupported()) currentPushState().then(setPushState);
+    setIosInstall(iosNeedsInstall());
   }, []);
 
   useEffect(() => {
@@ -111,6 +113,19 @@ export default function NotificationBell() {
             <p className="px-4 py-2.5 text-[11px] text-white/40 border-b border-white/[0.06]">
               Push заблокирован в настройках браузера.
             </p>
+          )}
+          {iosInstall && (
+            <div className="px-4 py-3 border-b border-white/[0.06] space-y-1.5">
+              <p className="text-[12px] font-bold text-blue-300">🔔 Уведомления на iPhone</p>
+              <p className="text-[11px] text-white/55">
+                Чтобы получать push, добавьте приложение на экран «Домой»:
+              </p>
+              <ol className="text-[11px] text-white/70 space-y-1">
+                <li>1. Нажмите <span className="font-semibold">Поделиться</span> в Safari (квадрат со стрелкой ↑)</li>
+                <li>2. Выберите <span className="font-semibold">«На экран „Домой"»</span></li>
+                <li>3. Откройте SpinCoach с экрана «Домой» и включите уведомления</li>
+              </ol>
+            </div>
           )}
 
           <div className="max-h-[60vh] overflow-y-auto">

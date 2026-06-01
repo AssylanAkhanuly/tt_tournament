@@ -1,10 +1,11 @@
 "use client";
 
-import ActiveMatchBanner from "@/components/ActiveMatchBanner";
 import FloatingTabBar from "@/components/FloatingTabBar";
+import MatchPrompts from "@/components/MatchPrompts";
 import NotificationBell from "@/components/NotificationBell";
 import NotificationPrompt from "@/components/NotificationPrompt";
 import SpinCoachLogo from "@/components/SpinCoachLogo";
+import { Toaster } from "sonner";
 import { api } from "@/lib/api";
 import { useLang } from "@/lib/i18n";
 import { User } from "@/lib/types";
@@ -149,7 +150,7 @@ export default function DashboardLayout({
   const [ready, setReady] = useState(false);
   const pathname = usePathname();
   const showNav = TAB_PATHS.includes(pathname);
-  const activeMatch = useActiveMatch(user ? !isClubAdminOnly(user) : false);
+  const { match: activeMatch, refresh: refreshActiveMatch } = useActiveMatch(user ? !isClubAdminOnly(user) : false);
 
   useEffect(() => {
     api
@@ -209,7 +210,6 @@ export default function DashboardLayout({
           />
           <main className="flex-1 overflow-y-auto px-5 py-6 pb-28 sm:px-8 sm:py-8 sm:pb-8">
             <NotificationPrompt />
-            {activeMatch && <ActiveMatchBanner match={activeMatch} />}
             {children}
           </main>
         </div>
@@ -224,6 +224,10 @@ export default function DashboardLayout({
           <FloatingTabBar hasActiveMatch={!!activeMatch} />
         </div>
       )}
+
+      {/* App-wide match prompts (your live match / confirm the opponent's score) */}
+      <MatchPrompts match={activeMatch} refresh={refreshActiveMatch} />
+      <Toaster position="top-center" theme="dark" offset="64px" />
     </div>
   );
 }

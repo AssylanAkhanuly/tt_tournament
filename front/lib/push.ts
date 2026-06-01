@@ -21,6 +21,33 @@ export function pushSupported(): boolean {
   );
 }
 
+/** iPhone / iPad (incl. iPadOS, which reports as Mac with touch). */
+export function isIos(): boolean {
+  if (typeof navigator === "undefined") return false;
+  const ua = navigator.userAgent || "";
+  return (
+    /iphone|ipad|ipod/i.test(ua) ||
+    (navigator.platform === "MacIntel" &&
+      (navigator as Navigator & { maxTouchPoints: number }).maxTouchPoints > 1)
+  );
+}
+
+/** Running as an installed PWA (added to the Home Screen / standalone window). */
+export function isStandalone(): boolean {
+  if (typeof window === "undefined") return false;
+  return (
+    window.matchMedia?.("(display-mode: standalone)").matches === true ||
+    (window.navigator as Navigator & { standalone?: boolean }).standalone === true
+  );
+}
+
+/** On iOS, Web Push only works from a Home-Screen-installed PWA — the push APIs
+ *  aren't exposed in a normal Safari tab. True when we should show install
+ *  instructions instead of an (impossible) "enable" button. */
+export function iosNeedsInstall(): boolean {
+  return isIos() && !isStandalone() && !pushSupported();
+}
+
 async function registerSW(): Promise<ServiceWorkerRegistration | null> {
   if (!("serviceWorker" in navigator)) return null;
   try {
