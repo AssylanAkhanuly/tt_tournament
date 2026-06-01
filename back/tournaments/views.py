@@ -972,10 +972,16 @@ class SubmitScoreView(APIView):
         match.winner  = match.player1 if score1 > score2 else match.player2
         match.status  = Match.FINISHED
         match.table_number = None
+        match.is_walkover = bool(request.data.get("walkover", False))  # manual no-show
         match.save()
 
         loser = match.player1 if match.winner == match.player2 else match.player2
         advance_winner_and_loser(match, match.winner, loser)
+
+        # If the winner advanced into a match against an absent player, that match
+        # is now a walkover too — resolve the cascade.
+        from .standings import forfeit_ready_bracket_matches
+        forfeit_ready_bracket_matches(tournament)
 
         _log_score(tournament, request.user, match, "bracket", f"Р{match.round_number} · М{match.match_number}")
 
@@ -1077,7 +1083,7 @@ class GroupMatchScoreView(APIView):
         match.score2 = score2
         match.winner = match.player1 if score1 > score2 else match.player2
         match.status = GroupMatch.FINISHED
-        match.is_walkover = False  # a real score overrides any walkover
+        match.is_walkover = bool(request.data.get("walkover", False))  # manual no-show
         match.save()
 
         # Standings are recomputed from all finished matches (win=2/loss=1/

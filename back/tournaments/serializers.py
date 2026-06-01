@@ -98,7 +98,7 @@ class MatchSerializer(serializers.ModelSerializer):
             "player1", "player2",
             "score1", "score2",
             "winner", "status", "table_number",
-            "is_consolation",
+            "is_consolation", "is_walkover",
             "winner_next_id", "loser_next_id",
             "place_lo", "place_hi",
         ]

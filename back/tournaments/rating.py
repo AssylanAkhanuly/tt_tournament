@@ -48,11 +48,7 @@ def apply_tournament_ratings(tournament) -> None:
         return  # already applied
 
     before = {p.user_id: (p.user.rating or 0) for p in parts}
-    # Absent players (no-shows) and their matches are excluded from rating
-    # entirely — neither they nor their opponents gain/lose from those games.
-    absent = {p.user_id for p in parts if p.is_absent}
-    rated = {uid: r for uid, r in before.items() if uid not in absent}
-    avg = (sum(rated.values()) / len(rated)) if rated else 0
+    avg = sum(before.values()) / len(before)
     k_t = _k_for_avg(avg)
     tcount = {
         p.user_id: TournamentParticipant.objects.filter(user_id=p.user_id).count()
@@ -60,11 +56,11 @@ def apply_tournament_ratings(tournament) -> None:
     }
     delta = {uid: 0.0 for uid in before}
 
-    def process(p1, p2, s1, s2, winner_id):
+    def process(p1, p2, s1, s2, winner_id, walkover=False):
         if not p1 or not p2 or not winner_id:
             return
-        if p1 in absent or p2 in absent:
-            return  # match involving an absent player — excluded from rating
+        if walkover:
+            return  # no-show forfeit — excluded from rating (real games still count)
         loser_id = p2 if winner_id == p1 else p1
         rw, rl = before.get(winner_id), before.get(loser_id)
         if rw is None or rl is None:
@@ -83,11 +79,11 @@ def apply_tournament_ratings(tournament) -> None:
     for m in tournament.matches.filter(status=Match.FINISHED, winner__isnull=False):
         if m.score1 is None or m.score2 is None:
             continue
-        process(m.player1_id, m.player2_id, m.score1, m.score2, m.winner_id)
+        process(m.player1_id, m.player2_id, m.score1, m.score2, m.winner_id, m.is_walkover)
     for m in GroupMatch.objects.filter(
         group__tournament=tournament, status=GroupMatch.FINISHED, winner__isnull=False
     ):
-        process(m.player1_id, m.player2_id, m.score1, m.score2, m.winner_id)
+        process(m.player1_id, m.player2_id, m.score1, m.score2, m.winner_id, m.is_walkover)
 
     for p in parts:
         change = int(round(delta.get(p.user_id, 0.0)))
