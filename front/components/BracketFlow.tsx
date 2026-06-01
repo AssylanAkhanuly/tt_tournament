@@ -60,15 +60,22 @@ function MatchNode({ data }: NodeProps) {
 
   const isLive     = match.status === "in_progress";
   const isFinished = match.status === "finished";
+  const isProposed = match.status === "score_proposed";  // awaiting opponent confirmation
 
   const canScore =
     isLive &&
     (isAdmin ||
       currentUser?.id === match.player1?.id ||
       currentUser?.id === match.player2?.id);
+  // Admin can also open a proposed match to override the result.
+  const canOpen = canScore || (isAdmin && isProposed);
 
-  const isW1 = match.winner !== null && match.winner.id === match.player1?.id;
-  const isW2 = match.winner !== null && match.winner.id === match.player2?.id;
+  // Show the pending numbers + winner while a score awaits confirmation.
+  const dScore1 = isProposed ? match.proposed_score1 : match.score1;
+  const dScore2 = isProposed ? match.proposed_score2 : match.score2;
+  const effWinner = isProposed ? match.proposed_winner : match.winner;
+  const isW1 = effWinner !== null && effWinner?.id === match.player1?.id;
+  const isW2 = effWinner !== null && effWinner?.id === match.player2?.id;
 
   return (
     <div
@@ -88,11 +95,12 @@ function MatchNode({ data }: NodeProps) {
                      "bg-white/[0.02]"
       }`}>
         <span className={`text-[10px] font-bold uppercase tracking-wider ${
-          isLive ? "text-blue-300" : isFinished ? "text-emerald-400/70" : "text-white/20"
+          isLive ? "text-blue-300" : isProposed ? "text-amber-300" : isFinished ? "text-emerald-400/70" : "text-white/20"
         }`}>
           {isLive     && "● Live"}
+          {isProposed && "⏳ Ожидает"}
           {isFinished && "✓ Завершён"}
-          {!isLive && !isFinished && `М${match.match_number}`}
+          {!isLive && !isFinished && !isProposed && `М${match.match_number}`}
         </span>
 
         <div className="flex items-center gap-1.5">
@@ -117,8 +125,8 @@ function MatchNode({ data }: NodeProps) {
       {/* ── Players ─────────────────────────────────────────────────────── */}
       <div className="py-1">
         {[
-          { player: match.player1, score: match.score1, isWinner: isW1 },
-          { player: match.player2, score: match.score2, isWinner: isW2 },
+          { player: match.player1, score: dScore1, isWinner: isW1 },
+          { player: match.player2, score: dScore2, isWinner: isW2 },
         ].map(({ player, score, isWinner }, i) => {
           // Yellow when currently absent, or when this player was the no-show in
           // this match (the loser of a walkover) — so past forfeits read clearly.
@@ -161,14 +169,16 @@ function MatchNode({ data }: NodeProps) {
       </div>
 
       {/* ── Enter-score button ───────────────────────────────────────────── */}
-      {canScore && (
+      {canOpen && (
         <div className="px-3 pb-2.5 pt-1">
           <button
             onPointerDown={(e) => e.stopPropagation()}
             onClick={(e) => { e.stopPropagation(); onEnterScore(match); }}
-            className="w-full text-[12px] py-1.5 rounded-xl bg-blue-600 hover:bg-blue-500 active:scale-[.97] text-white font-semibold transition-all"
+            className={`w-full text-[12px] py-1.5 rounded-xl active:scale-[.97] text-white font-semibold transition-all ${
+              isProposed ? "bg-amber-600 hover:bg-amber-500" : "bg-blue-600 hover:bg-blue-500"
+            }`}
           >
-            Ввести счёт
+            {isProposed ? "Изменить счёт" : "Ввести счёт"}
           </button>
         </div>
       )}

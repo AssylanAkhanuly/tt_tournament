@@ -76,7 +76,18 @@ export interface Participant {
   temp_password?: string;
 }
 
-export interface Match {
+/** A score one player entered that is awaiting the opponent's confirmation. */
+export interface ProposedScore {
+  /** status === "score_proposed" while a proposal is pending. */
+  proposed_score1: number | null;
+  proposed_score2: number | null;
+  proposed_winner: User | null;
+  /** The player who entered the score; the OTHER player must confirm it. */
+  proposed_by: User | null;
+  proposed_at: string | null;
+}
+
+export interface Match extends ProposedScore {
   id: number;
   round_number: number;
   match_number: number;
@@ -85,7 +96,7 @@ export interface Match {
   score1: number | null;
   score2: number | null;
   winner: User | null;
-  status: "pending" | "in_progress" | "finished";
+  status: "pending" | "in_progress" | "score_proposed" | "finished";
   table_number: number | null;
   is_consolation: boolean;
   /** Auto/manual no-show forfeit — opponent advanced without a real game */
@@ -97,7 +108,7 @@ export interface Match {
   place_hi: number | null;
 }
 
-export interface GroupMatch {
+export interface GroupMatch extends ProposedScore {
   id: number;
   match_number: number;
   player1: User;
@@ -105,7 +116,7 @@ export interface GroupMatch {
   score1: number | null;
   score2: number | null;
   winner: User | null;
-  status: "pending" | "in_progress" | "finished";
+  status: "pending" | "in_progress" | "score_proposed" | "finished";
   table_number: number | null;
   /** Auto-recorded forfeit because an opponent was marked absent */
   is_walkover: boolean;

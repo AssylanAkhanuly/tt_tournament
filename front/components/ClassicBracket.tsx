@@ -95,18 +95,23 @@ function MatchCard({
 }) {
   const isLive     = match.status === "in_progress";
   const isFinished = match.status === "finished";
+  const isProposed = match.status === "score_proposed";  // awaiting opponent confirmation
   const canScore =
     isLive &&
     (isAdmin ||
       currentUser?.id === match.player1?.id ||
       currentUser?.id === match.player2?.id);
-  // Admins can also open a finished match to correct/reset its score when no
-  // downstream result depends on it yet.
-  const canOpen = canScore || (isAdmin && canResetScore);
+  // Admins can also open a finished match to correct/reset its score (when no
+  // downstream result depends on it) or override a score awaiting confirmation.
+  const canOpen = canScore || (isAdmin && (canResetScore || isProposed));
   const isResetBlocked = isAdmin && hasFinishedScore(match) && !canResetScore;
 
-  const p1Winner = !!match.winner && match.winner.id === match.player1?.id;
-  const p2Winner = !!match.winner && match.winner.id === match.player2?.id;
+  // While a score is proposed, show the pending numbers + winner so it's visible.
+  const dScore1 = isProposed ? match.proposed_score1 : match.score1;
+  const dScore2 = isProposed ? match.proposed_score2 : match.score2;
+  const effWinner = isProposed ? match.proposed_winner : match.winner;
+  const p1Winner = !!effWinner && effWinner.id === match.player1?.id;
+  const p2Winner = !!effWinner && effWinner.id === match.player2?.id;
   // Yellow when currently absent, or the no-show side of a walkover (the loser).
   const p1Absent = !!match.player1 && (!!absentIds?.has(match.player1.id) || (match.is_walkover && p2Winner));
   const p2Absent = !!match.player2 && (!!absentIds?.has(match.player2.id) || (match.is_walkover && p1Winner));
@@ -183,14 +188,16 @@ function MatchCard({
           isLive ? "bg-blue-500/18 text-blue-200" : "bg-white/[0.04] text-white/28"
         }`}
       >
-        <span>{isLive ? "Live" : `M${match.match_number}`}</span>
+        <span className={isProposed ? "text-amber-300" : undefined}>
+          {isLive ? "Live" : isProposed ? "Ожидает" : `M${match.match_number}`}
+        </span>
         <div className="flex items-center gap-1.5">
           {match.table_number != null && <span>Ст.{match.table_number}</span>}
           {!isLive && isFinished && <span>Готово</span>}
         </div>
       </div>
-      {row(match.player1, seed1, match.score1, p1Winner, false, p1Absent)}
-      {row(match.player2, seed2, match.score2, p2Winner, true, p2Absent)}
+      {row(match.player1, seed1, dScore1, p1Winner, false, p1Absent)}
+      {row(match.player2, seed2, dScore2, p2Winner, true, p2Absent)}
     </div>
   );
 }

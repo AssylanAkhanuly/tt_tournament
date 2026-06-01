@@ -388,6 +388,13 @@ export const api = {
       method: "POST",
     }),
 
+  // Opponent confirms (accept=true) or rejects (accept=false) a proposed group score.
+  confirmGroupScore: (tournamentId: string, groupId: number, matchId: number, accept: boolean) =>
+    apiFetch<GroupMatch>(`/api/tournaments/${tournamentId}/groups/${groupId}/matches/${matchId}/confirm/`, {
+      method: "POST",
+      body: JSON.stringify({ accept }),
+    }),
+
   assignGroupMatchTable: (tournamentId: string, groupId: number, matchId: number, tableNumber: number | null) =>
     apiFetch<GroupMatch>(`/api/tournaments/${tournamentId}/groups/${groupId}/matches/${matchId}/table/`, {
       method: "PATCH",
@@ -419,6 +426,13 @@ export const api = {
   resetMatch: (tournamentId: string, matchId: number) =>
     apiFetch<Match>(`/api/tournaments/${tournamentId}/matches/${matchId}/reset/`, {
       method: "POST",
+    }),
+
+  // Opponent confirms (accept=true) or rejects (accept=false) a proposed bracket score.
+  confirmScore: (tournamentId: string, matchId: number, accept: boolean) =>
+    apiFetch<Match>(`/api/tournaments/${tournamentId}/matches/${matchId}/confirm/`, {
+      method: "POST",
+      body: JSON.stringify({ accept }),
     }),
 
   assignTable: (tournamentId: string, matchId: number, tableNumber: number | null) =>

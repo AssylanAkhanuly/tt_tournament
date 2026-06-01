@@ -107,6 +107,66 @@ function ScoreSheet({
   );
 }
 
+// Bottom sheet shown to the player who must confirm a score the opponent entered.
+function ConfirmSheet({
+  p1, p2, s1, s2, proposerName, onClose, onConfirm, onReject,
+}: {
+  p1: string; p2: string; s1: number; s2: number; proposerName: string;
+  onClose: () => void; onConfirm: () => Promise<void>; onReject: () => Promise<void>;
+}) {
+  const [busy, setBusy] = useState<null | "confirm" | "reject">(null);
+  const [err, setErr] = useState<string | null>(null);
+
+  async function run(which: "confirm" | "reject", fn: () => Promise<void>) {
+    setBusy(which); setErr(null);
+    try { await fn(); }
+    catch (e: unknown) { setErr((e as Record<string, string>)?.detail ?? "Ошибка."); setBusy(null); }
+  }
+
+  const rows: [string, number, boolean][] = [[p1, s1, s1 > s2], [p2, s2, s2 > s1]];
+
+  return (
+    <div className="fixed inset-0 z-[80] flex items-end bg-black/70 backdrop-blur-md"
+         onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
+      <div className="w-full rounded-t-[28px] border-t border-white/[0.12] p-5 pb-8 space-y-4"
+           style={{ background: "var(--elevated)" }}>
+        <div className="flex items-center justify-between">
+          <h2 className="text-[18px] font-bold text-white">Подтвердите счёт</h2>
+          <button onClick={onClose}
+            className="w-8 h-8 rounded-full bg-white/[0.08] flex items-center justify-center text-white/40">
+            <X size={15} />
+          </button>
+        </div>
+
+        <p className="text-[13px] text-white/55">
+          {proposerName} ввёл счёт. Подтвердите, если он верный, или отклоните и введите свой.
+        </p>
+
+        <div className="space-y-2.5">
+          {rows.map(([name, score, win], i) => (
+            <div key={i} className={`flex items-center gap-3 rounded-2xl px-4 py-3 border ${
+              win ? "border-emerald-500/35 bg-emerald-500/[0.08]" : "border-white/[0.08] bg-white/[0.04]"}`}>
+              <span className={`flex-1 text-[15px] font-semibold truncate ${win ? "text-white" : "text-white/60"}`}>{name}</span>
+              <span className={`text-[26px] font-black tabular-nums ${win ? "text-emerald-300" : "text-white/80"}`}>{score}</span>
+            </div>
+          ))}
+        </div>
+
+        {err && <p className="text-[13px] text-red-400 text-center">{err}</p>}
+
+        <button onClick={() => run("confirm", onConfirm)} disabled={!!busy}
+          className="w-full py-3.5 rounded-2xl bg-emerald-600 text-white font-bold text-[16px] disabled:opacity-40 active:scale-[.98]">
+          {busy === "confirm" ? "Подтверждение..." : "✓ Подтвердить счёт"}
+        </button>
+        <button onClick={() => run("reject", onReject)} disabled={!!busy}
+          className="w-full py-3 rounded-2xl bg-red-500/15 border border-red-500/30 text-red-300 font-bold text-[15px] disabled:opacity-40 active:scale-[.98]">
+          {busy === "reject" ? "..." : "✗ Отклонить и ввести свой счёт"}
+        </button>
+      </div>
+    </div>
+  );
+}
+
 export default function MobilePlayerView({
   tournament, user, isAdmin, tables, initialMatches, initialGroups, initialParticipants,
 }: Props) {
@@ -123,6 +183,10 @@ export default function MobilePlayerView({
   const [section, setSection] = useState<Section>("bracket");
   const [bracketScore, setBracketScore] = useState<Match | null>(null);
   const [groupScore, setGroupScore]     = useState<GMatch | null>(null);
+  // A proposed score the player is reviewing (confirm / reject).
+  const [confirm, setConfirm] = useState<{ kind: "bracket"; m: Match } | { kind: "group"; m: GMatch } | null>(null);
+  // Transient bottom toast (e.g. "score sent, awaiting confirmation").
+  const [flash, setFlash] = useState<string | null>(null);
   const [sectionPicked, setSectionPicked] = useState(false);
 
   // The parent (TournamentDetailClient) polls the live-state endpoint and passes
@@ -201,9 +265,24 @@ export default function MobilePlayerView({
     [groups]
   );
 
-  const liveBracket  = matches.filter((m) => m.status === "in_progress");
-  const liveGroup    = groupMatches.filter((m) => m.status === "in_progress");
+  // A match awaiting score confirmation is still "live" (players are at the table).
+  const isLiveStatus = (s: string) => s === "in_progress" || s === "score_proposed";
+  const liveBracket  = matches.filter((m) => isLiveStatus(m.status));
+  const liveGroup    = groupMatches.filter((m) => isLiveStatus(m.status));
   const live         = isGroupPhase ? liveGroup : liveBracket;
+
+  // Matches where the OPPONENT proposed a score and I must confirm/reject it.
+  // Surfaced as a pinned priority card (any tab) + an amber CTA in the live list.
+  const myPendingConfirm = useMemo(() => {
+    const out: ({ kind: "bracket"; m: Match } | { kind: "group"; m: GMatch })[] = [];
+    for (const m of matches)
+      if (m.status === "score_proposed" && (m.player1?.id === user.id || m.player2?.id === user.id) && m.proposed_by?.id !== user.id)
+        out.push({ kind: "bracket", m });
+    for (const m of groupMatches)
+      if (m.status === "score_proposed" && (m.player1?.id === user.id || m.player2?.id === user.id) && m.proposed_by?.id !== user.id)
+        out.push({ kind: "group", m });
+    return out;
+  }, [matches, groupMatches, user.id]);
   const pendingBracket = matches.filter((m) => m.status === "pending" && m.player1 && m.player2);
   const pendingGroup   = groupMatches.filter((m) => m.status === "pending");
   const pending      = isGroupPhase ? pendingGroup : pendingBracket;
@@ -220,6 +299,40 @@ export default function MobilePlayerView({
     else if (hasBracket) setSection("bracket");
     else setSection("players");
   }, [isGroupPhase, hasBracket, sectionPicked]);
+
+  // Auto-dismiss the transient toast.
+  useEffect(() => {
+    if (!flash) return;
+    const id = setTimeout(() => setFlash(null), 2800);
+    return () => clearTimeout(id);
+  }, [flash]);
+
+  // Confirm the opponent's proposed score → records the result.
+  async function confirmAccept() {
+    if (!confirm) return;
+    const c = confirm;
+    if (c.kind === "bracket") await api.confirmScore(tournament.id, c.m.id, true);
+    else await api.confirmGroupScore(tournament.id, c.m.groupId, c.m.id, true);
+    setConfirm(null);
+    setFlash("Счёт подтверждён");
+    await refresh();
+  }
+
+  // Reject the opponent's proposed score → reopen the match and enter my own
+  // score (pre-filled with their proposal so I can correct it), which then needs
+  // THEIR confirmation.
+  async function confirmReject() {
+    if (!confirm) return;
+    const c = confirm;
+    const p1 = c.m.proposed_score1 ?? 0;
+    const p2 = c.m.proposed_score2 ?? 0;
+    if (c.kind === "bracket") await api.confirmScore(tournament.id, c.m.id, false);
+    else await api.confirmGroupScore(tournament.id, c.m.groupId, c.m.id, false);
+    setConfirm(null);
+    if (c.kind === "bracket") setBracketScore({ ...c.m, score1: p1, score2: p2, status: "in_progress" });
+    else setGroupScore({ ...c.m, score1: p1, score2: p2, status: "in_progress" });
+    await refresh();
+  }
 
   if (!active) return null;
 
@@ -292,9 +405,13 @@ export default function MobilePlayerView({
               {live.length === 0
                 ? <p className="text-[13px] text-white/25 text-center py-6">Нет активных матчей</p>
                 : live.map((m) => <MatchRow key={m.id} m={m} table={tableName(m.table_number)} live
-                    you={mine(m)} onScore={() => mine(m) && (isGroupPhase
+                    you={mine(m)} userId={user.id}
+                    onScore={() => mine(m) && (isGroupPhase
                       ? setGroupScore(m as GMatch)
-                      : setBracketScore(m as Match))} />)}
+                      : setBracketScore(m as Match))}
+                    onConfirm={() => mine(m) && setConfirm(isGroupPhase
+                      ? { kind: "group", m: m as GMatch }
+                      : { kind: "bracket", m: m as Match })} />)}
             </Block>
             <Block title="Ожидают стола" count={pending.length} icon={<Clock size={12} />}>
               {pending.length === 0
@@ -334,14 +451,42 @@ export default function MobilePlayerView({
       <BottomPill tabs={tabs} section={section}
         onPick={(s) => { setSection(s); setSectionPicked(true); }} />
 
+      {/* ── Pinned priority card: a score awaits my confirmation (any tab) ── */}
+      {myPendingConfirm.length > 0 && !confirm && !bracketScore && !groupScore && (() => {
+        const first = myPendingConfirm[0];
+        const m = first.m;
+        const a = m.proposed_score1 ?? 0, b = m.proposed_score2 ?? 0;
+        const extra = myPendingConfirm.length - 1;
+        return (
+          <button onClick={() => setConfirm(first)}
+            className="fixed top-[70px] left-1/2 -translate-x-1/2 z-[79] w-[92vw] max-w-[440px]
+                       flex items-center gap-3 px-4 py-3 rounded-2xl text-left backdrop-blur-md
+                       bg-amber-500/[0.16] border border-amber-500/45 shadow-[0_12px_34px_rgba(0,0,0,0.55)]
+                       active:scale-[.99]">
+            <span className="text-[22px] shrink-0">🏓</span>
+            <div className="min-w-0 flex-1">
+              <p className="text-[13px] font-bold text-amber-200">
+                Подтвердите счёт{extra > 0 ? ` (+${extra})` : ""}
+              </p>
+              <p className="text-[12px] text-white/75 truncate">
+                {m.player1?.name ?? "?"} {a} : {b} {m.player2?.name ?? "?"}
+              </p>
+            </div>
+            <span className="text-[12px] font-bold text-amber-300 shrink-0">Ответить →</span>
+          </button>
+        );
+      })()}
+
       {/* ── Score sheets ── */}
       {bracketScore && (
         <ScoreSheet p1={bracketScore.player1?.name ?? "Игрок 1"} p2={bracketScore.player2?.name ?? "Игрок 2"}
           init1={bracketScore.score1 ?? 0} init2={bracketScore.score2 ?? 0}
           onClose={() => setBracketScore(null)}
           onSubmit={async (s1, s2) => {
-            await api.submitScore(tournament.id, bracketScore.id, s1, s2);
-            setBracketScore(null); await refresh();
+            const r = await api.submitScore(tournament.id, bracketScore.id, s1, s2);
+            setBracketScore(null);
+            setFlash(r.status === "score_proposed" ? "Счёт отправлен — ждём подтверждения соперника" : "Счёт записан");
+            await refresh();
           }} />
       )}
       {groupScore && (
@@ -349,9 +494,34 @@ export default function MobilePlayerView({
           init1={groupScore.score1 ?? 0} init2={groupScore.score2 ?? 0}
           onClose={() => setGroupScore(null)}
           onSubmit={async (s1, s2) => {
-            await api.submitGroupScore(tournament.id, groupScore.groupId, groupScore.id, s1, s2);
-            setGroupScore(null); await refresh();
+            const r = await api.submitGroupScore(tournament.id, groupScore.groupId, groupScore.id, s1, s2);
+            setGroupScore(null);
+            setFlash(r.status === "score_proposed" ? "Счёт отправлен — ждём подтверждения соперника" : "Счёт записан");
+            await refresh();
           }} />
+      )}
+
+      {/* ── Confirm sheet (accept / reject opponent's proposed score) ── */}
+      {confirm && (
+        <ConfirmSheet
+          p1={confirm.m.player1?.name ?? "Игрок 1"}
+          p2={confirm.m.player2?.name ?? "Игрок 2"}
+          s1={confirm.m.proposed_score1 ?? 0}
+          s2={confirm.m.proposed_score2 ?? 0}
+          proposerName={confirm.m.proposed_by?.name ?? "Соперник"}
+          onClose={() => setConfirm(null)}
+          onConfirm={confirmAccept}
+          onReject={confirmReject}
+        />
+      )}
+
+      {/* ── Transient toast ── */}
+      {flash && (
+        <div className="fixed bottom-[96px] left-1/2 -translate-x-1/2 z-[85] px-5 py-3 rounded-2xl text-center
+                        bg-[#0b1524] border border-white/[0.14] text-white text-[14px] font-semibold
+                        shadow-[0_10px_30px_rgba(0,0,0,0.6)] max-w-[92vw]">
+          {flash}
+        </div>
       )}
     </div>,
     document.body,
@@ -384,28 +554,38 @@ function Block({ title, count, dot, icon, children }: {
   );
 }
 
-function MatchRow({ m, table, live, you, onScore }: {
-  m: { player1: User | null; player2: User | null; score1: number | null; score2: number | null };
-  table: string | null; live?: boolean; you?: boolean; onScore?: () => void;
+function MatchRow({ m, table, live, you, userId, onScore, onConfirm }: {
+  m: Pick<Match, "player1" | "player2" | "score1" | "score2" | "status" | "proposed_score1" | "proposed_score2" | "proposed_by">;
+  table: string | null; live?: boolean; you?: boolean; userId?: string;
+  onScore?: () => void; onConfirm?: () => void;
 }) {
-  const canScore = !!(live && you && onScore);
+  const proposed  = m.status === "score_proposed";
+  const iProposed = proposed && !!userId && m.proposed_by?.id === userId;   // I'm waiting on the opponent
+  const iConfirm  = proposed && !!you && !iProposed && !!onConfirm;          // opponent waits on me
+  const canScore  = !!(live && you && onScore && m.status === "in_progress");
+  const s1 = proposed ? m.proposed_score1 : m.score1;
+  const s2 = proposed ? m.proposed_score2 : m.score2;
+  const onClick = iConfirm ? onConfirm : canScore ? onScore : undefined;
   return (
-    <div onClick={canScore ? onScore : undefined}
-      className={`rounded-2xl border px-4 py-3.5 ${canScore ? "cursor-pointer active:scale-[.99]" : ""} ${
-        you ? "border-blue-500/40 bg-blue-500/[0.08]" : "border-white/[0.08] bg-white/[0.03]"}`}>
+    <div onClick={onClick}
+      className={`rounded-2xl border px-4 py-3.5 ${onClick ? "cursor-pointer active:scale-[.99]" : ""} ${
+        iConfirm ? "border-amber-500/55 bg-amber-500/[0.10]"
+          : you ? "border-blue-500/40 bg-blue-500/[0.08]" : "border-white/[0.08] bg-white/[0.03]"}`}>
       <div className="flex items-center justify-between gap-2">
         <p className="text-[15px] font-semibold text-white truncate">{m.player1?.name ?? "—"}</p>
-        {m.score1 != null && <span className="text-[16px] font-black tabular-nums text-white/80">{m.score1}</span>}
+        {s1 != null && <span className="text-[16px] font-black tabular-nums text-white/80">{s1}</span>}
       </div>
       <div className="h-px bg-white/[0.06] my-1.5" />
       <div className="flex items-center justify-between gap-2">
         <p className="text-[15px] font-semibold text-white/75 truncate">{m.player2?.name ?? "—"}</p>
-        {m.score2 != null && <span className="text-[16px] font-black tabular-nums text-white/70">{m.score2}</span>}
+        {s2 != null && <span className="text-[16px] font-black tabular-nums text-white/70">{s2}</span>}
       </div>
       <div className="mt-2 flex items-center gap-2">
         {you && <span className="text-[10px] font-bold text-blue-300 bg-blue-500/20 px-2 py-0.5 rounded-full">Вы</span>}
         {table && <span className="text-[10px] font-bold text-white/45 bg-white/[0.06] px-2 py-0.5 rounded-full">{table}</span>}
-        {canScore && <span className="ml-auto text-[12px] font-bold text-emerald-300">Ввести счёт →</span>}
+        {iConfirm  && <span className="ml-auto text-[12px] font-bold text-amber-300">Подтвердите счёт →</span>}
+        {iProposed && <span className="ml-auto text-[11px] font-semibold text-white/45">Ожидание подтверждения…</span>}
+        {canScore  && <span className="ml-auto text-[12px] font-bold text-emerald-300">Ввести счёт →</span>}
       </div>
     </div>
   );

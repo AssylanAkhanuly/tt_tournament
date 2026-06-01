@@ -1700,9 +1700,9 @@ function OverviewPanel({
   // "Live" = a match actually at a table. A ready match (both players known) with
   // no table sits in the "Ожидают стола" queue until a table is assigned —
   // manually, or automatically when auto-assign is on.
-  const live         = matches.filter((m) => m.status === "in_progress" && m.table_number != null);
+  const live         = matches.filter((m) => (m.status === "in_progress" || m.status === "score_proposed") && m.table_number != null);
   const pendingReady = matches.filter(
-    (m) => m.player1 && m.player2 && m.table_number == null && m.status !== "finished"
+    (m) => m.player1 && m.player2 && m.table_number == null && m.status !== "finished" && m.status !== "score_proposed"
   );
   const absentIds = useMemo(
     () => new Set(participants.filter((p) => p.is_absent).map((p) => p.user.id)),
@@ -1741,7 +1741,9 @@ function OverviewPanel({
   // Group phase: live = in_progress group matches; callable = pending matches
   // where NEITHER player is currently at a table (non-conflicting schedule)
   const allGroupMatches     = isGroupPhase ? groups.flatMap((g) => g.matches.map((m) => ({ ...m, groupId: g.id, groupName: g.name }))) : [];
-  const groupMatchesLive = allGroupMatches.filter((m) => m.status === "in_progress");
+  // A score awaiting confirmation is still "live" — the table stays occupied and
+  // admins keep a way to open (and override) the match.
+  const groupMatchesLive = allGroupMatches.filter((m) => m.status === "in_progress" || m.status === "score_proposed");
 
   // Now that we know groupMatchesLive, include their table numbers so group
   // matches don't appear "free" when assigning another group match
@@ -1750,8 +1752,8 @@ function OverviewPanel({
 
   // The viewer's own live match — a discoverable "enter my score" CTA for players
   // (desktop has no equivalent of the mobile player view).
-  const myBracketLive = live.find((m) => m.player1?.id === user.id || m.player2?.id === user.id);
-  const myGroupLive   = groupMatchesLive.find((m) => m.player1.id === user.id || m.player2.id === user.id);
+  const myBracketLive = live.find((m) => m.status === "in_progress" && (m.player1?.id === user.id || m.player2?.id === user.id));
+  const myGroupLive   = groupMatchesLive.find((m) => m.status === "in_progress" && (m.player1.id === user.id || m.player2.id === user.id));
   const myOpponent = myBracketLive
     ? (myBracketLive.player1?.id === user.id ? myBracketLive.player2 : myBracketLive.player1)
     : myGroupLive
