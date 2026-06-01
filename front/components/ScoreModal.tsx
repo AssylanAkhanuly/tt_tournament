@@ -60,15 +60,12 @@ export default function ScoreModal({ match, onClose, onSubmit, canReset, onReset
 
   function pick(a: number, b: number) { setS1(a); setS2(b); setWo(0); setError(null); }
   function bump(setScore: (n: number) => void, n: number) { setScore(n); setWo(0); setError(null); }
-  // Select (don't submit) a walkover; the main Save button commits it.
-  function pickWalkover(winnerIsP1: boolean) {
-    setWo(winnerIsP1 ? 1 : 2);
-    setS1(winnerIsP1 ? 3 : 0); setS2(winnerIsP1 ? 0 : 3);
-    setError(null);
-  }
+  // Select (don't submit) a walkover; the score stays 0:0 and the main Save
+  // button commits it as a technical win.
+  function pickWalkover(winnerIsP1: boolean) { setWo(winnerIsP1 ? 1 : 2); setError(null); }
 
   async function save() {
-    if (s1 === s2) { setError("Ничья недопустима."); return; }
+    if (!wo && s1 === s2) { setError("Ничья недопустима."); return; }
     setLoading(true); setError(null);
     try {
       if (wo && onForfeit) await onForfeit(wo === 1);
@@ -216,33 +213,29 @@ export default function ScoreModal({ match, onClose, onSubmit, canReset, onReset
             </p>
           </div>
 
-          {/* ── Walkover / no-show — select like a quick result, then Save ── */}
+          {/* ── Walkover / no-show — pick who advances (0:0), then Save ── */}
           {!isFinished && onForfeit && (
             <div>
-              <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-white/25 mb-2">
+              <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-white/25 mb-1">
                 Неявка — техническая победа
               </p>
-              <div className="grid grid-cols-2 gap-1.5">
-                <button onClick={() => pickWalkover(true)}
-                  className={`py-2 rounded-xl text-[12px] font-bold transition-all active:scale-[.95] truncate ${
-                    wo === 1
-                      ? "bg-amber-500 text-white shadow-[0_0_12px_rgba(245,158,11,0.4)]"
-                      : "bg-amber-500/[0.08] hover:bg-amber-500/[0.16] text-amber-200/80"
-                  }`}>
-                  ✓ {p1}
-                </button>
-                <button onClick={() => pickWalkover(false)}
-                  className={`py-2 rounded-xl text-[12px] font-bold transition-all active:scale-[.95] truncate ${
-                    wo === 2
-                      ? "bg-amber-500 text-white shadow-[0_0_12px_rgba(245,158,11,0.4)]"
-                      : "bg-amber-500/[0.08] hover:bg-amber-500/[0.16] text-amber-200/80"
-                  }`}>
-                  ✓ {p2}
-                </button>
-              </div>
-              <p className="text-[10px] text-white/20 text-center mt-1.5">
-                Соперник проходит без игры — рейтинг не меняется
+              <p className="text-[11px] text-white/35 mb-2">
+                Нажмите, кто проходит дальше (счёт 0:0, рейтинг не меняется):
               </p>
+              <div className="space-y-1.5">
+                {[{ name: p1, w: 1 as const }, { name: p2, w: 2 as const }].map(({ name, w }) => (
+                  <button key={w} onClick={() => pickWalkover(w === 1)}
+                    className={`w-full flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl text-[13px] font-bold transition-all active:scale-[.98] ${
+                      wo === w
+                        ? "bg-amber-500 text-white shadow-[0_0_14px_rgba(245,158,11,0.4)]"
+                        : "bg-amber-500/[0.07] hover:bg-amber-500/[0.14] text-amber-200/80 border border-amber-500/20"
+                    }`}>
+                    <span className="text-[15px]">🏆</span>
+                    <span className="flex-1 text-left truncate">{name}</span>
+                    {wo === w && <span className="text-[12px] font-semibold">проходит ✓</span>}
+                  </button>
+                ))}
+              </div>
             </div>
           )}
 
@@ -258,7 +251,7 @@ export default function ScoreModal({ match, onClose, onSubmit, canReset, onReset
           {!isFinished && (
             <button
               onClick={save}
-              disabled={loading || s1 === s2}
+              disabled={loading || (!wo && s1 === s2)}
               className={`w-full py-3.5 rounded-xl font-bold text-[16px] transition-all
                          active:scale-[.98] disabled:opacity-35 text-white ${
                 wo

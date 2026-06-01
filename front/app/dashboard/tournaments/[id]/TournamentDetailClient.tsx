@@ -691,12 +691,11 @@ export default function TournamentDetailClient({
     toast(`Счёт изменён — ${winner ?? "Игрок"} победил ${s1}:${s2}`);
   }
 
-  // Manual walkover: the chosen player advances without a real game (no rating).
+  // Manual walkover: the chosen player advances without a real game (0:0, no rating).
   async function handleScoreForfeit(winnerIsP1: boolean) {
     if (!scoreMatch) return;
     const previousMatches = matches;
-    const [a, b] = winnerIsP1 ? [3, 0] : [0, 3];
-    await api.submitScore(tournament.id, scoreMatch.id, a, b, true);
+    await api.submitScore(tournament.id, scoreMatch.id, 0, 0, true, winnerIsP1 ? 1 : 2);
     const [fm, ft] = await Promise.all([api.getMatches(tournament.id), api.getTournament(tournament.id)]);
     callNewlyAssignedMatches(previousMatches, fm);
     setMatches(fm); setTournament(ft); setScoreMatch(null);
@@ -2219,8 +2218,7 @@ function OverviewPanel({
         p1Absent={absentIds.has(groupScoreMatch.player1.id)}
         p2Absent={absentIds.has(groupScoreMatch.player2.id)}
         onForfeit={isAdmin && !playoffStarted ? async (winnerIsP1) => {
-          const [a, b] = winnerIsP1 ? [3, 0] : [0, 3];
-          await api.submitGroupScore(tournament.id, groupScoreMatch.groupId, groupScoreMatch.id, a, b, true);
+          await api.submitGroupScore(tournament.id, groupScoreMatch.groupId, groupScoreMatch.id, 0, 0, true, winnerIsP1 ? 1 : 2);
           const updated = await api.getGroups(tournament.id);
           onGroupsChange(updated);
           setGroupScoreMatch(null);
@@ -2273,14 +2271,10 @@ function GroupScoreModal({
 
   function pick(a: number, b: number) { setS1(a); setS2(b); setWo(0); setError(null); }
   function bump(setScore: (n: number) => void, n: number) { setScore(n); setWo(0); setError(null); }
-  function pickWalkover(winnerIsP1: boolean) {
-    setWo(winnerIsP1 ? 1 : 2);
-    setS1(winnerIsP1 ? 3 : 0); setS2(winnerIsP1 ? 0 : 3);
-    setError(null);
-  }
+  function pickWalkover(winnerIsP1: boolean) { setWo(winnerIsP1 ? 1 : 2); setError(null); }
 
   async function save() {
-    if (s1 === s2) { setError("Ничья недопустима."); return; }
+    if (!wo && s1 === s2) { setError("Ничья недопустима."); return; }
     setLoading(true); setError(null);
     try {
       if (wo && onForfeit) await onForfeit(wo === 1);
@@ -2391,29 +2385,25 @@ function GroupScoreModal({
             </p>
           </div>
 
-          {/* Walkover / no-show — select like a quick result, then Save */}
+          {/* Walkover / no-show — pick who advances (0:0), then Save */}
           {!isFinished && onForfeit && (
             <div>
-              <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-white/25 mb-2">Неявка — техническая победа</p>
-              <div className="grid grid-cols-2 gap-1.5">
-                <button onClick={() => pickWalkover(true)}
-                  className={`py-2 rounded-xl text-[12px] font-bold transition-all active:scale-[.95] truncate ${
-                    wo === 1
-                      ? "bg-amber-500 text-white shadow-[0_0_12px_rgba(245,158,11,0.4)]"
-                      : "bg-amber-500/[0.08] hover:bg-amber-500/[0.16] text-amber-200/80"
-                  }`}>
-                  ✓ {match.player1.name}
-                </button>
-                <button onClick={() => pickWalkover(false)}
-                  className={`py-2 rounded-xl text-[12px] font-bold transition-all active:scale-[.95] truncate ${
-                    wo === 2
-                      ? "bg-amber-500 text-white shadow-[0_0_12px_rgba(245,158,11,0.4)]"
-                      : "bg-amber-500/[0.08] hover:bg-amber-500/[0.16] text-amber-200/80"
-                  }`}>
-                  ✓ {match.player2.name}
-                </button>
+              <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-white/25 mb-1">Неявка — техническая победа</p>
+              <p className="text-[11px] text-white/35 mb-2">Нажмите, кто проходит дальше (счёт 0:0, рейтинг не меняется):</p>
+              <div className="space-y-1.5">
+                {[{ name: match.player1.name, w: 1 as const }, { name: match.player2.name, w: 2 as const }].map(({ name, w }) => (
+                  <button key={w} onClick={() => pickWalkover(w === 1)}
+                    className={`w-full flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl text-[13px] font-bold transition-all active:scale-[.98] ${
+                      wo === w
+                        ? "bg-amber-500 text-white shadow-[0_0_14px_rgba(245,158,11,0.4)]"
+                        : "bg-amber-500/[0.07] hover:bg-amber-500/[0.14] text-amber-200/80 border border-amber-500/20"
+                    }`}>
+                    <span className="text-[15px]">🏆</span>
+                    <span className="flex-1 text-left truncate">{name}</span>
+                    {wo === w && <span className="text-[12px] font-semibold">проходит ✓</span>}
+                  </button>
+                ))}
               </div>
-              <p className="text-[10px] text-white/20 text-center mt-1.5">Соперник получает победу без игры — рейтинг не меняется</p>
             </div>
           )}
 
@@ -2459,14 +2449,14 @@ function GroupScoreModal({
                   Освободить
                 </button>
               )}
-              <button onClick={save} disabled={loading || s1 === s2 || isFinished}
+              <button onClick={save} disabled={loading || isFinished || (!wo && s1 === s2)}
                 className={`flex-1 py-3 rounded-xl font-bold text-[15px] transition-all active:scale-[.98]
                            disabled:opacity-35 text-white ${
                   wo
                     ? "bg-amber-500 hover:bg-amber-400 shadow-[0_4px_16px_rgba(245,158,11,0.35)]"
                     : "bg-blue-600 hover:bg-blue-500 shadow-[0_4px_16px_rgba(59,130,246,0.35)]"
                 }`}>
-                {loading ? "..." : wo ? "Неявка — Сохранить" : `${s1}:${s2} Сохранить`}
+                {loading ? "..." : wo ? `Неявка: ${wo === 1 ? match.player1.name : match.player2.name} — Сохранить` : `${s1}:${s2} Сохранить`}
               </button>
               <button onClick={onClose}
                 className="flex-1 py-3 rounded-xl font-semibold text-[14px] transition-all
