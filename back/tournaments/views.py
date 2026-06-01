@@ -441,7 +441,7 @@ def _add_user_to_group_stage(tournament, user):
     if GroupParticipant.objects.filter(group=group, user=user).exists():
         return
     opponents = [gp.user for gp in group.participants.select_related('user')]
-    GroupParticipant.objects.create(group=group, user=user)
+    GroupParticipant.objects.create(group=group, user=user, seed=len(opponents))
     next_num = (GroupMatch.objects.filter(group=group)
                 .aggregate(m=Max('match_number'))['m'] or 0)
     for opp in opponents:
@@ -519,6 +519,30 @@ class RemoveParticipantView(APIView):
         participant = get_object_or_404(TournamentParticipant, pk=participant_id, tournament=tournament)
         participant.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class ParticipantAbsentView(APIView):
+    """PATCH /api/tournaments/<pk>/participants/<participant_id>/absent/
+    Body: { "is_absent": bool }. Admin marks/unmarks a player as a no-show:
+    their unplayed group matches are auto-forfeited (opponent wins 3:0) and
+    their matches are excluded from RTTF rating when the tournament finishes.
+    """
+    permission_classes = [IsAuthenticated]
+
+    def patch(self, request, pk, participant_id):
+        tournament = get_object_or_404(Tournament.objects.select_related('club'), pk=pk)
+        if not _can_manage_tournament(request.user, tournament):
+            return Response({"detail": "Нет прав."}, status=status.HTTP_403_FORBIDDEN)
+        if tournament.status == Tournament.STATUS_FINISHED:
+            return Response({"detail": "Турнир завершён."}, status=status.HTTP_400_BAD_REQUEST)
+        participant = get_object_or_404(TournamentParticipant, pk=participant_id, tournament=tournament)
+
+        is_absent = bool(request.data.get("is_absent", True))
+        from .standings import apply_absence
+        apply_absence(tournament, participant.user_id, is_absent)
+
+        participant.refresh_from_db()
+        return Response(ParticipantSerializer(participant).data)
 
 
 class JoinTournamentSelfView(APIView):
@@ -1053,31 +1077,13 @@ class GroupMatchScoreView(APIView):
         match.score2 = score2
         match.winner = match.player1 if score1 > score2 else match.player2
         match.status = GroupMatch.FINISHED
+        match.is_walkover = False  # a real score overrides any walkover
         match.save()
 
-        # Update GroupParticipant standings
-        from .models import GroupParticipant as GP
-        winner_user = match.winner
-        loser_user = match.player2 if score1 > score2 else match.player1
-        winner_score = max(score1, score2)
-        loser_score  = min(score1, score2)
-
-        try:
-            gp_winner = GP.objects.get(group=group, user=winner_user)
-            gp_winner.wins   += 1
-            gp_winner.points += 3
-            gp_winner.diff   += (winner_score - loser_score)
-            gp_winner.save()
-        except GP.DoesNotExist:
-            pass
-
-        try:
-            gp_loser = GP.objects.get(group=group, user=loser_user)
-            gp_loser.losses += 1
-            gp_loser.diff   -= (winner_score - loser_score)
-            gp_loser.save()
-        except GP.DoesNotExist:
-            pass
+        # Standings are recomputed from all finished matches (win=2/loss=1/
+        # absent=0), keeping points consistent across edits and forfeits.
+        from .standings import recompute_group_standings
+        recompute_group_standings(group)
 
         _log_score(tournament, request.user, match, "group", f"{group.name} · М{match.match_number}")
 
@@ -1107,29 +1113,16 @@ class GroupMatchResetView(APIView):
         # Log the reset with the score being undone (before it's cleared below).
         _log_score(tournament, request.user, match, "group", f"{group.name} · М{match.match_number}", action=ScoreLog.ACTION_RESET)
 
-        from .models import GroupParticipant as GP
-        diff = abs(match.score1 - match.score2)
-        winner = match.winner
-        loser = match.player2 if match.winner_id == match.player1_id else match.player1
-
-        gp_w = GP.objects.filter(group=group, user=winner).first()
-        if gp_w:
-            gp_w.wins -= 1
-            gp_w.points -= 3
-            gp_w.diff -= diff
-            gp_w.save()
-        gp_l = GP.objects.filter(group=group, user=loser).first()
-        if gp_l:
-            gp_l.losses -= 1
-            gp_l.diff += diff
-            gp_l.save()
-
         match.score1 = None
         match.score2 = None
         match.winner = None
         match.status = GroupMatch.PENDING
         match.table_number = None
+        match.is_walkover = False
         match.save()
+
+        from .standings import recompute_group_standings
+        recompute_group_standings(group)
         return Response(GroupMatchSerializer(match).data)
 
 

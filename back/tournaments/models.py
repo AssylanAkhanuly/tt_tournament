@@ -76,6 +76,9 @@ class TournamentParticipant(models.Model):
         verbose_name="Участник",
     )
     joined_at = models.DateTimeField(auto_now_add=True)
+    # Absent / no-show: their matches are excluded from RTTF rating and score 0
+    # group points; their unplayed group matches are auto-forfeited.
+    is_absent = models.BooleanField(default=False, verbose_name="Отсутствует")
     # RTTF rating snapshot, set when the tournament finishes.
     rating_before = models.IntegerField(null=True, blank=True, verbose_name="Рейтинг до")
     rating_change = models.IntegerField(null=True, blank=True, verbose_name="Изменение рейтинга")
@@ -209,6 +212,9 @@ class TournamentGroup(models.Model):
 class GroupParticipant(models.Model):
     group = models.ForeignKey(TournamentGroup, on_delete=models.CASCADE, related_name='participants')
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='group_participations')
+    # Stable seed position within the group (snake-seed order), used to keep the
+    # table rows fixed while the computed place changes with results.
+    seed = models.PositiveIntegerField(default=0, verbose_name="Посев")
     points = models.IntegerField(default=0)
     wins = models.IntegerField(default=0)
     losses = models.IntegerField(default=0)
@@ -216,6 +222,8 @@ class GroupParticipant(models.Model):
 
     class Meta:
         unique_together = ('group', 'user')
+        # Default ordering is by standings — reused for playoff seeding (A1, B1…).
+        # The API serializes rows in `seed` order separately for the UI.
         ordering = ['-points', '-wins', '-diff']
 
     def __str__(self):
@@ -241,6 +249,9 @@ class GroupMatch(models.Model):
     winner = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name='gm_won')
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=PENDING)
     table_number = models.PositiveIntegerField(null=True, blank=True, verbose_name="Стол")
+    # Walkover: auto-recorded when an opponent is marked absent. Reverted to
+    # pending if the absent flag is cleared.
+    is_walkover = models.BooleanField(default=False, verbose_name="Неявка")
 
     class Meta:
         ordering = ['match_number']

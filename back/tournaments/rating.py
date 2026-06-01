@@ -48,7 +48,11 @@ def apply_tournament_ratings(tournament) -> None:
         return  # already applied
 
     before = {p.user_id: (p.user.rating or 0) for p in parts}
-    avg = sum(before.values()) / len(before)
+    # Absent players (no-shows) and their matches are excluded from rating
+    # entirely — neither they nor their opponents gain/lose from those games.
+    absent = {p.user_id for p in parts if p.is_absent}
+    rated = {uid: r for uid, r in before.items() if uid not in absent}
+    avg = (sum(rated.values()) / len(rated)) if rated else 0
     k_t = _k_for_avg(avg)
     tcount = {
         p.user_id: TournamentParticipant.objects.filter(user_id=p.user_id).count()
@@ -59,6 +63,8 @@ def apply_tournament_ratings(tournament) -> None:
     def process(p1, p2, s1, s2, winner_id):
         if not p1 or not p2 or not winner_id:
             return
+        if p1 in absent or p2 in absent:
+            return  # match involving an absent player — excluded from rating
         loser_id = p2 if winner_id == p1 else p1
         rw, rl = before.get(winner_id), before.get(loser_id)
         if rw is None or rl is None:

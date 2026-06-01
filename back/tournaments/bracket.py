@@ -481,8 +481,8 @@ def generate_group_bracket(tournament):
         created_groups.append(group)
 
         gp_list = []
-        for tp in players_in_group:
-            gp_list.append(GroupParticipant(group=group, user=tp.user))
+        for seed_idx, tp in enumerate(players_in_group):
+            gp_list.append(GroupParticipant(group=group, user=tp.user, seed=seed_idx))
         GroupParticipant.objects.bulk_create(gp_list)
 
         match_num = 1
@@ -497,6 +497,16 @@ def generate_group_bracket(tournament):
                     status=GroupMatch.PENDING,
                 )
                 match_num += 1
+
+    # Players marked absent before the start: forfeit their freshly-created
+    # group matches now (and zero their points) so the bracket is consistent.
+    from .models import TournamentParticipant
+    from .standings import apply_absence
+    absent_ids = TournamentParticipant.objects.filter(
+        tournament=tournament, is_absent=True
+    ).values_list("user_id", flat=True)
+    for uid in list(absent_ids):
+        apply_absence(tournament, uid, True)
 
     tournament.status = tournament.STATUS_IN_PROGRESS
     tournament.save()

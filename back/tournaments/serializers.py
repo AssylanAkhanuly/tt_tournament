@@ -75,7 +75,7 @@ class ParticipantSerializer(serializers.ModelSerializer):
 
     class Meta:
         model  = TournamentParticipant
-        fields = ["id", "user", "joined_at", "rating_before", "rating_change"]
+        fields = ["id", "user", "joined_at", "is_absent", "rating_before", "rating_change"]
 
 
 class TournamentTableSerializer(serializers.ModelSerializer):
@@ -111,24 +111,40 @@ class GroupMatchSerializer(serializers.ModelSerializer):
 
     class Meta:
         model  = GroupMatch
-        fields = ["id", "match_number", "player1", "player2", "score1", "score2", "winner", "status", "table_number"]
+        fields = ["id", "match_number", "player1", "player2", "score1", "score2", "winner", "status", "table_number", "is_walkover"]
 
 
 class GroupParticipantSerializer(serializers.ModelSerializer):
     user = UserSerializer(read_only=True)
+    # Injected by GroupSerializer.get_participants.
+    place = serializers.IntegerField(read_only=True)      # standings rank (1 = top)
+    is_absent = serializers.BooleanField(read_only=True)  # no-show flag
 
     class Meta:
         model  = GroupParticipant
-        fields = ["id", "user", "points", "wins", "losses", "diff"]
+        fields = ["id", "user", "seed", "points", "wins", "losses", "diff", "place", "is_absent"]
 
 
 class GroupSerializer(serializers.ModelSerializer):
-    participants = GroupParticipantSerializer(many=True, read_only=True)
+    participants = serializers.SerializerMethodField()
     matches      = GroupMatchSerializer(many=True, read_only=True)
 
     class Meta:
         model  = TournamentGroup
         fields = ["id", "name", "order", "participants", "matches"]
+
+    def get_participants(self, group):
+        # Rank by standings (the model's default ordering), then return rows in
+        # fixed `seed` order so the UI keeps players in place and only the
+        # `place` number moves.
+        from .standings import absent_user_ids
+        absent = absent_user_ids(group.tournament_id)
+        parts = list(group.participants.all())
+        for rank, gp in enumerate(parts, start=1):
+            gp.place = rank
+            gp.is_absent = gp.user_id in absent
+        parts.sort(key=lambda gp: (gp.seed, gp.id))
+        return GroupParticipantSerializer(parts, many=True).data
 
 
 class ScoreLogSerializer(serializers.ModelSerializer):
