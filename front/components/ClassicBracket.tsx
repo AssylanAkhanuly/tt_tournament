@@ -229,6 +229,14 @@ export default function ClassicBracket({
 
   const [pan,   setPan]   = useState(INITIAL_PAN);
   const [scale, setScale] = useState(INITIAL_SCALE);
+  // "Full net" toggle: off → compact view that hides bye/ghost slots (default,
+  // current behaviour); on → every bracket box is drawn. Persisted across views.
+  const [showFull, setShowFull] = useState<boolean>(() =>
+    typeof window !== "undefined" && localStorage.getItem("tt_bracket_full") === "1"
+  );
+  useEffect(() => {
+    if (typeof window !== "undefined") localStorage.setItem("tt_bracket_full", showFull ? "1" : "0");
+  }, [showFull]);
   const matchById = useMemo(() => new Map(matches.map((m) => [m.id, m])), [matches]);
 
   // ── Layout ─────────────────────────────────────────────────────────────────
@@ -294,7 +302,9 @@ export default function ClassicBracket({
     };
     for (const m of matches) countInputs(m);
 
-    const hidden = (m: Match) => (realInputs.get(m.id) ?? 0) < 2; // not a real contest → bye/ghost
+    // Compact mode hides matches that never get 2 real players (bye/ghost);
+    // full-net mode keeps every box.
+    const hidden = (m: Match) => !showFull && (realInputs.get(m.id) ?? 0) < 2;
 
     const visible = matches.filter((m) => !hidden(m));
     if (visible.length === 0) return empty;
@@ -470,7 +480,7 @@ export default function ClassicBracket({
     const maxX = items.length ? Math.max(...items.map((i) => i.x + CARD_W)) + 200 : 600;
     const maxY = cursorY + 120;
     return { items, labels, lines, width: maxX, height: maxY };
-  }, [matches]);
+  }, [matches, showFull]);
 
   // ── Wheel zoom (non-passive) ───────────────────────────────────────────────
   const panRef   = useRef(pan);
@@ -582,6 +592,24 @@ export default function ClassicBracket({
         onPointerUp={handlePointerUp}
         onPointerCancel={handlePointerUp}
       >
+        {/* Full-net toggle — compact (hide byes) vs full bracket */}
+        <button
+          data-no-pan="true"
+          onPointerDown={(e) => e.stopPropagation()}
+          onClick={() => setShowFull((v) => !v)}
+          title={showFull ? "Скрыть пустые слоты (компактная сетка)" : "Показать все слоты (полная сетка)"}
+          className={`absolute right-3 bottom-3 z-20 flex items-center gap-2 rounded-xl border px-3 h-10 text-[12px] font-semibold shadow-[0_16px_40px_rgba(0,0,0,0.28)] transition ${
+            showFull
+              ? "border-sky-300/40 bg-sky-500/20 text-sky-100"
+              : "border-white/[0.08] bg-[#0b1524]/92 text-white/65 hover:bg-white/[0.05]"
+          }`}
+        >
+          <span className={`inline-flex h-4 w-7 items-center rounded-full px-0.5 transition-colors ${showFull ? "bg-sky-400/80" : "bg-white/15"}`}>
+            <span className={`h-3 w-3 rounded-full bg-white transition-transform ${showFull ? "translate-x-3" : ""}`} />
+          </span>
+          Полная сетка
+        </button>
+
         {/* Zoom / reset controls */}
         <div
           data-no-pan="true"
