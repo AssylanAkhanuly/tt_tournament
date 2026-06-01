@@ -665,6 +665,25 @@ export default function TournamentDetailClient({
     toast("Счёт сброшен — введите заново");
   }
 
+  // Correct a finished bracket match's score in place: reset (pulls back the
+  // propagated players + reverts ratings) then re-submit the new score. Same
+  // two server steps as the manual flow, in one click. Throws so the modal
+  // surfaces the error (e.g. a downstream match was already played).
+  async function handleScoreEdit(s1: number, s2: number) {
+    if (!scoreMatch) return;
+    if (!canResetBracketScore(scoreMatch, matches)) {
+      throw { detail: "Сначала отмените результат следующего матча" };
+    }
+    const previousMatches = matches;
+    await api.resetMatch(tournament.id, scoreMatch.id);
+    await api.submitScore(tournament.id, scoreMatch.id, s1, s2);
+    const [fm, ft] = await Promise.all([api.getMatches(tournament.id), api.getTournament(tournament.id)]);
+    callNewlyAssignedMatches(previousMatches, fm);
+    setMatches(fm); setTournament(ft); setScoreMatch(null);
+    const winner = s1 > s2 ? scoreMatch.player1?.name : scoreMatch.player2?.name;
+    toast(`Счёт изменён — ${winner ?? "Игрок"} победил ${s1}:${s2}`);
+  }
+
   async function handleRemove(participantId: number) {
     setRemovingId(participantId);
     try {
@@ -1319,6 +1338,7 @@ export default function TournamentDetailClient({
           onSubmit={handleScoreSubmit}
           canReset={isAdmin && canResetBracketScore(scoreMatch, matches)}
           onReset={handleScoreReset}
+          onEdit={isAdmin ? handleScoreEdit : undefined}
         />
       )}
 
@@ -2117,6 +2137,17 @@ function OverviewPanel({
           onGroupsChange(updated);
           setGroupScoreMatch(null);
         }}
+        onEdit={isAdmin ? async (s1, s2) => {
+          if (playoffStarted) {
+            throw { detail: "Плей-офф уже начат — групповые результаты заблокированы." };
+          }
+          // Reset rolls back the standings, then re-submit applies the new score.
+          await api.resetGroupMatch(tournament.id, groupScoreMatch.groupId, groupScoreMatch.id);
+          await api.submitGroupScore(tournament.id, groupScoreMatch.groupId, groupScoreMatch.id, s1, s2);
+          const updated = await api.getGroups(tournament.id);
+          onGroupsChange(updated);
+          setGroupScoreMatch(null);
+        } : undefined}
       />
     )}
     </>
@@ -2140,7 +2171,7 @@ const GROUP_QUICK: [number, number][] = [
 ];
 
 function GroupScoreModal({
-  match, onClose, onSubmit, onClear, canReset, onReset,
+  match, onClose, onSubmit, onClear, canReset, onReset, onEdit,
 }: {
   match: GroupMatch & { groupId?: number; groupName?: string };
   onClose: () => void;
@@ -2148,6 +2179,7 @@ function GroupScoreModal({
   onClear?: () => void;
   canReset?: boolean;
   onReset?: () => Promise<void>;
+  onEdit?: (s1: number, s2: number) => Promise<void>;
 }) {
   const isFinished = match.status === "finished";
   const [s1, setS1]       = useState(match.score1 ?? 0);
@@ -2156,6 +2188,7 @@ function GroupScoreModal({
   const [error, setError] = useState<string | null>(null);
 
   const p1wins = s1 > s2, p2wins = s2 > s1;
+  const unchanged = s1 === match.score1 && s2 === match.score2;
 
   function pick(a: number, b: number) { setS1(a); setS2(b); setError(null); }
 
@@ -2165,6 +2198,14 @@ function GroupScoreModal({
     try { await onSubmit(s1, s2); }
     catch (err: unknown) { setError((err as Record<string, string>)?.detail ?? "Не удалось сохранить."); }
     finally { setLoading(false); }
+  }
+
+  async function edit() {
+    if (!onEdit) return;
+    if (s1 === s2) { setError("Ничья недопустима."); return; }
+    setLoading(true); setError(null);
+    try { await onEdit(s1, s2); }
+    catch (err: unknown) { setError((err as Record<string, string>)?.detail ?? "Не удалось сохранить."); setLoading(false); }
   }
 
   async function reset() {
@@ -2265,37 +2306,57 @@ function GroupScoreModal({
                           rounded-xl px-4 py-2.5 text-center">{error}</p>
           )}
 
-          {/* Three action buttons */}
-          <div className="flex gap-2">
-            {onClear && (
-              <button onClick={() => { onClear(); onClose(); }}
-                className="flex-1 py-3 rounded-xl font-semibold text-[14px] transition-all
-                           bg-white/[0.07] hover:bg-red-500/15 border border-white/[0.09]
-                           hover:border-red-500/30 text-white/50 hover:text-red-400 active:scale-[.97]">
-                Освободить
-              </button>
-            )}
-            {isFinished && canReset && onReset ? (
-              <button onClick={reset} disabled={loading}
-                className="flex-1 py-3 rounded-xl font-bold text-[15px] transition-all active:scale-[.98]
-                           disabled:opacity-40 bg-red-500/15 hover:bg-red-500/25 border border-red-500/25 text-red-300">
-                {loading ? "..." : "↺ Сбросить счёт"}
-              </button>
-            ) : (
+          {/* Action buttons */}
+          {isFinished && canReset && (onEdit || onReset) ? (
+            <div className="space-y-2">
+              {onEdit && (
+                <button onClick={edit} disabled={loading || s1 === s2 || unchanged}
+                  className="w-full py-3 rounded-xl font-bold text-[15px] transition-all active:scale-[.98]
+                             disabled:opacity-35 bg-blue-600 hover:bg-blue-500 text-white
+                             shadow-[0_4px_16px_rgba(59,130,246,0.35)]">
+                  {loading ? "..." : `${s1}:${s2} Сохранить счёт`}
+                </button>
+              )}
+              <div className="flex gap-2">
+                {onReset && (
+                  <button onClick={reset} disabled={loading}
+                    className="flex-1 py-3 rounded-xl font-bold text-[15px] transition-all active:scale-[.98]
+                               disabled:opacity-40 bg-red-500/15 hover:bg-red-500/25 border border-red-500/25 text-red-300">
+                    {loading ? "..." : "↺ Сбросить"}
+                  </button>
+                )}
+                <button onClick={onClose}
+                  className="flex-1 py-3 rounded-xl font-semibold text-[14px] transition-all
+                             bg-white/[0.07] hover:bg-white/[0.11] border border-white/[0.09]
+                             text-white/50 hover:text-white/80 active:scale-[.97]">
+                  Отмена
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="flex gap-2">
+              {onClear && (
+                <button onClick={() => { onClear(); onClose(); }}
+                  className="flex-1 py-3 rounded-xl font-semibold text-[14px] transition-all
+                             bg-white/[0.07] hover:bg-red-500/15 border border-white/[0.09]
+                             hover:border-red-500/30 text-white/50 hover:text-red-400 active:scale-[.97]">
+                  Освободить
+                </button>
+              )}
               <button onClick={save} disabled={loading || s1 === s2 || isFinished}
                 className="flex-1 py-3 rounded-xl font-bold text-[15px] transition-all active:scale-[.98]
                            disabled:opacity-35 bg-blue-600 hover:bg-blue-500 text-white
                            shadow-[0_4px_16px_rgba(59,130,246,0.35)]">
                 {loading ? "..." : `${s1}:${s2} Сохранить`}
               </button>
-            )}
-            <button onClick={onClose}
-              className="flex-1 py-3 rounded-xl font-semibold text-[14px] transition-all
-                         bg-white/[0.07] hover:bg-white/[0.11] border border-white/[0.09]
-                         text-white/50 hover:text-white/80 active:scale-[.97]">
-              Отмена
-            </button>
-          </div>
+              <button onClick={onClose}
+                className="flex-1 py-3 rounded-xl font-semibold text-[14px] transition-all
+                           bg-white/[0.07] hover:bg-white/[0.11] border border-white/[0.09]
+                           text-white/50 hover:text-white/80 active:scale-[.97]">
+                Отмена
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </div>

@@ -11,6 +11,8 @@ interface Props {
   /** Admins can reset a finished match (wrong score) to re-enter it. */
   canReset?: boolean;
   onReset?: () => Promise<void>;
+  /** Admins can correct a finished match's score in place (reset + re-submit). */
+  onEdit?: (score1: number, score2: number) => Promise<void>;
 }
 
 // Common table-tennis best-of-5 results
@@ -19,7 +21,7 @@ const QUICK: [number, number][] = [
   [0, 3], [1, 3], [2, 3],
 ];
 
-export default function ScoreModal({ match, onClose, onSubmit, canReset, onReset }: Props) {
+export default function ScoreModal({ match, onClose, onSubmit, canReset, onReset, onEdit }: Props) {
   const isFinished = match.status === "finished";
   const [s1, setS1]         = useState(match.score1 ?? 0);
   const [s2, setS2]         = useState(match.score2 ?? 0);
@@ -59,8 +61,22 @@ export default function ScoreModal({ match, onClose, onSubmit, canReset, onReset
     } finally { setLoading(false); }
   }
 
+  // Correct a finished match in place (parent resets + re-submits). On success
+  // the parent closes the modal, so loading is only cleared on failure.
+  async function edit() {
+    if (!onEdit) return;
+    if (s1 === s2) { setError("Ничья недопустима."); return; }
+    setLoading(true); setError(null);
+    try { await onEdit(s1, s2); }
+    catch (err: unknown) {
+      setError((err as Record<string, string>)?.detail ?? "Не удалось сохранить.");
+      setLoading(false);
+    }
+  }
+
   const p1wins = s1 > s2;
   const p2wins = s2 > s1;
+  const unchanged = s1 === match.score1 && s2 === match.score2;
 
   return (
     <div
@@ -204,19 +220,33 @@ export default function ScoreModal({ match, onClose, onSubmit, canReset, onReset
             </button>
           )}
 
-          {/* ── Reset (admin, finished match) ─────────────────────────── */}
-          {isFinished && canReset && onReset && (
+          {/* ── Edit / reset (admin, finished match) ──────────────────── */}
+          {isFinished && canReset && (onEdit || onReset) && (
             <>
               <p className="text-[12px] text-white/35 text-center">
-                Матч завершён со счётом {match.score1}:{match.score2}. Сбросьте его, чтобы ввести
-                заново.
+                Матч завершён со счётом {match.score1}:{match.score2}. Измените счёт выше и
+                сохраните — или сбросьте полностью.
               </p>
-              <button onClick={reset} disabled={loading}
-                className="w-full py-3 rounded-xl text-[15px] font-bold
-                           bg-red-500/15 hover:bg-red-500/25 border border-red-500/25
-                           text-red-300 disabled:opacity-40 transition-all">
-                {loading ? "..." : "↺ Сбросить счёт"}
-              </button>
+              {onEdit && (
+                <button
+                  onClick={edit}
+                  disabled={loading || s1 === s2 || unchanged}
+                  className="w-full py-3.5 rounded-xl font-bold text-[16px] transition-all
+                             active:scale-[.98] disabled:opacity-35
+                             bg-blue-600 hover:bg-blue-500 text-white
+                             shadow-[0_4px_20px_rgba(59,130,246,0.35)]"
+                >
+                  {loading ? "Сохранение..." : `${s1} : ${s2} — Сохранить счёт`}
+                </button>
+              )}
+              {onReset && (
+                <button onClick={reset} disabled={loading}
+                  className="w-full py-3 rounded-xl text-[15px] font-bold
+                             bg-red-500/15 hover:bg-red-500/25 border border-red-500/25
+                             text-red-300 disabled:opacity-40 transition-all">
+                  {loading ? "..." : "↺ Сбросить счёт"}
+                </button>
+              )}
             </>
           )}
 
