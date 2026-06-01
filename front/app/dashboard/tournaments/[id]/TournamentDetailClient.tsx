@@ -2170,8 +2170,10 @@ function OverviewPanel({
                 ) : (
                   pendingReady.map((m) => (
                     <PendingBracketRow key={m.id} match={m} isAdmin={isAdmin}
-                      freeTables={freeTables} assigning={assigning === m.id}
-                      onAssign={(t) => assignTable(m, t)} />
+                      freeTables={freeTables} tableNameMap={tableNameMap}
+                      onAssign={(t) => assignTable(m, t)}
+                      onScore={() => onEnterScore(m)}
+                      onClear={() => assignTable(m, null)} />
                   ))
                 )
               )}
@@ -2641,35 +2643,39 @@ function GroupMatchRow({ match, label, isAdmin, canScore, freeTables = [], table
 
 // ── Pending bracket match row (right panel) ───────────────────────────────────
 function PendingBracketRow({
-  match, isAdmin, freeTables, assigning, onAssign,
-}: { match: Match; isAdmin: boolean; freeTables: TournamentTable[]; assigning: boolean; onAssign: (t: number) => void }) {
-  const [tableInput, setTableInput] = useState("");
+  match, isAdmin, freeTables, tableNameMap, onAssign, onScore, onClear,
+}: {
+  match: Match; isAdmin: boolean; freeTables: TournamentTable[];
+  tableNameMap: Record<number, string>;
+  onAssign: (t: number) => void; onScore: () => void; onClear: () => void;
+}) {
+  const [showModal, setShowModal] = useState(false);
   return (
-    <div className="rounded-xl border border-white/[0.08] bg-white/[0.03] px-3 py-2.5">
-      <p className="text-[13px] font-semibold truncate">
-        <span className="text-white/85">{match.player1?.name ?? "—"}</span>
-        <span className="text-white/20 mx-1.5 font-normal">vs</span>
-        <span className="text-white/85">{match.player2?.name ?? "—"}</span>
-      </p>
-      {isAdmin && match.player1 && match.player2 && freeTables.length > 0 && (
-        <div className="flex items-center gap-2 mt-2.5">
-          <select value={tableInput} onChange={(e) => setTableInput(e.target.value)}
-            style={{ colorScheme: "dark" }}
-            className="flex-1 text-[11px] px-3 py-2 bg-white/[0.07] border border-white/[0.10]
-                       rounded-xl text-white focus:outline-none min-w-0">
-            <option value="">Стол</option>
-            {freeTables.map((t) => <option key={t.id} value={t.number}>{t.display_name}</option>)}
-          </select>
-          <button
-            onClick={() => { const n = parseInt(tableInput); if (!isNaN(n)) onAssign(n); }}
-            disabled={!tableInput || assigning}
-            className="text-[11px] px-3 py-2 rounded-xl bg-blue-600 hover:bg-blue-500
-                       text-white disabled:opacity-40 transition-all shrink-0">
-            {assigning ? "…" : "→"}
-          </button>
-        </div>
+    <>
+      <div
+        onClick={() => { if (isAdmin) setShowModal(true); }}
+        title={isAdmin ? "Назначить стол" : undefined}
+        className={`rounded-xl border border-white/[0.08] bg-white/[0.03] px-3 py-2.5 ${
+          isAdmin ? "cursor-pointer hover:border-blue-400/40 hover:bg-white/[0.05] transition-all" : ""
+        }`}>
+        <p className="text-[13px] font-semibold truncate">
+          <span className="text-white/85">{match.player1?.name ?? "—"}</span>
+          <span className="text-white/20 mx-1.5 font-normal">vs</span>
+          <span className="text-white/85">{match.player2?.name ?? "—"}</span>
+        </p>
+      </div>
+      {showModal && isAdmin && (
+        <BracketMatchModal
+          match={match}
+          freeTables={freeTables}
+          tableNameMap={tableNameMap}
+          onClose={() => setShowModal(false)}
+          onScore={() => { onScore(); setShowModal(false); }}
+          onAssign={onAssign}
+          onClear={onClear}
+        />
       )}
-    </div>
+    </>
   );
 }
 
@@ -3144,7 +3150,9 @@ function BracketMatchModal({
   onAssign: (t: number) => void; onClear: () => void;
 }) {
   const currentName = match.table_number ? (tableNameMap[match.table_number] ?? `Стол ${match.table_number}`) : null;
-  const isLive = match.status === "in_progress";
+  // Show the score view only once a table is assigned; otherwise the table picker
+  // (a ready bracket match is already in_progress but may have no table yet).
+  const hasTable = match.table_number != null;
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/65 backdrop-blur-sm p-4"
          onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
@@ -3153,7 +3161,7 @@ function BracketMatchModal({
         <div className="flex items-center justify-between px-5 py-4 border-b border-white/[0.07]">
           <div>
             <p className="text-[15px] font-bold text-white">
-              {isLive ? "Счёт матча" : "Назначить стол"}
+              {hasTable ? "Счёт матча" : "Назначить стол"}
             </p>
             <p className="text-[12px] text-white/35 mt-0.5">
               Раунд {match.round_number} · Матч {match.match_number}
@@ -3186,7 +3194,7 @@ function BracketMatchModal({
         </div>
 
         <div className="px-5 py-4">
-          {isLive ? (
+          {hasTable ? (
             <div className="space-y-2.5">
               <button onClick={onScore}
                 className="w-full py-3 rounded-xl bg-emerald-600/20 hover:bg-emerald-600/30
