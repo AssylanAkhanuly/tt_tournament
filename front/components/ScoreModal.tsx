@@ -13,6 +13,11 @@ interface Props {
   onReset?: () => Promise<void>;
   /** Admins can correct a finished match's score in place (reset + re-submit). */
   onEdit?: (score1: number, score2: number) => Promise<void>;
+  /** Whether each player is marked absent (badge + manual forfeit). */
+  p1Absent?: boolean;
+  p2Absent?: boolean;
+  /** Declare a walkover win without a real score (winnerIsP1 → player1 wins). */
+  onForfeit?: (winnerIsP1: boolean) => Promise<void>;
 }
 
 // Common table-tennis best-of-5 results
@@ -21,7 +26,7 @@ const QUICK: [number, number][] = [
   [0, 3], [1, 3], [2, 3],
 ];
 
-export default function ScoreModal({ match, onClose, onSubmit, canReset, onReset, onEdit }: Props) {
+export default function ScoreModal({ match, onClose, onSubmit, canReset, onReset, onEdit, p1Absent, p2Absent, onForfeit }: Props) {
   const isFinished = match.status === "finished";
   const [s1, setS1]         = useState(match.score1 ?? 0);
   const [s2, setS2]         = useState(match.score2 ?? 0);
@@ -74,6 +79,17 @@ export default function ScoreModal({ match, onClose, onSubmit, canReset, onReset
     }
   }
 
+  // Declare a no-show walkover (no real score). Parent closes on success.
+  async function forfeit(winnerIsP1: boolean) {
+    if (!onForfeit) return;
+    setLoading(true); setError(null);
+    try { await onForfeit(winnerIsP1); }
+    catch (err: unknown) {
+      setError((err as Record<string, string>)?.detail ?? "Не удалось сохранить.");
+      setLoading(false);
+    }
+  }
+
   const p1wins = s1 > s2;
   const p2wins = s2 > s1;
   const unchanged = s1 === match.score1 && s2 === match.score2;
@@ -112,9 +128,9 @@ export default function ScoreModal({ match, onClose, onSubmit, canReset, onReset
           {/* ── Player score rows ────────────────────────────────────── */}
           <div className="space-y-2.5">
             {[
-              { name: p1, score: s1, setScore: setS1, wins: p1wins },
-              { name: p2, score: s2, setScore: setS2, wins: p2wins },
-            ].map(({ name, score, setScore, wins }, i) => (
+              { name: p1, score: s1, setScore: setS1, wins: p1wins, absent: p1Absent },
+              { name: p2, score: s2, setScore: setS2, wins: p2wins, absent: p2Absent },
+            ].map(({ name, score, setScore, wins, absent }, i) => (
               <div key={i}
                 className={`flex items-center gap-3 rounded-2xl px-3.5 py-3 border
                             transition-all duration-200 ${
@@ -136,6 +152,7 @@ export default function ScoreModal({ match, onClose, onSubmit, canReset, onReset
                   wins ? "text-white" : "text-white/55"
                 }`}>
                   {name}
+                  {absent && <span className="ml-1.5 text-[10px] font-bold text-amber-300/90 uppercase">отсутствует</span>}
                 </span>
 
                 {/* Stepper */}
@@ -197,6 +214,30 @@ export default function ScoreModal({ match, onClose, onSubmit, canReset, onReset
               Первые 3 строки — победа {p1} · Вторые — победа {p2}
             </p>
           </div>
+
+          {/* ── Walkover / no-show (manual technical win, no rating) ───── */}
+          {!isFinished && onForfeit && (
+            <div>
+              <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-white/25 mb-2">
+                Неявка — техническая победа
+              </p>
+              <div className="grid grid-cols-2 gap-1.5">
+                <button onClick={() => forfeit(true)} disabled={loading}
+                  className="py-2 rounded-xl text-[12px] font-bold bg-amber-500/[0.10] hover:bg-amber-500/20
+                             border border-amber-500/25 text-amber-200 disabled:opacity-40 transition-all active:scale-[.97] truncate">
+                  ✓ {p1}
+                </button>
+                <button onClick={() => forfeit(false)} disabled={loading}
+                  className="py-2 rounded-xl text-[12px] font-bold bg-amber-500/[0.10] hover:bg-amber-500/20
+                             border border-amber-500/25 text-amber-200 disabled:opacity-40 transition-all active:scale-[.97] truncate">
+                  ✓ {p2}
+                </button>
+              </div>
+              <p className="text-[10px] text-white/20 text-center mt-1.5">
+                Соперник проходит без игры — рейтинг не меняется
+              </p>
+            </div>
+          )}
 
           {/* ── Error ────────────────────────────────────────────────── */}
           {error && (
