@@ -37,7 +37,11 @@ function hasFinishedScore(match: Match | undefined): boolean {
 function canResetMatchScore(match: Match, matchById: Map<number, Match>): boolean {
   if (!hasFinishedScore(match)) return false;
   const nextIds = [match.winner_next_id, match.loser_next_id].filter((id): id is number => id != null);
-  return nextIds.every((id) => !hasFinishedScore(matchById.get(id)));
+  // Downstream walkover matches cascade-reset automatically, so they don't block.
+  return nextIds.every((id) => {
+    const nxt = matchById.get(id);
+    return !hasFinishedScore(nxt) || !!nxt?.is_walkover;
+  });
 }
 
 // Round column header: 1/64 … ФИНАЛ relative to the deepest winners round.

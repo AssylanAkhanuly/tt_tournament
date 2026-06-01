@@ -91,7 +91,12 @@ function canResetBracketScore(match: Match | null | undefined, matches: Match[])
   if (!hasFinishedBracketScore(match)) return false;
   const byId = new Map(matches.map((m) => [m.id, m]));
   const nextIds = [match.winner_next_id, match.loser_next_id].filter((id): id is number => id != null);
-  return nextIds.every((id) => !hasFinishedBracketScore(byId.get(id)));
+  // Downstream walkover matches are cascade-reset automatically by the backend,
+  // so they don't block this match from being resettable.
+  return nextIds.every((id) => {
+    const nxt = byId.get(id);
+    return !hasFinishedBracketScore(nxt) || !!nxt?.is_walkover;
+  });
 }
 
 const MALE_RUSSIAN_VOICE_HINTS = [
