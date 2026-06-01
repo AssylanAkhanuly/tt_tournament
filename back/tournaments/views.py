@@ -956,27 +956,37 @@ class SubmitScoreView(APIView):
         if match.status != Match.IN_PROGRESS:
             return Response({"detail": "Матч ещё не начался."}, status=status.HTTP_400_BAD_REQUEST)
 
-        try:
-            score1 = int(request.data["score1"])
-            score2 = int(request.data["score2"])
-        except (KeyError, TypeError, ValueError):
-            return Response({"detail": "Укажите score1 и score2."}, status=status.HTTP_400_BAD_REQUEST)
-
-        if score1 < 0 or score2 < 0:
-            return Response({"detail": "Счёт не может быть отрицательным."}, status=400)
-        if score1 == score2:
-            return Response({"detail": "Ничья недопустима."}, status=400)
+        walkover = bool(request.data.get("walkover", False))
+        if walkover:
+            # Technical win — no real game. Score stays 0:0; the winner is
+            # given explicitly since the score can't imply one.
+            win = str(request.data.get("winner", ""))
+            if win not in ("1", "2"):
+                return Response({"detail": "Укажите победителя неявки."}, status=400)
+            score1, score2 = 0, 0
+            winner = match.player1 if win == "1" else match.player2
+        else:
+            try:
+                score1 = int(request.data["score1"])
+                score2 = int(request.data["score2"])
+            except (KeyError, TypeError, ValueError):
+                return Response({"detail": "Укажите score1 и score2."}, status=status.HTTP_400_BAD_REQUEST)
+            if score1 < 0 or score2 < 0:
+                return Response({"detail": "Счёт не может быть отрицательным."}, status=400)
+            if score1 == score2:
+                return Response({"detail": "Ничья недопустима."}, status=400)
+            winner = match.player1 if score1 > score2 else match.player2
 
         match.score1  = score1
         match.score2  = score2
-        match.winner  = match.player1 if score1 > score2 else match.player2
+        match.winner  = winner
         match.status  = Match.FINISHED
         match.table_number = None
-        match.is_walkover = bool(request.data.get("walkover", False))  # manual no-show
+        match.is_walkover = walkover
         match.save()
 
-        loser = match.player1 if match.winner == match.player2 else match.player2
-        advance_winner_and_loser(match, match.winner, loser)
+        loser = match.player1 if winner.id == match.player2_id else match.player2
+        advance_winner_and_loser(match, winner, loser)
 
         # If the winner advanced into a match against an absent player, that match
         # is now a walkover too — resolve the cascade.
@@ -1068,22 +1078,31 @@ class GroupMatchScoreView(APIView):
         if match.status == GroupMatch.FINISHED:
             return Response({"detail": "Матч уже завершён."}, status=status.HTTP_400_BAD_REQUEST)
 
-        try:
-            score1 = int(request.data["score1"])
-            score2 = int(request.data["score2"])
-        except (KeyError, TypeError, ValueError):
-            return Response({"detail": "Укажите score1 и score2."}, status=status.HTTP_400_BAD_REQUEST)
-
-        if score1 < 0 or score2 < 0:
-            return Response({"detail": "Счёт не может быть отрицательным."}, status=400)
-        if score1 == score2:
-            return Response({"detail": "Ничья недопустима."}, status=400)
+        walkover = bool(request.data.get("walkover", False))
+        if walkover:
+            # Technical win — score stays 0:0, winner given explicitly.
+            win = str(request.data.get("winner", ""))
+            if win not in ("1", "2"):
+                return Response({"detail": "Укажите победителя неявки."}, status=400)
+            score1, score2 = 0, 0
+            winner = match.player1 if win == "1" else match.player2
+        else:
+            try:
+                score1 = int(request.data["score1"])
+                score2 = int(request.data["score2"])
+            except (KeyError, TypeError, ValueError):
+                return Response({"detail": "Укажите score1 и score2."}, status=status.HTTP_400_BAD_REQUEST)
+            if score1 < 0 or score2 < 0:
+                return Response({"detail": "Счёт не может быть отрицательным."}, status=400)
+            if score1 == score2:
+                return Response({"detail": "Ничья недопустима."}, status=400)
+            winner = match.player1 if score1 > score2 else match.player2
 
         match.score1 = score1
         match.score2 = score2
-        match.winner = match.player1 if score1 > score2 else match.player2
+        match.winner = winner
         match.status = GroupMatch.FINISHED
-        match.is_walkover = bool(request.data.get("walkover", False))  # manual no-show
+        match.is_walkover = walkover
         match.save()
 
         # Standings are recomputed from all finished matches (win=2/loss=1/

@@ -12,7 +12,7 @@ from django.db.models import Q
 from .models import (GroupMatch, GroupParticipant, Match, TournamentGroup,
                      TournamentParticipant)
 
-WALKOVER_SCORE = 3  # the present opponent "wins" 3:0 on a no-show
+# A walkover is a technical win: score stays 0:0, only the winner is recorded.
 
 
 def absent_user_ids(tournament_id) -> set:
@@ -61,7 +61,7 @@ def _forfeit_group_matches(tournament, user_id) -> set:
     )
     for m in qs:
         opp_is_p1 = m.player1_id != user_id
-        m.score1, m.score2 = (WALKOVER_SCORE, 0) if opp_is_p1 else (0, WALKOVER_SCORE)
+        m.score1, m.score2 = 0, 0
         m.winner_id = m.player1_id if opp_is_p1 else m.player2_id
         m.status = GroupMatch.FINISHED
         m.table_number = None
@@ -120,10 +120,7 @@ def forfeit_ready_bracket_matches(tournament, absent_ids=None) -> bool:
         # Present player advances; if both absent, player1 advances arbitrarily.
         winner = hit.player2 if (p1_absent and not p2_absent) else hit.player1
         loser = hit.player1 if winner.id == hit.player2_id else hit.player2
-        if winner.id == hit.player1_id:
-            hit.score1, hit.score2 = WALKOVER_SCORE, 0
-        else:
-            hit.score1, hit.score2 = 0, WALKOVER_SCORE
+        hit.score1, hit.score2 = 0, 0
         hit.winner = winner
         hit.status = Match.FINISHED
         hit.table_number = None
