@@ -365,9 +365,9 @@ export default function TournamentDetailClient({
   const [joining, setJoining] = useState(false);
 
   // ── Derived ───────────────────────────────────────────────────────────────
-  const liveCount   = matches.filter((m) => m.status === "in_progress").length;
+  const liveCount   = matches.filter((m) => m.status === "in_progress" && m.table_number != null).length;
   const finishedCnt = matches.filter((m) => m.status === "finished").length;
-  const pendingCnt  = matches.filter((m) => m.status === "pending" && m.player1 && m.player2).length;
+  const pendingCnt  = matches.filter((m) => m.player1 && m.player2 && m.table_number == null && m.status !== "finished").length;
   const s           = S[tournament.status];
   const existingIds = new Set(participants.map((p) => p.user.id));
   const totalMatches = matches.length;
@@ -1692,9 +1692,13 @@ function OverviewPanel({
   voiceCallingEnabled, autoAssignEnabled, voiceLoadingTable, onCallTable,
 }: OverviewProps) {
   const activeTables = tables.filter((t) => t.is_active);
-  const live         = matches.filter((m) => m.status === "in_progress");
-  const pendingAll   = matches.filter((m) => m.status === "pending");
-  const pendingReady = pendingAll.filter((m) => m.player1 && m.player2);
+  // "Live" = a match actually at a table. A ready match (both players known) with
+  // no table sits in the "Ожидают стола" queue until a table is assigned —
+  // manually, or automatically when auto-assign is on.
+  const live         = matches.filter((m) => m.status === "in_progress" && m.table_number != null);
+  const pendingReady = matches.filter(
+    (m) => m.player1 && m.player2 && m.table_number == null && m.status !== "finished"
+  );
   const absentIds = useMemo(
     () => new Set(participants.filter((p) => p.is_absent).map((p) => p.user.id)),
     [participants]
