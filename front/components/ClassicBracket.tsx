@@ -85,6 +85,7 @@ function MatchCard({
   isAdmin,
   canResetScore,
   onActivate,
+  absentIds,
 }: {
   match: Match;
   seed1: number | null;
@@ -93,6 +94,7 @@ function MatchCard({
   isAdmin: boolean;
   canResetScore: boolean;
   onActivate: (match: Match) => void;
+  absentIds?: Set<string>;
 }) {
   const isLive     = match.status === "in_progress";
   const isFinished = match.status === "finished";
@@ -108,28 +110,35 @@ function MatchCard({
 
   const p1Winner = !!match.winner && match.winner.id === match.player1?.id;
   const p2Winner = !!match.winner && match.winner.id === match.player2?.id;
+  // Yellow when currently absent, or the no-show side of a walkover (the loser).
+  const p1Absent = !!match.player1 && (!!absentIds?.has(match.player1.id) || (match.is_walkover && p2Winner));
+  const p2Absent = !!match.player2 && (!!absentIds?.has(match.player2.id) || (match.is_walkover && p1Winner));
 
-  function row(player: User | null, seed: number | null, score: number | null, winner: boolean, isLast?: boolean) {
+  function row(player: User | null, seed: number | null, score: number | null, winner: boolean, isLast?: boolean, absent?: boolean) {
     return (
       <div
         className={`flex items-center gap-1.5 px-2 py-1.5 ${
           !isLast ? "border-b border-white/[0.05]" : ""
-        } ${winner ? "bg-emerald-500/[0.10]" : ""}`}
+        } ${winner ? "bg-emerald-500/[0.16]" : absent ? "bg-amber-500/[0.10]" : ""}`}
       >
         <span className="w-5 shrink-0 text-right text-[9px] font-bold tabular-nums text-white/25">
           {player && seed ? seed : ""}
         </span>
         <div className="min-w-0 flex-1">
           <div
-            className={`truncate text-[12px] leading-tight ${
+            className={`flex items-center gap-1 truncate text-[12px] leading-tight ${
               winner
-                ? "font-bold text-white"
+                ? "font-bold text-emerald-300"
+                : absent
+                ? "font-bold text-amber-300"
                 : player
                 ? "font-semibold text-white/82"
                 : "italic text-white/24"
             }`}
           >
-            {player?.name ?? "—"}
+            {winner && <span className="shrink-0 text-[10px]">🏆</span>}
+            <span className="truncate">{player?.name ?? "—"}</span>
+            {absent && <span className="shrink-0 text-[8px] font-bold uppercase text-amber-300/90">н/я</span>}
           </div>
         </div>
         {player && (
@@ -139,10 +148,10 @@ function MatchCard({
         )}
         <div
           className={`w-4 text-right text-[15px] font-black tabular-nums ${
-            winner ? "text-red-300" : "text-red-300/85"
+            winner ? "text-emerald-300" : "text-red-300/85"
           }`}
         >
-          {score ?? ""}
+          {match.is_walkover && winner ? "✓" : score ?? ""}
         </div>
       </div>
     );
@@ -183,8 +192,8 @@ function MatchCard({
           {!isLive && isFinished && <span>Готово</span>}
         </div>
       </div>
-      {row(match.player1, seed1, match.score1, p1Winner)}
-      {row(match.player2, seed2, match.score2, p2Winner, true)}
+      {row(match.player1, seed1, match.score1, p1Winner, false, p1Absent)}
+      {row(match.player2, seed2, match.score2, p2Winner, true, p2Absent)}
     </div>
   );
 }
@@ -194,12 +203,14 @@ export default function ClassicBracket({
   currentUser,
   isAdmin,
   onEnterScore,
+  absentIds,
   className,
 }: {
   matches: Match[];
   currentUser: User | null;
   isAdmin: boolean;
   onEnterScore: (match: Match) => void;
+  absentIds?: Set<string>;
   className?: string;
 }) {
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -577,6 +588,7 @@ export default function ClassicBracket({
                 isAdmin={isAdmin}
                 canResetScore={canResetMatchScore(item.match, matchById)}
                 onActivate={activate}
+                absentIds={absentIds}
               />
             </div>
           ))}

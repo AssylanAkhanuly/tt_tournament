@@ -987,6 +987,7 @@ export default function TournamentDetailClient({
                   currentUser={user}
                   isAdmin={isAdmin}
                   onEnterScore={setScoreMatch}
+                  absentIds={absentUserIds}
                 />
               ) : (
                 <BracketFlow
@@ -2021,7 +2022,7 @@ function OverviewPanel({
                 {hasBracket ? (
                   tournament.format === "group_playoff" ? (
                     <ClassicBracket key={matches.length} matches={matches} currentUser={user} isAdmin={isAdmin}
-                      onEnterScore={onEnterScore} className="w-full h-full bg-transparent" />
+                      onEnterScore={onEnterScore} absentIds={absentIds} className="w-full h-full bg-transparent" />
                   ) : (
                     <BracketFlow matches={matches} currentUser={user} isAdmin={isAdmin}
                       onEnterScore={onEnterScore} absentIds={absentIds} className="w-full h-full bg-transparent" />
