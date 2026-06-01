@@ -55,6 +55,100 @@ def notify_match_ready(match, kind):
         logger.exception("notify_match_ready failed")
 
 
+def _score_str(s1, s2):
+    a = "0" if s1 is None else str(s1)
+    b = "0" if s2 is None else str(s2)
+    return f"{a}:{b}"
+
+
+def notify_score_proposed(match, kind, proposer):
+    """Tell the OPPONENT that `proposer` entered a score that needs confirming.
+
+    `match` carries proposed_score1/proposed_score2; `kind` is 'bracket' or
+    'group'. Safe to call inside a request — never raises."""
+    try:
+        from .models import Notification
+
+        tournament = match.tournament if kind == "bracket" else match.group.tournament
+        opponent = match.player2 if match.player1_id == proposer.id else match.player1
+        if opponent is None:
+            return
+
+        prop_name = (proposer.name or "Соперник") if proposer else "Соперник"
+        score = _score_str(match.proposed_score1, match.proposed_score2)
+        title = "Подтвердите счёт"
+        body = f"{prop_name} ввёл счёт {score} — подтвердите или отклоните"
+
+        # One live confirm prompt per (opponent, match): clear any stale ones first.
+        Notification.objects.filter(
+            user=opponent, match_kind=kind, match_id=match.pk,
+            type__in=[Notification.TYPE_SCORE_PROPOSED, Notification.TYPE_SCORE_REJECTED],
+        ).delete()
+        notif = Notification.objects.create(
+            user=opponent, type=Notification.TYPE_SCORE_PROPOSED,
+            title=title, body=body, tournament=tournament,
+            match_kind=kind, match_id=match.pk, table_number=match.table_number,
+        )
+        _web_push(opponent, {
+            "title": title,
+            "body": body,
+            "tournament_id": str(tournament.id) if tournament else None,
+            "notification_id": notif.id,
+        })
+    except Exception:
+        logger.exception("notify_score_proposed failed")
+
+
+def notify_score_rejected(match, kind, rejecter):
+    """Tell the original proposer that `rejecter` rejected their score, so they
+    know to wait for / agree on the corrected score. Never raises."""
+    try:
+        from .models import Notification
+
+        tournament = match.tournament if kind == "bracket" else match.group.tournament
+        # The proposer is whoever is NOT the rejecter.
+        target = match.player2 if match.player1_id == rejecter.id else match.player1
+        if target is None:
+            return
+
+        rej_name = (rejecter.name or "Соперник") if rejecter else "Соперник"
+        title = "Счёт отклонён"
+        body = f"{rej_name} отклонил счёт — согласуйте результат заново"
+
+        Notification.objects.filter(
+            user=target, match_kind=kind, match_id=match.pk,
+            type__in=[Notification.TYPE_SCORE_PROPOSED, Notification.TYPE_SCORE_REJECTED],
+        ).delete()
+        notif = Notification.objects.create(
+            user=target, type=Notification.TYPE_SCORE_REJECTED,
+            title=title, body=body, tournament=tournament,
+            match_kind=kind, match_id=match.pk, table_number=match.table_number,
+        )
+        _web_push(target, {
+            "title": title,
+            "body": body,
+            "tournament_id": str(tournament.id) if tournament else None,
+            "notification_id": notif.id,
+        })
+    except Exception:
+        logger.exception("notify_score_rejected failed")
+
+
+def clear_score_notifications(user_id, kind, match_id):
+    """Remove any confirm/reject prompts for a match once it's resolved or reset."""
+    try:
+        from .models import Notification
+        q = Notification.objects.filter(
+            match_kind=kind, match_id=match_id,
+            type__in=[Notification.TYPE_SCORE_PROPOSED, Notification.TYPE_SCORE_REJECTED],
+        )
+        if user_id is not None:
+            q = q.filter(user_id=user_id)
+        q.delete()
+    except Exception:
+        logger.exception("clear_score_notifications failed")
+
+
 def _web_push(user, payload):
     """Best-effort Web Push to all of a user's subscriptions. No-op if VAPID
     keys are not configured or pywebpush is unavailable."""

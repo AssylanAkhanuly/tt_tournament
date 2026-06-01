@@ -8,8 +8,12 @@ class Notification(models.Model):
     group GroupMatch without a polymorphic FK."""
 
     TYPE_MATCH_READY = "match_ready"
+    TYPE_SCORE_PROPOSED = "score_proposed"
+    TYPE_SCORE_REJECTED = "score_rejected"
     TYPE_CHOICES = [
         (TYPE_MATCH_READY, "Матч готов"),
+        (TYPE_SCORE_PROPOSED, "Подтвердите счёт"),
+        (TYPE_SCORE_REJECTED, "Счёт отклонён"),
     ]
 
     user = models.ForeignKey(

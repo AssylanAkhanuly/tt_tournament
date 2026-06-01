@@ -121,10 +121,12 @@ class TournamentTable(models.Model):
 class Match(models.Model):
     PENDING = "pending"
     IN_PROGRESS = "in_progress"
+    SCORE_PROPOSED = "score_proposed"
     FINISHED = "finished"
     STATUS_CHOICES = [
         (PENDING, "Ожидание"),
         (IN_PROGRESS, "Идёт"),
+        (SCORE_PROPOSED, "Ожидает подтверждения"),
         (FINISHED, "Завершён"),
     ]
 
@@ -189,6 +191,23 @@ class Match(models.Model):
     place_lo = models.PositiveIntegerField(null=True, blank=True, verbose_name="Место от")
     place_hi = models.PositiveIntegerField(null=True, blank=True, verbose_name="Место до")
 
+    # ── Score confirmation ────────────────────────────────────────────────────
+    # When a player (not an admin) enters a score it is held here as a proposal
+    # with status=SCORE_PROPOSED until the opponent confirms. On confirm these
+    # copy into score1/score2/winner and the match finishes; on reject they clear
+    # and the match returns to IN_PROGRESS. Admin-entered scores skip this.
+    proposed_score1 = models.PositiveIntegerField(null=True, blank=True)
+    proposed_score2 = models.PositiveIntegerField(null=True, blank=True)
+    proposed_winner = models.ForeignKey(
+        settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL,
+        related_name="matches_proposed_won",
+    )
+    proposed_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL,
+        related_name="matches_proposed", verbose_name="Счёт предложил",
+    )
+    proposed_at = models.DateTimeField(null=True, blank=True)
+
     class Meta:
         verbose_name = "Матч"
         verbose_name_plural = "Матчи"
@@ -236,10 +255,12 @@ class GroupParticipant(models.Model):
 class GroupMatch(models.Model):
     PENDING = "pending"
     IN_PROGRESS = "in_progress"
+    SCORE_PROPOSED = "score_proposed"
     FINISHED = "finished"
     STATUS_CHOICES = [
         (PENDING, "Ожидание"),
         (IN_PROGRESS, "Идёт"),
+        (SCORE_PROPOSED, "Ожидает подтверждения"),
         (FINISHED, "Завершён"),
     ]
 
@@ -255,6 +276,15 @@ class GroupMatch(models.Model):
     # Walkover: auto-recorded when an opponent is marked absent. Reverted to
     # pending if the absent flag is cleared.
     is_walkover = models.BooleanField(default=False, verbose_name="Неявка")
+    # Score confirmation — see Match.proposed_* for the full flow. A player's
+    # entered score is held here until the opponent confirms it.
+    proposed_score1 = models.IntegerField(null=True, blank=True)
+    proposed_score2 = models.IntegerField(null=True, blank=True)
+    proposed_winner = models.ForeignKey(
+        settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name='gm_proposed_won')
+    proposed_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name='gm_proposed')
+    proposed_at = models.DateTimeField(null=True, blank=True)
 
     class Meta:
         ordering = ['match_number']

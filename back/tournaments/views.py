@@ -606,11 +606,13 @@ def _tournament_revision(tournament):
 
     parts.append("m:" + _rows(
         Match.objects.filter(tournament=tournament).order_by("id")
-        .values_list("id", "status", "score1", "score2", "table_number", "winner_id")
+        .values_list("id", "status", "score1", "score2", "table_number", "winner_id",
+                     "proposed_score1", "proposed_score2", "proposed_by_id")
     ))
     parts.append("gm:" + _rows(
         GroupMatch.objects.filter(group__tournament=tournament).order_by("id")
-        .values_list("id", "status", "score1", "score2", "table_number", "winner_id")
+        .values_list("id", "status", "score1", "score2", "table_number", "winner_id",
+                     "proposed_score1", "proposed_score2", "proposed_by_id")
     ))
     from .models import GroupParticipant
     parts.append("gp:" + _rows(
@@ -705,7 +707,7 @@ class MyActiveMatchView(APIView):
         user = request.user
 
         bracket = (
-            Match.objects.filter(status=Match.IN_PROGRESS)
+            Match.objects.filter(status__in=[Match.IN_PROGRESS, Match.SCORE_PROPOSED])
             .filter(Q(player1=user) | Q(player2=user))
             .select_related("tournament", "player1", "player2")
             .order_by("table_number", "pk")
@@ -726,7 +728,7 @@ class MyActiveMatchView(APIView):
             }})
 
         group = (
-            GroupMatch.objects.filter(status=GroupMatch.IN_PROGRESS)
+            GroupMatch.objects.filter(status__in=[GroupMatch.IN_PROGRESS, GroupMatch.SCORE_PROPOSED])
             .filter(Q(player1=user) | Q(player2=user))
             .select_related("group", "group__tournament", "player1", "player2")
             .order_by("table_number", "pk")
@@ -849,13 +851,16 @@ class AssignTableView(APIView):
             except (TypeError, ValueError):
                 return Response({"detail": "Номер стола должен быть положительным числом."}, status=400)
 
-            # Validate table is not already occupied
+            # Validate table is not already occupied (a proposed-score match still
+            # occupies its table until the result is confirmed).
             from .models import GroupMatch as GM
             table_busy_bracket = Match.objects.filter(
-                tournament=tournament, table_number=table_number, status=Match.IN_PROGRESS,
+                tournament=tournament, table_number=table_number,
+                status__in=[Match.IN_PROGRESS, Match.SCORE_PROPOSED],
             ).exclude(pk=match.pk).exists()
             table_busy_group = GM.objects.filter(
-                group__tournament=tournament, table_number=table_number, status=GM.IN_PROGRESS,
+                group__tournament=tournament, table_number=table_number,
+                status__in=[GM.IN_PROGRESS, GM.SCORE_PROPOSED],
             ).exists()
             if table_busy_bracket or table_busy_group:
                 return Response(
@@ -943,6 +948,43 @@ def _log_score(tournament, user, match, kind, label, action=ScoreLog.ACTION_SCOR
         pass
 
 
+def _record_bracket_result(match, tournament, request, score1, score2, winner, walkover):
+    """Finalize a bracket match: write the real score, clear any proposal, advance
+    the bracket, run auto-forfeit, log it, and finish the tournament + apply
+    ratings if every match is now done. Shared by admin submit and confirm-accept."""
+    match.score1 = score1
+    match.score2 = score2
+    match.winner = winner
+    match.status = Match.FINISHED
+    match.table_number = None
+    match.is_walkover = walkover
+    match.proposed_score1 = None
+    match.proposed_score2 = None
+    match.proposed_winner = None
+    match.proposed_by = None
+    match.proposed_at = None
+    match.save()
+
+    loser = match.player1 if winner.id == match.player2_id else match.player2
+    advance_winner_and_loser(match, winner, loser)
+
+    # If the winner advanced into a match against an absent player, auto-forfeit
+    # it too — but only when auto-assign is on (otherwise the admin handles it).
+    if bool(request.data.get("auto_forfeit", False)):
+        from .standings import forfeit_ready_bracket_matches
+        forfeit_ready_bracket_matches(tournament)
+
+    _log_score(tournament, request.user, match, "bracket", f"Р{match.round_number} · М{match.match_number}")
+
+    total_matches = tournament.matches.count()
+    finished_matches = tournament.matches.filter(status=Match.FINISHED).count()
+    if total_matches > 0 and total_matches == finished_matches:
+        tournament.status = Tournament.STATUS_FINISHED
+        tournament.save()
+        from .rating import apply_tournament_ratings
+        apply_tournament_ratings(tournament)
+
+
 class SubmitScoreView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -951,19 +993,28 @@ class SubmitScoreView(APIView):
         match = get_object_or_404(Match, pk=match_id, tournament=tournament)
 
         # Permission: club admin or one of the two players
-        if not _can_manage_tournament(request.user, tournament):
-            if request.user != match.player1 and request.user != match.player2:
-                return Response({"detail": "Нет прав."}, status=status.HTTP_403_FORBIDDEN)
+        is_admin = _can_manage_tournament(request.user, tournament)
+        is_player = request.user == match.player1 or request.user == match.player2
+        if not is_admin and not is_player:
+            return Response({"detail": "Нет прав."}, status=status.HTTP_403_FORBIDDEN)
 
         if match.status == Match.FINISHED:
             return Response({"detail": "Матч уже завершён."}, status=status.HTTP_400_BAD_REQUEST)
-        if match.status != Match.IN_PROGRESS:
+        if match.status not in (Match.IN_PROGRESS, Match.SCORE_PROPOSED):
             return Response({"detail": "Матч ещё не начался."}, status=status.HTTP_400_BAD_REQUEST)
+
+        # A score already awaiting confirmation blocks a fresh player submission —
+        # the opponent must confirm or reject first. Admins can override anytime.
+        if match.status == Match.SCORE_PROPOSED and not is_admin:
+            if match.proposed_by_id == request.user.id:
+                return Response({"detail": "Вы уже ввели счёт — ожидайте подтверждения соперника."}, status=400)
+            return Response({"detail": "Соперник предложил счёт — подтвердите или отклоните его."}, status=400)
 
         walkover = bool(request.data.get("walkover", False))
         if walkover:
-            # Technical win — no real game. Score stays 0:0; the winner is
-            # given explicitly since the score can't imply one.
+            # Technical win — admin-only, recorded immediately (no confirmation).
+            if not is_admin:
+                return Response({"detail": "Неявку отмечает организатор."}, status=status.HTTP_403_FORBIDDEN)
             win = str(request.data.get("winner", ""))
             if win not in ("1", "2"):
                 return Response({"detail": "Укажите победителя неявки."}, status=400)
@@ -981,32 +1032,76 @@ class SubmitScoreView(APIView):
                 return Response({"detail": "Ничья недопустима."}, status=400)
             winner = match.player1 if score1 > score2 else match.player2
 
-        match.score1  = score1
-        match.score2  = score2
-        match.winner  = winner
-        match.status  = Match.FINISHED
-        match.table_number = None
-        match.is_walkover = walkover
-        match.save()
+        # ── Player-entered score → hold as a proposal for the opponent ──────────
+        if is_player and not is_admin:
+            from django.utils import timezone
+            match.proposed_score1 = score1
+            match.proposed_score2 = score2
+            match.proposed_winner = winner
+            match.proposed_by = request.user
+            match.proposed_at = timezone.now()
+            match.status = Match.SCORE_PROPOSED
+            match.save(update_fields=[
+                "proposed_score1", "proposed_score2", "proposed_winner",
+                "proposed_by", "proposed_at", "status",
+            ])
+            from notifications.services import notify_score_proposed
+            notify_score_proposed(match, "bracket", request.user)
+            return Response(MatchSerializer(match).data)
 
-        loser = match.player1 if winner.id == match.player2_id else match.player2
-        advance_winner_and_loser(match, winner, loser)
+        # ── Admin-entered score → record immediately ───────────────────────────
+        _record_bracket_result(match, tournament, request, score1, score2, winner, walkover)
+        return Response(MatchSerializer(match).data)
 
-        # If the winner advanced into a match against an absent player, auto-forfeit
-        # it too — but only when auto-assign is on (otherwise the admin handles it).
-        if bool(request.data.get("auto_forfeit", False)):
-            from .standings import forfeit_ready_bracket_matches
-            forfeit_ready_bracket_matches(tournament)
 
-        _log_score(tournament, request.user, match, "bracket", f"Р{match.round_number} · М{match.match_number}")
+class ScoreConfirmView(APIView):
+    """POST /api/tournaments/<pk>/matches/<match_id>/confirm/  body: {accept: bool}
 
-        total_matches = tournament.matches.count()
-        finished_matches = tournament.matches.filter(status=Match.FINISHED).count()
-        if total_matches > 0 and total_matches == finished_matches:
-            tournament.status = Tournament.STATUS_FINISHED
-            tournament.save()
-            from .rating import apply_tournament_ratings
-            apply_tournament_ratings(tournament)
+    The opponent (the player who did NOT enter the score) confirms or rejects a
+    proposed bracket score. Accept records it; reject reopens the match so the
+    score can be re-entered."""
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, pk, match_id):
+        from django.db import transaction
+        tournament = get_object_or_404(Tournament.objects.select_related('club'), pk=pk)
+        with transaction.atomic():
+            match = get_object_or_404(
+                Match.objects.select_for_update(), pk=match_id, tournament=tournament
+            )
+            if match.status != Match.SCORE_PROPOSED:
+                return Response({"detail": "Нет счёта на подтверждении."}, status=status.HTTP_400_BAD_REQUEST)
+
+            is_player = request.user == match.player1 or request.user == match.player2
+            if not is_player:
+                return Response({"detail": "Нет прав."}, status=status.HTTP_403_FORBIDDEN)
+            # Only the opponent (not the proposer) may confirm/reject.
+            if match.proposed_by_id == request.user.id:
+                return Response({"detail": "Свой счёт подтверждает соперник."}, status=status.HTTP_400_BAD_REQUEST)
+
+            accept = bool(request.data.get("accept", False))
+            from notifications.services import clear_score_notifications, notify_score_rejected
+
+            if accept:
+                score1, score2 = match.proposed_score1, match.proposed_score2
+                winner = match.proposed_winner
+                _record_bracket_result(match, tournament, request, score1, score2, winner, False)
+                clear_score_notifications(request.user.id, "bracket", match.pk)
+            else:
+                proposer_id = match.proposed_by_id
+                match.proposed_score1 = None
+                match.proposed_score2 = None
+                match.proposed_winner = None
+                match.proposed_by = None
+                match.proposed_at = None
+                match.status = Match.IN_PROGRESS
+                match.save(update_fields=[
+                    "proposed_score1", "proposed_score2", "proposed_winner",
+                    "proposed_by", "proposed_at", "status",
+                ])
+                clear_score_notifications(request.user.id, "bracket", match.pk)
+                if proposer_id:
+                    notify_score_rejected(match, "bracket", request.user)
 
         return Response(MatchSerializer(match).data)
 
@@ -1060,6 +1155,29 @@ class GroupListView(generics.ListAPIView):
         )
 
 
+def _record_group_result(match, group, tournament, request, score1, score2, winner, walkover):
+    """Finalize a group match: write the real score, clear any proposal, recompute
+    standings, and log it. Shared by admin submit and confirm-accept."""
+    match.score1 = score1
+    match.score2 = score2
+    match.winner = winner
+    match.status = GroupMatch.FINISHED
+    match.is_walkover = walkover
+    match.proposed_score1 = None
+    match.proposed_score2 = None
+    match.proposed_winner = None
+    match.proposed_by = None
+    match.proposed_at = None
+    match.save()
+
+    # Standings are recomputed from all finished matches (win=2/loss=1/
+    # absent=0), keeping points consistent across edits and forfeits.
+    from .standings import recompute_group_standings
+    recompute_group_standings(group)
+
+    _log_score(tournament, request.user, match, "group", f"{group.name} · М{match.match_number}")
+
+
 class GroupMatchScoreView(APIView):
     """POST /api/tournaments/<pk>/groups/<group_id>/matches/<match_id>/score/"""
     permission_classes = [IsAuthenticated]
@@ -1070,12 +1188,13 @@ class GroupMatchScoreView(APIView):
         match = get_object_or_404(GroupMatch, pk=match_id, group=group)
 
         # Permission: club admin or one of the two players (own match only)
-        if not _can_manage_tournament(request.user, tournament):
-            if request.user != match.player1 and request.user != match.player2:
-                return Response({"detail": "Нет прав."}, status=status.HTTP_403_FORBIDDEN)
+        is_admin = _can_manage_tournament(request.user, tournament)
+        is_player = request.user == match.player1 or request.user == match.player2
+        if not is_admin and not is_player:
+            return Response({"detail": "Нет прав."}, status=status.HTTP_403_FORBIDDEN)
+        if not is_admin and match.status not in (GroupMatch.IN_PROGRESS, GroupMatch.SCORE_PROPOSED):
             # Players may only score a match that is actually in progress.
-            if match.status != GroupMatch.IN_PROGRESS:
-                return Response({"detail": "Матч ещё не начался."}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"detail": "Матч ещё не начался."}, status=status.HTTP_400_BAD_REQUEST)
 
         if _playoff_started(tournament):
             return Response({"detail": "Плей-офф уже начат — групповые результаты заблокированы."}, status=status.HTTP_400_BAD_REQUEST)
@@ -1083,9 +1202,17 @@ class GroupMatchScoreView(APIView):
         if match.status == GroupMatch.FINISHED:
             return Response({"detail": "Матч уже завершён."}, status=status.HTTP_400_BAD_REQUEST)
 
+        # A score already awaiting confirmation blocks a fresh player submission.
+        if match.status == GroupMatch.SCORE_PROPOSED and not is_admin:
+            if match.proposed_by_id == request.user.id:
+                return Response({"detail": "Вы уже ввели счёт — ожидайте подтверждения соперника."}, status=400)
+            return Response({"detail": "Соперник предложил счёт — подтвердите или отклоните его."}, status=400)
+
         walkover = bool(request.data.get("walkover", False))
         if walkover:
-            # Technical win — score stays 0:0, winner given explicitly.
+            # Technical win — admin-only, recorded immediately (no confirmation).
+            if not is_admin:
+                return Response({"detail": "Неявку отмечает организатор."}, status=status.HTTP_403_FORBIDDEN)
             win = str(request.data.get("winner", ""))
             if win not in ("1", "2"):
                 return Response({"detail": "Укажите победителя неявки."}, status=400)
@@ -1103,19 +1230,76 @@ class GroupMatchScoreView(APIView):
                 return Response({"detail": "Ничья недопустима."}, status=400)
             winner = match.player1 if score1 > score2 else match.player2
 
-        match.score1 = score1
-        match.score2 = score2
-        match.winner = winner
-        match.status = GroupMatch.FINISHED
-        match.is_walkover = walkover
-        match.save()
+        # ── Player-entered score → hold as a proposal for the opponent ──────────
+        if is_player and not is_admin:
+            from django.utils import timezone
+            match.proposed_score1 = score1
+            match.proposed_score2 = score2
+            match.proposed_winner = winner
+            match.proposed_by = request.user
+            match.proposed_at = timezone.now()
+            match.status = GroupMatch.SCORE_PROPOSED
+            match.save(update_fields=[
+                "proposed_score1", "proposed_score2", "proposed_winner",
+                "proposed_by", "proposed_at", "status",
+            ])
+            from notifications.services import notify_score_proposed
+            notify_score_proposed(match, "group", request.user)
+            return Response(GroupMatchSerializer(match).data)
 
-        # Standings are recomputed from all finished matches (win=2/loss=1/
-        # absent=0), keeping points consistent across edits and forfeits.
-        from .standings import recompute_group_standings
-        recompute_group_standings(group)
+        # ── Admin-entered score → record immediately ───────────────────────────
+        _record_group_result(match, group, tournament, request, score1, score2, winner, walkover)
+        return Response(GroupMatchSerializer(match).data)
 
-        _log_score(tournament, request.user, match, "group", f"{group.name} · М{match.match_number}")
+
+class GroupScoreConfirmView(APIView):
+    """POST /api/tournaments/<pk>/groups/<group_id>/matches/<match_id>/confirm/
+    body: {accept: bool}. The opponent confirms or rejects a proposed group score."""
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, pk, group_id, match_id):
+        from django.db import transaction
+        tournament = get_object_or_404(Tournament.objects.select_related('club'), pk=pk)
+        group = get_object_or_404(TournamentGroup, pk=group_id, tournament=tournament)
+        if _playoff_started(tournament):
+            return Response({"detail": "Плей-офф уже начат — групповые результаты заблокированы."}, status=status.HTTP_400_BAD_REQUEST)
+        with transaction.atomic():
+            match = get_object_or_404(
+                GroupMatch.objects.select_for_update(), pk=match_id, group=group
+            )
+            if match.status != GroupMatch.SCORE_PROPOSED:
+                return Response({"detail": "Нет счёта на подтверждении."}, status=status.HTTP_400_BAD_REQUEST)
+
+            is_player = request.user == match.player1 or request.user == match.player2
+            if not is_player:
+                return Response({"detail": "Нет прав."}, status=status.HTTP_403_FORBIDDEN)
+            if match.proposed_by_id == request.user.id:
+                return Response({"detail": "Свой счёт подтверждает соперник."}, status=status.HTTP_400_BAD_REQUEST)
+
+            accept = bool(request.data.get("accept", False))
+            from notifications.services import clear_score_notifications, notify_score_rejected
+
+            if accept:
+                _record_group_result(
+                    match, group, tournament, request,
+                    match.proposed_score1, match.proposed_score2, match.proposed_winner, False,
+                )
+                clear_score_notifications(request.user.id, "group", match.pk)
+            else:
+                proposer_id = match.proposed_by_id
+                match.proposed_score1 = None
+                match.proposed_score2 = None
+                match.proposed_winner = None
+                match.proposed_by = None
+                match.proposed_at = None
+                match.status = GroupMatch.IN_PROGRESS
+                match.save(update_fields=[
+                    "proposed_score1", "proposed_score2", "proposed_winner",
+                    "proposed_by", "proposed_at", "status",
+                ])
+                clear_score_notifications(request.user.id, "group", match.pk)
+                if proposer_id:
+                    notify_score_rejected(match, "group", request.user)
 
         return Response(GroupMatchSerializer(match).data)
 
@@ -1182,19 +1366,20 @@ class GroupMatchTableView(APIView):
             except (TypeError, ValueError):
                 return Response({"detail": "Номер стола должен быть положительным числом."}, status=400)
 
-            # Validate the table isn't already occupied by another in-progress match
+            # Validate the table isn't already occupied (a proposed-score match
+            # still occupies its table until the result is confirmed).
             from .models import GroupMatch as GM
             table_busy_group = (
                 GM.objects.filter(
                     group__tournament=tournament,
                     table_number=table_number,
-                    status=GM.IN_PROGRESS,
+                    status__in=[GM.IN_PROGRESS, GM.SCORE_PROPOSED],
                 ).exclude(pk=match.pk).exists()
             )
             table_busy_bracket = Match.objects.filter(
                 tournament=tournament,
                 table_number=table_number,
-                status=Match.IN_PROGRESS,
+                status__in=[Match.IN_PROGRESS, Match.SCORE_PROPOSED],
             ).exists()
             if table_busy_group or table_busy_bracket:
                 return Response(

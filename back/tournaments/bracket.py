@@ -46,11 +46,12 @@ def auto_assign_table(match: Match) -> None:
     if not active_tables:
         return
 
-    # Tables in use by in-progress matches in THIS tournament
+    # Tables in use by in-progress (or awaiting-confirmation) matches in THIS
+    # tournament — a proposed-score match still occupies its table.
     used = set(
         Match.objects.filter(
             tournament=tournament,
-            status=Match.IN_PROGRESS,
+            status__in=[Match.IN_PROGRESS, Match.SCORE_PROPOSED],
         )
         .exclude(pk=match.pk)
         .exclude(table_number__isnull=True)
@@ -619,6 +620,11 @@ def reset_match(match: Match, *, _cascade: bool = False) -> None:
     match.score2 = None
     match.status = Match.IN_PROGRESS
     match.is_walkover = False
+    match.proposed_score1 = None
+    match.proposed_score2 = None
+    match.proposed_winner = None
+    match.proposed_by = None
+    match.proposed_at = None
     match.save()
     if not _cascade:
         auto_assign_table(match)

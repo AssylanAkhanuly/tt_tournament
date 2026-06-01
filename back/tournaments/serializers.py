@@ -90,6 +90,8 @@ class MatchSerializer(serializers.ModelSerializer):
     player1 = UserSerializer(read_only=True)
     player2 = UserSerializer(read_only=True)
     winner  = UserSerializer(read_only=True)
+    proposed_by     = UserSerializer(read_only=True)
+    proposed_winner = UserSerializer(read_only=True)
 
     class Meta:
         model  = Match
@@ -101,6 +103,8 @@ class MatchSerializer(serializers.ModelSerializer):
             "is_consolation", "is_walkover",
             "winner_next_id", "loser_next_id",
             "place_lo", "place_hi",
+            "proposed_score1", "proposed_score2",
+            "proposed_winner", "proposed_by", "proposed_at",
         ]
 
 
@@ -108,10 +112,17 @@ class GroupMatchSerializer(serializers.ModelSerializer):
     player1 = UserSerializer(read_only=True)
     player2 = UserSerializer(read_only=True)
     winner  = UserSerializer(read_only=True)
+    proposed_by     = UserSerializer(read_only=True)
+    proposed_winner = UserSerializer(read_only=True)
 
     class Meta:
         model  = GroupMatch
-        fields = ["id", "match_number", "player1", "player2", "score1", "score2", "winner", "status", "table_number", "is_walkover"]
+        fields = [
+            "id", "match_number", "player1", "player2", "score1", "score2",
+            "winner", "status", "table_number", "is_walkover",
+            "proposed_score1", "proposed_score2",
+            "proposed_winner", "proposed_by", "proposed_at",
+        ]
 
 
 class GroupParticipantSerializer(serializers.ModelSerializer):
