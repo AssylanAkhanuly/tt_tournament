@@ -437,14 +437,19 @@ def generate_all_places_bracket(tournament, players):
 
 def generate_group_bracket(tournament):
     """
-    Divides tournament participants into round-robin groups.
+    Divides tournament participants into round-robin groups using rating-based
+    snake (serpentine) seeding so the top seeds are spread one-per-group and the
+    groups stay balanced in both size and strength.
     """
     from .models import TournamentGroup, GroupParticipant, GroupMatch
 
     TournamentGroup.objects.filter(tournament=tournament).delete()
 
+    # Seed by rating (best first); joined_at breaks ties for a stable order.
     participants = list(
-        tournament.participants.select_related("user").order_by("joined_at")
+        tournament.participants.select_related("user").order_by(
+            "-user__rating", "joined_at"
+        )
     )
     n = len(participants)
     if n < 2:
@@ -453,9 +458,17 @@ def generate_group_bracket(tournament):
     group_size = max(2, tournament.group_size)
     group_letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
 
-    groups_players = []
-    for i in range(0, n, group_size):
-        groups_players.append(participants[i:i + group_size])
+    # Snake (serpentine) seeding: walk the rating-ordered list across the groups
+    # left-to-right, then right-to-left, alternating on each pass. This spreads
+    # the top seeds one-per-group and keeps groups balanced in both size and
+    # strength. E.g. 16 players / 4 groups -> A:[1,8,9,16] B:[2,7,10,15]
+    # C:[3,6,11,14] D:[4,5,12,13].
+    num_groups = (n + group_size - 1) // group_size
+    groups_players = [[] for _ in range(num_groups)]
+    for seed, tp in enumerate(participants):
+        row, pos = divmod(seed, num_groups)
+        col = pos if row % 2 == 0 else num_groups - 1 - pos
+        groups_players[col].append(tp)
 
     created_groups = []
     for idx, players_in_group in enumerate(groups_players):
