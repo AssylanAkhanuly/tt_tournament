@@ -15,14 +15,7 @@ const LEFT_PADDING = 30;
 const INITIAL_PAN  = { x: 40, y: 24 };
 const INITIAL_SCALE = 0.82;
 
-type LayoutLine  = { id: string; d: string; loser?: boolean; color?: string };
-
-// Distinct hues for the consolation (loser) drops so overlapping connectors
-// stay individually traceable.
-const DROP_COLORS = [
-  "#f59e0b", "#a78bfa", "#34d399", "#fb7185", "#22d3ee",
-  "#fb923c", "#a3e635", "#e879f9", "#2dd4bf", "#60a5fa",
-];
+type LayoutLine  = { id: string; d: string };
 type LayoutLabel = { id: string; text: string; x: number; y: number; width: number; section?: boolean };
 type LayoutItem  = { id: string; match: Match; x: number; y: number; seed1: number | null; seed2: number | null };
 
@@ -410,21 +403,19 @@ export default function ClassicBracket({
       });
     }
 
-    // ── Connector lines ───────────────────────────────────────────────────────
-    // Winner edges route through the column-gap midpoint so the two feeders of
-    // a match merge into one clean elbow (classic bracket look). Loser/drop
-    // edges are spread across distinct vertical "lanes" within the gap so the
-    // long cross-band connectors fan out and stay individually traceable
-    // instead of stacking into an unreadable wall.
+    // ── Connector lines (winners only) ──────────────────────────────────────────
+    // Only the winner Y-elbows are drawn: two feeders merge into one clean elbow
+    // at the column-gap midpoint, matching the RTTF bracket look. The loser /
+    // consolation drop connectors are intentionally omitted — their long
+    // cross-band paths overlapped into an unreadable tangle that confused
+    // players and admins. The consolation boxes themselves still appear; only
+    // their connecting lines are gone.
     type Edge = { m: Match; t: Match };
     const winnerEdges: Edge[] = [];
-    const loserEdges:  Edge[] = [];
     for (const m of visible) {
       if (!posY.has(m.id)) continue;
       const we = m.winner_next_id ? byId.get(m.winner_next_id) : null;
       if (we && !hidden(we) && posY.has(we.id)) winnerEdges.push({ m, t: we });
-      const le = m.loser_next_id ? byId.get(m.loser_next_id) : null;
-      if (le && !hidden(le) && posY.has(le.id)) loserEdges.push({ m, t: le });
     }
 
     const elbow = (fromX: number, fromY: number, vx: number, toY: number, toX: number) =>
@@ -439,41 +430,6 @@ export default function ClassicBracket({
       lines.push({
         id: `w-${e.m.id}-${e.t.id}`,
         d: elbow(fromX, midY(e.m), toX - COL_GAP * 0.5, midY(e.t), toX),
-      });
-    }
-
-    // Loser drops — classic side-to-side elbow (source RIGHT → vertical spine →
-    // target LEFT), solid and tinted a distinct colour. The two feeders of a
-    // target share a spine just left of the target column so they merge; spines
-    // for different targets are nudged apart so overlapping drops stay separable.
-    const targetLane = new Map<number, number>();
-    const targetColor = new Map<number, string>();
-    {
-      const byTargetCol = new Map<number, Match[]>();
-      for (const e of loserEdges) {
-        const c = e.t.round_number;
-        const arr = byTargetCol.get(c) ?? byTargetCol.set(c, []).get(c)!;
-        if (!arr.some((x) => x.id === e.t.id)) arr.push(e.t);
-      }
-      let seq = 0;
-      for (const arr of byTargetCol.values()) {
-        arr.sort((a, b) => posY.get(a.id)! - posY.get(b.id)!);
-        arr.forEach((t, i) => {
-          targetLane.set(t.id, i);
-          targetColor.set(t.id, DROP_COLORS[seq++ % DROP_COLORS.length]);
-        });
-      }
-    }
-    for (const e of loserEdges) {
-      const fromX = colX(e.m.round_number) + CARD_W;
-      const toX   = colX(e.t.round_number);
-      const lane  = targetLane.get(e.t.id) ?? 0;
-      const vx    = toX - COL_GAP * 0.72 + lane * 13;   // per-target spine, well separated
-      lines.push({
-        id: `l-${e.m.id}-${e.t.id}`,
-        d: elbow(fromX, midY(e.m), vx, midY(e.t), toX),
-        loser: true,
-        color: targetColor.get(e.t.id),
       });
     }
 
@@ -652,8 +608,7 @@ export default function ClassicBracket({
                 key={line.id}
                 d={line.d}
                 fill="none"
-                stroke={line.loser ? (line.color ?? "#f59e0b") : "rgba(125,211,252,0.45)"}
-                strokeOpacity={line.loser ? 0.7 : 1}
+                stroke="rgba(125,211,252,0.45)"
                 strokeWidth={1.5}
                 strokeLinejoin="round"
                 shapeRendering="crispEdges"
