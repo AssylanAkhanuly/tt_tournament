@@ -715,6 +715,7 @@ class MyActiveMatchView(APIView):
         )
         if bracket:
             opponent = bracket.player2 if bracket.player1_id == user.id else bracket.player1
+            proposed = bracket.status == Match.SCORE_PROPOSED
             return Response({"active_match": {
                 "kind": "bracket",
                 "tournament_id": str(bracket.tournament_id),
@@ -725,6 +726,13 @@ class MyActiveMatchView(APIView):
                 "your_name": user.name,
                 # Maps the drawer's "you / opponent" scores onto score1/score2.
                 "you_is_player1": bracket.player1_id == user.id,
+                "status": bracket.status,
+                # I entered a score and am waiting on the opponent.
+                "i_proposed": bool(proposed and bracket.proposed_by_id == user.id),
+                # The opponent entered a score I must confirm/reject.
+                "awaiting_my_confirmation": bool(proposed and bracket.proposed_by_id and bracket.proposed_by_id != user.id),
+                "proposed_score1": bracket.proposed_score1,
+                "proposed_score2": bracket.proposed_score2,
             }})
 
         group = (
@@ -736,6 +744,7 @@ class MyActiveMatchView(APIView):
         )
         if group:
             opponent = group.player2 if group.player1_id == user.id else group.player1
+            proposed = group.status == GroupMatch.SCORE_PROPOSED
             return Response({"active_match": {
                 "kind": "group",
                 "tournament_id": str(group.group.tournament_id),
@@ -746,6 +755,11 @@ class MyActiveMatchView(APIView):
                 "opponent_name": opponent.name if opponent else None,
                 "your_name": user.name,
                 "you_is_player1": group.player1_id == user.id,
+                "status": group.status,
+                "i_proposed": bool(proposed and group.proposed_by_id == user.id),
+                "awaiting_my_confirmation": bool(proposed and group.proposed_by_id and group.proposed_by_id != user.id),
+                "proposed_score1": group.proposed_score1,
+                "proposed_score2": group.proposed_score2,
             }})
 
         return Response({"active_match": None})
