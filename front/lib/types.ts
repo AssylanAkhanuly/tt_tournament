@@ -88,6 +88,8 @@ export interface Match {
   status: "pending" | "in_progress" | "finished";
   table_number: number | null;
   is_consolation: boolean;
+  /** Auto/manual no-show forfeit — opponent advanced without a real game */
+  is_walkover: boolean;
   winner_next_id: number | null;
   loser_next_id:  number | null;
   /** Range of final places this match's participants can finish in (all-places playoff). */

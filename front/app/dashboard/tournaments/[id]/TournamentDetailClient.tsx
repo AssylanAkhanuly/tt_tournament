@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import {
@@ -355,6 +355,11 @@ export default function TournamentDetailClient({
   const [removingId, setRemovingId] = useState<number | null>(null);
   // Absent toggle (in-flight participant id)
   const [absentId, setAbsentId] = useState<number | null>(null);
+  // User ids of players marked absent — used to badge them in the bracket/modal.
+  const absentUserIds = useMemo(
+    () => new Set(participants.filter((p) => p.is_absent).map((p) => p.user.id)),
+    [participants]
+  );
 
   // Self-registration (a player joining an open tournament from this page)
   const [joining, setJoining] = useState(false);
@@ -686,6 +691,19 @@ export default function TournamentDetailClient({
     toast(`Счёт изменён — ${winner ?? "Игрок"} победил ${s1}:${s2}`);
   }
 
+  // Manual walkover: the chosen player advances without a real game (no rating).
+  async function handleScoreForfeit(winnerIsP1: boolean) {
+    if (!scoreMatch) return;
+    const previousMatches = matches;
+    const [a, b] = winnerIsP1 ? [3, 0] : [0, 3];
+    await api.submitScore(tournament.id, scoreMatch.id, a, b, true);
+    const [fm, ft] = await Promise.all([api.getMatches(tournament.id), api.getTournament(tournament.id)]);
+    callNewlyAssignedMatches(previousMatches, fm);
+    setMatches(fm); setTournament(ft); setScoreMatch(null);
+    const winner = winnerIsP1 ? scoreMatch.player1?.name : scoreMatch.player2?.name;
+    toast(`${winner ?? "Игрок"} проходит (неявка)`);
+  }
+
   async function handleRemove(participantId: number) {
     setRemovingId(participantId);
     try {
@@ -712,7 +730,10 @@ export default function TournamentDetailClient({
     try {
       await api.setParticipantAbsent(tournament.id, p.id, next);
       setParticipants((list) => list.map((x) => (x.id === p.id ? { ...x, is_absent: next } : x)));
-      // Forfeits + standings changed server-side — pull fresh groups.
+      // Marking absent forfeits their unplayed group + bracket matches and may
+      // advance opponents — pull fresh groups, matches and tournament status.
+      const [fm, ft] = await Promise.all([api.getMatches(tournament.id), api.getTournament(tournament.id)]);
+      setMatches(fm); setTournament(ft);
       if (isGroupStage) api.getGroups(tournament.id).then(setGroups).catch(() => {});
       toast(next ? `${p.user.name} отмечен отсутствующим` : `${p.user.name} снова в игре`);
     } catch (err: unknown) { toast((err as Record<string, string>)?.detail ?? "Ошибка", false); }
@@ -974,6 +995,7 @@ export default function TournamentDetailClient({
                   currentUser={user}
                   isAdmin={isAdmin}
                   onEnterScore={setScoreMatch}
+                  absentIds={absentUserIds}
                   className="w-full h-full bg-[#050c18]"
                 />
               )
@@ -1373,6 +1395,9 @@ export default function TournamentDetailClient({
           canReset={isAdmin && canResetBracketScore(scoreMatch, matches)}
           onReset={handleScoreReset}
           onEdit={isAdmin ? handleScoreEdit : undefined}
+          p1Absent={scoreMatch.player1 ? absentUserIds.has(scoreMatch.player1.id) : false}
+          p2Absent={scoreMatch.player2 ? absentUserIds.has(scoreMatch.player2.id) : false}
+          onForfeit={isAdmin ? handleScoreForfeit : undefined}
         />
       )}
 
@@ -1670,6 +1695,10 @@ function OverviewPanel({
   const live         = matches.filter((m) => m.status === "in_progress");
   const pendingAll   = matches.filter((m) => m.status === "pending");
   const pendingReady = pendingAll.filter((m) => m.player1 && m.player2);
+  const absentIds = useMemo(
+    () => new Set(participants.filter((p) => p.is_absent).map((p) => p.user.id)),
+    [participants]
+  );
   // usedNums must include BOTH bracket match tables AND group match tables
   // so a table occupied by a group match doesn't appear free for another
   const usedNums = new Set<number>([
@@ -1996,7 +2025,7 @@ function OverviewPanel({
                       onEnterScore={onEnterScore} className="w-full h-full bg-transparent" />
                   ) : (
                     <BracketFlow matches={matches} currentUser={user} isAdmin={isAdmin}
-                      onEnterScore={onEnterScore} className="w-full h-full bg-transparent" />
+                      onEnterScore={onEnterScore} absentIds={absentIds} className="w-full h-full bg-transparent" />
                   )
                 ) : (
                   <div className="h-full flex flex-col items-center justify-center gap-3">
@@ -2187,6 +2216,15 @@ function OverviewPanel({
           onGroupsChange(updated);
           setGroupScoreMatch(null);
         } : undefined}
+        p1Absent={absentIds.has(groupScoreMatch.player1.id)}
+        p2Absent={absentIds.has(groupScoreMatch.player2.id)}
+        onForfeit={isAdmin && !playoffStarted ? async (winnerIsP1) => {
+          const [a, b] = winnerIsP1 ? [3, 0] : [0, 3];
+          await api.submitGroupScore(tournament.id, groupScoreMatch.groupId, groupScoreMatch.id, a, b, true);
+          const updated = await api.getGroups(tournament.id);
+          onGroupsChange(updated);
+          setGroupScoreMatch(null);
+        } : undefined}
       />
     )}
     </>
@@ -2210,7 +2248,7 @@ const GROUP_QUICK: [number, number][] = [
 ];
 
 function GroupScoreModal({
-  match, onClose, onSubmit, onClear, canReset, onReset, onEdit,
+  match, onClose, onSubmit, onClear, canReset, onReset, onEdit, p1Absent, p2Absent, onForfeit,
 }: {
   match: GroupMatch & { groupId?: number; groupName?: string };
   onClose: () => void;
@@ -2219,6 +2257,9 @@ function GroupScoreModal({
   canReset?: boolean;
   onReset?: () => Promise<void>;
   onEdit?: (s1: number, s2: number) => Promise<void>;
+  p1Absent?: boolean;
+  p2Absent?: boolean;
+  onForfeit?: (winnerIsP1: boolean) => Promise<void>;
 }) {
   const isFinished = match.status === "finished";
   const [s1, setS1]       = useState(match.score1 ?? 0);
@@ -2230,6 +2271,13 @@ function GroupScoreModal({
   const unchanged = s1 === match.score1 && s2 === match.score2;
 
   function pick(a: number, b: number) { setS1(a); setS2(b); setError(null); }
+
+  async function forfeit(winnerIsP1: boolean) {
+    if (!onForfeit) return;
+    setLoading(true); setError(null);
+    try { await onForfeit(winnerIsP1); }
+    catch (err: unknown) { setError((err as Record<string, string>)?.detail ?? "Не удалось сохранить."); setLoading(false); }
+  }
 
   async function save() {
     if (s1 === s2) { setError("Ничья недопустима."); return; }
@@ -2282,9 +2330,9 @@ function GroupScoreModal({
           {/* Player rows with steppers */}
           <div className="space-y-2.5">
             {([
-              { name: match.player1.name, score: s1, setScore: setS1, wins: p1wins },
-              { name: match.player2.name, score: s2, setScore: setS2, wins: p2wins },
-            ] as const).map(({ name, score, setScore, wins }, i) => (
+              { name: match.player1.name, score: s1, setScore: setS1, wins: p1wins, absent: p1Absent },
+              { name: match.player2.name, score: s2, setScore: setS2, wins: p2wins, absent: p2Absent },
+            ] as const).map(({ name, score, setScore, wins, absent }, i) => (
               <div key={i}
                 className={`flex items-center gap-3 rounded-2xl px-3.5 py-3 border transition-all ${
                   wins ? "border-emerald-500/35 bg-emerald-500/[0.08]" : "border-white/[0.08] bg-white/[0.04]"
@@ -2295,6 +2343,7 @@ function GroupScoreModal({
                 </div>
                 <span className={`flex-1 text-[14px] font-semibold truncate ${wins ? "text-white" : "text-white/55"}`}>
                   {name}
+                  {absent && <span className="ml-1.5 text-[10px] font-bold text-amber-300/90 uppercase">отсутствует</span>}
                 </span>
                 <div className="flex items-center gap-1 shrink-0">
                   <button onClick={() => { setScore(Math.max(0, score - 1)); setError(null); }}
@@ -2339,6 +2388,26 @@ function GroupScoreModal({
               Победа {match.player1.name} · Победа {match.player2.name}
             </p>
           </div>
+
+          {/* Walkover / no-show (manual technical win, no rating) */}
+          {!isFinished && onForfeit && (
+            <div>
+              <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-white/25 mb-2">Неявка — техническая победа</p>
+              <div className="grid grid-cols-2 gap-1.5">
+                <button onClick={() => forfeit(true)} disabled={loading}
+                  className="py-2 rounded-xl text-[12px] font-bold bg-amber-500/[0.10] hover:bg-amber-500/20
+                             border border-amber-500/25 text-amber-200 disabled:opacity-40 transition-all active:scale-[.97] truncate">
+                  ✓ {match.player1.name}
+                </button>
+                <button onClick={() => forfeit(false)} disabled={loading}
+                  className="py-2 rounded-xl text-[12px] font-bold bg-amber-500/[0.10] hover:bg-amber-500/20
+                             border border-amber-500/25 text-amber-200 disabled:opacity-40 transition-all active:scale-[.97] truncate">
+                  ✓ {match.player2.name}
+                </button>
+              </div>
+              <p className="text-[10px] text-white/20 text-center mt-1.5">Соперник получает победу без игры — рейтинг не меняется</p>
+            </div>
+          )}
 
           {error && (
             <p className="text-[13px] text-red-400 bg-red-500/10 border border-red-500/20

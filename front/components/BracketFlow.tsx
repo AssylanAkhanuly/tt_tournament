@@ -37,6 +37,7 @@ export type MatchNodeData = {
   currentUser: User | null;
   isAdmin: boolean;
   onEnterScore: (match: Match) => void;
+  absentIds?: Set<string>;
 };
 
 type LabelNodeData = { label: string };
@@ -55,7 +56,7 @@ function RoundLabelNode({ data }: NodeProps) {
 
 // ── Match card node ───────────────────────────────────────────────────────────
 function MatchNode({ data }: NodeProps) {
-  const { match, currentUser, isAdmin, onEnterScore } = data as MatchNodeData;
+  const { match, currentUser, isAdmin, onEnterScore, absentIds } = data as MatchNodeData;
 
   const isLive     = match.status === "in_progress";
   const isFinished = match.status === "finished";
@@ -118,11 +119,13 @@ function MatchNode({ data }: NodeProps) {
         {[
           { player: match.player1, score: match.score1, isWinner: isW1 },
           { player: match.player2, score: match.score2, isWinner: isW2 },
-        ].map(({ player, score, isWinner }, i) => (
+        ].map(({ player, score, isWinner }, i) => {
+          const absent = !!player && !!absentIds?.has(player.id);
+          return (
           <div key={i}>
             <div className={`flex items-center gap-2 px-3 py-[7px] ${
               isWinner ? "bg-emerald-500/[0.11]" : ""
-            }`}>
+            } ${absent ? "opacity-50" : ""}`}>
               <span className="w-3.5 shrink-0 text-[11px] text-center">
                 {isWinner ? "🏆" : ""}
               </span>
@@ -134,6 +137,7 @@ function MatchNode({ data }: NodeProps) {
                   : "text-white/20 italic"
               }`}>
                 {player ? player.name : "TBD"}
+                {absent && <span className="ml-1 text-[9px] font-bold text-amber-300/80 uppercase">н/я</span>}
               </span>
               {score !== null && score !== undefined && (
                 <span className={`text-[16px] font-black tabular-nums leading-none ${
@@ -147,7 +151,8 @@ function MatchNode({ data }: NodeProps) {
               <div className={`h-px mx-3 ${isLive ? "bg-blue-500/15" : "bg-white/[0.04]"}`} />
             )}
           </div>
-        ))}
+          );
+        })}
       </div>
 
       {/* ── Enter-score button ───────────────────────────────────────────── */}
@@ -178,12 +183,14 @@ interface Props {
   currentUser: User | null;
   isAdmin: boolean;
   onEnterScore: (match: Match) => void;
+  /** User ids of players marked absent — badged + dimmed in the bracket. */
+  absentIds?: Set<string>;
   /** Container className — caller controls size; defaults to a minimum 500px tall block */
   className?: string;
 }
 
 // ── Main ─────────────────────────────────────────────────────────────────────
-export default function BracketFlow({ matches, currentUser, isAdmin, onEnterScore, className }: Props) {
+export default function BracketFlow({ matches, currentUser, isAdmin, onEnterScore, absentIds, className }: Props) {
   const rounds = useMemo(
     () => [...new Set(matches.map((m) => m.round_number))].sort((a, b) => a - b),
     [matches]
@@ -225,7 +232,7 @@ export default function BracketFlow({ matches, currentUser, isAdmin, onEnterScor
             id: `m-${match.id}`,
             type: "matchNode",
             position: { x, y: idx * slotH },
-            data: { match, currentUser, isAdmin, onEnterScore } satisfies MatchNodeData,
+            data: { match, currentUser, isAdmin, onEnterScore, absentIds } satisfies MatchNodeData,
             draggable: false, selectable: false,
           });
         });
@@ -247,7 +254,7 @@ export default function BracketFlow({ matches, currentUser, isAdmin, onEnterScor
             id: `m-${match.id}`,
             type: "matchNode",
             position: { x, y: cardTopOffset + idx * slotH },
-            data: { match, currentUser, isAdmin, onEnterScore } satisfies MatchNodeData,
+            data: { match, currentUser, isAdmin, onEnterScore, absentIds } satisfies MatchNodeData,
             draggable: false, selectable: false,
           });
         });

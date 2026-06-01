@@ -377,10 +377,10 @@ export const api = {
   getGroups: (tournamentId: string) =>
     apiFetch<TournamentGroup[]>(`/api/tournaments/${tournamentId}/groups/`),
 
-  submitGroupScore: (tournamentId: string, groupId: number, matchId: number, score1: number, score2: number) =>
+  submitGroupScore: (tournamentId: string, groupId: number, matchId: number, score1: number, score2: number, walkover = false) =>
     apiFetch<GroupMatch>(`/api/tournaments/${tournamentId}/groups/${groupId}/matches/${matchId}/score/`, {
       method: "POST",
-      body: JSON.stringify({ score1, score2 }),
+      body: JSON.stringify({ score1, score2, walkover }),
     }),
 
   resetGroupMatch: (tournamentId: string, groupId: number, matchId: number) =>
@@ -402,10 +402,10 @@ export const api = {
   getMatches: (id: string) =>
     apiFetch<Match[]>(`/api/tournaments/${id}/matches/`),
 
-  submitScore: (tournamentId: string, matchId: number, score1: number, score2: number) =>
+  submitScore: (tournamentId: string, matchId: number, score1: number, score2: number, walkover = false) =>
     apiFetch<Match>(`/api/tournaments/${tournamentId}/matches/${matchId}/score/`, {
       method: "POST",
-      body: JSON.stringify({ score1, score2 }),
+      body: JSON.stringify({ score1, score2, walkover }),
     }),
 
   resetMatch: (tournamentId: string, matchId: number) =>
