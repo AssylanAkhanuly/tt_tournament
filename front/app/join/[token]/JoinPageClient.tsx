@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { Tournament, User } from "@/lib/types";
 import { api } from "@/lib/api";
+import { identify, track } from "@/lib/amplitude";
 import PhoneInput from "@/components/PhoneInput";
 import PinInput, { PinInputHandle } from "@/components/PinInput";
 import { ArrowLeft, Users } from "lucide-react";
@@ -161,7 +162,10 @@ function RegisterAndJoinSteps({ joinToken, onJoined, onSwitchToLogin }: { joinTo
     setFE(null); setError(null);
     setLoading(true);
     try {
-      await api.registerAndJoin(joinToken, { phone, name: name.trim(), password: pin, confirm_password: pin });
+      const result = await api.registerAndJoin(joinToken, { phone, name: name.trim(), password: pin, confirm_password: pin });
+      if (result?.user?.id) identify(result.user.id);
+      track("register_success");
+      track("tournament_joined_via_link", { join_token: joinToken });
       onJoined();
     } catch (err) {
       const e = err as Record<string, string | string[] | boolean>;
@@ -326,8 +330,10 @@ function LoginAndJoinForm({ joinToken, onJoined }: { joinToken: string; onJoined
     setError(null); setFE(null);
     setLoading(true);
     try {
-      await api.login(phone, pin);
-      try { await api.joinByToken(joinToken); } catch { /* already joined */ }
+      const user = await api.login(phone, pin);
+      identify(user.id);
+      track("login_success");
+      try { await api.joinByToken(joinToken); track("tournament_joined_via_link", { join_token: joinToken }); } catch { /* already joined */ }
       onJoined();
     } catch (err) {
       const e = err as Record<string, string>;
@@ -393,6 +399,7 @@ function JoinConfirmSection({ tournament, joinToken }: { tournament: Tournament;
     setLoading(true); setError(null);
     try {
       await api.joinByToken(joinToken);
+      track("tournament_joined_via_link", { join_token: joinToken });
       setDone(true);
     } catch (err) {
       const e = err as Record<string, string>;

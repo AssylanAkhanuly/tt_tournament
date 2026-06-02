@@ -12,6 +12,7 @@ import {
 import { useRouter } from "next/navigation";
 import { GroupMatch, Match, Participant, Tournament, TournamentGroup, TournamentTable, User } from "@/lib/types";
 import { api, type ElevenLabsVoice, type ScoreLogEntry } from "@/lib/api";
+import { track } from "@/lib/amplitude";
 import { useTournamentLive } from "@/lib/useTournamentLive";
 import ScoreModal from "@/components/ScoreModal";
 import AddPlayerModal from "@/components/AddPlayerModal";
@@ -415,6 +416,17 @@ export default function TournamentDetailClient({
       })
     : null;
 
+  // Track tournament view on mount
+  useEffect(() => {
+    track("tournament_viewed", {
+      tournament_id: initTournament.id,
+      tournament_format: initTournament.format,
+      tournament_status: initTournament.status,
+      is_admin: isAdmin,
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // ── Auto-refresh every 30s while live ─────────────────────────────────────
   const refresh = useCallback(async (silent = true) => {
     if (!silent) setRefreshing(true);
@@ -634,6 +646,7 @@ export default function TournamentDetailClient({
         name: editName, description: editDesc, starts_at: editStartsAt || null,
       });
       setTournament(updated); setEditing(false);
+      track("tournament_updated", { tournament_id: tournament.id });
       toast("Турнир обновлён");
     } catch (err: unknown) {
       setEditError((err as Record<string, string>)?.detail ?? "Не удалось сохранить.");
@@ -647,7 +660,11 @@ export default function TournamentDetailClient({
   }
 
   async function handleDelete() {
-    try { await api.deleteTournament(tournament.id); router.push("/dashboard"); }
+    try {
+      await api.deleteTournament(tournament.id);
+      track("tournament_deleted", { tournament_id: tournament.id });
+      router.push("/dashboard");
+    }
     catch (err: unknown) { alert((err as Record<string, string>)?.detail ?? "Ошибка."); }
     setShowDeleteConfirm(false);
   }
@@ -659,9 +676,11 @@ export default function TournamentDetailClient({
       setTournament(r.tournament);
       if (r.groups) {
         setGroups(r.groups);
+        track("tournament_started", { tournament_id: tournament.id, format: tournament.format, stage: "group" });
         toast("Турнир начат! Групповой этап создан.");
       } else {
         setMatches(r.matches ?? []);
+        track("tournament_started", { tournament_id: tournament.id, format: tournament.format, stage: "bracket", match_count: r.matches?.length ?? 0 });
         toast("Турнир начат! Матчи сгенерированы.");
       }
       setPage("overview");
@@ -678,6 +697,13 @@ export default function TournamentDetailClient({
     callNewlyAssignedMatches(previousMatches, fm);
     setMatches(fm); setTournament(ft); setScoreMatch(null);
     const winner = s1 > s2 ? scoreMatch.player1?.name : scoreMatch.player2?.name;
+    track("score_submitted", {
+      tournament_id: tournament.id,
+      match_id: scoreMatch.id,
+      score1: s1,
+      score2: s2,
+      round: scoreMatch.round_number,
+    });
     toast(`${winner ?? "Игрок"} победил ${s1}:${s2}`);
   }
 
@@ -690,6 +716,7 @@ export default function TournamentDetailClient({
     await api.resetMatch(tournament.id, scoreMatch.id);
     const [fm, ft] = await Promise.all([api.getMatches(tournament.id), api.getTournament(tournament.id)]);
     setMatches(fm); setTournament(ft); setScoreMatch(null);
+    track("score_reset", { tournament_id: tournament.id, match_id: scoreMatch.id });
     toast("Счёт сброшен — введите заново");
   }
 
@@ -709,6 +736,12 @@ export default function TournamentDetailClient({
     callNewlyAssignedMatches(previousMatches, fm);
     setMatches(fm); setTournament(ft); setScoreMatch(null);
     const winner = s1 > s2 ? scoreMatch.player1?.name : scoreMatch.player2?.name;
+    track("score_edited", {
+      tournament_id: tournament.id,
+      match_id: scoreMatch.id,
+      score1: s1,
+      score2: s2,
+    });
     toast(`Счёт изменён — ${winner ?? "Игрок"} победил ${s1}:${s2}`);
   }
 
@@ -721,6 +754,11 @@ export default function TournamentDetailClient({
     callNewlyAssignedMatches(previousMatches, fm);
     setMatches(fm); setTournament(ft); setScoreMatch(null);
     const winner = winnerIsP1 ? scoreMatch.player1?.name : scoreMatch.player2?.name;
+    track("walkover_submitted", {
+      tournament_id: tournament.id,
+      match_id: scoreMatch.id,
+      winner_slot: winnerIsP1 ? 1 : 2,
+    });
     toast(`${winner ?? "Игрок"} проходит (неявка)`);
   }
 
@@ -730,6 +768,7 @@ export default function TournamentDetailClient({
       await api.removeParticipant(tournament.id, participantId);
       setParticipants((p) => p.filter((x) => x.id !== participantId));
       setTournament((t) => ({ ...t, participant_count: t.participant_count - 1 }));
+      track("player_removed", { tournament_id: tournament.id });
       toast("Игрок удалён");
     } catch (err: unknown) { toast((err as Record<string, string>)?.detail ?? "Ошибка", false); }
     finally { setRemovingId(null); }
@@ -738,6 +777,7 @@ export default function TournamentDetailClient({
   function handlePlayerAdded(participant: Participant) {
     setParticipants((p) => p.find((x) => x.id === participant.id) ? p : [...p, participant]);
     setTournament((t) => ({ ...t, participant_count: t.participant_count + 1 }));
+    track("player_added", { tournament_id: tournament.id });
     toast(`${participant.user.name} добавлен`);
     // A late entry during the group stage gets seated in a group server-side —
     // refresh the groups so the new player and their matches appear.
@@ -770,6 +810,7 @@ export default function TournamentDetailClient({
       const p = await api.joinTournamentSelf(tournament.id);
       setParticipants((prev) => (prev.find((x) => x.id === p.id) ? prev : [...prev, p]));
       setTournament((t) => ({ ...t, is_registered: true, participant_count: t.participant_count + 1 }));
+      track("tournament_self_registered", { tournament_id: tournament.id });
       toast("Вы записаны на турнир!");
     } catch (err: unknown) {
       toast((err as Record<string, string>)?.detail ?? "Не удалось записаться", false);
@@ -907,7 +948,7 @@ export default function TournamentDetailClient({
           {navItems.filter((n) => n.show).map(({ id, label, Icon, badge }) => {
             const active = page === id;
             return (
-              <button key={id} onClick={() => setPage(id)}
+              <button key={id} onClick={() => { setPage(id); track("tournament_tab_changed", { tournament_id: tournament.id, tab: id }); }}
                 className={`w-full flex items-center gap-3 px-4 py-3
                             text-left transition-all relative group ${
                   active

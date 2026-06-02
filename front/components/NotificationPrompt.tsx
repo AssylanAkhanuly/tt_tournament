@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { Bell, X } from "lucide-react";
 import { useLang } from "@/lib/i18n";
+import { track } from "@/lib/amplitude";
 import { usePushState } from "@/lib/usePushState";
 import { iosNeedsInstall } from "@/lib/push";
 
@@ -30,6 +31,7 @@ export default function NotificationPrompt() {
   }
   async function handleEnable() {
     await enable();
+    track("push_notifications_enabled");
     close();
   }
 

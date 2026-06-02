@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Zap } from "lucide-react";
 import { api, ActiveMatch } from "@/lib/api";
+import { track } from "@/lib/amplitude";
 
 const CONFIRM_ID = "tt-confirm-score";
 const ACTIVE_ID  = "tt-active-match";
@@ -58,8 +59,10 @@ export default function MatchPrompts({
           toast.dismiss(CONFIRM_ID);
           lastSig.current = "none";
           if (accept) {
+            track("score_confirmed", { tournament_id: m.tournament_id, match_id: m.match_id, kind: m.kind });
             toast.success("Счёт подтверждён");
           } else {
+            track("score_rejected", { tournament_id: m.tournament_id, match_id: m.match_id, kind: m.kind });
             toast("Счёт отклонён — введите свой счёт");
             router.push(`/dashboard/tournaments/${m.tournament_id}`);
           }

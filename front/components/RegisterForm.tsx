@@ -6,6 +6,7 @@ import { ArrowLeft } from "lucide-react";
 import { api } from "@/lib/api";
 import { ApiError, User } from "@/lib/types";
 import { useLang } from "@/lib/i18n";
+import { identify, track } from "@/lib/amplitude";
 import PhoneInput from "./PhoneInput";
 import PinInput, { PinInputHandle } from "./PinInput";
 import SpinCoachLogo from "./SpinCoachLogo";
@@ -78,9 +79,12 @@ export default function RegisterForm({ onSuccess }: Props) {
     setLoading(true);
     try {
       const user = await api.register({ phone, name: name.trim(), password: pin, confirm_password: pin });
+      identify(user.id);
+      track("register_success");
       onSuccess?.(user);
     } catch (err) {
       const e = err as ApiError;
+      track("register_error");
       if (e.phone)         { setFE(Array.isArray(e.phone)    ? e.phone[0]    : e.phone as string);    go(1); }
       else if (e.name)     { setFE(Array.isArray(e.name)     ? e.name[0]     : e.name as string);     go(2); }
       else if (e.password) { setFE(Array.isArray(e.password) ? e.password[0] : e.password as string); go(3); }

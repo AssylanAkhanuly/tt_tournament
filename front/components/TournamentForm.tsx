@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { api } from "@/lib/api";
+import { track } from "@/lib/amplitude";
 import { ApiError, Tournament } from "@/lib/types";
 
 interface Props {
@@ -29,6 +30,7 @@ export default function TournamentForm({ onCreated }: Props) {
         ...(form.starts_at ? { starts_at: new Date(form.starts_at).toISOString() } : {}),
       };
       const tournament = await api.createTournament(payload);
+      track("tournament_created", { tournament_id: tournament.id, format: tournament.format });
       onCreated(tournament);
       setForm({ name: "", description: "", starts_at: "" });
     } catch (err) {
