@@ -297,8 +297,11 @@ class GroupMatch(models.Model):
 class ScoreLog(models.Model):
     """Audit trail of who entered/changed a match score and when. Display fields
     are denormalized so the log stays a stable historical record."""
-    ACTION_SCORE = "score"
-    ACTION_RESET = "reset"
+    ACTION_SCORE = "score"        # admin entered a result directly
+    ACTION_RESET = "reset"        # admin undid a result
+    ACTION_PROPOSE = "propose"    # a player entered a score (awaiting confirmation)
+    ACTION_CONFIRM = "confirm"    # the opponent confirmed a proposed score
+    ACTION_REJECT = "reject"      # the opponent rejected a proposed score
 
     tournament      = models.ForeignKey(Tournament, on_delete=models.CASCADE, related_name="score_logs")
     entered_by      = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name="+")

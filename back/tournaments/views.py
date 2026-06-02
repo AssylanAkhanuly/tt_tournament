@@ -942,8 +942,11 @@ class TournamentTableDetailView(APIView):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
-def _log_score(tournament, user, match, kind, label, action=ScoreLog.ACTION_SCORE):
-    """Record who entered/changed a score. Never let logging break scoring."""
+def _log_score(tournament, user, match, kind, label, action=ScoreLog.ACTION_SCORE,
+               score1=None, score2=None, winner_name=None):
+    """Record who entered/changed/confirmed a score. Never let logging break
+    scoring. Scores/winner default to the match's, but can be passed explicitly
+    (e.g. a proposal/rejection where the match's own score isn't set yet)."""
     try:
         ScoreLog.objects.create(
             tournament=tournament,
@@ -953,16 +956,17 @@ def _log_score(tournament, user, match, kind, label, action=ScoreLog.ACTION_SCOR
             match_label=label,
             player1_name=match.player1.name if match.player1_id else "",
             player2_name=match.player2.name if match.player2_id else "",
-            score1=match.score1,
-            score2=match.score2,
-            winner_name=match.winner.name if match.winner_id else "",
+            score1=score1 if score1 is not None else match.score1,
+            score2=score2 if score2 is not None else match.score2,
+            winner_name=winner_name if winner_name is not None else (match.winner.name if match.winner_id else ""),
             action=action,
         )
     except Exception:
         pass
 
 
-def _record_bracket_result(match, tournament, request, score1, score2, winner, walkover):
+def _record_bracket_result(match, tournament, request, score1, score2, winner, walkover,
+                           log_action=ScoreLog.ACTION_SCORE):
     """Finalize a bracket match: write the real score, clear any proposal, advance
     the bracket, run auto-forfeit, log it, and finish the tournament + apply
     ratings if every match is now done. Shared by admin submit and confirm-accept."""
@@ -988,7 +992,7 @@ def _record_bracket_result(match, tournament, request, score1, score2, winner, w
         from .standings import forfeit_ready_bracket_matches
         forfeit_ready_bracket_matches(tournament)
 
-    _log_score(tournament, request.user, match, "bracket", f"Р{match.round_number} · М{match.match_number}")
+    _log_score(tournament, request.user, match, "bracket", f"Р{match.round_number} · М{match.match_number}", action=log_action)
 
     total_matches = tournament.matches.count()
     finished_matches = tournament.matches.filter(status=Match.FINISHED).count()
@@ -1059,6 +1063,10 @@ class SubmitScoreView(APIView):
                 "proposed_score1", "proposed_score2", "proposed_winner",
                 "proposed_by", "proposed_at", "status",
             ])
+            _log_score(tournament, request.user, match, "bracket",
+                       f"Р{match.round_number} · М{match.match_number}",
+                       action=ScoreLog.ACTION_PROPOSE, score1=score1, score2=score2,
+                       winner_name=winner.name if winner else "")
             from notifications.services import notify_score_proposed
             notify_score_proposed(match, "bracket", request.user)
             return Response(MatchSerializer(match).data)
@@ -1099,9 +1107,15 @@ class ScoreConfirmView(APIView):
             if accept:
                 score1, score2 = match.proposed_score1, match.proposed_score2
                 winner = match.proposed_winner
-                _record_bracket_result(match, tournament, request, score1, score2, winner, False)
+                _record_bracket_result(match, tournament, request, score1, score2, winner, False,
+                                       log_action=ScoreLog.ACTION_CONFIRM)
                 clear_score_notifications(request.user.id, "bracket", match.pk)
             else:
+                _log_score(tournament, request.user, match, "bracket",
+                           f"Р{match.round_number} · М{match.match_number}",
+                           action=ScoreLog.ACTION_REJECT,
+                           score1=match.proposed_score1, score2=match.proposed_score2,
+                           winner_name=match.proposed_winner.name if match.proposed_winner_id else "")
                 proposer_id = match.proposed_by_id
                 match.proposed_score1 = None
                 match.proposed_score2 = None
@@ -1169,7 +1183,8 @@ class GroupListView(generics.ListAPIView):
         )
 
 
-def _record_group_result(match, group, tournament, request, score1, score2, winner, walkover):
+def _record_group_result(match, group, tournament, request, score1, score2, winner, walkover,
+                         log_action=ScoreLog.ACTION_SCORE):
     """Finalize a group match: write the real score, clear any proposal, recompute
     standings, and log it. Shared by admin submit and confirm-accept."""
     match.score1 = score1
@@ -1189,7 +1204,7 @@ def _record_group_result(match, group, tournament, request, score1, score2, winn
     from .standings import recompute_group_standings
     recompute_group_standings(group)
 
-    _log_score(tournament, request.user, match, "group", f"{group.name} · М{match.match_number}")
+    _log_score(tournament, request.user, match, "group", f"{group.name} · М{match.match_number}", action=log_action)
 
 
 class GroupMatchScoreView(APIView):
@@ -1257,6 +1272,10 @@ class GroupMatchScoreView(APIView):
                 "proposed_score1", "proposed_score2", "proposed_winner",
                 "proposed_by", "proposed_at", "status",
             ])
+            _log_score(tournament, request.user, match, "group",
+                       f"{group.name} · М{match.match_number}",
+                       action=ScoreLog.ACTION_PROPOSE, score1=score1, score2=score2,
+                       winner_name=winner.name if winner else "")
             from notifications.services import notify_score_proposed
             notify_score_proposed(match, "group", request.user)
             return Response(GroupMatchSerializer(match).data)
@@ -1297,9 +1316,15 @@ class GroupScoreConfirmView(APIView):
                 _record_group_result(
                     match, group, tournament, request,
                     match.proposed_score1, match.proposed_score2, match.proposed_winner, False,
+                    log_action=ScoreLog.ACTION_CONFIRM,
                 )
                 clear_score_notifications(request.user.id, "group", match.pk)
             else:
+                _log_score(tournament, request.user, match, "group",
+                           f"{group.name} · М{match.match_number}",
+                           action=ScoreLog.ACTION_REJECT,
+                           score1=match.proposed_score1, score2=match.proposed_score2,
+                           winner_name=match.proposed_winner.name if match.proposed_winner_id else "")
                 proposer_id = match.proposed_by_id
                 match.proposed_score1 = None
                 match.proposed_score2 = None
