@@ -6,7 +6,7 @@ import { ArrowLeft } from "lucide-react";
 import { api } from "@/lib/api";
 import { ApiError, User } from "@/lib/types";
 import { useLang } from "@/lib/i18n";
-import { identify, track } from "@/lib/amplitude";
+import { identifyUser, track } from "@/lib/amplitude";
 import PhoneInput from "./PhoneInput";
 import PinInput from "./PinInput";
 import SpinCoachLogo from "./SpinCoachLogo";
@@ -70,7 +70,7 @@ export default function LoginForm({ onSuccess }: Props) {
     setLoading(true);
     try {
       const user = await api.login(phone, pin);
-      identify(user.id);
+      identifyUser(user);
       track("login_success");
       onSuccess?.(user);
     } catch (err) {

@@ -1,6 +1,7 @@
 "use client";
 
 import { createContext, useContext, useEffect, useState, ReactNode } from "react";
+import { setAppLanguage } from "@/lib/amplitude";
 
 export type Lang = "ru" | "en" | "kz";
 const LANG_KEY = "tt_lang";
@@ -448,6 +449,10 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     setLangState(detectLang());
   }, []);
+
+  useEffect(() => {
+    setAppLanguage(lang);
+  }, [lang]);
 
   function setLang(l: Lang) {
     setLangState(l);

@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { Tournament, User } from "@/lib/types";
 import { api } from "@/lib/api";
-import { identify, track } from "@/lib/amplitude";
+import { identifyUser, track } from "@/lib/amplitude";
 import PhoneInput from "@/components/PhoneInput";
 import PinInput, { PinInputHandle } from "@/components/PinInput";
 import { ArrowLeft, Users } from "lucide-react";
@@ -165,7 +165,7 @@ function RegisterAndJoinSteps({ joinToken, onJoined, onSwitchToLogin }: { joinTo
     setLoading(true);
     try {
       const result = await api.registerAndJoin(joinToken, { phone, name: name.trim(), password: pin, confirm_password: pin });
-      if (result?.user?.id) identify(result.user.id);
+      if (result?.user) identifyUser(result.user);
       track("register_success");
       track("tournament_joined_via_link", { join_token: joinToken });
       onJoined();
@@ -333,7 +333,7 @@ function LoginAndJoinForm({ joinToken, onJoined }: { joinToken: string; onJoined
     setLoading(true);
     try {
       const user = await api.login(phone, pin);
-      identify(user.id);
+      identifyUser(user);
       track("login_success");
       try { await api.joinByToken(joinToken); track("tournament_joined_via_link", { join_token: joinToken }); } catch { /* already joined */ }
       onJoined();

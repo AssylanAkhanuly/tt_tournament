@@ -7,7 +7,7 @@ import NotificationPrompt from "@/components/NotificationPrompt";
 import SpinCoachLogo from "@/components/SpinCoachLogo";
 import { Toaster } from "sonner";
 import { api } from "@/lib/api";
-import { identify, track } from "@/lib/amplitude";
+import { identifyUser, track } from "@/lib/amplitude";
 import { useLang } from "@/lib/i18n";
 import { User } from "@/lib/types";
 import { useActiveMatch } from "@/lib/useActiveMatch";
@@ -166,7 +166,7 @@ export default function DashboardLayout({
   useEffect(() => {
     api
       .me()
-      .then((u) => { identify(u.id); setUser(u); })
+      .then((u) => { identifyUser(u); setUser(u); })
       .catch(() => {
         window.location.href = "/login";
       })

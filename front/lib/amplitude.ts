@@ -1,4 +1,5 @@
 import * as amplitude from "@amplitude/analytics-browser";
+import { Identify } from "@amplitude/analytics-browser";
 import type { EnrichmentPlugin, BrowserClient, BrowserConfig, BaseEvent } from "@amplitude/analytics-core";
 import * as sessionReplay from "@amplitude/session-replay-browser";
 
@@ -33,10 +34,43 @@ export function initAmplitude() {
   });
 
   amplitude.add(makeSessionReplayPlugin());
+
+  // Set device category based on the app's mobile breakpoint (matches Tailwind sm: 640px).
+  // Amplitude captures OS/browser automatically; this adds the app-level distinction.
+  const deviceCategory = window.innerWidth < 640 ? "mobile" : "desktop";
+  const init = new Identify();
+  init.set("device_category", deviceCategory);
+  amplitude.identify(init);
 }
 
-export function identify(userId: string) {
-  amplitude.setUserId(`amp_user_${userId}`);
+/** Set user identity and persistent user properties after login or registration. */
+export function identifyUser(user: {
+  id: string;
+  name: string;
+  rating: number;
+  is_staff: boolean;
+  club_ids_admin: string[];
+}) {
+  amplitude.setUserId(`amp_user_${user.id}`);
+
+  const role = user.is_staff
+    ? "staff"
+    : user.club_ids_admin.length > 0
+    ? "club_admin"
+    : "player";
+
+  const props = new Identify();
+  props.set("role", role);
+  props.set("rating", user.rating);
+  props.set("display_name", user.name);
+  amplitude.identify(props);
+}
+
+/** Call whenever the user switches the in-app language. */
+export function setAppLanguage(lang: "ru" | "en" | "kz") {
+  const props = new Identify();
+  props.set("app_language", lang);
+  amplitude.identify(props);
 }
 
 export function resetIdentity() {
