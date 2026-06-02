@@ -519,10 +519,22 @@ def generate_group_bracket(tournament):
 
 def generate_playoff_from_groups(tournament, advance_count=None):
     """
-    Seeds ALL players from groups into a full consolation bracket.
-    Players are seeded by position across groups:
-      A1, B1, C1, A2, B2, C2, A3, B3, A4, B4 ...
-    If advance_count is given, only top N per group advance.
+    Seeds ALL players from groups into a full consolation bracket using
+    outside-in group interleaving.
+
+    For 4 groups [A, B, C, D] the interleaved order is [A, D, B, C], which
+    maps onto standard bracket seeding as seeds 1-4:
+      seed1 (A1) → Q1  "first box"        (CT.1)
+      seed2 (D1) → Q3  "top of 2nd half"  (CT.5)
+      seed3 (B1) → Q4  "last quarter"     (CT.7)
+      seed4 (C1) → Q2  "bottom of 1st half" (CT.3)
+
+    This guarantees:
+    - Every round-1 match pairs players from different groups.
+    - Group A and B winners can only meet in the final (opposite bracket ends).
+    - Group C and D winners can only meet in the final.
+    - Runners-up and lower-placed players follow the same interleaving, so
+      same-group players are also spread across quarters.
     """
     from .models import TournamentGroup, GroupParticipant
 
@@ -530,41 +542,39 @@ def generate_playoff_from_groups(tournament, advance_count=None):
     if not groups:
         raise ValueError("Нет групп для генерации плей-офф.")
 
-    # Determine how many positions to iterate (max group size = advance all)
     if advance_count is None:
         advance_count = max(
             GroupParticipant.objects.filter(group=g).count()
             for g in groups
         )
 
+    # Outside-in interleaving: lo and hi pointers walk toward the centre.
+    # [A,B,C,D] → [A,D,B,C];  [A,B,C,D,E,F] → [A,F,B,E,C,D]
+    n_groups = len(groups)
+    interleaved_groups = []
+    lo, hi = 0, n_groups - 1
+    while lo <= hi:
+        interleaved_groups.append(groups[lo])
+        if lo != hi:
+            interleaved_groups.append(groups[hi])
+        lo += 1
+        hi -= 1
+
     pool = []
     for pos in range(advance_count):
-        position_participants = []
-        for group in groups:
+        for group in interleaved_groups:
             top = list(
                 GroupParticipant.objects.filter(group=group)
                 .select_related('user')
                 .order_by('-points', '-wins', '-diff')
             )
             if len(top) > pos:
-                position_participants.append(top[pos])
-        if position_participants:
-            # Within each position tier, seed by group-stage performance
-            # (points → wins → set-diff), using pre-tournament rating only
-            # as a final tiebreaker. Group winners always become seeds 1-N,
-            # runners-up N+1-2N, etc. — never mixed with a higher position.
-            position_participants.sort(
-                key=lambda gp: (-gp.points, -gp.wins, -gp.diff, -(gp.user.rating or 0))
-            )
-            pool.extend(gp.user for gp in position_participants)
+                pool.append(top[pos].user)
 
-    seeded_players = pool
-
-    n = len(seeded_players)
-    if n < 2:
+    if len(pool) < 2:
         raise ValueError("Недостаточно игроков для плей-офф.")
 
-    return generate_all_places_bracket(tournament, seeded_players)
+    return generate_all_places_bracket(tournament, pool)
 
 
 def reset_match(match: Match, *, _cascade: bool = False) -> None:
