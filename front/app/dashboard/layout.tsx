@@ -7,7 +7,7 @@ import NotificationPrompt from "@/components/NotificationPrompt";
 import SpinCoachLogo from "@/components/SpinCoachLogo";
 import { Toaster } from "sonner";
 import { api } from "@/lib/api";
-import { identify } from "@/lib/amplitude";
+import { identify, track } from "@/lib/amplitude";
 import { useLang } from "@/lib/i18n";
 import { User } from "@/lib/types";
 import { useActiveMatch } from "@/lib/useActiveMatch";
@@ -19,6 +19,16 @@ import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 
 const TAB_PATHS = ["/dashboard", "/dashboard/my", "/dashboard/profile"];
+
+function resolvePageName(pathname: string): string {
+  if (pathname === "/dashboard")          return "home";
+  if (pathname === "/dashboard/my")       return "my_tournaments";
+  if (pathname === "/dashboard/profile")  return "profile";
+  if (pathname === "/dashboard/match")    return "active_match";
+  if (pathname.startsWith("/dashboard/tournaments/")) return "tournament_detail";
+  if (pathname.startsWith("/dashboard/clubs/"))       return "club_detail";
+  return "unknown";
+}
 
 function isClubAdminOnly(user: User) {
   return !user.is_staff && user.club_ids_admin.length > 0;
@@ -162,6 +172,10 @@ export default function DashboardLayout({
       })
       .finally(() => setReady(true));
   }, []);
+
+  useEffect(() => {
+    track("page_viewed", { page: resolvePageName(pathname), path: pathname });
+  }, [pathname]);
 
   if (!ready || !user) {
     return (

@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { Club, ClubAdmin, ClubTable, Tournament, User } from "@/lib/types";
 import { api } from "@/lib/api";
+import { track } from "@/lib/amplitude";
 import { useLang } from "@/lib/i18n";
 import { useThemeMode } from "@/lib/useThemeMode";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
@@ -402,6 +403,7 @@ export default function ClubDetailClient({
 
   function setTournamentView(view: "list" | "calendar") {
     setTournamentViewState(view);
+    track("tab_viewed", { context: "club", club_id: initClub.id, tab: "tournaments", view });
     const url = view === "calendar"
       ? `${pathname}?view=calendar`
       : pathname;
@@ -410,12 +412,20 @@ export default function ClubDetailClient({
 
   function setPageAndUpdateUrl(p: Page) {
     setPage(p);
+    track("tab_viewed", { context: "club", club_id: initClub.id, tab: p });
     // keep current view param when switching to tournaments, clear otherwise
     const url = p === "tournaments" && tournamentView === "calendar"
       ? `${pathname}?tab=${p}&view=calendar`
       : `${pathname}?tab=${p}`;
     router.replace(url, { scroll: false });
   }
+
+  // Track club view and initial tab on mount
+  useEffect(() => {
+    track("club_viewed", { club_id: initClub.id, initial_tab: initialTab });
+    track("tab_viewed", { context: "club", club_id: initClub.id, tab: initialTab });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Edit club
   const [editing,         setEditing]         = useState(false);

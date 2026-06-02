@@ -27,6 +27,9 @@ interface Props {
 
 export default function RegisterForm({ onSuccess }: Props) {
   const { t } = useLang();
+
+  useEffect(() => { track("page_viewed", { page: "register" }); }, []);
+
   const [step, setStep]           = useState<Step>(1);
   const [dir, setDir]             = useState<"forward" | "back">("forward");
 

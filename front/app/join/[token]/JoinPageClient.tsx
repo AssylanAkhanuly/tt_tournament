@@ -31,6 +31,8 @@ export default function JoinPageClient({ tournament, joinToken, user, alreadyJoi
   const [clientUser, setClientUser] = useState<User | null>(user);
   const [checking, setChecking] = useState(!user);
 
+  useEffect(() => { track("page_viewed", { page: "join", join_token: joinToken }); }, []);  // eslint-disable-line react-hooks/exhaustive-deps
+
   useEffect(() => {
     if (user) return;
     let alive = true;

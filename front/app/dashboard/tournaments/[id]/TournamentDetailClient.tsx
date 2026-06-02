@@ -416,14 +416,17 @@ export default function TournamentDetailClient({
       })
     : null;
 
-  // Track tournament view on mount
+  // Track tournament view and initial tab on mount
   useEffect(() => {
+    const initialTab = initTournament.status === "open" ? "bracket" : "overview";
     track("tournament_viewed", {
       tournament_id: initTournament.id,
       tournament_format: initTournament.format,
       tournament_status: initTournament.status,
       is_admin: isAdmin,
+      initial_tab: initialTab,
     });
+    track("tab_viewed", { context: "tournament", tournament_id: initTournament.id, tab: initialTab });
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -948,7 +951,7 @@ export default function TournamentDetailClient({
           {navItems.filter((n) => n.show).map(({ id, label, Icon, badge }) => {
             const active = page === id;
             return (
-              <button key={id} onClick={() => { setPage(id); track("tournament_tab_changed", { tournament_id: tournament.id, tab: id }); }}
+              <button key={id} onClick={() => { setPage(id); track("tab_viewed", { context: "tournament", tournament_id: tournament.id, tab: id }); }}
                 className={`w-full flex items-center gap-3 px-4 py-3
                             text-left transition-all relative group ${
                   active

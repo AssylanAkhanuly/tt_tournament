@@ -21,6 +21,9 @@ interface Props {
 
 export default function LoginForm({ onSuccess }: Props) {
   const { t } = useLang();
+
+  useEffect(() => { track("page_viewed", { page: "login" }); }, []);
+
   const [step, setStep]           = useState<1 | 2>(1);
   const [phone, setPhone]         = useState("");
   const [phoneComplete, setPhoneComplete] = useState(false);
