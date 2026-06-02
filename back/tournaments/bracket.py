@@ -537,9 +537,9 @@ def generate_playoff_from_groups(tournament, advance_count=None):
             for g in groups
         )
 
-    advancers_by_position = []
+    pool = []
     for pos in range(advance_count):
-        position_players = []
+        position_participants = []
         for group in groups:
             top = list(
                 GroupParticipant.objects.filter(group=group)
@@ -547,18 +547,18 @@ def generate_playoff_from_groups(tournament, advance_count=None):
                 .order_by('-points', '-wins', '-diff')
             )
             if len(top) > pos:
-                position_players.append(top[pos].user)
-        if position_players:
-            advancers_by_position.append(position_players)
+                position_participants.append(top[pos])
+        if position_participants:
+            # Within each position tier, seed by group-stage performance
+            # (points → wins → set-diff), using pre-tournament rating only
+            # as a final tiebreaker. Group winners always become seeds 1-N,
+            # runners-up N+1-2N, etc. — never mixed with a higher position.
+            position_participants.sort(
+                key=lambda gp: (-gp.points, -gp.wins, -gp.diff, -(gp.user.rating or 0))
+            )
+            pool.extend(gp.user for gp in position_participants)
 
-    pool = []
-    for pos_players in advancers_by_position:
-        pool.extend(pos_players)
-
-    # RTTF seeding: order the qualifying pool by rating (best first) so the
-    # standard-seeding placement in generate_all_places_bracket spreads the
-    # strongest players to opposite halves of the draw.
-    seeded_players = sorted(pool, key=lambda u: (-(u.rating or 0), u.id))
+    seeded_players = pool
 
     n = len(seeded_players)
     if n < 2:
