@@ -14,9 +14,18 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "SpinCoach",
+  // Branding everywhere: child pages render as "<Page> · SpinCoach".
+  title: { default: "SpinCoach", template: "%s · SpinCoach" },
   description: "Турниры по настольному теннису",
+  applicationName: "SpinCoach",
   manifest: "/manifest.webmanifest",
+  // iOS "Add to Home Screen": label + standalone status bar. The home-screen
+  // icon comes from app/apple-icon.png (auto-detected); browser tab from app/icon.png.
+  appleWebApp: {
+    capable: true,
+    title: "SpinCoach",
+    statusBarStyle: "black-translucent",
+  },
 };
 
 export const viewport: Viewport = {
