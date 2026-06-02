@@ -12,6 +12,7 @@ import {
   Match, GroupMatch, Tournament, TournamentGroup, TournamentTable, Participant, User,
 } from "@/lib/types";
 import { api } from "@/lib/api";
+import { track } from "@/lib/amplitude";
 
 const BracketFlow    = dynamic(() => import("@/components/BracketFlow"),    { ssr: false });
 const ClassicBracket = dynamic(() => import("@/components/ClassicBracket"), { ssr: false });
@@ -286,10 +287,10 @@ export default function MobilePlayerView({
   // Default section once data is known.
   useEffect(() => {
     if (sectionPicked) return;
-    if (isGroupPhase) setSection("groups");
-    else if (hasBracket) setSection("bracket");
-    else setSection("players");
-  }, [isGroupPhase, hasBracket, sectionPicked]);
+    const auto = isGroupPhase ? "groups" : hasBracket ? "bracket" : "players";
+    setSection(auto);
+    track("tab_viewed", { context: "mobile_player", tournament_id: tournament.id, tab: auto, trigger: "auto" });
+  }, [isGroupPhase, hasBracket, sectionPicked]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Auto-dismiss the transient toast.
   useEffect(() => {
@@ -442,7 +443,7 @@ export default function MobilePlayerView({
 
       {/* ── Floating bottom pill nav (liquid glass) ── */}
       <BottomPill tabs={tabs} section={section}
-        onPick={(s) => { setSection(s); setSectionPicked(true); }} />
+        onPick={(s) => { setSection(s); setSectionPicked(true); track("tab_viewed", { context: "mobile_player", tournament_id: tournament.id, tab: s, trigger: "manual" }); }} />
 
       {/* ── Score sheets ── */}
       {bracketScore && (

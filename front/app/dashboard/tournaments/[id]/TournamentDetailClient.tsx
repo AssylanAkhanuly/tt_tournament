@@ -1901,13 +1901,18 @@ function OverviewPanel({
   // Toggle between groups view and bracket view in center
   // Use format + matches.length (server data, available immediately) so the
   // correct tab is shown on landing before the async groups fetch completes.
-  const [centerView, setCenterView] = useState<"bracket" | "groups" | "results">(
+  const initialCenterView: "bracket" | "groups" | "results" =
     tournament.status === "finished" && matches.length > 0
       ? "results"
       : tournament.format === "group_playoff" && matches.length === 0
       ? "groups"
-      : "bracket"
-  );
+      : "bracket";
+  const [centerView, setCenterView] = useState<"bracket" | "groups" | "results">(initialCenterView);
+
+  useEffect(() => {
+    track("tab_viewed", { context: "overview_panel", tournament_id: tournament.id, tab: initialCenterView });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const [autoScoring, setAutoScoring] = useState(false);
   const [autoFinishing, setAutoFinishing] = useState(false);
 
@@ -2089,7 +2094,7 @@ function OverviewPanel({
                 ...(hasBracket && tournament.status === "finished"
                   ? [{ v: "results" as const, label: "Результаты" }] : []),
               ]).map(({ v, label }) => (
-                <button key={v} onClick={() => setCenterView(v)}
+                <button key={v} onClick={() => { setCenterView(v); track("tab_viewed", { context: "overview_panel", tournament_id: tournament.id, tab: v }); }}
                   className={`px-3 py-1 rounded-lg text-[12px] font-semibold transition-all ${
                     centerView === v
                       ? "bg-blue-600/25 text-blue-300 border border-blue-500/30"
@@ -2116,7 +2121,7 @@ function OverviewPanel({
                   {groups.every((g) => g.matches.every((m) => m.status === "finished")) && (
                     <StartPlayoffButton
                       tournamentId={tournament.id}
-                      onStarted={(ms, t) => { onMatchesChange(ms); onTournamentChange(t); setCenterView("bracket"); }}
+                      onStarted={(ms, t) => { onMatchesChange(ms); onTournamentChange(t); setCenterView("bracket"); track("tab_viewed", { context: "overview_panel", tournament_id: tournament.id, tab: "bracket" }); }}
                     />
                   )}
                 </div>
