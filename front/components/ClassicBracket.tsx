@@ -208,6 +208,7 @@ export default function ClassicBracket({
   isAdmin,
   onEnterScore,
   absentIds,
+  controlsBottom = 12,
   className,
 }: {
   matches: Match[];
@@ -215,6 +216,9 @@ export default function ClassicBracket({
   isAdmin: boolean;
   onEnterScore: (match: Match) => void;
   absentIds?: Set<string>;
+  /** Distance (px) of the map controls from the bottom edge — raise it on
+   *  mobile so the floating tab bar doesn't cover them. */
+  controlsBottom?: number;
   className?: string;
 }) {
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -561,7 +565,8 @@ export default function ClassicBracket({
           onPointerDown={(e) => e.stopPropagation()}
           onClick={() => setShowFull((v) => !v)}
           title={showFull ? "Скрыть пустые слоты (компактная сетка)" : "Показать все слоты (полная сетка)"}
-          className={`absolute right-3 bottom-3 z-20 flex items-center gap-2 rounded-xl border px-3 h-10 text-[12px] font-semibold shadow-[0_16px_40px_rgba(0,0,0,0.28)] transition ${
+          style={{ bottom: controlsBottom }}
+          className={`absolute right-3 z-20 flex items-center gap-2 rounded-xl border px-3 h-10 text-[12px] font-semibold shadow-[0_16px_40px_rgba(0,0,0,0.28)] transition ${
             showFull
               ? "border-sky-300/40 bg-sky-500/20 text-sky-100"
               : "border-white/[0.08] bg-[#0b1524]/92 text-white/65 hover:bg-white/[0.05]"
@@ -576,7 +581,8 @@ export default function ClassicBracket({
         {/* Zoom / reset controls */}
         <div
           data-no-pan="true"
-          className="absolute left-3 bottom-3 z-20 flex flex-col overflow-hidden rounded-xl border border-white/[0.08] bg-[#0b1524]/92 shadow-[0_16px_40px_rgba(0,0,0,0.28)]"
+          style={{ bottom: controlsBottom }}
+          className="absolute left-3 z-20 flex flex-col overflow-hidden rounded-xl border border-white/[0.08] bg-[#0b1524]/92 shadow-[0_16px_40px_rgba(0,0,0,0.28)]"
           onPointerDown={(e) => e.stopPropagation()}
         >
           {[

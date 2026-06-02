@@ -364,15 +364,15 @@ export default function MobilePlayerView({
       {/* ── Content ── */}
       <div className="flex-1 min-h-0 relative">
 
-        {/* Сетка — pan/zoom bracket. Stop above the floating tab bar so the
-            lower matches and the bracket's own map controls (zoom/reset, sitting
-            at its bottom corners) aren't hidden behind it. */}
+        {/* Сетка — full-screen pan/zoom bracket under the floating tab bar.
+            controlsBottom lifts the bracket's own map controls (zoom/reset,
+            full-net toggle) above the tab bar so they stay reachable. */}
         {section === "bracket" && (
-          <div className="absolute inset-x-0 top-0 bottom-[88px]">
+          <div className="absolute inset-0">
             {hasBracket ? (
               tournament.format === "group_playoff"
                 ? <ClassicBracket key={matches.length} matches={matches} currentUser={user} isAdmin={false}
-                    onEnterScore={setBracketScore} className="w-full h-full" />
+                    onEnterScore={setBracketScore} controlsBottom={96} className="w-full h-full" />
                 : <BracketFlow matches={matches} currentUser={user} isAdmin={false}
                     onEnterScore={setBracketScore} className="w-full h-full" />
             ) : (
