@@ -7,11 +7,11 @@ import {
   ArrowLeft, Pencil, Check, X, Trash2, UserPlus,
   Zap, Users, Trophy, Clock, Settings, Minus,
   RefreshCw, Calendar, LayoutGrid, Plus, ToggleLeft, ToggleRight, Layers,
-  ChevronDown, Volume2, VolumeX, UserX, UserCheck,
+  ChevronDown, Volume2, VolumeX, UserX, UserCheck, ScrollText,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { GroupMatch, Match, Participant, Tournament, TournamentGroup, TournamentTable, User } from "@/lib/types";
-import { api, type ElevenLabsVoice } from "@/lib/api";
+import { api, type ElevenLabsVoice, type ScoreLogEntry } from "@/lib/api";
 import { useTournamentLive } from "@/lib/useTournamentLive";
 import ScoreModal from "@/components/ScoreModal";
 import AddPlayerModal from "@/components/AddPlayerModal";
@@ -45,7 +45,7 @@ const S = {
   finished:    { dot: "bg-white/20",               pill: "bg-white/[0.07] text-white/35",      label: "Завершён" },
 } as const;
 
-type Page = "overview" | "bracket" | "players" | "tables" | "settings";
+type Page = "overview" | "bracket" | "players" | "tables" | "settings" | "log";
 type ThemeMode = "dark" | "light";
 
 // ─── Toast ───────────────────────────────────────────────────────────────────
@@ -360,6 +360,9 @@ export default function TournamentDetailClient({
   const [removingId, setRemovingId] = useState<number | null>(null);
   // Absent toggle (in-flight participant id)
   const [absentId, setAbsentId] = useState<number | null>(null);
+  // Score log (this tournament only) — loaded when the Журнал tab opens.
+  const [scoreLog, setScoreLog] = useState<ScoreLogEntry[]>([]);
+  const [logLoading, setLogLoading] = useState(false);
   // User ids of players marked absent — used to badge them in the bracket/modal.
   const absentUserIds = useMemo(
     () => new Set(participants.filter((p) => p.is_absent).map((p) => p.user.id)),
@@ -368,6 +371,19 @@ export default function TournamentDetailClient({
 
   // Self-registration (a player joining an open tournament from this page)
   const [joining, setJoining] = useState(false);
+
+  // Reload this tournament's score log whenever the Журнал tab opens.
+  useEffect(() => {
+    if (page !== "log" || !isAdmin) return;
+    let alive = true;
+    setLogLoading(true);
+    api.getTournamentScoreLog(tournament.id)
+      .then((d) => { if (alive) setScoreLog(d); })
+      .catch(() => {})
+      .finally(() => { if (alive) setLogLoading(false); });
+    return () => { alive = false; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [page, isAdmin, tournament.id]);
 
   // ── Derived ───────────────────────────────────────────────────────────────
   const liveCount   = matches.filter((m) => m.status === "in_progress" && m.table_number != null).length;
@@ -768,6 +784,7 @@ export default function TournamentDetailClient({
     { id: "bracket",   label: "Сетка",     Icon: Trophy,     show: tournament.status === "open" },
     { id: "players",   label: "Игроки",    Icon: Users,      badge: participants.length, show: true },
     { id: "tables",    label: "Столы",     Icon: LayoutGrid, badge: tables.length || undefined, show: isAdmin },
+    { id: "log",       label: "Журнал",    Icon: ScrollText, show: isAdmin },
     { id: "settings",  label: "Настройки", Icon: Settings,   show: isAdmin },
   ];
 
@@ -1189,6 +1206,56 @@ export default function TournamentDetailClient({
             tables={tables}
             onTablesChange={setTables}
           />
+        )}
+
+        {/* ── SCORE LOG (this tournament) ─────────────────────────── */}
+        {page === "log" && isAdmin && (
+          <div className="h-full flex flex-col">
+            <div className="px-6 py-4 border-b border-white/[0.07] shrink-0 bg-[#070f1d]/60">
+              <h2 className="text-[17px] font-bold text-white">Журнал счёта</h2>
+              <p className="text-[12px] text-white/30 mt-0.5">Кто вводил, подтверждал и сбрасывал счёт</p>
+            </div>
+            <div className="flex-1 overflow-y-auto">
+              <div className="max-w-2xl mx-auto px-5 py-5">
+                {logLoading && scoreLog.length === 0 ? (
+                  <div className="py-12 flex justify-center">
+                    <div className="w-5 h-5 border-2 border-blue-500/40 border-t-blue-500 rounded-full animate-spin" />
+                  </div>
+                ) : scoreLog.length === 0 ? (
+                  <p className="text-[13px] text-white/35 text-center py-12">Пока нет записей о счёте</p>
+                ) : (
+                  <div className="rounded-2xl border border-white/[0.08] overflow-hidden" style={{ background: "var(--card)" }}>
+                    {scoreLog.map((e) => {
+                      const act = {
+                        score:   { label: "ввёл счёт",        cls: "text-white/40" },
+                        propose: { label: "предложил счёт",   cls: "text-blue-300/80" },
+                        confirm: { label: "подтвердил счёт",  cls: "text-emerald-400/85" },
+                        reject:  { label: "отклонил счёт",    cls: "text-red-400/80" },
+                        reset:   { label: "сбросил счёт",     cls: "text-amber-300/80" },
+                      }[e.action] ?? { label: e.action, cls: "text-white/40" };
+                      return (
+                        <div key={e.id} className="px-4 py-3 border-b border-white/[0.05] last:border-0">
+                          <div className="flex items-center justify-between gap-2">
+                            <p className="text-[13px] font-semibold text-white truncate">
+                              {e.entered_by_name || "—"}{" "}
+                              <span className={`font-medium ${act.cls}`}>{act.label}</span>
+                            </p>
+                            <span className="text-[11px] text-white/30 shrink-0 tabular-nums">
+                              {new Date(e.created_at).toLocaleString("ru-RU", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}
+                            </span>
+                          </div>
+                          <p className="text-[13px] text-white/70 mt-0.5 truncate">
+                            {e.player1_name} <span className="font-black tabular-nums text-white">{e.score1 ?? "–"}:{e.score2 ?? "–"}</span> {e.player2_name}
+                          </p>
+                          <p className="text-[11px] text-white/30 mt-0.5 truncate">{e.match_label}</p>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
         )}
 
         {/* ── SETTINGS ────────────────────────────────────────────── */}

@@ -60,7 +60,7 @@ export type ScoreLogEntry = {
   score2: number | null;
   winner_name: string;
   entered_by_name: string;
-  action: "score" | "reset";
+  action: "score" | "reset" | "propose" | "confirm" | "reject";
   created_at: string;
 };
 
@@ -272,6 +272,9 @@ export const api = {
 
   getScoreLog: (clubId: string) =>
     apiFetch<ScoreLogEntry[]>(`/api/tournaments/score-log/?club_id=${clubId}`),
+
+  getTournamentScoreLog: (tournamentId: string) =>
+    apiFetch<ScoreLogEntry[]>(`/api/tournaments/score-log/?tournament_id=${tournamentId}`),
 
   createTournament: (data: { name: string; description?: string; starts_at?: string; club_id?: string; format?: string; group_size?: number }) =>
     apiFetch<Tournament>("/api/tournaments/", {
