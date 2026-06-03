@@ -441,6 +441,9 @@ export default function MobilePlayerView({
         )
       )}
 
+      {/* ── Awaiting-confirmation banner (shown to the score proposer) ── */}
+      <ProposedBanner matches={matches} groupMatches={groupMatches} userId={user.id} />
+
       {/* ── Floating bottom pill nav (liquid glass) ── */}
       <BottomPill tabs={tabs} section={section}
         onPick={(s) => { setSection(s); setSectionPicked(true); track("tab_viewed", { context: "mobile_player", tournament_id: tournament.id, tab: s, trigger: "manual" }); }} />
@@ -493,6 +496,46 @@ export default function MobilePlayerView({
       )}
     </div>,
     document.body,
+  );
+}
+
+// ── Awaiting-confirmation banner ──────────────────────────────────────────────
+function ProposedBanner({
+  matches, groupMatches, userId,
+}: {
+  matches: Match[];
+  groupMatches: GMatch[];
+  userId: string;
+}) {
+  const proposed =
+    matches.find((m) => m.status === "score_proposed" && (m.player1?.id === userId || m.player2?.id === userId) && m.proposed_by?.id === userId) ??
+    groupMatches.find((m) => m.status === "score_proposed" && (m.player1?.id === userId || m.player2?.id === userId) && m.proposed_by?.id === userId);
+
+  if (!proposed) return null;
+
+  const s1 = proposed.proposed_score1 ?? 0;
+  const s2 = proposed.proposed_score2 ?? 0;
+  const opp = proposed.player1?.id === userId ? proposed.player2?.name : proposed.player1?.name;
+
+  return (
+    <div className="fixed bottom-[80px] left-0 right-0 z-[76] px-3 pointer-events-none">
+      <div className="rounded-2xl border border-amber-500/40 bg-[#0b1524] px-4 py-3 flex items-center gap-3
+                      shadow-[0_8px_28px_rgba(0,0,0,0.55)]">
+        <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse shrink-0" />
+        <div className="min-w-0 flex-1">
+          <p className="text-[13px] font-bold text-amber-200">Ждём подтверждения соперника</p>
+          <p className="text-[12px] text-white/50 mt-0.5 truncate">
+            Вы предложили {s1}:{s2}{opp ? ` · ожидаем ${opp}` : ""}
+          </p>
+        </div>
+        <div className="flex gap-[3px] shrink-0">
+          {[0, 1, 2].map((i) => (
+            <span key={i} className="w-1 h-1 rounded-full bg-amber-400/60"
+              style={{ animation: `pulse 1.2s ease-in-out ${i * 0.2}s infinite` }} />
+          ))}
+        </div>
+      </div>
+    </div>
   );
 }
 

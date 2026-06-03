@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, useCallback } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Bell, BellRing, Check } from "lucide-react";
 import { api, AppNotification } from "@/lib/api";
@@ -10,13 +10,22 @@ const POLL_MS = 15000;
 
 export default function NotificationBell() {
   const router = useRouter();
-  const [items, setItems] = useState<AppNotification[]>([]);
-  const [unread, setUnread] = useState(0);
-  const [open, setOpen] = useState(false);
+  const [items, setItems]         = useState<AppNotification[]>([]);
+  const [unread, setUnread]       = useState(0);
+  const [open, setOpen]           = useState(false);
   const [pushState, setPushState] = useState<PushState>("default");
   const [iosInstall, setIosInstall] = useState(false);
-  const [busy, setBusy] = useState(false);
+  const [busy, setBusy]           = useState(false);
+  const [isMobile, setIsMobile]   = useState(false);
   const ref = useRef<HTMLDivElement>(null);
+
+  useLayoutEffect(() => {
+    const mq = window.matchMedia("(max-width: 640px)");
+    setIsMobile(mq.matches);
+    const handler = (e: MediaQueryListEvent) => setIsMobile(e.matches);
+    mq.addEventListener("change", handler);
+    return () => mq.removeEventListener("change", handler);
+  }, []);
 
   const load = useCallback(async () => {
     try {
@@ -70,10 +79,21 @@ export default function NotificationBell() {
     }
   }
 
+  function handleBellClick() {
+    if (isMobile) {
+      // Full-page notifications on mobile — mark all read as a side-effect.
+      markAllRead();
+      router.push("/dashboard/notifications");
+    } else {
+      setOpen((o) => !o);
+      if (!open) markAllRead();
+    }
+  }
+
   return (
     <div ref={ref} className="relative">
       <button
-        onClick={() => { setOpen((o) => !o); if (!open) markAllRead(); }}
+        onClick={handleBellClick}
         className="relative w-8 h-8 rounded-full flex items-center justify-center
                    bg-white/[0.07] hover:bg-white/[0.13] text-white/50 hover:text-white transition-all"
         aria-label="Уведомления"
@@ -88,7 +108,8 @@ export default function NotificationBell() {
         )}
       </button>
 
-      {open && (
+      {/* Desktop dropdown — hidden on mobile */}
+      {open && !isMobile && (
         <div className="absolute right-0 top-[calc(100%+8px)] w-[320px] max-w-[88vw] rounded-2xl
                         border border-white/[0.09] shadow-2xl overflow-hidden z-50"
              style={{ background: "var(--elevated)" }}>
