@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Minus, Plus, Swords, Zap } from "lucide-react";
+import { ArrowLeft, Clock, Minus, Plus, Swords, Zap } from "lucide-react";
 import { Drawer } from "vaul";
 import { api, ActiveMatch } from "@/lib/api";
 import { useLang } from "@/lib/i18n";
@@ -109,11 +109,26 @@ export default function MatchClient() {
         </div>
       </div>
 
-      <button onClick={() => { setError(null); setOpen(true); }}
-        className="w-full mt-5 py-4 rounded-2xl font-bold text-[16px] bg-blue-600 hover:bg-blue-500 text-white
-                   transition-all active:scale-[.98] shadow-[0_8px_24px_rgba(59,130,246,0.4)]">
-        {t.enter_score}
-      </button>
+      {match.i_proposed ? (
+        <div className="mt-5 rounded-2xl border border-amber-500/35 bg-amber-500/[0.08] px-5 py-4 flex items-center gap-4">
+          <Clock size={22} className="text-amber-400 shrink-0 animate-pulse" />
+          <div className="min-w-0">
+            <p className="text-[15px] font-bold text-amber-200">Ждём подтверждения соперника</p>
+            <p className="text-[13px] text-white/50 mt-0.5">
+              Вы предложили{" "}
+              {match.you_is_player1
+                ? `${match.proposed_score1} : ${match.proposed_score2}`
+                : `${match.proposed_score2} : ${match.proposed_score1}`}
+            </p>
+          </div>
+        </div>
+      ) : (
+        <button onClick={() => { setError(null); setOpen(true); }}
+          className="w-full mt-5 py-4 rounded-2xl font-bold text-[16px] bg-blue-600 hover:bg-blue-500 text-white
+                     transition-all active:scale-[.98] shadow-[0_8px_24px_rgba(59,130,246,0.4)]">
+          {t.enter_score}
+        </button>
+      )}
 
       <Drawer.Root open={open} onOpenChange={setOpen}>
         <Drawer.Portal>

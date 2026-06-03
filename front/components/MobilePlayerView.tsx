@@ -373,23 +373,9 @@ export default function MobilePlayerView({
             {hasBracket ? (
               tournament.format === "group_playoff"
                 ? <ClassicBracket key={matches.length} matches={matches} currentUser={user} isAdmin={false}
-                    onEnterScore={(m) => {
-                      if (m.status === "score_proposed") {
-                        if (m.proposed_by?.id === user.id) return; // already proposed — wait
-                        setConfirm({ kind: "bracket", m });        // opponent proposed — confirm
-                        return;
-                      }
-                      setBracketScore(m);
-                    }} controlsBottom={96} className="w-full h-full" />
+                    onEnterScore={setBracketScore} controlsBottom={96} className="w-full h-full" />
                 : <BracketFlow matches={matches} currentUser={user} isAdmin={false}
-                    onEnterScore={(m) => {
-                      if (m.status === "score_proposed") {
-                        if (m.proposed_by?.id === user.id) return;
-                        setConfirm({ kind: "bracket", m });
-                        return;
-                      }
-                      setBracketScore(m);
-                    }} className="w-full h-full" />
+                    onEnterScore={setBracketScore} className="w-full h-full" />
             ) : (
               <Empty icon={<Trophy size={42} />} text={isGroupPhase ? "Плей-офф ещё не начат" : "Сетка ещё не готова"} />
             )}
@@ -402,15 +388,7 @@ export default function MobilePlayerView({
             {!hasGroups ? <Empty icon={<LayoutGrid size={42} />} text="Групп нет" /> :
               groups.map((g, idx) => <GroupCard key={g.id} group={g} idx={idx} userId={user.id}
                 tableName={tableName}
-                onScore={(m) => {
-                  if (!mine(m)) return;
-                  const gm: GMatch = { ...m, groupId: g.id, groupName: g.name };
-                  if (m.status === "score_proposed" && m.proposed_by?.id !== user.id) {
-                    setConfirm({ kind: "group", m: gm }); // opponent proposed → open confirm sheet
-                  } else if (m.status === "in_progress") {
-                    setGroupScore(gm);
-                  }
-                }} />)}
+                onScore={(m) => mine(m) && m.status === "in_progress" && setGroupScore({ ...m, groupId: g.id, groupName: g.name })} />)}
           </div>
         )}
 
@@ -652,25 +630,16 @@ function GroupCard({ group, idx, userId, tableName, onScore }: {
         })}
       </div>
       {/* live matches in this group that belong to the player */}
-      {group.matches.filter((m) => m.status === "in_progress" || m.status === "score_proposed").map((m) => {
-        const you       = m.player1?.id === userId || m.player2?.id === userId;
-        const proposed  = m.status === "score_proposed";
-        const iProposed = proposed && m.proposed_by?.id === userId;
-        const iConfirm  = proposed && you && !iProposed;
-        const clickable = you && (m.status === "in_progress" || iConfirm);
+      {group.matches.filter((m) => m.status === "in_progress").map((m) => {
+        const you = m.player1?.id === userId || m.player2?.id === userId;
         return (
-          <button key={m.id} disabled={!clickable}
-            onClick={() => { if (clickable) onScore(m); }}
+          <button key={m.id} disabled={!you} onClick={() => onScore(m)}
             className={`w-full text-left px-4 py-2 border-t border-white/[0.05] flex items-center justify-between gap-2 ${
-              clickable ? "active:scale-[.99]" : ""}`}>
+              you ? "active:scale-[.99]" : ""}`}>
             <span className="text-[12px] text-white/70 truncate">
               {m.player1?.name} <span className="text-white/25">vs</span> {m.player2?.name}
             </span>
-            {iProposed
-              ? <span className="text-[11px] font-semibold text-amber-400/80 shrink-0">ждём соперника…</span>
-              : iConfirm
-              ? <span className="text-[11px] font-bold text-amber-300 shrink-0">подтвердить →</span>
-              : you
+            {you
               ? <span className="text-[11px] font-bold text-emerald-300 shrink-0">счёт →</span>
               : <span className="text-[10px] text-blue-300 shrink-0">{tableName(m.table_number) ?? "live"}</span>}
           </button>
