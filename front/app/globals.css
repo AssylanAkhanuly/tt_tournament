@@ -1,0 +1,509 @@
+@import "tailwindcss";
+
+/* ─── Design system ───────────────────────────────────────────────────────── */
+:root {
+  --bg:        #09091a;
+  --surface:   #111228;
+  --card:      #14162a;
+  --elevated:  #1a1d35;
+  --border:    rgba(255,255,255,0.07);
+  --border-hi: rgba(255,255,255,0.13);
+  --accent:    #3b82f6;
+  --accent-dim:rgba(59,130,246,0.18);
+  --live:      #06b6d4;
+  --success:   #22c55e;
+  --warning:   #f59e0b;
+  --danger:    #ef4444;
+  --text:      #f1f5f9;
+  --text-2:    rgba(241,245,249,0.55);
+  --text-3:    rgba(241,245,249,0.28);
+}
+
+:root[data-theme="light"] {
+  --bg:        #f5f7fb;
+  --surface:   #ffffff;
+  --card:      #ffffff;
+  --elevated:  #f8fafc;
+  --border:    rgba(15,23,42,0.10);
+  --border-hi: rgba(15,23,42,0.16);
+  --accent:    #2563eb;
+  --accent-dim:rgba(37,99,235,0.12);
+  --live:      #0891b2;
+  --success:   #059669;
+  --warning:   #d97706;
+  --danger:    #dc2626;
+  --text:      #0f172a;
+  --text-2:    rgba(15,23,42,0.62);
+  --text-3:    rgba(15,23,42,0.36);
+}
+
+body {
+  background:
+    radial-gradient(ellipse 100% 50% at 50% -10%,
+      rgba(59,130,246,0.09) 0%, transparent 70%),
+    radial-gradient(ellipse 60% 40% at 90% 110%,
+      rgba(139,92,246,0.05) 0%, transparent 70%),
+    #09091a;
+  color: var(--text);
+  font-family: var(--font-geist-sans, system-ui, -apple-system, sans-serif);
+  -webkit-font-smoothing: antialiased;
+  min-height: 100vh;
+}
+
+:root[data-theme="light"] body {
+  background:
+    radial-gradient(ellipse 80% 42% at 50% -10%,
+      rgba(37,99,235,0.10) 0%, transparent 70%),
+    #f5f7fb;
+  color: var(--text);
+}
+
+.tt-tournament-theme {
+  background: var(--bg);
+  color: var(--text);
+  color-scheme: dark;
+}
+
+.tt-tournament-theme.tt-theme-light {
+  color-scheme: light;
+}
+
+.tt-theme-light [class*="bg-[#050c18]"],
+.tt-theme-light [class*="bg-[#07111d]"] {
+  background: #eef3f9 !important;
+}
+
+.tt-theme-light [class*="bg-[#070f1d]"],
+.tt-theme-light [class*="bg-[#0a1a30]"],
+.tt-theme-light [class*="bg-[#101928]"],
+.tt-theme-light [class*="bg-[#0b1524]"],
+.tt-theme-light [class*="bg-[linear-gradient(180deg,rgba(11,21,38"],
+.tt-theme-light [class*="bg-[linear-gradient(180deg,rgba(17,18,40"] {
+  background: var(--surface) !important;
+}
+
+.tt-theme-light [class*="bg-[#0d1624]"],
+.tt-theme-light [class*="bg-[#111a28]"],
+.tt-theme-light [class*="bg-[#0a1628]"] {
+  background: #ffffff !important;
+}
+
+.tt-theme-light [class*="bg-[#0e2344]"],
+.tt-theme-light [class*="bg-[#091c38]"] {
+  background: #eaf2ff !important;
+}
+
+.tt-theme-light [class*="border-white/"] {
+  border-color: var(--border) !important;
+}
+
+.tt-theme-light [class*="bg-white/"] {
+  background-color: rgba(15,23,42,0.04) !important;
+}
+
+.tt-theme-light [class*="hover:bg-white/"]:hover {
+  background-color: rgba(15,23,42,0.07) !important;
+}
+
+.tt-theme-light .text-white {
+  color: var(--text) !important;
+}
+
+.tt-theme-light [class*="text-white/"] {
+  color: rgba(15,23,42,0.36) !important;
+}
+
+.tt-theme-light [class*="text-white/95"],
+.tt-theme-light [class*="text-white/90"],
+.tt-theme-light [class*="text-white/88"],
+.tt-theme-light [class*="text-white/85"],
+.tt-theme-light [class*="text-white/82"],
+.tt-theme-light [class*="text-white/80"],
+.tt-theme-light [class*="text-white/75"],
+.tt-theme-light [class*="text-white/72"],
+.tt-theme-light [class*="text-white/70"] {
+  color: rgba(15,23,42,0.82) !important;
+}
+
+.tt-theme-light [class*="text-white/65"],
+.tt-theme-light [class*="text-white/60"],
+.tt-theme-light [class*="text-white/55"],
+.tt-theme-light [class*="text-white/50"] {
+  color: rgba(15,23,42,0.64) !important;
+}
+
+.tt-theme-light [class*="text-white/45"],
+.tt-theme-light [class*="text-white/40"],
+.tt-theme-light [class*="text-white/35"],
+.tt-theme-light [class*="text-white/30"] {
+  color: rgba(15,23,42,0.54) !important;
+}
+
+.tt-theme-light [class*="text-white/28"],
+.tt-theme-light [class*="text-white/25"],
+.tt-theme-light [class*="text-white/24"],
+.tt-theme-light [class*="text-white/20"] {
+  color: rgba(15,23,42,0.44) !important;
+}
+
+.tt-theme-light [class*="text-white/15"],
+.tt-theme-light [class*="text-white/12"],
+.tt-theme-light [class*="text-white/10"],
+.tt-theme-light [class*="text-white/["] {
+  color: rgba(15,23,42,0.34) !important;
+}
+
+.tt-theme-light [class*="placeholder:text-white/"]::placeholder {
+  color: rgba(15,23,42,0.30) !important;
+}
+
+.tt-theme-light [class*="text-blue-100"],
+.tt-theme-light [class*="text-blue-200"],
+.tt-theme-light [class*="text-blue-300"] {
+  color: #1d4ed8 !important;
+}
+
+.tt-theme-light [class*="text-sky-100"],
+.tt-theme-light [class*="text-sky-200"],
+.tt-theme-light [class*="text-sky-300"] {
+  color: #0369a1 !important;
+}
+
+.tt-theme-light [class*="border-sky-300"] {
+  border-color: rgba(2,132,199,0.34) !important;
+}
+
+.tt-theme-light [class*="bg-sky-200"] {
+  background-color: rgba(14,165,233,0.10) !important;
+}
+
+.tt-theme-light [class*="bg-sky-300"] {
+  background-color: rgba(2,132,199,0.22) !important;
+}
+
+.tt-theme-light [class*="text-emerald-300"],
+.tt-theme-light [class*="text-emerald-400"] {
+  color: #047857 !important;
+}
+
+.tt-theme-light [class*="text-red-300"],
+.tt-theme-light [class*="text-red-400"] {
+  color: #b91c1c !important;
+}
+
+.tt-theme-light [class*="text-amber-300"],
+.tt-theme-light [class*="text-amber-400"] {
+  color: #b45309 !important;
+}
+
+.tt-theme-light [class~="bg-blue-600"],
+.tt-theme-light [class~="bg-red-500"],
+.tt-theme-light [class~="bg-amber-500"] {
+  color: #fff !important;
+}
+
+.tt-theme-light .shadow-2xl {
+  box-shadow: 0 18px 48px rgba(15,23,42,0.14) !important;
+}
+
+.tt-theme-light svg path[stroke="rgba(125,211,252,0.45)"] {
+  stroke: rgba(37,99,235,0.46);
+}
+
+.tt-theme-light .react-flow__controls {
+  background: rgba(255,255,255,0.94) !important;
+  border-color: var(--border) !important;
+  box-shadow: 0 16px 38px rgba(15,23,42,0.12) !important;
+}
+
+.tt-theme-light .react-flow__controls-button {
+  border-bottom-color: var(--border) !important;
+  color: rgba(15,23,42,0.52) !important;
+  fill: rgba(15,23,42,0.52) !important;
+}
+
+.tt-theme-light .react-flow__controls-button:hover {
+  background: rgba(15,23,42,0.06) !important;
+  color: rgba(15,23,42,0.80) !important;
+  fill: rgba(15,23,42,0.80) !important;
+}
+
+/* ─── Scrollbar ───────────────────────────────────────────────────────────── */
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.09); border-radius: 10px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.18); }
+
+:root[data-theme="light"] ::-webkit-scrollbar-thumb { background: rgba(15,23,42,0.18); }
+:root[data-theme="light"] ::-webkit-scrollbar-thumb:hover { background: rgba(15,23,42,0.32); }
+
+/* ─── Light theme — form inputs (override [color-scheme:dark] in inputs) ──── */
+.tt-theme-light [class*="[color-scheme:dark]"] {
+  color-scheme: light !important;
+}
+
+/* ─── Light theme — hardcoded dark backgrounds not covered above ──────────── */
+.tt-theme-light [class*="bg-[#09091a]"],
+.tt-theme-light [class*="bg-[#0d0d1a]"] {
+  background: var(--bg) !important;
+}
+
+/* ─── Light theme — cyan accent text ─────────────────────────────────────── */
+.tt-theme-light [class*="text-cyan-300"],
+.tt-theme-light [class*="text-cyan-400"] {
+  color: #0369a1 !important;
+}
+
+/* ─── Light theme — hover:text-white ─────────────────────────────────────── */
+.tt-theme-light [class*="hover:text-white"]:hover {
+  color: var(--text) !important;
+}
+
+/* ─── Step transitions ────────────────────────────────────────────────────── */
+@keyframes step-in-forward {
+  from { opacity: 0; transform: translateX(32px); }
+  to   { opacity: 1; transform: translateX(0);    }
+}
+@keyframes step-in-back {
+  from { opacity: 0; transform: translateX(-32px); }
+  to   { opacity: 1; transform: translateX(0);     }
+}
+.step-forward { animation: step-in-forward 0.25s cubic-bezier(.25,.46,.45,.94) both; }
+.step-back    { animation: step-in-back    0.25s cubic-bezier(.25,.46,.45,.94) both; }
+
+/* ─── Toast ───────────────────────────────────────────────────────────────── */
+@keyframes toast-in {
+  from { opacity: 0; transform: translateY(10px) scale(0.96); }
+  to   { opacity: 1; transform: translateY(0)    scale(1);    }
+}
+.animate-toast { animation: toast-in 0.2s cubic-bezier(.34,1.46,.64,1) both; }
+
+/* ─── React Flow — strip white defaults ───────────────────────────────────── */
+.react-flow__node {
+  background:    transparent !important;
+  border:        none       !important;
+  padding:       0          !important;
+  box-shadow:    none       !important;
+  pointer-events: all       !important;   /* elementsSelectable=false kills clicks */
+}
+.react-flow__controls {
+  background:   rgba(9,9,26,0.92)        !important;
+  border:       1px solid rgba(255,255,255,0.07) !important;
+  border-radius:12px                     !important;
+  box-shadow:   none                     !important;
+  overflow:     hidden;
+}
+.react-flow__controls-button {
+  background:   transparent             !important;
+  border:       none                    !important;
+  border-bottom:1px solid rgba(255,255,255,0.06) !important;
+  color:        rgba(255,255,255,0.30)  !important;
+  fill:         rgba(255,255,255,0.30)  !important;
+}
+.react-flow__controls-button:hover {
+  background:   rgba(255,255,255,0.05) !important;
+  color:        rgba(255,255,255,0.75) !important;
+  fill:         rgba(255,255,255,0.75) !important;
+}
+.react-flow__controls-button svg { fill: inherit !important; }
+.react-flow__controls-button:last-child { border-bottom: none !important; }
+
+/* ─── FullCalendar dark theme ─────────────────────────────────────────────── */
+.fc-dark {
+  --fc-border-color:                 rgba(255,255,255,0.07);
+  --fc-page-bg-color:                transparent;
+  --fc-neutral-bg-color:             rgba(255,255,255,0.03);
+  --fc-neutral-text-color:           rgba(255,255,255,0.35);
+  --fc-today-bg-color:               rgba(59,130,246,0.07);
+  --fc-highlight-color:              rgba(59,130,246,0.13);
+  --fc-now-indicator-color:          #3b82f6;
+  --fc-non-business-color:           rgba(0,0,0,0.10);
+  --fc-button-text-color:            rgba(255,255,255,0.65);
+  --fc-button-bg-color:              rgba(255,255,255,0.06);
+  --fc-button-border-color:          rgba(255,255,255,0.10);
+  --fc-button-hover-bg-color:        rgba(255,255,255,0.10);
+  --fc-button-hover-border-color:    rgba(255,255,255,0.15);
+  --fc-button-active-bg-color:       rgba(59,130,246,0.22);
+  --fc-button-active-border-color:   rgba(59,130,246,0.40);
+  --fc-event-bg-color:               rgba(59,130,246,0.22);
+  --fc-event-border-color:           transparent;
+  --fc-event-text-color:             #93c5fd;
+  --fc-event-selected-overlay-color: rgba(0,0,0,0.25);
+  --fc-more-link-bg-color:           rgba(255,255,255,0.07);
+  --fc-more-link-text-color:         rgba(255,255,255,0.45);
+
+  height: 100%;
+}
+
+/* Scrollgrid */
+.fc-dark .fc-scrollgrid               { border-radius: 16px; overflow: hidden; }
+.fc-dark td, .fc-dark th              { border-color: rgba(255,255,255,0.07) !important; }
+
+/* Column headers */
+.fc-dark .fc-col-header-cell          { background: rgba(255,255,255,0.02); }
+.fc-dark .fc-col-header-cell-cushion  {
+  color: rgba(255,255,255,0.30) !important;
+  font-size: 11px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.10em;
+  padding: 10px 4px; text-decoration: none !important;
+}
+.fc-dark .fc-scrollgrid-section-header .fc-scroller { overflow: hidden !important; }
+
+/* Day numbers */
+.fc-dark .fc-daygrid-day:hover        { background: rgba(255,255,255,0.015); }
+.fc-dark .fc-daygrid-day-top          { justify-content: flex-end; }
+.fc-dark .fc-daygrid-day-number       {
+  color: rgba(255,255,255,0.40) !important;
+  font-size: 12px; font-weight: 600;
+  padding: 5px 8px; text-decoration: none !important;
+}
+.fc-dark .fc-day-today .fc-daygrid-day-number {
+  background: #3b82f6; color: #fff !important; border-radius: 50%;
+  width: 26px; height: 26px; display: flex; align-items: center;
+  justify-content: center; padding: 0; margin: 4px; font-weight: 800;
+}
+.fc-dark .fc-day-other .fc-daygrid-day-number { color: rgba(255,255,255,0.15) !important; }
+
+/* Events */
+.fc-dark .fc-event {
+  border-radius: 5px; border-left-width: 3px;
+  border-top-width: 0; border-right-width: 0; border-bottom-width: 0;
+  padding: 2px 5px; font-size: 11px; font-weight: 600;
+  cursor: pointer; transition: filter 0.12s, transform 0.12s;
+}
+.fc-dark .fc-event:hover              { filter: brightness(1.18); transform: scale(1.01); }
+.fc-dark .fc-event-dragging           { opacity: 0.85; box-shadow: 0 8px 24px rgba(0,0,0,0.4); }
+.fc-dark .fc-event-title              { font-weight: 600; }
+.fc-dark .fc-daygrid-event-dot        { display: none; }
+
+/* Toolbar */
+.fc-dark .fc-toolbar-title            { color: #fff; font-size: 18px; font-weight: 800; }
+.fc-dark .fc-toolbar-chunk button     {
+  border-radius: 10px !important; font-size: 13px !important;
+  font-weight: 600 !important; padding: 6px 14px !important;
+  text-transform: none !important; box-shadow: none !important;
+  transition: all 0.15s !important;
+}
+.fc-dark .fc-button-group > button:not(:first-child) { margin-left: 2px !important; }
+
+/* Time grid */
+.fc-dark .fc-timegrid-slot            { border-color: rgba(255,255,255,0.04) !important; height: 40px; }
+.fc-dark .fc-timegrid-slot-label-cushion { color: rgba(255,255,255,0.25); font-size: 11px; }
+.fc-dark .fc-timegrid-col.fc-day-today { background: rgba(59,130,246,0.05); }
+.fc-dark .fc-timegrid-now-indicator-line { border-color: #3b82f6; }
+.fc-dark .fc-timegrid-now-indicator-arrow { border-color: #3b82f6; }
+
+/* List view */
+.fc-dark .fc-list-table               { border-color: rgba(255,255,255,0.07) !important; }
+.fc-dark .fc-list-day-cushion         { background: rgba(255,255,255,0.04) !important; }
+.fc-dark .fc-list-day-text,
+.fc-dark .fc-list-day-side-text       { color: rgba(255,255,255,0.45) !important; font-weight: 700; text-decoration: none !important; }
+.fc-dark .fc-list-event:hover td      { background: rgba(255,255,255,0.03) !important; }
+.fc-dark .fc-list-event-title a       { color: rgba(255,255,255,0.75) !important; text-decoration: none !important; }
+.fc-dark .fc-list-empty               { background: transparent; color: rgba(255,255,255,0.25); }
+
+/* Popover */
+.fc-dark .fc-popover                  {
+  background: #1a1d35 !important; border-color: rgba(255,255,255,0.12) !important;
+  border-radius: 14px !important; box-shadow: 0 20px 60px rgba(0,0,0,0.55) !important; overflow: hidden;
+}
+.fc-dark .fc-popover-header           {
+  background: rgba(255,255,255,0.05) !important;
+  color: rgba(255,255,255,0.8) !important; font-weight: 700; font-size: 13px;
+}
+.fc-dark .fc-popover-close            { color: rgba(255,255,255,0.35) !important; opacity: 1; }
+
+/* Misc */
+.fc-dark .fc-bg-event                 { opacity: 0.12; }
+.fc-dark .fc-non-business             { background: rgba(0,0,0,0.08); }
+
+/* ─── FullCalendar light theme ────────────────────────────────────────────── */
+.fc-light {
+  --fc-border-color:                 var(--border);
+  --fc-page-bg-color:                transparent;
+  --fc-neutral-bg-color:             rgba(15,23,42,0.02);
+  --fc-neutral-text-color:           var(--text-3);
+  --fc-today-bg-color:               rgba(37,99,235,0.05);
+  --fc-highlight-color:              rgba(37,99,235,0.09);
+  --fc-now-indicator-color:          var(--accent);
+  --fc-non-business-color:           rgba(15,23,42,0.03);
+  --fc-button-text-color:            var(--text-2);
+  --fc-button-bg-color:              rgba(15,23,42,0.05);
+  --fc-button-border-color:          var(--border-hi);
+  --fc-button-hover-bg-color:        rgba(15,23,42,0.09);
+  --fc-button-hover-border-color:    rgba(15,23,42,0.22);
+  --fc-button-active-bg-color:       rgba(37,99,235,0.14);
+  --fc-button-active-border-color:   rgba(37,99,235,0.40);
+  --fc-event-bg-color:               rgba(37,99,235,0.14);
+  --fc-event-border-color:           transparent;
+  --fc-event-text-color:             #1d4ed8;
+  --fc-event-selected-overlay-color: rgba(0,0,0,0.08);
+  --fc-more-link-bg-color:           rgba(15,23,42,0.06);
+  --fc-more-link-text-color:         var(--text-2);
+  height: 100%;
+}
+
+.fc-light .fc-scrollgrid               { border-radius: 16px; overflow: hidden; }
+.fc-light td, .fc-light th             { border-color: var(--border) !important; }
+.fc-light .fc-col-header-cell          { background: rgba(15,23,42,0.02); }
+.fc-light .fc-col-header-cell-cushion  {
+  color: var(--text-3) !important;
+  font-size: 11px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.10em;
+  padding: 10px 4px; text-decoration: none !important;
+}
+.fc-light .fc-scrollgrid-section-header .fc-scroller { overflow: hidden !important; }
+.fc-light .fc-daygrid-day:hover        { background: rgba(15,23,42,0.015); }
+.fc-light .fc-daygrid-day-top          { justify-content: flex-end; }
+.fc-light .fc-daygrid-day-number       {
+  color: var(--text-2) !important;
+  font-size: 12px; font-weight: 600;
+  padding: 5px 8px; text-decoration: none !important;
+}
+.fc-light .fc-day-today .fc-daygrid-day-number {
+  background: var(--accent); color: #fff !important; border-radius: 50%;
+  width: 26px; height: 26px; display: flex; align-items: center;
+  justify-content: center; padding: 0; margin: 4px; font-weight: 800;
+}
+.fc-light .fc-day-other .fc-daygrid-day-number { color: var(--text-3) !important; }
+.fc-light .fc-event {
+  border-radius: 5px; border-left-width: 3px;
+  border-top-width: 0; border-right-width: 0; border-bottom-width: 0;
+  padding: 2px 5px; font-size: 11px; font-weight: 600;
+  cursor: pointer; transition: filter 0.12s, transform 0.12s;
+}
+.fc-light .fc-event:hover              { filter: brightness(0.92); transform: scale(1.01); }
+.fc-light .fc-event-dragging           { opacity: 0.85; box-shadow: 0 8px 24px rgba(0,0,0,0.12); }
+.fc-light .fc-event-title              { font-weight: 600; }
+.fc-light .fc-daygrid-event-dot        { display: none; }
+.fc-light .fc-toolbar-title            { color: var(--text); font-size: 18px; font-weight: 800; }
+.fc-light .fc-toolbar-chunk button     {
+  border-radius: 10px !important; font-size: 13px !important;
+  font-weight: 600 !important; padding: 6px 14px !important;
+  text-transform: none !important; box-shadow: none !important;
+  transition: all 0.15s !important;
+}
+.fc-light .fc-button-group > button:not(:first-child) { margin-left: 2px !important; }
+.fc-light .fc-timegrid-slot            { border-color: var(--border) !important; height: 40px; }
+.fc-light .fc-timegrid-slot-label-cushion { color: var(--text-3); font-size: 11px; }
+.fc-light .fc-timegrid-col.fc-day-today { background: rgba(37,99,235,0.04); }
+.fc-light .fc-timegrid-now-indicator-line  { border-color: var(--accent); }
+.fc-light .fc-timegrid-now-indicator-arrow { border-color: var(--accent); }
+.fc-light .fc-list-table               { border-color: var(--border) !important; }
+.fc-light .fc-list-day-cushion         { background: rgba(15,23,42,0.03) !important; }
+.fc-light .fc-list-day-text,
+.fc-light .fc-list-day-side-text       { color: var(--text-2) !important; font-weight: 700; text-decoration: none !important; }
+.fc-light .fc-list-event:hover td      { background: rgba(15,23,42,0.03) !important; }
+.fc-light .fc-list-event-title a       { color: var(--text) !important; text-decoration: none !important; }
+.fc-light .fc-list-empty               { background: transparent; color: var(--text-3); }
+.fc-light .fc-popover                  {
+  background: #ffffff !important; border-color: var(--border-hi) !important;
+  border-radius: 14px !important; box-shadow: 0 20px 60px rgba(15,23,42,0.14) !important; overflow: hidden;
+}
+.fc-light .fc-popover-header           {
+  background: rgba(15,23,42,0.04) !important;
+  color: var(--text) !important; font-weight: 700; font-size: 13px;
+}
+.fc-light .fc-popover-close            { color: var(--text-3) !important; opacity: 1; }
+.fc-light .fc-bg-event                 { opacity: 0.12; }
+.fc-light .fc-non-business             { background: rgba(15,23,42,0.03); }
