@@ -10,6 +10,7 @@ project, no Vercel project and no database.
 ```
 back/    Django + DRF + Postgres     <- tt_back  archive/main-tournament-2026-07-04  (47 commits)
 front/   Next.js (App Router)        <- tt_front archive/main-2026-07-04             (109 commits)
+mobile/  Expo (React Native, SDK 57) <- new
 ```
 
 Both histories are preserved in full — nothing was rewritten except nesting each project under
@@ -34,6 +35,36 @@ point the `back` service at this repo with **root directory `back`**. Until then
 
 `back/railway.json` pins the **NIXPACKS** builder on purpose — Railway's default RAILPACK
 ignores `nixpacks.toml`, which skips `collectstatic` and serves an unstyled Django admin.
+
+### Builds are path-filtered
+
+`mobile/` has no deployment — Expo ships binaries through EAS Build, not a web host. But a
+monorepo means every push would otherwise rebuild *everything*, so both web deploys are
+scoped to their own folder:
+
+- Railway: `watchPatterns = ["back/**"]`
+- Vercel: ignored-build-step `git diff --quiet HEAD^ HEAD -- .` (runs inside `front/`)
+
+A commit that only touches `mobile/` now redeploys nothing.
+
+## mobile/ (Expo)
+
+```bash
+cd mobile && npm install && npx expo start        # scan the QR with Expo Go
+```
+
+Standalone on purpose: it has its own `package.json` and duplicates the API types in
+`mobile/api.ts` rather than importing from `front/lib`. Sharing them means npm workspaces plus
+a Metro monorepo config (`watchFolders` / `nodeModulesPaths`), which is a well-known source of
+baffling bundler errors — not worth it for one screen. Promote to a shared `packages/api` when
+the duplication actually costs something.
+
+`EXPO_PUBLIC_API_URL` selects the backend (see `.env.example`); `api.ts` falls back to
+production if it is unset.
+
+**Not done yet: push notifications.** The Django `notifications` app is built on **web-push /
+VAPID**, which does not work in a native app — Expo uses Expo push tokens on top of FCM/APNs.
+A real mobile release needs a second notification channel in the backend.
 
 ## Layout
 
