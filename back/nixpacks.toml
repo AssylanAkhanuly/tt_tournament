@@ -1,7 +1,28 @@
+# Every phase is declared EXPLICITLY. Do not rely on Nixpacks' language auto-detection.
+#
+# This app now lives in a monorepo (back/ + front/) and Railway builds it with
+# rootDirectory=back. In that setup Nixpacks reads THIS file but its provider detection
+# does not see requirements.txt, so it never provisions Python -- and the build died with
+# "pip: command not found" while running the very command below. Declaring setup/install
+# ourselves makes the build identical whether it comes from GitHub or `railway up`.
+#
+# The venv is activated by hand in each phase rather than trusting PATH to carry over.
+
+[phases.setup]
+nixPkgs = ["python3", "postgresql_16.dev", "gcc"]
+
+[phases.install]
+cmds = [
+  "python -m venv --copies /opt/venv",
+  ". /opt/venv/bin/activate && pip install --upgrade pip && pip install -r requirements.txt",
+]
+
 [phases.build]
 cmds = [
-  "pip install -r requirements.txt",
-  "python manage.py collectstatic --noinput",
+  # collectstatic at BUILD time so the Django admin is styled. Railway's default RAILPACK
+  # builder ignores this file entirely, which is why railway.json pins NIXPACKS -- without
+  # it the admin ships unstyled.
+  ". /opt/venv/bin/activate && python manage.py collectstatic --noinput",
 ]
 
 [start]
@@ -9,4 +30,4 @@ cmds = [
 # trips), so threads let other requests run while one waits on Postgres — without
 # this (gunicorn's 1-worker/1-thread default) every request is served serially and
 # the polling load saturates the single thread.
-cmd = "python manage.py migrate --noinput && python manage.py collectstatic --noinput && gunicorn tt_back.wsgi:application --bind 0.0.0.0:$PORT --workers 2 --threads 4 --timeout 60"
+cmd = ". /opt/venv/bin/activate && python manage.py migrate --noinput && python manage.py collectstatic --noinput && gunicorn tt_back.wsgi:application --bind 0.0.0.0:$PORT --workers 2 --threads 4 --timeout 60"
