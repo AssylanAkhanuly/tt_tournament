@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>Турнирная система — диаграммы</title>
+<style>
+  :root { color-scheme: light dark; }
+  body {
+    margin: 0;
+    font: 16px/1.6 -apple-system, "Segoe UI", system-ui, sans-serif;
+    background: #f6f7f9;
+    color: #111827;
+  }
+  header {
+    position: sticky; top: 0; z-index: 10;
+    background: #111827; color: #f9fafb;
+    padding: 14px 24px;
+    display: flex; align-items: center; gap: 24px; flex-wrap: wrap;
+  }
+  header h1 { font-size: 17px; margin: 0; font-weight: 600; }
+  nav { display: flex; gap: 14px; flex-wrap: wrap; }
+  nav a { color: #93c5fd; text-decoration: none; font-size: 14px; }
+  nav a:hover { text-decoration: underline; }
+  main { padding: 24px; max-width: 1600px; margin: 0 auto; }
+  section { margin-bottom: 40px; }
+  h2 { font-size: 20px; margin: 0 0 4px; }
+  p.note { margin: 0 0 12px; color: #6b7280; font-size: 14px; }
+  .frame {
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    border-radius: 10px;
+    padding: 16px;
+    overflow-x: auto;
+  }
+  .frame img { display: block; max-width: none; height: auto; }
+  @media (prefers-color-scheme: dark) {
+    body { background: #0b1220; color: #e5e7eb; }
+    .frame { background: #fff; border-color: #1f2937; }
+    p.note { color: #9ca3af; }
+  }
+</style>
+</head>
+<body>
+<header>
+  <h1>Турнирная система — диаграммы</h1>
+  <nav>
+    <a href="#architecture">Архитектура</a>
+    <a href="#domain">Доменная модель</a>
+    <a href="#roles">Роли</a>
+    <a href="#lifecycle">Жизненный цикл</a>
+    <a href="#admins">Управляющие роли</a>
+    <a href="#judge">Судья стола</a>
+    <a href="#offline">Обрыв сети</a>
+    <a href="#player">Игрок</a>
+  </nav>
+</header>
+<main>
+
+<section id="architecture">
+  <h2>Архитектура</h2>
+  <p class="note">Клиенты → шлюз → авторизация → сервисы → движок → данные. Зелёное — то, что переиспользуется.</p>
+  <div class="frame"><img src="architecture.svg" alt="Архитектура"></div>
+</section>
+
+<section id="domain">
+  <h2>Доменная модель</h2>
+  <p class="note">Зелёные таблицы — новые сущности: GAME (партия), RALLY (розыгрыш), RATING_POINT. Красная — неизменяемый аудит.</p>
+  <div class="frame"><img src="domain.svg" alt="Доменная модель"></div>
+</section>
+
+<section id="roles">
+  <h2>Иерархия ролей</h2>
+  <p class="note">Наследование прав: вышестоящая роль может всё, что может нижестоящая.</p>
+  <div class="frame"><img src="roles.svg" alt="Иерархия ролей"></div>
+</section>
+
+<section id="lifecycle">
+  <h2>Жизненный цикл турнира</h2>
+  <p class="note">Сквозной сценарий через все роли. ГС — главный судья, СТ — судья турнира, СС — судья стола.</p>
+  <div class="frame"><img src="flow-lifecycle.svg" alt="Жизненный цикл"></div>
+</section>
+
+<section id="admins">
+  <h2>Управляющие роли — десктоп</h2>
+  <p class="note">Показаны рядом, потому что сцеплены: тренер подаёт → главный судья одобряет → судья турнира запускает.</p>
+  <div class="frame"><img src="flow-admins.svg" alt="Управляющие роли"></div>
+</section>
+
+<section id="judge">
+  <h2>Судья стола — планшет</h2>
+  <p class="note">Розыгрыши, партии, подача, смена сторон. Счёт судьи авторитетный.</p>
+  <div class="frame"><img src="flow-table-judge.svg" alt="Судья стола"></div>
+</section>
+
+<section id="offline">
+  <h2>Обрыв сети</h2>
+  <p class="note">Идёт параллельно всему циклу судьи: порядок событий восстанавливается по времени на устройстве, не на сервере.</p>
+  <div class="frame"><img src="flow-offline.svg" alt="Обрыв сети"></div>
+</section>
+
+<section id="player">
+  <h2>Игрок — телефон</h2>
+  <p class="note">Единственная роль с аналитикой. Счёт своих матчей не вводит.</p>
+  <div class="frame"><img src="flow-player.svg" alt="Игрок"></div>
+</section>
+
+</main>
+</body>
+</html>

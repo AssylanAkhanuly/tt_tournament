@@ -1,0 +1,104 @@
+...@_theme
+
+direction: down
+
+# Три управляющие роли, все с десктопа.
+# Показаны рядом, потому что их флоу сцеплены: тренер подаёт — главный судья
+# одобряет — судья турнира запускает.
+
+head: Главный судья {
+  direction: down
+  style.fill: "#faf5ff"
+  style.stroke: "#c4b5fd"
+
+  login: Вход { class: start }
+  create: "Создаёт турнир\nвид · разряд · партий до победы" { class: step }
+  open: Открывает приём заявок { class: step }
+  inbox: "Заявки: от тренеров и от игроков" { class: step }
+  decide: Одобрена? { class: decide }
+  reject: Отклоняет с причиной { class: block }
+  accept: Игроки в составе { class: good }
+  judge: Назначает судью турнира { class: step }
+  tables: Назначает судей столов { class: step }
+  gate: Все столы с судьями? { class: decide }
+  blocked: Турнир не запустится { class: block }
+  watch: Наблюдает за ходом { class: step }
+  override: "Переопределяет счёт\nвсё пишется в аудит" { class: block }
+
+  login -> create
+  create -> open
+  open -> inbox
+  inbox -> decide
+  decide -> reject: нет { class: back }
+  reject -> inbox { class: back }
+  decide -> accept: да
+  accept -> judge
+  judge -> tables
+  tables -> gate
+  gate -> blocked: нет { class: back }
+  blocked -> tables { class: back }
+  gate -> watch: да
+  watch -> override
+}
+
+ref: Судья турнира {
+  direction: down
+  style.fill: "#f8faff"
+  style.stroke: "#93c5fd"
+
+  login: Вход { class: start }
+  mine: "Мои турниры — только назначенные" { class: step }
+  roster: Состав и посев { class: step }
+  gate: Все столы с судьями? { class: decide }
+  blocked: "Старт заблокирован\nждёт назначения" { class: block }
+  start: Запускает турнир { class: step }
+  bracket: "ДВИЖОК: сетка и столы" { class: engine }
+  watch: Следит и правит счёт { class: step }
+  done: Все матчи сыграны? { class: decide }
+  finish: Завершает турнир { class: good }
+  ratings: "РАСЧЁТ РЕЙТИНГА: игроки и судьи, заложенная методика" {
+    style: { fill: "#fffbeb"; stroke: "#f59e0b"; stroke-width: 2 }
+  }
+
+  login -> mine
+  mine -> roster
+  roster -> gate
+  gate -> blocked: нет { class: back }
+  blocked -> gate { class: back }
+  gate -> start: да
+  start -> bracket
+  bracket -> watch
+  watch -> done
+  done -> watch: нет { class: loop }
+  done -> finish: да
+  finish -> ratings
+}
+
+coach: Тренер клуба {
+  direction: down
+  style.fill: "#f0fdf4"
+  style.stroke: "#86efac"
+
+  login: Вход { class: start }
+  club: "Мой клуб — список игроков" { class: step }
+  browse: Открытые турниры { class: step }
+  roster: Формирует список игроков { class: step }
+  submit: "Одна заявка на весь список" { class: step }
+  verdict: Решение главного судьи { class: decide }
+  rejected: Видит причину отказа { class: block }
+  accepted: Игроки в составе { class: good }
+  watch: Следит как зритель { class: muted }
+
+  login -> club
+  club -> browse
+  browse -> roster
+  roster -> submit
+  submit -> verdict
+  verdict -> rejected: отклонена { class: back }
+  rejected -> roster { class: back }
+  verdict -> accepted: принята
+  accepted -> watch
+}
+
+coach.submit -> head.inbox: заявка уходит главному судье { class: liveEdge }
+head.judge -> ref.mine: назначение { class: liveEdge }

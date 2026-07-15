@@ -1,0 +1,145 @@
+# Общие стили. Подключается через: ...@_theme
+# Правим цвета здесь — меняются во всех диаграммах разом.
+
+classes: {
+  client: {
+    style: {
+      fill: "#dbe4ff"
+      stroke: "#3b82f6"
+      stroke-width: 2
+      border-radius: 8
+    }
+  }
+  gate: {
+    style: {
+      fill: "#ede9fe"
+      stroke: "#8b5cf6"
+      stroke-width: 2
+      border-radius: 8
+    }
+  }
+  # авторизация — сердце ТЗ, выделена
+  rbac: {
+    style: {
+      fill: "#fef3c7"
+      stroke: "#f59e0b"
+      stroke-width: 3
+      border-radius: 8
+      bold: true
+    }
+  }
+  service: {
+    style: {
+      fill: "#f3f0ff"
+      stroke: "#8b5cf6"
+      stroke-width: 2
+      border-radius: 8
+    }
+  }
+  # переиспользуемый движок
+  engine: {
+    style: {
+      fill: "#d1fae5"
+      stroke: "#10b981"
+      stroke-width: 3
+      border-radius: 8
+      bold: true
+    }
+  }
+  data: {
+    shape: cylinder
+    style: {
+      fill: "#cffafe"
+      stroke: "#06b6d4"
+      stroke-width: 2
+    }
+  }
+  # неизменяемый аудит
+  audit: {
+    shape: cylinder
+    style: {
+      fill: "#fee2e2"
+      stroke: "#ef4444"
+      stroke-width: 3
+      bold: true
+    }
+  }
+  live: {
+    style: {
+      fill: "#cffafe"
+      stroke: "#06b6d4"
+      stroke-width: 2
+      border-radius: 8
+    }
+  }
+
+  # --- флоу
+  start: {
+    shape: oval
+    style: {
+      fill: "#e5e7eb"
+      stroke: "#6b7280"
+      stroke-width: 2
+    }
+  }
+  step: {
+    style: {
+      fill: "#eff6ff"
+      stroke: "#3b82f6"
+      stroke-width: 2
+      border-radius: 8
+    }
+  }
+  decide: {
+    shape: diamond
+    style: {
+      fill: "#fef3c7"
+      stroke: "#f59e0b"
+      stroke-width: 2
+    }
+  }
+  block: {
+    style: {
+      fill: "#fee2e2"
+      stroke: "#ef4444"
+      stroke-width: 2
+      border-radius: 8
+    }
+  }
+  good: {
+    style: {
+      fill: "#d1fae5"
+      stroke: "#10b981"
+      stroke-width: 2
+      border-radius: 8
+    }
+  }
+  muted: {
+    style: {
+      fill: "#f3f4f6"
+      stroke: "#9ca3af"
+      stroke-width: 2
+      border-radius: 8
+    }
+  }
+
+  # --- связи
+  back: {
+    style: {
+      stroke: "#ef4444"
+      stroke-dash: 4
+    }
+  }
+  loop: {
+    style: {
+      stroke: "#9ca3af"
+      stroke-dash: 4
+    }
+  }
+  liveEdge: {
+    style: {
+      stroke: "#06b6d4"
+      stroke-dash: 4
+    }
+  }
+}

@@ -1,0 +1,57 @@
+...@_theme
+
+direction: down
+
+# Жизненный цикл турнира — сквозной сценарий через все роли.
+# ГС — главный судья, СТ — судья турнира, СС — судья стола.
+
+create: "ГС: создаёт турнир\nвид, разряд, партий до победы" { class: step }
+open: Открыт приём заявок { class: step }
+
+coach: "Тренер: заявка со списком" { class: step }
+self: "Игрок: заявка сам" { class: step }
+
+review: Заявка одобрена? { class: decide }
+reject: Отказ с причиной { class: block }
+squad: Игроки в составе { class: good }
+
+judge: "ГС: назначает судью турнира" { class: step }
+tables: "ГС: назначает судей столов" { class: step }
+gate: У каждого стола есть судья? { class: decide }
+blocked: "Старт заблокирован\nбез судьи стол не принимает матчи" { class: block }
+
+seed: "СТ: посев и запуск" { class: step }
+bracket: "ДВИЖОК: сетка и распределение по столам" { class: engine }
+
+play: "СС: ведёт матч\nрозыгрыши, партии, подача, смена сторон" { class: step }
+advance: "ДВИЖОК: продвигает победителя" { class: engine }
+more: Остались матчи? { class: decide }
+
+finish: "СТ: завершает турнир" { class: step }
+ratings: "РАСЧЁТ РЕЙТИНГА: по заложенной методике" {
+  style: { fill: "#fffbeb"; stroke: "#f59e0b"; stroke-width: 2 }
+}
+result: "Игрок видит результат и новую аналитику" { class: good }
+
+create -> open
+open -> coach
+open -> self
+coach -> review
+self -> review
+review -> reject: нет { class: back }
+reject -> open { class: back }
+review -> squad: да
+squad -> judge
+judge -> tables
+tables -> gate
+gate -> blocked: нет { class: back }
+blocked -> tables { class: back }
+gate -> seed: да
+seed -> bracket
+bracket -> play
+play -> advance
+advance -> more
+more -> play: да { class: loop }
+more -> finish: нет
+finish -> ratings
+ratings -> result

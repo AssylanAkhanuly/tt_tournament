@@ -1,0 +1,55 @@
+...@_theme
+
+direction: down
+
+# Судья стола — планшет в ландшафте. Самая насыщенная роль.
+# Его счёт авторитетный: подтверждение от игроков не требуется.
+
+login: Вход с планшета { class: start }
+queue: Очередь матчей моего стола { class: step }
+invite: Вызывает игроков к столу { class: step }
+
+present: Оба игрока пришли? { class: decide }
+absent: Отмечает неявку { class: block }
+walkover: "ДВИЖОК: техническая победа" { class: engine }
+
+serve: Определяет подающего { class: step }
+rally: Розыгрыш { class: step }
+point: "Начисляет очко: +1 игроку" { class: step }
+ribbon: Очко уходит в ленту розыгрышей { class: step }
+
+mistake: Ошибочный тап? { class: decide }
+undo: Отменяет последний розыгрыш { class: block }
+
+game_over: Партия сыграна? { class: decide }
+swap: Смена сторон { class: step }
+match_over: Матч сыгран? { class: decide }
+
+finish: Завершает матч { class: good }
+advance: "ДВИЖОК: продвигает победителя" { class: engine }
+next: Есть следующий матч? { class: decide }
+free: Стол свободен { class: start }
+
+login -> queue
+queue -> invite
+invite -> present
+present -> absent: нет { class: back }
+absent -> walkover
+walkover -> next
+present -> serve: да
+serve -> rally
+rally -> point
+point -> ribbon
+ribbon -> mistake
+mistake -> undo: да { class: back }
+undo -> rally { class: back }
+mistake -> game_over: нет
+game_over -> rally: нет { class: loop }
+game_over -> match_over: да
+match_over -> swap: нет { class: loop }
+swap -> serve { class: loop }
+match_over -> finish: да
+finish -> advance
+advance -> next
+next -> queue: да { class: loop }
+next -> free: нет

@@ -1,0 +1,34 @@
+...@_theme
+
+direction: down
+
+# Обрыв сети идёт ПАРАЛЛЕЛЬНО всему циклу судьи: сеть может пропасть в любой
+# момент, и работа судьи от этого не останавливается.
+#
+# Порядок событий восстанавливается по времени НА УСТРОЙСТВЕ, а не на сервере:
+# после обрыва очередь уходит пачкой, серверные метки будут почти одинаковыми,
+# и последовательность розыгрышей развалится.
+
+enter: Судья вводит очко { class: step }
+local: Событие в локальной очереди { class: step }
+show: Счёт на экране сразу { class: good }
+
+online: Сеть есть? { class: decide }
+send: Отправка на сервер { class: step }
+queued: "Статус: сохранено локально, N в очереди" { class: block }
+keep: Судья продолжает вести счёт { class: step }
+back: Сеть вернулась? { class: decide }
+flush: "Очередь уходит по порядку\nвремя устройства, не сервера" { class: step }
+synced: "Статус: синхронизация активна" { class: good }
+
+enter -> local
+local -> show
+show -> online
+online -> send: да
+send -> synced
+online -> queued: нет { class: back }
+queued -> keep
+keep -> back
+back -> keep: нет { class: loop }
+back -> flush: да
+flush -> synced

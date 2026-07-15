@@ -1,0 +1,94 @@
+...@_theme
+
+# Слева направо: клиенты → шлюз → авторизация → сервисы → движок → данные.
+#
+# ВАЖНО: никаких обратных рёбер. ELK — послойный движок; цикл он ломает
+# разворотом ребра, и схему переворачивает вверх ногами. Связь
+# "Live-канал → клиенты" поэтому не рисуется, а живёт подписью на узле.
+direction: right
+
+clients: Клиенты {
+  direction: down
+  style.fill: "#f8faff"
+  style.stroke: "#93c5fd"
+
+  tablet: Планшет судьи стола {
+    class: client
+    offline: офлайн-очередь {
+      style: {
+        fill: "#fef3c7"
+        stroke: "#f59e0b"
+        stroke-dash: 4
+        font-size: 12
+      }
+    }
+  }
+  phone: Телефон игрока {class: client}
+  desktop: "Десктоп\nадминистратор, главный судья, тренер" {class: client}
+  guest: Гость {class: muted}
+}
+
+gw: "API-шлюз\nHTTPS, JWT в куках" {class: gate}
+
+auth: Аутентификация {class: service}
+rbac: "Авторизация\nроль → область → право" {class: rbac}
+
+apps: Прикладные сервисы {
+  direction: down
+  style.fill: "#fdfaff"
+  style.stroke: "#ddd6fe"
+
+  tournaments: Турниры и столы {class: service}
+  applications: Заявки {class: service}
+  score: "Счёт\nрозыгрыши и партии" {class: service}
+  referee: "Регламент\nподача и смена сторон" {class: service}
+  analytics: Аналитика игрока {class: service}
+}
+
+engine: "Движок турниров и конструктор сеток\nПЕРЕИСПОЛЬЗУЕТСЯ" {class: engine}
+# Рейтинг считается по ЗАЛОЖЕННОЙ методике (ELO), единой для всех турниров.
+rating: "Расчёт рейтинга\nзаложенная методика · ELO" {
+  style: {fill: "#fffbeb"; stroke: "#f59e0b"; stroke-width: 2}
+}
+# кормится движком, поэтому стоит справа от него, а не в прикладных сервисах —
+# иначе получается обратное ребро и длинный крюк через всю схему
+notify: Уведомления {class: service}
+live: "Live-канал\nсчёт по очкам ≤ 1 с · до 4 столов" {class: live}
+
+storage: Данные {
+  direction: down
+  style.fill: "#f0fdfa"
+  style.stroke: "#5eead4"
+  pg: PostgreSQL {class: data}
+  audit: "Аудит счёта\nнеизменяемый" {class: audit}
+}
+
+clients.tablet -> gw
+clients.phone -> gw
+clients.desktop -> gw
+clients.guest -> gw: публичное чтение {class: loop}
+
+gw -> auth: вход
+gw -> rbac: проверка прав {style.stroke: "#f59e0b"; style.stroke-width: 3}
+
+rbac -> apps.tournaments
+rbac -> apps.applications
+rbac -> apps.score
+rbac -> apps.referee
+rbac -> apps.analytics
+
+apps.tournaments -> engine: генерация сетки
+apps.score -> engine: партия сыграна
+apps.score -> live: событие счёта
+apps.score -> storage.audit: каждая правка {style.stroke: "#ef4444"; style.stroke-width: 2}
+apps.referee -> storage.audit: события матча {style.stroke: "#ef4444"}
+
+engine -> rating: итоги турнира
+engine -> notify: матч готов
+
+auth -> storage.pg
+apps -> storage.pg: чтение и запись
+engine -> storage.pg: матчи, партии, сетка
+rating -> storage.pg: рейтинги в историю
+notify -> storage.pg
+live -> storage.pg: читает состояние

@@ -1,0 +1,192 @@
+direction: right
+
+# Доменная модель. Ключевое:
+#   ROLE  — не флаг на пользователе, а связка «пользователь → роль → область»
+#   GAME  — партия; MATCH счёт НЕ хранит, 3:1 это производная
+#   RALLY — розыгрыш; без него нет ленты и точечной отмены
+#   RALLY.at_device — время НА УСТРОЙСТВЕ: после офлайна очередь уходит пачкой,
+#                     и по серверному времени порядок розыгрышей развалится
+
+classes: {
+  core: {style.fill: "#eff6ff"; style.stroke: "#3b82f6"}
+  new: {style.fill: "#d1fae5"; style.stroke: "#10b981"; style.stroke-width: 2}
+  audit: {style.fill: "#fee2e2"; style.stroke: "#ef4444"; style.stroke-width: 2}
+}
+
+user: USER {
+  shape: sql_table
+  class: core
+  id: uuid {constraint: primary_key}
+  name: string
+  phone: string {constraint: unique}
+  city: string
+  photo_url: string
+  club_id: uuid {constraint: foreign_key}
+  rating: int
+}
+
+role: ROLE {
+  shape: sql_table
+  class: new
+  id: uuid {constraint: primary_key}
+  user_id: uuid {constraint: foreign_key}
+  kind: "судья | тренер | игрок"
+  scope: "система | турнир | клуб | стол"
+  scope_id: uuid
+}
+
+club: CLUB {
+  shape: sql_table
+  class: core
+  id: uuid {constraint: primary_key}
+  name: string
+  city: string
+}
+
+tournament: TOURNAMENT {
+  shape: sql_table
+  class: core
+  id: uuid {constraint: primary_key}
+  name: string
+  format: "олимпийка | круговая | швейцарка | …"
+  discipline: "одиночный | парный | командный"
+  status: "заявки | идёт | завершён"
+  games_to_win: int
+  starts_at: datetime
+}
+
+table_: TOURNAMENT_TABLE {
+  shape: sql_table
+  class: core
+  id: uuid {constraint: primary_key}
+  tournament_id: uuid {constraint: foreign_key}
+  number: int
+  referee_id: uuid {constraint: foreign_key}
+}
+
+application: APPLICATION {
+  shape: sql_table
+  class: new
+  id: uuid {constraint: primary_key}
+  tournament_id: uuid {constraint: foreign_key}
+  club_id: "uuid — пусто, если игрок сам" {constraint: foreign_key}
+  submitted_by: uuid {constraint: foreign_key}
+  source: "клуб | игрок сам"
+  status: "подана | принята | отклонена"
+  reject_reason: string
+}
+
+application_item: APPLICATION_ITEM {
+  shape: sql_table
+  class: new
+  id: uuid {constraint: primary_key}
+  application_id: uuid {constraint: foreign_key}
+  user_id: uuid {constraint: foreign_key}
+}
+
+entry: ENTRY {
+  shape: sql_table
+  class: new
+  id: uuid {constraint: primary_key}
+  tournament_id: uuid {constraint: foreign_key}
+  player1_id: uuid {constraint: foreign_key}
+  player2_id: "uuid — пусто в одиночке" {constraint: foreign_key}
+  seed: int
+  place: int
+}
+
+match: MATCH {
+  shape: sql_table
+  class: core
+  id: uuid {constraint: primary_key}
+  tournament_id: uuid {constraint: foreign_key}
+  table_id: uuid {constraint: foreign_key}
+  round: "1/8 | 1/4 | финал"
+  side_a_id: uuid {constraint: foreign_key}
+  side_b_id: uuid {constraint: foreign_key}
+  serving_player_id: uuid {constraint: foreign_key}
+  status: "ожидает | идёт | завершён"
+  winner_side_id: uuid {constraint: foreign_key}
+  is_walkover: bool
+}
+
+game: GAME {
+  shape: sql_table
+  class: new
+  id: uuid {constraint: primary_key}
+  match_id: uuid {constraint: foreign_key}
+  number: "номер партии 1..5"
+  score1: int
+  score2: int
+  status: "идёт | завершена"
+}
+
+rally: RALLY {
+  shape: sql_table
+  class: new
+  id: uuid {constraint: primary_key}
+  game_id: uuid {constraint: foreign_key}
+  number: int
+  won_by: uuid {constraint: foreign_key}
+  at_device: "datetime — время НА УСТРОЙСТВЕ"
+  entered_by: uuid {constraint: foreign_key}
+}
+
+match_event: MATCH_EVENT {
+  shape: sql_table
+  class: new
+  id: uuid {constraint: primary_key}
+  match_id: uuid {constraint: foreign_key}
+  kind: "смена сторон | смена подачи"
+  recorded_by: uuid {constraint: foreign_key}
+  at: datetime
+}
+
+score_log: SCORE_LOG {
+  shape: sql_table
+  class: audit
+  id: uuid {constraint: primary_key}
+  match_id: uuid {constraint: foreign_key}
+  author_id: uuid {constraint: foreign_key}
+  at: datetime
+  before: string
+  after: string
+  reason: "правка судьи | переопределение"
+}
+
+rating_point: RATING_POINT {
+  shape: sql_table
+  class: new
+  id: uuid {constraint: primary_key}
+  user_id: uuid {constraint: foreign_key}
+  kind: "игрок | судья"
+  tournament_id: uuid {constraint: foreign_key}
+  value: "int — по заложенной методике"
+  change: "int — например +24"
+  at: datetime
+}
+
+user.id -> role.user_id: имеет
+user.club_id -> club.id
+club.id -> application.club_id: подаёт
+user.id -> application.submitted_by: автор
+tournament.id -> application.tournament_id: получает
+application.id -> application_item.application_id: список игроков
+user.id -> application_item.user_id: заявлен
+application_item.id -> entry.id: принята — создаёт сторону
+
+tournament.id -> table_.tournament_id
+tournament.id -> entry.tournament_id: составы и посев
+tournament.id -> match.tournament_id
+user.id -> entry.player1_id: игрок стороны
+user.id -> table_.referee_id: судья стола
+entry.id -> match.side_a_id: сторона матча
+table_.id -> match.table_id: проводит
+
+match.id -> game.match_id: партии
+game.id -> rally.game_id: розыгрыши
+match.id -> match_event.match_id
+match.id -> score_log.match_id
+user.id -> score_log.author_id: автор правки
+user.id -> rating_point.user_id
+tournament.id -> rating_point.tournament_id

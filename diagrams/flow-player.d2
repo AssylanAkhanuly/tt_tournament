@@ -1,0 +1,53 @@
+...@_theme
+
+direction: down
+
+# Игрок — телефон. Единственная роль с аналитикой.
+# Счёт своих матчей не вводит: это делает судья стола.
+
+login: Вход с телефона { class: start }
+
+home: "Главная\nрейтинг 2456 (+24) · место 8 из 1042" { class: good }
+stats: "Аналитика\nматчи · победы · поражения · винрейт" { class: step }
+chart: График динамики рейтинга { class: step }
+
+nearest: "Ближайший турнир\nстатус регистрации" { class: step }
+apply: Заявиться самому? { class: decide }
+submit: "Подаёт заявку без тренера" { class: step }
+verdict: Заявка одобрена? { class: decide }
+rejected: Отказ с причиной { class: block }
+inside: В составе турнира { class: good }
+
+active: Турнир идёт? { class: decide }
+my_match: "Мой матч\nсоперник · стол · когда выходить" { class: step }
+playing: "Играет — счёт ведёт судья стола" { class: step }
+result: "Результат матча\nсчёт по партиям" { class: step }
+more: Ещё матчи? { class: decide }
+place: "Турнир завершён — итоговое место" { class: good }
+new_rating: "Рейтинг пересчитан" { class: good }
+
+history: "Последние матчи\nсоперник · счёт по партиям · дата" { class: step }
+h2h: Личные встречи с соперником { class: step }
+
+login -> home
+home -> stats
+stats -> chart
+home -> nearest
+nearest -> apply
+apply -> submit: да
+submit -> verdict
+verdict -> rejected: нет { class: back }
+rejected -> nearest { class: back }
+verdict -> inside: да
+apply -> history: нет { class: loop }
+inside -> active
+active -> my_match: да
+my_match -> playing
+playing -> result
+result -> more
+more -> my_match: да { class: loop }
+more -> place: нет
+place -> new_rating
+new_rating -> history
+active -> history: нет { class: loop }
+history -> h2h
