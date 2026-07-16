@@ -30,7 +30,7 @@ role: ROLE {
   class: new
   id: uuid {constraint: primary_key}
   user_id: uuid {constraint: foreign_key}
-  kind: "судья | тренер | игрок"
+  kind: "администратор | главный судья | судья стола | тренер | игрок"
   scope: "система | турнир | клуб | стол"
   scope_id: uuid
 }

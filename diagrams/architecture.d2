@@ -4,7 +4,8 @@
 #
 # ВАЖНО: никаких обратных рёбер. ELK — послойный движок; цикл он ломает
 # разворотом ребра, и схему переворачивает вверх ногами. Связь
-# "Live-канал → клиенты" поэтому не рисуется, а живёт подписью на узле.
+# "счёт в реальном времени → клиенты" поэтому не рисуется, а живёт
+# подписью на узле.
 direction: right
 
 clients: Клиенты {
@@ -12,7 +13,7 @@ clients: Клиенты {
   style.fill: "#f8faff"
   style.stroke: "#93c5fd"
 
-  tablet: Планшет судьи стола {
+  tablet: "Судья стола\nадаптивный сайт, обычно планшет" {
     class: client
     offline: офлайн-очередь {
       style: {
@@ -23,7 +24,7 @@ clients: Клиенты {
       }
     }
   }
-  phone: Телефон игрока {class: client}
+  phone: "Игрок\nсайт и приложение iOS/Android" {class: client}
   desktop: "Десктоп\nадминистратор, главный судья, тренер" {class: client}
   guest: Гость {class: muted}
 }
@@ -42,7 +43,7 @@ apps: Прикладные сервисы {
   applications: Заявки {class: service}
   score: "Счёт\nрозыгрыши и партии" {class: service}
   referee: "Регламент\nподача и смена сторон" {class: service}
-  analytics: Аналитика игрока {class: service}
+  analytics: "Аналитика игрока\nбесплатная и платная" {class: service}
 }
 
 engine: "Движок турниров и конструктор сеток\nПЕРЕИСПОЛЬЗУЕТСЯ" {class: engine}
@@ -53,7 +54,10 @@ rating: "Расчёт рейтинга\nзаложенная методика ·
 # кормится движком, поэтому стоит справа от него, а не в прикладных сервисах —
 # иначе получается обратное ребро и длинный крюк через всю схему
 notify: Уведомления {class: service}
-live: "Live-канал\nсчёт по очкам ≤ 1 с · до 4 столов" {class: live}
+live: "Счёт в реальном времени\nпо очкам, много столов" {class: live}
+# Трансляция столов на YouTube: счёт накладывается на видео автоматически
+# из ввода судьи (TZ §6.3), без оператора.
+broadcast: "Трансляция на YouTube\nсчёт поверх видео со столов" {class: live}
 
 storage: Данные {
   direction: down
@@ -80,6 +84,7 @@ rbac -> apps.analytics
 apps.tournaments -> engine: генерация сетки
 apps.score -> engine: партия сыграна
 apps.score -> live: событие счёта
+apps.score -> broadcast: счёт для наложения
 apps.score -> storage.audit: каждая правка {style.stroke: "#ef4444"; style.stroke-width: 2}
 apps.referee -> storage.audit: события матча {style.stroke: "#ef4444"}
 

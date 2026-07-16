@@ -2,79 +2,82 @@
 
 direction: down
 
-# Три управляющие роли, все с десктопа.
-# Показаны рядом, потому что их флоу сцеплены: тренер подаёт — главный судья
-# одобряет — судья турнира запускает.
+# Управляющие роли, все с десктопа (по ФНТ ТЗ v1.1).
+# Показаны рядом, потому что их флоу сцеплены: администратор системы заводит
+# аккаунты и организации — тренер подаёт заявку — главный судья одобряет,
+# собирает сетку и ведёт турнир.
 
-head: Главный судья {
+adm: Администратор системы {
   direction: down
   style.fill: "#faf5ff"
   style.stroke: "#c4b5fd"
 
   login: Вход { class: start }
-  create: "Создаёт турнир\nвид · разряд · партий до победы" { class: step }
-  open: Открывает приём заявок { class: step }
-  inbox: "Заявки: от тренеров и от игроков" { class: step }
-  decide: Одобрена? { class: decide }
-  reject: Отклоняет с причиной { class: block }
-  accept: Игроки в составе { class: good }
-  judge: Назначает судью турнира { class: step }
-  tables: Назначает судей столов { class: step }
-  gate: Все столы с судьями? { class: decide }
-  blocked: Турнир не запустится { class: block }
-  watch: Наблюдает за ходом { class: step }
-  override: "Переопределяет счёт\nвсё пишется в аудит" { class: block }
+  accounts: "Аккаунты и роли\nзаводит, назначает" { class: rbac }
+  orgs: "Организации\nклубы, спортшколы, федерации" { class: step }
+  settings: Настройки системы { class: step }
+  content: "Публикация контента\nновости, страницы" { class: step }
+  oversee: Обзор всех турниров { class: good }
 
-  login -> create
-  create -> open
-  open -> inbox
-  inbox -> decide
-  decide -> reject: нет { class: back }
-  reject -> inbox { class: back }
-  decide -> accept: да
-  accept -> judge
-  judge -> tables
-  tables -> gate
-  gate -> blocked: нет { class: back }
-  blocked -> tables { class: back }
-  gate -> watch: да
-  watch -> override
+  login -> accounts
+  accounts -> orgs
+  orgs -> settings
+  settings -> content
+  content -> oversee
 }
 
-ref: Судья турнира {
+head: Главный судья {
   direction: down
   style.fill: "#f8faff"
   style.stroke: "#93c5fd"
 
   login: Вход { class: start }
-  mine: "Мои турниры — только назначенные" { class: step }
-  roster: Состав и посев { class: step }
+  create: "Создаёт турнир\nвид · разряд · формат сетки" { class: step }
+  bracketCfg: "Собирает сетку\nбиблиотека или конструктор" { class: step }
+  open: Открывает приём заявок { class: step }
+  inbox: "Заявки: от тренеров и от игроков" { class: step }
+  decide: Одобрена? { class: decide }
+  reject: Отклоняет с причиной { class: block }
+  accept: Игроки в составе { class: good }
+  seed: Посев { class: step }
+  tables: Назначает судей столов { class: step }
   gate: Все столы с судьями? { class: decide }
-  blocked: "Старт заблокирован\nждёт назначения" { class: block }
+  blocked: Турнир не запустится { class: block }
   start: Запускает турнир { class: step }
-  bracket: "ДВИЖОК: сетка и столы" { class: engine }
-  watch: Следит и правит счёт { class: step }
-  done: Все матчи сыграны? { class: decide }
+  engine: "ДВИЖОК: сетка и столы" { class: engine }
+  watch: "Ведёт турнир: вызывает пары, следит" { class: step }
+  override: "Переопределяет счёт\nвсё пишется в аудит" { class: block }
+  allDone: Все матчи сыграны? { class: decide }
   finish: Завершает турнир { class: good }
   ratings: "РАСЧЁТ РЕЙТИНГА: игроки и судьи, заложенная методика" {
     style: { fill: "#fffbeb"; stroke: "#f59e0b"; stroke-width: 2 }
   }
 
-  login -> mine
-  mine -> roster
-  roster -> gate
+  login -> create
+  create -> bracketCfg
+  bracketCfg -> open
+  open -> inbox
+  inbox -> decide
+  decide -> reject: нет { class: back }
+  reject -> inbox { class: back }
+  decide -> accept: да
+  accept -> seed
+  seed -> tables
+  tables -> gate
   gate -> blocked: нет { class: back }
-  blocked -> gate { class: back }
+  blocked -> tables { class: back }
   gate -> start: да
-  start -> bracket
-  bracket -> watch
-  watch -> done
-  done -> watch: нет { class: loop }
-  done -> finish: да
+  start -> engine
+  engine -> watch
+  watch -> override
+  override -> watch { class: back }
+  watch -> allDone
+  allDone -> watch: нет { class: loop }
+  allDone -> finish: да
   finish -> ratings
 }
 
-coach: Тренер клуба {
+coach: Тренер, представитель {
   direction: down
   style.fill: "#f0fdf4"
   style.stroke: "#86efac"
@@ -100,5 +103,5 @@ coach: Тренер клуба {
   accepted -> watch
 }
 
+adm.accounts -> head.login: назначает главного судью { class: liveEdge }
 coach.submit -> head.inbox: заявка уходит главному судье { class: liveEdge }
-head.judge -> ref.mine: назначение { class: liveEdge }
