@@ -10,6 +10,9 @@
 #     of truth and nobody has to remember to bump it in two places.
 #   * Everything Cyrillic lives in UTF-8 files, never in this script and never
 #     in a command-line argument: PS 5.1 mangles non-ASCII args to native exes.
+#   * docx-reference.docx carries the house style: navy headings, the navy
+#     table header, cell borders and the page number in the footer. Without it
+#     pandoc falls back to its plain default and all of that is lost.
 #
 # NOTE: keep this file ASCII-only. Windows PowerShell 5.1 reads .ps1 as ANSI
 # unless there is a BOM, so Cyrillic here becomes mojibake and breaks parsing.
@@ -42,8 +45,17 @@ $tmp = Join-Path $env:TEMP 'tz-docx-body.md'
 $doc = @('---') + $meta + ("date: `"$version`"") + @('---', '') + $lines[$start..($lines.Count - 1)]
 $doc | Set-Content $tmp -Encoding UTF8
 
-& $pandoc $tmp -o $out --toc --toc-depth=2
+& $pandoc $tmp -o $out --toc --toc-depth=2 --reference-doc=docx-reference.docx
+$code = $LASTEXITCODE
 Remove-Item $tmp -Force
+
+# $ErrorActionPreference does not catch a native exe's exit code, so check it by
+# hand. Without this the script cheerfully reports success on a failed build:
+# the usual cause is the .docx being open in Word, which locks it for writing.
+if ($code -ne 0) {
+  Pop-Location
+  throw "pandoc failed (exit $code). If the file is open in Word, close it and run again."
+}
 
 Pop-Location
 Write-Host "done -> $out  ($version)"
