@@ -11,12 +11,12 @@ openRef: Открывает приём заявок судей { class: step }
 inbox: "Заявки судей\nрейтинг · категория · история" { class: step }
 pick: Выбирает судью { class: step }
 direct: "Назначает напрямую\nмалый турнир, без конкурса" { class: step }
-gateOrg: Организация утверждена? { class: decide }
+gateOrg: "Система проведения утверждена?" { class: decide }
 rework: "Возврат с причиной\nтурнир не публикуется" { class: block }
 publish: "Утверждает — турнир опубликован" { class: good }
-gateRes: Результаты приняты? { class: decide }
+gateRes: "Итоговый протокол утверждён?" { class: decide }
 fix: "Возврат с причиной\nввод открывается снова" { class: block }
-accept: "Принимает — рейтинг пересчитывается" { class: good }
+accept: "Утверждает — рейтинг пересчитывается" { class: good }
 
 login -> create
 create -> openRef

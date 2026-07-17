@@ -1,0 +1,33 @@
+...@_theme
+
+direction: down
+
+# Микрофлоу роли «Бухгалтер» (ФНТ ТЗ v1.5).
+# Проверяет оплату ежегодного регистрационного взноса и отмечает её.
+#
+# Красным — блокировка: заявка от участника с неоплаченным взносом не проходит.
+# Это допущение с нашей стороны, у заказчика не подтверждено (QUESTIONS 6.1).
+# Здесь же развилка, которую надо закрыть: отмечает ли бухгалтер оплату руками
+# или система принимает платежи сама (QUESTIONS 6.5).
+
+login: Вход { class: start }
+registry: "Реестр взносов за год\nучастник · состояние · дата" { class: step }
+filter: "Фильтр: не оплачено и просрочено" { class: step }
+check: Проверяет поступление оплаты { class: step }
+paid: Оплата подтверждена? { class: decide }
+mark: "Отмечает оплату\nсостояние: оплачен" { class: good }
+overdue: "Состояние: просрочен\nзаявки не проходят" { class: block }
+visible: "Состояние видно участнику и его тренеру" { class: good }
+gate: "БЛОКИРОВКА: заявка от неоплатившего не проходит" { class: block }
+done: Реестр в актуальном состоянии { class: good }
+
+login -> registry
+registry -> filter
+filter -> check
+check -> paid
+paid -> mark: да
+paid -> overdue: нет { class: back }
+overdue -> gate { class: back }
+mark -> visible
+overdue -> visible { class: back }
+visible -> done
