@@ -2,16 +2,28 @@
 
 direction: down
 
-# Жизненный цикл турнира — сквозной сценарий через все роли.
-# ГС — главный судья (создаёт и ведёт турнир), СС — судья стола.
+# Жизненный цикл турнира по ФНТ ТЗ v1.3 — сквозной сценарий через все роли.
+# ПСК — председатель судейской коллегии, ГС — главный судья турнира,
+# СС — судья стола.
+#
+# Два шлагбаума федерации: организация утверждается ДО публикации, результаты
+# принимаются ПОСЛЕ игры. Первый решает, состоится ли турнир в таком виде,
+# второй решает, попадёт ли он в рейтинг.
 
-create: "ГС: создаёт турнир\nвид, разряд, формат сетки" { class: step }
-open: Открыт приём заявок { class: step }
+create: "ПСК: заводит турнир\nназвание · уровень · город · окно дат" { class: step }
+openRef: Приём заявок судей { class: step }
+refApply: "Судья: заявка на судейство" { class: step }
+pickRef: "ПСК: выбирает судью\nрейтинг · категория · история" { class: step }
+direct: "ПСК: назначает напрямую\nмалый турнир, без конкурса" { class: step }
 
+organize: "ГС: организует турнир\nформат · дисциплина · расписание · столы" { class: step }
+gateOrg: "ПСК: организация утверждена?" { class: decide }
+rework: "Возврат с причиной\nбез утверждения турнир не публикуется" { class: block }
+
+publish: "Турнир опубликован\nоткрыт приём заявок игроков" { class: step }
 coach: "Тренер: заявка со списком" { class: step }
 self: "Игрок: заявка сам" { class: step }
-
-review: Заявка одобрена? { class: decide }
+review: "ГС: заявка одобрена?" { class: decide }
 reject: Отказ с причиной { class: block }
 squad: Игроки в составе { class: good }
 
@@ -27,20 +39,35 @@ live: "Счёт в реальном времени\nзрители, гости, 
 advance: "ДВИЖОК: продвигает победителя" { class: engine }
 more: Остались матчи? { class: decide }
 
-finish: "ГС: завершает турнир" { class: step }
+close: "ГС: закрывает турнир\nввод результатов заблокирован" { class: step }
+gateRes: "ПСК: результаты приняты?" { class: decide }
+fix: "Возврат с причиной\nввод открыт, судья исправляет" { class: block }
+
 ratings: "РАСЧЁТ РЕЙТИНГА: по заложенной методике" {
   style: { fill: "#fffbeb"; stroke: "#f59e0b"; stroke-width: 2 }
 }
 result: "Игрок видит результат и новую аналитику" { class: good }
 
-create -> open
-open -> coach
-open -> self
+create -> openRef
+openRef -> refApply
+refApply -> pickRef
+create -> direct: малый турнир { class: loop }
+pickRef -> organize
+direct -> organize
+
+organize -> gateOrg
+gateOrg -> rework: нет { class: back }
+rework -> organize { class: back }
+gateOrg -> publish: да
+
+publish -> coach
+publish -> self
 coach -> review
 self -> review
 review -> reject: нет { class: back }
-reject -> open { class: back }
+reject -> publish { class: back }
 review -> squad: да
+
 squad -> tables
 tables -> gate
 gate -> blocked: нет { class: back }
@@ -52,6 +79,10 @@ play -> live: в реальном времени { class: loop }
 play -> advance
 advance -> more
 more -> play: да { class: loop }
-more -> finish: нет
-finish -> ratings
+more -> close: нет
+
+close -> gateRes
+gateRes -> fix: нет { class: back }
+fix -> close { class: back }
+gateRes -> ratings: да
 ratings -> result

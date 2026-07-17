@@ -1,0 +1,53 @@
+...@_theme
+
+direction: down
+
+# Микрофлоу роли «Главный судья турнира» (ФНТ ТЗ v1.3).
+# Выделен из общей схемы: глобальный флоу ссылается сюда стрелкой.
+
+login: Вход { class: start }
+apply: Подаёт заявку на судейство { class: step }
+got: Назначен на турнир { class: good }
+organize: "Организует турнир\nформат · дисциплина · число партий" { class: step }
+bracketCfg: "Собирает сетку\nбиблиотека или конструктор" { class: step }
+schedule: Расписание по дням и столам { class: step }
+submitOrg: Отправляет организацию на утверждение { class: step }
+inbox: "Заявки: от тренеров и от игроков" { class: step }
+decide: Одобрена? { class: decide }
+reject: Отклоняет с причиной { class: block }
+accept: Игроки в составе { class: good }
+seed: Посев { class: step }
+tables: Назначает судей столов { class: step }
+gate: Все столы с судьями? { class: decide }
+blocked: Турнир не запустится { class: block }
+start: Запускает турнир { class: step }
+engine: "ДВИЖОК: сетка и столы" { class: engine }
+watch: "Ведёт турнир: вызывает пары, следит" { class: step }
+override: "Переопределяет счёт\nвсё пишется в аудит" { class: block }
+allDone: Все матчи сыграны? { class: decide }
+close: "Закрывает турнир\nввод заблокирован, итоги уходят в коллегию" { class: good }
+
+login -> apply
+apply -> got
+got -> organize
+organize -> bracketCfg
+bracketCfg -> schedule
+schedule -> submitOrg
+submitOrg -> inbox
+inbox -> decide
+decide -> reject: нет { class: back }
+reject -> inbox { class: back }
+decide -> accept: да
+accept -> seed
+seed -> tables
+tables -> gate
+gate -> blocked: нет { class: back }
+blocked -> tables { class: back }
+gate -> start: да
+start -> engine
+engine -> watch
+watch -> override
+override -> watch { class: back }
+watch -> allDone
+allDone -> watch: нет { class: loop }
+allDone -> close: да

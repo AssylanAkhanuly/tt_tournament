@@ -1,0 +1,19 @@
+...@_theme
+
+direction: down
+
+# Микрофлоу роли «Администратор системы» (ФНТ ТЗ v1.3).
+# Выделен из общей схемы: глобальный флоу ссылается сюда стрелкой.
+
+login: Вход { class: start }
+accounts: "Аккаунты и роли\nзаводит, назначает" { class: rbac }
+orgs: "Организации\nклубы, спортшколы, федерации" { class: step }
+settings: Настройки системы { class: step }
+content: "Публикация контента\nновости, страницы" { class: step }
+oversee: Обзор всех турниров { class: good }
+
+login -> accounts
+accounts -> orgs
+orgs -> settings
+settings -> content
+content -> oversee

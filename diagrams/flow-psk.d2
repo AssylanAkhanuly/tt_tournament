@@ -1,0 +1,34 @@
+...@_theme
+
+direction: down
+
+# Микрофлоу роли «Председатель судейской коллегии» (ФНТ ТЗ v1.3).
+# Выделен из общей схемы: глобальный флоу ссылается сюда стрелкой.
+
+login: Вход { class: start }
+create: "Заводит турнир\nназвание · уровень · город · окно дат" { class: step }
+openRef: Открывает приём заявок судей { class: step }
+inbox: "Заявки судей\nрейтинг · категория · история" { class: step }
+pick: Выбирает судью { class: step }
+direct: "Назначает напрямую\nмалый турнир, без конкурса" { class: step }
+gateOrg: Организация утверждена? { class: decide }
+rework: "Возврат с причиной\nтурнир не публикуется" { class: block }
+publish: "Утверждает — турнир опубликован" { class: good }
+gateRes: Результаты приняты? { class: decide }
+fix: "Возврат с причиной\nввод открывается снова" { class: block }
+accept: "Принимает — рейтинг пересчитывается" { class: good }
+
+login -> create
+create -> openRef
+openRef -> inbox
+inbox -> pick
+create -> direct: малый турнир { class: loop }
+pick -> gateOrg
+direct -> gateOrg
+gateOrg -> rework: нет { class: back }
+rework -> gateOrg { class: back }
+gateOrg -> publish: да
+publish -> gateRes
+gateRes -> fix: нет { class: back }
+fix -> gateRes { class: back }
+gateRes -> accept: да

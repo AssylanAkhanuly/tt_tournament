@@ -30,7 +30,7 @@ role: ROLE {
   class: new
   id: uuid {constraint: primary_key}
   user_id: uuid {constraint: foreign_key}
-  kind: "администратор | главный судья | судья стола | тренер | игрок"
+  kind: "администратор | председатель коллегии | главный судья турнира | судья стола | тренер | игрок"
   scope: "система | турнир | клуб | стол"
   scope_id: uuid
 }
@@ -48,11 +48,23 @@ tournament: TOURNAMENT {
   class: core
   id: uuid {constraint: primary_key}
   name: string
+  level: "открытый | республиканский"
+  city: string
   format: "олимпийка | круговая | швейцарка | …"
   discipline: "одиночный | парный | командный"
-  status: "заявки | идёт | завершён"
+  status: "черновик | заявки судей | судья назначен | организация на утверждении | заявки игроков | идёт | результаты на утверждении | завершён"
   games_to_win: int
   starts_at: datetime
+}
+
+referee_application: REFEREE_APPLICATION {
+  shape: sql_table
+  class: new
+  id: uuid {constraint: primary_key}
+  tournament_id: uuid {constraint: foreign_key}
+  user_id: "uuid — судья-заявитель" {constraint: foreign_key}
+  status: "подана | принята | отклонена"
+  reject_reason: string
 }
 
 table_: TOURNAMENT_TABLE {
@@ -171,6 +183,8 @@ user.club_id -> club.id
 club.id -> application.club_id: подаёт
 user.id -> application.submitted_by: автор
 tournament.id -> application.tournament_id: получает
+tournament.id -> referee_application.tournament_id: конкурс судейства
+user.id -> referee_application.user_id: судья подаёт
 application.id -> application_item.application_id: список игроков
 user.id -> application_item.user_id: заявлен
 application_item.id -> entry.id: принята — создаёт сторону
