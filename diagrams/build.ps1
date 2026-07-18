@@ -16,6 +16,10 @@ $browser = "C:\Program Files\BraveSoftware\Brave-Browser\Application\brave.exe"
 $out = Join-Path $here 'out'
 New-Item -ItemType Directory -Force $out | Out-Null
 
+# The domain model lives in domain.d2 and is spliced into the PostgreSQL
+# container inside architecture.d2. One source, shown in two places.
+python (Join-Path $here 'sync-domain.py')
+
 $files = Get-ChildItem -Filter '*.d2' | Where-Object { $_.Name -notlike '_*' }
 
 foreach ($f in $files) {
@@ -28,8 +32,8 @@ foreach ($f in $files) {
   # ELK is a layered engine: it breaks a cycle by REVERSING an edge, which
   # flips the whole flow upside down. Every flow-* here has loops (undo,
   # next game, next match), so they must use dagre.
-  # domain: у ER-схемы elk растягивает полотно почти вдвое (8660x4372
-  # против 5575x3449 у dagre), поэтому она тоже на dagre.
+  # domain: elk stretches the ER chart nearly twice as wide as dagre
+  # (8660x4372 vs 5575x3449), so it goes through dagre as well.
   $layout = if ($name -like 'flow-*' -or $name -eq 'domain') { 'dagre' } else { 'elk' }
   & $d2 --layout=$layout --theme=0 --pad=40 $f.Name $svg | Out-Null
 

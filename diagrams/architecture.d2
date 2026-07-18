@@ -21,7 +21,20 @@ clients: "1 · КЛИЕНТЫ · кто и с чего работает" {
   style.stroke: "#93c5fd"
 
   tablet: "Судья стола\nадаптивный сайт, обычно планшет\nофлайн-очередь на устройстве" { class: client }
-  phone: "Игрок\nсайт и приложение iOS/Android\nна лигах сам вводит счёт" { class: client }
+
+  # У игрока ДВА канала, и это не «или», а «и»: дома и с чужого компьютера он
+  # заходит на сайт, в зале между матчами — с приложения. Поэтому оба канала
+  # показаны отдельными узлами и оба полноценные, приложение не урезано.
+  player: "ИГРОК · два канала, оба полноценные" {
+    style.fill: "#eef2ff"
+    style.stroke: "#3b82f6"
+    style.stroke-width: 3
+
+    web: "Веб\nтот же сайт, любой браузер" { class: client }
+    app: "Приложение\nAndroid и iOS" { class: client }
+    note: "Один аккаунт, одни данные, один backend.\nРазличие только в push: он есть в приложении,\nв вебе — открытый вопрос (Q 11.1).\nНа лигах игрок сам вводит счёт (§6.4)" { class: muted }
+  }
+
   desktop: "Десктоп\nадминистратор · федерация · коллегия\nглавный судья · тренер · бухгалтер" { class: client }
   guest: "Гость\nтолько чтение" { class: muted }
 }
@@ -74,17 +87,256 @@ rt: "5 · РЕАЛЬНОЕ ВРЕМЯ И УВЕДОМЛЕНИЯ" {
 }
 
 # ── 6. ДАННЫЕ ───────────────────────────────────────────────────────────────
+# Доменная модель лежит прямо здесь, внутри PostgreSQL, а не отдельной схемой:
+# так видно, что именно хранится за словом «данные».
+#
+# Отдельного узла «Аудит счёта» больше нет: это таблица SCORE_LOG, она внутри
+# модели и подсвечена красным. Два узла об одном и том же расходились бы.
+#
+# Тело модели вставляется из domain.d2 скриптом sync-domain.py — правим только
+# domain.d2, иначе две копии модели разъедутся.
 storage: "6 · ДАННЫЕ" {
   style.fill: "#f0fdfa"
   style.stroke: "#5eead4"
 
-  pg: "PostgreSQL" { class: data }
-  audit: "Аудит счёта\nнеизменяемый, с автором и временем" { class: audit }
+  pg: "PostgreSQL · доменная модель" {
+    style.fill: "#ffffff"
+    style.stroke: "#06b6d4"
+    style.stroke-width: 3
+
+# DOMAIN-MODEL-HERE
+    user: USER {
+      shape: sql_table
+      class: core
+      id: uuid {constraint: primary_key}
+      name: string
+      phone: string {constraint: unique}
+      city: string
+      photo_url: string
+      club_id: uuid {constraint: foreign_key}
+      rating: int
+    }
+
+    role: ROLE {
+      shape: sql_table
+      class: new
+      id: uuid {constraint: primary_key}
+      user_id: uuid {constraint: foreign_key}
+      kind: "девять ролей, см. ТЗ §2"
+      scope: "система | турнир | клуб | стол"
+      scope_id: uuid
+    }
+
+    club: CLUB {
+      shape: sql_table
+      class: core
+      id: uuid {constraint: primary_key}
+      name: string
+      city: string
+    }
+
+    tournament: TOURNAMENT {
+      shape: sql_table
+      class: core
+      id: uuid {constraint: primary_key}
+      name: string
+      category: "республиканский | лига | любительский"
+      city: string
+      format: "олимпийка | круговая | швейцарка"
+      discipline: "одиночный | парный"
+      status: "девять состояний, см. ТЗ §4.3"
+      games_to_win: int
+      starts_at: datetime
+
+      needs_table_referees: "bool — настройка, не категория"
+      needs_fee: "bool — настройка, не категория"
+      needs_documents: "bool — настройка, не категория"
+      needs_approval: "bool — участвует ли коллегия"
+    }
+
+    # Одна таблица на оба конкурса: на главного судью и на судейство столов.
+    # Различаются они тем, КТО рассматривает (коллегия либо главный судья) и
+    # сколько человек берут — а не структурой заявки. Набор судей столов пока
+    # наше допущение (QUESTIONS 12).
+    referee_application: REFEREE_APPLICATION {
+      shape: sql_table
+      class: new
+      id: uuid {constraint: primary_key}
+      tournament_id: uuid {constraint: foreign_key}
+      user_id: "uuid — судья-заявитель" {constraint: foreign_key}
+      kind: "главный судья | судья стола"
+      status: "подана | принята | отклонена"
+      reject_reason: string
+      decided_by: "uuid — коллегия или главный судья" {constraint: foreign_key}
+    }
+
+    # Годовой взнос. Отдельная сущность, а не флаг на игроке: у взноса свой год,
+    # своя дата оплаты и свой автор отметки. Влияет ли он на допуск — открытый
+    # вопрос (QUESTIONS 6.1), поэтому связи с ENTRY здесь намеренно нет.
+    fee: MEMBERSHIP_FEE {
+      shape: sql_table
+      class: new
+      id: uuid {constraint: primary_key}
+      user_id: uuid {constraint: foreign_key}
+      year: "int — календарный или сезон, вопрос (Q 6.4)"
+      status: "оплачен | не оплачен | просрочен"
+      paid_at: datetime
+      marked_by: "uuid — бухгалтер" {constraint: foreign_key}
+    }
+
+    table_: TOURNAMENT_TABLE {
+      shape: sql_table
+      class: core
+      id: uuid {constraint: primary_key}
+      tournament_id: uuid {constraint: foreign_key}
+      number: int
+      referee_id: uuid {constraint: foreign_key}
+    }
+
+    application: APPLICATION {
+      shape: sql_table
+      class: new
+      id: uuid {constraint: primary_key}
+      tournament_id: uuid {constraint: foreign_key}
+      club_id: "uuid — пусто, если игрок сам" {constraint: foreign_key}
+      submitted_by: uuid {constraint: foreign_key}
+      source: "клуб | игрок сам"
+      status: "подана | принята | отклонена"
+      reject_reason: string
+    }
+
+    application_item: APPLICATION_ITEM {
+      shape: sql_table
+      class: new
+      id: uuid {constraint: primary_key}
+      application_id: uuid {constraint: foreign_key}
+      user_id: uuid {constraint: foreign_key}
+    }
+
+    entry: ENTRY {
+      shape: sql_table
+      class: new
+      id: uuid {constraint: primary_key}
+      tournament_id: uuid {constraint: foreign_key}
+      player1_id: uuid {constraint: foreign_key}
+      player2_id: "uuid — пусто в одиночке" {constraint: foreign_key}
+      seed: int
+      place: int
+    }
+
+    match: MATCH {
+      shape: sql_table
+      class: core
+      id: uuid {constraint: primary_key}
+      tournament_id: uuid {constraint: foreign_key}
+      table_id: uuid {constraint: foreign_key}
+      round: "1/8 | 1/4 | финал"
+      side_a_id: uuid {constraint: foreign_key}
+      side_b_id: uuid {constraint: foreign_key}
+      serving_player_id: uuid {constraint: foreign_key}
+      status: "ожидает | идёт | завершён"
+      winner_side_id: uuid {constraint: foreign_key}
+      is_walkover: bool
+    }
+
+    game: GAME {
+      shape: sql_table
+      class: new
+      id: uuid {constraint: primary_key}
+      match_id: uuid {constraint: foreign_key}
+      number: "номер партии 1..5"
+      score1: int
+      score2: int
+      status: "идёт | завершена"
+
+      # Кто вводил счёт: судья стола либо сам игрок (§6.4). Во втором случае
+      # результат не считается принятым, пока соперник не подтвердил.
+      entered_by: uuid {constraint: foreign_key}
+      entry_source: "судья стола | игрок"
+      confirmed_by: "uuid — второй игрок, если счёт вводил игрок" {constraint: foreign_key}
+      confirmed_at: datetime
+    }
+
+    rally: RALLY {
+      shape: sql_table
+      class: new
+      id: uuid {constraint: primary_key}
+      game_id: uuid {constraint: foreign_key}
+      number: int
+      won_by: uuid {constraint: foreign_key}
+      at_device: "datetime — время НА УСТРОЙСТВЕ"
+      entered_by: uuid {constraint: foreign_key}
+    }
+
+    match_event: MATCH_EVENT {
+      shape: sql_table
+      class: new
+      id: uuid {constraint: primary_key}
+      match_id: uuid {constraint: foreign_key}
+      kind: "смена сторон | смена подачи"
+      recorded_by: uuid {constraint: foreign_key}
+      at: datetime
+    }
+
+    score_log: SCORE_LOG {
+      shape: sql_table
+      class: audit
+      id: uuid {constraint: primary_key}
+      match_id: uuid {constraint: foreign_key}
+      author_id: uuid {constraint: foreign_key}
+      at: datetime
+      before: string
+      after: string
+      reason: "правка судьи | переопределение"
+    }
+
+    rating_point: RATING_POINT {
+      shape: sql_table
+      class: new
+      id: uuid {constraint: primary_key}
+      user_id: uuid {constraint: foreign_key}
+      kind: "игрок | судья"
+      tournament_id: uuid {constraint: foreign_key}
+      value: "int — методика не определена (Q 5.1)"
+      change: "int — например +24"
+      at: datetime
+    }
+
+    user.id -> role.user_id: имеет
+    user.club_id -> club.id
+    club.id -> application.club_id: подаёт
+    user.id -> application.submitted_by: автор
+    tournament.id -> application.tournament_id: получает
+    tournament.id -> referee_application.tournament_id: конкурс судейства
+    user.id -> referee_application.user_id: судья подаёт
+    user.id -> fee.user_id: годовой взнос
+    user.id -> fee.marked_by: бухгалтер отмечает
+    application.id -> application_item.application_id: список игроков
+    user.id -> application_item.user_id: заявлен
+    application_item.id -> entry.id: принята — создаёт сторону
+
+    tournament.id -> table_.tournament_id
+    tournament.id -> entry.tournament_id: составы и посев
+    tournament.id -> match.tournament_id
+    user.id -> entry.player1_id: игрок стороны
+    user.id -> table_.referee_id: судья стола
+    entry.id -> match.side_a_id: сторона матча
+    table_.id -> match.table_id: проводит
+
+    match.id -> game.match_id: партии
+    game.id -> rally.game_id: розыгрыши
+    match.id -> match_event.match_id
+    match.id -> score_log.match_id
+    user.id -> score_log.author_id: автор правки
+    user.id -> rating_point.user_id
+    tournament.id -> rating_point.tournament_id
+  }
 }
 
 # ── СВЯЗИ МЕЖДУ СЛОЯМИ ──────────────────────────────────────────────────────
 clients.tablet -> entry.gw
-clients.phone -> entry.gw
+clients.player.web -> entry.gw
+clients.player.app -> entry.gw
 clients.desktop -> entry.gw
 clients.guest -> entry.gw: публичное чтение { class: loop }
 
