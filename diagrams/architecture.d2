@@ -1,104 +1,112 @@
 ...@_theme
 
-# Слева направо: клиенты → шлюз → авторизация → сервисы → движок → данные.
+# СИСТЕМНЫЙ ДИЗАЙН — слоями сверху вниз.
 #
-# ВАЖНО: никаких обратных рёбер. ELK — послойный движок; цикл он ломает
-# разворотом ребра, и схему переворачивает вверх ногами. Связь
-# "счёт в реальном времени → клиенты" поэтому не рисуется, а живёт
-# подписью на узле.
-direction: right
+# Раньше здесь было direction: right одной лентой, и получалось 5829×1022:
+# шесть экранов в ряд, читать невозможно. Теперь каждый слой — своя рамка,
+# а стрелки между рамками идут вниз.
+#
+# НЕ СТАВИТЬ grid-columns на эти контейнеры. Пробовал: контейнер становится
+# грид-контейнером, direction: down у корня перестаёт действовать, и все шесть
+# слоёв выстраиваются в один ряд — 6771×438, ещё хуже исходного.
+#
+# ВАЖНО: обратных рёбер быть не должно. ELK послойный, цикл он ломает
+# разворотом ребра и переворачивает схему. Связь "счёт в реальном времени →
+# клиенты" поэтому не рисуется, а живёт подписью на узле.
+direction: down
 
-clients: Клиенты {
-  direction: down
+# ── 1. КЛИЕНТЫ ──────────────────────────────────────────────────────────────
+clients: "1 · КЛИЕНТЫ · кто и с чего работает" {
   style.fill: "#f8faff"
   style.stroke: "#93c5fd"
 
-  tablet: "Судья стола\nадаптивный сайт, обычно планшет" {
-    class: client
-    offline: офлайн-очередь {
-      style: {
-        fill: "#fef3c7"
-        stroke: "#f59e0b"
-        stroke-dash: 4
-        font-size: 12
-      }
-    }
-  }
-  phone: "Игрок\nсайт и приложение iOS/Android\nна лигах сам вводит счёт" {class: client}
-  desktop: "Десктоп\nадминистратор · федерация · коллегия\nглавный судья · тренер · бухгалтер" {class: client}
-  guest: Гость {class: muted}
+  tablet: "Судья стола\nадаптивный сайт, обычно планшет\nофлайн-очередь на устройстве" { class: client }
+  phone: "Игрок\nсайт и приложение iOS/Android\nна лигах сам вводит счёт" { class: client }
+  desktop: "Десктоп\nадминистратор · федерация · коллегия\nглавный судья · тренер · бухгалтер" { class: client }
+  guest: "Гость\nтолько чтение" { class: muted }
 }
 
-gw: "API-шлюз\nHTTPS, JWT в куках" {class: gate}
-
-auth: Аутентификация {class: service}
-rbac: "Авторизация\nроль → область → право" {class: rbac}
-
-apps: Прикладные сервисы {
-  direction: down
+# ── 2. ВХОД ─────────────────────────────────────────────────────────────────
+entry: "2 · ВХОД И ПРАВА" {
   style.fill: "#fdfaff"
   style.stroke: "#ddd6fe"
 
-  tournaments: "Турниры, столы и настройки\nкатегория задаёт умолчания, но всё правится" {class: service}
-  applications: "Заявки\nсудей на турнир · судей на столы · игроков" {class: service}
-  fees: "Взносы\nгодовой взнос, отметка бухгалтера" {class: service}
-  score: "Счёт\nведёт судья стола или сами игроки" {class: service}
-  referee: "Регламент\nподача и смена сторон" {class: service}
-  analytics: "Аналитика игрока\nбесплатная и платная" {class: service}
+  gw: "API-шлюз\nHTTPS, JWT в куках" { class: gate }
+  auth: "Аутентификация\nвход по паролю или короткому коду" { class: service }
+  rbac: "АВТОРИЗАЦИЯ\nроль → область → право\nдевять ролей (§2)" { class: rbac }
+
+  gw -> auth: вход
+  gw -> rbac: проверка прав
 }
 
-engine: "Движок турниров и конструктор сеток\nПЕРЕИСПОЛЬЗУЕТСЯ" {class: engine}
-# Методика рейтинга НЕ ОПРЕДЕЛЕНА: ТЗ §7.1 ссылается на Приложение А, которого
-# не существует. Раньше здесь стояло "ELO с фиксированными коэффициентами" —
-# это было наше предположение, а не решение федерации (QUESTIONS 5.1).
-rating: "РАСЧЁТ РЕЙТИНГА\nметодика не определена — блокер (QUESTIONS 5.1)" {
-  style: {fill: "#fffbeb"; stroke: "#f59e0b"; stroke-width: 2}
-}
-# кормится движком, поэтому стоит справа от него, а не в прикладных сервисах —
-# иначе получается обратное ребро и длинный крюк через всю схему
-notify: "Push-уведомления\nсемь событий процесса (§10.1)\nканал для веба открыт (QUESTIONS 11.1)" {class: service}
-live: "Счёт в реальном времени\nпо очкам, много столов" {class: live}
-# Трансляция столов на YouTube: счёт накладывается на видео автоматически
-# из ввода судьи (TZ §6.3), без оператора.
-broadcast: "Трансляция на YouTube\nсчёт поверх видео со столов" {class: live}
+# ── 3. ПРИКЛАДНЫЕ СЕРВИСЫ ───────────────────────────────────────────────────
+apps: "3 · ПРИКЛАДНЫЕ СЕРВИСЫ" {
+  style.fill: "#fdfaff"
+  style.stroke: "#ddd6fe"
 
-storage: Данные {
-  direction: down
+  tournaments: "Турниры, столы и настройки\nкатегория задаёт умолчания,\nно всё правится (§4.2)" { class: service }
+  applications: "Заявки\nсудей на турнир · судей на столы\nигроков (§4.3, §4.5, §8)" { class: service }
+  fees: "Взносы\nгодовой взнос, отметка бухгалтера\nсвязь с допуском — вопрос (Q 6.1)" { class: service }
+  score: "Счёт\nсудья стола либо сами игроки\nс подтверждением соперника (§6)" { class: service }
+  referee: "Регламент\nподача и смена сторон" { class: service }
+  analytics: "Аналитика игрока\nбесплатная и платная (§11)" { class: service }
+}
+
+# ── 4. ДВИЖОК И РАСЧЁТЫ ─────────────────────────────────────────────────────
+core: "4 · ДВИЖОК И РАСЧЁТЫ" {
+  style.fill: "#f0fdf4"
+  style.stroke: "#86efac"
+
+  engine: "ДВИЖОК ТУРНИРОВ И КОНСТРУКТОР СЕТОК\nПЕРЕИСПОЛЬЗУЕТСЯ: внутри ничего не переписываем" { class: engine }
+  rating: "РАСЧЁТ РЕЙТИНГА\nметодика не определена — блокер (Q 5.1)\nидут все три категории турниров (§4.1)" {
+    style: { fill: "#fffbeb"; stroke: "#f59e0b"; stroke-width: 3 }
+  }
+}
+
+# ── 5. РЕАЛЬНОЕ ВРЕМЯ ───────────────────────────────────────────────────────
+rt: "5 · РЕАЛЬНОЕ ВРЕМЯ И УВЕДОМЛЕНИЯ" {
+  style.fill: "#fdfaff"
+  style.stroke: "#ddd6fe"
+
+  live: "Счёт в реальном времени\nпо очкам, много столов\nтранспорт не выбран" { class: live }
+  broadcast: "Трансляция на YouTube\nсчёт поверх видео со столов,\nбез оператора (§6.3)" { class: live }
+  notify: "Push-уведомления\nсемь событий процесса (§10.1)\nканал для веба — вопрос (Q 11.1)" { class: service }
+}
+
+# ── 6. ДАННЫЕ ───────────────────────────────────────────────────────────────
+storage: "6 · ДАННЫЕ" {
   style.fill: "#f0fdfa"
   style.stroke: "#5eead4"
-  pg: PostgreSQL {class: data}
-  audit: "Аудит счёта\nнеизменяемый" {class: audit}
+
+  pg: "PostgreSQL" { class: data }
+  audit: "Аудит счёта\nнеизменяемый, с автором и временем" { class: audit }
 }
 
-clients.tablet -> gw
-clients.phone -> gw
-clients.desktop -> gw
-clients.guest -> gw: публичное чтение {class: loop}
+# ── СВЯЗИ МЕЖДУ СЛОЯМИ ──────────────────────────────────────────────────────
+clients.tablet -> entry.gw
+clients.phone -> entry.gw
+clients.desktop -> entry.gw
+clients.guest -> entry.gw: публичное чтение { class: loop }
 
-gw -> auth: вход
-gw -> rbac: проверка прав {style.stroke: "#f59e0b"; style.stroke-width: 3}
-
-rbac -> apps.tournaments
-rbac -> apps.applications
-rbac -> apps.fees
-rbac -> apps.score
-rbac -> apps.referee
-rbac -> apps.analytics
+entry.rbac -> apps.tournaments
+entry.rbac -> apps.applications
+entry.rbac -> apps.fees
+entry.rbac -> apps.score
+entry.rbac -> apps.referee
+entry.rbac -> apps.analytics
 
 apps.applications -> apps.fees: проверка взноса, если турнир требует
-apps.tournaments -> engine: генерация сетки
-apps.score -> engine: партия сыграна
-apps.score -> live: событие счёта
-apps.score -> broadcast: счёт для наложения
-apps.score -> storage.audit: каждая правка {style.stroke: "#ef4444"; style.stroke-width: 2}
-apps.referee -> storage.audit: события матча {style.stroke: "#ef4444"}
+apps.tournaments -> core.engine: генерация сетки
+apps.score -> core.engine: партия сыграна
+core.engine -> core.rating: итоги турнира
 
-engine -> rating: итоги турнира
-engine -> notify: матч готов
+apps.score -> rt.live: событие счёта
+apps.score -> rt.broadcast: счёт для наложения
+core.engine -> rt.notify: матч готов
 
-auth -> storage.pg
-apps -> storage.pg: чтение и запись
-engine -> storage.pg: матчи, партии, сетка
-rating -> storage.pg: рейтинги в историю
-notify -> storage.pg
-live -> storage.pg: читает состояние
+apps.score -> storage.audit: каждая правка { style.stroke: "#ef4444"; style.stroke-width: 2 }
+apps.referee -> storage.audit: события матча { style.stroke: "#ef4444" }
+entry.auth -> storage.pg
+apps.analytics -> storage.pg: чтение и запись
+core.rating -> storage.pg: рейтинги в историю
+rt.notify -> storage.pg
