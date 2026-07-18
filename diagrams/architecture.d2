@@ -289,7 +289,12 @@ storage: "6 · ДАННЫЕ" {
 
     score_log: SCORE_LOG {
       shape: sql_table
-      class: audit
+      # Не class: audit. У sql_table d2 красит ШАПКУ цветом fill, а ТЕЛО строк —
+      # цветом stroke, то есть наоборот по сравнению с обычным узлом. С классом
+      # audit (fill светлый, stroke насыщенный) строки заливались #ef4444 и текст
+      # в них не читался. Здесь цвета заданы под эту особенность: насыщенная
+      # шапка, светлые строки. Сам класс в теме не трогаем — он для цилиндров.
+      style: { fill: "#ef4444"; stroke: "#fee2e2"; stroke-width: 2 }
       id: uuid {constraint: primary_key}
       match_id: uuid {constraint: foreign_key}
       author_id: uuid {constraint: foreign_key}
