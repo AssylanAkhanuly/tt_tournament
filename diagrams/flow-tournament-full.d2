@@ -81,31 +81,46 @@ zayavki: "4 · ЗАЯВКИ ИГРОКОВ" {
   style.stroke: "#86efac"
 
   published: "Турнир опубликован\nвиден публично, открыт приём заявок" { class: good }
+  kind: "Категория турнира?" { class: decide }
+
+  # Лига и любительский: записался — и всё. Обставлять клубный турнир
+  # документами значит закрыть систему для тех, ради кого она делается (§8.1).
+  signup: "Игрок записывается сам\nбез документов, без рассмотрения" { class: good }
+  coachSignup: "Тренер записывает своих игроков" { class: step }
+
   who: "Кто подаёт?\nзависит от уровня турнира" { class: decide }
   self: "Игрок сам\nоткрытый городской" { class: step }
   coach: "Тренер: список игроков\nодна заявка на весь список" { class: step }
   rep: "Представитель федерации\nреспубликанский" { class: step }
   docs: "Прикладывает документы" { class: step }
-  vznos: "Взнос за год оплачен?" { class: decide }
-  noVznos: "Заявка не проходит\nсостояние взноса видно тренеру заранее" { class: block }
   review: "Главный судья рассматривает" { class: decide }
   reject: "Отказ с причиной\nправит и подаёт снова, пока приём открыт" { class: block }
+
+  vznos: "Взнос за год оплачен?" { class: decide }
+  noVznos: "Не проходит\nсостояние взноса видно заранее" { class: block }
   entry: "Игрок в списке участников" { class: good }
 
-  published -> who
+  published -> kind
+  kind -> signup: лига · любительский
+  kind -> coachSignup: лига · любительский
+  kind -> who: республиканский · городской
+
   who -> self
   who -> coach
   who -> rep
   self -> docs
   coach -> docs
   rep -> docs
-  docs -> vznos
-  vznos -> noVznos: нет { class: back }
-  noVznos -> docs { class: back }
-  vznos -> review: да
+  docs -> review
   review -> reject: отклонена { class: back }
   reject -> docs { class: back }
-  review -> entry: принята
+  review -> vznos: принята
+
+  signup -> vznos
+  coachSignup -> vznos
+  vznos -> noVznos: нет { class: back }
+  noVznos -> published { class: back }
+  vznos -> entry: да
 }
 
 # ── 5. ЗАПУСК ───────────────────────────────────────────────────────────────
