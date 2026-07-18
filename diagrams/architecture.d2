@@ -87,19 +87,28 @@ rt: "5 · РЕАЛЬНОЕ ВРЕМЯ И УВЕДОМЛЕНИЯ" {
 }
 
 # ── 6. ДАННЫЕ ───────────────────────────────────────────────────────────────
-# Доменная модель лежит прямо здесь, внутри PostgreSQL, а не отдельной схемой:
-# так видно, что именно хранится за словом «данные».
+# Таблицы лежат прямо здесь, внутри PostgreSQL: видно, что именно хранится за
+# словом «данные». А вот СВЯЗЕЙ между ними здесь нет, и это не забывчивость.
+# Пробовал с ними: два десятка внешних ключей внутри вложенного контейнера
+# elk растягивает через всё полотно, схема стала 6778×8121 и превратилась в
+# паутину. Связи живут на отдельной схеме доменной модели, она под это сделана.
 #
 # Отдельного узла «Аудит счёта» больше нет: это таблица SCORE_LOG, она внутри
-# модели и подсвечена красным. Два узла об одном и том же расходились бы.
+# и подсвечена красным. Два узла об одном и том же расходились бы.
 #
-# Тело модели вставляется из domain.d2 скриптом sync-domain.py — правим только
+# Тело вставляется из domain.d2 скриптом sync-domain.py — правим только
 # domain.d2, иначе две копии модели разъедутся.
 storage: "6 · ДАННЫЕ" {
   style.fill: "#f0fdfa"
   style.stroke: "#5eead4"
 
-  pg: "PostgreSQL · доменная модель" {
+  # grid-columns здесь можно и нужно: контейнер вложенный, на direction корня
+  # он не влияет (в отличие от слоёв верхнего уровня — см. шапку файла).
+  # Без сетки elk раскладывает таблицы по логике внешней схемы и они
+  # расползаются по всей ширине.
+  pg: "PostgreSQL · что лежит в базе\nсвязи между таблицами — на схеме доменной модели" {
+    grid-columns: 4
+    grid-gap: 40
     style.fill: "#ffffff"
     style.stroke: "#06b6d4"
     style.stroke-width: 3
@@ -301,35 +310,6 @@ storage: "6 · ДАННЫЕ" {
       change: "int — например +24"
       at: datetime
     }
-
-    user.id -> role.user_id: имеет
-    user.club_id -> club.id
-    club.id -> application.club_id: подаёт
-    user.id -> application.submitted_by: автор
-    tournament.id -> application.tournament_id: получает
-    tournament.id -> referee_application.tournament_id: конкурс судейства
-    user.id -> referee_application.user_id: судья подаёт
-    user.id -> fee.user_id: годовой взнос
-    user.id -> fee.marked_by: бухгалтер отмечает
-    application.id -> application_item.application_id: список игроков
-    user.id -> application_item.user_id: заявлен
-    application_item.id -> entry.id: принята — создаёт сторону
-
-    tournament.id -> table_.tournament_id
-    tournament.id -> entry.tournament_id: составы и посев
-    tournament.id -> match.tournament_id
-    user.id -> entry.player1_id: игрок стороны
-    user.id -> table_.referee_id: судья стола
-    entry.id -> match.side_a_id: сторона матча
-    table_.id -> match.table_id: проводит
-
-    match.id -> game.match_id: партии
-    game.id -> rally.game_id: розыгрыши
-    match.id -> match_event.match_id
-    match.id -> score_log.match_id
-    user.id -> score_log.author_id: автор правки
-    user.id -> rating_point.user_id
-    tournament.id -> rating_point.tournament_id
   }
 }
 
@@ -356,8 +336,8 @@ apps.score -> rt.live: событие счёта
 apps.score -> rt.broadcast: счёт для наложения
 core.engine -> rt.notify: матч готов
 
-apps.score -> storage.audit: каждая правка { style.stroke: "#ef4444"; style.stroke-width: 2 }
-apps.referee -> storage.audit: события матча { style.stroke: "#ef4444" }
+apps.score -> storage.pg.score_log: каждая правка { style.stroke: "#ef4444"; style.stroke-width: 2 }
+apps.referee -> storage.pg.match_event: события матча { style.stroke: "#ef4444" }
 entry.auth -> storage.pg
 apps.analytics -> storage.pg: чтение и запись
 core.rating -> storage.pg: рейтинги в историю
