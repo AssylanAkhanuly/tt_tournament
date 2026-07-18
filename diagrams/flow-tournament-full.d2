@@ -18,6 +18,7 @@ direction: down
 #   * блокировка старта без судьи на столе — если судьи нужны (§4.2)
 #   * два разных хода игры: со судьёй стола (§6) и без него, где счёт ведут
 #     сами игроки — и открытые вопросы второго сценария
+#   * push-уведомления в шести местах процесса (§10.1)
 #   * обрыв связи у судьи стола (§12)
 
 # ── 1. ЗАВЕДЕНИЕ ────────────────────────────────────────────────────────────
@@ -49,12 +50,14 @@ sudeystvo: "2 · РАСПРЕДЕЛЕНИЕ СУДЕЙСТВА · только �
   pick: "Коллегия выбирает\nвидны оценка, категория, история" { class: step }
   refuse: "Отказ с причиной\nможно подать снова, пока приём открыт" { class: block }
   assigned: "Главный судья турнира назначен" { class: good }
+  pushRef: "PUSH судье\nрешение по заявке на судейство" { class: push }
 
   openRef -> apply
   apply -> pick
   pick -> refuse: не выбран { class: back }
   refuse -> apply { class: back }
   pick -> assigned: выбран
+  pick -> pushRef { class: loop }
 }
 
 # ── 3. СИСТЕМА ПРОВЕДЕНИЯ ───────────────────────────────────────────────────
@@ -70,6 +73,7 @@ sistema: "3 · СИСТЕМА ПРОВЕДЕНИЯ" {
   submit: "Отправляет на утверждение" { class: step }
   gate: "Коллегия утвердила?" { class: decide }
   rework: "Возврат с причиной\nбез утверждения турнир не публикуется" { class: block }
+  pushOrg: "PUSH главному судье\nсистема утверждена или возвращена" { class: push }
 
   hint -> format: рекомендация
   format -> discipline
@@ -77,6 +81,7 @@ sistema: "3 · СИСТЕМА ПРОВЕДЕНИЯ" {
   schedule -> tableRef
   tableRef -> submit
   submit -> gate
+  gate -> pushOrg { class: loop }
   gate -> rework: нет { class: back }
   rework -> format { class: back }
 }
@@ -105,6 +110,7 @@ zayavki: "4 · ЗАЯВКИ ИГРОКОВ" {
   vznos: "Взнос за год оплачен?" { class: decide }
   noVznos: "Не проходит\nсостояние взноса видно заранее" { class: block }
   entry: "Игрок в списке участников" { class: good }
+  pushApp: "PUSH заявителю\nзаявка принята или отклонена" { class: push }
 
   published -> kind
   kind -> signup: лига · любительский
@@ -116,6 +122,7 @@ zayavki: "4 · ЗАЯВКИ ИГРОКОВ" {
   self -> docs
   coach -> docs
   docs -> review
+  review -> pushApp { class: loop }
   review -> reject: отклонена { class: back }
   reject -> docs { class: back }
   review -> needVznos: принята
@@ -167,8 +174,10 @@ igraRef: "6А · ИГРА · счёт ведёт судья стола" {
   offline: "Обрыв связи\nсудья продолжает локально, потом синхронизация" { class: block }
   fix: "Правка счёта\nкаждая пишется в журнал с автором" { class: block }
   doneRef: "Судья подтверждает результат\nуходит главному судье и в базу" { class: good }
+  pushCall: "PUSH игрокам\nвас вызвали на стол" { class: push }
 
   call -> mode
+  call -> pushCall { class: loop }
   mode -> byGame: по умолчанию
   mode -> byPoint: live включён на крупный турнир
   byPoint -> live
@@ -188,6 +197,7 @@ igraSelf: "6Б · ИГРА · счёт ведут сами игроки" {
   pair: "Главный судья турнира вызывает пару на стол" { class: step }
   p1: "Игрок 1 вводит счёт" { class: step }
   p2: "Игрок 2 подтверждает?" { class: decide }
+  pushConfirm: "PUSH игроку 2\nподтвердите счёт" { class: push }
   dispute: "Не подтверждает\nспор решает главный судья турнира" { class: block }
   doneSelf: "Результат матча зафиксирован" { class: good }
 
@@ -197,6 +207,7 @@ igraSelf: "6Б · ИГРА · счёт ведут сами игроки" {
   openQ: "ОТКРЫТЫЙ ВОПРОС (QUESTIONS 10.1)\nкто назначает главного судью на лигах\nи любительских: конкурса судей там нет" { class: muted }
 
   pair -> p1
+  p1 -> pushConfirm { class: loop }
   p1 -> p2
   p2 -> dispute: нет { class: back }
   dispute -> doneSelf: решение судьи
@@ -227,6 +238,7 @@ finish: "8 · ЗАВЕРШЕНИЕ И РЕЙТИНГ" {
     style: { fill: "#fffbeb"; stroke: "#f59e0b"; stroke-width: 2 }
   }
   print: "Печать протоколов\nитоговый и по каждому матчу" { class: step }
+  pushRes: "PUSH игроку\nрезультат и новый рейтинг" { class: push }
   player: "Игрок видит результат,\nновый рейтинг и аналитику" { class: good }
 
   close -> gateRes
@@ -234,6 +246,7 @@ finish: "8 · ЗАВЕРШЕНИЕ И РЕЙТИНГ" {
   back -> close { class: back }
   gateRes -> rating: да
   rating -> player
+  rating -> pushRes { class: loop }
   rating -> print
 }
 
@@ -251,6 +264,7 @@ whoScores -> igraSelf.pair: судей нет · лига, любительск�
 
 igraRef.doneRef -> setka.advance { class: liveEdge }
 igraSelf.doneSelf -> setka.advance { class: liveEdge }
-setka.more -> igraRef.call: да, следующий матч { class: loop }
-setka.more -> igraSelf.pair: да, следующий матч { class: loop }
+# Петля возвращается в развилку, а не в каждый контейнер по отдельности.
+# Так 6А и 6Б остаются на одном ранге и встают рядом, а не лесенкой.
+setka.more -> whoScores: да, следующий матч { class: loop }
 setka.more -> finish.close: матчей больше нет { class: liveEdge }
