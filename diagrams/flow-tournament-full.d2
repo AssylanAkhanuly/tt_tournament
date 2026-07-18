@@ -185,14 +185,23 @@ igraSelf: "6Б · ИГРА · счёт ведут сами игроки" {
   style.fill: "#fdfaff"
   style.stroke: "#ddd6fe"
 
-  pair: "Пара выходит на стол по расписанию" { class: step }
-  selfScore: "Игроки сами вводят счёт" { class: step }
+  pair: "Главный судья турнира вызывает пару на стол" { class: step }
+  p1: "Игрок 1 вводит счёт" { class: step }
+  p2: "Игрок 2 подтверждает?" { class: decide }
+  dispute: "Не подтверждает\nспор решает главный судья турнира" { class: block }
   doneSelf: "Результат матча зафиксирован" { class: good }
-  openQ: "ОТКРЫТЫЕ ВОПРОСЫ (QUESTIONS 10)\nкто подтверждает счёт · кто правит ошибку\nкто вызывает пару, если судейства нет" { class: muted }
 
-  pair -> selfScore
-  selfScore -> doneSelf
-  selfScore -> openQ { class: loop }
+  # Главный судья здесь есть, но конкурс судей (блок 2) идёт только на
+  # республиканских, а коллегия в лигах не участвует (§4.1) — значит откуда
+  # он берётся, ещё не определено.
+  openQ: "ОТКРЫТЫЙ ВОПРОС (QUESTIONS 10.1)\nкто назначает главного судью на лигах\nи любительских: конкурса судей там нет" { class: muted }
+
+  pair -> p1
+  p1 -> p2
+  p2 -> dispute: нет { class: back }
+  dispute -> doneSelf: решение судьи
+  p2 -> doneSelf: да
+  pair -> openQ { class: loop }
 }
 
 # ── 7. ПРОДВИЖЕНИЕ ПО СЕТКЕ ─────────────────────────────────────────────────
@@ -230,8 +239,8 @@ finish: "8 · ЗАВЕРШЕНИЕ И РЕЙТИНГ" {
 
 # ── СКВОЗНЫЕ СВЯЗИ МЕЖДУ ЭТАПАМИ ────────────────────────────────────────────
 zavedenie.resp -> sudeystvo.openRef: конкурс судей { class: liveEdge }
-zavedenie.league -> zayavki.published: без судейства и утверждений { class: loop }
-zavedenie.amateur -> zayavki.published: без судейства и утверждений { class: loop }
+zavedenie.league -> zayavki.published: без конкурса судей и утверждений { class: loop }
+zavedenie.amateur -> zayavki.published: без конкурса судей и утверждений { class: loop }
 
 sudeystvo.assigned -> sistema.hint: судья приступает { class: liveEdge }
 sistema.gate -> zayavki.published: утверждено { class: liveEdge }
