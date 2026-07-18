@@ -10,11 +10,12 @@ direction: down
 # схему.
 #
 # Что показано помимо счастливого пути:
-#   * развилка по категории турнира (§4.1) — республиканский идёт длиннее
+#   * три категории турнира (§4.1) и настройки, которые их переопределяют (§4.2)
 #   * все возвраты: отказ по заявке судьи, по системе проведения, по заявке
 #     игрока, по итоговому протоколу
-#   * проверка регистрационного взноса (§9.2)
-#   * блокировка старта без судьи на столе — только для республиканских (§4.5)
+#   * запись без документов на лигу и любительский (§8.1)
+#   * проверка взноса — только если турнир её требует (§9.2)
+#   * блокировка старта без судьи на столе — если судьи нужны (§4.2)
 #   * два режима ввода счёта и трансляция (§6)
 #   * обрыв связи у судьи стола (§12)
 
@@ -23,14 +24,18 @@ zavedenie: "1 · ЗАВЕДЕНИЕ ТУРНИРА" {
   style.fill: "#f8faff"
   style.stroke: "#93c5fd"
 
-  create: "Коллегия заводит турнир\nназвание · уровень · город · окно дат" { class: step }
+  create: "Заводит турнир\nназвание · уровень · город · окно дат" { class: step }
+  settings: "НАСТРОЙКИ ТУРНИРА\nсудьи на столах · взнос · документы · утверждения\nкатегория задаёт умолчания, но всё правится (§4.2)" { class: rbac }
   category: "Категория турнира?" { class: decide }
-  resp: "РЕСПУБЛИКАНСКИЙ\nсудьи на столах, коллегия участвует" { class: rbac }
-  amateur: "ЛИГА или ЛЮБИТЕЛЬСКИЙ\nбез судей на столах, без коллегии" { class: good }
+  resp: "РЕСПУБЛИКАНСКИЙ\nсудьи, взнос, документы, утверждения" { class: rbac }
+  league: "ЛИГА\nвзнос нужен, без судей и документов" { class: step }
+  amateur: "ЛЮБИТЕЛЬСКИЙ\nвход свободный: ни взноса, ни документов" { class: good }
 
-  create -> category
+  create -> settings
+  settings -> category
   category -> resp: республиканский
-  category -> amateur: лига · любительский
+  category -> league: лига
+  category -> amateur: любительский
 }
 
 # ── 2. СУДЕЙСТВО ────────────────────────────────────────────────────────────
@@ -96,6 +101,7 @@ zayavki: "4 · ЗАЯВКИ ИГРОКОВ" {
   review: "Главный судья рассматривает" { class: decide }
   reject: "Отказ с причиной\nправит и подаёт снова, пока приём открыт" { class: block }
 
+  needVznos: "Турнир требует взноса?\nнастройка турнира (§4.2)" { class: decide }
   vznos: "Взнос за год оплачен?" { class: decide }
   noVznos: "Не проходит\nсостояние взноса видно заранее" { class: block }
   entry: "Игрок в списке участников" { class: good }
@@ -114,12 +120,14 @@ zayavki: "4 · ЗАЯВКИ ИГРОКОВ" {
   docs -> review
   review -> reject: отклонена { class: back }
   reject -> docs { class: back }
-  review -> vznos: принята
+  review -> needVznos: принята
 
-  signup -> vznos
-  coachSignup -> vznos
+  signup -> needVznos
+  coachSignup -> needVznos
   vznos -> noVznos: нет { class: back }
   noVznos -> published { class: back }
+  needVznos -> vznos: да
+  needVznos -> entry: нет · любительский
   vznos -> entry: да
 }
 
@@ -130,7 +138,7 @@ zapusk: "5 · ЗАПУСК" {
 
   seed: "Посев или жеребьёвка\nпара сеётся по среднему рейтингу" { class: step }
   refGate: "У каждого стола есть судья?" { class: decide }
-  blocked: "Старт заблокирован\nтолько на республиканских (§4.5)" { class: block }
+  blocked: "Старт заблокирован\nесли турнир требует судей на столах (§4.2)" { class: block }
   start: "Турнир запущен" { class: step }
   engine: "ДВИЖОК: генерирует сетку\nи распределяет матчи по столам" { class: engine }
 
@@ -195,7 +203,8 @@ finish: "7 · ЗАВЕРШЕНИЕ И РЕЙТИНГ" {
 
 # ── СКВОЗНЫЕ СВЯЗИ МЕЖДУ ЭТАПАМИ ────────────────────────────────────────────
 zavedenie.resp -> sudeystvo.openRef: конкурс судей { class: liveEdge }
-zavedenie.amateur -> zayavki.published: без судейства и утверждений (§4.1) { class: loop }
+zavedenie.league -> zayavki.published: без судейства и утверждений { class: loop }
+zavedenie.amateur -> zayavki.published: без судейства и утверждений { class: loop }
 
 sudeystvo.assigned -> sistema.hint: судья приступает { class: liveEdge }
 sistema.gate -> zayavki.published: утверждено { class: liveEdge }
