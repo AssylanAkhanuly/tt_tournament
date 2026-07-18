@@ -10,7 +10,6 @@ create: "Заводит турнир\nназвание · уровень · го
 openRef: Открывает приём заявок судей { class: step }
 inbox: "Заявки судей\nрейтинг · категория · история" { class: step }
 pick: Выбирает судью { class: step }
-direct: "Назначает напрямую\nмалый турнир, без конкурса" { class: step }
 gateOrg: "Система проведения утверждена?" { class: decide }
 rework: "Возврат с причиной\nтурнир не публикуется" { class: block }
 publish: "Утверждает — турнир опубликован" { class: good }
@@ -22,9 +21,7 @@ login -> create
 create -> openRef
 openRef -> inbox
 inbox -> pick
-create -> direct: малый турнир { class: loop }
 pick -> gateOrg
-direct -> gateOrg
 gateOrg -> rework: нет { class: back }
 rework -> gateOrg { class: back }
 gateOrg -> publish: да

@@ -42,7 +42,6 @@ sudeystvo: "2 · РАСПРЕДЕЛЕНИЕ СУДЕЙСТВА · только �
   apply: "Судья подаёт заявку" { class: step }
   pick: "Коллегия выбирает\nвидны оценка, категория, история" { class: step }
   refuse: "Отказ с причиной\nможно подать снова, пока приём открыт" { class: block }
-  direct: "Назначение напрямую\nмалый турнир, без конкурса" { class: step }
   assigned: "Главный судья турнира назначен" { class: good }
 
   openRef -> apply
@@ -50,7 +49,6 @@ sudeystvo: "2 · РАСПРЕДЕЛЕНИЕ СУДЕЙСТВА · только �
   pick -> refuse: не выбран { class: back }
   refuse -> apply { class: back }
   pick -> assigned: выбран
-  direct -> assigned
 }
 
 # ── 3. СИСТЕМА ПРОВЕДЕНИЯ ───────────────────────────────────────────────────
@@ -182,7 +180,6 @@ finish: "7 · ЗАВЕРШЕНИЕ И РЕЙТИНГ" {
 
 # ── СКВОЗНЫЕ СВЯЗИ МЕЖДУ ЭТАПАМИ ────────────────────────────────────────────
 zavedenie.resp -> sudeystvo.openRef: конкурс судей { class: liveEdge }
-zavedenie.resp -> sudeystvo.direct: малый турнир { class: loop }
 zavedenie.amateur -> zayavki.published: без судейства и утверждений (§4.1) { class: loop }
 
 sudeystvo.assigned -> sistema.hint: судья приступает { class: liveEdge }

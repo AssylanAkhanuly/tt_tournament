@@ -15,7 +15,6 @@ create: "ПСК: заводит турнир\nназвание · уровень
 openRef: Приём заявок судей { class: step }
 refApply: "Судья: заявка на судейство" { class: step }
 pickRef: "ПСК: выбирает судью\nрейтинг · категория · история" { class: step }
-direct: "ПСК: назначает напрямую\nмалый турнир, без конкурса" { class: step }
 
 organize: "ГС: выбирает систему проведения\nформат · дисциплина · расписание · столы" { class: step }
 gateOrg: "ПСК: система проведения утверждена?" { class: decide }
@@ -52,9 +51,7 @@ result: "Игрок видит результат и новую аналитик
 create -> openRef
 openRef -> refApply
 refApply -> pickRef
-create -> direct: малый турнир { class: loop }
 pickRef -> organize
-direct -> organize
 
 organize -> gateOrg
 gateOrg -> rework: нет { class: back }
