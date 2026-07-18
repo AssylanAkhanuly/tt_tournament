@@ -41,19 +41,32 @@ zavedenie: "1 · ЗАВЕДЕНИЕ ТУРНИРА" {
 }
 
 # ── 2. СУДЕЙСТВО ────────────────────────────────────────────────────────────
-sudeystvo: "2 · РАСПРЕДЕЛЕНИЕ СУДЕЙСТВА · только республиканские" {
+sudeystvo: "2 · ЗАЯВКИ СУДЕЙ И НАЗНАЧЕНИЕ · только республиканские" {
   style.fill: "#fff7ed"
   style.stroke: "#fdba74"
 
-  openRef: "Коллегия открывает приём заявок судей" { class: step }
-  apply: "Судья подаёт заявку" { class: step }
-  pick: "Коллегия выбирает\nвидны оценка, категория, история" { class: step }
+  openRef: "Коллегия открывает приём заявок судей\nтурнир ещё не опубликован (§4.3)" { class: step }
+  list: "Судья видит турниры,\nоткрытые для заявок на судейство" { class: step }
+  apply: "Судья подаёт заявку на турнир" { class: step }
+  inbox: "Заявки в списке у коллегии\nвидны оценка, категория, история судейства" { class: step }
+  any: "Заявки поступили?" { class: decide }
+  none: "Заявок нет\nчто тогда — открытый вопрос (QUESTIONS 3.6)" { class: muted }
+  pick: "Коллегия выбирает одного" { class: decide }
   refuse: "Отказ с причиной\nможно подать снова, пока приём открыт" { class: block }
   assigned: "Главный судья турнира назначен" { class: good }
   pushRef: "PUSH судье\nрешение по заявке на судейство" { class: push }
 
-  openRef -> apply
-  apply -> pick
+  # §4.3 описывает этот процесс тремя предложениями. Всё, чего в них нет,
+  # помечено, а не додумано: см. QUESTIONS 3.
+  qApply: "ОТКРЫТЫЕ ВОПРОСЫ (QUESTIONS 3.1-3.3)\nкто вправе подать: категория, регион, уровень\nнужны ли документы · есть ли срок приёма" { class: muted }
+
+  openRef -> list
+  list -> apply
+  apply -> qApply { class: loop }
+  apply -> inbox
+  inbox -> any
+  any -> none: нет { class: back }
+  any -> pick: да
   pick -> refuse: не выбран { class: back }
   refuse -> apply { class: back }
   pick -> assigned: выбран

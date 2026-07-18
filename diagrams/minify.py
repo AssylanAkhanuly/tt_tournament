@@ -34,7 +34,52 @@ def num(v):
 
 
 def path(d):
-    return re.sub(r"-?\d+\.\d+", lambda m: str(round(float(m.group()))), d)
+    """Округляет координаты и схлопывает прямые пробеги.
+
+    Длинная сквозная стрелка через всю схему приходит из d2 как три десятка
+    кубических сегментов подряд, у которых все контрольные точки лежат на
+    одной вертикали. Геометрически это отрезок, а places в JSON занимает
+    больше килобайта. Такие пробеги сливаются в одно L.
+    """
+    d = re.sub(r"-?\d+\.\d+", lambda m: str(round(float(m.group()))), d)
+
+    tokens = re.findall(r"[MLCZ]|-?\d+", d)
+    out, i = [], 0
+    cur = None
+    while i < len(tokens):
+        t = tokens[i]
+        if t == "M":
+            cur = (int(tokens[i + 1]), int(tokens[i + 2]))
+            out.append(f"M {cur[0]} {cur[1]}")
+            i += 3
+        elif t == "C":
+            # собрать максимальный прямой пробег из подряд идущих C
+            run_end, straight = cur, False
+            j = i
+            while j < len(tokens) and tokens[j] == "C":
+                pts = [(int(tokens[j + 1 + 2 * k]), int(tokens[j + 2 + 2 * k])) for k in range(3)]
+                same_x = all(p[0] == run_end[0] for p in pts)
+                same_y = all(p[1] == run_end[1] for p in pts)
+                if not (same_x or same_y):
+                    break
+                run_end, straight, j = pts[2], True, j + 7
+            if straight:
+                out.append(f"L {run_end[0]} {run_end[1]}")
+                cur, i = run_end, j
+            else:
+                pts = [(int(tokens[i + 1 + 2 * k]), int(tokens[i + 2 + 2 * k])) for k in range(3)]
+                out.append("C " + " ".join(f"{x} {y}" for x, y in pts))
+                cur, i = pts[2], i + 7
+        elif t == "L":
+            cur = (int(tokens[i + 1]), int(tokens[i + 2]))
+            out.append(f"L {cur[0]} {cur[1]}")
+            i += 3
+        elif t == "Z":
+            out.append("Z")
+            i += 1
+        else:
+            i += 1
+    return " ".join(out)
 
 
 def label(l):
