@@ -24,8 +24,8 @@ clients: Клиенты {
       }
     }
   }
-  phone: "Игрок\nсайт и приложение iOS/Android" {class: client}
-  desktop: "Десктоп\nадминистратор, коллегия, главный судья, тренер" {class: client}
+  phone: "Игрок\nсайт и приложение iOS/Android\nна лигах сам вводит счёт" {class: client}
+  desktop: "Десктоп\nадминистратор · федерация · коллегия\nглавный судья · тренер · бухгалтер" {class: client}
   guest: Гость {class: muted}
 }
 
@@ -39,21 +39,24 @@ apps: Прикладные сервисы {
   style.fill: "#fdfaff"
   style.stroke: "#ddd6fe"
 
-  tournaments: Турниры и столы {class: service}
-  applications: Заявки {class: service}
-  score: "Счёт\nрозыгрыши и партии" {class: service}
+  tournaments: "Турниры, столы и настройки\nкатегория задаёт умолчания, но всё правится" {class: service}
+  applications: "Заявки\nсудей на турнир · судей на столы · игроков" {class: service}
+  fees: "Взносы\nгодовой взнос, отметка бухгалтера" {class: service}
+  score: "Счёт\nведёт судья стола или сами игроки" {class: service}
   referee: "Регламент\nподача и смена сторон" {class: service}
   analytics: "Аналитика игрока\nбесплатная и платная" {class: service}
 }
 
 engine: "Движок турниров и конструктор сеток\nПЕРЕИСПОЛЬЗУЕТСЯ" {class: engine}
-# Рейтинг считается по ЗАЛОЖЕННОЙ методике (ELO), единой для всех турниров.
-rating: "Расчёт рейтинга\nзаложенная методика · ELO" {
+# Методика рейтинга НЕ ОПРЕДЕЛЕНА: ТЗ §7.1 ссылается на Приложение А, которого
+# не существует. Раньше здесь стояло "ELO с фиксированными коэффициентами" —
+# это было наше предположение, а не решение федерации (QUESTIONS 5.1).
+rating: "РАСЧЁТ РЕЙТИНГА\nметодика не определена — блокер (QUESTIONS 5.1)" {
   style: {fill: "#fffbeb"; stroke: "#f59e0b"; stroke-width: 2}
 }
 # кормится движком, поэтому стоит справа от него, а не в прикладных сервисах —
 # иначе получается обратное ребро и длинный крюк через всю схему
-notify: Уведомления {class: service}
+notify: "Push-уведомления\nсемь событий процесса (§10.1)\nканал для веба открыт (QUESTIONS 11.1)" {class: service}
 live: "Счёт в реальном времени\nпо очкам, много столов" {class: live}
 # Трансляция столов на YouTube: счёт накладывается на видео автоматически
 # из ввода судьи (TZ §6.3), без оператора.
@@ -77,10 +80,12 @@ gw -> rbac: проверка прав {style.stroke: "#f59e0b"; style.stroke-wid
 
 rbac -> apps.tournaments
 rbac -> apps.applications
+rbac -> apps.fees
 rbac -> apps.score
 rbac -> apps.referee
 rbac -> apps.analytics
 
+apps.applications -> apps.fees: проверка взноса, если турнир требует
 apps.tournaments -> engine: генерация сетки
 apps.score -> engine: партия сыграна
 apps.score -> live: событие счёта
