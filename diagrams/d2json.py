@@ -101,7 +101,17 @@ def _texts(g, ox, oy):
         chars = html.unescape("\n".join(p for p in parts if p.strip()).strip())
         if not chars:
             continue
-        size = re.search(r"font-size:(\d+)", t.get("style") or "")
+        style = t.get("style") or ""
+        size = re.search(r"font-size:(\d+)", style)
+
+        # Выравнивание обязательно тащить с собой. У обычных подписей оно
+        # middle и x — центр, а внутри sql_table строки идут start (x — левый
+        # край), а маркеры PK/FK — end (x — правый край). Без этого поля всё
+        # содержимое таблиц уезжает влево на половину ширины, а PK/FK вылезают
+        # за рамку. Проверено на живой схеме.
+        anchor = re.search(r"text-anchor:(\w+)", style)
+        anchor = anchor.group(1) if anchor else "middle"
+
         out.append({
             "t": chars,
             "x": _f(t, "x") + ox,
@@ -109,6 +119,7 @@ def _texts(g, ox, oy):
             "size": int(size.group(1)) if size else 14,
             "fill": t.get("fill") or "#0A0F25",
             "bold": "text-bold" in (t.get("class") or ""),
+            "anchor": anchor,
         })
     return out
 

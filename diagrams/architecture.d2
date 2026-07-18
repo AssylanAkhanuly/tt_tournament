@@ -341,8 +341,8 @@ apps.score -> rt.live: событие счёта
 apps.score -> rt.broadcast: счёт для наложения
 core.engine -> rt.notify: матч готов
 
-apps.score -> storage.pg.score_log: каждая правка { style.stroke: "#ef4444"; style.stroke-width: 2 }
-apps.referee -> storage.pg.match_event: события матча { style.stroke: "#ef4444" }
+apps.score -> storage.pg: каждая правка в SCORE_LOG { style.stroke: "#ef4444"; style.stroke-width: 2 }
+apps.referee -> storage.pg: события матча в MATCH_EVENT { style.stroke: "#ef4444" }
 entry.auth -> storage.pg
 apps.analytics -> storage.pg: чтение и запись
 core.rating -> storage.pg: рейтинги в историю

@@ -22,7 +22,7 @@ OUT = Path(__file__).parent / "out"
 
 NODE = {"kind": "k", "fill": "f", "stroke": "s", "labels": "L", "rx": "r"}
 EDGE = {"stroke": "s", "dash": "z", "labels": "L"}
-LABEL = {"size": "z", "bold": "b"}
+LABEL = {"size": "z", "bold": "b", "anchor": "a"}
 
 # Цвет подписи один на всю схему и задан темой — в Penpot он выставляется
 # из builder-а, поэтому в min-файле не нужен.
@@ -87,6 +87,12 @@ def label(l):
     for k, v in l.items():
         if k in LABEL_DROP:
             continue
+        # middle — умолчание, его не пишем: подписей тысячи, а поле лишнее.
+        # Остаются s (левый край) и e (правый) из таблиц sql_table.
+        if k == "anchor":
+            if v == "middle":
+                continue
+            v = v[0]
         out[LABEL.get(k, k)] = int(v) if k == "bold" else num(v)
     return out
 
