@@ -16,7 +16,8 @@ direction: down
 #   * запись без документов на лигу и любительский (§8.1)
 #   * проверка взноса — только если турнир её требует (§9.2)
 #   * блокировка старта без судьи на столе — если судьи нужны (§4.2)
-#   * два режима ввода счёта и трансляция (§6)
+#   * два разных хода игры: со судьёй стола (§6) и без него, где счёт ведут
+#     сами игроки — и открытые вопросы второго сценария
 #   * обрыв связи у судьи стола (§12)
 
 # ── 1. ЗАВЕДЕНИЕ ────────────────────────────────────────────────────────────
@@ -147,37 +148,66 @@ zapusk: "5 · ЗАПУСК" {
 }
 
 # ── 6. ИГРА ─────────────────────────────────────────────────────────────────
-igra: "6 · ИГРА" {
+# Ход матча зависит от того, есть ли на турнире судьи столов. Это два разных
+# сценария, а не два режима одного: где судья есть, счёт ведёт и подтверждает
+# он; где судей нет (лига, любительский), счёт вводят сами игроки. Поэтому
+# отдельный флоу на каждый, а не общая развилка внутри одного блока.
+whoScores: "Кто ведёт счёт?\nсудьи на столах — настройка турнира (§4.2)" { class: decide }
+
+igraRef: "6А · ИГРА · счёт ведёт судья стола" {
   style.fill: "#fdfaff"
   style.stroke: "#ddd6fe"
 
-  call: "Главный судья вызывает пару на стол\nсудья получает уведомление мгновенно" { class: step }
+  call: "Главный судья вызывает пару на стол\nсудья стола получает уведомление мгновенно" { class: step }
   mode: "Режим ввода счёта?" { class: decide }
-  byGame: "По партиям\nитог матча — производная от партий" { class: step }
-  byPoint: "По очкам в реальном времени\nкрупные турниры, отмена последнего" { class: step }
+  byGame: "Ввод по партиям (§6.1)\nитог матча — производная от партий" { class: step }
+  byPoint: "Ввод по очкам в реальном времени (§6.2)\nотмена последнего очка" { class: step }
   live: "ПРЯМОЙ ЭФИР на сайте\nсчёт обновляется в реальном времени" { class: live }
   youtube: "YOUTUBE: видео со столов\nсчёт накладывается автоматически" { class: live }
   offline: "Обрыв связи\nсудья продолжает локально, потом синхронизация" { class: block }
   fix: "Правка счёта\nкаждая пишется в журнал с автором" { class: block }
+  doneRef: "Судья подтверждает результат\nуходит главному судье и в базу" { class: good }
+
+  call -> mode
+  mode -> byGame: по умолчанию
+  mode -> byPoint: live включён на крупный турнир
+  byPoint -> live
+  live -> youtube
+  byGame -> offline: сеть пропала { class: back }
+  offline -> byGame: сеть вернулась { class: back }
+  byGame -> doneRef
+  byPoint -> doneRef
+  doneRef -> fix: спорный счёт { class: back }
+  fix -> doneRef { class: back }
+}
+
+igraSelf: "6Б · ИГРА · счёт ведут сами игроки" {
+  style.fill: "#fdfaff"
+  style.stroke: "#ddd6fe"
+
+  pair: "Пара выходит на стол по расписанию" { class: step }
+  selfScore: "Игроки сами вводят счёт" { class: step }
+  doneSelf: "Результат матча зафиксирован" { class: good }
+  openQ: "ОТКРЫТЫЕ ВОПРОСЫ (QUESTIONS 10)\nкто подтверждает счёт · кто правит ошибку\nкто вызывает пару, если судейства нет" { class: muted }
+
+  pair -> selfScore
+  selfScore -> doneSelf
+  selfScore -> openQ { class: loop }
+}
+
+# ── 7. ПРОДВИЖЕНИЕ ПО СЕТКЕ ─────────────────────────────────────────────────
+setka: "7 · ПРОДВИЖЕНИЕ ПО СЕТКЕ" {
+  style.fill: "#f8faff"
+  style.stroke: "#93c5fd"
+
   advance: "ДВИЖОК: продвигает победителя\nсетка обновляется автоматически" { class: engine }
   more: "Остались матчи?" { class: decide }
 
-  call -> mode
-  mode -> byGame: обычный
-  mode -> byPoint: крупный турнир
-  byPoint -> live
-  live -> youtube
-  byGame -> advance
-  byPoint -> advance
-  byGame -> offline: сеть пропала { class: back }
-  offline -> byGame: сеть вернулась { class: back }
-  fix -> advance { class: back }
   advance -> more
-  more -> call: да { class: loop }
 }
 
-# ── 7. ЗАВЕРШЕНИЕ ───────────────────────────────────────────────────────────
-finish: "7 · ЗАВЕРШЕНИЕ И РЕЙТИНГ" {
+# ── 8. ЗАВЕРШЕНИЕ ───────────────────────────────────────────────────────────
+finish: "8 · ЗАВЕРШЕНИЕ И РЕЙТИНГ" {
   style.fill: "#fff7ed"
   style.stroke: "#fdba74"
 
@@ -206,6 +236,12 @@ zavedenie.amateur -> zayavki.published: без судейства и утвер�
 sudeystvo.assigned -> sistema.hint: судья приступает { class: liveEdge }
 sistema.gate -> zayavki.published: утверждено { class: liveEdge }
 zayavki.entry -> zapusk.seed: состав собран { class: liveEdge }
-zapusk.engine -> igra.call: матчи распределены { class: liveEdge }
-igra.more -> finish.close: нет { class: liveEdge }
-igra.advance -> igra.fix: спорный счёт { class: back }
+zapusk.engine -> whoScores: матчи распределены { class: liveEdge }
+whoScores -> igraRef.call: судьи на столах есть { class: liveEdge }
+whoScores -> igraSelf.pair: судей нет · лига, любительский { class: liveEdge }
+
+igraRef.doneRef -> setka.advance { class: liveEdge }
+igraSelf.doneSelf -> setka.advance { class: liveEdge }
+setka.more -> igraRef.call: да, следующий матч { class: loop }
+setka.more -> igraSelf.pair: да, следующий матч { class: loop }
+setka.more -> finish.close: матчей больше нет { class: liveEdge }
