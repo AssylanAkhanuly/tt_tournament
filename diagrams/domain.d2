@@ -1,4 +1,4 @@
-direction: right
+direction: down
 
 # Доменная модель. Ключевое:
 #   ROLE  — не флаг на пользователе, а связка «пользователь → роль → область»
@@ -30,7 +30,7 @@ role: ROLE {
   class: new
   id: uuid {constraint: primary_key}
   user_id: uuid {constraint: foreign_key}
-  kind: "администратор | председатель коллегии | главный судья турнира | судья стола | тренер | игрок"
+  kind: "девять ролей, см. ТЗ §2"
   scope: "система | турнир | клуб | стол"
   scope_id: uuid
 }
@@ -48,23 +48,48 @@ tournament: TOURNAMENT {
   class: core
   id: uuid {constraint: primary_key}
   name: string
-  level: "открытый | республиканский"
+  category: "республиканский | лига | любительский"
   city: string
-  format: "олимпийка | круговая | швейцарка | …"
+  format: "олимпийка | круговая | швейцарка"
   discipline: "одиночный | парный"
-  status: "черновик | заявки судей | судья назначен | система проведения на утверждении | заявки игроков | идёт | итоговый протокол на утверждении | завершён"
+  status: "девять состояний, см. ТЗ §4.3"
   games_to_win: int
   starts_at: datetime
+
+  needs_table_referees: "bool — настройка, не категория"
+  needs_fee: "bool — настройка, не категория"
+  needs_documents: "bool — настройка, не категория"
+  needs_approval: "bool — участвует ли коллегия"
 }
 
+# Одна таблица на оба конкурса: на главного судью и на судейство столов.
+# Различаются они тем, КТО рассматривает (коллегия либо главный судья) и
+# сколько человек берут — а не структурой заявки. Набор судей столов пока
+# наше допущение (QUESTIONS 12).
 referee_application: REFEREE_APPLICATION {
   shape: sql_table
   class: new
   id: uuid {constraint: primary_key}
   tournament_id: uuid {constraint: foreign_key}
   user_id: "uuid — судья-заявитель" {constraint: foreign_key}
+  kind: "главный судья | судья стола"
   status: "подана | принята | отклонена"
   reject_reason: string
+  decided_by: "uuid — коллегия или главный судья" {constraint: foreign_key}
+}
+
+# Годовой взнос. Отдельная сущность, а не флаг на игроке: у взноса свой год,
+# своя дата оплаты и свой автор отметки. Влияет ли он на допуск — открытый
+# вопрос (QUESTIONS 6.1), поэтому связи с ENTRY здесь намеренно нет.
+fee: MEMBERSHIP_FEE {
+  shape: sql_table
+  class: new
+  id: uuid {constraint: primary_key}
+  user_id: uuid {constraint: foreign_key}
+  year: "int — календарный или сезон, вопрос (Q 6.4)"
+  status: "оплачен | не оплачен | просрочен"
+  paid_at: datetime
+  marked_by: "uuid — бухгалтер" {constraint: foreign_key}
 }
 
 table_: TOURNAMENT_TABLE {
@@ -131,6 +156,13 @@ game: GAME {
   score1: int
   score2: int
   status: "идёт | завершена"
+
+  # Кто вводил счёт: судья стола либо сам игрок (§6.4). Во втором случае
+  # результат не считается принятым, пока соперник не подтвердил.
+  entered_by: uuid {constraint: foreign_key}
+  entry_source: "судья стола | игрок"
+  confirmed_by: "uuid — второй игрок, если счёт вводил игрок" {constraint: foreign_key}
+  confirmed_at: datetime
 }
 
 rally: RALLY {
@@ -173,7 +205,7 @@ rating_point: RATING_POINT {
   user_id: uuid {constraint: foreign_key}
   kind: "игрок | судья"
   tournament_id: uuid {constraint: foreign_key}
-  value: "int — по заложенной методике"
+  value: "int — методика не определена (Q 5.1)"
   change: "int — например +24"
   at: datetime
 }
@@ -185,6 +217,8 @@ user.id -> application.submitted_by: автор
 tournament.id -> application.tournament_id: получает
 tournament.id -> referee_application.tournament_id: конкурс судейства
 user.id -> referee_application.user_id: судья подаёт
+user.id -> fee.user_id: годовой взнос
+user.id -> fee.marked_by: бухгалтер отмечает
 application.id -> application_item.application_id: список игроков
 user.id -> application_item.user_id: заявлен
 application_item.id -> entry.id: принята — создаёт сторону
