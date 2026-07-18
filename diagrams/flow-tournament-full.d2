@@ -1,0 +1,193 @@
+...@_theme
+
+direction: down
+
+# ПОЛНЫЙ ХОД ТУРНИРА по ФНТ ТЗ v1.5 — одна связная схема.
+#
+# Разбивать её на отдельные схемы нельзя: теряется главное, то есть связь между
+# этапами. Поэтому здесь всё в одном полотне, а читаемость держится на
+# контейнерах: каждый этап — своя рамка, стрелки идут между рамками сквозь всю
+# схему.
+#
+# Что показано помимо счастливого пути:
+#   * развилка по категории турнира (§4.1) — республиканский идёт длиннее
+#   * все возвраты: отказ по заявке судьи, по системе проведения, по заявке
+#     игрока, по итоговому протоколу
+#   * проверка регистрационного взноса (§9.2)
+#   * блокировка старта без судьи на столе — только для республиканских (§4.5)
+#   * два режима ввода счёта и трансляция (§6)
+#   * обрыв связи у судьи стола (§12)
+
+# ── 1. ЗАВЕДЕНИЕ ────────────────────────────────────────────────────────────
+zavedenie: "1 · ЗАВЕДЕНИЕ ТУРНИРА" {
+  style.fill: "#f8faff"
+  style.stroke: "#93c5fd"
+
+  create: "Коллегия заводит турнир\nназвание · уровень · город · окно дат" { class: step }
+  category: "Категория турнира?" { class: decide }
+  resp: "РЕСПУБЛИКАНСКИЙ\nсудьи на столах, коллегия участвует" { class: rbac }
+  amateur: "ЛИГА или ЛЮБИТЕЛЬСКИЙ\nбез судей на столах, без коллегии" { class: good }
+
+  create -> category
+  category -> resp: республиканский
+  category -> amateur: лига · любительский
+}
+
+# ── 2. СУДЕЙСТВО ────────────────────────────────────────────────────────────
+sudeystvo: "2 · РАСПРЕДЕЛЕНИЕ СУДЕЙСТВА · только республиканские" {
+  style.fill: "#fff7ed"
+  style.stroke: "#fdba74"
+
+  openRef: "Коллегия открывает приём заявок судей" { class: step }
+  apply: "Судья подаёт заявку" { class: step }
+  pick: "Коллегия выбирает\nвидны оценка, категория, история" { class: step }
+  refuse: "Отказ с причиной\nможно подать снова, пока приём открыт" { class: block }
+  direct: "Назначение напрямую\nмалый турнир, без конкурса" { class: step }
+  assigned: "Главный судья турнира назначен" { class: good }
+
+  openRef -> apply
+  apply -> pick
+  pick -> refuse: не выбран { class: back }
+  refuse -> apply { class: back }
+  pick -> assigned: выбран
+  direct -> assigned
+}
+
+# ── 3. СИСТЕМА ПРОВЕДЕНИЯ ───────────────────────────────────────────────────
+sistema: "3 · СИСТЕМА ПРОВЕДЕНИЯ" {
+  style.fill: "#f8faff"
+  style.stroke: "#93c5fd"
+
+  hint: "ПОДСКАЗКА СИСТЕМЫ\nучастники · дни · часы · столы -> что укладывается" { class: engine }
+  format: "Формат сетки\nбиблиотека или конструктор" { class: step }
+  discipline: "Дисциплина и число партий\nодиночная или парная" { class: step }
+  schedule: "Расписание по дням и столам" { class: step }
+  tableRef: "Назначение судей столов\nи столов с трансляцией" { class: step }
+  submit: "Отправляет на утверждение" { class: step }
+  gate: "Коллегия утвердила?" { class: decide }
+  rework: "Возврат с причиной\nбез утверждения турнир не публикуется" { class: block }
+
+  hint -> format: рекомендация
+  format -> discipline
+  discipline -> schedule
+  schedule -> tableRef
+  tableRef -> submit
+  submit -> gate
+  gate -> rework: нет { class: back }
+  rework -> format { class: back }
+}
+
+# ── 4. ЗАЯВКИ ───────────────────────────────────────────────────────────────
+zayavki: "4 · ЗАЯВКИ ИГРОКОВ" {
+  style.fill: "#f0fdf4"
+  style.stroke: "#86efac"
+
+  published: "Турнир опубликован\nвиден публично, открыт приём заявок" { class: good }
+  who: "Кто подаёт?\nзависит от уровня турнира" { class: decide }
+  self: "Игрок сам\nоткрытый городской" { class: step }
+  coach: "Тренер: список игроков\nодна заявка на весь список" { class: step }
+  rep: "Представитель федерации\nреспубликанский" { class: step }
+  docs: "Прикладывает документы" { class: step }
+  vznos: "Взнос за год оплачен?" { class: decide }
+  noVznos: "Заявка не проходит\nсостояние взноса видно тренеру заранее" { class: block }
+  review: "Главный судья рассматривает" { class: decide }
+  reject: "Отказ с причиной\nправит и подаёт снова, пока приём открыт" { class: block }
+  entry: "Игрок в списке участников" { class: good }
+
+  published -> who
+  who -> self
+  who -> coach
+  who -> rep
+  self -> docs
+  coach -> docs
+  rep -> docs
+  docs -> vznos
+  vznos -> noVznos: нет { class: back }
+  noVznos -> docs { class: back }
+  vznos -> review: да
+  review -> reject: отклонена { class: back }
+  reject -> docs { class: back }
+  review -> entry: принята
+}
+
+# ── 5. ЗАПУСК ───────────────────────────────────────────────────────────────
+zapusk: "5 · ЗАПУСК" {
+  style.fill: "#f8faff"
+  style.stroke: "#93c5fd"
+
+  seed: "Посев или жеребьёвка\nпара сеётся по среднему рейтингу" { class: step }
+  refGate: "У каждого стола есть судья?" { class: decide }
+  blocked: "Старт заблокирован\nтолько на республиканских (§4.5)" { class: block }
+  start: "Турнир запущен" { class: step }
+  engine: "ДВИЖОК: генерирует сетку\nи распределяет матчи по столам" { class: engine }
+
+  seed -> refGate
+  refGate -> blocked: нет { class: back }
+  blocked -> refGate { class: back }
+  refGate -> start: да
+  start -> engine
+}
+
+# ── 6. ИГРА ─────────────────────────────────────────────────────────────────
+igra: "6 · ИГРА" {
+  style.fill: "#fdfaff"
+  style.stroke: "#ddd6fe"
+
+  call: "Главный судья вызывает пару на стол\nсудья получает уведомление мгновенно" { class: step }
+  mode: "Режим ввода счёта?" { class: decide }
+  byGame: "По партиям\nитог матча — производная от партий" { class: step }
+  byPoint: "По очкам в реальном времени\nкрупные турниры, отмена последнего" { class: step }
+  live: "ПРЯМОЙ ЭФИР на сайте\nсчёт обновляется в реальном времени" { class: live }
+  youtube: "YOUTUBE: видео со столов\nсчёт накладывается автоматически" { class: live }
+  offline: "Обрыв связи\nсудья продолжает локально, потом синхронизация" { class: block }
+  fix: "Правка счёта\nкаждая пишется в журнал с автором" { class: block }
+  advance: "ДВИЖОК: продвигает победителя\nсетка обновляется автоматически" { class: engine }
+  more: "Остались матчи?" { class: decide }
+
+  call -> mode
+  mode -> byGame: обычный
+  mode -> byPoint: крупный турнир
+  byPoint -> live
+  live -> youtube
+  byGame -> advance
+  byPoint -> advance
+  byGame -> offline: сеть пропала { class: back }
+  offline -> byGame: сеть вернулась { class: back }
+  fix -> advance { class: back }
+  advance -> more
+  more -> call: да { class: loop }
+}
+
+# ── 7. ЗАВЕРШЕНИЕ ───────────────────────────────────────────────────────────
+finish: "7 · ЗАВЕРШЕНИЕ И РЕЙТИНГ" {
+  style.fill: "#fff7ed"
+  style.stroke: "#fdba74"
+
+  close: "Главный судья формирует итоговый протокол\nввод результатов блокируется" { class: step }
+  gateRes: "Коллегия утвердила протокол?" { class: decide }
+  back: "Возврат с причиной\nввод открывается снова" { class: block }
+  rating: "ПЕРЕСЧЁТ РЕЙТИНГА\nидут все три категории турниров (§4.1)" {
+    style: { fill: "#fffbeb"; stroke: "#f59e0b"; stroke-width: 2 }
+  }
+  print: "Печать протоколов\nитоговый и по каждому матчу" { class: step }
+  player: "Игрок видит результат,\nновый рейтинг и аналитику" { class: good }
+
+  close -> gateRes
+  gateRes -> back: нет { class: back }
+  back -> close { class: back }
+  gateRes -> rating: да
+  rating -> player
+  rating -> print
+}
+
+# ── СКВОЗНЫЕ СВЯЗИ МЕЖДУ ЭТАПАМИ ────────────────────────────────────────────
+zavedenie.resp -> sudeystvo.openRef: конкурс судей { class: liveEdge }
+zavedenie.resp -> sudeystvo.direct: малый турнир { class: loop }
+zavedenie.amateur -> zayavki.published: без судейства и утверждений (§4.1) { class: loop }
+
+sudeystvo.assigned -> sistema.hint: судья приступает { class: liveEdge }
+sistema.gate -> zayavki.published: утверждено { class: liveEdge }
+zayavki.entry -> zapusk.seed: состав собран { class: liveEdge }
+zapusk.engine -> igra.call: матчи распределены { class: liveEdge }
+igra.more -> finish.close: нет { class: liveEdge }
+igra.advance -> igra.fix: спорный счёт { class: back }
