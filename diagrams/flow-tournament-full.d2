@@ -95,8 +95,7 @@ zayavki: "4 · ЗАЯВКИ ИГРОКОВ" {
 
   who: "Кто подаёт?\nзависит от уровня турнира" { class: decide }
   self: "Игрок сам\nоткрытый городской" { class: step }
-  coach: "Тренер: список игроков\nодна заявка на весь список" { class: step }
-  rep: "Представитель федерации\nреспубликанский" { class: step }
+  coach: "Тренер или главный тренер региона\nодна заявка на список игроков" { class: step }
   docs: "Прикладывает документы" { class: step }
   review: "Главный судья рассматривает" { class: decide }
   reject: "Отказ с причиной\nправит и подаёт снова, пока приём открыт" { class: block }
@@ -113,10 +112,8 @@ zayavki: "4 · ЗАЯВКИ ИГРОКОВ" {
 
   who -> self
   who -> coach
-  who -> rep
   self -> docs
   coach -> docs
-  rep -> docs
   docs -> review
   review -> reject: отклонена { class: back }
   reject -> docs { class: back }
