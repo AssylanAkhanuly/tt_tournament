@@ -47,18 +47,66 @@ clients: "1 · КЛИЕНТЫ · кто и с чего работает" {
 #
 # Мобильное приложение через Next.js НЕ ходит: у него свой рендер, ему нужен
 # только API. Поэтому его стрелка идёт мимо этого слоя.
-front: "2 · ФРОНТ · Next.js 16 · откуда уходит запрос" {
+front: "2А · ВЕБ · Next.js 16, App Router · Node-процесс на Railway" {
   style.fill: "#eef2ff"
   style.stroke: "#3b82f6"
 
-  ssr: "СЕРВЕР NEXT.JS · Node\nсерверные компоненты, рендер страницы" { class: service }
-  ssrWhat: "Запрашивается ЗДЕСЬ\nпубличные страницы: турнир, сетка,\nрейтинг, расписание, новости\nпервичное состояние экрана\nкуки с JWT пробрасываются вручную" { class: step }
+  # ── что рендерится на сервере Next
+  static: "Статика и ISR\nпубличные страницы: расписание, новости,\nтаблица рейтинга. Кэш с ревалидацией,\nв Django за ними не ходим на каждый заход" { class: good }
+  rsc: "Серверные компоненты (RSC)\nстраница турнира, сетка, состав, профиль:\nданные тянутся на сервере Next и приезжают\nуже готовой разметкой" { class: service }
+  action: "Server Actions\nвызываются из браузера, а ВЫПОЛНЯЮТСЯ здесь.\nБраузер не видит адресов Django" { class: service }
 
-  browser: "БРАУЗЕР\nклиентские компоненты после гидрации" { class: client }
-  browserWhat: "Запрашивается ОТСЮДА\nSSE-поток счёта — только отсюда\nдействия: ввод счёта, заявки, подтверждения\nподписка на push\nкуки уходят сами" { class: step }
+  # ── что живёт в браузере
+  client: "Клиентские компоненты\nпосле гидрации: интерактив, формы,\nлокальное состояние" { class: client }
 
-  ssr -> ssrWhat
-  browser -> browserWhat
+  # Это не выбор, а свойство технологии: держать открытое соединение или
+  # хранить ключ подписки серверный компонент не может — он отрендерился
+  # и умер. Такие вещи возможны ТОЛЬКО в браузере.
+  only: "ТОЛЬКО ИЗ БРАУЗЕРА · не наш выбор\nSSE-поток счёта: EventSource живёт здесь\nподписка на push: ключ у устройства\nоптимистичный отклик до ответа сервера" { class: live }
+
+  # А вот это выбор, и его надо сделать осознанно.
+  pick: "РЕШИТЬ: как ходят мутации\nчерез Server Actions — единая точка, куки и права\nна сервере, но лишний прыжок Next → Django\nлибо напрямую из браузера в API — короче,\nно адреса и токены уезжают в клиент" { class: muted }
+
+  # Куки httpOnly: браузер отправляет их сам, серверу Next надо пробрасывать
+  # руками при каждом вызове наружу.
+  cookies: "JWT в httpOnly-куках\nиз браузера уходят сами\nс сервера Next — пробрасываем вручную" { class: step }
+
+  static -> rsc
+  rsc -> client: гидрация
+  client -> action: вызов
+  client -> only
+  action -> pick { class: loop }
+}
+
+# ── 2Б. ПРИЛОЖЕНИЕ ──────────────────────────────────────────────────────────
+# Главное отличие от веба: серверной половины здесь нет вообще. Всё рендерится
+# на устройстве, и «что на сервере, а что на клиенте» не стоит — всё на
+# клиенте. Поэтому у приложения нет ни RSC, ни Server Actions, ни ISR: экраны
+# собираются на телефоне, данные тянутся прямо из API.
+#
+# Два места, где приложение расходится с вебом и это придётся учесть в API:
+#   * авторизация — не куки, а токен в защищённом хранилище устройства;
+#   * SSE — в React Native нет EventSource, нужен polyfill.
+expo: "2Б · ПРИЛОЖЕНИЕ · Expo (React Native) · Android и iOS" {
+  style.fill: "#eef2ff"
+  style.stroke: "#3b82f6"
+
+  router: "Expo Router\nфайловая навигация, как в Next,\nно СЕРВЕРНОЙ ПОЛОВИНЫ НЕТ:\nвсе экраны рендерятся на устройстве" { class: client }
+  data: "Данные\nfetch прямо в API, без промежуточного слоя\nкэш и офлайн-состояние на устройстве" { class: step }
+
+  # Расхождение с вебом, которое упирается в бэкенд
+  auth: "АВТОРИЗАЦИЯ ИНАЧЕ, ЧЕМ В ВЕБЕ\nhttpOnly-куки в приложении не работают:\nтокен лежит в SecureStore и уходит\nзаголовком Authorization" { class: rbac }
+
+  sse: "SSE: нужен polyfill\nв React Native нет EventSource,\nставим react-native-sse.\nПоток тот же, что у веба" { class: live }
+
+  push: "Push · expo-notifications\nтокен устройства регистрируется при входе,\nдоставка через FCM и APNs" { class: service }
+
+  ship: "Выкатка\nEAS Build → App Store и Google Play\nправки JS — по воздуху через expo-updates,\nбез ревью магазина" { class: good }
+
+  router -> data
+  router -> auth
+  data -> sse
+  data -> push
 }
 
 # ── 3. ВХОД ─────────────────────────────────────────────────────────────────
@@ -66,7 +114,9 @@ entry: "3 · ВХОД И ПРАВА · Django + DRF на Railway" {
   style.fill: "#fdfaff"
   style.stroke: "#ddd6fe"
 
-  gw: "API-шлюз\nHTTPS, JWT в куках" { class: gate }
+  # Два способа принести один и тот же JWT: веб — куками, приложение —
+  # заголовком. Это не два вида авторизации, а один токен и два транспорта.
+  gw: "API-шлюз · HTTPS\nиз веба — JWT в httpOnly-куках\nиз приложения — Bearer-заголовок\nтокен один, транспорт разный" { class: gate }
   auth: "Аутентификация\nвход по паролю или короткому коду" { class: service }
   rbac: "АВТОРИЗАЦИЯ\nроль → область → право\nдевять ролей (§2)" { class: rbac }
 
@@ -358,20 +408,25 @@ storage: "7 · ДАННЫЕ · PostgreSQL от Railway и Cloudflare R2" {
 }
 
 # ── СВЯЗИ МЕЖДУ СЛОЯМИ ──────────────────────────────────────────────────────
-clients.tablet -> front.browser
-clients.player.web -> front.ssr
-clients.desktop -> front.ssr
-clients.guest -> front.ssr: публичные страницы { class: loop }
+clients.tablet -> front.client
+clients.player.web -> front.rsc
+clients.desktop -> front.rsc
+clients.guest -> front.static: публичные страницы { class: loop }
 
 # приложение рендерит себя само, Next.js ему не нужен — только API
-clients.player.app -> entry.gw: мимо Next.js, сразу в API
+clients.player.app -> expo.router: мимо Next.js
 
-front.ssr -> entry.gw: запрос с сервера Next
-front.browser -> entry.gw: запрос из браузера
+front.rsc -> entry.gw: данные для рендера, сервер → сервер
+front.action -> entry.gw: мутация с сервера Next
+front.client -> entry.gw: прямой запрос, если решим без Server Actions { class: loop }
 
 # EventSource живёт в браузере: серверный компонент отрендерился и умер,
 # держать соединение ему нечем. Поэтому стрелка идёт именно отсюда.
-front.browser -> rt.stream: EventSource — подписка на поток { class: liveEdge }
+front.only -> rt.stream: EventSource — подписка на поток { class: liveEdge }
+expo.sse -> rt.stream: тот же поток, через polyfill { class: liveEdge }
+expo.auth -> entry.gw: Bearer-токен, не куки
+expo.data -> entry.gw: fetch с устройства
+expo.push -> rt.notify: регистрация токена устройства { class: loop }
 
 entry.rbac -> apps.tournaments
 entry.rbac -> apps.applications
