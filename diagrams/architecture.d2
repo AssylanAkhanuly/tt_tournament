@@ -30,17 +30,17 @@ clients: "1 · КЛИЕНТЫ · кто и с чего работает" {
     style.stroke: "#3b82f6"
     style.stroke-width: 3
 
-    web: "Веб\nтот же сайт, любой браузер" { class: client }
-    app: "Приложение\nAndroid и iOS" { class: client }
+    web: "Веб · Next.js 16 + React 19\nтот же сайт, любой браузер" { class: client }
+    app: "Приложение · Android и iOS\npush через FCM и APNs" { class: client }
     note: "Один аккаунт, одни данные, один backend.\nРазличие только в push: он есть в приложении,\nв вебе — открытый вопрос (Q 11.1).\nНа лигах игрок сам вводит счёт (§6.4)" { class: muted }
   }
 
-  desktop: "Десктоп\nадминистратор · федерация · коллегия\nглавный судья · тренер · бухгалтер" { class: client }
+  desktop: "Десктоп · тот же Next.js\nадминистратор · федерация · коллегия\nглавный судья · тренер · бухгалтер" { class: client }
   guest: "Гость\nтолько чтение" { class: muted }
 }
 
 # ── 2. ВХОД ─────────────────────────────────────────────────────────────────
-entry: "2 · ВХОД И ПРАВА" {
+entry: "2 · ВХОД И ПРАВА · Django + DRF на Railway" {
   style.fill: "#fdfaff"
   style.stroke: "#ddd6fe"
 
@@ -53,7 +53,7 @@ entry: "2 · ВХОД И ПРАВА" {
 }
 
 # ── 3. ПРИКЛАДНЫЕ СЕРВИСЫ ───────────────────────────────────────────────────
-apps: "3 · ПРИКЛАДНЫЕ СЕРВИСЫ" {
+apps: "3 · ПРИКЛАДНЫЕ СЕРВИСЫ · Django 4.2 + DRF · gunicorn на Railway" {
   style.fill: "#fdfaff"
   style.stroke: "#ddd6fe"
 
@@ -66,7 +66,7 @@ apps: "3 · ПРИКЛАДНЫЕ СЕРВИСЫ" {
 }
 
 # ── 4. ДВИЖОК И РАСЧЁТЫ ─────────────────────────────────────────────────────
-core: "4 · ДВИЖОК И РАСЧЁТЫ" {
+core: "4 · ДВИЖОК И РАСЧЁТЫ · Python, там же" {
   style.fill: "#f0fdf4"
   style.stroke: "#86efac"
 
@@ -77,60 +77,30 @@ core: "4 · ДВИЖОК И РАСЧЁТЫ" {
 }
 
 # ── 5. РЕАЛЬНОЕ ВРЕМЯ ───────────────────────────────────────────────────────
-rt: "5 · РЕАЛЬНОЕ ВРЕМЯ И УВЕДОМЛЕНИЯ" {
+# Здесь показан сам ход SSE, а не только упоминание технологии. Читается
+# слева направо: очко записано → событие в поток → поток держится открытым →
+# его слушают клиенты.
+rt: "5 · РЕАЛЬНОЕ ВРЕМЯ И УВЕДОМЛЕНИЯ · Railway" {
   style.fill: "#fdfaff"
   style.stroke: "#ddd6fe"
 
-  # SSE, а не WebSocket: счёт идёт в одну сторону, сервер → клиент. Обратный
-  # канал не нужен — судья отправляет очко обычным POST. Плата за SSE в том,
-  # что соединение висит: синхронный воркер gunicorn занят им целиком, поэтому
-  # поток обслуживается отдельным ASGI-процессом.
-  live: "Счёт в реальном времени · SSE\nодносторонний поток сервер → клиент\nотдельный ASGI-процесс, не блокирует API" { class: live }
+  # SSE, а не WebSocket: счёт идёт в одну сторону. Обратный канал не нужен —
+  # судья отправляет очко обычным POST. Плата в том, что соединение висит и
+  # синхронный воркер gunicorn занят им целиком, поэтому отдельный процесс.
+  emit: "Очко записано\nсервис счёта публикует событие" { class: step }
+  stream: "SSE-ПОТОК · uvicorn (ASGI)\nContent-Type: text/event-stream\nсоединение держится открытым" { class: live }
+  reconnect: "Обрыв связи\nбраузер сам переподключается,\nотдельной логики не пишем" { class: block }
+  listeners: "Поток слушают\nстраница турнира · приложение игрока\nтабло в зале · гость без входа" { class: client }
+
   broadcast: "Трансляция на YouTube\nсчёт поверх видео со столов,\nбез оператора (§6.3)" { class: live }
 
-  notify: "Уведомления · семь событий (§10.1)\nв приложении — FCM и APNs\nв вебе — Web Push (VAPID), нужен ли — Q 11.1\nвсегда дублируются в интерфейсе" { class: service }
+  notify: "Уведомления · семь событий (§10.1)\nв приложении — FCM и APNs\nв вебе — Web Push (VAPID), нужен ли — Q 11.1" { class: service }
   inbox: "Лента уведомлений в интерфейсе\nпропущенный push не теряет действие" { class: step }
 
-  notify -> inbox
-}
-
-# ── СТЕК ────────────────────────────────────────────────────────────────────
-# Взято не с потолка: это стек, на котором команда уже работает (tt_back,
-# tt_front). Для платформы ФНТ он ещё не подтверждён — см. ARCHITECTURE.md.
-# Отдельно выделено то, что НЕ выбрано, чтобы не выглядело решённым.
-stack: "СТЕК · чем это делается" {
-  grid-columns: 2
-  style.fill: "#fffbeb"
-  style.stroke: "#f59e0b"
-
-  be: "Бэкенд\nPython 3.11 · Django 4.2 · DRF\ngunicorn, Docker" { class: service }
-  fe: "Веб\nNext.js 16 · React 19 · TypeScript · Tailwind" { class: service }
-  db: "База\nPostgreSQL\npsycopg2 · dj-database-url" { class: data }
-  files: "Файлы — Cloudflare R2\nS3-совместимый API, поэтому boto3 без правок\nдокументы к заявкам, фото" { class: data }
-  mob: "Приложение игрока\nAndroid и iOS · FCM и APNs" { class: client }
-  rtl: "Реальное время\nSSE через ASGI (uvicorn)\nотдельно от синхронного API" { class: service }
-  open: "ЕЩЁ НЕ ВЫБРАНО\nнужен ли Web Push в вебе (Q 11.1)\nконвейер видео на YouTube" { class: muted }
-}
-
-# ── ДЕПЛОЙ ──────────────────────────────────────────────────────────────────
-# Схема сборки взята из того, как устроен tt_back: Dockerfile плюс Procfile,
-# где релиз сам гонит collectstatic и migrate. Площадка выбрана под это же:
-# Railway читает Procfile как есть, поэтому переписывать ничего не нужно.
-deploy: "ДЕПЛОЙ · Railway" {
-  grid-columns: 2
-  style.fill: "#f0fdf4"
-  style.stroke: "#86efac"
-
-  ci: "Сборка\nиз GitHub по пушу, образ из Dockerfile" { class: step }
-  rel: "Релиз\ncollectstatic и migrate на старте (Procfile)\nоткат — предыдущий деплой" { class: step }
-  envs: "Окружения\nстенд и продакшн: разные проекты Railway,\nразные базы и бакеты, всё в переменных" { class: step }
-  api: "Процесс API\ngunicorn, синхронные воркеры" { class: service }
-  sse: "Процесс SSE\nuvicorn, долгие соединения\nотдельный сервис, масштабируется сам" { class: service }
-  pgm: "PostgreSQL от Railway\nDATABASE_URL приходит переменной,\nкод уже так устроен (dj-database-url)" { class: data }
-  r2: "Файлы — Cloudflare R2\nS3-совместимый, код уже умеет\nAWS_S3_ENDPOINT_URL" { class: data }
-
-  ci -> rel
-  rel -> envs
+  emit -> stream: событие
+  stream -> listeners: поток событий
+  stream -> reconnect: сеть пропала { class: back }
+  notify -> inbox: дублируется всегда
 }
 
 # ── 6. ДАННЫЕ ───────────────────────────────────────────────────────────────
@@ -145,7 +115,7 @@ deploy: "ДЕПЛОЙ · Railway" {
 #
 # Тело вставляется из domain.d2 скриптом sync-domain.py — правим только
 # domain.d2, иначе две копии модели разъедутся.
-storage: "6 · ДАННЫЕ" {
+storage: "6 · ДАННЫЕ · PostgreSQL от Railway и Cloudflare R2" {
   style.fill: "#f0fdfa"
   style.stroke: "#5eead4"
 
@@ -384,7 +354,7 @@ apps.tournaments -> core.engine: генерация сетки
 apps.score -> core.engine: партия сыграна
 core.engine -> core.rating: итоги турнира
 
-apps.score -> rt.live: событие счёта
+apps.score -> rt.emit: очко записано в базу
 apps.score -> rt.broadcast: счёт для наложения
 core.engine -> rt.notify: матч готов
 
