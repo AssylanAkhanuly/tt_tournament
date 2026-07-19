@@ -106,27 +106,28 @@ stack: "СТЕК · чем это делается" {
   be: "Бэкенд\nPython 3.11 · Django 4.2 · DRF\ngunicorn, Docker" { class: service }
   fe: "Веб\nNext.js 16 · React 19 · TypeScript · Tailwind" { class: service }
   db: "База\nPostgreSQL\npsycopg2 · dj-database-url" { class: data }
-  files: "Файлы\nS3-совместимое хранилище (boto3)\nдокументы к заявкам, фото" { class: data }
+  files: "Файлы — Cloudflare R2\nS3-совместимый API, поэтому boto3 без правок\nдокументы к заявкам, фото" { class: data }
   mob: "Приложение игрока\nAndroid и iOS · FCM и APNs" { class: client }
   rtl: "Реальное время\nSSE через ASGI (uvicorn)\nотдельно от синхронного API" { class: service }
-  open: "ЕЩЁ НЕ ВЫБРАНО\nплощадка размещения — закон 94-V (§11)\nнужен ли Web Push в вебе (Q 11.1)\nконвейер видео на YouTube" { class: muted }
+  open: "ЕЩЁ НЕ ВЫБРАНО\nнужен ли Web Push в вебе (Q 11.1)\nконвейер видео на YouTube" { class: muted }
 }
 
 # ── ДЕПЛОЙ ──────────────────────────────────────────────────────────────────
-# Схема сборки и выката взята из того, как устроен tt_back: Dockerfile плюс
-# Procfile, где релиз сам гонит collectstatic и migrate. Где это физически
-# крутится — отдельный вопрос, и он не технический (§11, закон 94-V).
-deploy: "ДЕПЛОЙ · как это попадает на сервер" {
+# Схема сборки взята из того, как устроен tt_back: Dockerfile плюс Procfile,
+# где релиз сам гонит collectstatic и migrate. Площадка выбрана под это же:
+# Railway читает Procfile как есть, поэтому переписывать ничего не нужно.
+deploy: "ДЕПЛОЙ · Railway" {
   grid-columns: 2
   style.fill: "#f0fdf4"
   style.stroke: "#86efac"
 
-  ci: "Сборка\nобраз из Dockerfile, тег на коммит" { class: step }
-  rel: "Релиз\ncollectstatic и migrate на старте (Procfile)\nоткат — предыдущий образ" { class: step }
-  envs: "Окружения\nстенд и продакшн, разные базы и бакеты\nвсё через переменные среды" { class: step }
+  ci: "Сборка\nиз GitHub по пушу, образ из Dockerfile" { class: step }
+  rel: "Релиз\ncollectstatic и migrate на старте (Procfile)\nоткат — предыдущий деплой" { class: step }
+  envs: "Окружения\nстенд и продакшн: разные проекты Railway,\nразные базы и бакеты, всё в переменных" { class: step }
   api: "Процесс API\ngunicorn, синхронные воркеры" { class: service }
-  sse: "Процесс SSE\nuvicorn, долгие соединения" { class: service }
-  where: "ГДЕ РАЗМЕЩАТЬ — НЕ РЕШЕНО\nвыбор диктует закон 94-V о персональных\nданных, а не удобство площадки (§11, §13.1)" { class: muted }
+  sse: "Процесс SSE\nuvicorn, долгие соединения\nотдельный сервис, масштабируется сам" { class: service }
+  pgm: "PostgreSQL от Railway\nDATABASE_URL приходит переменной,\nкод уже так устроен (dj-database-url)" { class: data }
+  r2: "Файлы — Cloudflare R2\nS3-совместимый, код уже умеет\nAWS_S3_ENDPOINT_URL" { class: data }
 
   ci -> rel
   rel -> envs
