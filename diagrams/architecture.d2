@@ -99,7 +99,10 @@ expo: "2Б · ПРИЛОЖЕНИЕ · Expo (React Native) · Android и iOS" {
 
   sse: "SSE: нужен polyfill\nв React Native нет EventSource,\nставим react-native-sse.\nПоток тот же, что у веба" { class: live }
 
-  push: "Push · expo-notifications\nтокен устройства регистрируется при входе,\nдоставка через FCM и APNs" { class: service }
+  # getDevicePushTokenAsync, а не getExpoPushTokenAsync: нам нужен родной
+  # токен FCM, потому что отправляет Django через firebase-admin. Токен Expo
+  # понимает только релей Expo, а мы его не используем.
+  push: "Push · expo-notifications\ngetDevicePushTokenAsync — родной токен FCM\nрегистрируется при входе, отзывается при выходе" { class: service }
 
   ship: "Выкатка\nEAS Build → App Store и Google Play\nправки JS — по воздуху через expo-updates,\nбез ревью магазина" { class: good }
 
@@ -128,6 +131,11 @@ entry: "3 · ВХОД И ПРАВА · Django + DRF на Railway" {
 apps: "4 · ПРИКЛАДНЫЕ СЕРВИСЫ · Django 4.2 + DRF · gunicorn на Railway" {
   style.fill: "#fdfaff"
   style.stroke: "#ddd6fe"
+
+  # Профиль появился, когда разделяли PostgreSQL и R2: у USER есть photo_url,
+  # у заявок — документы, а сервиса, который этими файлами владеет, на схеме
+  # не было. Фото не относится ни к аутентификации, ни к заявкам.
+  profile: "Профиль и аккаунт\nданные игрока, фото, клуб, город" { class: service }
 
   tournaments: "Турниры, столы и настройки\nкатегория задаёт умолчания,\nно всё правится (§4.2)" { class: service }
   applications: "Заявки\nсудей на турнир · судей на столы\nигроков (§4.3, §4.5, §8)" { class: service }
@@ -166,7 +174,14 @@ rt: "6 · РЕАЛЬНОЕ ВРЕМЯ И УВЕДОМЛЕНИЯ · Railway" {
 
   broadcast: "Трансляция на YouTube\nсчёт поверх видео со столов,\nбез оператора (§6.3)" { class: live }
 
-  notify: "Уведомления · семь событий (§10.1)\nв приложении — FCM и APNs\nв вебе — Web Push (VAPID), нужен ли — Q 11.1" { class: service }
+  # Отправляем через Firebase Cloud Messaging, а не через Expo Push Service.
+  # Причина одна и она про Q 11.1: FCM — единственный, кто закрывает все три
+  # поверхности сразу, включая браузер. Пока вопрос про веб-push открыт, брать
+  # отправщик, который умеет только приложения, значит заранее согласиться на
+  # второй канал отправки. Плюс в цепочке доставки «вызвали на стол» не
+  # появляется третий посредник. Цена — firebase-admin в Django и ключ APNs
+  # заводим сами, один раз.
+  notify: "Уведомления · семь событий (§10.1)\nFCM (firebase-admin) — один отправщик на всё\nAndroid — напрямую · iOS — FCM отдаёт в APNs\nбраузер — тот же FCM, если Q 11.1 решится «да»" { class: service }
   inbox: "Лента уведомлений в интерфейсе\nпропущенный push не теряет действие" { class: step }
 
   emit -> stream: событие
@@ -187,15 +202,30 @@ rt: "6 · РЕАЛЬНОЕ ВРЕМЯ И УВЕДОМЛЕНИЯ · Railway" {
 #
 # Тело вставляется из domain.d2 скриптом sync-domain.py — правим только
 # domain.d2, иначе две копии модели разъедутся.
-storage: "7 · ДАННЫЕ · PostgreSQL от Railway и Cloudflare R2" {
+#
+# PostgreSQL и R2 — РАЗНЫЕ хранилища у разных поставщиков, и раньше они были
+# слиты в один заголовок слоя. По схеме нельзя было понять, что куда пишется.
+# Теперь это два соседних блока, и стрелки из сервисов приходят в конкретный:
+# строки — в базу, байты — в R2.
+storage: "7 · ДАННЫЕ · два разных хранилища" {
   style.fill: "#f0fdfa"
   style.stroke: "#5eead4"
+
+  # R2, а не S3: у Cloudflare нет платы за исходящий трафик. Для нас это
+  # прямо считается — фото игроков и афиши раздаются на каждый просмотр
+  # расписания. Протокол тот же S3, работаем через boto3 с
+  # AWS_S3_ENDPOINT_URL, как уже настроено в tt_back.
+  files: "Cloudflare R2 · файлы\nфото игроков · документы к заявкам\nв базе лежит только ключ объекта, не сам файл\nS3-совместимый: boto3, AWS_S3_ENDPOINT_URL\nисходящий трафик бесплатный — потому R2, а не S3" {
+    style.fill: "#fff7ed"
+    style.stroke: "#f97316"
+    style.stroke-width: 3
+  }
 
   # grid-columns здесь можно и нужно: контейнер вложенный, на direction корня
   # он не влияет (в отличие от слоёв верхнего уровня — см. шапку файла).
   # Без сетки elk раскладывает таблицы по логике внешней схемы и они
   # расползаются по всей ширине.
-  pg: "PostgreSQL · что лежит в базе\nсвязи между таблицами — на схеме доменной модели" {
+  pg: "PostgreSQL · управляемый Railway · что лежит в базе\nсвязи между таблицами — на схеме доменной модели" {
     grid-columns: 4
     grid-gap: 40
     style.fill: "#ffffff"
@@ -428,6 +458,7 @@ expo.auth -> entry.gw: Bearer-токен, не куки
 expo.data -> entry.gw: fetch с устройства
 expo.push -> rt.notify: регистрация токена устройства { class: loop }
 
+entry.rbac -> apps.profile
 entry.rbac -> apps.tournaments
 entry.rbac -> apps.applications
 entry.rbac -> apps.fees
@@ -450,3 +481,9 @@ entry.auth -> storage.pg
 apps.analytics -> storage.pg: чтение и запись
 core.rating -> storage.pg: рейтинги в историю
 rt.notify -> storage.pg
+
+# Байты идут мимо базы. В PostgreSQL остаётся только ключ объекта — иначе
+# дамп базы распухает и его нельзя быстро восстановить.
+apps.profile -> storage.pg: строки профиля
+apps.profile -> storage.files: фото игрока { style.stroke: "#f97316"; style.stroke-width: 2 }
+apps.applications -> storage.files: документы к заявке { style.stroke: "#f97316"; style.stroke-width: 2 }

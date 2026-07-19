@@ -112,11 +112,30 @@ def _texts(g, ox, oy):
         anchor = re.search(r"text-anchor:(\w+)", style)
         anchor = anchor.group(1) if anchor else "middle"
 
+        size_px = int(size.group(1)) if size else 14
+
+        # ВНИМАНИЕ: в SVG атрибут y у <text> — это БАЗОВАЯ ЛИНИЯ ПЕРВОЙ строки,
+        # а не верх блока. Многострочные подписи D2 продолжает через <tspan dy>.
+        # Раньше мы отдавали этот y как есть, а на приёмнике клали его в «верх
+        # текстового блока»: весь текст съезжал вниз примерно на 0.9 кегля, и в
+        # sql_table нижняя строка вылезала за нижнюю рамку. На живой схеме было
+        # видно — строки rating, scope_id, city подрезаны границей таблицы.
+        #
+        # Поэтому отдаём СЕРЕДИНУ блока по вертикали. Приёмнику остаётся
+        # y - height/2 своими метриками, и расхождение шрифтов D2 и Penpot
+        # перестаёт влиять: центр блока совпадает, как бы ни считалась высота.
+        # 0.3 * кегль — половина разницы восходящих и нисходящих элементов;
+        # без неё блок висит ниже середины на несколько пикселей.
+        dys = [_f(s, "dy") for s in t if s.get("dy") and _f(s, "dy") > 0]
+        step = dys[0] if dys else size_px * 1.104
+        nlines = chars.count("\n") + 1
+        y_center = _f(t, "y") + (nlines - 1) * step / 2 - 0.3 * size_px
+
         out.append({
             "t": chars,
             "x": _f(t, "x") + ox,
-            "y": _f(t, "y") + oy,
-            "size": int(size.group(1)) if size else 14,
+            "y": round(y_center + oy, 1),
+            "size": size_px,
             "fill": t.get("fill") or "#0A0F25",
             "bold": "text-bold" in (t.get("class") or ""),
             "anchor": anchor,
