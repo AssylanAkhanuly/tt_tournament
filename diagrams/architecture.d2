@@ -120,12 +120,21 @@ expo: "2Б · ПРИЛОЖЕНИЕ · Expo (React Native) · Android и iOS" {
 
   push: "Push · expo-notifications\ngetExpoPushTokenAsync — токен Expo, один на обе ОС\nрегистрируется при входе, отзывается при выходе" { class: service }
 
-  ship: "Выкатка\nEAS Build → App Store и Google Play\nправки JS — по воздуху через expo-updates,\nбез ревью магазина" { class: good }
+  # ── путь релиза: сборка → тестовый круг → магазины → правки по воздуху.
+  # Развёрнуто из одного узла «Выкатка» по просьбе: видно, где TestFlight,
+  # где ревью, и что уходит мимо ревью.
+  build: "Сборка · EAS Build\nоблако Expo собирает бинарники обеих ОС,\nсвой мак для iOS не нужен" { class: step }
+  beta: "Тестовый круг до магазина\niOS — TestFlight · Android — внутренний трек Play\nсудьи и федерация гоняют боевую сборку\nобновления тестерам — без ревью, за минуты" { class: service }
+  release: "Релиз в магазины\nревью: Apple — день-два, Google — часы\nв Play — поэтапная раскатка по проценту\nоткат бинарника невозможен — только новая версия" { class: good }
+  ota: "Правки по воздуху · expo-updates\nJS и ассеты — мимо ревью, за минуты\nновая нативная библиотека так не уедет —\nснова полный круг через магазин" { class: live }
 
   router -> data
   router -> auth
   data -> sse
   data -> push
+  build -> beta: сборка тестерам
+  beta -> release: приняли — подаём
+  release -> ota: дальше мелкие правки — по воздуху
 }
 
 # ── 3. ВХОД ─────────────────────────────────────────────────────────────────
@@ -174,8 +183,14 @@ core: "5 · ДВИЖОК И РАСЧЁТЫ · Python, там же" {
 
 # ── 6. РЕАЛЬНОЕ ВРЕМЯ ───────────────────────────────────────────────────────
 # Здесь показан сам ход SSE, а не только упоминание технологии. Читается
-# слева направо: очко записано → событие в поток → поток держится открытым →
-# его слушают клиенты.
+# слева направо: очко записано → шина → поток держится открытым → его слушают.
+#
+# ШИНА — ответ на дыру, которая была в прошлой версии схемы: «сервис счёта
+# публикует событие» рисовалось стрелкой, а транспорта под ней не было. Счёт
+# принимает gunicorn, поток держит uvicorn — процессы разные, общей памяти
+# нет. Транспорт — LISTEN/NOTIFY в самом PostgreSQL: база уже есть, Redis
+# ради одного канала не заводим. Лимит NOTIFY — 8 КБ, поэтому в сообщении
+# только id матча, счёт получатель дочитывает из базы.
 rt: "6 · РЕАЛЬНОЕ ВРЕМЯ И УВЕДОМЛЕНИЯ · Railway" {
   style.fill: "#fdfaff"
   style.stroke: "#ddd6fe"
@@ -183,7 +198,8 @@ rt: "6 · РЕАЛЬНОЕ ВРЕМЯ И УВЕДОМЛЕНИЯ · Railway" {
   # SSE, а не WebSocket: счёт идёт в одну сторону. Обратный канал не нужен —
   # судья отправляет очко обычным POST. Плата в том, что соединение висит и
   # синхронный воркер gunicorn занят им целиком, поэтому отдельный процесс.
-  emit: "Очко записано\nсервис счёта публикует событие" { class: step }
+  emit: "Очко записано\nсервис счёта пишет в базу и делает NOTIFY" { class: step }
+  bus: "ШИНА СОБЫТИЙ · LISTEN/NOTIFY в самом PostgreSQL\nмежду процессами нет общей памяти — нужен транспорт\nв сообщении только id матча (лимит NOTIFY — 8 КБ),\nсчёт получатель дочитывает из базы\nотдельный брокер (Redis) не нужен" { class: gate }
   stream: "SSE-ПОТОК · uvicorn (ASGI)\nContent-Type: text/event-stream\nсоединение держится открытым" { class: live }
   reconnect: "Обрыв связи\nбраузер сам переподключается,\nотдельной логики не пишем" { class: block }
   listeners: "Поток слушают\nстраница турнира · приложение игрока\nтабло в зале · гость без входа" { class: client }
@@ -198,16 +214,27 @@ rt: "6 · РЕАЛЬНОЕ ВРЕМЯ И УВЕДОМЛЕНИЯ · Railway" {
   # его делают отдельным каналом. Довод исчез, и остался простой счёт: мы уже на
   # Expo, отправка — один HTTP-запрос без firebase-admin и без ключа APNs в
   # Django, ключами управляет EAS.
-  notify: "Уведомления · семь событий (§10.1)\nExpo Push Service — релей поверх FCM и APNs\nDjango шлёт один POST на exp.host\nключами APNs и FCM управляет EAS, не мы\nтолько приложение: веб-push решено не делать" { class: service }
+  # ВОРКЕР — ответ на вторую дыру: всё остальное в дизайне только отвечает на
+  # запросы, а три вещи должны случаться «сами»: рассылка не в цикле запроса,
+  # квитанции забираются через минуты ПОСЛЕ отправки, пересчёт рейтинга долгий.
+  # Очередь задач — procrastinate, она живёт в PostgreSQL и будится тем же
+  # LISTEN/NOTIFY. Celery не берём по общему правилу: не добавлять хранилище
+  # (Redis), пока единственное, что от него нужно, умеет Postgres.
+  worker: "ВОРКЕР · третий процесс на Railway\nделает работу «потом», без входящего запроса:\nрассылка push · квитанции через минуты · пересчёт\nрейтинга. Очередь задач — procrastinate в PostgreSQL,\nбудится той же LISTEN/NOTIFY" { class: engine }
+
+  notify: "Уведомления · семь событий (§10.1)\nExpo Push Service — релей поверх FCM и APNs\nворкер шлёт один POST на exp.host\nключами APNs и FCM управляет EAS, не мы\nтолько приложение: веб-push решено не делать" { class: service }
 
   # Квитанции — не деталь, а единственный способ узнать, что токен умер.
   # Без них список устройств копит мусор после переустановок.
-  receipts: "Квитанции доставки\nотдельный запрос за статусом отправки\nDeviceNotRegistered — токен удаляем" { class: step }
-  inbox: "Лента уведомлений в интерфейсе\nпропущенный push не теряет действие" { class: step }
+  receipts: "Квитанции доставки\nворкер спрашивает статус через минуты после отправки\nDeviceNotRegistered — токен удаляем из PUSH_TOKEN" { class: step }
+  inbox: "Лента уведомлений в интерфейсе\nтаблица NOTIFICATION — пропущенный push\nне теряет действие" { class: step }
 
-  emit -> stream: событие
+  emit -> bus: "NOTIFY: id матча"
+  bus -> stream: "LISTEN: дочитал счёт, отдал в поток"
+  bus -> worker: будит задачей
   stream -> listeners: поток событий
   stream -> reconnect: сеть пропала { class: back }
+  worker -> notify: рассылает
   notify -> inbox: дублируется всегда
   notify -> receipts: проверяем, дошло ли
 }
@@ -470,6 +497,31 @@ storage: "7 · ДАННЫЕ · два разных хранилища" {
       change: "int — например +24"
       at: datetime
     }
+
+    # Обе таблицы появились после ревизии дизайна: на схеме архитектуры была
+    # «лента уведомлений» и «регистрация токена», а хранилища под ними — не было.
+    notification: NOTIFICATION {
+      shape: sql_table
+      class: new
+      id: uuid {constraint: primary_key}
+      user_id: uuid {constraint: foreign_key}
+      kind: "семь событий, см. ТЗ §10.1"
+      title: string
+      body: string
+      created_at: datetime
+      read_at: "datetime — пусто, пока не открыто"
+    }
+
+    push_token: PUSH_TOKEN {
+      shape: sql_table
+      class: new
+      id: uuid {constraint: primary_key}
+      user_id: uuid {constraint: foreign_key}
+      token: "string — токен Expo, один формат на обе ОС"
+      platform: "ios | android"
+      created_at: datetime
+      revoked_at: "datetime — выход или DeviceNotRegistered"
+    }
   }
 }
 
@@ -491,7 +543,7 @@ front.only -> rt.stream: EventSource — подписка на поток { clas
 expo.sse -> rt.stream: тот же поток, через polyfill { class: liveEdge }
 expo.auth -> entry.gw: Bearer-токен, не куки
 expo.data -> entry.gw: fetch с устройства
-expo.push -> rt.notify: регистрация токена устройства { class: loop }
+expo.push -> rt.notify: токен устройства — в PUSH_TOKEN { class: loop }
 
 entry.rbac -> apps.profile
 entry.rbac -> apps.tournaments
@@ -508,14 +560,14 @@ core.engine -> core.rating: итоги турнира
 
 apps.score -> rt.emit: очко записано в базу
 apps.score -> rt.broadcast: счёт для наложения
-core.engine -> rt.notify: матч готов
+core.engine -> rt.worker: задача «матч готов»
 
 apps.score -> storage.pg: каждая правка в SCORE_LOG { style.stroke: "#ef4444"; style.stroke-width: 2 }
 apps.referee -> storage.pg: события матча в MATCH_EVENT { style.stroke: "#ef4444" }
 entry.auth -> storage.pg
 apps.analytics -> storage.pg: чтение и запись
 core.rating -> storage.pg: рейтинги в историю
-rt.notify -> storage.pg
+rt.worker -> storage.pg: очередь задач и лента живут в базе
 
 # Байты идут мимо базы. В PostgreSQL остаётся только ключ объекта — иначе
 # дамп базы распухает и его нельзя быстро восстановить.

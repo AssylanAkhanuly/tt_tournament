@@ -215,6 +215,31 @@ rating_point: RATING_POINT {
   at: datetime
 }
 
+# Обе таблицы появились после ревизии дизайна: на схеме архитектуры была
+# «лента уведомлений» и «регистрация токена», а хранилища под ними — не было.
+notification: NOTIFICATION {
+  shape: sql_table
+  class: new
+  id: uuid {constraint: primary_key}
+  user_id: uuid {constraint: foreign_key}
+  kind: "семь событий, см. ТЗ §10.1"
+  title: string
+  body: string
+  created_at: datetime
+  read_at: "datetime — пусто, пока не открыто"
+}
+
+push_token: PUSH_TOKEN {
+  shape: sql_table
+  class: new
+  id: uuid {constraint: primary_key}
+  user_id: uuid {constraint: foreign_key}
+  token: "string — токен Expo, один формат на обе ОС"
+  platform: "ios | android"
+  created_at: datetime
+  revoked_at: "datetime — выход или DeviceNotRegistered"
+}
+
 user.id -> role.user_id: имеет
 user.club_id -> club.id
 club.id -> application.club_id: подаёт
@@ -243,3 +268,6 @@ match.id -> score_log.match_id
 user.id -> score_log.author_id: автор правки
 user.id -> rating_point.user_id
 tournament.id -> rating_point.tournament_id
+
+user.id -> notification.user_id: лента событий
+user.id -> push_token.user_id: устройства
