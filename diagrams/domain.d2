@@ -30,7 +30,7 @@ role: ROLE {
   class: new
   id: uuid {constraint: primary_key}
   user_id: uuid {constraint: foreign_key}
-  kind: "девять ролей, см. ТЗ §2"
+  kind: "десять ролей, см. ТЗ §2 (в т.ч. организатор клуба)"
   scope: "система | турнир | клуб | стол"
   scope_id: uuid
 }
@@ -48,18 +48,23 @@ tournament: TOURNAMENT {
   class: core
   id: uuid {constraint: primary_key}
   name: string
-  category: "республиканский | лига | любительский"
+  govtype: "тип управления: официальный | клубный"
   city: string
   format: "олимпийка | круговая | швейцарка"
   discipline: "одиночный | парный"
-  status: "девять состояний, см. ТЗ §4.3"
+  status: "состояния, см. ТЗ §4.3"
   games_to_win: int
   starts_at: datetime
 
-  needs_table_referees: "bool — настройка, не категория"
-  needs_fee: "bool — настройка, не категория"
-  needs_documents: "bool — настройка, не категория"
-  needs_approval: "bool — участвует ли коллегия"
+  # Свойства — независимые флаги, а не следствие категории. «Лига» и
+  # «любительский» — это клубный турнир с разным набором этих флагов.
+  needs_table_referees: "bool — судьи на столах"
+  is_rated: "bool — учитывается ли в рейтинге"
+  rating_limit: "string — ценз по рейтингу, если организатор задал"
+  entry_fee: "int — плата за участие, ставит организатор (0 — нет)"
+  needs_fee: "bool — годовой взнос (официальный)"
+  needs_documents: "bool — документы к заявке"
+  needs_approval: "bool — утверждение коллегией (только официальный)"
 }
 
 # Одна таблица на оба конкурса: на главного судью и на судейство столов.
@@ -90,6 +95,21 @@ fee: MEMBERSHIP_FEE {
   status: "оплачен | не оплачен | просрочен"
   paid_at: datetime
   marked_by: "uuid — бухгалтер" {constraint: foreign_key}
+}
+
+# Плата ЗА КОНКРЕТНЫЙ ТУРНИР — отдельно от годового взноса. Её ставит
+# организатор клуба, и она есть в т.ч. на любительских турнирах. Годовой взнос
+# (MEMBERSHIP_FEE) — членство в федерации; эта плата — вход в один турнир.
+payment: TOURNAMENT_PAYMENT {
+  shape: sql_table
+  class: new
+  id: uuid {constraint: primary_key}
+  tournament_id: uuid {constraint: foreign_key}
+  user_id: uuid {constraint: foreign_key}
+  amount: "int — плата за этот турнир"
+  status: "оплачено | не оплачено"
+  paid_at: datetime
+  marked_by: "uuid — организатор клуба" {constraint: foreign_key}
 }
 
 table_: TOURNAMENT_TABLE {
@@ -157,12 +177,11 @@ game: GAME {
   score2: int
   status: "идёт | завершена"
 
-  # Кто вводил счёт: судья стола либо сам игрок (§6.4). Во втором случае
-  # результат не считается принятым, пока соперник не подтвердил.
+  # Кто вводил счёт: судья стола (официальный) либо главный судья (клубный).
+  # На клубных победитель называет результат главному судье, тот вводит —
+  # ввода игроком и подтверждения соперником НЕТ (по замечанию Андрея).
   entered_by: uuid {constraint: foreign_key}
-  entry_source: "судья стола | игрок"
-  confirmed_by: "uuid — второй игрок, если счёт вводил игрок" {constraint: foreign_key}
-  confirmed_at: datetime
+  entry_source: "судья стола | главный судья"
 }
 
 rally: RALLY {
@@ -249,6 +268,9 @@ tournament.id -> referee_application.tournament_id: конкурс судейс�
 user.id -> referee_application.user_id: судья подаёт
 user.id -> fee.user_id: годовой взнос
 user.id -> fee.marked_by: бухгалтер отмечает
+tournament.id -> payment.tournament_id: плата за турнир
+user.id -> payment.user_id: платит за участие
+user.id -> payment.marked_by: организатор отмечает
 application.id -> application_item.application_id: список игроков
 user.id -> application_item.user_id: заявлен
 application_item.id -> entry.id: принята — создаёт сторону
