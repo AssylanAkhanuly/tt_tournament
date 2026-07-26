@@ -29,6 +29,7 @@ buh: "Бухгалтер\nвзносы" {
   style: { fill: "#fef3c7"; stroke: "#f59e0b"; stroke-width: 2; border-radius: 8 }
 }
 tr: "Тренер, представитель\nсвой клуб или регион" { class: good }
+org: "Организатор клуба\nклубные турниры: регламент, судья, плата" { class: good }
 ss: "Судья стола\nодин стол" { class: step }
 ig: "Игрок\nсвой профиль · сайт и приложение" { class: step }
 go: "Гость\nтолько чтение" { class: muted }
@@ -38,11 +39,14 @@ fed -> buh: видит всё { class: loop }
 adm -> psk: "заводит аккаунт\nно не судейские права" { class: back }
 adm -> tr: заводит аккаунт { class: back }
 adm -> buh: заводит аккаунт { class: back }
+adm -> org: заводит аккаунт { class: back }
 psk -> gs
+org -> gs: назначает на клубных { class: loop }
 gs -> ss
 gs -> ig
 buh -> ig: допуск по взносу { class: loop }
 tr -> ig
+org -> ig: клубные турниры { class: loop }
 ss -> ig
 ig -> go
 

@@ -341,12 +341,39 @@ storage: "7 · ДАННЫЕ · два разных хранилища" {
       city: string
     }
 
+    # Шаблон регламента. Пресеты «Официальный» и «Клубный» живут ДАННЫМИ, а не в
+    # коде: строки этой таблицы. При создании турнира шаблон КОПИРУЕТ свои значения
+    # в поля турнира (см. ниже) — правка шаблона потом НЕ меняет уже созданные
+    # турниры, и турнир можно донастроить поверх пресета. Гейт полномочий: значения
+    # rating_pool=official, approval_by=collegium, judge_appointed_by=collegium
+    # допустимы только в системных шаблонах федерации (is_system, owner пустой).
+    tournament_template: TOURNAMENT_TEMPLATE {
+      shape: sql_table
+      class: new
+      id: uuid {constraint: primary_key}
+      name: "«Официальный республиканский» | «Клубный» | своё"
+      kind: "официальный | клубный — класс полномочий, гейтит допустимые значения"
+      is_system: "bool — встроенный пресет федерации"
+      owner_id: "uuid — пусто = глобальный; иначе кастомный шаблон организатора" {constraint: foreign_key}
+
+      # Значения политик по умолчанию — та же схема, что у турнира.
+      approval_by: "none | collegium"
+      judge_appointed_by: "organizer | collegium"
+      rating_pool: "none | internal | official"
+      fee_model: "none | entry_fee | annual_membership"
+      default_entry_fee: int
+      needs_table_referees: bool
+      needs_documents: bool
+      rating_limit: string
+    }
+
     tournament: TOURNAMENT {
       shape: sql_table
       class: core
       id: uuid {constraint: primary_key}
       name: string
-      govtype: "тип управления: официальный | клубный"
+      template_id: "uuid — из какого шаблона засеян регламент" {constraint: foreign_key}
+      govtype: "официальный | клубный — копия kind шаблона, денормализация под фильтр"
       city: string
       format: "олимпийка | круговая | швейцарка"
       discipline: "одиночный | парный"
@@ -354,15 +381,18 @@ storage: "7 · ДАННЫЕ · два разных хранилища" {
       games_to_win: int
       starts_at: datetime
 
-      # Свойства — независимые флаги, а не следствие категории. «Лига» и
-      # «любительский» — это клубный турнир с разным набором этих флагов.
+      # Политики — ИСТОЧНИК ПРАВДЫ поведения. Шаблон засевает их при создании,
+      # дальше это собственные поля турнира. Код ветвится по approval_by /
+      # rating_pool / …, а НЕ по govtype. «Лига» и «любительский» — это один и тот
+      # же клубный турнир с разным набором значений, а не отдельные категории.
+      approval_by: "none | collegium — кто утверждает систему и протокол"
+      judge_appointed_by: "organizer | collegium — кто назначает главного судью"
+      rating_pool: "none | internal | official — куда идёт результат"
+      fee_model: "none | entry_fee | annual_membership — модель денег"
+      entry_fee: "int — сумма, если fee_model = entry_fee"
       needs_table_referees: "bool — судьи на столах"
-      is_rated: "bool — учитывается ли в рейтинге"
-      rating_limit: "string — ценз по рейтингу, если организатор задал"
-      entry_fee: "int — плата за участие, ставит организатор (0 — нет)"
-      needs_fee: "bool — годовой взнос (официальный)"
       needs_documents: "bool — документы к заявке"
-      needs_approval: "bool — утверждение коллегией (только официальный)"
+      rating_limit: "string — ценз по рейтингу, если задан"
     }
 
     # Одна таблица на оба конкурса: на главного судью и на судейство столов.
