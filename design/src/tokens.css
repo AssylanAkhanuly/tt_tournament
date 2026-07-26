@@ -1,0 +1,21 @@
+/* Дизайн-токены — единый источник для веба (CSS-переменные) и приложения
+   (тот же набор в TS-модуле → Unistyles). Макет и код берут значения отсюда. */
+:root {
+  --c-primary:      #2563eb;
+  --c-primary-ink:  #ffffff;
+  --c-success:      #10b981;
+  --c-bg:           #f6f8fc;
+  --c-surface:      #ffffff;
+  --c-ink:          #0f172a;
+  --c-muted:        #64748b;
+  --c-line:         #e6ebf3;
+  --c-chip:         #eff4ff;
+
+  --r-sm: 10px;  --r-md: 16px;  --r-lg: 24px;
+  --s-1: 4px; --s-2: 8px; --s-3: 12px; --s-4: 16px; --s-5: 20px; --s-6: 28px;
+
+  --font: -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+}
+
+/* лёгкий фон для докс-страниц, чтобы телефоны читались */
+.sb-show-main.sb-main-padded { background: var(--c-bg); }
