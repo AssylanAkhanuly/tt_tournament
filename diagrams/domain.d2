@@ -289,6 +289,29 @@ push_token: PUSH_TOKEN {
   revoked_at: "datetime — выход или DeviceNotRegistered"
 }
 
+# Новости и анонсы — тип страницы Wagtail (готовый CMS, написан на Django),
+# в том же PostgreSQL и без отдельного сервиса. Редактор, черновики, расписание,
+# ревизии, мультиязык — из коробки; медиа (обложки) — в R2. kind различает
+# новость и анонс: у анонса pinned, он может быть про турнир (tournament_id) и
+# уйти пушем — хук публикации Wagtail ставит воркеру задачу, тот кладёт
+# NOTIFICATION подписчикам.
+news: NEWS_POST {
+  shape: sql_table
+  class: new
+  id: "uuid — Wagtail Page" {constraint: primary_key}
+  kind: "новость | анонс"
+  title: "string — Wagtail"
+  slug: "string — Wagtail" {constraint: unique}
+  cover_key: "string — обложка: медиа-библиотека Wagtail → R2"
+  body: "StreamField — текст, картинки, врезки"
+  status: "черновик | опубликован (Wagtail live/draft)"
+  pinned: "bool — закреплён (анонс)"
+  tournament_id: "uuid — если анонс про турнир, иначе пусто" {constraint: foreign_key}
+  author_id: "uuid — owner страницы (Wagtail)" {constraint: foreign_key}
+  published_at: "datetime — go_live (Wagtail)"
+  created_at: datetime
+}
+
 user.id -> role.user_id: имеет
 user.club_id -> club.id
 club.id -> application.club_id: подаёт
@@ -303,6 +326,8 @@ user.id -> fee.marked_by: бухгалтер отмечает
 tournament.id -> payment.tournament_id: плата за турнир
 user.id -> payment.user_id: платит за участие
 user.id -> payment.marked_by: организатор отмечает
+user.id -> news.author_id: автор публикации
+tournament.id -> news.tournament_id: анонс про турнир
 application.id -> application_item.application_id: список игроков
 user.id -> application_item.user_id: заявлен
 application_item.id -> entry.id: принята — создаёт сторону

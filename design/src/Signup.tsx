@@ -2,7 +2,7 @@ import type { ReactNode } from 'react';
 import s from './Signup.module.css';
 
 // Каркас телефона со статус-баром и аппбаром — переиспользуется всеми экранами.
-function Phone({ title, children }: { title: string; children: ReactNode }) {
+export function Phone({ title, children }: { title: string; children: ReactNode }) {
   return (
     <div className={s.phone}>
       <div className={s.scr}>

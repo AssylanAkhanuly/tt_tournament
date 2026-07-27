@@ -205,6 +205,15 @@ apps: "4 · ПРИКЛАДНЫЕ СЕРВИСЫ · Django 4.2 + DRF · gunicorn 
   score: "Счёт\nсудья стола (официальный) либо\nглавный судья (клубный, §6)" { class: service }
   referee: "Регламент\nподача и смена сторон" { class: service }
   analytics: "Аналитика игрока\nбесплатная и платная (§11)" { class: service }
+
+  # Новости, анонсы и статические страницы (о федерации, регламент, документы)
+  # — на Wagtail: готовый CMS, но написан на Django, поэтому живёт в ТОМ ЖЕ
+  # проекте и той же PostgreSQL, без второго бэкенда и второго контура прав.
+  # Из коробки: редактор (StreamField), медиа-библиотека (в R2), черновики,
+  # расписание, ревизии, мультиязык (рус/каз). Это ПЕРВОЕ место, где кэш/ISR
+  # оправдан: читают много чаще, чем меняют, и нужен SEO — в отличие от живых
+  # данных турнира. Анонс на публикации дёргает воркер → пуш (NOTIFICATION).
+  news: "Новости, анонсы и страницы · Wagtail (CMS на Django)\nтот же проект и PostgreSQL, без второго бэкенда · медиа в R2\nредактор · черновики · расписание · мультиязык (рус/каз)\nвеб: RSC + ISR (тут кэш оправдан, §2А) · анонс → пуш · читает и гость" { class: service }
 }
 
 # ── 5. ДВИЖОК И РАСЧЁТЫ ─────────────────────────────────────────────────────
@@ -608,6 +617,29 @@ storage: "7 · ДАННЫЕ · два разных хранилища" {
       created_at: datetime
       revoked_at: "datetime — выход или DeviceNotRegistered"
     }
+
+    # Новости и анонсы — тип страницы Wagtail (готовый CMS, написан на Django),
+    # в том же PostgreSQL и без отдельного сервиса. Редактор, черновики, расписание,
+    # ревизии, мультиязык — из коробки; медиа (обложки) — в R2. kind различает
+    # новость и анонс: у анонса pinned, он может быть про турнир (tournament_id) и
+    # уйти пушем — хук публикации Wagtail ставит воркеру задачу, тот кладёт
+    # NOTIFICATION подписчикам.
+    news: NEWS_POST {
+      shape: sql_table
+      class: new
+      id: "uuid — Wagtail Page" {constraint: primary_key}
+      kind: "новость | анонс"
+      title: "string — Wagtail"
+      slug: "string — Wagtail" {constraint: unique}
+      cover_key: "string — обложка: медиа-библиотека Wagtail → R2"
+      body: "StreamField — текст, картинки, врезки"
+      status: "черновик | опубликован (Wagtail live/draft)"
+      pinned: "bool — закреплён (анонс)"
+      tournament_id: "uuid — если анонс про турнир, иначе пусто" {constraint: foreign_key}
+      author_id: "uuid — owner страницы (Wagtail)" {constraint: foreign_key}
+      published_at: "datetime — go_live (Wagtail)"
+      created_at: datetime
+    }
   }
 }
 
@@ -638,6 +670,7 @@ entry.rbac -> apps.fees
 entry.rbac -> apps.score
 entry.rbac -> apps.referee
 entry.rbac -> apps.analytics
+entry.rbac -> apps.news
 
 apps.applications -> apps.fees: проверка взноса, если турнир требует
 apps.tournaments -> core.engine: генерация сетки
@@ -647,6 +680,7 @@ core.engine -> core.rating: итоги турнира
 apps.score -> rt.emit: очко записано в базу
 apps.score -> rt.broadcast: счёт для наложения
 core.engine -> rt.worker: задача «матч готов»
+apps.news -> rt.worker: анонс → рассылка пушем
 
 apps.score -> storage.pg: каждая правка в SCORE_LOG { style.stroke: "#ef4444"; style.stroke-width: 2 }
 apps.referee -> storage.pg: события матча в MATCH_EVENT { style.stroke: "#ef4444" }
@@ -660,6 +694,8 @@ rt.worker -> storage.pg: очередь задач и лента живут в �
 apps.profile -> storage.pg: строки профиля
 apps.profile -> storage.files: фото игрока { style.stroke: "#f97316"; style.stroke-width: 2 }
 apps.applications -> storage.files: документы к заявке { style.stroke: "#f97316"; style.stroke-width: 2 }
+apps.news -> storage.pg: посты в NEWS_POST
+apps.news -> storage.files: обложки постов { style.stroke: "#f97316"; style.stroke-width: 2 }
 
 storage.pg -> storage.backup: дамп по расписанию { style.stroke: "#dc2626"; style.stroke-width: 2 }
 storage.files -> storage.backup: копия в другой регион { style.stroke: "#dc2626"; style.stroke-width: 2 }

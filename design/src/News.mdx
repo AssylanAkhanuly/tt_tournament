@@ -1,0 +1,28 @@
+import { Meta, Canvas } from '@storybook/blocks';
+import * as News from './News.stories';
+import flowMap from './assets/flow-news.svg';
+
+<Meta title="Флоу/Новости и анонсы" />
+
+# Новости и анонсы
+
+Контент живёт в том же Django/PostgreSQL, без отдельной CMS. Федерация публикует
+через Django admin; тело — Markdown, обложка — в R2. Анонс отличается от новости
+флагом `pinned`, может ссылаться на турнир и уйти пушем. Веб отдаёт с ISR (тут кэш
+оправдан), читает и гость без входа.
+
+## Карта флоу
+
+<img src={flowMap} alt="Флоу новостей и анонсов — из D2" style={{ width: '100%', border: '1px solid var(--c-line)', borderRadius: 16 }} />
+
+## Лента
+
+Закреплённый анонс сверху, ниже — обычные новости.
+
+<Canvas of={News.Feed} />
+
+## Статья / анонс
+
+Обложка, заголовок, тело из Markdown. У анонса про турнир — кнопка «К турниру».
+
+<Canvas of={News.Post} />

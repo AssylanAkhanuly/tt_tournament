@@ -1,0 +1,49 @@
+...@_theme
+
+direction: down
+
+# Микрофлоу «Новости и анонсы».
+# Контент — в том же Django/PostgreSQL, без отдельной CMS. Редактирует федерация
+# через Django admin: заголовок, тело Markdown, обложка в R2. kind различает
+# новость и анонс: у анонса pinned (закреплён сверху), он может быть про турнир
+# (tournament_id) и уйти пушем — воркер создаёт NOTIFICATION подписчикам.
+# Кэш/ISR здесь оправдан: читают много чаще, чем меняют, и нужен SEO — в отличие
+# от живых данных турнира, где кэша нет.
+
+# ── публикация
+open: "Федерация · редактор Wagtail\n(CMS на Django, тот же проект)" { class: start }
+write: "Пишет пост\nзаголовок · тело StreamField · обложка → R2" { class: step }
+kind: "Новость или анонс?" { class: decide }
+
+news: "Новость\nпросто в ленту" { class: step }
+ann: "Анонс\npinned — закрепляется сверху" { class: good }
+about: "Анонс про турнир?" { class: decide }
+bind: "Ставит tournament_id\nна карточке — кнопка «К турниру»" { class: step }
+
+publish: "Публикует (или по расписанию)\nWagtail: live · published_at" { class: good }
+worker: "Только анонс: хук публикации → воркер\nExpo Push → NOTIFICATION подписчикам" { class: engine }
+
+# ── чтение
+feed: "Лента новостей и анонсов\nанонсы закреплены сверху" { class: service }
+web: "Веб · Next.js RSC + ISR\nкэш тут оправдан, нужен SEO\nчитает и гость без входа" { class: client }
+app: "Приложение · экран новостей\nанонс приходит ещё и пушем" { class: client }
+read: "Игрок / гость читает" { class: good }
+toT: "Анонс про турнир → страница турнира → заявка\n(см. основной флоу)" { class: loop }
+
+open -> write
+write -> kind
+kind -> news: новость
+kind -> ann: анонс
+ann -> about
+about -> bind: да
+about -> publish: нет
+bind -> publish
+news -> publish
+publish -> worker: анонс { class: loop }
+publish -> feed
+worker -> app: пуш на устройство { class: loop }
+feed -> web
+feed -> app
+web -> read
+app -> read
+read -> toT: если анонс про турнир { class: loop }
