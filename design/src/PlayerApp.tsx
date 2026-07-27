@@ -180,7 +180,7 @@ export function PlayerFlowBoard() {
   return <div className="board">
     <div className="board-h">
       <div className="board-title">ИГРОК · МОБИЛЬНОЕ ПРИЛОЖЕНИЕ</div>
-      <div className="board-tag">iOS · тёмная тема · Liquid Glass · Lucide</div>
+      <div className="board-tag">iOS · тёмная тема · Lucide</div>
     </div>
     <div className="row">
       <Col cap="7 — Главная"><PlayerHome /></Col>
