@@ -1,0 +1,143 @@
+/* frame.css — общая система для макетов-бордов.
+   Каждый экран = набор этих классов, поэтому компоненты (шапка, таб-бар,
+   строка матча, чип) ОДИНАКОВЫ на всех экранах — как в референсе.
+   Тёмная тема iOS. Значения-акценты из design/src/tokens.css. */
+
+:root {
+  --nav: #0b1a38;                 /* фон экрана сверху */
+  --nav2: #0a1530;                /* фон экрана снизу  */
+  --card: #13234c;                /* карточка/поверхность */
+  --card2: #172a58;               /* карточка вложенная  */
+  --line: rgba(255,255,255,.08);  /* границы */
+  --ink: #e9f0fd;                 /* основной текст */
+  --mut: #8ea6d2;                 /* второстепенный */
+  --dim: #5f78a8;                 /* самый тусклый */
+  --pri: #3b7bff;                 /* акцент (синий) */
+  --ok: #10b981;                  /* победа */
+  --bad: #f4517b;                 /* поражение */
+  --chip: rgba(59,123,255,.16);   /* фон чипа */
+  --board-bg: #ffffff;
+  --font: -apple-system, "SF Pro Display", "Segoe UI", Roboto, Arial, sans-serif;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+.board {
+  background: var(--board-bg);
+  font-family: var(--font);
+  padding: 40px 44px 48px;
+  width: max-content;
+  color: #0f172a;
+}
+.board-h { margin-bottom: 30px; }
+.board-title {
+  font-size: 22px; font-weight: 800; letter-spacing: .3px; color: #0f172a;
+}
+.board-tag {
+  display: inline-block; margin-top: 10px;
+  font-size: 12px; font-weight: 600; color: var(--pri);
+  background: #eef4ff; border: 1px solid #d7e5ff;
+  padding: 4px 10px; border-radius: 999px;
+}
+
+/* ряд экранов с подписями и стрелками */
+.row { display: flex; align-items: flex-start; gap: 0; }
+.col { display: flex; flex-direction: column; align-items: center; }
+.cap { font-size: 13px; font-weight: 600; color: #64748b; margin-bottom: 12px; height: 18px; white-space: nowrap; }
+
+/* стрелка-связка между экранами */
+.arrow { width: 118px; align-self: center; padding-top: 30px; text-align: center; }
+.arrow .lbl { font-size: 11.5px; color: var(--pri); font-weight: 600; margin-bottom: 6px; }
+.arrow .ln  { position: relative; height: 2px; background: var(--pri); margin: 0 8px; }
+.arrow .ln::after {
+  content: ""; position: absolute; right: -1px; top: -4px;
+  border: 5px solid transparent; border-left-color: var(--pri);
+}
+
+/* ── телефон ── */
+.frame {
+  width: 316px; padding: 9px; border-radius: 46px;
+  background: linear-gradient(160deg,#1c2540,#0a0f22);
+  box-shadow: 0 30px 60px -20px rgba(15,23,42,.45), 0 0 0 1px rgba(15,23,42,.06);
+}
+.screen {
+  position: relative; height: 648px; border-radius: 38px; overflow: hidden;
+  background: linear-gradient(180deg,var(--nav),var(--nav2));
+  color: var(--ink); display: flex; flex-direction: column;
+}
+.island {
+  position: absolute; top: 10px; left: 50%; transform: translateX(-50%);
+  width: 92px; height: 26px; border-radius: 999px; background: #05070f; z-index: 5;
+}
+
+/* системная строка + шапка приложения */
+.sys { display: flex; justify-content: space-between; padding: 14px 22px 0; font-size: 12px; color: var(--ink); font-weight: 600; }
+.nav { display: flex; align-items: center; justify-content: space-between; padding: 14px 18px 10px; }
+.brand { display: flex; align-items: center; gap: 7px; font-size: 13px; font-weight: 800; letter-spacing: .4px; color: var(--ink); }
+.brand .mk { width: 22px; height: 22px; border-radius: 7px; background: var(--pri); display: grid; place-items: center; font-size: 12px; }
+.bell { position: relative; width: 30px; height: 30px; border-radius: 9px; background: rgba(255,255,255,.06); display: grid; place-items: center; font-size: 14px; }
+.bell.dot::after { content: ""; position: absolute; top: 6px; right: 7px; width: 7px; height: 7px; border-radius: 50%; background: var(--bad); border: 2px solid var(--nav); }
+.nav .back { font-size: 22px; color: var(--ink); line-height: 1; }
+.nav .link { font-size: 12.5px; color: var(--pri); font-weight: 600; }
+
+.body { flex: 1; overflow: hidden; padding: 4px 16px 0; display: flex; flex-direction: column; gap: 12px; }
+.title { font-size: 21px; font-weight: 800; padding: 2px 2px 2px; }
+
+.sect { font-size: 11px; font-weight: 700; letter-spacing: .8px; color: var(--dim); text-transform: uppercase; margin: 4px 2px -2px; }
+.card { background: var(--card); border: 1px solid var(--line); border-radius: 18px; padding: 14px; }
+
+/* карточка игрока */
+.pcard { display: flex; align-items: center; gap: 12px; }
+.avatar { width: 48px; height: 48px; border-radius: 50%; background: linear-gradient(140deg,#3b7bff,#7c4dff); display: grid; place-items: center; font-weight: 800; font-size: 16px; color: #fff; flex: none; }
+.avatar.sm { width: 34px; height: 34px; font-size: 12px; }
+.pcard .who { flex: 1; }
+.pcard .nm { font-size: 15px; font-weight: 700; }
+.pcard .mt { font-size: 11.5px; color: var(--mut); margin-top: 3px; line-height: 1.5; }
+.pcard .rt { text-align: right; }
+.pcard .rt .k { font-size: 10.5px; color: var(--mut); }
+.pcard .rt .v { font-size: 20px; font-weight: 800; color: var(--pri); }
+
+.chart-h { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+.chart-h .t { font-size: 12.5px; color: var(--mut); font-weight: 600; }
+.tagnew { font-size: 9.5px; font-weight: 800; color: #fff; background: var(--pri); padding: 2px 7px; border-radius: 999px; letter-spacing: .5px; }
+.chart { width: 100%; height: 66px; }
+
+/* сетка статистики */
+.stats { display: grid; grid-template-columns: repeat(4,1fr); gap: 8px; }
+.stat { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 10px 6px; text-align: center; }
+.stat .v { font-size: 18px; font-weight: 800; }
+.stat .k { font-size: 10px; color: var(--mut); margin-top: 3px; }
+.stat.g .v { color: var(--ok); } .stat.r .v { color: var(--bad); } .stat.b .v { color: var(--pri); }
+
+/* список матчей */
+.rowh { display: flex; justify-content: space-between; align-items: center; }
+.rowh .a { font-size: 11.5px; color: var(--pri); font-weight: 600; }
+.list { display: flex; flex-direction: column; }
+.match { display: flex; align-items: center; gap: 10px; padding: 9px 2px; border-bottom: 1px solid var(--line); }
+.match:last-child { border-bottom: 0; }
+.badge { width: 22px; height: 22px; border-radius: 7px; display: grid; place-items: center; font-size: 11px; font-weight: 800; color: #fff; flex: none; }
+.badge.win { background: var(--ok); } .badge.loss { background: var(--bad); }
+.match .who { flex: 1; }
+.match .nm { font-size: 13px; font-weight: 600; }
+.match .mt { font-size: 10.5px; color: var(--mut); margin-top: 2px; }
+.match .sc { font-size: 14px; font-weight: 800; }
+.match .dt { font-size: 10.5px; color: var(--dim); width: 46px; text-align: right; }
+
+/* строка уведомления / турнира */
+.item { display: flex; align-items: center; gap: 11px; padding: 12px; background: var(--card); border: 1px solid var(--line); border-radius: 14px; margin-top: 8px; }
+.item .ic { width: 34px; height: 34px; border-radius: 10px; background: var(--chip); display: grid; place-items: center; font-size: 15px; flex: none; }
+.item .tx { flex: 1; }
+.item .tt { font-size: 13px; font-weight: 700; }
+.item .ss { font-size: 11px; color: var(--mut); margin-top: 3px; }
+.item .rt { font-size: 10.5px; color: var(--dim); }
+.item.live { border-color: rgba(16,185,129,.4); }
+.pill { display: inline-block; font-size: 9.5px; font-weight: 800; letter-spacing: .5px; padding: 2px 7px; border-radius: 999px; margin-bottom: 5px; }
+.pill.live { background: rgba(16,185,129,.16); color: var(--ok); }
+.pill.reg  { background: var(--chip); color: var(--pri); }
+.pill.done { background: rgba(255,255,255,.07); color: var(--dim); }
+
+/* плавающий таб-бар */
+.tabbar { margin: auto 12px 12px; display: flex; justify-content: space-around; background: rgba(11,22,48,.85); border: 1px solid var(--line); border-radius: 20px; padding: 9px 4px; backdrop-filter: blur(8px); }
+.tab { display: flex; flex-direction: column; align-items: center; gap: 3px; font-size: 9.5px; color: var(--dim); }
+.tab .i { font-size: 16px; }
+.tab.on { color: var(--pri); }
