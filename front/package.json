@@ -1,5 +1,5 @@
 {
-  "name": "tt_front",
+  "name": "front",
   "version": "0.1.0",
   "private": true,
   "scripts": {
@@ -9,32 +9,19 @@
     "lint": "eslint"
   },
   "dependencies": {
-    "@amplitude/analytics-browser": "^2.42.5",
-    "@amplitude/session-replay-browser": "^1.44.0",
-    "@fullcalendar/core": "^6.1.20",
-    "@fullcalendar/daygrid": "^6.1.20",
-    "@fullcalendar/interaction": "^6.1.20",
-    "@fullcalendar/list": "^6.1.20",
-    "@fullcalendar/react": "^6.1.20",
-    "@fullcalendar/timegrid": "^6.1.20",
-    "@xyflow/react": "^12.10.2",
-    "lucide-react": "^1.16.0",
     "next": "16.2.6",
     "react": "19.2.4",
     "react-dom": "19.2.4",
-    "react-qr-code": "^2.0.21",
-    "sonner": "^2.0.7",
-    "vaul": "^1.1.2",
-    "zod": "^4.4.3"
+    "i18next": "^25.5.2",
+    "react-i18next": "^15.7.4",
+    "i18next-browser-languagedetector": "^8.2.0"
   },
   "devDependencies": {
-    "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.2.6",
-    "tailwindcss": "^4",
     "typescript": "^5"
   }
 }
