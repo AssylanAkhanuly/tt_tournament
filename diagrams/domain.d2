@@ -180,6 +180,7 @@ entry: ENTRY {
   player2_id: "uuid — пусто в одиночке" {constraint: foreign_key}
   seed: int
   place: int
+  attended: "bool — вышел на игру; неявка учитывается по регламенту (сверка явки → рейтинг)"
 }
 
 match: MATCH {
@@ -316,7 +317,8 @@ news: NEWS_POST {
 # S1 (судейство) и S2 (опорный балл за категорию) — начисляются автоматически;
 # S3 (семинары) и S4 (иная деятельность) — через загрузку документов, проверяет
 # комиссия. Рейтинг живой; активность (S1/S3/S4) сбрасывается ежегодно, категория
-# (S2) остаётся. Апелляция — 10 дней после отказа.
+# (S2) остаётся. Апелляция — только ПОСЛЕ публикации рейтинга, окно 10 дней
+# (JUDGE_APPEAL), а не при подаче документа.
 judge_doc: JUDGE_DOCUMENT {
   shape: sql_table
   class: new
@@ -326,11 +328,10 @@ judge_doc: JUDGE_DOCUMENT {
   file_key: "string — скан в R2"
   event_at: "datetime — дата мероприятия"
   meta: "json — уровень, роль, «вне региона» (для расчёта баллов)"
-  status: "на проверке | принят | отклонён | оспаривается | отказ окончательный"
+  status: "на проверке | принят | отклонён"
   points: "int — начислено при приёме"
   reviewed_by: "uuid — комиссия / председатель ГСК" {constraint: foreign_key}
-  rejected_at: "datetime — старт окна апелляции (10 дней)"
-  appeal_reason: string
+  rejected_at: "datetime — дата отклонения (уведомление; оспаривание — после публикации рейтинга)"
 }
 
 # Журнал начислений — источник живого рейтинга и аудит. Заменяет ручной журнал.
@@ -341,10 +342,54 @@ judge_score: JUDGE_SCORE {
   user_id: "uuid — судья" {constraint: foreign_key}
   year: "int — отчётный год (активность сбрасывается ежегодно)"
   category: "S1 | S2 | S3 | S4"
-  source: "турнир (авто) | категория из профиля (авто) | документ"
-  ref_id: "uuid — турнир или JUDGE_DOCUMENT"
+  source: "наряд/турнир (авто) | категория из профиля (авто) | документ | апелляция (пересчёт)"
+  ref_id: "uuid — JUDGE_DUTY, JUDGE_DOCUMENT или JUDGE_APPEAL"
   points: "int — начислено (может быть отрицательным: неявка −1)"
   at: datetime
+}
+
+# Наряд судей на турнире — кто и в какой роли работал. Источник ЯВКИ судей
+# (сверка после закрытия турнира) и автоматического начисления S1: роль и выезд
+# задают коэффициент, неявка при заявке даёт −1.
+judge_duty: JUDGE_DUTY {
+  shape: sql_table
+  class: new
+  id: uuid {constraint: primary_key}
+  tournament_id: uuid {constraint: foreign_key}
+  user_id: "uuid — судья" {constraint: foreign_key}
+  role: "главный | зам | секретарь | судья стола — коэффициент S1"
+  traveled: "bool — выезд в другой регион (влияет на S1)"
+  attended: "bool — явился и отсудил (сверка явки)"
+  no_show: "bool — заявлен, но не явился → S1 −1"
+}
+
+# Официальная публикация рейтинга — якорь окна апелляции. Рейтинг живой и всегда
+# актуален, но именно ПУБЛИКАЦИЯ открывает 10-дневное окно оспаривания.
+rating_pub: JUDGE_RATING_PUBLICATION {
+  shape: sql_table
+  class: new
+  id: uuid {constraint: primary_key}
+  year: int
+  published_at: "datetime — старт окна апелляции (10 дней)"
+  note: "string — период / примечание"
+}
+
+# Апелляция на ОПУБЛИКОВАННЫЙ рейтинг (а не на отклонение документа при подаче).
+# Открывается только после публикации, в течение 10 дней. Обоснованная →
+# пересчёт: правка пишется в журнал (JUDGE_SCORE), рейтинг обновляется.
+judge_appeal: JUDGE_APPEAL {
+  shape: sql_table
+  class: new
+  id: uuid {constraint: primary_key}
+  user_id: "uuid — судья" {constraint: foreign_key}
+  publication_id: "uuid — от какой публикации считается окно 10 дней" {constraint: foreign_key}
+  subject: "отклонённый документ | начисление | коэффициент"
+  ref_id: "uuid — спорный JUDGE_SCORE или JUDGE_DOCUMENT, если есть"
+  reason: string
+  status: "оспаривается | обоснованно (пересчёт) | отклонено"
+  opened_at: datetime
+  decided_by: "uuid — рейтинговая комиссия" {constraint: foreign_key}
+  decided_at: "datetime — решение окончательное"
 }
 
 user.id -> role.user_id: имеет
@@ -367,6 +412,13 @@ user.id -> judge_doc.user_id: судья подаёт документ
 user.id -> judge_doc.reviewed_by: комиссия проверяет
 user.id -> judge_score.user_id: баллы судьи
 judge_doc.id -> judge_score.ref_id: документ → начисление
+tournament.id -> judge_duty.tournament_id: наряд судей
+user.id -> judge_duty.user_id: судья в наряде
+judge_duty.id -> judge_score.ref_id: судейство S1 → начисление
+user.id -> judge_appeal.user_id: судья оспаривает после публикации
+rating_pub.id -> judge_appeal.publication_id: окно 10 дней от публикации
+user.id -> judge_appeal.decided_by: комиссия решает
+judge_appeal.id -> judge_score.ref_id: обоснованная апелляция → пересчёт
 application.id -> application_item.application_id: список игроков
 user.id -> application_item.user_id: заявлен
 application_item.id -> entry.id: принята — создаёт сторону
