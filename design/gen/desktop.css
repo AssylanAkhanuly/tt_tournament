@@ -1,0 +1,98 @@
+/* desktop.css — десктопная оболочка (панель главного судьи).
+   Токены и стеклянные переменные — из frame.css. */
+
+.dwrap { background: var(--board-bg); padding: 44px; width: max-content; font-family: var(--font); -webkit-font-smoothing: antialiased; }
+
+.laptop {
+  width: 1200px; height: 760px; border-radius: 20px; overflow: hidden; position: relative;
+  color: var(--ink); display: flex; flex-direction: column;
+  box-shadow: 0 60px 120px -34px rgba(9,12,22,.6), 0 0 0 1px rgba(15,23,42,.1), inset 0 0 0 1px rgba(255,255,255,.04);
+  background:
+    radial-gradient(46% 44% at 10% -2%, rgba(111,155,255,.38), transparent 62%),
+    radial-gradient(42% 42% at 90% 4%, rgba(139,102,255,.3), transparent 62%),
+    radial-gradient(60% 40% at 60% 106%, rgba(52,211,153,.16), transparent 60%),
+    linear-gradient(180deg, #0b1120 0%, #0a0e18 60%, #0c1424 100%);
+}
+
+/* верхняя панель приложения */
+.dtop { display: flex; align-items: center; gap: 14px; padding: 0 20px; height: 58px; border-bottom: 1px solid var(--glass-line); background: var(--glass); backdrop-filter: var(--blur); -webkit-backdrop-filter: var(--blur); }
+.dtop .logo { height: 30px; width: auto; filter: drop-shadow(0 2px 7px rgba(111,155,255,.4)); }
+.dtop .bname { font-weight: 700; font-size: 15px; letter-spacing: .2px; }
+.dtop .tname { color: var(--mut); font-size: 13px; }
+.dtop .sp { flex: 1; }
+.dtop .live { display: inline-flex; align-items: center; gap: 6px; font-size: 11px; font-weight: 800; letter-spacing: .5px; color: var(--ok); background: rgba(52,211,153,.16); padding: 5px 10px; border-radius: 999px; }
+.dtop .live .d { width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+.dtop .me { display: flex; align-items: center; gap: 9px; }
+.dtop .me img { width: 32px; height: 32px; border-radius: 50%; object-fit: cover; box-shadow: 0 0 0 1px rgba(255,255,255,.14); }
+.dtop .me .nm { font-size: 12.5px; font-weight: 600; } .dtop .me .rl { font-size: 10.5px; color: var(--mut); }
+
+.dgrid { flex: 1; display: grid; grid-template-columns: 212px 1fr; min-height: 0; }
+
+/* боковая навигация */
+.dside { border-right: 1px solid var(--glass-line); padding: 16px 12px; display: flex; flex-direction: column; gap: 3px; }
+.dni { display: flex; align-items: center; gap: 11px; padding: 10px 12px; border-radius: 12px; color: var(--mut); font-size: 13.5px; font-weight: 600; }
+.dni.on { color: var(--ink); background: var(--glass-2); border: 1px solid var(--glass-line); box-shadow: inset 0 1px 0 var(--glass-hi); }
+.dside .grow { flex: 1; }
+.dside .hint { font-size: 11px; color: var(--dim); padding: 10px 12px; line-height: 1.5; }
+
+/* основная область */
+.dmain { padding: 20px 22px; min-width: 0; overflow: hidden; display: flex; flex-direction: column; gap: 16px; }
+.dtitle h2 { font-size: 21px; font-weight: 800; letter-spacing: -.3px; }
+.dtitle p { color: var(--mut); font-size: 12.5px; margin-top: 2px; }
+
+.dchips { display: flex; gap: 10px; }
+.dchip { flex: 1; background: var(--glass); border: 1px solid var(--glass-line); border-radius: 14px; padding: 12px 14px; box-shadow: inset 0 1px 0 var(--glass-hi); }
+.dchip .v { font-size: 22px; font-weight: 800; font-variant-numeric: tabular-nums; letter-spacing: -.5px; }
+.dchip .k { font-size: 11.5px; color: var(--mut); margin-top: 2px; }
+.dchip.g .v { color: var(--ok); } .dchip.b .v { color: var(--pri); } .dchip.a .v { color: #f0b24b; }
+
+/* столы */
+.dtables { display: grid; grid-template-columns: repeat(6,1fr); gap: 10px; }
+.dtable { background: var(--glass); border: 1px solid var(--glass-line); border-radius: 12px; padding: 10px; box-shadow: inset 0 1px 0 var(--glass-hi); }
+.dtable .tn { display: flex; align-items: center; justify-content: space-between; font-size: 11px; color: var(--mut); font-weight: 700; }
+.dtable .st { width: 7px; height: 7px; border-radius: 50%; background: var(--dim); }
+.dtable.busy { border-color: rgba(111,155,255,.4); } .dtable.busy .st { background: var(--pri); box-shadow: 0 0 8px var(--pri); }
+.dtable.free .pl { color: var(--dim); font-size: 12px; margin-top: 6px; }
+.dtable .pl { font-size: 12px; margin-top: 6px; line-height: 1.5; font-weight: 600; }
+.dtable .sc { font-size: 12px; color: var(--pri); font-weight: 800; font-variant-numeric: tabular-nums; }
+
+/* две колонки: сетка + очередь */
+.dcols { flex: 1; display: grid; grid-template-columns: 1fr 340px; gap: 16px; min-height: 0; }
+.panel { background: var(--glass); border: 1px solid var(--glass-line); border-radius: 16px; box-shadow: inset 0 1px 0 var(--glass-hi), 0 20px 44px -26px rgba(0,0,0,.7); display: flex; flex-direction: column; min-height: 0; overflow: hidden; }
+.phead { display: flex; align-items: center; justify-content: space-between; padding: 13px 15px; border-bottom: 1px solid var(--glass-line); }
+.phead .t { font-size: 13.5px; font-weight: 700; }
+.phead .seg { display: flex; gap: 2px; background: rgba(255,255,255,.05); border-radius: 9px; padding: 2px; }
+.phead .seg span { font-size: 11px; font-weight: 600; color: var(--mut); padding: 4px 10px; border-radius: 7px; }
+.phead .seg span.on { color: var(--ink); background: var(--glass-2); }
+.pbody { padding: 16px; overflow: hidden; flex: 1; }
+
+/* сетка */
+.bracket { display: flex; gap: 26px; height: 100%; }
+.bround { display: flex; flex-direction: column; justify-content: space-around; gap: 12px; flex: 1; }
+.brt { font-size: 10.5px; font-weight: 700; letter-spacing: .8px; text-transform: uppercase; color: var(--dim); text-align: center; margin-bottom: 2px; }
+.bmatch { background: var(--glass-2); border: 1px solid var(--glass-line); border-radius: 11px; overflow: hidden; box-shadow: inset 0 1px 0 var(--glass-hi); }
+.bmatch.now { border-color: rgba(111,155,255,.5); box-shadow: inset 0 1px 0 var(--glass-hi), 0 0 0 1px rgba(111,155,255,.3); }
+.bp { display: flex; align-items: center; gap: 8px; padding: 7px 9px; }
+.bp + .bp { border-top: 1px solid var(--glass-line); }
+.bp img { width: 22px; height: 22px; border-radius: 50%; object-fit: cover; flex: none; }
+.bp .n { flex: 1; font-size: 12px; font-weight: 600; color: var(--mut); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.bp .s { font-size: 12.5px; font-weight: 800; color: var(--dim); font-variant-numeric: tabular-nums; }
+.bp.w .n { color: var(--ink); } .bp.w .s { color: var(--pri); }
+
+/* очередь / живые матчи */
+.qsec { font-size: 10.5px; font-weight: 700; letter-spacing: .7px; text-transform: uppercase; color: var(--dim); margin: 2px 0 8px; }
+.qsec:not(:first-child) { margin-top: 16px; }
+.livem { background: var(--glass-2); border: 1px solid rgba(111,155,255,.35); border-radius: 12px; padding: 10px 11px; margin-bottom: 8px; box-shadow: inset 0 1px 0 var(--glass-hi); }
+.livem .top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+.livem .tbl { font-size: 10.5px; font-weight: 800; color: var(--pri); letter-spacing: .4px; }
+.livem .liv { display: inline-flex; align-items: center; gap: 5px; font-size: 9.5px; font-weight: 800; color: var(--ok); }
+.livem .liv .d { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+.livem .pr { display: flex; align-items: center; gap: 8px; padding: 3px 0; }
+.livem .pr img { width: 24px; height: 24px; border-radius: 50%; object-fit: cover; }
+.livem .pr .n { flex: 1; font-size: 12.5px; font-weight: 600; }
+.livem .pr .s { font-size: 15px; font-weight: 800; font-variant-numeric: tabular-nums; }
+.qitem { display: flex; align-items: center; gap: 9px; padding: 9px 0; border-bottom: 1px solid var(--glass-line); }
+.qitem:last-child { border-bottom: 0; }
+.qav { display: flex; } .qav img { width: 26px; height: 26px; border-radius: 50%; object-fit: cover; box-shadow: 0 0 0 2px #0d1526; } .qav img + img { margin-left: -9px; }
+.qitem .q { flex: 1; min-width: 0; } .qitem .q .n { font-size: 12.5px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } .qitem .q .r { font-size: 10.5px; color: var(--mut); }
+.callbtn { font-size: 11.5px; font-weight: 700; color: #fff; background: var(--pri); border-radius: 9px; padding: 7px 12px; box-shadow: 0 6px 14px -4px rgba(111,155,255,.6), inset 0 1px 0 rgba(255,255,255,.35); white-space: nowrap; }
