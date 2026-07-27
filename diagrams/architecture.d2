@@ -214,6 +214,13 @@ apps: "4 · ПРИКЛАДНЫЕ СЕРВИСЫ · Django 4.2 + DRF · gunicorn 
   # оправдан: читают много чаще, чем меняют, и нужен SEO — в отличие от живых
   # данных турнира. Анонс на публикации дёргает воркер → пуш (NOTIFICATION).
   news: "Новости, анонсы и страницы · Wagtail (CMS на Django)\nтот же проект и PostgreSQL, без второго бэкенда · медиа в R2\nредактор · черновики · расписание · мультиязык (рус/каз)\nвеб: RSC + ISR (тут кэш оправдан, §2А) · анонс → пуш · читает и гость" { class: service }
+
+  # Рейтинг судей (Положение ФНТ РК, утв. 02.02.2026). R = S1+S2+S3+S4.
+  # S1 (судейство) и S2 (опорный балл за категорию) — автоматически; S3/S4 —
+  # через загрузку документов с проверкой комиссией (журнал начислений — аудит).
+  # Рейтинг живой; активность сбрасывается ежегодно, категория остаётся;
+  # апелляция 10 дней после отказа. Публичная страница — как новости, с ISR.
+  judgerating: "Рейтинг судей\nS1 (судейство) и S2 (категория) — начисляются автоматически\nS3/S4 — загрузка документов + проверка комиссией · журнал/аудит\nR=S1+S2+S3+S4 · живой · публичная страница · апелляция 10 дней" { class: service }
 }
 
 # ── 5. ДВИЖОК И РАСЧЁТЫ ─────────────────────────────────────────────────────
@@ -640,6 +647,41 @@ storage: "7 · ДАННЫЕ · два разных хранилища" {
       published_at: "datetime — go_live (Wagtail)"
       created_at: datetime
     }
+
+    # Рейтинг судей (Положение ФНТ РК, утв. 02.02.2026). R = S1 + S2 + S3 + S4.
+    # S1 (судейство) и S2 (опорный балл за категорию) — начисляются автоматически;
+    # S3 (семинары) и S4 (иная деятельность) — через загрузку документов, проверяет
+    # комиссия. Рейтинг живой; активность (S1/S3/S4) сбрасывается ежегодно, категория
+    # (S2) остаётся. Апелляция — 10 дней после отказа.
+    judge_doc: JUDGE_DOCUMENT {
+      shape: sql_table
+      class: new
+      id: uuid {constraint: primary_key}
+      user_id: "uuid — судья" {constraint: foreign_key}
+      kind: "семинар (S3) | награда/коллегия (S4) | присвоение/смена категории"
+      file_key: "string — скан в R2"
+      event_at: "datetime — дата мероприятия"
+      meta: "json — уровень, роль, «вне региона» (для расчёта баллов)"
+      status: "на проверке | принят | отклонён | оспаривается | отказ окончательный"
+      points: "int — начислено при приёме"
+      reviewed_by: "uuid — комиссия / председатель ГСК" {constraint: foreign_key}
+      rejected_at: "datetime — старт окна апелляции (10 дней)"
+      appeal_reason: string
+    }
+
+    # Журнал начислений — источник живого рейтинга и аудит. Заменяет ручной журнал.
+    judge_score: JUDGE_SCORE {
+      shape: sql_table
+      class: new
+      id: uuid {constraint: primary_key}
+      user_id: "uuid — судья" {constraint: foreign_key}
+      year: "int — отчётный год (активность сбрасывается ежегодно)"
+      category: "S1 | S2 | S3 | S4"
+      source: "турнир (авто) | категория из профиля (авто) | документ"
+      ref_id: "uuid — турнир или JUDGE_DOCUMENT"
+      points: "int — начислено (может быть отрицательным: неявка −1)"
+      at: datetime
+    }
   }
 }
 
@@ -671,11 +713,13 @@ entry.rbac -> apps.score
 entry.rbac -> apps.referee
 entry.rbac -> apps.analytics
 entry.rbac -> apps.news
+entry.rbac -> apps.judgerating
 
 apps.applications -> apps.fees: проверка взноса, если турнир требует
 apps.tournaments -> core.engine: генерация сетки
 apps.score -> core.engine: партия сыграна
 core.engine -> core.rating: итоги турнира
+core.engine -> apps.judgerating: судейство → S1 (авто)
 
 apps.score -> rt.emit: очко записано в базу
 apps.score -> rt.broadcast: счёт для наложения
@@ -696,6 +740,8 @@ apps.profile -> storage.files: фото игрока { style.stroke: "#f97316"; 
 apps.applications -> storage.files: документы к заявке { style.stroke: "#f97316"; style.stroke-width: 2 }
 apps.news -> storage.pg: посты в NEWS_POST
 apps.news -> storage.files: обложки постов { style.stroke: "#f97316"; style.stroke-width: 2 }
+apps.judgerating -> storage.pg: журнал начислений и документы
+apps.judgerating -> storage.files: сканы документов судей { style.stroke: "#f97316"; style.stroke-width: 2 }
 
 storage.pg -> storage.backup: дамп по расписанию { style.stroke: "#dc2626"; style.stroke-width: 2 }
 storage.files -> storage.backup: копия в другой регион { style.stroke: "#dc2626"; style.stroke-width: 2 }

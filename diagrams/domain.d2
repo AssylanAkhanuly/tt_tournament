@@ -312,6 +312,41 @@ news: NEWS_POST {
   created_at: datetime
 }
 
+# Рейтинг судей (Положение ФНТ РК, утв. 02.02.2026). R = S1 + S2 + S3 + S4.
+# S1 (судейство) и S2 (опорный балл за категорию) — начисляются автоматически;
+# S3 (семинары) и S4 (иная деятельность) — через загрузку документов, проверяет
+# комиссия. Рейтинг живой; активность (S1/S3/S4) сбрасывается ежегодно, категория
+# (S2) остаётся. Апелляция — 10 дней после отказа.
+judge_doc: JUDGE_DOCUMENT {
+  shape: sql_table
+  class: new
+  id: uuid {constraint: primary_key}
+  user_id: "uuid — судья" {constraint: foreign_key}
+  kind: "семинар (S3) | награда/коллегия (S4) | присвоение/смена категории"
+  file_key: "string — скан в R2"
+  event_at: "datetime — дата мероприятия"
+  meta: "json — уровень, роль, «вне региона» (для расчёта баллов)"
+  status: "на проверке | принят | отклонён | оспаривается | отказ окончательный"
+  points: "int — начислено при приёме"
+  reviewed_by: "uuid — комиссия / председатель ГСК" {constraint: foreign_key}
+  rejected_at: "datetime — старт окна апелляции (10 дней)"
+  appeal_reason: string
+}
+
+# Журнал начислений — источник живого рейтинга и аудит. Заменяет ручной журнал.
+judge_score: JUDGE_SCORE {
+  shape: sql_table
+  class: new
+  id: uuid {constraint: primary_key}
+  user_id: "uuid — судья" {constraint: foreign_key}
+  year: "int — отчётный год (активность сбрасывается ежегодно)"
+  category: "S1 | S2 | S3 | S4"
+  source: "турнир (авто) | категория из профиля (авто) | документ"
+  ref_id: "uuid — турнир или JUDGE_DOCUMENT"
+  points: "int — начислено (может быть отрицательным: неявка −1)"
+  at: datetime
+}
+
 user.id -> role.user_id: имеет
 user.club_id -> club.id
 club.id -> application.club_id: подаёт
@@ -328,6 +363,10 @@ user.id -> payment.user_id: платит за участие
 user.id -> payment.marked_by: организатор отмечает
 user.id -> news.author_id: автор публикации
 tournament.id -> news.tournament_id: анонс про турнир
+user.id -> judge_doc.user_id: судья подаёт документ
+user.id -> judge_doc.reviewed_by: комиссия проверяет
+user.id -> judge_score.user_id: баллы судьи
+judge_doc.id -> judge_score.ref_id: документ → начисление
 application.id -> application_item.application_id: список игроков
 user.id -> application_item.user_id: заявлен
 application_item.id -> entry.id: принята — создаёт сторону
