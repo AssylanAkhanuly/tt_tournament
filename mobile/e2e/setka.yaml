@@ -1,0 +1,33 @@
+# E2E турнирной сетки (react-native-skia) через Maestro.
+# Правило: RN-фичи проверяем на эмуляторе e2e (корневой CLAUDE.md -> «E2E-проверка»).
+#
+# ВАЖНО: сама сетка (имена/счёт/линии) рисуется на Skia-канвасе и НЕ попадает в
+# accessibility-дерево — по тексту её не найти. Maestro проверяет RN-обвязку
+# (шапка, кнопки зума) и жесты, а Skia-контент фиксируем скриншотом.
+#
+# Запуск: см. mobile/e2e/README.md (нужен эмулятор + dev-build + Metro на 8081).
+appId: com.assylan.tttournament
+---
+# dev-build: Skia работает только в dev-build, поэтому грузим экран через
+# deep link на Metro. Для standalone-сборки заменить на `- launchApp`.
+- openLink: "ttt://expo-development-client/?url=http://localhost:8081"
+
+# ждём, пока Metro отдаст бандл и смонтируется экран (RN-шапка)
+- extendedWaitUntil:
+    visible: "Чемпионат Казахстана 2026"
+    timeout: 60000
+
+# кнопки зума (RN-оверлей поверх канваса) присутствуют
+- assertVisible: "1:1"
+
+# интерактив: зум + / сброс
+- tapOn: "+"
+- tapOn: "1:1"
+
+# панорама сетки
+- swipe:
+    start: 85%, 45%
+    end: 15%, 35%
+
+# визуальная фиксация Skia-контента (имена/линии/подсветка)
+- takeScreenshot: setka
