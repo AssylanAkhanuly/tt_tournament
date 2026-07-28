@@ -25,11 +25,16 @@
 - typecheck: `node node_modules/typescript/lib/tsc.js -p tsconfig.json --noEmit`
 
 ## Проверка (обязательно перед «готово»)
-- Каждую фичу гоняем сквозным **Playwright e2e** — в реальном браузере, по
-  пользовательскому сценарию (клики/ввод/переходы/видимость), не только typecheck.
+- **Юниты/интеграция — Vitest + React Testing Library**: `npm test`
+  (watch — `npm run test:watch`). Спеки рядом с кодом (`src/**/*.test.ts[x]`),
+  конфиг `vitest.config.mts`, матчеры jest-dom в `vitest.setup.ts`. Логику
+  (раскладка сетки и т.п.) — юнитами; RTL — рендер/интеракции компонентов.
+  Пример — `src/entities/bracket/model.test.ts`.
+- **E2E — Playwright**: каждую фичу гоняем сквозным сценарием в реальном браузере
+  (клики/ввод/переходы/видимость), не только typecheck. `npm run test:e2e`
+  (конфиг `playwright.config.ts`, спеки в `e2e/*.spec.ts`, переиспользует
+  запущенный `npm run dev`). Пример — `e2e/setka.spec.ts`.
   См. корневой `CLAUDE.md` → «E2E-проверка» и `TESTING.md`.
-- Запуск: `npm run test:e2e` (конфиг `playwright.config.ts`, спеки в `e2e/*.spec.ts`;
-  переиспользует запущенный `npm run dev`). Пример — `e2e/setka.spec.ts`.
 
 ## Конвенции
 - Один компонент — своя папка в нужном слое FSD + `Component.module.css` рядом.
