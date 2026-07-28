@@ -4,7 +4,7 @@ import { TournamentScreen, ApplicationForm, Submitted } from './Signup';
 // Экраны флоу «Заявка на турнир» как stories. Появятся в дереве слева
 // и переиспользуются в MDX-странице флоу (Signup.mdx).
 const meta: Meta = {
-  title: 'Экраны/Заявка на турнир',
+  title: 'Мобильное приложение/Игрок/Заявка на турнир',
   parameters: { layout: 'centered' },
 };
 export default meta;

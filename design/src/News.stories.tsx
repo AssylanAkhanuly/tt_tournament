@@ -2,7 +2,7 @@ import type { Meta, StoryObj } from '@storybook/react';
 import { NewsFeed, Article } from './News';
 
 const meta: Meta = {
-  title: 'Экраны/Новости и анонсы',
+  title: 'Мобильное приложение/Игрок/Новости',
   parameters: { layout: 'centered' },
 };
 export default meta;

@@ -1,11 +1,12 @@
 import type { Meta, StoryObj } from '@storybook/react';
 import { RefereeDesktop } from './DesktopReferee';
 
-/* Десктоп главного судьи — живое ведение турнира. */
+/* Веб → Главный судья: десктоп-панель живого ведения турнира (20 столов,
+   настоящая сетка, очередь). */
 const meta: Meta = {
-  title: 'Главный судья/Десктоп',
+  title: 'Веб/Главный судья',
   parameters: { layout: 'fullscreen' },
 };
 export default meta;
 
-export const Обзор: StoryObj = { render: () => <RefereeDesktop /> };
+export const Панель: StoryObj = { render: () => <RefereeDesktop /> };

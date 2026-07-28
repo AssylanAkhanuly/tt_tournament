@@ -1,13 +1,11 @@
 import type { Meta, StoryObj } from '@storybook/react';
 import { PlayerFlowBoard } from './PlayerApp';
 
-/* Только флоу (см. design/README.md): отдельные экраны (главная, уведомления,
-   статистика, турниры) — компоненты внутри флоу-борда, отдельными историями
-   их не показываем. */
+/* Только флоу (design/README.md). Раздел: Мобильное приложение → Игрок. */
 const meta: Meta = {
-  title: 'Игрок/Мобильное приложение',
+  title: 'Мобильное приложение/Игрок',
   parameters: { layout: 'fullscreen' },
 };
 export default meta;
 
-export const Флоу: StoryObj = { render: () => <PlayerFlowBoard /> };
+export const Приложение: StoryObj = { render: () => <PlayerFlowBoard /> };

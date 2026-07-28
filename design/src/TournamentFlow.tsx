@@ -196,16 +196,14 @@ export function TournamentFlowBoard() {
   return (
     <div className="board">
       <div className="board-h">
-        <div className="board-title">ТУРНИР · ФЛОУ</div>
-        <div className="board-tag">игрок/зритель + судья стола · тёмная тема</div>
+        <div className="board-title">ТУРНИР · ИГРОК/ЗРИТЕЛЬ</div>
+        <div className="board-tag">мобильное приложение · тёмная тема</div>
       </div>
       <div className="row">
         <Col cap="Обзор турнира"><TournamentDetail /></Col>
         <Arrow lbl="вкладка «Сетка»" />
         <Col cap="Сетка"><TournamentBracket /></Col>
-        <Arrow lbl="матч идёт" />
-        <Col cap="Судья стола · ввод"><JudgeTable /></Col>
-        <Arrow lbl="в реальном времени" />
+        <Arrow lbl="открыть матч" />
         <Col cap="Live · зритель"><LiveMatch /></Col>
       </div>
     </div>

@@ -99,3 +99,38 @@
 .qav { display: flex; } .qav img { width: 26px; height: 26px; border-radius: 50%; object-fit: cover; box-shadow: 0 0 0 2px #0d1526; } .qav img + img { margin-left: -9px; }
 .qitem .q { flex: 1; min-width: 0; } .qitem .q .n { font-size: 12.5px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } .qitem .q .r { font-size: 10.5px; color: var(--mut); }
 .callbtn { font-size: 11.5px; font-weight: 700; color: #fff; background: var(--pri); border-radius: 9px; padding: 7px 12px; box-shadow: 0 6px 14px -4px rgba(111,155,255,.6), inset 0 1px 0 rgba(255,255,255,.35); white-space: nowrap; }
+
+/* десктоп-флоу: форма организации, выбор судьи, приёмка */
+.dform { flex: 1; display: grid; grid-template-columns: 1fr 1fr; gap: 16px; min-height: 0; }
+.dformCol { display: flex; flex-direction: column; gap: 16px; min-height: 0; }
+.dfg { display: flex; flex-direction: column; gap: 14px; }
+.dfield { display: flex; flex-direction: column; gap: 7px; }
+.dfield > label { font-size: 12px; font-weight: 600; color: var(--mut); }
+.dseg2 { display: flex; gap: 6px; flex-wrap: wrap; }
+.dseg2 span { font-size: 12.5px; font-weight: 600; color: var(--mut); padding: 8px 12px; border-radius: 10px; background: var(--glass); border: 1px solid var(--glass-line); }
+.dseg2 span.on { color: #fff; background: var(--pri); border-color: transparent; box-shadow: inset 0 1px 0 rgba(255,255,255,.3); }
+.dval { font-size: 13.5px; font-weight: 600; }
+.dhintbox { font-size: 11.5px; color: var(--dim); background: rgba(255,255,255,.03); border: 1px solid var(--glass-line); border-radius: 10px; padding: 9px 11px; line-height: 1.5; }
+.djudges { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; overflow: auto; align-content: start; }
+.djudge { display: flex; align-items: center; justify-content: space-between; background: var(--glass); border: 1px solid var(--glass-line); border-radius: 10px; padding: 9px 11px; }
+.djudge .tn { font-size: 12px; color: var(--mut); font-weight: 700; }
+.djudge .jn { font-size: 12.5px; font-weight: 600; } .djudge .jn.empty { color: var(--dim); }
+.dsubmit { display: flex; align-items: center; justify-content: center; gap: 8px; padding: 14px; border-radius: 14px; font-size: 14px; font-weight: 800; color: #fff; background: var(--pri); box-shadow: 0 14px 30px -12px rgba(111,155,255,.8), inset 0 1px 0 rgba(255,255,255,.4); }
+.dsubmit.ok { background: var(--ok); color: #04240f; box-shadow: 0 14px 30px -12px rgba(52,211,153,.8); }
+.dcenter { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; text-align: center; }
+
+/* выбор судьи из заявок / приёмка результатов — список-строки */
+.drows { display: flex; flex-direction: column; gap: 8px; overflow: auto; }
+.drow { display: flex; align-items: center; gap: 12px; background: var(--glass); border: 1px solid var(--glass-line); border-radius: 12px; padding: 11px 13px; }
+.drow.pick { border-color: rgba(111,155,255,.5); box-shadow: 0 0 0 1px rgba(111,155,255,.3); }
+.drow img { width: 34px; height: 34px; border-radius: 50%; object-fit: cover; flex: none; }
+.drow .who { flex: 1; min-width: 0; }
+.drow .who .nm { font-size: 13.5px; font-weight: 700; }
+.drow .who .rl { font-size: 11.5px; color: var(--mut); margin-top: 2px; }
+.drow .rt { display: flex; gap: 16px; text-align: center; }
+.drow .rt .v { font-size: 15px; font-weight: 800; font-variant-numeric: tabular-nums; }
+.drow .rt .k { font-size: 10px; color: var(--mut); }
+.dpickbtn { font-size: 12px; font-weight: 700; color: #fff; background: var(--pri); border-radius: 9px; padding: 8px 14px; box-shadow: inset 0 1px 0 rgba(255,255,255,.35); white-space: nowrap; }
+.dactionbar { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.dcount { font-size: 12.5px; color: var(--mut); font-weight: 600; }
+.dsubmit { flex: none; }

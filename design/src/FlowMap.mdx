@@ -1,0 +1,17 @@
+import { Meta } from '@storybook/blocks';
+import flowMap from './assets/flow-tournament-full.svg';
+
+<Meta title="Обзор/Карта флоу" />
+
+# Карта флоу турнира
+
+Сквозной путь турнира — от заведения федерацией до пересчёта рейтинга. Относится
+**ко всем ролям и платформам сразу**, поэтому вынесен в общий раздел «Обзор», а не
+под конкретную роль. Источник — `diagrams/flow-tournament-full.d2` (единственный
+источник схем, см. корневой `CLAUDE.md`).
+
+<img
+  src={flowMap}
+  alt="Карта флоу турнира"
+  style={{ width: '100%', border: '1px solid var(--c-line)', borderRadius: 16 }}
+/>
