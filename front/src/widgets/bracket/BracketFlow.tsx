@@ -55,8 +55,18 @@ function MatchNode({ data }: NodeProps) {
 
 const nodeTypes = { match: MatchNode };
 
-export function BracketFlow({ bracket }: { bracket: Bracket }) {
-  const { nodes, connectorD } = useMemo(() => {
+export function BracketFlow({
+  bracket,
+  minZoom = 0.4,
+  maxZoom = 2.5,
+  fitPadding = 0.3,
+}: {
+  bracket: Bracket;
+  minZoom?: number; // ниже — чтобы уместить всю сетку в узком контейнере (напр. телефон)
+  maxZoom?: number;
+  fitPadding?: number;
+}) {
+  const { nodes, connectorD, extent } = useMemo(() => {
     const layout = layoutSingleElimination(bracket, {
       nodeW: NODE_W,
       nodeH: NODE_H,
@@ -83,7 +93,18 @@ export function BracketFlow({ bracket }: { bracket: Bracket }) {
       .map((c) => c.points.map((p, i) => `${i === 0 ? 'M' : 'L'}${p.x} ${p.y}`).join(' '))
       .join(' ');
 
-    return { nodes: ns, connectorD };
+    // границы «карты» — нельзя утащить сетку в бесконечную пустоту (translateExtent)
+    const left = Math.min(...layout.nodes.map((n) => n.x));
+    const top = Math.min(...layout.nodes.map((n) => n.y));
+    const right = Math.max(...layout.nodes.map((n) => n.x + NODE_W));
+    const bottom = Math.max(...layout.nodes.map((n) => n.y + NODE_H));
+    const m = 240; // небольшой отступ вокруг сетки
+    const extent: [[number, number], [number, number]] = [
+      [left - m, top - m],
+      [right + m, bottom + m],
+    ];
+
+    return { nodes: ns, connectorD, extent };
   }, [bracket]);
 
   return (
@@ -95,9 +116,10 @@ export function BracketFlow({ bracket }: { bracket: Bracket }) {
           nodeTypes={nodeTypes}
           colorMode="dark"
           fitView
-          fitViewOptions={{ padding: 0.3 }}
-          minZoom={0.4}
-          maxZoom={2.5}
+          fitViewOptions={{ padding: fitPadding }}
+          minZoom={minZoom}
+          maxZoom={maxZoom}
+          translateExtent={extent}
           nodesDraggable={false}
           nodesConnectable={false}
           elementsSelectable={false}
