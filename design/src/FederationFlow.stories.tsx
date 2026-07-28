@@ -5,7 +5,7 @@ import { FederationTabletBoard, FederationMobileBoard } from './FederationRespon
 /* Веб → Федерация: календарь/создать → выбрать судью → приёмка результатов.
    Три версии одного флоу — десктоп / планшет / телефон. */
 const meta: Meta = {
-  title: 'Веб/Федерация',
+  title: 'Веб/Федерация/Календарь и приёмка',
   parameters: { layout: 'fullscreen' },
 };
 export default meta;

@@ -5,7 +5,7 @@ import { RefereeMobile, RefereeTablet } from './RefereeResponsive';
 /* Веб → Главный судья. Адаптив: одна панель живого ведения турнира в раскладках
    десктоп / планшет (портрет) / планшет-альбом / мобилка — правило design/README.md. */
 const meta: Meta = {
-  title: 'Веб/Главный судья',
+  title: 'Веб/Главный судья/Обзор',
   parameters: { layout: 'fullscreen' },
 };
 export default meta;
