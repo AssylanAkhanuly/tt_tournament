@@ -145,3 +145,11 @@
 .tgrid { flex: 1; display: grid; grid-template-columns: 1.3fr 1fr; gap: 16px; min-height: 0; }
 .tcol { display: flex; flex-direction: column; gap: 11px; overflow: auto; }
 .ttables { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+
+/* планшет — тело экрана: скролл-колонка либо центрирование (пустые/итоговые шаги) */
+.tbody { flex: 1; min-height: 0; overflow: auto; display: flex; flex-direction: column; gap: 12px; scrollbar-width: none; }
+.tbody::-webkit-scrollbar { display: none; }
+.tbody.center { justify-content: center; align-items: center; text-align: center; }
+.tbody .sect:first-child { margin-top: 0; }
+/* две колонки формы на планшете (шире телефона) */
+.tform2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
