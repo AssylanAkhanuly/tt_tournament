@@ -3,6 +3,8 @@ import {
   LayoutDashboard, Network, Users, Grid2x2, Settings, Bell, Search,
 } from 'lucide-react';
 import fntLogo from './assets/fnt-emblem.png';
+import { BracketFlow } from '@/widgets/bracket/BracketFlow';
+import { bigBracket } from './bigBracket';
 import '../gen/frame.css';
 import '../gen/desktop.css';
 
@@ -16,11 +18,13 @@ const P = {
 };
 
 type PP = { av: string; n: string; s?: string; w?: boolean };
-const Bp = ({ p }: { p: PP | null }) => p
-  ? <div className={'bp' + (p.w ? ' w' : '')}><img src={p.av} alt="" /><span className="n">{p.n}</span><span className="s">{p.s ?? '–'}</span></div>
-  : <div className="bp"><span className="n" style={{ color: 'var(--dim)' }}>—</span></div>;
-const BMatch = ({ p1, p2, now }: { p1: PP | null; p2: PP | null; now?: boolean }) =>
-  <div className={'bmatch' + (now ? ' now' : '')}><Bp p={p1} /><Bp p={p2} /></div>;
+
+// столы зала: реалистично много (20). Компактные чипы — номер, статус, счёт.
+const TABLES = Array.from({ length: 20 }, (_, i) => {
+  const busy = i < 12;
+  const scores = ['2 : 1', '1 : 1', '0 : 2', '3 : 2', '1 : 0', '2 : 2', '0 : 1', '1 : 3', '2 : 0', '1 : 2', '3 : 1', '0 : 0'];
+  return { n: i + 1, busy, score: busy ? scores[i % scores.length] : null };
+});
 
 function LiveM({ tbl, a, b }: { tbl: string; a: PP; b: PP }) {
   return <div className="livem">
@@ -72,40 +76,28 @@ export function RefereeDesktop() {
         <div className="dtitle"><h2>Обзор турнира</h2><p>Живая сводка · сетка обновляется после каждого результата</p></div>
 
         <div className="dchips">
-          <div className="dchip"><div className="v">32</div><div className="k">Участников</div></div>
-          <div className="dchip b"><div className="v">4</div><div className="k">Идут сейчас</div></div>
-          <div className="dchip a"><div className="v">6</div><div className="k">Ждут стола</div></div>
-          <div className="dchip g"><div className="v">18</div><div className="k">Завершено</div></div>
+          <div className="dchip"><div className="v">128</div><div className="k">Участников</div></div>
+          <div className="dchip b"><div className="v">12</div><div className="k">Идут сейчас</div></div>
+          <div className="dchip a"><div className="v">8</div><div className="k">Ждут стола</div></div>
+          <div className="dchip g"><div className="v">60</div><div className="k">Завершено</div></div>
         </div>
 
+        {/* столы зала — реалистично много (20), компактная сетка чипов */}
         <div className="dtables">
-          <div className="dtable busy"><div className="tn">Стол 1<span className="st" /></div><div className="pl">Пак С. — Ерлан Б.</div><div className="sc">1 : 1</div></div>
-          <div className="dtable busy"><div className="tn">Стол 3 · эфир<span className="st" /></div><div className="pl">Смагулов — Токаев</div><div className="sc">2 : 1</div></div>
-          <div className="dtable busy"><div className="tn">Стол 4<span className="st" /></div><div className="pl">Абаев — Сериков</div><div className="sc">0 : 2</div></div>
-          <div className="dtable free"><div className="tn">Стол 2<span className="st" /></div><div className="pl">свободен</div></div>
-          <div className="dtable free"><div className="tn">Стол 5<span className="st" /></div><div className="pl">свободен</div></div>
-          <div className="dtable free"><div className="tn">Стол 6<span className="st" /></div><div className="pl">свободен</div></div>
+          {TABLES.map((t) => (
+            <div key={t.n} className={'dtable ' + (t.busy ? 'busy' : 'free')}>
+              <div className="tn">Стол {t.n}<span className="st" /></div>
+              {t.busy ? <div className="sc">{t.score}</div> : <div className="pl">—</div>}
+            </div>
+          ))}
         </div>
 
         <div className="dcols">
           <section className="panel">
             <div className="phead"><span className="t">Сетка</span><span className="seg"><span className="on">Сетка</span><span>Группы</span></span></div>
-            <div className="pbody">
-              <div className="bracket">
-                <div className="bround">
-                  <div><div className="brt">1/4 финала</div><BMatch p1={{ av: P.smag, n: 'Смагулов А.', s: '3', w: true }} p2={{ av: P.aba, n: 'Абаев Д.', s: '1' }} /></div>
-                  <BMatch p1={{ av: P.kim, n: 'Ким Г.', s: '2' }} p2={{ av: P.tok, n: 'Токаев М.', s: '3', w: true }} />
-                  <BMatch p1={{ av: P.zhu, n: 'Жумабеков Р.', s: '3', w: true }} p2={{ av: P.ser, n: 'Сериков Н.', s: '0' }} />
-                  <BMatch p1={{ av: P.gla, n: 'Гладун И.', s: '1' }} p2={{ av: P.bai, n: 'Байжанов А.', s: '3', w: true }} />
-                </div>
-                <div className="bround">
-                  <div><div className="brt">1/2 финала</div><BMatch now p1={{ av: P.smag, n: 'Смагулов А.', s: '2' }} p2={{ av: P.tok, n: 'Токаев М.', s: '1' }} /></div>
-                  <BMatch p1={{ av: P.zhu, n: 'Жумабеков Р.' }} p2={{ av: P.bai, n: 'Байжанов А.' }} />
-                </div>
-                <div className="bround">
-                  <div><div className="brt">Финал</div><BMatch p1={null} p2={null} /></div>
-                </div>
-              </div>
+            <div className="pbody dbracketWrap">
+              {/* настоящий React Flow, большой посев (128) — реалистичный масштаб */}
+              <BracketFlow bracket={bigBracket} minZoom={0.05} fitPadding={0.1} />
             </div>
           </section>
 

@@ -2,7 +2,6 @@ import type { ReactNode } from 'react';
 import {
   Bell, Home, Trophy, Swords, User, ChevronRight, ChevronLeft,
   Megaphone, CheckCircle2, TrendingUp, CalendarDays,
-  Signal, Wifi, BatteryFull,
 } from 'lucide-react';
 import fntLogo from './assets/fnt-emblem.png';
 import '../gen/frame.css';
@@ -22,12 +21,37 @@ const AV = {
 
 type Tab = 'home' | 'tournaments' | 'matches' | 'profile';
 
-function Frame({ children }: { children: ReactNode }) {
+// точные иконки статус-бара iOS (сотовая — 4 полоски, wifi-веер, батарея с носиком)
+const IosCellular = () => (
+  <svg width="18" height="12" viewBox="0 0 18 12" fill="currentColor" aria-hidden>
+    <rect x="0" y="8" width="3.1" height="4" rx="1" />
+    <rect x="4.9" y="5.5" width="3.1" height="6.5" rx="1" />
+    <rect x="9.8" y="3" width="3.1" height="9" rx="1" />
+    <rect x="14.7" y="0.5" width="3.1" height="11.5" rx="1" />
+  </svg>
+);
+const IosWifi = () => (
+  <svg width="17" height="12" viewBox="0 0 17 12" fill="currentColor" aria-hidden>
+    <path d="M8.5 2.05c2.55 0 4.88.98 6.62 2.58a.62.62 0 0 0 .85-.02l.62-.64a.62.62 0 0 0-.02-.9A12.06 12.06 0 0 0 8.5 0 12.06 12.06 0 0 0 .43 3.05a.62.62 0 0 0-.02.9l.62.64c.23.24.6.25.85.02A9.68 9.68 0 0 1 8.5 2.05Z" />
+    <path d="M8.5 5.55c1.55 0 2.97.58 4.05 1.53a.62.62 0 0 0 .85-.04l.66-.68a.62.62 0 0 0-.03-.9A8.4 8.4 0 0 0 8.5 3.3a8.4 8.4 0 0 0-5.53 2.16.62.62 0 0 0-.03.9l.66.68c.22.23.58.25.83.04A6.14 6.14 0 0 1 8.5 5.55Z" />
+    <path d="M8.5 9.05c.62 0 1.19.22 1.64.58a.62.62 0 0 0 .83-.05l.72-.75a.62.62 0 0 0-.06-.92A5.06 5.06 0 0 0 8.5 6.7a5.06 5.06 0 0 0-3.13 1.19.62.62 0 0 0-.06.92l.72.75c.21.22.55.25.8.05.46-.36 1.03-.58 1.67-.58Z" />
+    <circle cx="8.5" cy="10.75" r="1.15" />
+  </svg>
+);
+const IosBattery = () => (
+  <svg width="28" height="13" viewBox="0 0 28 13" fill="none" aria-hidden>
+    <rect x="0.6" y="0.8" width="22.8" height="11.4" rx="3" stroke="currentColor" strokeOpacity="0.45" />
+    <rect x="2.1" y="2.3" width="19.8" height="8.4" rx="1.7" fill="currentColor" />
+    <path d="M25.1 4.5c1 .3 1.6 1.15 1.6 2.5s-.6 2.2-1.6 2.5V4.5Z" fill="currentColor" fillOpacity="0.45" />
+  </svg>
+);
+
+export function Frame({ children }: { children: ReactNode }) {
   return <div className="frame"><div className="screen">
     <div className="island" />
     <div className="sys">
-      <span>9:41</span>
-      <span className="r"><Signal size={14} /><Wifi size={14} /><BatteryFull size={17} /></span>
+      <span className="time">9:41</span>
+      <span className="r"><IosCellular /><IosWifi /><IosBattery /></span>
     </div>
     {children}
   </div></div>;
@@ -37,7 +61,7 @@ const Brand = () => <div className="brand"><img src={fntLogo} alt="ФНТ РК" 
 const BellBtn = () => <button className="iconbtn dot"><Bell size={17} /></button>;
 const SeeAll = () => <span className="a">Смотреть все <ChevronRight size={13} /></span>;
 
-function TabBar({ active }: { active: Tab }) {
+export function TabBar({ active }: { active: Tab }) {
   const tabs: [Tab, ReactNode, string][] = [
     ['home', <Home size={20} />, 'Главная'],
     ['tournaments', <Trophy size={20} />, 'Турниры'],
