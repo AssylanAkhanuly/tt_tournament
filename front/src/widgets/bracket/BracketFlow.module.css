@@ -1,0 +1,150 @@
+.root {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  background: #0b1120;
+  color: var(--text);
+}
+
+.header {
+  padding: 20px 24px 12px;
+  flex: none;
+}
+.title {
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  color: #eef2fb;
+}
+.sub {
+  margin-top: 3px;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.canvas {
+  flex: 1;
+  min-height: 0;
+  position: relative;
+}
+
+/* ── карточка матча ─────────────────────────────────────────── */
+.card {
+  box-sizing: border-box;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 0 12px;
+  background: #151b2b;
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 14px;
+  position: relative;
+  overflow: hidden;
+  font-family: var(--font);
+}
+.live {
+  border-color: rgba(111, 155, 255, 0.6);
+}
+.stripe {
+  position: absolute;
+  left: 5px;
+  top: 13px;
+  bottom: 13px;
+  width: 3.5px;
+  border-radius: 2px;
+  background: #34d399;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 27px;
+}
+.avatar {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  overflow: hidden;
+  background: #3b4675;
+  flex: none;
+}
+.avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.avatarEmpty {
+  background: rgba(255, 255, 255, 0.05);
+}
+.name {
+  flex: 1;
+  min-width: 0;
+  font-size: 13px;
+  color: #98a2b6;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.win {
+  color: #eef2fb;
+  font-weight: 600;
+}
+.tbd {
+  color: #5b6577;
+}
+.score {
+  font-size: 13.5px;
+  font-weight: 800;
+  color: #5b6577;
+  font-variant-numeric: tabular-nums;
+}
+.scoreWin {
+  color: #6f9bff;
+}
+.divider {
+  height: 1px;
+  background: rgba(255, 255, 255, 0.06);
+  margin: 1px 0;
+}
+
+.round {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: #5b6577;
+  white-space: nowrap;
+  font-family: var(--font);
+}
+
+/* хендлы нужны только как якоря рёбер — прячем */
+.handle {
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* ── переопределения темы React Flow ────────────────────────── */
+.canvas :global(.react-flow) {
+  background: #0b1120;
+}
+/* сбрасываем дефолтную обёртку узла (рамка/фон/курсор) — рисуем сами */
+.canvas :global(.react-flow__node) {
+  padding: 0;
+  border: none;
+  background: transparent;
+  border-radius: 0;
+  box-shadow: none;
+  cursor: default;
+  font-family: var(--font);
+}
+.canvas :global(.react-flow__handle) {
+  min-width: 1px;
+  min-height: 1px;
+  border: none;
+  background: transparent;
+}
+.canvas :global(.react-flow__attribution) {
+  display: none;
+}
