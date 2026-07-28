@@ -139,11 +139,10 @@ export function layoutSingleElimination(
   return { nodes: [...box.values()], connectors, width, height };
 }
 
-/** Подпись круга по индексу и общему числу кругов (1/8, 1/4, 1/2, Финал). */
+/** Подпись круга по индексу и общему числу кругов (Финал, 1/2, 1/4, 1/8…). */
 export function roundTitle(roundIndex: number, roundCount: number): string {
   const fromEnd = roundCount - 1 - roundIndex;
   if (fromEnd === 0) return 'Финал';
-  if (fromEnd === 1) return '1/2 финала';
-  if (fromEnd === 2) return '1/4 финала';
-  return `1/${2 ** (fromEnd + 1)} финала`;
+  // знаменатель = 2^(кругов до финала): 1/2, 1/4, 1/8, 1/16 …
+  return `1/${2 ** fromEnd} финала`;
 }
