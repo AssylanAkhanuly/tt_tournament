@@ -5,10 +5,8 @@ import {
   Background,
   BackgroundVariant,
   Controls,
-  Handle,
-  Position,
   ReactFlow,
-  type Edge,
+  ViewportPortal,
   type Node,
   type NodeProps,
 } from '@xyflow/react';
@@ -16,7 +14,6 @@ import '@xyflow/react/dist/style.css';
 
 import {
   layoutSingleElimination,
-  roundTitle,
   type Bracket,
   type Match,
   type Side,
@@ -48,24 +45,18 @@ function MatchNode({ data }: NodeProps) {
   const live = m.status === 'live';
   return (
     <div className={live ? `${s.card} ${s.live}` : s.card}>
-      <Handle type="target" position={Position.Left} className={s.handle} isConnectable={false} />
       {live && <span className={s.stripe} />}
       <Row side={m.a} win={m.winner === 'a'} score={m.scoreA} />
       <div className={s.divider} />
       <Row side={m.b} win={m.winner === 'b'} score={m.scoreB} />
-      <Handle type="source" position={Position.Right} className={s.handle} isConnectable={false} />
     </div>
   );
 }
 
-function RoundLabel({ data }: NodeProps) {
-  return <div className={s.round}>{(data as { text: string }).text}</div>;
-}
-
-const nodeTypes = { match: MatchNode, round: RoundLabel };
+const nodeTypes = { match: MatchNode };
 
 export function BracketFlow({ bracket }: { bracket: Bracket }) {
-  const { nodes, edges } = useMemo(() => {
+  const { nodes, connectorD } = useMemo(() => {
     const layout = layoutSingleElimination(bracket, {
       nodeW: NODE_W,
       nodeH: NODE_H,
@@ -73,10 +64,8 @@ export function BracketFlow({ bracket }: { bracket: Bracket }) {
       gapY: 28,
       padding: 0,
     });
-    const roundCount = Math.max(...bracket.matches.map((m) => m.round)) + 1;
-    const minY = Math.min(...layout.nodes.map((n) => n.y));
 
-    const matchNodes: Node[] = layout.nodes.map((n) => ({
+    const ns: Node[] = layout.nodes.map((n) => ({
       id: n.match.id,
       type: 'match',
       position: { x: n.x, y: n.y },
@@ -87,49 +76,26 @@ export function BracketFlow({ bracket }: { bracket: Bracket }) {
       selectable: false,
     }));
 
-    // подписи кругов — в одну линию сверху (как в мобилке)
-    const seen = new Set<number>();
-    const labelNodes: Node[] = [];
-    for (const n of layout.nodes) {
-      const r = n.match.round;
-      if (seen.has(r)) continue;
-      seen.add(r);
-      labelNodes.push({
-        id: `round-${r}`,
-        type: 'round',
-        position: { x: n.x, y: minY - 40 },
-        data: { text: roundTitle(r, roundCount).toUpperCase() },
-        draggable: false,
-        selectable: false,
-      });
-    }
+    // коннекторы-локти рисуем сами (тот же геометрический расчёт, что и в мобилке).
+    // Ребра React Flow в связке Next16/Turbopack + xyflow12 не отрисовывались,
+    // поэтому линии кладём своим SVG в координатах холста через ViewportPortal.
+    const connectorD = layout.connectors
+      .map((c) => c.points.map((p, i) => `${i === 0 ? 'M' : 'L'}${p.x} ${p.y}`).join(' '))
+      .join(' ');
 
-    // рёбра-локти рисует сам React Flow (smoothstep) между хендлами
-    const es: Edge[] = layout.connectors.map((c) => ({
-      id: `${c.fromId}-${c.toId}`,
-      source: c.fromId,
-      target: c.toId,
-      type: 'smoothstep',
-      style: { stroke: 'rgba(255,255,255,0.2)', strokeWidth: 1.5 },
-    }));
-
-    return { nodes: [...matchNodes, ...labelNodes], edges: es };
+    return { nodes: ns, connectorD };
   }, [bracket]);
 
   return (
     <div className={s.root}>
-      <header className={s.header}>
-        <h1 className={s.title}>{bracket.title}</h1>
-        <p className={s.sub}>Сетка · колесо или кнопки — зум, тяните — панорама</p>
-      </header>
       <div className={s.canvas}>
         <ReactFlow
           nodes={nodes}
-          edges={edges}
+          edges={[]}
           nodeTypes={nodeTypes}
           colorMode="dark"
           fitView
-          fitViewOptions={{ padding: 0.25 }}
+          fitViewOptions={{ padding: 0.3 }}
           minZoom={0.4}
           maxZoom={2.5}
           nodesDraggable={false}
@@ -137,6 +103,16 @@ export function BracketFlow({ bracket }: { bracket: Bracket }) {
           elementsSelectable={false}
           proOptions={{ hideAttribution: true }}
         >
+          <ViewportPortal>
+            <svg
+              className={s.wires}
+              width={1}
+              height={1}
+              style={{ position: 'absolute', top: 0, left: 0, overflow: 'visible', pointerEvents: 'none' }}
+            >
+              <path d={connectorD} fill="none" stroke="rgba(255,255,255,0.28)" strokeWidth={2} />
+            </svg>
+          </ViewportPortal>
           <Background variant={BackgroundVariant.Dots} gap={24} size={1} color="rgba(255,255,255,0.05)" />
           <Controls showInteractive={false} />
         </ReactFlow>

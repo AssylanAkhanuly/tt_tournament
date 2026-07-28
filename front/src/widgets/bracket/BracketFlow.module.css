@@ -41,7 +41,6 @@
   border: 1px solid rgba(255, 255, 255, 0.09);
   border-radius: 14px;
   position: relative;
-  overflow: hidden;
   font-family: var(--font);
 }
 .live {
@@ -119,10 +118,11 @@
   font-family: var(--font);
 }
 
-/* хендлы нужны только как якоря рёбер — прячем */
-.handle {
-  opacity: 0;
-  pointer-events: none;
+/* коннекторы рисуем своим svg в ViewportPortal — глобальный reset
+   `svg { max-width: 100% }` мог бы его обрезать, поэтому снимаем ограничение */
+.wires {
+  overflow: visible;
+  max-width: none;
 }
 
 /* ── переопределения темы React Flow ────────────────────────── */
@@ -138,12 +138,6 @@
   box-shadow: none;
   cursor: default;
   font-family: var(--font);
-}
-.canvas :global(.react-flow__handle) {
-  min-width: 1px;
-  min-height: 1px;
-  border: none;
-  background: transparent;
 }
 .canvas :global(.react-flow__attribution) {
   display: none;
