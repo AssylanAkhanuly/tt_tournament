@@ -119,6 +119,23 @@
 .dsubmit.ok { background: var(--ok); color: #04240f; box-shadow: 0 14px 30px -12px rgba(52,211,153,.8); }
 .dcenter { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; text-align: center; }
 
+/* планшет · альбом: тот же десктоп-layout (шапка + сайдбар + main) в горизонтальной
+   планшетной рамке ~1024x720 — так веб реально выглядит на планшете лёжа. */
+.tabframe.land { width: auto; }
+.deskland {
+  width: 1024px; height: 720px; border-radius: 32px; overflow: hidden; position: relative;
+  color: var(--ink); display: flex; flex-direction: column;
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,.04);
+  background:
+    radial-gradient(46% 44% at 10% -2%, rgba(111,155,255,.38), transparent 62%),
+    radial-gradient(42% 42% at 90% 4%, rgba(139,102,255,.3), transparent 62%),
+    radial-gradient(60% 40% at 60% 106%, rgba(52,211,153,.16), transparent 60%),
+    linear-gradient(180deg, #0b1120 0%, #0a0e18 60%, #0c1424 100%);
+}
+/* в альбоме сайдбар чуть уже — экран короче десктопного */
+.deskland .dside { padding: 13px 10px; }
+.deskland .dmain { padding: 16px 18px; gap: 13px; }
+
 /* выбор судьи из заявок / приёмка результатов — список-строки */
 .drows { display: flex; flex-direction: column; gap: 8px; overflow: auto; }
 .drow { display: flex; align-items: center; gap: 12px; background: var(--glass); border: 1px solid var(--glass-line); border-radius: 12px; padding: 11px 13px; }

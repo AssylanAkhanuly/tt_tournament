@@ -3,10 +3,21 @@ import { Bell, Search } from 'lucide-react';
 import fntLogo from './assets/fnt-emblem.png';
 
 /* Общая десктоп-оболочка (верхняя панель + сайдбар + main) для флоу веба.
-   Навигация, роль и заголовок — параметрами. Стили — gen/desktop.css. */
+   variant='land' — тот же layout в горизонтальной планшетной рамке (веб на планшете
+   лёжа ≈ компактный десктоп). Навигация, роль и заголовок — параметрами. */
+
+export type DeskVariant = 'desktop' | 'land';
+
+// рамка: десктоп (ноутбук 1200x760) либо планшет-альбом (1024x720)
+export function DeskFrame({ variant = 'desktop', children }: { variant?: DeskVariant; children: ReactNode }) {
+  if (variant === 'land') return <div className="tabframe land"><div className="deskland">{children}</div></div>;
+  return <div className="dwrap"><div className="laptop">{children}</div></div>;
+}
+
 export function Desk({
-  brandName, brandSub, title, sub, nav, activeNav, role, hint, children,
+  variant = 'desktop', brandName, brandSub, title, sub, nav, activeNav, role, hint, children,
 }: {
+  variant?: DeskVariant;
   brandName?: string;
   brandSub?: string;
   title: string;
@@ -18,7 +29,7 @@ export function Desk({
   children: ReactNode;
 }) {
   return (
-    <div className="dwrap"><div className="laptop">
+    <DeskFrame variant={variant}>
       <div className="dtop">
         <img className="logo" src={fntLogo} alt="ФНТ РК" />
         <div><div className="bname">ФНТ РК</div></div>
@@ -44,6 +55,6 @@ export function Desk({
           {children}
         </main>
       </div>
-    </div></div>
+    </DeskFrame>
   );
 }

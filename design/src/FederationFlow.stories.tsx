@@ -13,4 +13,5 @@ type S = StoryObj;
 
 export const Десктоп: S = { render: () => <FederationFlowBoard /> };
 export const Таблет: S = { render: () => <FederationTabletBoard /> };
+export const ТаблетАльбом: S = { name: 'Таблет · альбом', render: () => <FederationFlowBoard frame="land" /> };
 export const Мобилка: S = { render: () => <FederationMobileBoard /> };

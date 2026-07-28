@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import { Scale, FileText, User, ChevronRight, Clock3, CheckCircle2, Send, Trophy } from 'lucide-react';
-import { Desk } from './deskShell';
+import { Desk, type DeskVariant } from './deskShell';
 import { Board, Col, Arrow, Tab } from './respShell';
 
 /* Веб → Судья · Заявка на судейство, десктоп + планшет (телефон — в JudgeApplyFlow).
@@ -73,26 +73,27 @@ const Accepted = () => (
   </div>
 );
 
-export function JudgeApplyDesktopBoard() {
+export function JudgeApplyDesktopBoard({ frame = 'desktop' }: { frame?: DeskVariant }) {
+  const land = frame === 'land';
   return (
-    <Board title="СУДЬЯ · ЗАЯВКА НА СУДЕЙСТВО · ДЕСКТОП" tag="веб · большой экран">
+    <Board title={land ? 'СУДЬЯ · ЗАЯВКА НА СУДЕЙСТВО · ПЛАНШЕТ (АЛЬБОМ)' : 'СУДЬЯ · ЗАЯВКА НА СУДЕЙСТВО · ДЕСКТОП'} tag={land ? 'веб · планшет · альбом' : 'веб · большой экран'}>
       <Col cap="Турниры для судейства">
-        <Desk title="Открыт приём заявок" sub="Турниры, где можно подать на судейство" nav={NAV} activeNav="Судейство" role={ME}>
+        <Desk variant={frame} title="Открыт приём заявок" sub="Турниры, где можно подать на судейство" nav={NAV} activeNav="Судейство" role={ME}>
           <Tournaments />
         </Desk>
       </Col>
       <Arrow lbl="подать заявку" />
       <Col cap="Заявка">
-        <Desk title="Заявка на судейство" sub="Чемпионат Казахстана 2026 · главный судья" nav={NAV} activeNav="Судейство" role={ME}
+        <Desk variant={frame} title="Заявка на судейство" sub="Чемпионат Казахстана 2026 · главный судья" nav={NAV} activeNav="Судейство" role={ME}
           hint="Заявку можно подать снова, пока приём открыт."><ApplyForm /></Desk>
       </Col>
       <Arrow lbl="отправлено" />
       <Col cap="На рассмотрении">
-        <Desk title="Моя заявка" sub="Ожидает решения федерации" nav={NAV} activeNav="Мои заявки" role={ME}><Status /></Desk>
+        <Desk variant={frame} title="Моя заявка" sub="Ожидает решения федерации" nav={NAV} activeNav="Мои заявки" role={ME}><Status /></Desk>
       </Col>
       <Arrow lbl="решение" />
       <Col cap="Назначен">
-        <Desk title="Решение федерации" sub="Заявка одобрена" nav={NAV} activeNav="Мои заявки" role={ME}><Accepted /></Desk>
+        <Desk variant={frame} title="Решение федерации" sub="Заявка одобрена" nav={NAV} activeNav="Мои заявки" role={ME}><Accepted /></Desk>
       </Col>
     </Board>
   );

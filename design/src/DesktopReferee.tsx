@@ -3,6 +3,7 @@ import {
   LayoutDashboard, Network, Users, Grid2x2, Settings, Bell, Search,
 } from 'lucide-react';
 import fntLogo from './assets/fnt-emblem.png';
+import { DeskFrame, type DeskVariant } from './deskShell';
 import { BracketFlow } from '@/widgets/bracket/BracketFlow';
 import { bigBracket } from './bigBracket';
 import '../gen/frame.css';
@@ -50,8 +51,8 @@ const NAV: [ReactNode, string, boolean][] = [
   [<Settings size={18} />, 'Настройки', false],
 ];
 
-export function RefereeDesktop() {
-  return <div className="dwrap"><div className="laptop">
+export function RefereeDesktop({ variant = 'desktop' }: { variant?: DeskVariant }) {
+  return <DeskFrame variant={variant}>
 
     <div className="dtop">
       <img className="logo" src={fntLogo} alt="ФНТ РК" />
@@ -117,5 +118,5 @@ export function RefereeDesktop() {
       </main>
     </div>
 
-  </div></div>;
+  </DeskFrame>;
 }

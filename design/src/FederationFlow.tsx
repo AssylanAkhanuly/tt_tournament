@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import { CalendarDays, Trophy, Scale, Users, Wallet, Plus, CheckCircle2, CornerUpLeft } from 'lucide-react';
-import { Desk } from './deskShell';
+import { Desk, type DeskVariant } from './deskShell';
 import '../gen/frame.css';
 import '../gen/desktop.css';
 import './tournament.css';
@@ -26,9 +26,9 @@ const TRow = ({ status, cls, nm, mt }: { status: string; cls: string; nm: string
 );
 
 // 1. календарь + создать турнир
-function Calendar() {
+function Calendar({ variant }: { variant?: DeskVariant }) {
   return (
-    <Desk brandName="Календарь сезона 2026" brandSub="Республика Казахстан" title="Календарь турниров"
+    <Desk variant={variant} brandName="Календарь сезона 2026" brandSub="Республика Казахстан" title="Календарь турниров"
       sub="Заводит турнир федерация — название, уровень, город, окно дат" nav={NAV} activeNav="Календарь" role={FED}
       hint="Формат и расписание задаёт назначенный судья, не федерация.">
       <div className="dactionbar"><div className="dcount">14 турниров в сезоне</div><button className="dsubmit" style={{ padding: '11px 16px' }}><Plus size={16} />Создать турнир</button></div>
@@ -44,7 +44,7 @@ function Calendar() {
 }
 
 // 2. выбрать судью из заявок
-function PickJudge() {
+function PickJudge({ variant }: { variant?: DeskVariant }) {
   const J = ({ n, nm, cat, r, t, pick }: { n: number; nm: string; cat: string; r: number; t: number; pick?: boolean }) => (
     <div className={'drow' + (pick ? ' pick' : '')}>
       <img src={A(n)} alt="" />
@@ -57,7 +57,7 @@ function PickJudge() {
     </div>
   );
   return (
-    <Desk title="Заявки на судейство" sub="Чемпионат Казахстана 2026 · выберите одного главного судью" nav={NAV} activeNav="Судьи" role={FED}
+    <Desk variant={variant} title="Заявки на судейство" sub="Чемпионат Казахстана 2026 · выберите одного главного судью" nav={NAV} activeNav="Судьи" role={FED}
       hint="Остальные получат отказ с причиной и смогут подать снова, пока приём открыт.">
       <div className="dactionbar"><div className="dcount">4 заявки · приём открыт</div></div>
       <div className="drows">
@@ -71,9 +71,9 @@ function PickJudge() {
 }
 
 // 3. приёмка результатов
-function Accept() {
+function Accept({ variant }: { variant?: DeskVariant }) {
   return (
-    <Desk title="Приёмка результатов" sub="Чемпионат Казахстана 2026 · сверка перед пересчётом рейтинга" nav={NAV} activeNav="Турниры" role={FED}>
+    <Desk variant={variant} title="Приёмка результатов" sub="Чемпионат Казахстана 2026 · сверка перед пересчётом рейтинга" nav={NAV} activeNav="Турниры" role={FED}>
       <div className="dform" style={{ gridTemplateColumns: '1fr' }}>
         <section className="panel" style={{ maxHeight: 260 }}>
           <div className="phead"><span className="t">Сводка</span><span className="live" style={{ background: 'rgba(52,211,153,.16)' }}><CheckCircle2 size={13} />все матчи сыграны</span></div>
@@ -95,19 +95,20 @@ function Accept() {
 const Arrow = ({ lbl }: { lbl: string }) => <div className="arrow"><div className="lbl">{lbl}</div><div className="ln" /></div>;
 const Col = ({ cap, children }: { cap: string; children: ReactNode }) => <div className="col"><div className="cap">{cap}</div>{children}</div>;
 
-export function FederationFlowBoard() {
+export function FederationFlowBoard({ frame = 'desktop' }: { frame?: DeskVariant }) {
+  const land = frame === 'land';
   return (
     <div className="board">
       <div className="board-h">
-        <div className="board-title">ФЕДЕРАЦИЯ · ФЛОУ</div>
-        <div className="board-tag">десктоп · веб · ведёт турнир от календаря до рейтинга</div>
+        <div className="board-title">{land ? 'ФЕДЕРАЦИЯ · ПЛАНШЕТ (АЛЬБОМ)' : 'ФЕДЕРАЦИЯ · ФЛОУ'}</div>
+        <div className="board-tag">{land ? 'веб · планшет · альбом · от календаря до рейтинга' : 'десктоп · веб · ведёт турнир от календаря до рейтинга'}</div>
       </div>
       <div className="row">
-        <Col cap="Календарь · создать"><Calendar /></Col>
+        <Col cap="Календарь · создать"><Calendar variant={frame} /></Col>
         <Arrow lbl="выбрать судью" />
-        <Col cap="Выбор судьи"><PickJudge /></Col>
+        <Col cap="Выбор судьи"><PickJudge variant={frame} /></Col>
         <Arrow lbl="после игры" />
-        <Col cap="Приёмка результатов"><Accept /></Col>
+        <Col cap="Приёмка результатов"><Accept variant={frame} /></Col>
       </div>
     </div>
   );

@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import { LayoutDashboard, Network, Users, Grid2x2, Settings, Send, Clock3 } from 'lucide-react';
-import { Desk } from './deskShell';
+import { Desk, type DeskVariant } from './deskShell';
 import '../gen/frame.css';
 import '../gen/desktop.css';
 import './tournament.css';
@@ -21,13 +21,14 @@ const Seg = ({ opts, on }: { opts: string[]; on: number }) => (
   <div className="dseg2">{opts.map((o, i) => <span key={o} className={i === on ? 'on' : ''}>{o}</span>)}</div>
 );
 
-function Organize() {
+function Organize({ variant }: { variant?: DeskVariant }) {
   const judges: [string, string][] = [
     ['Стол 1', 'Пак С.'], ['Стол 2', 'Ким Г.'], ['Стол 3', 'Ли А.'], ['Стол 4', '—'],
     ['Стол 5', '—'], ['Стол 6', 'Цой В.'], ['Стол 7', 'Нур А.'], ['Стол 8', '—'],
   ];
   return (
     <Desk
+      variant={variant}
       title="Организация турнира"
       sub="Формат, расписание и судьи столов — перед отправкой на утверждение"
       nav={NAV} activeNav="Настройки" role={JUDGE}
@@ -68,9 +69,9 @@ function Organize() {
   );
 }
 
-function Submitted() {
+function Submitted({ variant }: { variant?: DeskVariant }) {
   return (
-    <Desk title="Организация отправлена" sub="Федерация проверяет и утверждает" nav={NAV} activeNav="Настройки" role={JUDGE}>
+    <Desk variant={variant} title="Организация отправлена" sub="Федерация проверяет и утверждает" nav={NAV} activeNav="Настройки" role={JUDGE}>
       <div className="dcenter">
         <div className="jwaitIc"><Clock3 size={30} /></div>
         <div className="jbig">На утверждении у федерации</div>
@@ -88,17 +89,18 @@ function Submitted() {
 const Arrow = ({ lbl }: { lbl: string }) => <div className="arrow"><div className="lbl">{lbl}</div><div className="ln" /></div>;
 const Col = ({ cap, children }: { cap: string; children: ReactNode }) => <div className="col"><div className="cap">{cap}</div>{children}</div>;
 
-export function JudgeOrganizeFlowBoard() {
+export function JudgeOrganizeFlowBoard({ frame = 'desktop' }: { frame?: DeskVariant }) {
+  const land = frame === 'land';
   return (
     <div className="board">
       <div className="board-h">
-        <div className="board-title">СУДЬЯ · ОРГАНИЗАЦИЯ ТУРНИРА</div>
-        <div className="board-tag">десктоп · веб</div>
+        <div className="board-title">{land ? 'СУДЬЯ · ОРГАНИЗАЦИЯ ТУРНИРА · ПЛАНШЕТ (АЛЬБОМ)' : 'СУДЬЯ · ОРГАНИЗАЦИЯ ТУРНИРА'}</div>
+        <div className="board-tag">{land ? 'веб · планшет · альбом' : 'десктоп · веб'}</div>
       </div>
       <div className="row">
-        <Col cap="Настройка"><Organize /></Col>
+        <Col cap="Настройка"><Organize variant={frame} /></Col>
         <Arrow lbl="отправить" />
-        <Col cap="На утверждении"><Submitted /></Col>
+        <Col cap="На утверждении"><Submitted variant={frame} /></Col>
       </div>
     </div>
   );

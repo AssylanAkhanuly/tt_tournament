@@ -13,4 +13,5 @@ type S = StoryObj;
 
 export const Десктоп: S = { render: () => <TableJudgeDesktopBoard /> };
 export const Таблет: S = { render: () => <TableJudgeTabletBoard /> };
+export const ТаблетАльбом: S = { name: 'Таблет · альбом', render: () => <TableJudgeDesktopBoard frame="land" /> };
 export const Мобилка: S = { render: () => <TableJudgeFlowBoard /> };

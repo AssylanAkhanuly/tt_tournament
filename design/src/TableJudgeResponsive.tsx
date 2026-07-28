@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import { Swords, ClipboardList, Grid2x2, Radio, CheckCircle2, Send, Minus, Plus } from 'lucide-react';
-import { Desk } from './deskShell';
+import { Desk, type DeskVariant } from './deskShell';
 import { Board, Col, Arrow, Tab } from './respShell';
 
 /* Веб → Судья стола, десктоп + планшет (телефон — в TableJudgeFlow).
@@ -84,23 +84,24 @@ const Done = () => (
 
 const HINT = 'Матч ведёт судья стола; главный судья видит счёт по ходу игры.';
 
-export function TableJudgeDesktopBoard() {
+export function TableJudgeDesktopBoard({ frame = 'desktop' }: { frame?: DeskVariant }) {
+  const land = frame === 'land';
   return (
-    <Board title="СУДЬЯ СТОЛА · ДЕСКТОП" tag="веб · большой экран · тёмная тема">
+    <Board title={land ? 'СУДЬЯ СТОЛА · ПЛАНШЕТ (АЛЬБОМ)' : 'СУДЬЯ СТОЛА · ДЕСКТОП'} tag={land ? 'веб · планшет · альбом' : 'веб · большой экран · тёмная тема'}>
       <Col cap="Назначен стол">
-        <Desk title="Мой стол" sub="Стол 3 · назначен матч, подтвердите готовность" nav={NAV} activeNav="Мой стол" role={JUDGE} hint={HINT}>
+        <Desk variant={frame} title="Мой стол" sub="Стол 3 · назначен матч, подтвердите готовность" nav={NAV} activeNav="Мой стол" role={JUDGE} hint={HINT}>
           <div className="dcenter"><Assigned /></div>
         </Desk>
       </Col>
       <Arrow lbl="начать матч" />
       <Col cap="Ведение · ввод счёта">
-        <Desk title="Ведение матча" sub="Стол 3 · счёт по партиям, подача" nav={NAV} activeNav="Мой стол" role={JUDGE} hint={HINT}>
+        <Desk variant={frame} title="Ведение матча" sub="Стол 3 · счёт по партиям, подача" nav={NAV} activeNav="Мой стол" role={JUDGE} hint={HINT}>
           <div className="dcenter"><ScoreCard /></div>
         </Desk>
       </Col>
       <Arrow lbl="матч-болл" />
       <Col cap="Матч завершён">
-        <Desk title="Итог матча" sub="Стол 3 · отправка результата главному судье" nav={NAV} activeNav="Протокол" role={JUDGE} hint={HINT}>
+        <Desk variant={frame} title="Итог матча" sub="Стол 3 · отправка результата главному судье" nav={NAV} activeNav="Протокол" role={JUDGE} hint={HINT}>
           <div className="dcenter"><Done /></div>
         </Desk>
       </Col>
