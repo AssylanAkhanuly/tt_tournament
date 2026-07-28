@@ -24,6 +24,11 @@
 - dev: `npm run dev` · build: `npm run build`
 - typecheck: `node node_modules/typescript/lib/tsc.js -p tsconfig.json --noEmit`
 
+## Проверка (обязательно перед «готово»)
+- Каждую фичу гоняем сквозным **Playwright e2e** — в реальном браузере, по
+  пользовательскому сценарию (клики/ввод/переходы/видимость), не только typecheck.
+  См. корневой `CLAUDE.md` → «E2E-проверка» и `TESTING.md`.
+
 ## Конвенции
 - Один компонент — своя папка в нужном слое FSD + `Component.module.css` рядом.
 - Общие примитивы UI — `src/shared/ui`; бизнес-сущности — `src/entities`;
