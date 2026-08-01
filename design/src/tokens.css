@@ -17,5 +17,11 @@
   --font: -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
 }
 
+/* Экраны в основном на инлайн-стилях без font-family — наследуют от body.
+   Держим body на токене, чтобы переключатель гарнитуры в тулбаре доставал
+   до всего макета, а не только до кусков с явным `font-family: var(--font)`. */
+body,
+.sb-show-main { font-family: var(--font); }
+
 /* лёгкий фон для докс-страниц, чтобы телефоны читались */
 .sb-show-main.sb-main-padded { background: var(--c-bg); }
