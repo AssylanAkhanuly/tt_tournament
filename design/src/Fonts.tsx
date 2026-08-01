@@ -1,18 +1,39 @@
 import type { CSSProperties } from 'react';
-import { FONTS } from './fonts';
+import { FONTS, FONT_GROUPS, stackOf } from './fonts';
+// Настоящий знак ФНТ — только здесь, чтобы примерять шрифт рядом с ним.
+// В сами макеты его не ставим: по DESIGN.md они идут под нейтральным именем.
+import fntLogo from '../../brand/fnt/png/fnt-logo-512.png';
 
 /* Специмен гарнитур: один и тот же кусок интерфейса турнира, набранный каждым
    шрифтом из списка. Нужен, чтобы сравнивать не «алфавит», а реальные вещи —
    заголовок, таблицу рейтинга, счёт матча, кнопку. */
 
 const S: Record<string, CSSProperties> = {
+  page: { background: 'var(--c-bg)', padding: 32, color: 'var(--c-ink)', display: 'grid', gap: 28 },
+  section: { display: 'grid', gap: 14 },
+  gname: {
+    margin: 0,
+    fontSize: 13,
+    fontWeight: 700,
+    letterSpacing: '.08em',
+    textTransform: 'uppercase',
+    color: 'var(--c-muted)',
+    display: 'flex',
+    alignItems: 'center',
+    gap: 8,
+  },
+  gcount: {
+    background: 'var(--c-surface)',
+    border: '1px solid var(--c-line)',
+    borderRadius: 999,
+    padding: '2px 8px',
+    fontSize: 11,
+    letterSpacing: 0,
+  },
   wrap: {
-    background: 'var(--c-bg)',
-    padding: 32,
     display: 'grid',
     gap: 20,
     gridTemplateColumns: 'repeat(auto-fill, minmax(420px, 1fr))',
-    color: 'var(--c-ink)',
   },
   card: {
     background: 'var(--c-surface)',
@@ -23,6 +44,19 @@ const S: Record<string, CSSProperties> = {
     gap: 14,
   },
   head: { display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 12 },
+  // блок «знак + название» — по нему видно, дружит ли гарнитура с логотипом
+  lock: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 12,
+    padding: '12px 14px',
+    background: 'var(--c-chip)',
+    borderRadius: 'var(--r-sm)',
+  },
+  lockLogo: { height: 52, width: 'auto', display: 'block' },
+  lockName: { fontSize: 26, fontWeight: 800, lineHeight: 1, letterSpacing: '-.01em' },
+  lockFull: { fontSize: 12, color: 'var(--c-muted)', marginTop: 4, letterSpacing: '.02em' },
+  lockLat: { marginLeft: 'auto', fontSize: 26, fontWeight: 800, letterSpacing: '-.02em', color: 'var(--c-muted)' },
   name: { fontSize: 13, fontWeight: 700, letterSpacing: '.06em', textTransform: 'uppercase', color: 'var(--c-primary)' },
   note: { fontSize: 12, color: 'var(--c-muted)', lineHeight: 1.45 },
   h1: { fontSize: 26, fontWeight: 800, letterSpacing: '-.01em', lineHeight: 1.15 },
@@ -57,6 +91,8 @@ const S: Record<string, CSSProperties> = {
     fontSize: 14,
     fontWeight: 600,
     fontFamily: 'inherit', // кнопки не наследуют шрифт сами — иначе примерка врёт
+    whiteSpace: 'nowrap',
+    flex: '0 0 auto', // на узких гарнитурах кнопка иначе ломается на две строки
   },
 };
 
@@ -68,12 +104,44 @@ const RATING = [
 
 export function FontSpecimen() {
   return (
-    <div style={S.wrap}>
-      {FONTS.map((f) => (
-        <div key={f.id} style={{ ...S.card, fontFamily: f.stack }}>
+    <div style={S.page}>
+      {FONT_GROUPS.map((group) => {
+        const fonts = FONTS.filter((f) => f.group === group);
+        if (!fonts.length) return null;
+        return (
+          <section key={group} style={S.section}>
+            <h2 style={S.gname}>
+              {group}
+              <span style={S.gcount}>{fonts.length}</span>
+            </h2>
+            <div style={S.wrap}>
+              {fonts.map((f) => (
+                <Card key={f.id} font={f} />
+              ))}
+            </div>
+          </section>
+        );
+      })}
+    </div>
+  );
+}
+
+function Card({ font: f }: { font: (typeof FONTS)[number] }) {
+  const stack = stackOf(f);
+  return (
+        <div style={{ ...S.card, fontFamily: stack }}>
           <div style={S.head}>
-            <span style={{ ...S.name, fontFamily: f.stack }}>{f.label}</span>
+            <span style={{ ...S.name, fontFamily: stack }}>{f.label}</span>
             <span style={S.chip}>Идёт</span>
+          </div>
+
+          <div style={S.lock}>
+            <img src={fntLogo} alt="Знак ФНТ РК" style={S.lockLogo} />
+            <div>
+              <div style={S.lockName}>ФНТ РК</div>
+              <div style={S.lockFull}>Федерация настольного тенниса</div>
+            </div>
+            <span style={S.lockLat}>TTFRK</span>
           </div>
           <div>
             <div style={S.h1}>Кубок Республики Казахстан</div>
@@ -101,7 +169,5 @@ export function FontSpecimen() {
             <span style={S.note}>{f.note}</span>
           </div>
         </div>
-      ))}
-    </div>
   );
 }

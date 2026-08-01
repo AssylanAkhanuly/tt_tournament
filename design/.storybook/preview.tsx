@@ -1,7 +1,11 @@
 import type { Preview } from '@storybook/react';
 import React from 'react';
 import '../src/tokens.css';
-import { DEFAULT_FONT, FONTS, fontStack } from '../src/fonts';
+import { DEFAULT_FONT, FONTS, ensureFontsLoaded, fontStack } from '../src/fonts';
+
+// Гарнитуры грузим из списка `src/fonts.ts` — он единственный источник, ссылка
+// на Google Fonts собирается из него же (иначе список и <link> разъезжаются).
+ensureFontsLoaded();
 
 const preview: Preview = {
   parameters: {
@@ -23,7 +27,12 @@ const preview: Preview = {
       description: 'Гарнитура макета',
       toolbar: {
         icon: 'paragraph',
-        items: FONTS.map((f) => ({ value: f.id, title: f.label })),
+        items: FONTS.map((f) => ({
+          value: f.id,
+          title: f.label,
+          // подпись справа = раздел списка (гротеск / дисплейный / …)
+          right: f.group === 'Системный' ? undefined : f.group.toLowerCase(),
+        })),
         dynamicTitle: true,
       },
     },
