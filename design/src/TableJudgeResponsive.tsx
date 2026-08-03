@@ -44,7 +44,7 @@ const ScoreP = ({ av, nm, note, pts }: { av: string; nm: string; note: string; p
 
 const ScoreCard = () => (
   <div className="card" style={{ width: '100%', maxWidth: 480, display: 'flex', flexDirection: 'column' }}>
-    <div className="phead" style={{ padding: '0 0 12px', marginBottom: 4, borderBottom: '1px solid var(--glass-line)' }}>
+    <div className="phead" style={{ padding: '0 0 12px', marginBottom: 4, borderBottom: '1px solid var(--c-glass-line)' }}>
       <span className="t" style={{ fontSize: 13 }}>Стол 3 · 1/2 финала · партия 4</span>
       <span className="livebadge" style={{ padding: '3px 9px', fontSize: 9.5 }}><span className="d" />LIVE</span>
     </div>

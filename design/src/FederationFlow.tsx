@@ -76,7 +76,7 @@ function Accept({ variant }: { variant?: DeskVariant }) {
     <Desk variant={variant} title="Приёмка результатов" sub="Чемпионат Казахстана 2026 · сверка перед пересчётом рейтинга" nav={NAV} activeNav="Турниры" role={FED}>
       <div className="dform" style={{ gridTemplateColumns: '1fr' }}>
         <section className="panel" style={{ maxHeight: 260 }}>
-          <div className="phead"><span className="t">Сводка</span><span className="live" style={{ background: 'rgba(52,211,153,.16)' }}><CheckCircle2 size={13} />все матчи сыграны</span></div>
+          <div className="phead"><span className="t">Сводка</span><span className="live" style={{ background: 'var(--c-success-soft)' }}><CheckCircle2 size={13} />все матчи сыграны</span></div>
           <div className="pbody dfg">
             <div className="dfield"><label>Матчей сыграно</label><div className="dval">127 из 127 · протесты: нет</div></div>
             <div className="dfield"><label>Победитель</label><div className="dval">Смагулов Алан · финал 4:2</div></div>
@@ -84,7 +84,7 @@ function Accept({ variant }: { variant?: DeskVariant }) {
           </div>
         </section>
         <div className="dactionbar" style={{ justifyContent: 'flex-end', gap: 10 }}>
-          <button className="dsubmit" style={{ flex: 'none', padding: '13px 16px', background: 'var(--glass)', color: 'var(--ink)', border: '1px solid var(--glass-line)', boxShadow: 'none' }}><CornerUpLeft size={16} />Вернуть с причиной</button>
+          <button className="dsubmit" style={{ flex: 'none', padding: '13px 16px', background: 'var(--c-glass)', color: 'var(--c-ink)', border: '1px solid var(--c-glass-line)', boxShadow: 'none' }}><CornerUpLeft size={16} />Вернуть с причиной</button>
           <button className="dsubmit ok" style={{ flex: 'none', padding: '13px 18px' }}><CheckCircle2 size={16} />Утвердить · пересчитать рейтинг</button>
         </div>
       </div>

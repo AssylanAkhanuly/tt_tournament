@@ -67,7 +67,7 @@ export function RefereeTablet() {
         <div className="brand"><img src={fntLogo} alt="ФНТ РК" /> ФНТ РК</div>
         <div style={{ flex: 1 }}>
           <div style={{ fontSize: 15, fontWeight: 700 }}>Чемпионат Казахстана 2026</div>
-          <div style={{ fontSize: 12, color: 'var(--mut)', marginTop: 2 }}>Одиночный · олимпийская · г. Астана</div>
+          <div style={{ fontSize: 12, color: 'var(--c-muted)', marginTop: 2 }}>Одиночный · олимпийская · г. Астана</div>
         </div>
         <span className="livebadge"><span className="d" />ИДЁТ</span>
       </div>

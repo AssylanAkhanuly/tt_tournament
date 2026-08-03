@@ -38,7 +38,7 @@ export function Tab({
         <div className="brand"><img src={fntLogo} alt="ФНТ РК" /> ФНТ РК</div>
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontSize: 15, fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{title}</div>
-          <div style={{ fontSize: 12, color: 'var(--mut)', marginTop: 2 }}>{sub}</div>
+          <div style={{ fontSize: 12, color: 'var(--c-muted)', marginTop: 2 }}>{sub}</div>
         </div>
         <span className="livebadge"><span className="d" />{badge}</span>
       </div>

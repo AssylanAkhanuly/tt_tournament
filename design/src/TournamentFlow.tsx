@@ -47,7 +47,7 @@ export function TournamentDetail() {
       <div className="body">
         <THead />
         <Tabs on="obzor" />
-        <div className="card mymatch live" style={{ borderColor: 'rgba(52,211,153,.4)' }}>
+        <div className="card mymatch live" style={{ borderColor: 'var(--c-success-line-2)' }}>
           <img className="avatar sm" src={AV.smag} alt="" />
           <div className="who">
             <div className="nm">Ваш матч · финал</div>
@@ -94,7 +94,7 @@ export function LiveMatch() {
     <Frame>
       <div className="nav">
         <span className="back"><ChevronLeft size={22} /></span>
-        <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--mut)' }}>1/2 финала · Стол 3</span>
+        <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--c-muted)' }}>1/2 финала · Стол 3</span>
         <span style={{ width: 34 }} />
       </div>
       <div className="body">
@@ -119,7 +119,7 @@ export function LiveMatch() {
             <span className="setchip"><b>11</b>–7</span>
             <span className="setchip">партия 4</span>
           </div>
-          <div className="watch"><Play size={15} fill="#fff" />Смотреть трансляцию</div>
+          <div className="watch"><Play size={15} fill="currentColor" />Смотреть трансляцию</div>
         </div>
       </div>
       <TabBar active="matches" />
@@ -152,7 +152,7 @@ export function JudgeTable() {
               <div className="who"><div className="nm">Смагулов А.</div><div className="mt">партии: 2</div></div>
               <Stepper pt={8} plusOn />
             </div>
-            <div style={{ height: 1, background: 'rgba(255,255,255,.06)', margin: '4px 0' }} />
+            <div style={{ height: 1, background: 'var(--c-glass-line-soft)', margin: '4px 0' }} />
             <div className="jp">
               <img className="avatar sm" src={AV.tok} alt="" />
               <div className="who"><div className="nm">Токаев М.</div><div className="mt">партии: 1</div></div>

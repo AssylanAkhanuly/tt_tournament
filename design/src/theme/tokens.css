@@ -1,0 +1,224 @@
+/* tokens.css — ЕДИНСТВЕННЫЙ источник цвета, радиусов, отступов и теней.
+
+   Правило дизайн-системы: ни в одном другом файле (`gen/*.css`, `src/*.css`,
+   `src/ui/*.css`, инлайн-стили в `.tsx`) не должно быть «сырого» цвета —
+   ни `#hex`, ни `rgb()/rgba()`. Только `var(--…)` отсюда. Поменяли значение
+   здесь — перекрасился весь Storybook: и макеты экранов, и примитивы `src/ui`,
+   и специмены. Проверка: `npm run lint:colors`.
+
+   Слои:
+     1. СЕМЕНА (`--seed-*`) — то, из чего растёт палитра. Их же подменяет
+        переключатель «Тема» в тулбаре (список тем — `src/theme/themes.ts`).
+     2. СЕМАНТИКА (`--c-*`) — «акцент», «успех», «стекло», «текст». Экраны и
+        компоненты обращаются только сюда, чтобы смена темы не требовала правок.
+     3. ФОРМА (`--r-*`, `--s-*`, `--sh-*`, `--fx-*`) — радиусы, шаг, тени, блюр.
+
+   Полупрозрачные варианты не хардкодим, а считаем от семантического токена
+   через `color-mix()` — иначе при смене акцента подложки и свечения остались бы
+   старого цвета (ровно та поломка, из-за которой всё это и затевалось).
+   `color-mix(in srgb, X 16%, transparent)` даёт ровно `rgba(X, .16)`. */
+
+:root {
+  /* ─────────────────── 1. СЕМЕНА ─────────────────── */
+
+  /* фирменные цвета */
+  --seed-accent:        #6f9bff;   /* основной акцент (синий ФНТ) */
+  --seed-accent-2:      #8b66ff;   /* второй акцент — фиолетовое пятно фона */
+  --seed-accent-3:      #4f83ff;   /* третье пятно фона, ближе к акценту */
+  --seed-success:       #34d399;
+  --seed-success-ink:   #04240f;   /* текст на зелёной кнопке */
+  --seed-warning:       #f0b24b;
+  --seed-danger:        #fb7185;
+  --seed-broadcast:     #ff5252;   /* «смотреть трансляцию» — красный эфира */
+  --seed-broadcast-2:   #e11d1d;
+
+  /* тёмный экран приложения: остановки вертикального градиента */
+  --seed-screen-1:      #0b1120;
+  --seed-screen-2:      #0a0e18;
+  --seed-screen-3:      #0d1526;
+  --seed-screen-4:      #0c1424;   /* низ десктопной оболочки */
+  --seed-screen-deep:   #04060c;   /* «остров» камеры */
+  --seed-avatar-bg:     #141b2b;   /* заглушка под фото */
+
+  /* текст на тёмном */
+  --seed-ink:           #eef2fb;
+  --seed-muted:         #a6b0c6;
+  --seed-dim:           #6b7691;
+
+  /* светлая подложка борда (флоу-схемы) и текст на ней */
+  --seed-board:         #eef1f8;
+  --seed-board-ink:     #0f172a;
+  --seed-board-muted:   #64748b;
+  --seed-board-accent:  #3b6fe0;
+
+  /* светлые экраны документации (регистрация, новости) */
+  --seed-light-bg:      #f6f8fc;
+  --seed-light-surface: #ffffff;
+  --seed-light-accent:  #2563eb;
+  --seed-light-success: #10b981;
+  --seed-light-2:       #6366f1;   /* вторая обложка новостей */
+  --seed-light-3:       #22d3ee;
+  --seed-light-line:    #e6ebf3;
+  --seed-light-chip:    #eff4ff;
+  --seed-light-zebra:   #f1f5f9;
+  --seed-light-ink-2:   #334155;
+  --seed-light-ink-3:   #94a3b8;
+  --seed-info-bg:       #f0f9ff;
+  --seed-info-line:     #bae6fd;
+  --seed-info-ink:      #075985;
+
+  /* корпус телефона/планшета */
+  --seed-bezel-1:       #2a3252;
+  --seed-bezel-2:       #0a0f1c;
+
+  /* нейтральные крайности — на них считаются стекло, свечения и тени */
+  --seed-white:         #ffffff;
+  --seed-black:         #000000;
+
+  /* ─────────────────── 2. СЕМАНТИКА ─────────────────── */
+
+  /* акцент */
+  --c-accent:            var(--seed-accent);
+  --c-accent-2:          var(--seed-accent-2);
+  --c-accent-3:          var(--seed-accent-3);
+  --c-accent-ink:        var(--seed-white);                                      /* текст на акценте */
+  --c-accent-soft:       color-mix(in srgb, var(--c-accent) 16%, transparent);    /* подложка чипа/иконки */
+  --c-accent-line:       color-mix(in srgb, var(--c-accent) 35%, transparent);    /* граница «идёт сейчас» */
+  --c-accent-line-2:     color-mix(in srgb, var(--c-accent) 40%, transparent);
+  --c-accent-line-3:     color-mix(in srgb, var(--c-accent) 50%, transparent);    /* граница выбранного */
+  --c-accent-halo:       color-mix(in srgb, var(--c-accent) 30%, transparent);    /* внешнее кольцо */
+  --c-accent-glow:       color-mix(in srgb, var(--c-accent) 60%, transparent);    /* тень-свечение кнопки */
+  --c-accent-glow-2:     color-mix(in srgb, var(--c-accent) 70%, transparent);
+  --c-accent-glow-3:     color-mix(in srgb, var(--c-accent) 80%, transparent);
+
+  /* статусы */
+  --c-success:           var(--seed-success);
+  --c-success-ink:       var(--seed-success-ink);
+  --c-success-soft:      color-mix(in srgb, var(--c-success) 16%, transparent);
+  --c-success-soft-2:    color-mix(in srgb, var(--c-success) 18%, transparent);
+  --c-success-soft-3:    color-mix(in srgb, var(--c-success) 14%, transparent);
+  --c-success-line:      color-mix(in srgb, var(--c-success) 35%, transparent);
+  --c-success-line-2:    color-mix(in srgb, var(--c-success) 40%, transparent);
+  --c-success-halo:      color-mix(in srgb, var(--c-success) 30%, transparent);
+  --c-success-ring:      color-mix(in srgb, var(--c-success) 20%, transparent);
+  --c-success-glow:      color-mix(in srgb, var(--c-success) 80%, transparent);
+  --c-warning:           var(--seed-warning);
+  --c-warning-soft:      color-mix(in srgb, var(--c-warning) 16%, transparent);
+  --c-danger:            var(--seed-danger);
+  --c-danger-soft:       color-mix(in srgb, var(--c-danger) 18%, transparent);
+  --c-danger-soft-2:     color-mix(in srgb, var(--c-danger) 16%, transparent);
+  --c-danger-line:       color-mix(in srgb, var(--c-danger) 30%, transparent);
+  --c-broadcast:         var(--seed-broadcast);
+  --c-broadcast-2:       var(--seed-broadcast-2);
+  --c-broadcast-glow:    color-mix(in srgb, var(--c-broadcast-2) 80%, transparent);
+
+  /* текст */
+  --c-ink:               var(--seed-ink);
+  --c-ink-bright:        var(--seed-white);   /* максимальный контраст: лидер счёта, текст на цветной кнопке */
+  --c-muted:             var(--seed-muted);
+  --c-dim:               var(--seed-dim);
+
+  /* тёмный экран: база + амбиентные пятна (стекло видно только на них) */
+  --c-screen-1:          var(--seed-screen-1);
+  --c-screen-2:          var(--seed-screen-2);
+  --c-screen-3:          var(--seed-screen-3);
+  --c-screen-4:          var(--seed-screen-4);
+  --c-screen-deep:       var(--seed-screen-deep);
+  --c-avatar-bg:         var(--seed-avatar-bg);
+  --c-screen:
+    radial-gradient(72% 42% at 15% 6%,   color-mix(in srgb, var(--c-accent)   55%, transparent), transparent 60%),
+    radial-gradient(66% 42% at 92% 20%,  color-mix(in srgb, var(--c-accent-2) 42%, transparent), transparent 60%),
+    radial-gradient(95% 46% at 50% 97%,  color-mix(in srgb, var(--c-accent-3) 32%, transparent), transparent 62%),
+    radial-gradient(70% 34% at 50% 104%, color-mix(in srgb, var(--c-success)  22%, transparent), transparent 60%),
+    linear-gradient(180deg, var(--c-screen-1) 0%, var(--c-screen-2) 55%, var(--c-screen-3) 100%);
+  --c-screen-desk:
+    radial-gradient(46% 44% at 10% -2%,  color-mix(in srgb, var(--c-accent)   38%, transparent), transparent 62%),
+    radial-gradient(42% 42% at 90% 4%,   color-mix(in srgb, var(--c-accent-2) 30%, transparent), transparent 62%),
+    radial-gradient(60% 40% at 60% 106%, color-mix(in srgb, var(--c-success)  16%, transparent), transparent 60%),
+    linear-gradient(180deg, var(--c-screen-1) 0%, var(--c-screen-2) 60%, var(--c-screen-4) 100%);
+  --c-screen-tab:
+    radial-gradient(60% 40% at 12% 4%,   color-mix(in srgb, var(--c-accent)   50%, transparent), transparent 60%),
+    radial-gradient(56% 40% at 90% 8%,   color-mix(in srgb, var(--c-accent-2) 40%, transparent), transparent 60%),
+    radial-gradient(80% 40% at 50% 104%, color-mix(in srgb, var(--c-accent-3) 28%, transparent), transparent 62%),
+    linear-gradient(180deg, var(--c-screen-1) 0%, var(--c-screen-2) 55%, var(--c-screen-3) 100%);
+
+  /* стекло: полупрозрачные панели поверх экрана */
+  --c-glass:             color-mix(in srgb, var(--seed-white) 5.5%, transparent);
+  --c-glass-2:           color-mix(in srgb, var(--seed-white) 8.5%, transparent);
+  --c-glass-3:           color-mix(in srgb, var(--seed-white) 3%,   transparent);  /* подсказка-плашка */
+  --c-glass-line:        color-mix(in srgb, var(--seed-white) 11%,  transparent);
+  --c-glass-line-soft:   color-mix(in srgb, var(--seed-white) 6%,   transparent);  /* разделитель строк */
+  --c-glass-hi:          color-mix(in srgb, var(--seed-white) 18%,  transparent);  /* верхняя световая грань */
+  --c-glass-hi-2:        color-mix(in srgb, var(--seed-white) 30%,  transparent);  /* грань на цветной кнопке */
+  --c-glass-hi-3:        color-mix(in srgb, var(--seed-white) 35%,  transparent);
+  --c-glass-hi-4:        color-mix(in srgb, var(--seed-white) 40%,  transparent);
+  --c-glass-ring:        color-mix(in srgb, var(--seed-white) 14%,  transparent);  /* кольцо вокруг фото */
+  --c-glass-seg:         color-mix(in srgb, var(--seed-white) 5%,   transparent);  /* фон сегмент-контрола */
+  --c-glass-quiet:       color-mix(in srgb, var(--seed-white) 8%,   transparent);  /* пилюля «завершено» */
+  --c-glass-edge:        color-mix(in srgb, var(--seed-white) 4%,   transparent);  /* внутренняя грань корпуса */
+
+  /* светлая подложка борда (флоу-схемы) */
+  --c-board-bg:          var(--seed-board);
+  --c-board-ink:         var(--seed-board-ink);
+  --c-board-muted:       var(--seed-board-muted);
+  --c-board-accent:      var(--seed-board-accent);
+  --c-board-accent-soft: color-mix(in srgb, var(--c-board-accent) 9%,  var(--seed-white));
+  --c-board-accent-line: color-mix(in srgb, var(--c-board-accent) 19%, var(--seed-white));
+
+  /* корпус устройства */
+  --c-bezel:             linear-gradient(160deg, var(--seed-bezel-1), var(--seed-bezel-2));
+  --c-bezel-ring:        color-mix(in srgb, var(--seed-white) 5%, transparent);
+
+  /* светлые экраны документации (регистрация, новости) */
+  --c-primary:           var(--seed-light-accent);
+  --c-primary-ink:       var(--seed-white);
+  --c-primary-soft:      color-mix(in srgb, var(--c-primary) 15%, var(--seed-white));
+  --c-success-light:     var(--seed-light-success);
+  --c-success-light-bg:  color-mix(in srgb, var(--c-success-light) 9%,  var(--seed-white));
+  --c-success-light-ln:  color-mix(in srgb, var(--c-success-light) 46%, var(--seed-white));
+  --c-bg:                var(--seed-light-bg);
+  --c-surface:           var(--seed-light-surface);
+  --c-line:              var(--seed-light-line);
+  --c-chip:              var(--seed-light-chip);
+  --c-zebra:             var(--seed-light-zebra);
+  --c-text:              var(--seed-board-ink);
+  --c-text-2:            var(--seed-light-ink-2);
+  --c-text-3:            var(--seed-board-muted);
+  --c-text-4:            var(--seed-light-ink-3);
+  --c-cover-1:           linear-gradient(135deg, var(--c-primary), var(--c-success-light));
+  --c-cover-2:           linear-gradient(135deg, var(--seed-light-2), var(--seed-light-3));
+  --c-info-bg:           var(--seed-info-bg);
+  --c-info-line:         var(--seed-info-line);
+  --c-info-ink:          var(--seed-info-ink);
+
+  /* ─────────────────── 3. ФОРМА ─────────────────── */
+
+  --r-xs: 7px; --r-sm: 10px; --r-md: 16px; --r-lg: 24px; --r-pill: 999px;
+  --s-1: 4px; --s-2: 8px; --s-3: 12px; --s-4: 16px; --s-5: 20px; --s-6: 28px;
+
+  --sh-card:    0 16px 40px -24px color-mix(in srgb, var(--seed-black) 80%, transparent);
+  --sh-panel:   0 20px 44px -26px color-mix(in srgb, var(--seed-black) 70%, transparent);
+  --sh-tabbar:  0 22px 50px -14px color-mix(in srgb, var(--seed-black) 55%, transparent);
+  --sh-avatar:  0 6px 16px -6px   color-mix(in srgb, var(--seed-black) 60%, transparent);
+  --sh-device:  0 44px 90px -30px color-mix(in srgb, var(--seed-screen-2) 75%, transparent);
+  --sh-laptop:  0 60px 120px -34px color-mix(in srgb, var(--seed-screen-1) 60%, transparent);
+  --sh-accent:  0 14px 30px -12px var(--c-accent-glow-3);
+  --sh-success: 0 14px 30px -12px var(--c-success-glow);
+  --sh-light:   0 12px 30px color-mix(in srgb, var(--seed-board-ink) 16%, transparent);
+
+  --fx-blur: saturate(160%) blur(22px);
+  --fx-blur-strong: saturate(180%) blur(30px);
+
+  /* system-ui первым: в Storybook грузятся веб-гарнитуры для примерки, среди них
+     Roboto — без system-ui «системный» вариант подхватывал бы его (см. fonts.ts) */
+  --font: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+}
+
+/* Экраны в основном на инлайн-стилях без font-family — наследуют от body.
+   Держим body на токене, чтобы переключатель гарнитуры в тулбаре доставал
+   до всего макета, а не только до кусков с явным `font-family: var(--font)`. */
+body,
+.sb-show-main { font-family: var(--font); }
+
+/* лёгкий фон для докс-страниц, чтобы телефоны читались */
+.sb-show-main.sb-main-padded { background: var(--c-bg); }

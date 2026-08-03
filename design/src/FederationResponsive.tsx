@@ -25,10 +25,10 @@ const TCard = ({ st, cls, nm, mt }: { st: string; cls: string; nm: string; mt: s
 );
 
 const JCard = ({ n, nm, cat, r, t, pick }: { n: number; nm: string; cat: string; r: number; t: number; pick?: boolean }) => (
-  <div className="card pcard" style={pick ? { borderColor: 'rgba(111,155,255,.5)' } : undefined}>
+  <div className="card pcard" style={pick ? { borderColor: 'var(--c-accent-line-3)' } : undefined}>
     <img className="avatar sm" src={A(n)} alt="" />
     <div className="who"><div className="nm">{nm}</div><div className="mt">{cat} · рейтинг {r} · {t} турн.</div></div>
-    <button className="btnp" style={pick ? {} : { background: 'var(--glass-2)', color: 'var(--ink)', boxShadow: 'inset 0 1px 0 var(--glass-hi)' }}>{pick ? 'Выбран' : 'Выбрать'}</button>
+    <button className="btnp" style={pick ? {} : { background: 'var(--c-glass-2)', color: 'var(--c-ink)', boxShadow: 'inset 0 1px 0 var(--c-glass-hi)' }}>{pick ? 'Выбран' : 'Выбрать'}</button>
   </div>
 );
 

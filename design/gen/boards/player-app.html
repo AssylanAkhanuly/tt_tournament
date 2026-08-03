@@ -1,3 +1,5 @@
+<!-- токены обязательны первыми: цвет живёт только в них (см. src/theme/tokens.css) -->
+<link rel="stylesheet" href="../../src/theme/tokens.css">
 <link rel="stylesheet" href="../frame.css">
 <div class="board">
   <div class="board-h">
@@ -27,9 +29,9 @@
           <div class="card">
             <div class="chart-h"><span class="t">Динамика рейтинга</span><span class="tagnew">NEW</span></div>
             <svg class="chart" viewBox="0 0 260 66" preserveAspectRatio="none">
-              <polyline fill="none" stroke="#3b7bff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"
+              <polyline fill="none" stroke="var(--c-accent)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"
                 points="4,52 40,46 76,50 112,34 148,38 184,22 220,26 256,10"/>
-              <circle cx="256" cy="10" r="3.5" fill="#3b7bff"/>
+              <circle cx="256" cy="10" r="3.5" fill="var(--c-accent)"/>
             </svg>
           </div>
           <div class="stats">
@@ -111,9 +113,9 @@
           <div class="card">
             <div class="chart-h"><span class="t">Рейтинг · сезон</span></div>
             <svg class="chart" viewBox="0 0 260 66" preserveAspectRatio="none">
-              <polyline fill="none" stroke="#3b7bff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"
+              <polyline fill="none" stroke="var(--c-accent)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"
                 points="4,48 40,50 76,40 112,44 148,28 184,32 220,18 256,12"/>
-              <circle cx="256" cy="12" r="3.5" fill="#3b7bff"/>
+              <circle cx="256" cy="12" r="3.5" fill="var(--c-accent)"/>
             </svg>
           </div>
           <div class="stats">
@@ -159,26 +161,26 @@
         <div class="body">
           <div class="title">Турниры</div>
           <div class="sect">Текущие</div>
-          <div class="card live" style="border-color:rgba(16,185,129,.4)">
+          <div class="card live" style="border-color:var(--c-success-line-2)">
             <span class="pill live">● ИДЁТ</span>
             <div class="nm" style="font-size:15px;font-weight:700">Чемпионат Казахстана 2026</div>
-            <div class="mt" style="font-size:11.5px;color:var(--mut);margin-top:5px">г. Астана · 18–20 мая<br>Ваш матч: финал · стол 3</div>
+            <div class="mt" style="font-size:11.5px;color:var(--c-muted);margin-top:5px">г. Астана · 18–20 мая<br>Ваш матч: финал · стол 3</div>
           </div>
           <div class="card">
             <span class="pill reg">РЕГИСТРАЦИЯ</span>
             <div class="nm" style="font-size:15px;font-weight:700">Первенство города</div>
-            <div class="mt" style="font-size:11.5px;color:var(--mut);margin-top:5px">г. Алматы · 20 фев · Заявка открыта</div>
+            <div class="mt" style="font-size:11.5px;color:var(--c-muted);margin-top:5px">г. Алматы · 20 фев · Заявка открыта</div>
           </div>
           <div class="sect">Прошедшие</div>
           <div class="card">
             <span class="pill done">ЗАВЕРШЁН</span>
             <div class="nm" style="font-size:14px;font-weight:700">Кубок Алматы 2025</div>
-            <div class="mt" style="font-size:11px;color:var(--mut);margin-top:4px">12–14 фев · Ваше место 8 из 32</div>
+            <div class="mt" style="font-size:11px;color:var(--c-muted);margin-top:4px">12–14 фев · Ваше место 8 из 32</div>
           </div>
           <div class="card">
             <span class="pill done">ЗАВЕРШЁН</span>
             <div class="nm" style="font-size:14px;font-weight:700">Кубок КазНУ</div>
-            <div class="mt" style="font-size:11px;color:var(--mut);margin-top:4px">27 мая · Ваше место 8 из 24</div>
+            <div class="mt" style="font-size:11px;color:var(--c-muted);margin-top:4px">27 мая · Ваше место 8 из 24</div>
           </div>
         </div>
         <div class="tabbar">

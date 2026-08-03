@@ -2,7 +2,7 @@
   display: flex;
   flex-direction: column;
   height: 100vh;
-  background: #0b1120;
+  background: var(--c-screen-1, #0b1120);
   color: var(--text);
 }
 
@@ -14,7 +14,7 @@
   font-size: 22px;
   font-weight: 800;
   letter-spacing: -0.01em;
-  color: #eef2fb;
+  color: var(--c-ink, #eef2fb);
 }
 .sub {
   margin-top: 3px;
@@ -37,14 +37,14 @@
   flex-direction: column;
   justify-content: center;
   padding: 0 12px;
-  background: #151b2b;
-  border: 1px solid rgba(255, 255, 255, 0.09);
+  background: color-mix(in srgb, var(--c-screen-1, #0b1120) 95.5%, var(--c-ink, #eef2fb));
+  border: 1px solid var(--c-glass-line, rgba(255, 255, 255, 0.11));
   border-radius: 14px;
   position: relative;
   font-family: var(--font);
 }
 .live {
-  border-color: rgba(111, 155, 255, 0.6);
+  border-color: var(--c-accent-line-3, rgba(111, 155, 255, 0.5));
 }
 .stripe {
   position: absolute;
@@ -53,7 +53,7 @@
   bottom: 13px;
   width: 3.5px;
   border-radius: 2px;
-  background: #34d399;
+  background: var(--c-success, #34d399);
 }
 
 .row {
@@ -67,7 +67,7 @@
   height: 22px;
   border-radius: 50%;
   overflow: hidden;
-  background: #3b4675;
+  background: var(--c-avatar-bg, #141b2b);
   flex: none;
 }
 .avatar img {
@@ -76,36 +76,36 @@
   object-fit: cover;
 }
 .avatarEmpty {
-  background: rgba(255, 255, 255, 0.05);
+  background: var(--c-glass-seg, rgba(255, 255, 255, 0.05));
 }
 .name {
   flex: 1;
   min-width: 0;
   font-size: 13px;
-  color: #98a2b6;
+  color: var(--c-muted, #a6b0c6);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 .win {
-  color: #eef2fb;
+  color: var(--c-ink, #eef2fb);
   font-weight: 600;
 }
 .tbd {
-  color: #5b6577;
+  color: var(--c-dim, #6b7691);
 }
 .score {
   font-size: 13.5px;
   font-weight: 800;
-  color: #5b6577;
+  color: var(--c-dim, #6b7691);
   font-variant-numeric: tabular-nums;
 }
 .scoreWin {
-  color: #6f9bff;
+  color: var(--c-accent, #6f9bff);
 }
 .divider {
   height: 1px;
-  background: rgba(255, 255, 255, 0.06);
+  background: var(--c-glass-line-soft, rgba(255, 255, 255, 0.06));
   margin: 1px 0;
 }
 
@@ -113,7 +113,7 @@
   font-size: 11px;
   font-weight: 700;
   letter-spacing: 0.06em;
-  color: #5b6577;
+  color: var(--c-dim, #6b7691);
   white-space: nowrap;
   font-family: var(--font);
 }
@@ -127,7 +127,7 @@
 
 /* ── переопределения темы React Flow ────────────────────────── */
 .canvas :global(.react-flow) {
-  background: #0b1120;
+  background: var(--c-screen-1, #0b1120);
 }
 /* сбрасываем дефолтную обёртку узла (рамка/фон/курсор) — рисуем сами */
 .canvas :global(.react-flow__node) {

@@ -78,13 +78,13 @@ function Chart({ pts }: { pts: string }) {
   return <svg className="chart" viewBox="0 0 260 68" preserveAspectRatio="none">
     <defs>
       <linearGradient id="cg" x1="0" y1="0" x2="0" y2="1">
-        <stop offset="0" stopColor="#6f9bff" stopOpacity="0.32" />
-        <stop offset="1" stopColor="#6f9bff" stopOpacity="0" />
+        <stop offset="0" stopColor="var(--c-accent)" stopOpacity="0.32" />
+        <stop offset="1" stopColor="var(--c-accent)" stopOpacity="0" />
       </linearGradient>
     </defs>
     <polyline fill="url(#cg)" stroke="none" points={`0,68 ${pts} 260,68`} />
-    <polyline fill="none" stroke="#6f9bff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" points={pts} />
-    <circle cx={last[0]} cy={last[1]} r="3.5" fill="#6f9bff" />
+    <polyline fill="none" stroke="var(--c-accent)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" points={pts} />
+    <circle cx={last[0]} cy={last[1]} r="3.5" fill="var(--c-accent)" />
   </svg>;
 }
 
@@ -177,10 +177,10 @@ export function PlayerStats() {
 
 export function PlayerTournaments() {
   const T = ({ pill, cls, live, nm, mt }: { pill: ReactNode; cls: string; live?: boolean; nm: string; mt: ReactNode }) =>
-    <div className={'card' + (live ? ' live' : '')} style={live ? { borderColor: 'rgba(52,211,153,.4)' } : undefined}>
+    <div className={'card' + (live ? ' live' : '')} style={live ? { borderColor: 'var(--c-success-line-2)' } : undefined}>
       <span className={'pill ' + cls}>{pill}</span>
       <div className="nm" style={{ fontSize: 15, fontWeight: 700, letterSpacing: '-.1px' }}>{nm}</div>
-      <div className="mt" style={{ fontSize: 11.5, color: 'var(--mut)', marginTop: 5, lineHeight: 1.5 }}>{mt}</div>
+      <div className="mt" style={{ fontSize: 11.5, color: 'var(--c-muted)', marginTop: 5, lineHeight: 1.5 }}>{mt}</div>
     </div>;
   return <Frame>
     <div className="nav"><Brand /><BellBtn /></div>

@@ -9,7 +9,7 @@ import fntLogo from '../../brand/fnt/png/fnt-logo-512.png';
    заголовок, таблицу рейтинга, счёт матча, кнопку. */
 
 const S: Record<string, CSSProperties> = {
-  page: { background: 'var(--c-bg)', padding: 32, color: 'var(--c-ink)', display: 'grid', gap: 28 },
+  page: { background: 'var(--c-bg)', padding: 32, color: 'var(--c-text)', display: 'grid', gap: 28 },
   section: { display: 'grid', gap: 14 },
   gname: {
     margin: 0,
@@ -17,7 +17,7 @@ const S: Record<string, CSSProperties> = {
     fontWeight: 700,
     letterSpacing: '.08em',
     textTransform: 'uppercase',
-    color: 'var(--c-muted)',
+    color: 'var(--c-text-3)',
     display: 'flex',
     alignItems: 'center',
     gap: 8,
@@ -55,12 +55,12 @@ const S: Record<string, CSSProperties> = {
   },
   lockLogo: { height: 52, width: 'auto', display: 'block' },
   lockName: { fontSize: 26, fontWeight: 800, lineHeight: 1, letterSpacing: '-.01em' },
-  lockFull: { fontSize: 12, color: 'var(--c-muted)', marginTop: 4, letterSpacing: '.02em' },
-  lockLat: { marginLeft: 'auto', fontSize: 26, fontWeight: 800, letterSpacing: '-.02em', color: 'var(--c-muted)' },
+  lockFull: { fontSize: 12, color: 'var(--c-text-3)', marginTop: 4, letterSpacing: '.02em' },
+  lockLat: { marginLeft: 'auto', fontSize: 26, fontWeight: 800, letterSpacing: '-.02em', color: 'var(--c-text-3)' },
   name: { fontSize: 13, fontWeight: 700, letterSpacing: '.06em', textTransform: 'uppercase', color: 'var(--c-primary)' },
-  note: { fontSize: 12, color: 'var(--c-muted)', lineHeight: 1.45 },
+  note: { fontSize: 12, color: 'var(--c-text-3)', lineHeight: 1.45 },
   h1: { fontSize: 26, fontWeight: 800, letterSpacing: '-.01em', lineHeight: 1.15 },
-  sub: { fontSize: 14, color: 'var(--c-muted)' },
+  sub: { fontSize: 14, color: 'var(--c-text-3)' },
   row: {
     display: 'grid',
     gridTemplateColumns: '28px 1fr 64px 52px',
@@ -70,7 +70,7 @@ const S: Record<string, CSSProperties> = {
     borderTop: '1px solid var(--c-line)',
     fontSize: 14,
   },
-  num: { color: 'var(--c-muted)', fontVariantNumeric: 'tabular-nums' },
+  num: { color: 'var(--c-text-3)', fontVariantNumeric: 'tabular-nums' },
   pts: { fontWeight: 600, textAlign: 'right', fontVariantNumeric: 'tabular-nums' },
   score: { display: 'flex', gap: 8, alignItems: 'center' },
   scoreBig: { fontSize: 34, fontWeight: 800, fontVariantNumeric: 'tabular-nums', letterSpacing: '-.02em' },
@@ -159,7 +159,7 @@ function Card({ font: f }: { font: (typeof FONTS)[number] }) {
                 <span style={S.num}>{n}</span>
                 <span>{player}</span>
                 <span style={S.pts}>{pts}</span>
-                <span style={{ ...S.pts, color: d.startsWith('+') ? 'var(--c-success)' : 'var(--c-muted)' }}>{d}</span>
+                <span style={{ ...S.pts, color: d.startsWith('+') ? 'var(--c-success-light)' : 'var(--c-text-3)' }}>{d}</span>
               </div>
             ))}
           </div>
