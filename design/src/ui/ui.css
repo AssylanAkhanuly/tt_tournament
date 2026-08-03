@@ -1,0 +1,89 @@
+/* ui.css — стили примитивов дизайн-системы.
+
+   Здесь только то, чего нет в макетном слое (`gen/frame.css`): канонические
+   кнопка, сегмент-контрол, поле и подложка для специменов. Остальные примитивы
+   (`Card`, `Pill`, `Badge`, `Stat`, `Avatar`, `IconButton`, `SectionTitle`)
+   переиспользуют классы макетов — один источник стиля на весь Storybook,
+   а не вторая параллельная реализация.
+
+   Цвет — только токены из `src/theme/tokens.css`. */
+
+/* ── кнопка ──────────────────────────────────────────────────── */
+.ui-btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 7px;
+  font-family: var(--font); font-weight: 700; white-space: nowrap;
+  border: 1px solid transparent; border-radius: 12px; cursor: pointer;
+}
+.ui-btn--sm { font-size: 11.5px; padding: 7px 12px; border-radius: 9px; }
+.ui-btn--md { font-size: 13px;   padding: 10px 16px; }
+.ui-btn--lg { font-size: 14px;   padding: 14px 18px; font-weight: 800; border-radius: 14px; }
+.ui-btn--block { display: flex; width: 100%; }
+
+.ui-btn--accent {
+  color: var(--c-accent-ink); background: var(--c-accent);
+  box-shadow: inset 0 1px 0 var(--c-glass-hi-3), 0 10px 24px -12px var(--c-accent-glow-2);
+}
+.ui-btn--success {
+  color: var(--c-success-ink); background: var(--c-success);
+  box-shadow: inset 0 1px 0 var(--c-glass-hi-3), 0 10px 24px -12px var(--c-success-glow);
+}
+.ui-btn--broadcast {
+  color: var(--c-accent-ink);
+  background: linear-gradient(180deg, var(--c-broadcast), var(--c-broadcast-2));
+  box-shadow: 0 10px 24px -12px var(--c-broadcast-glow);
+}
+.ui-btn--ghost {
+  color: var(--c-ink); background: var(--c-glass); border-color: var(--c-glass-line);
+  box-shadow: inset 0 1px 0 var(--c-glass-hi);
+}
+.ui-btn--quiet { color: var(--c-accent); background: transparent; }
+
+/* ── пилюля: тона, которых нет в макетном слое ────────────────── */
+/* базовый .pill и тона live/reg/done — в gen/frame.css; здесь остальные,
+   чтобы примитив Pill был полным и в витрине, и на экранах */
+.pill.wait { background: var(--c-warning-soft); color: var(--c-warning); }
+.pill.bad { background: var(--c-danger-soft-2); color: var(--c-danger); }
+.pill.up { background: var(--c-success-soft); color: var(--c-success); }
+.pill.down { background: var(--c-danger-soft-2); color: var(--c-danger); }
+
+/* ── сегмент-контрол ─────────────────────────────────────────── */
+.ui-seg { display: inline-flex; gap: 2px; background: var(--c-glass-seg); border-radius: 9px; padding: 2px; }
+.ui-seg button {
+  font-family: var(--font); font-size: 11px; font-weight: 600; color: var(--c-muted);
+  padding: 4px 10px; border-radius: var(--r-xs); border: 0; background: none; cursor: pointer;
+}
+.ui-seg button.on { color: var(--c-ink); background: var(--c-glass-2); }
+
+/* ── поле формы (подпись + значение) ─────────────────────────── */
+.ui-field { display: flex; flex-direction: column; gap: 7px; }
+.ui-field > label { font-size: 12px; font-weight: 600; color: var(--c-muted); }
+.ui-field .ui-field-value { font-size: 13.5px; font-weight: 600; color: var(--c-ink); }
+
+/* ── подложки для специменов дизайн-системы ──────────────────── */
+.ui-canvas {
+  background: var(--c-screen); color: var(--c-ink); font-family: var(--font);
+  padding: 22px; border-radius: 20px; display: flex; flex-direction: column; gap: 18px;
+}
+.ui-canvas--light { background: var(--c-board-bg); color: var(--c-board-ink); }
+.ui-row { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.ui-grid { display: grid; gap: 12px; }
+.ui-label { font-size: 11px; font-weight: 700; letter-spacing: .9px; text-transform: uppercase; color: var(--c-muted); opacity: .8; }
+.ui-note { font-size: 12px; color: var(--c-muted); line-height: 1.5; }
+
+/* карточка токена в специмене «Цвета» */
+.ui-swatch { display: flex; align-items: center; gap: 11px; padding: 9px 11px; border-radius: 12px; background: var(--c-glass); border: 1px solid var(--c-glass-line); }
+/* полупрозрачные токены показываем поверх «шахматки» из самих же токенов —
+   иначе rgba-стекло на тёмном фоне выглядит просто пустым квадратом */
+.ui-swatch .chip {
+  width: 38px; height: 38px; border-radius: var(--r-sm); flex: none;
+  box-shadow: inset 0 0 0 1px var(--c-glass-line);
+  background-image:
+    linear-gradient(45deg, var(--c-glass-2) 25%, transparent 25%, transparent 75%, var(--c-glass-2) 75%),
+    linear-gradient(45deg, var(--c-glass-2) 25%, transparent 25%, transparent 75%, var(--c-glass-2) 75%);
+  background-size: 12px 12px; background-position: 0 0, 6px 6px;
+}
+.ui-swatch .chip i { display: block; width: 100%; height: 100%; border-radius: inherit; }
+.ui-swatch .meta { min-width: 0; }
+.ui-swatch .name { font-size: 12px; font-weight: 700; font-family: ui-monospace, "JetBrains Mono", Menlo, monospace; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ui-swatch .val { font-size: 10.5px; color: var(--c-muted); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ui-swatch .desc { font-size: 10.5px; color: var(--c-dim); margin-top: 2px; }

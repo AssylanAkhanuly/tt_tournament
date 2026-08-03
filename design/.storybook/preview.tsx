@@ -1,7 +1,9 @@
 import type { Preview } from '@storybook/react';
 import React from 'react';
-import '../src/tokens.css';
+import '../src/theme/tokens.css';
+import '../src/ui/ui.css';
 import { DEFAULT_FONT, FONTS, ensureFontsLoaded, fontStack } from '../src/fonts';
+import { DEFAULT_THEME, THEMES, applyTheme } from '../src/theme/themes';
 
 // Гарнитуры грузим из списка `src/fonts.ts` — он единственный источник, ссылка
 // на Google Fonts собирается из него же (иначе список и <link> разъезжаются).
@@ -18,10 +20,19 @@ const preview: Preview = {
     },
   },
 
-  // Примерка гарнитур: в тулбаре выбираем шрифт, он подставляется в токен
-  // `--font`, на котором сидят все макеты. Историю можно прибить к своему
-  // шрифту через `globals: { font: 'onest' }` в её аннотации.
+  // Тулбар: тема (цвет) и гарнитура. Оба переключателя работают одинаково —
+  // подменяют переменные на `:root`, на которых сидит вся вёрстка макетов.
+  // Прибить к истории: `globals: { theme: 'sunset', font: 'onest' }`.
   globalTypes: {
+    theme: {
+      name: 'Тема',
+      description: 'Цветовая тема (семена токенов)',
+      toolbar: {
+        icon: 'paintbrush',
+        items: THEMES.map((t) => ({ value: t.id, title: t.label })),
+        dynamicTitle: true,
+      },
+    },
     font: {
       name: 'Шрифт',
       description: 'Гарнитура макета',
@@ -37,14 +48,14 @@ const preview: Preview = {
       },
     },
   },
-  initialGlobals: { font: DEFAULT_FONT },
+  initialGlobals: { theme: DEFAULT_THEME, font: DEFAULT_FONT },
 
   decorators: [
     (Story, ctx) => {
-      const stack = fontStack(ctx.globals.font);
-      // Синхронно, чтобы не мигало на первом кадре; --font живёт на :root.
+      // Синхронно, чтобы не мигало на первом кадре; переменные живут на :root.
       if (typeof document !== 'undefined') {
-        document.documentElement.style.setProperty('--font', stack);
+        document.documentElement.style.setProperty('--font', fontStack(ctx.globals.font));
+        applyTheme(ctx.globals.theme);
       }
       return <Story />;
     },
