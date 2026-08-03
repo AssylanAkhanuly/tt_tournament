@@ -1,0 +1,88 @@
+/* Формы: поле, многострочное поле, выпадающий список, флажок, переключатель,
+   тумблер, счётчик, поиск. Цвет — только токены (`src/theme/tokens.css`). */
+
+/* ── общая обёртка поля: подпись сверху, подсказка/ошибка снизу ── */
+.ui-fld { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.ui-fld > label { font-size: 12px; font-weight: 600; color: var(--c-muted); }
+.ui-fld .ui-fld-hint { font-size: 11px; color: var(--c-dim); line-height: 1.45; }
+.ui-fld .ui-fld-err { font-size: 11px; color: var(--c-danger); line-height: 1.45; }
+
+/* ── текстовое поле ─────────────────────────────────────────── */
+.ui-input {
+  display: flex; align-items: center; gap: 8px;
+  background: var(--c-glass); border: 1px solid var(--c-glass-line); border-radius: 12px;
+  padding: 0 12px; color: var(--c-ink);
+  box-shadow: inset 0 1px 0 var(--c-glass-hi);
+}
+.ui-input input,
+.ui-input textarea {
+  flex: 1; min-width: 0; background: none; border: 0; outline: none;
+  font-family: var(--font); font-size: 13.5px; color: var(--c-ink);
+  padding: 11px 0;
+}
+.ui-input textarea { resize: vertical; min-height: 78px; line-height: 1.5; }
+.ui-input input::placeholder,
+.ui-input textarea::placeholder { color: var(--c-dim); }
+.ui-input .ui-input-ic { color: var(--c-dim); display: grid; place-items: center; flex: none; }
+.ui-input .ui-input-suffix { font-size: 12px; color: var(--c-dim); flex: none; }
+.ui-input--sm input { padding: 8px 0; font-size: 12.5px; }
+.ui-input--focus { border-color: var(--c-accent-line-3); box-shadow: inset 0 1px 0 var(--c-glass-hi), 0 0 0 3px var(--c-accent-soft); }
+.ui-input--err { border-color: var(--c-danger-line); }
+.ui-input--off { opacity: .45; }
+
+/* ── выпадающий список ──────────────────────────────────────── */
+.ui-select { position: relative; display: flex; align-items: center; }
+.ui-select select {
+  appearance: none; width: 100%;
+  background: var(--c-glass); border: 1px solid var(--c-glass-line); border-radius: 12px;
+  box-shadow: inset 0 1px 0 var(--c-glass-hi);
+  font-family: var(--font); font-size: 13.5px; color: var(--c-ink);
+  padding: 11px 34px 11px 12px; cursor: pointer;
+}
+.ui-select select option { background: var(--c-screen-1); color: var(--c-ink); }
+.ui-select .ui-select-ic { position: absolute; right: 11px; color: var(--c-dim); pointer-events: none; display: grid; }
+
+/* ── флажок и переключатель ─────────────────────────────────── */
+.ui-check { display: inline-flex; align-items: center; gap: 9px; font-size: 13px; color: var(--c-ink); cursor: pointer; }
+.ui-check input { position: absolute; opacity: 0; width: 0; height: 0; }
+.ui-check .box {
+  width: 19px; height: 19px; border-radius: 6px; flex: none;
+  background: var(--c-glass); border: 1px solid var(--c-glass-line);
+  box-shadow: inset 0 1px 0 var(--c-glass-hi);
+  display: grid; place-items: center; color: var(--c-accent-ink);
+}
+.ui-check .box svg { opacity: 0; }
+.ui-check input:checked + .box { background: var(--c-accent); border-color: transparent; }
+.ui-check input:checked + .box svg { opacity: 1; }
+.ui-check.ui-radio .box { border-radius: 50%; }
+.ui-check.ui-radio input:checked + .box { background: var(--c-glass); border-color: var(--c-accent); }
+.ui-check.ui-radio .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--c-accent); opacity: 0; }
+.ui-check.ui-radio input:checked + .box .dot { opacity: 1; }
+.ui-check.off { opacity: .45; cursor: default; }
+.ui-check .sub { display: block; font-size: 11px; color: var(--c-muted); margin-top: 2px; }
+
+/* ── тумблер ────────────────────────────────────────────────── */
+.ui-switch { display: inline-flex; align-items: center; gap: 10px; font-size: 13px; color: var(--c-ink); cursor: pointer; }
+.ui-switch input { position: absolute; opacity: 0; width: 0; height: 0; }
+.ui-switch .track {
+  width: 40px; height: 23px; border-radius: var(--r-pill); flex: none; position: relative;
+  background: var(--c-glass-2); border: 1px solid var(--c-glass-line);
+  transition: background .15s ease;
+}
+.ui-switch .track::after {
+  content: ""; position: absolute; top: 2px; left: 2px; width: 17px; height: 17px; border-radius: 50%;
+  background: var(--c-ink); transition: transform .15s ease;
+}
+.ui-switch input:checked + .track { background: var(--c-accent); border-color: transparent; }
+.ui-switch input:checked + .track::after { transform: translateX(17px); background: var(--c-accent-ink); }
+.ui-switch.off { opacity: .45; cursor: default; }
+
+/* ── счётчик (минус · значение · плюс) ──────────────────────── */
+.ui-stepper { display: inline-flex; align-items: center; gap: 7px; }
+.ui-stepper button {
+  width: 32px; height: 32px; border-radius: var(--r-sm); display: grid; place-items: center;
+  background: var(--c-glass); border: 1px solid var(--c-glass-line); color: var(--c-ink);
+  box-shadow: inset 0 1px 0 var(--c-glass-hi); cursor: pointer;
+}
+.ui-stepper button.plus { background: var(--c-accent); border-color: transparent; color: var(--c-accent-ink); }
+.ui-stepper .val { font-size: 20px; font-weight: 800; font-variant-numeric: tabular-nums; min-width: 28px; text-align: center; }

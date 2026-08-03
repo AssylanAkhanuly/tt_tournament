@@ -1,0 +1,107 @@
+/* Данные: таблица, строка реестра, пары «ключ — значение», пустое состояние,
+   прогресс, скелет загрузки, спиннер, разделитель, лента событий, подсказка.
+   Цвет — только токены (`src/theme/tokens.css`). */
+
+/* ── таблица реестра ────────────────────────────────────────── */
+.ui-table { width: 100%; border-collapse: collapse; font-family: var(--font); }
+.ui-table th {
+  text-align: left; font-size: 10.5px; font-weight: 700; letter-spacing: .7px; text-transform: uppercase;
+  color: var(--c-dim); padding: 0 10px 9px; white-space: nowrap;
+}
+.ui-table td {
+  font-size: 13px; color: var(--c-ink); padding: 11px 10px;
+  border-top: 1px solid var(--c-glass-line-soft);
+}
+.ui-table tr:hover td { background: var(--c-glass); }
+.ui-table td.num, .ui-table th.num { text-align: right; font-variant-numeric: tabular-nums; }
+.ui-table .sub { font-size: 11px; color: var(--c-muted); margin-top: 2px; }
+
+/* ── строка реестра (карточка-строка) ───────────────────────── */
+.ui-row-item {
+  display: flex; align-items: center; gap: 12px;
+  background: var(--c-glass); border: 1px solid var(--c-glass-line); border-radius: 12px;
+  padding: 11px 13px;
+}
+.ui-row-item.sel { border-color: var(--c-accent-line-3); box-shadow: 0 0 0 1px var(--c-accent-halo); }
+.ui-row-item .who { flex: 1; min-width: 0; }
+.ui-row-item .nm { font-size: 13.5px; font-weight: 700; }
+.ui-row-item .mt { font-size: 11.5px; color: var(--c-muted); margin-top: 2px; }
+.ui-row-item .rt { display: flex; align-items: center; gap: 12px; flex: none; }
+
+/* ── пары «ключ — значение» ─────────────────────────────────── */
+.ui-kv { display: grid; gap: 10px; }
+.ui-kv .k { font-size: 11.5px; color: var(--c-muted); }
+.ui-kv .v { font-size: 13.5px; font-weight: 600; color: var(--c-ink); margin-top: 2px; }
+
+/* ── пустое состояние ───────────────────────────────────────── */
+.ui-empty { display: flex; flex-direction: column; align-items: center; gap: 10px; text-align: center; padding: 26px 18px; }
+.ui-empty .ic {
+  width: 52px; height: 52px; border-radius: var(--r-md); display: grid; place-items: center;
+  background: var(--c-glass-2); color: var(--c-dim); box-shadow: inset 0 1px 0 var(--c-glass-hi);
+}
+.ui-empty .t { font-size: 14px; font-weight: 700; color: var(--c-ink); }
+.ui-empty .s { font-size: 12px; color: var(--c-muted); line-height: 1.5; max-width: 280px; }
+
+/* ── прогресс ───────────────────────────────────────────────── */
+.ui-prog { display: grid; gap: 6px; }
+.ui-prog .bar { height: 7px; border-radius: var(--r-pill); background: var(--c-glass-2); overflow: hidden; }
+.ui-prog .fill { height: 100%; border-radius: inherit; background: var(--c-accent); }
+.ui-prog.g .fill { background: var(--c-success); }
+.ui-prog.a .fill { background: var(--c-warning); }
+.ui-prog .lbl { display: flex; justify-content: space-between; font-size: 11.5px; color: var(--c-muted); }
+.ui-prog .lbl b { color: var(--c-ink); font-variant-numeric: tabular-nums; }
+
+/* ── скелет загрузки ────────────────────────────────────────── */
+.ui-skel {
+  border-radius: var(--r-sm); background: var(--c-glass-2); position: relative; overflow: hidden;
+}
+.ui-skel::after {
+  content: ""; position: absolute; inset: 0;
+  background: linear-gradient(90deg, transparent, var(--c-glass-line), transparent);
+  animation: ui-skel-run 1.4s infinite;
+}
+@keyframes ui-skel-run { from { transform: translateX(-100%); } to { transform: translateX(100%); } }
+
+/* ── спиннер ────────────────────────────────────────────────── */
+.ui-spin {
+  width: 20px; height: 20px; border-radius: 50%; flex: none;
+  border: 2px solid var(--c-glass-line); border-top-color: var(--c-accent);
+  animation: ui-spin-run .8s linear infinite;
+}
+@keyframes ui-spin-run { to { transform: rotate(360deg); } }
+
+/* ── разделитель ────────────────────────────────────────────── */
+.ui-div { height: 1px; background: var(--c-glass-line); border: 0; margin: 2px 0; }
+.ui-div.lbl { display: flex; align-items: center; gap: 10px; height: auto; background: none; font-size: 10.5px; font-weight: 700; letter-spacing: .8px; text-transform: uppercase; color: var(--c-dim); }
+.ui-div.lbl::before, .ui-div.lbl::after { content: ""; flex: 1; height: 1px; background: var(--c-glass-line); }
+
+/* ── лента событий ──────────────────────────────────────────── */
+.ui-time { display: grid; gap: 0; }
+.ui-time .ev { display: grid; grid-template-columns: 22px 1fr; gap: 12px; position: relative; padding-bottom: 16px; }
+.ui-time .ev:last-child { padding-bottom: 0; }
+.ui-time .ev::before {
+  content: ""; position: absolute; left: 10px; top: 20px; bottom: 0; width: 2px; background: var(--c-glass-line);
+}
+.ui-time .ev:last-child::before { display: none; }
+.ui-time .pt {
+  width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center;
+  background: var(--c-glass-2); border: 1px solid var(--c-glass-line); color: var(--c-muted); z-index: 1;
+}
+.ui-time .ev.on .pt { background: var(--c-accent-soft); border-color: var(--c-accent-line); color: var(--c-accent); }
+.ui-time .ev.ok .pt { background: var(--c-success-soft); border-color: var(--c-success-line); color: var(--c-success); }
+.ui-time .t { font-size: 13px; font-weight: 600; color: var(--c-ink); }
+.ui-time .s { font-size: 11.5px; color: var(--c-muted); margin-top: 2px; line-height: 1.45; }
+
+/* ── подсказка (только CSS, по наведению) ───────────────────── */
+.ui-tip { position: relative; display: inline-flex; }
+.ui-tip .tip {
+  position: absolute; bottom: calc(100% + 8px); left: 50%; transform: translateX(-50%);
+  background: var(--c-screen-1); color: var(--c-ink); border: 1px solid var(--c-glass-line);
+  border-radius: var(--r-sm); padding: 7px 10px; font-size: 11.5px; white-space: nowrap;
+  box-shadow: var(--sh-panel); opacity: 0; pointer-events: none; transition: opacity .12s ease;
+}
+.ui-tip .tip::after {
+  content: ""; position: absolute; top: 100%; left: 50%; transform: translateX(-50%);
+  border: 5px solid transparent; border-top-color: var(--c-glass-line);
+}
+.ui-tip:hover .tip { opacity: 1; }

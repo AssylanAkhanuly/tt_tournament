@@ -112,12 +112,26 @@ Storybook 8 (Vite)**, тёмная glass-тема (`gen/frame.css`), токен�
 
 ### Компоненты
 
-`src/ui` — примитивы: `Button`, `Card`, `Panel`, `Pill`, `Badge`, `Stat`,
-`Avatar`, `AvatarStack`, `IconButton`, `SectionTitle`, `Segmented`, `Field`.
-Часть из них — **типизированная обёртка над классами макетного слоя**
-(`gen/frame.css`), а не вторая реализация: у стиля один источник, поэтому
-экраны и компоненты не разъезжаются. Новое (`Button`, `Segmented`, `Field`,
-дополнительные тона пилюль) описано в `src/ui/ui.css`.
+`src/ui` — библиотека примитивов, ~40 штук, разложена по файлам-разделам:
+
+| Файл | Что внутри |
+|---|---|
+| `base.tsx` | Button, Card, Panel, Pill, Badge, Stat/Stats, Avatar, AvatarStack, IconButton, SectionTitle, Segmented, Field |
+| `forms.tsx` | Input, SearchField, Textarea, Select, Checkbox, Radio, RadioGroup, Switch, Stepper |
+| `nav.tsx` | Tabs, Nav/NavItem, Breadcrumbs, Pagination, Steps |
+| `data.tsx` | Table, RowItem, KeyValue, EmptyState, Progress, Skeleton, Spinner, Divider, Timeline, Tooltip |
+| `feedback.tsx` | Notice (4 тона), Toast, Modal |
+| `domain.tsx` | турнирные: MatchRow, TableTile, RatingDelta, SeedBadge, ScoreInput, RankRow |
+
+Точка входа одна — `src/ui` (`index.ts` реэкспортирует всё). У каждого раздела
+свой CSS рядом (`forms.css`, `nav.css`, …), цвет и форма — только токены.
+
+Два принципа, из-за которых библиотека не разъезжается с макетами:
+
+- **Один источник стиля.** Примитивы из `base` — типизированная обёртка над
+  классами макетного слоя (`gen/frame.css`), а не вторая реализация.
+- **Доменное — тоже примитив.** Строка матча, плитка стола, дельта рейтинга и
+  ввод счёта живут в библиотеке, а не переписываются на каждом экране.
 
 Кнопки внутри самих макетов (`.btnp`, `.callbtn`, `.dsubmit`, `.jbtn`…) —
 исторические, доставшиеся от отрисовки экранов; при переносе во `front/` их
@@ -138,7 +152,9 @@ npm run lint:colors   # сырые цвета + ссылки на несущес
 - **Дизайн-система → Цвета** — все токены с живыми значениями (читаются из
   браузера, а не переписаны в коде) и один и тот же кусок интерфейса во всех
   темах сразу.
-- **Дизайн-система → Компоненты** — примитивы во всех вариантах.
+- **Дизайн-система → Компоненты** — шесть историй по разделам: «Основа»,
+  «Формы», «Навигация», «Данные», «Обратная связь», «Турнирные». Каждая
+  показывает компоненты в живых примерах из турнирной жизни, а не «Lorem ipsum».
 
 ### Сетка из `front/`
 

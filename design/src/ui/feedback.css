@@ -1,0 +1,56 @@
+/* Обратная связь: плашка-уведомление, всплывающее уведомление, диалог.
+   Цвет — только токены (`src/theme/tokens.css`). */
+
+/* ── плашка ─────────────────────────────────────────────────── */
+.ui-notice {
+  display: flex; gap: 11px; align-items: flex-start;
+  border: 1px solid var(--c-glass-line); border-radius: 12px; padding: 12px 13px;
+  background: var(--c-glass); box-shadow: inset 0 1px 0 var(--c-glass-hi);
+}
+.ui-notice .ic { flex: none; display: grid; place-items: center; width: 20px; height: 20px; color: var(--c-accent); }
+.ui-notice .tx { min-width: 0; }
+.ui-notice .t { font-size: 13px; font-weight: 700; color: var(--c-ink); }
+.ui-notice .s { font-size: 12px; color: var(--c-muted); margin-top: 3px; line-height: 1.5; }
+.ui-notice .act { margin-left: auto; flex: none; }
+.ui-notice--info    { border-color: var(--c-accent-line);    background: var(--c-accent-soft); }
+.ui-notice--success { border-color: var(--c-success-line);   background: var(--c-success-soft); }
+.ui-notice--success .ic { color: var(--c-success); }
+.ui-notice--warning { border-color: var(--c-warning-soft);   background: var(--c-warning-soft); }
+.ui-notice--warning .ic { color: var(--c-warning); }
+.ui-notice--danger  { border-color: var(--c-danger-line);    background: var(--c-danger-soft); }
+.ui-notice--danger .ic { color: var(--c-danger); }
+
+/* ── всплывающее уведомление ────────────────────────────────── */
+.ui-toast {
+  display: flex; align-items: center; gap: 11px; max-width: 380px;
+  background: var(--c-glass-2); backdrop-filter: var(--fx-blur); -webkit-backdrop-filter: var(--fx-blur);
+  border: 1px solid var(--c-glass-line); border-radius: 14px; padding: 12px 14px;
+  box-shadow: inset 0 1px 0 var(--c-glass-hi), var(--sh-panel);
+}
+.ui-toast .ic {
+  width: 30px; height: 30px; border-radius: var(--r-sm); flex: none; display: grid; place-items: center;
+  background: var(--c-accent-soft); color: var(--c-accent);
+}
+.ui-toast.ok .ic { background: var(--c-success-soft); color: var(--c-success); }
+.ui-toast.bad .ic { background: var(--c-danger-soft); color: var(--c-danger); }
+.ui-toast .t { font-size: 13px; font-weight: 700; color: var(--c-ink); }
+.ui-toast .s { font-size: 11.5px; color: var(--c-muted); margin-top: 2px; }
+.ui-toast .x { margin-left: auto; color: var(--c-dim); background: none; border: 0; cursor: pointer; display: grid; }
+
+/* ── диалог ─────────────────────────────────────────────────── */
+.ui-modal-scrim {
+  position: relative; border-radius: var(--r-md); overflow: hidden;
+  background: color-mix(in srgb, var(--c-screen-1) 72%, transparent);
+  display: grid; place-items: center; padding: 26px;
+}
+.ui-modal {
+  width: 100%; max-width: 380px;
+  background: var(--c-glass-2); backdrop-filter: var(--fx-blur); -webkit-backdrop-filter: var(--fx-blur);
+  border: 1px solid var(--c-glass-line); border-radius: var(--r-md);
+  box-shadow: inset 0 1px 0 var(--c-glass-hi), var(--sh-panel);
+}
+.ui-modal .head { display: flex; align-items: center; gap: 10px; padding: 14px 16px; border-bottom: 1px solid var(--c-glass-line); }
+.ui-modal .head .t { font-size: 14px; font-weight: 700; color: var(--c-ink); flex: 1; }
+.ui-modal .head .x { color: var(--c-dim); background: none; border: 0; cursor: pointer; display: grid; }
+.ui-modal .body { padding: 15px 16px; font-size: 13px; color: var(--c-muted); line-height: 1.55; }
+.ui-modal .foot { display: flex; justify-content: flex-end; gap: 9px; padding: 0 16px 16px; }

@@ -1,12 +1,17 @@
 import type { Meta, StoryObj } from '@storybook/react';
-import { ComponentGallery } from './Components';
+import { GalleryBase, GalleryData, GalleryDomain, GalleryFeedback, GalleryForms, GalleryNav } from './Components';
 
-/* Витрина примитивов `src/ui`. Тема и гарнитура — тулбар сверху. */
-const meta: Meta<typeof ComponentGallery> = {
+/* Витрины примитивов `src/ui`, по разделам. Тема и гарнитура — тулбар сверху:
+   всё нарисовано на токенах, поэтому перекрашивается вместе с макетами. */
+const meta: Meta = {
   title: 'Дизайн-система/Компоненты',
-  component: ComponentGallery,
   parameters: { layout: 'fullscreen' },
 };
 export default meta;
 
-export const Витрина: StoryObj<typeof ComponentGallery> = {};
+export const Основа: StoryObj = { render: () => <GalleryBase /> };
+export const Формы: StoryObj = { render: () => <GalleryForms /> };
+export const Навигация: StoryObj = { render: () => <GalleryNav /> };
+export const Данные: StoryObj = { render: () => <GalleryData /> };
+export const ОбратнаяСвязь: StoryObj = { name: 'Обратная связь', render: () => <GalleryFeedback /> };
+export const Турнирные: StoryObj = { render: () => <GalleryDomain /> };

@@ -1,0 +1,77 @@
+/* Навигация: вкладки, пункт бокового меню, хлебные крошки, страницы, шаги.
+   Цвет — только токены (`src/theme/tokens.css`). */
+
+/* ── вкладки с подчёркиванием ───────────────────────────────── */
+.ui-tabs { display: flex; gap: 18px; border-bottom: 1px solid var(--c-glass-line); }
+.ui-tabs button {
+  font-family: var(--font); font-size: 13px; font-weight: 600; color: var(--c-muted);
+  background: none; border: 0; padding: 0 0 10px; cursor: pointer; position: relative;
+  display: inline-flex; align-items: center; gap: 7px;
+}
+.ui-tabs button.on { color: var(--c-ink); }
+.ui-tabs button.on::after {
+  content: ""; position: absolute; left: 0; right: 0; bottom: -1px; height: 2px;
+  background: var(--c-accent); border-radius: 2px;
+}
+.ui-tabs .count {
+  font-size: 10.5px; font-weight: 700; padding: 1px 6px; border-radius: var(--r-pill);
+  background: var(--c-glass-2); color: var(--c-muted);
+}
+.ui-tabs button.on .count { background: var(--c-accent-soft); color: var(--c-accent); }
+
+/* ── пункт бокового меню ────────────────────────────────────── */
+.ui-nav { display: flex; flex-direction: column; gap: 3px; }
+/* в витрине показываем меню шириной с настоящий сайдбар роли */
+.ui-nav-demo { width: 240px; }
+.ui-navitem {
+  display: flex; align-items: center; gap: 11px; padding: 10px 12px; border-radius: 12px;
+  color: var(--c-muted); font-size: 13.5px; font-weight: 600; cursor: pointer;
+  border: 1px solid transparent; background: none; font-family: var(--font); text-align: left;
+}
+.ui-navitem .grow { flex: 1; }
+.ui-navitem .badge {
+  font-size: 10.5px; font-weight: 800; padding: 1px 7px; border-radius: var(--r-pill);
+  background: var(--c-accent-soft); color: var(--c-accent);
+}
+.ui-navitem.on {
+  color: var(--c-ink); background: var(--c-glass-2); border-color: var(--c-glass-line);
+  box-shadow: inset 0 1px 0 var(--c-glass-hi);
+}
+
+/* ── хлебные крошки ─────────────────────────────────────────── */
+.ui-crumbs { display: flex; align-items: center; gap: 7px; font-size: 12px; color: var(--c-muted); flex-wrap: wrap; }
+.ui-crumbs a { color: var(--c-muted); cursor: pointer; }
+.ui-crumbs .sep { color: var(--c-dim); display: grid; }
+.ui-crumbs .last { color: var(--c-ink); font-weight: 600; }
+
+/* ── страницы ───────────────────────────────────────────────── */
+.ui-pages { display: inline-flex; align-items: center; gap: 5px; }
+.ui-pages button {
+  min-width: 30px; height: 30px; padding: 0 8px; border-radius: var(--r-sm);
+  font-family: var(--font); font-size: 12.5px; font-weight: 600; color: var(--c-muted);
+  background: var(--c-glass); border: 1px solid var(--c-glass-line); cursor: pointer;
+  display: grid; place-items: center;
+}
+.ui-pages button.on { color: var(--c-accent-ink); background: var(--c-accent); border-color: transparent; }
+.ui-pages button.off { opacity: .4; cursor: default; }
+.ui-pages .gap { color: var(--c-dim); padding: 0 2px; }
+
+/* ── шаги мастера ───────────────────────────────────────────── */
+.ui-steps { display: flex; align-items: flex-start; }
+.ui-steps .step { display: flex; flex-direction: column; align-items: center; gap: 7px; flex: 1; text-align: center; position: relative; }
+.ui-steps .step .dot {
+  width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center;
+  font-size: 11.5px; font-weight: 800; font-variant-numeric: tabular-nums;
+  background: var(--c-glass); border: 1px solid var(--c-glass-line); color: var(--c-muted);
+  box-shadow: inset 0 1px 0 var(--c-glass-hi); position: relative; z-index: 1;
+}
+.ui-steps .step .lbl { font-size: 11.5px; color: var(--c-muted); line-height: 1.35; max-width: 120px; }
+.ui-steps .step.done .dot { background: var(--c-success); border-color: transparent; color: var(--c-success-ink); }
+.ui-steps .step.now .dot { background: var(--c-accent); border-color: transparent; color: var(--c-accent-ink); box-shadow: 0 0 0 4px var(--c-accent-soft); }
+.ui-steps .step.now .lbl { color: var(--c-ink); font-weight: 600; }
+.ui-steps .step + .step::before {
+  content: ""; position: absolute; top: 13px; right: 50%; left: -50%; height: 2px;
+  background: var(--c-glass-line);
+}
+.ui-steps .step.done::before,
+.ui-steps .step.now::before { background: var(--c-success-line-2); }
