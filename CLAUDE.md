@@ -94,6 +94,12 @@
   `design/src/*.tsx` (+ `.stories.tsx`). Storybook: `npm run storybook`.
 - Стек стилей: веб — PostCSS + нативный CSS (CSS Modules, кастомные свойства,
   `@layer`); приложение — Unistyles 3.
+- **Цвет — только токенами.** Единственный источник — `design/src/theme/tokens.css`;
+  «сырых» `#hex`/`rgba()` в макетах, примитивах и инлайн-стилях быть не должно,
+  полупрозрачные варианты считаются через `color-mix()` от токена. Темы —
+  `design/src/theme/themes.ts`, примитивы — `design/src/ui`. Перед «готово»:
+  `cd design && npm run lint:colors` (ловит и сырые цвета, и ссылки на
+  переименованные токены). Подробности — `design/README.md`.
 
 ## Чтение PDF
 
