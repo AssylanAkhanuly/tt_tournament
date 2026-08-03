@@ -88,6 +88,26 @@ cd design
 npm run storybook        # http://localhost:6006
 ```
 
+## Публикация: деплой на каждый пуш
+
+Storybook живёт на **https://storybook-static-nu-two.vercel.app** и собирается
+Vercel'ом сам — руками ничего заливать не надо.
+
+- Проект Vercel `storybook-static` подключён к репозиторию
+  `AssylanAkhanuly/tt_tournament`, продакшн-ветка — `main`. Пуш в `main` →
+  прод-деплой; пуш в другую ветку / PR → превью-деплой со своей ссылкой.
+- Корень проекта — папка `design/`, сборка и вывод описаны в `design/vercel.json`
+  (`npm install` → `npm run build` → отдаём `storybook-static/`).
+- «Ignored Build Step» на Vercel: `git diff --quiet HEAD^ HEAD -- . ../front/src`.
+  То есть сборка запускается, если в коммите изменился `design/` **или**
+  `front/src` — второе обязательно, потому что экран «Сетка» тянет настоящий
+  `BracketFlow` из `front/` по алиасу `@`. Правки только в `TZ.md`/диаграммах
+  деплой не гоняют.
+- Поэтому же в настройках включён доступ к файлам вне корня проекта
+  (`sourceFilesOutsideRootDirectory`) — без него `../front/src` не виден сборке.
+- Ручной деплой (если очень нужно): `cd design && npx vercel deploy --prod`.
+
+
 ## Пайплайн генерации
 
 Картинки-ориентиры и арт-дирекшн — в `gen/` (`gen/README.md`, `gen/context.md`).
