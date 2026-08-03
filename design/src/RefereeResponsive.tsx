@@ -1,6 +1,8 @@
 import type { ReactNode } from 'react';
 import { Bell, LayoutDashboard, Grid2x2, Network, Users } from 'lucide-react';
 import { Frame } from './PlayerApp';
+import { MiniTabBar } from './respShell';
+import { ORG_TABS } from './orgCommon';
 import fntLogo from './assets/fnt-emblem.png';
 import '../gen/frame.css';
 import '../gen/desktop.css';
@@ -31,15 +33,6 @@ function RQ({ a, b, r }: { a: string; b: string; r: string }) {
   );
 }
 
-function RefTabBar() {
-  const tabs: [ReactNode, string, boolean][] = [
-    [<LayoutDashboard size={20} />, 'Сводка', true],
-    [<Grid2x2 size={20} />, 'Столы', false],
-    [<Network size={20} />, 'Сетка', false],
-    [<Users size={20} />, 'Игроки', false],
-  ];
-  return <div className="tabbar">{tabs.map(([ic, t, on]) => <div key={t} className={'tab' + (on ? ' on' : '')}>{ic}{t}</div>)}</div>;
-}
 
 const STATS = (
   <div className="stats">
@@ -95,7 +88,7 @@ export function RefereeTablet() {
   );
 }
 
-export function RefereeMobile() {
+export function RefereeMobile({ onNavigate }: { onNavigate?: (item: string) => void } = {}) {
   return (
     <Frame>
       <div className="nav">
@@ -113,7 +106,7 @@ export function RefereeMobile() {
         <RQ a={A(22)} b={A(85)} r="Жумабеков Р. — Байжанов А." />
         <RQ a={A(67)} b={A(93)} r="Оспанов Д. — Мұрат Е." />
       </div>
-      <RefTabBar />
+      <MiniTabBar items={ORG_TABS} active="Обзор" onSelect={onNavigate} />
     </Frame>
   );
 }

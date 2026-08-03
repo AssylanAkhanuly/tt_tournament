@@ -36,9 +36,9 @@ const FeeRow = ({ f }: { f: Fee }) => (
   </div>
 );
 
-export function FeesScreen({ variant }: { variant?: DeskVariant }) {
+export function FeesScreen({ variant, onNavigate }: { variant?: DeskVariant; onNavigate?: (item: string) => void }) {
   return (
-    <Desk variant={variant} title="Взносы турнира" sub="Чемпионат Казахстана 2026 · стартовый взнос ₸ 10 000"
+    <Desk onNavigate={onNavigate} variant={variant} title="Взносы турнира" sub="Чемпионат Казахстана 2026 · стартовый взнос ₸ 10 000"
       nav={FED_NAV} activeNav="Взносы" role={FED} hint="Без подтверждённого взноса участник не попадает в жеребьёвку.">
       <Chips />
       <div className="dactionbar"><div className="dcount">128 участников · 16 не оплатили</div>

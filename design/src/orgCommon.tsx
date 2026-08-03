@@ -26,7 +26,9 @@ export const ORG_TABS: [ReactNode, string][] = [
   [<Grid2x2 size={20} />, 'Столы'],
 ];
 
-export function OrgPhone({ title, active, children }: { title: string; active: string; children: ReactNode }) {
+export function OrgPhone({
+  title, active, onNavigate, children,
+}: { title: string; active: string; onNavigate?: (item: string) => void; children: ReactNode }) {
   return (
     <Frame>
       <div className="nav">
@@ -37,7 +39,7 @@ export function OrgPhone({ title, active, children }: { title: string; active: s
         <div className="title">{title}</div>
         {children}
       </div>
-      <MiniTabBar items={ORG_TABS} active={active} />
+      <MiniTabBar items={ORG_TABS} active={active} onSelect={onNavigate} />
     </Frame>
   );
 }

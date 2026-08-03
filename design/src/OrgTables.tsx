@@ -40,9 +40,9 @@ const WaitRow = ({ w }: { w: W }) => (
   </div>
 );
 
-export function TablesScreen({ variant }: { variant?: DeskVariant }) {
+export function TablesScreen({ variant, onNavigate }: { variant?: DeskVariant; onNavigate?: (item: string) => void }) {
   return (
-    <Desk variant={variant} title="Распределение столов" sub="Чемпионат Казахстана 2026 · 20 столов в зале"
+    <Desk onNavigate={onNavigate} variant={variant} title="Распределение столов" sub="Чемпионат Казахстана 2026 · 20 столов в зале"
       nav={ORG_NAV} activeNav="Столы" role={JUDGE} hint="Матч не начнётся, пока на стол не назначен судья.">
       <Chips />
       <div className="dtables">{TABLES.map((t) => <TableChip key={t.n} n={t.n} score={t.score} />)}</div>
@@ -64,9 +64,9 @@ export function TablesTablet() {
   );
 }
 
-export function TablesMobile() {
+export function TablesMobile({ onNavigate }: { onNavigate?: (item: string) => void } = {}) {
   return (
-    <OrgPhone title="Столы" active="Столы">
+    <OrgPhone onNavigate={onNavigate} title="Столы" active="Столы">
       <div className="stats">
         <div className="stat b"><div className="v">20</div><div className="k">Столов</div></div>
         <div className="stat"><div className="v">12</div><div className="k">Заняты</div></div>

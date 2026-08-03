@@ -8,6 +8,7 @@ import { BracketFlow } from '@/widgets/bracket/BracketFlow';
 import { bigBracket } from './bigBracket';
 import '../gen/frame.css';
 import '../gen/desktop.css';
+import { PanelSeg } from './segs';
 
 /* Десктопная панель ГЛАВНОГО СУДЬИ (живое ведение турнира) — Storybook.
    Та же дизайн-система, что у приложения: стекло, Lucide, логотип ФНТ, фото-аватары. */
@@ -51,7 +52,7 @@ const NAV: [ReactNode, string, boolean][] = [
   [<Settings size={18} />, 'Настройки', false],
 ];
 
-export function RefereeDesktop({ variant = 'desktop' }: { variant?: DeskVariant }) {
+export function RefereeDesktop({ variant = 'desktop', onNavigate }: { variant?: DeskVariant; onNavigate?: (item: string) => void }) {
   return <DeskFrame variant={variant}>
 
     <div className="dtop">
@@ -68,7 +69,11 @@ export function RefereeDesktop({ variant = 'desktop' }: { variant?: DeskVariant 
 
     <div className="dgrid">
       <aside className="dside">
-        {NAV.map(([ic, t, on]) => <div key={t} className={'dni' + (on ? ' on' : '')}>{ic}{t}</div>)}
+        {NAV.map(([ic, t, on]) => (
+          <button key={t} type="button" className={'dni' + (on ? ' on' : '')} onClick={onNavigate ? () => onNavigate(t) : undefined}>
+            {ic}{t}
+          </button>
+        ))}
         <div className="grow" />
         <div className="hint">Матч не начнётся, пока на стол не назначен судья.</div>
       </aside>
@@ -95,7 +100,7 @@ export function RefereeDesktop({ variant = 'desktop' }: { variant?: DeskVariant 
 
         <div className="dcols">
           <section className="panel">
-            <div className="phead"><span className="t">Сетка</span><span className="seg"><span className="on">Сетка</span><span>Группы</span></span></div>
+            <div className="phead"><span className="t">Сетка</span><PanelSeg items={['Сетка', 'Группы']} /></div>
             <div className="pbody dbracketWrap">
               {/* настоящий React Flow, большой посев (128) — реалистичный масштаб */}
               <BracketFlow bracket={bigBracket} minZoom={0.05} fitPadding={0.1} />

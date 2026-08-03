@@ -4,7 +4,11 @@ import fntLogo from './assets/fnt-emblem.png';
 
 /* Общая десктоп-оболочка (верхняя панель + сайдбар + main) для флоу веба.
    variant='land' — тот же layout в горизонтальной планшетной рамке (веб на планшете
-   лёжа ≈ компактный десктоп). Навигация, роль и заголовок — параметрами. */
+   лёжа ≈ компактный десктоп). Навигация, роль и заголовок — параметрами.
+
+   Пункты сайдбара — кнопки. Если передан `onNavigate`, экран переключается по
+   клику (истории «Прототип»); без него кнопки просто показывают текущий раздел,
+   как и раньше в статичных флоу-бордах. */
 
 export type DeskVariant = 'desktop' | 'land';
 
@@ -15,7 +19,7 @@ export function DeskFrame({ variant = 'desktop', children }: { variant?: DeskVar
 }
 
 export function Desk({
-  variant = 'desktop', brandName, brandSub, title, sub, nav, activeNav, role, hint, children,
+  variant = 'desktop', brandName, brandSub, title, sub, nav, activeNav, onNavigate, role, hint, children,
 }: {
   variant?: DeskVariant;
   brandName?: string;
@@ -24,6 +28,8 @@ export function Desk({
   sub: string;
   nav: [ReactNode, string][];
   activeNav: string;
+  /** передан — сайдбар становится кликабельным (живой прототип роли) */
+  onNavigate?: (item: string) => void;
   role: { nm: string; rl: string; av: string };
   hint?: string;
   children: ReactNode;
@@ -46,7 +52,16 @@ export function Desk({
       </div>
       <div className="dgrid">
         <aside className="dside">
-          {nav.map(([ic, t]) => <div key={t} className={'dni' + (t === activeNav ? ' on' : '')}>{ic}{t}</div>)}
+          {nav.map(([ic, t]) => (
+            <button
+              key={t}
+              type="button"
+              className={'dni' + (t === activeNav ? ' on' : '')}
+              onClick={onNavigate ? () => onNavigate(t) : undefined}
+            >
+              {ic}{t}
+            </button>
+          ))}
           <div className="grow" />
           {hint && <div className="hint">{hint}</div>}
         </aside>

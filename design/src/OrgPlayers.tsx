@@ -35,9 +35,9 @@ const PRow = ({ p }: { p: P }) => (
   </div>
 );
 
-export function PlayersScreen({ variant }: { variant?: DeskVariant }) {
+export function PlayersScreen({ variant, onNavigate }: { variant?: DeskVariant; onNavigate?: (item: string) => void }) {
   return (
-    <Desk variant={variant} title="Участники турнира" sub="Чемпионат Казахстана 2026 · заявки, взносы, посев"
+    <Desk onNavigate={onNavigate} variant={variant} title="Участники турнира" sub="Чемпионат Казахстана 2026 · заявки, взносы, посев"
       nav={ORG_NAV} activeNav="Игроки" role={JUDGE} hint="Посев — по рейтингу; в жеребьёвку попадают только с оплаченным взносом.">
       <Chips />
       <div className="dactionbar"><div className="dcount">Столбец «№» — номер посева</div>
@@ -57,9 +57,9 @@ export function PlayersTablet() {
   );
 }
 
-export function PlayersMobile() {
+export function PlayersMobile({ onNavigate }: { onNavigate?: (item: string) => void } = {}) {
   return (
-    <OrgPhone title="Участники" active="Игроки">
+    <OrgPhone onNavigate={onNavigate} title="Участники" active="Игроки">
       <div className="stats">
         <div className="stat b"><div className="v">128</div><div className="k">Заявок</div></div>
         <div className="stat g"><div className="v">112</div><div className="k">Подтв.</div></div>

@@ -3,6 +3,7 @@ import { LayoutDashboard, Network, Grid2x2, Settings, Send, Clock3, Bell } from 
 import { Frame } from './PlayerApp';
 import { Board, Col, Arrow, Tab, MiniTabBar } from './respShell';
 import fntLogo from './assets/fnt-emblem.png';
+import { FormSeg } from './segs';
 
 /* Веб → Судья · Организация турнира, планшет + телефон (десктоп — в JudgeOrganizeFlow).
    Настройка формата/расписания/судей столов → отправка на утверждение федерации. */
@@ -15,7 +16,7 @@ const JTABS: [ReactNode, string][] = [
 ];
 
 const Seg = ({ opts, on }: { opts: string[]; on: number }) => (
-  <div className="dseg2">{opts.map((o, i) => <span key={o} className={i === on ? 'on' : ''}>{o}</span>)}</div>
+  <FormSeg items={opts} active={opts[on]} />
 );
 
 const Field = ({ label, children }: { label: string; children: ReactNode }) => (

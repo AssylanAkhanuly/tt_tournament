@@ -5,6 +5,7 @@ import { Tab } from './respShell';
 import { BracketFlow } from '@/widgets/bracket/BracketFlow';
 import { bigBracket } from './bigBracket';
 import { A, FED, FED_NAV, FedPhone } from './fedCommon';
+import { PanelSeg } from './segs';
 
 /* Веб → Федерация · Турнир: карточка турнира (сводка + сетка). Десктоп/альбом
    показывают настоящую сетку (React Flow), планшет/телефон — сводку и ход. */
@@ -47,15 +48,15 @@ const LeaderRow = ({ p }: { p: L }) => (
   </div>
 );
 
-export function TournamentScreen({ variant }: { variant?: DeskVariant }) {
+export function TournamentScreen({ variant, onNavigate }: { variant?: DeskVariant; onNavigate?: (item: string) => void }) {
   return (
-    <Desk variant={variant} brandName="Чемпионат Казахстана 2026" brandSub="Республиканский · олимпийская"
+    <Desk onNavigate={onNavigate} variant={variant} brandName="Чемпионат Казахстана 2026" brandSub="Республиканский · олимпийская"
       title="Чемпионат Казахстана 2026" sub="Республиканский · олимпийская · г. Астана · 18–20 мая"
       nav={FED_NAV} activeNav="Турниры" role={FED}>
       <Chips />
       <div className="dcols">
         <section className="panel">
-          <div className="phead"><span className="t">Сетка турнира</span><span className="seg"><span className="on">Сетка</span><span>Участники</span></span></div>
+          <div className="phead"><span className="t">Сетка турнира</span><PanelSeg items={['Сетка', 'Участники']} /></div>
           <div className="pbody dbracketWrap"><BracketFlow bracket={bigBracket} minZoom={0.05} fitPadding={0.1} /></div>
         </section>
         <aside className="panel">

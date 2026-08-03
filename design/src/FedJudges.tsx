@@ -37,9 +37,9 @@ const JRow = ({ j }: { j: J }) => (
   </div>
 );
 
-export function JudgesScreen({ variant }: { variant?: DeskVariant }) {
+export function JudgesScreen({ variant, onNavigate }: { variant?: DeskVariant; onNavigate?: (item: string) => void }) {
   return (
-    <Desk variant={variant} title="Реестр судей" sub="Республика Казахстан · категории и допуски"
+    <Desk onNavigate={onNavigate} variant={variant} title="Реестр судей" sub="Республика Казахстан · категории и допуски"
       nav={FED_NAV} activeNav="Судьи" role={FED} hint="Категорию присваивает федерация; на турнир судья попадает через заявку.">
       <Chips />
       <div className="dactionbar"><div className="dcount">86 судей в реестре</div>

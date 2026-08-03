@@ -4,6 +4,7 @@ import { Desk, type DeskVariant } from './deskShell';
 import '../gen/frame.css';
 import '../gen/desktop.css';
 import './tournament.css';
+import { FormSeg } from './segs';
 
 /* Веб → Судья: главный судья организует турнир (формат/расписание/судьи столов)
    и отправляет на утверждение федерации. */
@@ -18,7 +19,7 @@ const NAV: [ReactNode, string][] = [
 const JUDGE = { nm: 'Оспанов Т.', rl: 'Главный судья', av: 'https://randomuser.me/api/portraits/men/76.jpg' };
 
 const Seg = ({ opts, on }: { opts: string[]; on: number }) => (
-  <div className="dseg2">{opts.map((o, i) => <span key={o} className={i === on ? 'on' : ''}>{o}</span>)}</div>
+  <FormSeg items={opts} active={opts[on]} />
 );
 
 function Organize({ variant }: { variant?: DeskVariant }) {

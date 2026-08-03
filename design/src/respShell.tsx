@@ -48,10 +48,21 @@ export function Tab({
 }
 
 // мини-таб-бар для веб-флоу на телефоне (не нативное приложение — своя навигация роли)
-export function MiniTabBar({ items, active }: { items: [ReactNode, string][]; active: string }) {
+export function MiniTabBar({
+  items, active, onSelect,
+}: { items: [ReactNode, string][]; active: string; onSelect?: (item: string) => void }) {
   return (
     <div className="tabbar">
-      {items.map(([ic, t]) => <div key={t} className={'tab' + (t === active ? ' on' : '')}>{ic}{t}</div>)}
+      {items.map(([ic, t]) => (
+        <button
+          key={t}
+          type="button"
+          className={'tab' + (t === active ? ' on' : '')}
+          onClick={onSelect ? () => onSelect(t) : undefined}
+        >
+          {ic}{t}
+        </button>
+      ))}
     </div>
   );
 }

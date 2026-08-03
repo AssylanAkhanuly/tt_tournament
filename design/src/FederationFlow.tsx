@@ -26,9 +26,9 @@ const TRow = ({ status, cls, nm, mt }: { status: string; cls: string; nm: string
 );
 
 // 1. календарь + создать турнир
-function Calendar({ variant }: { variant?: DeskVariant }) {
+export function CalendarScreen({ variant, onNavigate }: { variant?: DeskVariant; onNavigate?: (item: string) => void }) {
   return (
-    <Desk variant={variant} brandName="Календарь сезона 2026" brandSub="Республика Казахстан" title="Календарь турниров"
+    <Desk onNavigate={onNavigate} variant={variant} brandName="Календарь сезона 2026" brandSub="Республика Казахстан" title="Календарь турниров"
       sub="Заводит турнир федерация — название, уровень, город, окно дат" nav={NAV} activeNav="Календарь" role={FED}
       hint="Формат и расписание задаёт назначенный судья, не федерация.">
       <div className="dactionbar"><div className="dcount">14 турниров в сезоне</div><button className="dsubmit" style={{ padding: '11px 16px' }}><Plus size={16} />Создать турнир</button></div>
@@ -104,7 +104,7 @@ export function FederationFlowBoard({ frame = 'desktop' }: { frame?: DeskVariant
         <div className="board-tag">{land ? 'веб · планшет · альбом · от календаря до рейтинга' : 'десктоп · веб · ведёт турнир от календаря до рейтинга'}</div>
       </div>
       <div className="row">
-        <Col cap="Календарь · создать"><Calendar variant={frame} /></Col>
+        <Col cap="Календарь · создать"><CalendarScreen variant={frame} /></Col>
         <Arrow lbl="выбрать судью" />
         <Col cap="Выбор судьи"><PickJudge variant={frame} /></Col>
         <Arrow lbl="после игры" />

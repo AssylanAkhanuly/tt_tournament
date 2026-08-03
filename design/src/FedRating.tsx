@@ -36,9 +36,9 @@ const RankRow = ({ p }: { p: P }) => (
   </div>
 );
 
-export function RatingScreen({ variant }: { variant?: DeskVariant }) {
+export function RatingScreen({ variant, onNavigate }: { variant?: DeskVariant; onNavigate?: (item: string) => void }) {
   return (
-    <Desk variant={variant} title="Рейтинг игроков" sub="Республика Казахстан · сезон 2026 · обновлён 18 мая"
+    <Desk onNavigate={onNavigate} variant={variant} title="Рейтинг игроков" sub="Республика Казахстан · сезон 2026 · обновлён 18 мая"
       nav={FED_NAV} activeNav="Игроки" role={FED} hint="Рейтинг пересчитывается после того, как федерация утвердит результаты турнира.">
       <Chips />
       <div className="dactionbar"><div className="dcount">Показаны топ-7 из 1 284</div>

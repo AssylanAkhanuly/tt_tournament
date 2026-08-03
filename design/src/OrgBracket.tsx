@@ -4,6 +4,7 @@ import { Tab } from './respShell';
 import { BracketFlow } from '@/widgets/bracket/BracketFlow';
 import { bigBracket } from './bigBracket';
 import { A, JUDGE, ORG_NAV, OrgPhone } from './orgCommon';
+import { FormSeg, PanelSeg } from './segs';
 
 /* Веб → Главный судья · Сетка: посев и жеребьёвка. Десктоп/альбом показывают
    настоящую сетку (React Flow), планшет/телефон — посев и параметры жеребьёвки. */
@@ -36,17 +37,17 @@ const SeedRow = ({ s }: { s: Seed }) => (
 );
 
 const DrawSetting = () => (
-  <div className="dfield"><label>Посев</label><div className="dseg2"><span className="on">По рейтингу</span><span>Вручную</span></div></div>
+  <div className="dfield"><label>Посев</label><FormSeg items={['По рейтингу', 'Вручную']} /></div>
 );
 
-export function BracketScreen({ variant }: { variant?: DeskVariant }) {
+export function BracketScreen({ variant, onNavigate }: { variant?: DeskVariant; onNavigate?: (item: string) => void }) {
   return (
-    <Desk variant={variant} title="Сетка и посев" sub="Чемпионат Казахстана 2026 · олимпийская · 128 участников"
+    <Desk onNavigate={onNavigate} variant={variant} title="Сетка и посев" sub="Чемпионат Казахстана 2026 · олимпийская · 128 участников"
       nav={ORG_NAV} activeNav="Сетка" role={JUDGE} hint="Жеребьёвка разводит сеяных по разным частям сетки.">
       <Chips />
       <div className="dcols">
         <section className="panel">
-          <div className="phead"><span className="t">Сетка</span><span className="seg"><span className="on">Дерево</span><span>Список</span></span></div>
+          <div className="phead"><span className="t">Сетка</span><PanelSeg items={['Дерево', 'Список']} /></div>
           <div className="pbody dbracketWrap"><BracketFlow bracket={bigBracket} minZoom={0.05} fitPadding={0.1} /></div>
         </section>
         <aside className="panel">
@@ -76,9 +77,9 @@ export function BracketTablet() {
   );
 }
 
-export function BracketMobile() {
+export function BracketMobile({ onNavigate }: { onNavigate?: (item: string) => void } = {}) {
   return (
-    <OrgPhone title="Сетка и посев" active="Сетка">
+    <OrgPhone onNavigate={onNavigate} title="Сетка и посев" active="Сетка">
       <div className="stats">
         <div className="stat b"><div className="v">128</div><div className="k">Участ.</div></div>
         <div className="stat"><div className="v">16</div><div className="k">Сеяных</div></div>
