@@ -36,12 +36,14 @@ export function Button({
   className,
   style,
   children,
-}: Base & { variant?: ButtonVariant; size?: ButtonSize; block?: boolean; icon?: ReactNode }) {
+  onClick,
+}: Base & { variant?: ButtonVariant; size?: ButtonSize; block?: boolean; icon?: ReactNode; onClick?: () => void }) {
   return (
     <button
       type="button"
       className={cx('ui-btn', `ui-btn--${variant}`, `ui-btn--${size}`, block && 'ui-btn--block', className)}
       style={style}
+      onClick={onClick}
     >
       {icon}
       {children}

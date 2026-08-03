@@ -12,8 +12,9 @@
    отдельный набор (текст тёмный, грани — не белые), его собирает `light()`. */
 
 import patternLight from './pattern-nomad-light.svg';
+import { CUSTOM_ID, loadCustom } from './custom';
 
-export type ThemeGroup = 'Тёмные' | 'Светлые';
+export type ThemeGroup = 'Тёмные' | 'Светлые' | 'Свои';
 
 export type Theme = {
   id: string;
@@ -188,18 +189,78 @@ export const THEMES: Theme[] = [
     seeds: light({ accent: '#475569', paper: '#eef0f4' }) },
 ];
 
+/* ── что можно крутить руками в конструкторе ────────────────── */
+
+export type EditableField = { key: string; label: string; group: string; hint?: string };
+
+/** Каждый цвет системы — отдельным полем. Порядок = порядок в конструкторе. */
+export const EDITABLE: EditableField[] = [
+  { key: '--seed-accent',        group: 'Акцент',    label: 'Акцент',                hint: 'кнопки, активные вкладки, счёт победителя' },
+  { key: '--c-accent-ink',       group: 'Акцент',    label: 'Текст на акценте' },
+  { key: '--seed-accent-2',      group: 'Акцент',    label: 'Второе пятно фона' },
+  { key: '--seed-accent-3',      group: 'Акцент',    label: 'Третье пятно фона' },
+
+  { key: '--seed-success',       group: 'Статусы',   label: 'Успех',                 hint: 'победа, «идёт сейчас»' },
+  { key: '--seed-success-ink',   group: 'Статусы',   label: 'Текст на зелёном' },
+  { key: '--seed-warning',       group: 'Статусы',   label: 'Ожидание' },
+  { key: '--seed-danger',        group: 'Статусы',   label: 'Отказ' },
+  { key: '--seed-broadcast',     group: 'Статусы',   label: 'Эфир — верх градиента' },
+  { key: '--seed-broadcast-2',   group: 'Статусы',   label: 'Эфир — низ градиента' },
+
+  { key: '--seed-ink',           group: 'Текст',     label: 'Основной текст' },
+  { key: '--c-ink-bright',       group: 'Текст',     label: 'Максимальный контраст' },
+  { key: '--seed-muted',         group: 'Текст',     label: 'Второстепенный' },
+  { key: '--seed-dim',           group: 'Текст',     label: 'Подсказки, даты' },
+
+  { key: '--seed-screen-1',      group: 'Экран',     label: 'Фон — верх' },
+  { key: '--seed-screen-2',      group: 'Экран',     label: 'Фон — середина' },
+  { key: '--seed-screen-3',      group: 'Экран',     label: 'Фон — низ' },
+  { key: '--seed-screen-4',      group: 'Экран',     label: 'Фон — низ десктопа' },
+  { key: '--seed-screen-deep',   group: 'Экран',     label: '«Остров» камеры' },
+  { key: '--seed-avatar-bg',     group: 'Экран',     label: 'Заглушка под фото' },
+
+  { key: '--c-panel',            group: 'Поверхности', label: 'Карточка',            hint: 'по умолчанию считается от фона' },
+  { key: '--c-panel-2',          group: 'Поверхности', label: 'Панель, таб-бар' },
+  { key: '--c-panel-3',          group: 'Поверхности', label: 'Сайдбар, подсказка' },
+
+  { key: '--seed-board',         group: 'Светлые',   label: 'Подложка флоу-борда' },
+  { key: '--seed-board-ink',     group: 'Светлые',   label: 'Текст на борде' },
+  { key: '--seed-board-muted',   group: 'Светлые',   label: 'Подписи на борде' },
+  { key: '--seed-board-accent',  group: 'Светлые',   label: 'Акцент борда' },
+  { key: '--seed-light-bg',      group: 'Светлые',   label: 'Фон светлой страницы' },
+  { key: '--seed-light-surface', group: 'Светлые',   label: 'Карточка на светлом' },
+  { key: '--seed-light-accent',  group: 'Светлые',   label: 'Акцент светлых страниц' },
+  { key: '--seed-light-success', group: 'Светлые',   label: 'Успех на светлом' },
+
+  { key: '--seed-bezel-1',       group: 'Корпус',    label: 'Корпус — верх' },
+  { key: '--seed-bezel-2',       group: 'Корпус',    label: 'Корпус — низ' },
+];
+
+export const EDITABLE_GROUPS = Array.from(new Set(EDITABLE.map((f) => f.group)));
+
+/* «Свой цвет» — то, что накручено в конструкторе; значения подставляются
+   в момент применения, поэтому список тем их не хранит. */
+THEMES.push({
+  id: CUSTOM_ID,
+  label: 'Свой цвет (конструктор)',
+  group: 'Свои',
+  note: 'Ручная палитра из истории «Дизайн-система → Конструктор темы». Хранится в браузере и работает на всех экранах.',
+  seeds: {},
+});
+
 export const DEFAULT_THEME = 'fnt';
 
-export const THEME_GROUPS: ThemeGroup[] = ['Тёмные', 'Светлые'];
+export const THEME_GROUPS: ThemeGroup[] = ['Тёмные', 'Светлые', 'Свои'];
 
 /** все переменные, которые вообще трогают темы — чтобы корректно снимать старые */
-const ALL_KEYS = Array.from(new Set(THEMES.flatMap((t) => Object.keys(t.seeds))));
+const ALL_KEYS = Array.from(new Set([...THEMES.flatMap((t) => Object.keys(t.seeds)), ...EDITABLE.map((f) => f.key)]));
 
 /** Выставляет тему на элементе (по умолчанию — `:root` превью). */
 export function applyTheme(id: unknown, el: HTMLElement = document.documentElement): void {
   const theme = THEMES.find((t) => t.id === id) ?? THEMES[0];
+  const seeds = theme.id === CUSTOM_ID ? loadCustom() : theme.seeds;
   for (const key of ALL_KEYS) {
-    const value = theme.seeds[key];
+    const value = seeds[key];
     if (value) el.style.setProperty(key, value);
     else el.style.removeProperty(key);
   }

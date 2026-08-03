@@ -15,7 +15,10 @@ const ROOT = new URL('..', import.meta.url).pathname;
 const SCAN = ['src', 'gen'];
 const SKIP_DIRS = new Set(['node_modules', 'out', 'assets']);
 const TOKENS_FILE = 'src/theme/tokens.css';
-const SKIP_RAW = new Set([TOKENS_FILE, 'src/theme/themes.ts']);
+/* Инструменты темы работают с «сырыми» цветами по своей природе: список тем,
+   хранилище своей палитры и конструктор с пипетками. Всё остальное — только
+   токены. */
+const SKIP_RAW = new Set([TOKENS_FILE, 'src/theme/themes.ts', 'src/theme/custom.ts', 'src/theme/Builder.tsx']);
 const EXT = /\.(css|tsx|ts|html)$/;
 const RAW = /#[0-9a-fA-F]{3,8}\b|\brgba?\(|\bhsla?\(/g;
 const VAR_USE = /var\(\s*(--[\w-]+)/g;
