@@ -171,14 +171,13 @@
   --c-board-accent-soft: color-mix(in srgb, var(--c-board-accent) 9%,  var(--seed-white));
   --c-board-accent-line: color-mix(in srgb, var(--c-board-accent) 19%, var(--seed-white));
 
-  /* фоновый орнамент: казахский узор лентой по правому краю экрана.
-     Рисунок — маска (`src/theme/ornament-band.svg`), цвет отсюда, поэтому
-     орнамент перекрашивается вместе с темой. Держим его тихим: это фон, а не
-     элемент интерфейса. */
-  --c-ornament:          color-mix(in srgb, var(--c-accent) 12%, transparent);
-  --fx-ornament:         url('./ornament-band.svg');
-  --fx-ornament-size:    auto 420px;      /* высота плитки; ширина ленты — 590px */
-  --fx-ornament-fade:    linear-gradient(to left, var(--seed-black) 0%, var(--seed-black) 22%, transparent 66%);
+  /* фоновый орнамент: лента узора со щита логотипа ФНТ (brand/fnt/fnt-logo.svg —
+     оттуда вынуты кривые орнамента, см. src/theme/ornament-logo-band.svg).
+     Подключается маской, цвет — отсюда, поэтому лента следует теме. Держим её
+     тихой: это фон, а не элемент интерфейса. */
+  --c-ornament:          color-mix(in srgb, var(--c-accent) 14%, transparent);
+  --fx-ornament:         url('./ornament-logo-band.svg');
+  --fx-ornament-size:    auto 100%;   /* лента во всю высоту экрана, пропорция 1:9 */
 
   /* корпус устройства */
   --c-bezel:             linear-gradient(160deg, var(--seed-bezel-1), var(--seed-bezel-2));
