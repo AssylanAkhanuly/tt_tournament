@@ -174,7 +174,7 @@ function ThemeBox({ id, label, note }: { id: string; label: string; note: string
     if (ref.current) applyTheme(id, ref.current);
   }, [id]);
   return (
-    <div ref={ref} style={{ display: 'grid', gap: 8 }}>
+    <div ref={ref} className="ui-theme" style={{ display: 'grid', gap: 8 }}>
       <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
         <b style={{ fontSize: 14, color: 'var(--c-text)' }}>{label}</b>
         <code style={{ fontSize: 11, color: 'var(--c-text-3)' }}>theme:{id}</code>

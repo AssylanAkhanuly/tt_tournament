@@ -71,7 +71,7 @@
 .ui-note { font-size: 12px; color: var(--c-muted); line-height: 1.5; }
 
 /* карточка токена в специмене «Цвета» */
-.ui-swatch { display: flex; align-items: center; gap: 11px; padding: 9px 11px; border-radius: 12px; background: var(--c-glass); border: 1px solid var(--c-glass-line); }
+.ui-swatch { color: var(--c-ink); display: flex; align-items: center; gap: 11px; padding: 9px 11px; border-radius: 12px; background: var(--c-glass); border: 1px solid var(--c-glass-line); }
 /* полупрозрачные токены показываем поверх «шахматки» из самих же токенов —
    иначе rgba-стекло на тёмном фоне выглядит просто пустым квадратом */
 .ui-swatch .chip {
