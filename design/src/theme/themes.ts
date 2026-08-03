@@ -127,10 +127,10 @@ function light({ accent, paper = '#f2f5fa', success = '#0f9d68', warning = '#c28
 /* ── список тем ─────────────────────────────────────────────── */
 
 export const THEMES: Theme[] = [
-  { id: 'fnt', label: 'ФНТ (базовая)', group: 'Тёмные', note: 'Синий акцент федерации на тёмном холодном фоне — то, что в макетах по умолчанию.', seeds: {} },
+  { id: 'fnt', label: 'ФНТ (базовая)', group: 'Тёмные', note: 'Синий флага и знака ФНТ на тёмном холодном фоне — то, что в макетах по умолчанию.', seeds: {} },
 
-  { id: 'tengri', label: 'Тенгри', group: 'Тёмные', note: 'Небесно-синий и золото — цвета флага; самый «казахстанский» вариант.',
-    seeds: dark({ accent: '#4aa8ff', accent2: '#ffcf3d', accent3: '#7cc4ff', warning: '#ffcf3d' }) },
+  { id: 'tengri', label: 'Тенгри', group: 'Тёмные', note: 'Чистый голубой флага и золото солнца — самый «флаговый» вариант.',
+    seeds: dark({ accent: '#00afca', accent2: '#ffd400', accent3: '#4cc6ee', warning: '#ffd400' }) },
   { id: 'indigo', label: 'Индиго', group: 'Тёмные', note: 'Глубокий сине-фиолетовый, спокойный и «ночной».',
     seeds: dark({ accent: '#7c86ff', accent2: '#b06cff' }) },
   { id: 'cobalt', label: 'Кобальт', group: 'Тёмные', note: 'Чистый насыщенный синий без фиолета — деловой тон.',
