@@ -2,11 +2,11 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import type { CSSProperties } from 'react';
 import { Bell, Check, Copy, Dices, Play, RotateCcw } from 'lucide-react';
 import { EDITABLE, EDITABLE_GROUPS, THEMES, applyTheme } from './themes';
-import { CUSTOM_ID, clearCustom, loadCustom, resolveColor, saveCustom, type Seeds } from './custom';
+import { CUSTOM_ID, clearCustom, loadCustom, paintValue, resolvePaint, saveCustom, type Seeds } from './custom';
 import { Avatar, Badge, Button, Card, Pill, Stat, Stats } from '../ui';
 import './builder.css';
 
-/* Конструктор темы: 33 цвета системы, каждый — своей пипеткой и полем hex.
+/* Конструктор темы: 43 цвета системы, каждый — своей пипеткой и полем hex.
    Правка сразу видна на образце справа; «Применить» сохраняет палитру как тему
    «Свой цвет» — после этого её можно выбрать в тулбаре и походить с ней по
    любым экранам Storybook. Палитра лежит в localStorage, поэтому переживает
@@ -63,10 +63,10 @@ const page: CSSProperties = { background: 'var(--c-bg)', color: 'var(--c-text)',
 
 export function ThemeBuilder() {
   const boxRef = useRef<HTMLDivElement>(null);
-  /** что накрутили: только изменённые поля (пустое — берём из активной темы) */
-  const [seeds, setSeeds] = useState<Seeds>(() => loadCustom());
+  /** что накрутили: hex и процент по каждому полю (пусто — берём из активной темы) */
+  const [paint, setPaint] = useState<Record<string, { hex: string; alpha: number }>>({});
   /** значения «как есть» для полей, которые не трогали */
-  const [base, setBase] = useState<Seeds>({});
+  const [base, setBase] = useState<Record<string, { hex: string; alpha: number }>>({});
   const [applied, setApplied] = useState(false);
   const [copied, setCopied] = useState('');
 
@@ -74,10 +74,29 @@ export function ThemeBuilder() {
   useEffect(() => {
     const el = boxRef.current;
     if (!el) return;
-    const next: Seeds = {};
-    for (const f of EDITABLE) next[f.key] = resolveColor(f.key, el);
+    const next: Record<string, { hex: string; alpha: number }> = {};
+    for (const f of EDITABLE) next[f.key] = resolvePaint(f.key, el);
     setBase(next);
+    // если в браузере уже лежит своя палитра — показываем её значения
+    const saved = loadCustom();
+    if (Object.keys(saved).length) {
+      const restored: Record<string, { hex: string; alpha: number }> = {};
+      for (const f of EDITABLE) {
+        if (!saved[f.key]) continue;
+        el.style.setProperty(f.key, saved[f.key]);
+        restored[f.key] = resolvePaint(f.key, el);
+        el.style.removeProperty(f.key);
+      }
+      setPaint(restored);
+    }
   }, []);
+
+  /** то, что уйдёт в тему: только изменённые поля, уже готовыми значениями */
+  const seeds: Seeds = useMemo(() => {
+    const out: Seeds = {};
+    for (const [key, p] of Object.entries(paint)) out[key] = paintValue(p.hex, p.alpha);
+    return out;
+  }, [paint]);
 
   // живой предпросмотр: накрученное кладём прямо на коробку с образцом
   useEffect(() => {
@@ -89,17 +108,20 @@ export function ThemeBuilder() {
     }
   }, [seeds]);
 
-  const value = (key: string) => seeds[key] ?? base[key] ?? '#000000';
-  const set = (key: string, v: string) => {
+  const cur = (key: string) => paint[key] ?? base[key] ?? { hex: '#000000', alpha: 100 };
+  const set = (key: string, patch: Partial<{ hex: string; alpha: number }>) => {
     setApplied(false);
-    setSeeds((s) => ({ ...s, [key]: v }));
+    setPaint((p) => ({ ...p, [key]: { ...cur(key), ...patch } }));
   };
 
   const full: Seeds = useMemo(() => {
     const out: Seeds = {};
-    for (const f of EDITABLE) out[f.key] = value(f.key);
+    for (const f of EDITABLE) {
+      const p = cur(f.key);
+      out[f.key] = paintValue(p.hex, p.alpha);
+    }
     return out;
-  }, [seeds, base]);
+  }, [paint, base]);
 
   const apply = () => {
     saveCustom(seeds);
@@ -107,14 +129,18 @@ export function ThemeBuilder() {
     setApplied(true);
   };
   const reset = () => {
-    setSeeds({});
+    setPaint({});
     clearCustom();
     setApplied(false);
   };
   const randomize = () => {
-    const accent = rnd();
-    setSeeds((s) => ({ ...s, '--seed-accent': accent, '--seed-accent-2': rnd(), '--seed-accent-3': rnd() }));
     setApplied(false);
+    setPaint((p) => ({
+      ...p,
+      '--seed-accent': { hex: rnd(), alpha: 100 },
+      '--seed-accent-2': { hex: rnd(), alpha: 100 },
+      '--seed-accent-3': { hex: rnd(), alpha: 100 },
+    }));
   };
 
   const copy = async (what: 'ts' | 'css') => {
@@ -137,14 +163,14 @@ export function ThemeBuilder() {
     }
   };
 
-  const changedCount = Object.keys(seeds).length;
+  const changedCount = Object.keys(paint).length;
 
   return (
     <div style={page}>
       <header style={{ display: 'grid', gap: 8 }}>
         <h1 style={{ fontSize: 24, fontWeight: 800, letterSpacing: '-.02em' }}>Конструктор темы</h1>
         <p style={{ fontSize: 13, color: 'var(--c-text-3)', lineHeight: 1.55, maxWidth: 820 }}>
-          Каждый цвет системы — отдельным полем: пипетка или hex вручную. Правка сразу видна на образце справа.
+          Каждый цвет системы — отдельным полем: пипетка или hex вручную. У полупрозрачных (подложки чипов, границы, свечения, лента орнамента) рядом процент. Правка сразу видна на образце справа.
           «Применить» сохраняет палитру как тему <b>«Свой цвет»</b> — после этого выберите её в тулбаре «Тема» и
           ходите с ней по любым экранам: макетам, прототипу, витринам компонентов. Палитра живёт в браузере, так
           что переживает перезагрузку; «Сбросить» возвращает всё к активной теме.
@@ -178,20 +204,34 @@ export function ThemeBuilder() {
               <h2>{group}</h2>
               <div className="tb-grid">
                 {EDITABLE.filter((f) => f.group === group).map((f) => (
-                  <label key={f.key} className={'tb-field' + (seeds[f.key] ? ' changed' : '')}>
+                  <label key={f.key} className={'tb-field' + (paint[f.key] ? ' changed' : '')}>
                     <input
                       type="color"
-                      value={isHex(value(f.key)) ? value(f.key) : '#000000'}
-                      onChange={(e) => set(f.key, e.target.value)}
+                      value={isHex(cur(f.key).hex) ? cur(f.key).hex : '#000000'}
+                      onChange={(e) => set(f.key, { hex: e.target.value })}
                     />
                     <span className="tb-meta">
                       <span className="tb-label">{f.label}</span>
-                      <input
-                        className="tb-hex"
-                        value={value(f.key)}
-                        spellCheck={false}
-                        onChange={(e) => set(f.key, e.target.value.trim())}
-                      />
+                      <span className="tb-values">
+                        <input
+                          className="tb-hex"
+                          value={cur(f.key).hex}
+                          spellCheck={false}
+                          onChange={(e) => set(f.key, { hex: e.target.value.trim() })}
+                        />
+                        {f.alpha && (
+                          <span className="tb-alpha">
+                            <input
+                              type="number"
+                              min={0}
+                              max={100}
+                              value={cur(f.key).alpha}
+                              onChange={(e) => set(f.key, { alpha: Math.max(0, Math.min(100, Number(e.target.value) || 0)) })}
+                            />
+                            %
+                          </span>
+                        )}
+                      </span>
                       <span className="tb-key">{f.key}</span>
                       {f.hint && <span className="tb-hint">{f.hint}</span>}
                     </span>

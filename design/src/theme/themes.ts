@@ -191,7 +191,14 @@ export const THEMES: Theme[] = [
 
 /* ── что можно крутить руками в конструкторе ────────────────── */
 
-export type EditableField = { key: string; label: string; group: string; hint?: string };
+export type EditableField = {
+  key: string;
+  label: string;
+  group: string;
+  hint?: string;
+  /** токен полупрозрачный по смыслу — в конструкторе к нему идёт процент */
+  alpha?: boolean;
+};
 
 /** Каждый цвет системы — отдельным полем. Порядок = порядок в конструкторе. */
 export const EDITABLE: EditableField[] = [
@@ -199,6 +206,9 @@ export const EDITABLE: EditableField[] = [
   { key: '--c-accent-ink',       group: 'Акцент',    label: 'Текст на акценте' },
   { key: '--seed-accent-2',      group: 'Акцент',    label: 'Второе пятно фона' },
   { key: '--seed-accent-3',      group: 'Акцент',    label: 'Третье пятно фона' },
+  { key: '--c-accent-soft',      group: 'Акцент',    label: 'Подложка чипа',         hint: 'пилюля «заявка», иконка-плашка', alpha: true },
+  { key: '--c-accent-line',      group: 'Акцент',    label: 'Граница «идёт сейчас»', alpha: true },
+  { key: '--c-accent-glow-2',    group: 'Акцент',    label: 'Свечение под кнопкой',  alpha: true },
 
   { key: '--seed-success',       group: 'Статусы',   label: 'Успех',                 hint: 'победа, «идёт сейчас»' },
   { key: '--seed-success-ink',   group: 'Статусы',   label: 'Текст на зелёном' },
@@ -206,6 +216,9 @@ export const EDITABLE: EditableField[] = [
   { key: '--seed-danger',        group: 'Статусы',   label: 'Отказ' },
   { key: '--seed-broadcast',     group: 'Статусы',   label: 'Эфир — верх градиента' },
   { key: '--seed-broadcast-2',   group: 'Статусы',   label: 'Эфир — низ градиента' },
+  { key: '--c-success-soft',     group: 'Статусы',   label: 'Подложка зелёной пилюли', alpha: true },
+  { key: '--c-warning-soft',     group: 'Статусы',   label: 'Подложка жёлтой пилюли',  alpha: true },
+  { key: '--c-danger-soft',      group: 'Статусы',   label: 'Подложка красной пилюли', alpha: true },
 
   { key: '--seed-ink',           group: 'Текст',     label: 'Основной текст' },
   { key: '--c-ink-bright',       group: 'Текст',     label: 'Максимальный контраст' },
@@ -218,10 +231,14 @@ export const EDITABLE: EditableField[] = [
   { key: '--seed-screen-4',      group: 'Экран',     label: 'Фон — низ десктопа' },
   { key: '--seed-screen-deep',   group: 'Экран',     label: '«Остров» камеры' },
   { key: '--seed-avatar-bg',     group: 'Экран',     label: 'Заглушка под фото' },
+  { key: '--c-ornament',         group: 'Экран',     label: 'Лента орнамента',       hint: 'узор со щита по правому краю', alpha: true },
 
   { key: '--c-panel',            group: 'Поверхности', label: 'Карточка',            hint: 'по умолчанию считается от фона' },
   { key: '--c-panel-2',          group: 'Поверхности', label: 'Панель, таб-бар' },
   { key: '--c-panel-3',          group: 'Поверхности', label: 'Сайдбар, подсказка' },
+  { key: '--c-glass-line',       group: 'Поверхности', label: 'Граница поверхности', alpha: true },
+  { key: '--c-glass-line-soft',  group: 'Поверхности', label: 'Разделитель строк',   alpha: true },
+  { key: '--c-glass-hi',         group: 'Поверхности', label: 'Световая грань сверху', alpha: true },
 
   { key: '--seed-board',         group: 'Светлые',   label: 'Подложка флоу-борда' },
   { key: '--seed-board-ink',     group: 'Светлые',   label: 'Текст на борде' },

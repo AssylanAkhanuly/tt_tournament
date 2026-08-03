@@ -30,8 +30,32 @@ export function clearCustom(): void {
   localStorage.removeItem(KEY);
 }
 
-/** Текущее значение переменной в виде #rrggbb — считаем краской, а не парсером:
-    `color-mix()` и `var()` браузер уже посчитал за нас. */
+/** Цвет + прозрачность переменной. Считаем краской, а не парсером: `color-mix()`
+    и `var()` браузер уже посчитал за нас. */
+export function resolvePaint(name: string, el: HTMLElement = document.documentElement): { hex: string; alpha: number } {
+  const probe = document.createElement('span');
+  probe.style.cssText = `position:absolute;opacity:0;pointer-events:none;background:var(${name})`;
+  el.appendChild(probe);
+  const painted = getComputedStyle(probe).backgroundColor;
+  probe.remove();
+  const nums = (painted.match(/[\d.]+/g) ?? []).map(Number);
+  if (!nums.length) return { hex: '#000000', alpha: 100 };
+  // color(srgb 0.07 0.09 0.15 / 0.16) — каналы 0..1; rgb(11, 17, 32) — 0..255
+  const scale = painted.startsWith('color(') ? 255 : 1;
+  const [r, g, b] = nums.slice(0, 3).map((n) => Math.round(n * scale));
+  const a = nums.length > 3 ? nums[3] : 1;
+  return {
+    hex: '#' + [r, g, b].map((n) => Math.max(0, Math.min(255, n)).toString(16).padStart(2, '0')).join(''),
+    alpha: Math.round(a * 100),
+  };
+}
+
+/** Собирает значение обратно: непрозрачное — как hex, полупрозрачное — через color-mix */
+export function paintValue(hex: string, alpha: number): string {
+  return alpha >= 100 ? hex : `color-mix(in srgb, ${hex} ${alpha}%, transparent)`;
+}
+
+/** Только цвет, без прозрачности (для полей, которые всегда сплошные). */
 export function resolveColor(name: string, el: HTMLElement = document.documentElement): string {
   const probe = document.createElement('span');
   probe.style.cssText = `position:absolute;opacity:0;pointer-events:none;background:var(${name})`;
