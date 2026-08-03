@@ -22,6 +22,38 @@ svg { display: block; }
 .arrow .ln { position: relative; height: 2px; background: var(--c-board-accent); margin: 0 8px; }
 .arrow .ln::after { content: ""; position: absolute; right: -1px; top: -4px; border: 5px solid transparent; border-left-color: var(--c-board-accent); }
 
+/* ── фоновый орнамент экрана ─────────────────────────────────
+   Казахский узор лентой по правому краю, на всю высоту, ЗА интерфейсом.
+   Только широкие экраны (десктоп, планшет): на телефоне лента шире самого
+   экрана и читалась бы как случайные пятна.
+   Рисунок приходит маской (--fx-ornament), красится токеном (--c-ornament) —
+   значит, следует теме. Вторая маска-градиент растворяет ленту влево, чтобы
+   узор не спорил с контентом. Сам слой — ::before, поэтому в разметке экранов
+   ничего не появляется. */
+.laptop::before,
+.deskland::before,
+.tabscreen::before {
+  content: ""; position: absolute; inset: 0; z-index: 0; pointer-events: none;
+  background: var(--c-ornament);
+  -webkit-mask-image: var(--fx-ornament), var(--fx-ornament-fade);
+          mask-image: var(--fx-ornament), var(--fx-ornament-fade);
+  -webkit-mask-repeat: repeat-y, no-repeat;
+          mask-repeat: repeat-y, no-repeat;
+  -webkit-mask-position: right top, center;
+          mask-position: right top, center;
+  -webkit-mask-size: var(--fx-ornament-size), 100% 100%;
+          mask-size: var(--fx-ornament-size), 100% 100%;
+  -webkit-mask-composite: source-in;
+          mask-composite: intersect;
+}
+/* Контент — над орнаментом. Только `position: relative`, без z-index:
+   z-index создал бы контекст наложения и сломал бы `backdrop-filter` стекла
+   (панели перестают размывать фон). Позиционированные потомки и так рисуются
+   поверх ::before, потому что идут за ним по документу. */
+.laptop > *,
+.deskland > *,
+.tabscreen > * { position: relative; }
+
 /* ── корпус телефона ─────────────────────────────────────────── */
 .frame { width: 320px; padding: 10px; border-radius: 48px; background: var(--c-bezel); box-shadow: var(--sh-device), 0 0 0 1px var(--c-bezel-ring); }
 .screen {
