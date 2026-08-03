@@ -43,10 +43,8 @@ svg { display: block; }
   -webkit-mask-size: var(--fx-ornament-size);
           mask-size: var(--fx-ornament-size);
 }
-/* Контент — над орнаментом. Только `position: relative`, без z-index:
-   z-index создал бы контекст наложения и сломал бы `backdrop-filter` стекла
-   (панели перестают размывать фон). Позиционированные потомки и так рисуются
-   поверх ::before, потому что идут за ним по документу. */
+/* Контент — над лентой орнамента. Только `position: relative`, без z-index:
+   z-index создал бы контекст наложения и сломал бы `backdrop-filter` стекла. */
 .laptop > *,
 .deskland > *,
 .tabscreen > * { position: relative; }
@@ -58,7 +56,10 @@ svg { display: block; }
   color: var(--c-ink); display: flex; flex-direction: column;
   font-family: var(--font); -webkit-font-smoothing: antialiased;
   /* тёмная база + цветные амбиентные пятна — чтобы стекло было видно */
-  background: var(--c-screen);
+  /* первый слой фона — узор из кочевых символов, как обои чата: он
+     подмешивается к градиенту (overlay), а не лежит отдельным слоем сверху —
+     иначе у плавающего таб-бара ломается backdrop-filter */
+  background: var(--fx-pattern) 0 0 / var(--fx-pattern-size) repeat, var(--c-screen);
 }
 .island { position: absolute; top: 11px; left: 50%; transform: translateX(-50%); width: 96px; height: 27px; border-radius: var(--r-pill); background: var(--c-screen-deep); z-index: 6; }
 

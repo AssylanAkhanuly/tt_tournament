@@ -142,7 +142,7 @@
 .tabscreen { position: relative; height: 940px; border-radius: 32px; overflow: hidden; color: var(--c-ink);
   display: flex; flex-direction: column; gap: 14px; padding: 24px 24px 20px; font-family: var(--font);
   -webkit-font-smoothing: antialiased;
-  background: var(--c-screen-tab); }
+  background: var(--fx-pattern) 0 0 / var(--fx-pattern-size) repeat, var(--c-screen-tab); }
 .ttop { display: flex; align-items: center; gap: 14px; }
 .tgrid { flex: 1; display: grid; grid-template-columns: 1.3fr 1fr; gap: 16px; min-height: 0; }
 .tcol { display: flex; flex-direction: column; gap: 11px; overflow: auto; }

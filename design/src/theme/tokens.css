@@ -179,6 +179,15 @@
   --fx-ornament:         url('./ornament-logo-band.svg');
   --fx-ornament-size:    auto 100%;   /* лента во всю высоту экрана, пропорция 1:9 */
 
+  /* мелкий узор по всему фону — как обои чата в телеграме: кочевые символы
+     (қошқар мүйіз, шаңырақ, тұмар, юрта, домбыра, беркут…) плюс пара
+     предметов настольного тенниса. Узор — не наложение, а слой фона: он
+     подмешивается к градиенту экрана (`background-blend-mode: overlay`),
+     поэтому его цвет всегда рождается из темы, а стекло сверху продолжает
+     размывать фон. */
+  --fx-pattern:          url('./pattern-nomad.svg');
+  --fx-pattern-size:     320px;       /* шаг плитки: символы получаются ~26px */
+
   /* корпус устройства */
   --c-bezel:             linear-gradient(160deg, var(--seed-bezel-1), var(--seed-bezel-2));
   --c-bezel-ring:        color-mix(in srgb, var(--seed-white) 5%, transparent);
