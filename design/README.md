@@ -98,13 +98,18 @@ Vercel'ом сам — руками ничего заливать не надо.
   прод-деплой; пуш в другую ветку / PR → превью-деплой со своей ссылкой.
 - Корень проекта — папка `design/`, сборка и вывод описаны в `design/vercel.json`
   (`npm install` → `npm run build` → отдаём `storybook-static/`).
-- Собираем **на каждый пуш**, без «Ignored Build Step». Пробовали ограничить
-  сборку папками (`git diff --quiet HEAD^ HEAD -- . ../front/src`) — Vercel
-  помечал деплой `BLOCKED / buildSkipped` даже когда `design/` реально менялся,
-  поэтому условие убрано. Сборка занимает ~40 секунд, экономить не на чем.
+- «Ignored Build Step» на Vercel: `git diff --quiet HEAD^ HEAD -- . ../front/src`.
+  Сборка запускается, если коммит изменил `design/` **или** `front/src` — второе
+  обязательно, потому что экран «Сетка» тянет настоящий `BracketFlow` из
+  `front/` по алиасу `@`. Правки только в `TZ.md`/диаграммах деплой не гоняют
+  (такой деплой Vercel показывает как `CANCELED` — это норма).
 - В настройках включён доступ к файлам вне корня проекта
-  (`sourceFilesOutsideRootDirectory`) — он обязателен: экран «Сетка» тянет
-  настоящий `BracketFlow` из `front/src` по алиасу `@`.
+  (`sourceFilesOutsideRootDirectory`) — без него `../front/src` не виден сборке.
+- **Автор коммита обязан быть `assylan.akhanuly@gmail.com`.** Vercel сверяет
+  e-mail автора с аккаунтом, у которого есть доступ к проекту; коммиты от
+  чужого адреса (например `…@users.noreply.github.com` из бот-окружения) дают
+  деплой в статусе `BLOCKED` — сборка даже не стартует. Это же правило
+  действует для проекта `tt-tournament` (фронт).
 - Ручной деплой (если очень нужно): `cd design && npx vercel deploy --prod`.
 
 

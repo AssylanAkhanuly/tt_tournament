@@ -107,6 +107,17 @@ Poppler/`pdftoppm` не установлен, `pypdf` на сканах даёт
 - Сообщения **по-русски**, группировать по логическим темам (не «всё одним»).
 - Коммитим прямо в `main` (так ведётся история проекта). Пуш — по просьбе.
 - В конце сообщения: `Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>`.
+- **Автор коммита — `assylan.akhanuly@gmail.com`** (`git config user.email`).
+  Vercel деплоит только коммиты, чей автор — владелец аккаунта; с чужим адресом
+  (например `…@users.noreply.github.com`) деплой встаёт в `BLOCKED` и Storybook
+  с фронтом не обновляются. Подробности — в `design/README.md`.
+
+## Деплой
+
+- **Storybook** (`design/`) → https://storybook-static-nu-two.vercel.app,
+  проект Vercel `storybook-static`, автосборка на пуш в `main`. Настройки и
+  подводные камни — `design/README.md`, раздел «Публикация».
+- **Веб** (`front/`) → проект Vercel `tt-tournament`, тоже по пушу в `main`.
 
 ## Честность и проверка
 
