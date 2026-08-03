@@ -9,7 +9,7 @@
 /* табы турнира */
 .ttabs { display: flex; gap: 6px; }
 .ttab { flex: 1; text-align: center; font-size: 11.5px; font-weight: 700; color: var(--c-muted);
-  padding: 8px 4px; border-radius: 11px; background: var(--c-glass); border: 1px solid var(--c-glass-line);
+  padding: 8px 4px; border-radius: 11px; background: var(--c-panel); border: 1px solid var(--c-glass-line);
   display: inline-flex; align-items: center; justify-content: center; gap: 5px; }
 .ttab.on { color: var(--c-accent-ink); background: var(--c-accent); border-color: transparent; box-shadow: inset 0 1px 0 var(--c-glass-hi-3); }
 
@@ -31,16 +31,16 @@
 .bt { position: absolute; top: 44px; left: 14px; right: 14px; z-index: 6;
   display: flex; align-items: center; gap: 9px; }
 .bt-title { flex: 1; min-width: 0; font-size: 12.5px; font-weight: 700; color: var(--c-ink);
-  background: var(--c-glass-2); backdrop-filter: var(--fx-blur); -webkit-backdrop-filter: var(--fx-blur);
+  background: var(--c-panel-2);
   border: 1px solid var(--c-glass-line); border-radius: 12px; padding: 9px 13px;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   box-shadow: inset 0 1px 0 var(--c-glass-hi); }
 /* зум-контролы React Flow скрываем — карта чистая, зум колесом/жестами */
 .bracketFull .react-flow__controls { display: none !important; }
 .zoomhint { position: absolute; bottom: 10px; left: 50%; transform: translateX(-50%);
-  font-size: 10px; font-weight: 600; color: var(--c-muted); background: var(--c-glass-2);
+  font-size: 10px; font-weight: 600; color: var(--c-muted); background: var(--c-panel-2);
   border: 1px solid var(--c-glass-line); padding: 5px 11px; border-radius: 999px;
-  backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); white-space: nowrap; }
+  white-space: nowrap; }
 
 /* ── live-счёт (табло/зритель) ── */
 .lwrap { flex: 1; display: flex; flex-direction: column; gap: 14px; padding-top: 4px; }
@@ -62,7 +62,7 @@
 .lvs .vs { font-size: 12px; font-weight: 700; color: var(--c-dim); }
 .sets { display: flex; justify-content: center; gap: 6px; flex-wrap: wrap; }
 .setchip { font-size: 12px; font-weight: 700; font-variant-numeric: tabular-nums;
-  padding: 5px 9px; border-radius: 9px; background: var(--c-glass); border: 1px solid var(--c-glass-line); color: var(--c-muted); }
+  padding: 5px 9px; border-radius: 9px; background: var(--c-panel); border: 1px solid var(--c-glass-line); color: var(--c-muted); }
 .setchip b { color: var(--c-ink); }
 .watch { margin-top: auto; display: flex; align-items: center; justify-content: center; gap: 8px;
   font-size: 13px; font-weight: 700; color: var(--c-accent-ink); padding: 13px;
@@ -77,14 +77,14 @@
 .jp .mt { font-size: 10px; color: var(--c-muted); margin-top: 1px; white-space: nowrap; }
 .stepper { display: flex; align-items: center; gap: 6px; flex: none; }
 .stepbtn { width: 34px; height: 34px; border-radius: 11px; display: grid; place-items: center;
-  background: var(--c-glass); border: 1px solid var(--c-glass-line); color: var(--c-ink);
+  background: var(--c-panel); border: 1px solid var(--c-glass-line); color: var(--c-ink);
   box-shadow: inset 0 1px 0 var(--c-glass-hi); flex: none; }
 .stepbtn.plus { background: var(--c-accent); color: var(--c-accent-ink); border-color: transparent; }
 .pt { font-size: 24px; font-weight: 800; font-variant-numeric: tabular-nums; min-width: 20px; text-align: center; }
 .jactions { display: flex; gap: 9px; margin-top: auto; }
 .jbtn { flex: 1; text-align: center; padding: 14px; border-radius: 15px; font-size: 13px; font-weight: 700;
   display: inline-flex; align-items: center; justify-content: center; gap: 6px; }
-.jbtn.ghost { background: var(--c-glass); border: 1px solid var(--c-glass-line); color: var(--c-ink); }
+.jbtn.ghost { background: var(--c-panel); border: 1px solid var(--c-glass-line); color: var(--c-ink); }
 .jbtn.pri { background: var(--c-success); color: var(--c-success-ink); box-shadow: 0 12px 26px -12px var(--c-success-glow); }
 
 /* судья стола — назначение стола / итог матча */

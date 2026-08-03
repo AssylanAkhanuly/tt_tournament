@@ -28,7 +28,7 @@ const JCard = ({ n, nm, cat, r, t, pick }: { n: number; nm: string; cat: string;
   <div className="card pcard" style={pick ? { borderColor: 'var(--c-accent-line-3)' } : undefined}>
     <img className="avatar sm" src={A(n)} alt="" />
     <div className="who"><div className="nm">{nm}</div><div className="mt">{cat} · рейтинг {r} · {t} турн.</div></div>
-    <button className="btnp" style={pick ? {} : { background: 'var(--c-glass-2)', color: 'var(--c-ink)', boxShadow: 'inset 0 1px 0 var(--c-glass-hi)' }}>{pick ? 'Выбран' : 'Выбрать'}</button>
+    <button className="btnp" style={pick ? {} : { background: 'var(--c-panel-2)', color: 'var(--c-ink)', boxShadow: 'inset 0 1px 0 var(--c-glass-hi)' }}>{pick ? 'Выбран' : 'Выбрать'}</button>
   </div>
 );
 

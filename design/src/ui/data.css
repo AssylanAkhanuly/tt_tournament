@@ -12,14 +12,14 @@
   font-size: 13px; color: var(--c-ink); padding: 11px 10px;
   border-top: 1px solid var(--c-glass-line-soft);
 }
-.ui-table tr:hover td { background: var(--c-glass); }
+.ui-table tr:hover td { background: var(--c-panel); }
 .ui-table td.num, .ui-table th.num { text-align: right; font-variant-numeric: tabular-nums; }
 .ui-table .sub { font-size: 11px; color: var(--c-muted); margin-top: 2px; }
 
 /* ── строка реестра (карточка-строка) ───────────────────────── */
 .ui-row-item {
   display: flex; align-items: center; gap: 12px;
-  background: var(--c-glass); border: 1px solid var(--c-glass-line); border-radius: 12px;
+  background: var(--c-panel); border: 1px solid var(--c-glass-line); border-radius: 12px;
   padding: 11px 13px;
 }
 .ui-row-item.sel { border-color: var(--c-accent-line-3); box-shadow: 0 0 0 1px var(--c-accent-halo); }
@@ -37,14 +37,14 @@
 .ui-empty { display: flex; flex-direction: column; align-items: center; gap: 10px; text-align: center; padding: 26px 18px; }
 .ui-empty .ic {
   width: 52px; height: 52px; border-radius: var(--r-md); display: grid; place-items: center;
-  background: var(--c-glass-2); color: var(--c-dim); box-shadow: inset 0 1px 0 var(--c-glass-hi);
+  background: var(--c-panel-2); color: var(--c-dim); box-shadow: inset 0 1px 0 var(--c-glass-hi);
 }
 .ui-empty .t { font-size: 14px; font-weight: 700; color: var(--c-ink); }
 .ui-empty .s { font-size: 12px; color: var(--c-muted); line-height: 1.5; max-width: 280px; }
 
 /* ── прогресс ───────────────────────────────────────────────── */
 .ui-prog { display: grid; gap: 6px; }
-.ui-prog .bar { height: 7px; border-radius: var(--r-pill); background: var(--c-glass-2); overflow: hidden; }
+.ui-prog .bar { height: 7px; border-radius: var(--r-pill); background: var(--c-panel-2); overflow: hidden; }
 .ui-prog .fill { height: 100%; border-radius: inherit; background: var(--c-accent); }
 .ui-prog.g .fill { background: var(--c-success); }
 .ui-prog.a .fill { background: var(--c-warning); }
@@ -53,7 +53,7 @@
 
 /* ── скелет загрузки ────────────────────────────────────────── */
 .ui-skel {
-  border-radius: var(--r-sm); background: var(--c-glass-2); position: relative; overflow: hidden;
+  border-radius: var(--r-sm); background: var(--c-panel-2); position: relative; overflow: hidden;
 }
 .ui-skel::after {
   content: ""; position: absolute; inset: 0;
@@ -85,7 +85,7 @@
 .ui-time .ev:last-child::before { display: none; }
 .ui-time .pt {
   width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center;
-  background: var(--c-glass-2); border: 1px solid var(--c-glass-line); color: var(--c-muted); z-index: 1;
+  background: var(--c-panel-2); border: 1px solid var(--c-glass-line); color: var(--c-muted); z-index: 1;
 }
 .ui-time .ev.on .pt { background: var(--c-accent-soft); border-color: var(--c-accent-line); color: var(--c-accent); }
 .ui-time .ev.ok .pt { background: var(--c-success-soft); border-color: var(--c-success-line); color: var(--c-success); }

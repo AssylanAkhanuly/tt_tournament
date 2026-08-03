@@ -15,7 +15,7 @@
 }
 .ui-tabs .count {
   font-size: 10.5px; font-weight: 700; padding: 1px 6px; border-radius: var(--r-pill);
-  background: var(--c-glass-2); color: var(--c-muted);
+  background: var(--c-panel-2); color: var(--c-muted);
 }
 .ui-tabs button.on .count { background: var(--c-accent-soft); color: var(--c-accent); }
 
@@ -34,7 +34,7 @@
   background: var(--c-accent-soft); color: var(--c-accent);
 }
 .ui-navitem.on {
-  color: var(--c-ink); background: var(--c-glass-2); border-color: var(--c-glass-line);
+  color: var(--c-ink); background: var(--c-panel-2); border-color: var(--c-glass-line);
   box-shadow: inset 0 1px 0 var(--c-glass-hi);
 }
 
@@ -49,7 +49,7 @@
 .ui-pages button {
   min-width: 30px; height: 30px; padding: 0 8px; border-radius: var(--r-sm);
   font-family: var(--font); font-size: 12.5px; font-weight: 600; color: var(--c-muted);
-  background: var(--c-glass); border: 1px solid var(--c-glass-line); cursor: pointer;
+  background: var(--c-panel); border: 1px solid var(--c-glass-line); cursor: pointer;
   display: grid; place-items: center;
 }
 .ui-pages button.on { color: var(--c-accent-ink); background: var(--c-accent); border-color: transparent; }
@@ -62,7 +62,7 @@
 .ui-steps .step .dot {
   width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center;
   font-size: 11.5px; font-weight: 800; font-variant-numeric: tabular-nums;
-  background: var(--c-glass); border: 1px solid var(--c-glass-line); color: var(--c-muted);
+  background: var(--c-panel); border: 1px solid var(--c-glass-line); color: var(--c-muted);
   box-shadow: inset 0 1px 0 var(--c-glass-hi); position: relative; z-index: 1;
 }
 .ui-steps .step .lbl { font-size: 11.5px; color: var(--c-muted); line-height: 1.35; max-width: 120px; }

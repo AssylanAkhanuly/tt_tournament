@@ -55,7 +55,7 @@ export function BracketScreen({ variant }: { variant?: DeskVariant }) {
             <div style={{ marginBottom: 12 }}><DrawSetting /></div>
             <div className="qsec">Сеяные · топ-16</div>
             {SEEDS.map((s) => <SeedRow key={s.s} s={s} />)}
-            <div className="dsubmit" style={{ marginTop: 12, background: 'var(--c-glass)', color: 'var(--c-ink)', border: '1px solid var(--c-glass-line)', boxShadow: 'none' }}><Shuffle size={15} />Пережеребить</div>
+            <div className="dsubmit" style={{ marginTop: 12, background: 'var(--c-panel)', color: 'var(--c-ink)', border: '1px solid var(--c-glass-line)', boxShadow: 'none' }}><Shuffle size={15} />Пережеребить</div>
           </div>
         </aside>
       </div>

@@ -5,7 +5,7 @@
 /* ── строка матча: двое, счёт, статус ───────────────────────── */
 .ui-match {
   display: flex; align-items: center; gap: 12px;
-  background: var(--c-glass); border: 1px solid var(--c-glass-line); border-radius: 12px;
+  background: var(--c-panel); border: 1px solid var(--c-glass-line); border-radius: 12px;
   padding: 10px 12px; box-shadow: inset 0 1px 0 var(--c-glass-hi);
 }
 .ui-match.live { border-color: var(--c-accent-line); }
@@ -21,7 +21,7 @@
 
 /* ── плитка стола ───────────────────────────────────────────── */
 .ui-tabletile {
-  background: var(--c-glass); border: 1px solid var(--c-glass-line); border-radius: 11px;
+  background: var(--c-panel); border: 1px solid var(--c-glass-line); border-radius: 11px;
   padding: 9px 10px; box-shadow: inset 0 1px 0 var(--c-glass-hi); min-width: 96px;
 }
 .ui-tabletile .tn { display: flex; align-items: center; justify-content: space-between; font-size: 11px; color: var(--c-muted); font-weight: 700; }
@@ -41,7 +41,7 @@
 .ui-seed {
   display: inline-grid; place-items: center; min-width: 22px; height: 22px; padding: 0 6px;
   border-radius: 7px; font-size: 11px; font-weight: 800; font-variant-numeric: tabular-nums;
-  background: var(--c-glass-2); color: var(--c-muted); border: 1px solid var(--c-glass-line);
+  background: var(--c-panel-2); color: var(--c-muted); border: 1px solid var(--c-glass-line);
 }
 .ui-seed.top { background: var(--c-accent-soft); color: var(--c-accent); border-color: var(--c-accent-line); }
 
@@ -55,7 +55,7 @@
 .ui-score .sets { display: flex; gap: 6px; justify-content: center; flex-wrap: wrap; margin-top: 4px; }
 .ui-score .setchip {
   font-size: 12px; font-weight: 700; font-variant-numeric: tabular-nums; padding: 5px 9px;
-  border-radius: 9px; background: var(--c-glass); border: 1px solid var(--c-glass-line); color: var(--c-muted);
+  border-radius: 9px; background: var(--c-panel); border: 1px solid var(--c-glass-line); color: var(--c-muted);
 }
 .ui-score .setchip b { color: var(--c-ink); }
 

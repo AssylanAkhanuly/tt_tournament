@@ -96,6 +96,7 @@
   --c-accent-glow:       color-mix(in srgb, var(--c-accent) 60%, transparent);    /* тень-свечение кнопки */
   --c-accent-glow-2:     color-mix(in srgb, var(--c-accent) 70%, transparent);
   --c-accent-glow-3:     color-mix(in srgb, var(--c-accent) 80%, transparent);
+  --c-accent-fill:       color-mix(in srgb, var(--c-accent) 15%, var(--c-screen-1));   /* непрозрачная подложка плашки */
 
   /* статусы */
   --c-success:           var(--seed-success);
@@ -108,12 +109,15 @@
   --c-success-halo:      color-mix(in srgb, var(--c-success) 30%, transparent);
   --c-success-ring:      color-mix(in srgb, var(--c-success) 20%, transparent);
   --c-success-glow:      color-mix(in srgb, var(--c-success) 80%, transparent);
+  --c-success-fill:      color-mix(in srgb, var(--c-success) 14%, var(--c-screen-1));
   --c-warning:           var(--seed-warning);
   --c-warning-soft:      color-mix(in srgb, var(--c-warning) 16%, transparent);
+  --c-warning-fill:      color-mix(in srgb, var(--c-warning) 14%, var(--c-screen-1));
   --c-danger:            var(--seed-danger);
   --c-danger-soft:       color-mix(in srgb, var(--c-danger) 18%, transparent);
   --c-danger-soft-2:     color-mix(in srgb, var(--c-danger) 16%, transparent);
   --c-danger-line:       color-mix(in srgb, var(--c-danger) 30%, transparent);
+  --c-danger-fill:       color-mix(in srgb, var(--c-danger) 14%, var(--c-screen-1));
   --c-broadcast:         var(--seed-broadcast);
   --c-broadcast-2:       var(--seed-broadcast-2);
   --c-broadcast-glow:    color-mix(in srgb, var(--c-broadcast-2) 80%, transparent);
@@ -148,10 +152,16 @@
     radial-gradient(80% 40% at 50% 104%, color-mix(in srgb, var(--c-accent-3) 28%, transparent), transparent 62%),
     linear-gradient(180deg, var(--c-screen-1) 0%, var(--c-screen-2) 55%, var(--c-screen-3) 100%);
 
-  /* стекло: полупрозрачные панели поверх экрана */
-  --c-glass:             color-mix(in srgb, var(--seed-white) 5.5%, transparent);
-  --c-glass-2:           color-mix(in srgb, var(--seed-white) 8.5%, transparent);
-  --c-glass-3:           color-mix(in srgb, var(--seed-white) 3%,   transparent);  /* подсказка-плашка */
+  /* Поверхности: карточки, панели, плитки. Заливка НЕПРОЗРАЧНАЯ — узор-обои и
+     градиент экрана сквозь интерфейс не просвечивают. Цвет считается от базы
+     экрана с подмешанным белым, поэтому «стеклянный» характер (чуть светлее
+     фона) остался, а читаемость больше не зависит от того, что под карточкой. */
+  --c-panel:             color-mix(in srgb, var(--seed-white) 5.5%, var(--c-screen-1));
+  --c-panel-2:           color-mix(in srgb, var(--seed-white) 8.5%, var(--c-screen-1));
+  --c-panel-3:           color-mix(in srgb, var(--seed-white) 3%,   var(--c-screen-1));  /* подсказка-плашка */
+
+  /* грани и разделители — по-прежнему полупрозрачные: это волосяные линии
+     поверх собственной заливки элемента, сквозь них ничего не читается */
   --c-glass-line:        color-mix(in srgb, var(--seed-white) 11%,  transparent);
   --c-glass-line-soft:   color-mix(in srgb, var(--seed-white) 6%,   transparent);  /* разделитель строк */
   --c-glass-hi:          color-mix(in srgb, var(--seed-white) 18%,  transparent);  /* верхняя световая грань */
@@ -159,8 +169,8 @@
   --c-glass-hi-3:        color-mix(in srgb, var(--seed-white) 35%,  transparent);
   --c-glass-hi-4:        color-mix(in srgb, var(--seed-white) 40%,  transparent);
   --c-glass-ring:        color-mix(in srgb, var(--seed-white) 14%,  transparent);  /* кольцо вокруг фото */
-  --c-glass-seg:         color-mix(in srgb, var(--seed-white) 5%,   transparent);  /* фон сегмент-контрола */
-  --c-glass-quiet:       color-mix(in srgb, var(--seed-white) 8%,   transparent);  /* пилюля «завершено» */
+  --c-panel-seg:         color-mix(in srgb, var(--seed-white) 5%,   var(--c-screen-1));  /* фон сегмент-контрола */
+  --c-panel-quiet:       color-mix(in srgb, var(--seed-white) 8%,   var(--c-screen-1));  /* пилюля «завершено» */
   --c-glass-edge:        color-mix(in srgb, var(--seed-white) 4%,   transparent);  /* внутренняя грань корпуса */
 
   /* светлая подложка борда (флоу-схемы) */
@@ -229,8 +239,7 @@
   --sh-success: 0 14px 30px -12px var(--c-success-glow);
   --sh-light:   0 12px 30px color-mix(in srgb, var(--seed-board-ink) 16%, transparent);
 
-  --fx-blur: saturate(160%) blur(22px);
-  --fx-blur-strong: saturate(180%) blur(30px);
+  /* блюр (backdrop-filter) убран: поверхности непрозрачные, размывать нечего */
 
   /* system-ui первым: в Storybook грузятся веб-гарнитуры для примерки, среди них
      Roboto — без system-ui «системный» вариант подхватывал бы его (см. fonts.ts) */

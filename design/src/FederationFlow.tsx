@@ -84,7 +84,7 @@ function Accept({ variant }: { variant?: DeskVariant }) {
           </div>
         </section>
         <div className="dactionbar" style={{ justifyContent: 'flex-end', gap: 10 }}>
-          <button className="dsubmit" style={{ flex: 'none', padding: '13px 16px', background: 'var(--c-glass)', color: 'var(--c-ink)', border: '1px solid var(--c-glass-line)', boxShadow: 'none' }}><CornerUpLeft size={16} />Вернуть с причиной</button>
+          <button className="dsubmit" style={{ flex: 'none', padding: '13px 16px', background: 'var(--c-panel)', color: 'var(--c-ink)', border: '1px solid var(--c-glass-line)', boxShadow: 'none' }}><CornerUpLeft size={16} />Вернуть с причиной</button>
           <button className="dsubmit ok" style={{ flex: 'none', padding: '13px 18px' }}><CheckCircle2 size={16} />Утвердить · пересчитать рейтинг</button>
         </div>
       </div>

@@ -72,7 +72,7 @@ svg { display: block; }
 .brand img { height: 30px; width: auto; display: block; filter: drop-shadow(0 2px 7px var(--c-accent-line-2)); }
 
 /* стеклянная кнопка-иконка */
-.iconbtn { position: relative; width: 34px; height: 34px; border-radius: 11px; background: var(--c-glass); backdrop-filter: var(--fx-blur); -webkit-backdrop-filter: var(--fx-blur); border: 1px solid var(--c-glass-line); box-shadow: inset 0 1px 0 var(--c-glass-hi); display: grid; place-items: center; color: var(--c-ink); }
+.iconbtn { position: relative; width: 34px; height: 34px; border-radius: 11px; background: var(--c-panel); border: 1px solid var(--c-glass-line); box-shadow: inset 0 1px 0 var(--c-glass-hi); display: grid; place-items: center; color: var(--c-ink); }
 .iconbtn.dot::after { content: ""; position: absolute; top: 6px; right: 7px; width: 9px; height: 9px; border-radius: 50%; background: var(--c-danger); box-shadow: 0 0 0 2px color-mix(in srgb, var(--c-screen-1) 90%, transparent); }
 .nav .back { color: var(--c-ink); display: grid; place-items: center; width: 34px; height: 34px; }
 .nav .link { font-size: 13px; color: var(--c-accent); font-weight: 600; }
@@ -87,8 +87,8 @@ svg { display: block; }
 
 /* ── СТЕКЛО: базовая панель (карточка / плитка / строка-уведомление) ── */
 .card, .stat, .item {
-  background: var(--c-glass);
-  backdrop-filter: var(--fx-blur); -webkit-backdrop-filter: var(--fx-blur);
+  background: var(--c-panel);
+ 
   border: 1px solid var(--c-glass-line);
   box-shadow: inset 0 1px 0 var(--c-glass-hi), var(--sh-card);
 }
@@ -143,14 +143,14 @@ svg { display: block; }
 .pill { display: inline-flex; align-items: center; gap: 4px; font-size: 9.5px; font-weight: 800; letter-spacing: .5px; padding: 3px 8px; border-radius: var(--r-pill); margin-bottom: 6px; }
 .pill.live { background: var(--c-success-soft-2); color: var(--c-success); }
 .pill.reg { background: var(--c-accent-soft); color: var(--c-accent); }
-.pill.done { background: var(--c-glass-quiet); color: var(--c-dim); }
+.pill.done { background: var(--c-panel-quiet); color: var(--c-dim); }
 .pill .d { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
 
 /* плавающий стеклянный таб-бар */
 .tabbar {
   position: absolute; left: 14px; right: 14px; bottom: 16px; z-index: 5;
   display: flex; justify-content: space-around;
-  background: var(--c-glass-2); backdrop-filter: var(--fx-blur-strong); -webkit-backdrop-filter: var(--fx-blur-strong);
+  background: var(--c-panel-2);
   border: 1px solid var(--c-glass-line); border-radius: var(--r-lg); padding: 11px 4px;
   box-shadow: inset 0 1px 0 var(--c-glass-hi), var(--sh-tabbar);
 }

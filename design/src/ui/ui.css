@@ -33,7 +33,7 @@
   box-shadow: 0 10px 24px -12px var(--c-broadcast-glow);
 }
 .ui-btn--ghost {
-  color: var(--c-ink); background: var(--c-glass); border-color: var(--c-glass-line);
+  color: var(--c-ink); background: var(--c-panel); border-color: var(--c-glass-line);
   box-shadow: inset 0 1px 0 var(--c-glass-hi);
 }
 .ui-btn--quiet { color: var(--c-accent); background: transparent; }
@@ -47,12 +47,12 @@
 .pill.down { background: var(--c-danger-soft-2); color: var(--c-danger); }
 
 /* ── сегмент-контрол ─────────────────────────────────────────── */
-.ui-seg { display: inline-flex; gap: 2px; background: var(--c-glass-seg); border-radius: 9px; padding: 2px; }
+.ui-seg { display: inline-flex; gap: 2px; background: var(--c-panel-seg); border-radius: 9px; padding: 2px; }
 .ui-seg button {
   font-family: var(--font); font-size: 11px; font-weight: 600; color: var(--c-muted);
   padding: 4px 10px; border-radius: var(--r-xs); border: 0; background: none; cursor: pointer;
 }
-.ui-seg button.on { color: var(--c-ink); background: var(--c-glass-2); }
+.ui-seg button.on { color: var(--c-ink); background: var(--c-panel-2); }
 
 /* ── поле формы (подпись + значение) ─────────────────────────── */
 .ui-field { display: flex; flex-direction: column; gap: 7px; }
@@ -71,15 +71,15 @@
 .ui-note { font-size: 12px; color: var(--c-muted); line-height: 1.5; }
 
 /* карточка токена в специмене «Цвета» */
-.ui-swatch { color: var(--c-ink); display: flex; align-items: center; gap: 11px; padding: 9px 11px; border-radius: 12px; background: var(--c-glass); border: 1px solid var(--c-glass-line); }
+.ui-swatch { color: var(--c-ink); display: flex; align-items: center; gap: 11px; padding: 9px 11px; border-radius: 12px; background: var(--c-panel); border: 1px solid var(--c-glass-line); }
 /* полупрозрачные токены показываем поверх «шахматки» из самих же токенов —
    иначе rgba-стекло на тёмном фоне выглядит просто пустым квадратом */
 .ui-swatch .chip {
   width: 38px; height: 38px; border-radius: var(--r-sm); flex: none;
   box-shadow: inset 0 0 0 1px var(--c-glass-line);
   background-image:
-    linear-gradient(45deg, var(--c-glass-2) 25%, transparent 25%, transparent 75%, var(--c-glass-2) 75%),
-    linear-gradient(45deg, var(--c-glass-2) 25%, transparent 25%, transparent 75%, var(--c-glass-2) 75%);
+    linear-gradient(45deg, var(--c-panel-2) 25%, transparent 25%, transparent 75%, var(--c-panel-2) 75%),
+    linear-gradient(45deg, var(--c-panel-2) 25%, transparent 25%, transparent 75%, var(--c-panel-2) 75%);
   background-size: 12px 12px; background-position: 0 0, 6px 6px;
 }
 .ui-swatch .chip i { display: block; width: 100%; height: 100%; border-radius: inherit; }
