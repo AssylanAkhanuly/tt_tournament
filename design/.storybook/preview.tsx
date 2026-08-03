@@ -29,7 +29,8 @@ const preview: Preview = {
       description: 'Цветовая тема (семена токенов)',
       toolbar: {
         icon: 'paintbrush',
-        items: THEMES.map((t) => ({ value: t.id, title: t.label })),
+        // подпись справа = группа темы (тёмные / светлые), как в списке шрифтов
+        items: THEMES.map((t) => ({ value: t.id, title: t.label, right: t.group.toLowerCase() })),
         dynamicTitle: true,
       },
     },

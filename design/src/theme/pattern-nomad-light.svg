@@ -1,0 +1,122 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 360" width="360" height="360">
+  <defs>
+    <g id="horn" fill="none" stroke="#000" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M20 6 V13"/>
+      <path d="M20 13 C20 24 8 22 6 30 C4.5 36 12 39 14 33 C15 30 11 28.5 9.5 31"/>
+      <path d="M20 13 C20 24 32 22 34 30 C35.5 36 28 39 26 33 C25 30 29 28.5 30.5 31"/>
+    </g>
+    <g id="shanyrak" fill="none" stroke="#000" stroke-width="2.2" stroke-linecap="round">
+      <circle cx="20" cy="20" r="13"/>
+      <circle cx="20" cy="20" r="4.5"/>
+      <path d="M20 7 V12 M20 28 V33 M7 20 H12 M28 20 H33 M11 11 L14.5 14.5 M25.5 25.5 L29 29 M29 11 L25.5 14.5 M14.5 25.5 L11 29"/>
+    </g>
+    <g id="tumar" fill="none" stroke="#000" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M20 7 L33 31 H7 Z"/>
+      <circle cx="20" cy="23" r="3.4"/>
+    </g>
+    <g id="water" fill="none" stroke="#000" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M4 26 L12 14 L20 26 L28 14 L36 26"/>
+      <path d="M4 33 L12 21 L20 33 L28 21 L36 33"/>
+    </g>
+    <g id="botamoyin" fill="none" stroke="#000" stroke-width="2.4" stroke-linecap="round">
+      <path d="M8 33 C8 21 20 23 20 15 C20 9 12 9 12 14"/>
+      <path d="M32 7 C32 19 20 17 20 25 C20 31 28 31 28 26"/>
+    </g>
+    <g id="yurt" fill="none" stroke="#000" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M5 31 H35"/>
+      <path d="M8 31 C8 15 32 15 32 31"/>
+      <path d="M16 31 V22 H24 V31"/>
+      <path d="M20 15 V10"/>
+      <path d="M15 11 H25"/>
+    </g>
+    <g id="earring" fill="none" stroke="#000" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="20" cy="9" r="4"/>
+      <path d="M20 14 C11 20 11 30 20 34 C29 30 29 20 20 14 Z"/>
+    </g>
+    <g id="flower" fill="none" stroke="#000" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M20 6 C27 13 27 27 20 34 C13 27 13 13 20 6 Z"/>
+      <path d="M6 20 C13 13 27 13 34 20 C27 27 13 27 6 20 Z"/>
+    </g>
+    <g id="kerege" fill="none" stroke="#000" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M6 20 L20 6 L34 20 L20 34 Z"/>
+      <path d="M13 20 L20 13 L27 20 L20 27 Z"/>
+    </g>
+    <g id="knot" fill="none" stroke="#000" stroke-width="2.3" stroke-linecap="round">
+      <circle cx="14" cy="20" r="8.5"/>
+      <circle cx="26" cy="20" r="8.5"/>
+    </g>
+    <g id="dombra" fill="none" stroke="#000" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M14 34 C7 34 5 26 9 22 C13 18 18 21 19 26"/>
+      <path d="M14 34 C21 34 23 26 19 22"/>
+      <circle cx="13" cy="27" r="2.2"/>
+      <path d="M19 22 L31 9"/>
+      <path d="M29 7 L33.5 11.5"/>
+      <path d="M16 24 L30.5 10"/>
+    </g>
+    <g id="eagle" fill="none" stroke="#000" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M4 24 C11 14 17 18 20 23 C23 18 29 14 36 24"/>
+      <path d="M20 23 V30"/>
+      <path d="M16 30 H24"/>
+    </g>
+    <g id="sun" fill="none" stroke="#000" stroke-width="2.3" stroke-linecap="round">
+      <circle cx="20" cy="20" r="7"/>
+      <path d="M20 5 V10 M20 30 V35 M5 20 H10 M30 20 H35 M9.5 9.5 L13 13 M27 27 L30.5 30.5 M30.5 9.5 L27 13 M13 27 L9.5 30.5"/>
+    </g>
+    <g id="rhomb" fill="none" stroke="#000" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M20 8 L32 20 L20 32 L8 20 Z"/>
+      <circle cx="20" cy="20" r="2.6" fill="#000"/>
+    </g>
+    <g id="spiral" fill="none" stroke="#000" stroke-width="2.4" stroke-linecap="round">
+      <path d="M32 20 C32 26.6 26.6 32 20 32 C13.4 32 8 26.6 8 20 C8 13.4 13.4 8 20 8 C25 8 29 12 29 17 C29 21.4 25.4 25 21 25 C17.7 25 15 22.3 15 19"/>
+    </g>
+    <g id="paddle" fill="none" stroke="#000" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round">
+      <ellipse cx="17" cy="16" rx="9" ry="10.5" transform="rotate(-25 17 16)"/>
+      <path d="M21.5 24.5 L28 33"/>
+      <circle cx="31" cy="13" r="3.2"/>
+    </g>
+    <g id="cup" fill="none" stroke="#000" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M12 8 H28 V15 C28 21.5 12 21.5 12 15 Z"/>
+      <path d="M12 10 H8 C8 15.5 11 17 12.5 17"/>
+      <path d="M28 10 H32 C32 15.5 29 17 27.5 17"/>
+      <path d="M20 21.5 V26 M16 26 H24 V30 H16 Z"/>
+    </g>
+  </defs>
+
+  <g opacity="0.055">
+    <use href="#horn"      transform="translate(34 36) rotate(-8) scale(1) translate(-20 -20)"/>
+    <use href="#shanyrak"  transform="translate(126 58) rotate(0) scale(.92) translate(-20 -20)"/>
+    <use href="#water"     transform="translate(222 30) rotate(6) scale(.95) translate(-20 -20)"/>
+    <use href="#tumar"     transform="translate(310 52) rotate(10) scale(.95) translate(-20 -20)"/>
+
+    <use href="#yurt"      transform="translate(58 134) rotate(0) scale(1) translate(-20 -20)"/>
+    <use href="#flower"    transform="translate(158 146) rotate(18) scale(.9) translate(-20 -20)"/>
+    <use href="#botamoyin" transform="translate(252 128) rotate(-6) scale(1) translate(-20 -20)"/>
+    <use href="#spiral"    transform="translate(332 168) rotate(0) scale(.85) translate(-20 -20)"/>
+
+    <use href="#kerege"    transform="translate(28 228) rotate(0) scale(.95) translate(-20 -20)"/>
+    <use href="#eagle"     transform="translate(118 242) rotate(0) scale(1) translate(-20 -20)"/>
+    <use href="#paddle"    transform="translate(210 232) rotate(8) scale(.95) translate(-20 -20)"/>
+    <use href="#sun"       transform="translate(298 258) rotate(0) scale(.9) translate(-20 -20)"/>
+
+    <use href="#knot"      transform="translate(62 322) rotate(0) scale(.9) translate(-20 -20)"/>
+    <use href="#rhomb"     transform="translate(156 334) rotate(0) scale(.85) translate(-20 -20)"/>
+    <use href="#dombra"    transform="translate(246 328) rotate(-12) scale(.95) translate(-20 -20)"/>
+    <use href="#cup"       transform="translate(336 306) rotate(6) scale(.9) translate(-20 -20)"/>
+
+    <use href="#horn"      transform="translate(352 118) rotate(180) scale(.8) translate(-20 -20)"/>
+    <use href="#earring"   transform="translate(8 118) rotate(0) scale(.85) translate(-20 -20)"/>
+    <use href="#tumar"     transform="translate(6 300) rotate(-14) scale(.8) translate(-20 -20)"/>
+    <use href="#water"     transform="translate(354 226) rotate(0) scale(.8) translate(-20 -20)"/>
+    <use href="#spiral"    transform="translate(84 82) rotate(0) scale(.62) translate(-20 -20)"/>
+    <use href="#rhomb"     transform="translate(276 88) rotate(0) scale(.6) translate(-20 -20)"/>
+    <use href="#knot"      transform="translate(180 96) rotate(0) scale(.58) translate(-20 -20)"/>
+    <use href="#water"     transform="translate(108 190) rotate(0) scale(.62) translate(-20 -20)"/>
+    <use href="#sun"       transform="translate(212 178) rotate(0) scale(.6) translate(-20 -20)"/>
+    <use href="#tumar"     transform="translate(304 200) rotate(0) scale(.6) translate(-20 -20)"/>
+    <use href="#flower"    transform="translate(64 268) rotate(0) scale(.58) translate(-20 -20)"/>
+    <use href="#shanyrak"  transform="translate(164 286) rotate(0) scale(.6) translate(-20 -20)"/>
+    <use href="#kerege"    transform="translate(258 272) rotate(0) scale(.58) translate(-20 -20)"/>
+    <use href="#horn"      transform="translate(348 356) rotate(0) scale(.6) translate(-20 -20)"/>
+    <use href="#earring"   transform="translate(196 12) rotate(0) scale(.58) translate(-20 -20)"/>
+  </g>
+</svg>

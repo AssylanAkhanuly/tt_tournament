@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import type { CSSProperties } from 'react';
 import { Bell, Play } from 'lucide-react';
-import { THEMES, applyTheme } from '../theme/themes';
+import { THEMES, THEME_GROUPS, applyTheme } from '../theme/themes';
 import { Avatar, Badge, Button, Card, Pill, Stat, Stats } from './index';
 
 /* Специмен цвета: что за токены есть, чему равны прямо сейчас и как выглядит
@@ -230,17 +230,25 @@ export function ColorSpecimen() {
 
       <section style={{ display: 'grid', gap: 12 }}>
         <div>
-          <h2 style={{ fontSize: 15, fontWeight: 700 }}>Темы целиком</h2>
-          <div style={{ fontSize: 12, color: 'var(--c-text-3)', marginTop: 4 }}>
-            Тема — это набор «семян» (<code>src/theme/themes.ts</code>), всё остальное считается от них. Один и тот
-            же кусок интерфейса в каждой теме:
+          <h2 style={{ fontSize: 15, fontWeight: 700 }}>Темы целиком — {THEMES.length}</h2>
+          <div style={{ fontSize: 12, color: 'var(--c-text-3)', marginTop: 4, maxWidth: 780, lineHeight: 1.5 }}>
+            Тема — это набор «семян» (<code>src/theme/themes.ts</code>), всё остальное считается от них: ступени
+            тёмного фона, корпус устройства и светлые производные собирает функция <code>dark()</code> из двух-трёх
+            цветов, светлым темам нужен свой набор (<code>light()</code>) — там текст тёмный, грани не белые, а узор
+            фона берётся тёмной плиткой. Ниже один и тот же кусок интерфейса в каждой теме; выбрать её целиком —
+            тулбар «Тема».
           </div>
         </div>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 18 }}>
-          {THEMES.map((t) => (
-            <ThemeBox key={t.id} id={t.id} label={t.label} note={t.note} />
-          ))}
-        </div>
+        {THEME_GROUPS.map((group) => (
+          <div key={group} style={{ display: 'grid', gap: 12 }}>
+            <div className="ui-label" style={{ color: 'var(--c-text-3)' }}>{group}</div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 18 }}>
+              {THEMES.filter((t) => t.group === group).map((t) => (
+                <ThemeBox key={t.id} id={t.id} label={t.label} note={t.note} />
+              ))}
+            </div>
+          </div>
+        ))}
       </section>
     </div>
   );
