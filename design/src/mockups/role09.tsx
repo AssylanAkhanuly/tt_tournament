@@ -74,7 +74,7 @@ const DOCS: { t: string; sub: string; st: string; cls: Cls }[] = [
 
 export function Tours9_1() {
   return (
-    <RoleTablet title="Судья · Пак Сергей" sub="Мои назначения и открытые приёмы заявок" badge="СЕЗОН 2026">
+    <RoleTablet title="Судья · Оралбай Ержан" sub="Мои назначения и открытые приёмы заявок" badge="СЕЗОН 2026">
       <div className="sect">Мои назначения</div>
       {ASSIGN.map((a) => (
         <div className="item" key={a.t} style={{ marginTop: 0 }}>
@@ -327,9 +327,9 @@ export function Rating9_5() {
   return (
     <RoleTablet title="Мой рейтинг судьи" sub="Сезон 2026 · R = S1 + S2 + S3 + S4 (§7.2)" badge="ОПУБЛИКОВАН">
       <div className="card pcard">
-        <img className="avatar" src={A(13)} alt="" />
+        <img className="avatar" src={A(39)} alt="" />
         <div className="who">
-          <div className="nm">Пак Сергей</div>
+          <div className="nm">Оралбай Ержан</div>
           <div className="mt">Павлодар · судья национальной категории · рейтинг опубликован 06.04.2026</div>
         </div>
         <div className="rt" style={{ marginRight: 20 }}>

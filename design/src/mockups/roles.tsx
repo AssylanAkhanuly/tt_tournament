@@ -58,7 +58,7 @@ export const R0304: RoleUI = {
 
 export const R05: RoleUI = {
   num: '5', title: 'Председатель ГСК',
-  person: { nm: 'Мукашев Б.', rl: 'Председатель ГСК', av: A(76) },
+  person: { nm: 'Мукашев Б.', rl: 'Председатель ГСК', av: A(83) },
   brandName: 'Судейство сезона', brandSub: 'Назначения · протоколы · рейтинг судей',
   nav: [
     [<Trophy size={18} />, 'Мои соревнования'],
@@ -99,7 +99,7 @@ export const R07: RoleUI = {
 
 export const R08: RoleUI = {
   num: '8', title: 'Заместитель главного судьи',
-  person: { nm: 'Жумабеков Р.', rl: 'Заместитель главного судьи', av: A(22) },
+  person: { nm: 'Сагинтаев Д.', rl: 'Заместитель главного судьи', av: A(37) },
   ...TOUR_BRAND,
   nav: [
     [<LayoutDashboard size={18} />, 'Мой турнир'],
@@ -110,7 +110,7 @@ export const R08: RoleUI = {
 
 export const R09: RoleUI = {
   num: '9', title: 'Судья',
-  person: { nm: 'Пак С.', rl: 'Судья · стол 4', av: A(13) },
+  person: { nm: 'Оралбай Е.', rl: 'Судья · стол 4', av: A(39) },
   ...TOUR_BRAND,
   nav: [
     [<Trophy size={18} />, 'Мои турниры'],
@@ -121,7 +121,7 @@ export const R09: RoleUI = {
 
 export const R10: RoleUI = {
   num: '10', title: 'Инспектор / супервайзер',
-  person: { nm: 'Ерлан Б.', rl: 'Инспектор', av: A(75) },
+  person: { nm: 'Каримов А.', rl: 'Инспектор', av: A(48) },
   brandName: 'Инспекция соревнований', brandSub: 'Контроль качества судейства',
   nav: [
     [<Eye size={18} />, 'На контроле'],
@@ -133,7 +133,7 @@ export const R10: RoleUI = {
 
 export const R11: RoleUI = {
   num: '11', title: 'Главный тренер национальной команды',
-  person: { nm: 'Гладун И.', rl: 'Главный тренер сборной', av: A(56) },
+  person: { nm: 'Ахметов С.', rl: 'Главный тренер сборной', av: A(52) },
   brandName: 'Сборная РК', brandSub: 'Кандидаты · рейтинг · результаты',
   nav: [
     [<Users size={18} />, 'Кандидаты'],
@@ -144,7 +144,7 @@ export const R11: RoleUI = {
 
 export const R12: RoleUI = {
   num: '12', title: 'Старший тренер региона',
-  person: { nm: 'Смагулов А.', rl: 'Старший тренер · Алматы', av: A(32) },
+  person: { nm: 'Байтасов Р.', rl: 'Старший тренер · Алматы', av: A(55) },
   brandName: 'Регион Алматы', brandSub: 'Заявки на главные старты РК',
   nav: [
     [<Users size={18} />, 'Мой регион'],

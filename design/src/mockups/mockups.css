@@ -51,5 +51,11 @@
 .dpickbtn,
 .dsubmit { display: inline-flex; align-items: center; gap: 6px; }
 
+/* Строка реестра в узкой колонке (панель в две колонки, планшет): имя и
+   подпись не сжимаем — иначе текст рассыпается по одному слову в строку.
+   Тесно — состояние и кнопка переносятся под имя. */
+.drow { flex-wrap: wrap; }
+.drow .who { min-width: 170px; flex: 1 1 170px; }
+
 /* Две колонки в рабочей области, когда на экране список и панель рядом. */
 .mkcols { display: grid; grid-template-columns: 1.35fr 1fr; gap: var(--s-3); align-items: start; }

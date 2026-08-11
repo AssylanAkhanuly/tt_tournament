@@ -7,7 +7,10 @@ import type { CSSProperties, ReactNode } from 'react';
 import { Check, ChevronDown, Minus, Plus, Search } from 'lucide-react';
 import './forms.css';
 
-const cx = (...p: (string | false | undefined)[]) => p.filter(Boolean).join(' ');
+/* Фильтруем по типу, а не по истинности: `error` — это `ReactNode`, поэтому
+   выражение `error && 'ui-input--err'` даёт не только строку или `false`
+   (например `null` у пустого поля), и узкая сигнатура ломала типизацию. */
+const cx = (...p: unknown[]) => p.filter((x): x is string => typeof x === 'string' && x !== '').join(' ');
 
 type FieldWrap = {
   label?: ReactNode;

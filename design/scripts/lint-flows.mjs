@@ -24,12 +24,15 @@ const ROOT = fileURLToPath(new URL('..', import.meta.url));
 const REPO = join(ROOT, '..');
 const FLOWS_DIR = join(ROOT, 'src', 'flows');
 const DATA_DIR = join(FLOWS_DIR, 'data');
+const MOCKUPS_DIR = join(ROOT, 'src', 'mockups');
 
 /** Заголовок экрана в markdown: `## Э6.2 · Заявки участников`. */
 const MD_SCREEN = /^##\s+(Э\d+\.\d+)\s+·\s+(.+?)\s*$/gm;
 /** Экран в данных: `id: 'Э6.2'` + следующий за ним `title: '…'`. */
 const TS_SCREEN = /id:\s*'(Э\d+\.\d+)',\s*\n\s*title:\s*'([^']+)'/g;
 const TS_TO = /\bto:\s*'(Э\d+\.\d+)'/g;
+/** Колонка борда макетов: `<Screen code="Э6.2" …>`. */
+const MOCK_CODE = /code="(Э\d+\.\d+)"/g;
 const TS_SOURCE = /\bsource:\s*'([^']+)'/;
 
 const problems = [];
@@ -107,6 +110,26 @@ for (const file of dataFiles) {
     problems.push(
       `${storiesFile}: в подписи истории не ${tsScreens.size} экранов — запустите npm run gen:flows`,
     );
+  }
+
+  // Макеты роли: на каждый экран флоу — своя колонка борда с тем же кодом.
+  const mockFile = file.replace(/\.ts$/, '.tsx');
+  const mockPath = join(MOCKUPS_DIR, mockFile);
+  if (!existsSync(mockPath)) {
+    problems.push(`${mockFile}: нет макетов роли (src/mockups)`);
+    continue;
+  }
+  const mock = readFileSync(mockPath, 'utf8');
+  const mockCodes = new Set(all(MOCK_CODE, mock).map((m) => m[1]));
+  for (const [id, title] of tsScreens) {
+    if (!mockCodes.has(id)) {
+      problems.push(`${mockFile}: нет макета экрана ${id} «${title}»`);
+    }
+  }
+  for (const id of mockCodes) {
+    if (!tsScreens.has(id)) {
+      problems.push(`${mockFile}: макет ${id} — такого экрана у роли нет`);
+    }
   }
 }
 
