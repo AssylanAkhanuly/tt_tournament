@@ -25,6 +25,28 @@ powershell -ExecutionPolicy Bypass -File diagrams/build.ps1
   тянет Playwright, а его CDN сейчас отдаёт 404, поэтому PNG снимается
   headless-браузером.
 
+### Если собираете на Linux без браузера
+
+Headless Chrome падает, когда полотно большое (у `flow-tournaments` это
+2355×8058 — при таком окне процесс валится с trace trap; 800×600 снимается
+нормально). Обходной путь без браузера — рендерить растр через **resvg**, но
+тогда шрифт должен быть один и тот же на обоих концах, иначе D2 считает ширину
+рамок по своим метрикам, а resvg рисует текст другим шрифтом, и подписи вылезают
+за рамки:
+
+```bash
+F=/usr/share/fonts/truetype/liberation
+d2 --layout=dagre --theme=0 --pad=40 \
+   --font-regular $F/LiberationSans-Regular.ttf \
+   --font-bold    $F/LiberationSans-Bold.ttf \
+   --font-italic  $F/LiberationSans-Italic.ttf \
+   flow-tournaments.d2 out/flow-tournaments.svg
+# затем @resvg/resvg-js с fontFiles на те же три файла
+```
+
+Так собран `out/flow-tournaments.*`: шрифт там Liberation Sans, а не штатный
+шрифт D2. Пересборка через `build.ps1` на Windows приведёт его к общему виду.
+
 ## Два движка раскладки, и это не косметика
 
 | Файл | Движок | Почему |
@@ -48,6 +70,7 @@ powershell -ExecutionPolicy Bypass -File diagrams/build.ps1
 | `architecture` | клиенты → шлюз → авторизация → сервисы → движок → данные |
 | `domain` | доменная модель, ERD с ключами |
 | `roles` | иерархия семи ролей и наследование прав |
+| `flow-tournaments` | сценарий по каждому турниру календаря: семь колонок — восемь главных стартов, Евразийская лига (муж./жен.) и открытые турниры. Заменил прежний `flow-tournament-full` |
 | `flow-lifecycle` | жизненный цикл турнира, сквозь все роли |
 | `flow-adm` · `flow-psk` · `flow-head` · `flow-coach` | микрофлоу управляющих ролей: администратор системы, председатель судейской коллегии, главный судья, тренер — рядом, потому что сцеплены |
 | `flow-table-judge` | судья стола: розыгрыши, партии, подача, смена сторон |

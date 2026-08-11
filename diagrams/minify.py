@@ -11,7 +11,7 @@
     edge   d path · s stroke · z dash · L labels
     label  t text · x y · z size · b bold
 
-    python diagrams/minify.py flow-tournament-full
+    python diagrams/minify.py flow-tournaments
 """
 import json
 import re
