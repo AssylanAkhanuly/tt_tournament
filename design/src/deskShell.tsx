@@ -19,11 +19,13 @@ export function DeskFrame({ variant = 'desktop', children }: { variant?: DeskVar
 }
 
 export function Desk({
-  variant = 'desktop', brandName, brandSub, title, sub, nav, activeNav, onNavigate, role, hint, children,
+  variant = 'desktop', brandName, brandSub, badge = 'ИДЁТ', title, sub, nav, activeNav, onNavigate, role, hint, children,
 }: {
   variant?: DeskVariant;
   brandName?: string;
   brandSub?: string;
+  /** Значок состояния рядом с названием. `false` — роль вне турнира, значка нет. */
+  badge?: string | false;
   title: string;
   sub: string;
   nav: [ReactNode, string][];
@@ -44,7 +46,7 @@ export function Desk({
           <div className="bname" style={{ fontSize: 14 }}>{brandName ?? 'Чемпионат Казахстана 2026'}</div>
           <div className="tname">{brandSub ?? 'Одиночный · олимпийская · г. Астана'}</div>
         </div>
-        <span className="live"><span className="d" />ИДЁТ</span>
+        {badge !== false && <span className="live"><span className="d" />{badge}</span>}
         <div className="sp" />
         <button className="iconbtn"><Search size={16} /></button>
         <button className="iconbtn dot"><Bell size={16} /></button>

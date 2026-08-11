@@ -1,0 +1,55 @@
+/* Добавки к макетному слою для макетов по флоу. Всё остальное берём из
+   `gen/desktop.css` и `gen/frame.css`; цвет — только токены. */
+
+/* Код экрана в подписи колонки борда: связывает макет со схемой роли. */
+.mkcode {
+  display: inline-block;
+  padding: 1px 7px;
+  margin-right: 6px;
+  border-radius: var(--r-pill);
+  background: var(--c-accent-soft);
+  border: 1px solid var(--c-accent-line);
+  color: var(--c-accent-2);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: .04em;
+}
+
+/* Пустое состояние экрана. */
+.mkempty {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 28px 18px;
+  border: 1px dashed var(--c-glass-line);
+  border-radius: var(--r-md);
+  background: var(--c-panel-3);
+}
+.mkempty .t { font-size: 14px; font-weight: 700; color: var(--c-ink); }
+.mkempty .s { font-size: 12.5px; line-height: 1.5; color: var(--c-dim); max-width: 46ch; }
+
+/* Поле формы во всю ширину строки. */
+.dfield.wide { grid-column: 1 / -1; }
+
+/* Подпись поля. В макетном слое стилизован только `.dfield > label`, а хелпер
+   `Field` рисует подпись как `.k` — без этого правила она шла дефолтными 16px
+   и спорила со значением. */
+.dfield .k {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  color: var(--c-muted);
+  margin-bottom: 4px;
+}
+
+/* Кнопки-действия в строках: иконка рядом с подписью, а не строкой выше
+   (у `svg` в макетном слое `display: block`). */
+.dpickbtn,
+.dsubmit { display: inline-flex; align-items: center; gap: 6px; }
+
+/* Две колонки в рабочей области, когда на экране список и панель рядом. */
+.mkcols { display: grid; grid-template-columns: 1.35fr 1fr; gap: var(--s-3); align-items: start; }
