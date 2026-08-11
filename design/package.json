@@ -8,7 +8,8 @@
     "build": "storybook build",
     "lint:colors": "node scripts/lint-colors.mjs",
     "lint:flows": "node scripts/lint-flows.mjs",
-    "gen:flows": "node scripts/gen-flow-stories.mjs"
+    "gen:flows": "node scripts/gen-flow-stories.mjs",
+    "gen:diagrams": "node scripts/gen-flow-diagrams.mjs"
   },
   "dependencies": {
     "@xyflow/react": "^12.10.2",
