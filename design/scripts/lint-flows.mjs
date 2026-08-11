@@ -81,7 +81,7 @@ for (const file of dataFiles) {
     if (!tsScreens.has(to)) problems.push(`${file}: переход to: '${to}' — такого экрана у роли нет`);
   }
 
-  // Файл историй: по истории на экран, имена совпадают с данными.
+  // Файл историй роли: показывает её схему, и схема должна быть отрисована.
   const storiesFile = file.replace(/\.ts$/, '.stories.tsx');
   const storiesPath = join(FLOWS_DIR, storiesFile);
   if (!existsSync(storiesPath)) {
@@ -89,15 +89,24 @@ for (const file of dataFiles) {
     continue;
   }
   const stories = readFileSync(storiesPath, 'utf8');
-  for (const [id, title] of tsScreens) {
-    if (!stories.includes(`name: '${id} · ${title}'`)) {
-      problems.push(
-        `${storiesFile}: нет истории «${id} · ${title}» — запустите npm run gen:flows`,
-      );
-    }
+  const scheme = stories.match(/diagrams\/out\/(flow-role-[\d-]+)\.png/)?.[1];
+  if (!scheme) {
+    problems.push(`${storiesFile}: история не подключает схему — запустите npm run gen:flows`);
+    continue;
   }
-  if (!stories.includes("name: 'Весь флоу'")) {
-    problems.push(`${storiesFile}: нет истории «Весь флоу» — запустите npm run gen:flows`);
+  if (!existsSync(join(REPO, 'diagrams', `${scheme}.d2`))) {
+    problems.push(`${scheme}.d2: схема роли не сгенерирована — запустите npm run gen:diagrams`);
+  }
+  if (!existsSync(join(REPO, 'diagrams', 'out', `${scheme}.png`))) {
+    problems.push(
+      `${scheme}.png: схема не отрисована — powershell -File diagrams/build.ps1`,
+    );
+  }
+  // Число экранов в подписи истории — из данных, чтобы не разъезжалось.
+  if (!new RegExp(`name: 'Схема · ${tsScreens.size} экран`).test(stories)) {
+    problems.push(
+      `${storiesFile}: в подписи истории не ${tsScreens.size} экранов — запустите npm run gen:flows`,
+    );
   }
 }
 

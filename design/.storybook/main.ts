@@ -15,6 +15,11 @@ const config: StorybookConfig = {
       '@': resolve(process.cwd(), '../front/src'),
     };
     cfg.resolve.dedupe = [...(cfg.resolve.dedupe ?? []), 'react', 'react-dom', '@xyflow/react'];
+    // Раздел «Флоу» подключает схемы прямо из `diagrams/out/*.png` — это вне
+    // корня проекта, и dev-серверу нужно разрешить чтение оттуда. Копии в
+    // `design/` не держим: те же мегабайты лежали бы в репозитории дважды.
+    cfg.server ??= {};
+    cfg.server.fs = { ...(cfg.server.fs ?? {}), allow: [resolve(process.cwd(), '..')] };
     return cfg;
   },
 };

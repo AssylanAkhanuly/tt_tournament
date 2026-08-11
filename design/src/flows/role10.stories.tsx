@@ -1,16 +1,16 @@
 /* Сгенерировано: npm run gen:flows (источник — data/role10.ts).
-   Руками не правим — правим данные роли и запускаем генератор. */
+   Руками не правим — правим данные роли, затем: npm run gen:diagrams →
+   powershell -File diagrams/build.ps1 → npm run gen:flows. */
 
-import { role10 } from './data/role10';
-import { boardRender, screenRender } from './kit';
+import scheme from '../../../diagrams/out/flow-role-10.png';
+import { Scheme } from './scheme';
 
 export default {
   title: 'Флоу/10 · Инспектор / супервайзер',
   parameters: { layout: 'fullscreen' },
 };
 
-export const Board = { name: 'Весь флоу', render: boardRender(role10) };
-export const S1 = { name: 'Э10.1 · Соревнования на контроле', render: screenRender(role10, 'Э10.1') };
-export const S2 = { name: 'Э10.2 · Ход турнира глазами инспектора', render: screenRender(role10, 'Э10.2') };
-export const S3 = { name: 'Э10.3 · Журнал правок и спорных ситуаций', render: screenRender(role10, 'Э10.3') };
-export const S4 = { name: 'Э10.4 · Заключение', render: screenRender(role10, 'Э10.4') };
+export const Sheme = {
+  name: 'Схема · 4 экрана',
+  render: () => <Scheme src={scheme} alt="Флоу роли 10 · Инспектор / супервайзер" source="flows/10-inspektor.md" />,
+};

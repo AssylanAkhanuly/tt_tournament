@@ -1,14 +1,16 @@
 /* Сгенерировано: npm run gen:flows (источник — data/role02.ts).
-   Руками не правим — правим данные роли и запускаем генератор. */
+   Руками не правим — правим данные роли, затем: npm run gen:diagrams →
+   powershell -File diagrams/build.ps1 → npm run gen:flows. */
 
-import { role02 } from './data/role02';
-import { boardRender, screenRender } from './kit';
+import scheme from '../../../diagrams/out/flow-role-02.png';
+import { Scheme } from './scheme';
 
 export default {
   title: 'Флоу/02 · Экономист / бухгалтер',
   parameters: { layout: 'fullscreen' },
 };
 
-export const Board = { name: 'Весь флоу', render: boardRender(role02) };
-export const S1 = { name: 'Э2.1 · Взносы за сезон', render: screenRender(role02, 'Э2.1') };
-export const S2 = { name: 'Э2.2 · Карточка взноса', render: screenRender(role02, 'Э2.2') };
+export const Sheme = {
+  name: 'Схема · 2 экрана',
+  render: () => <Scheme src={scheme} alt="Флоу роли 2 · Экономист / бухгалтер" source="flows/02-ekonomist.md" />,
+};

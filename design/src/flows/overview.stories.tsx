@@ -1,7 +1,8 @@
-/* Обзор раздела «Флоу»: все роли карточками, отсюда — в маршрут любой роли. */
+/* Обзор раздела «Флоу»: схема со всеми ролями сразу — кто с какого экрана
+   начинает, что нажимает и чего не может. Детали по роли — в её схеме. */
 
-import { ROLES } from './data/all';
-import { RolesOverview } from './spec';
+import scheme from '../../../diagrams/out/flow-roles.png';
+import { Scheme } from './scheme';
 
 export default {
   title: 'Флоу/Обзор',
@@ -9,6 +10,8 @@ export default {
 };
 
 export const AllRoles = {
-  name: 'Все роли',
-  render: () => <RolesOverview roles={ROLES} />,
+  name: 'Все роли — одна схема',
+  render: () => (
+    <Scheme src={scheme} alt="Рабочий путь всех четырнадцати ролей" source="flows/README.md" />
+  ),
 };
