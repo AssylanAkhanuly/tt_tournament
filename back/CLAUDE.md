@@ -1,4 +1,24 @@
-# SpinCoach Backend — Claude Context
+# Бэкенд — Claude Context
+
+## Что это и как соотносится со спекой
+
+Действующий прототип (исторически SpinCoach), на котором стоит платформа ФНТ РК.
+**Он описывает то, что есть в коде сейчас, а не то, что должно получиться** —
+целевые требования лежат в корне: [TZ.md](../TZ.md), модель —
+[ARCHITECTURE.md](../ARCHITECTURE.md) и `diagrams/domain.d2`, сценарии ролей —
+[ROLES.md](../ROLES.md) и [flows/](../flows/README.md).
+
+Главные расхождения прототипа с целевой моделью — не ошибки документа, а объём
+работы впереди:
+
+- **ролей три** (`is_staff`, `ClubAdmin`, игрок), в ТЗ §2 — **четырнадцать** с
+  областью и сроком действия;
+- **статусов турнира три** (`open | in_progress | finished`), в ТЗ §4.3 —
+  **восемь**, и от них зависят права;
+- **форматов два** (`single_elimination`, `group_playoff`), перечень уточняется
+  у федерации ([QUESTIONS.md](../QUESTIONS.md) §13);
+- политик турнира (кто утверждает, куда идёт рейтинг, модель денег) в модели
+  ещё нет — см. `TOURNAMENT_TEMPLATE` в `diagrams/domain.d2`.
 
 ## Stack
 - **Django 5** + **Django REST Framework** + **SimpleJWT** (cookie-based auth)
