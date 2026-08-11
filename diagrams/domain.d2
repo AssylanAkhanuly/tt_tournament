@@ -30,7 +30,7 @@ role: ROLE {
   class: new
   id: uuid {constraint: primary_key}
   user_id: uuid {constraint: foreign_key}
-  kind: "одиннадцать ролей, см. ТЗ §2 (в т.ч. организатор и администратор клуба)"
+  kind: "четырнадцать ролей, см. ТЗ §2 (перечень федерации)"
   scope: "система | турнир | клуб | стол"
   scope_id: uuid
 }
@@ -120,7 +120,7 @@ referee_application: REFEREE_APPLICATION {
   id: uuid {constraint: primary_key}
   tournament_id: uuid {constraint: foreign_key}
   user_id: "uuid — судья-заявитель" {constraint: foreign_key}
-  kind: "главный судья | судья стола"
+  kind: "главный судья | секретарь | зам | судья"
   status: "подана | принята | отклонена"
   reject_reason: string
   decided_by: "uuid — коллегия или главный судья" {constraint: foreign_key}
@@ -137,11 +137,11 @@ fee: MEMBERSHIP_FEE {
   year: "int — календарный или сезон, вопрос (Q 6.4)"
   status: "оплачен | не оплачен | просрочен"
   paid_at: datetime
-  marked_by: "uuid — бухгалтер" {constraint: foreign_key}
+  marked_by: "uuid — экономист/бухгалтер" {constraint: foreign_key}
 }
 
 # Плата ЗА КОНКРЕТНЫЙ ТУРНИР — отдельно от годового взноса. Её ставит
-# организатор клуба, и она есть в т.ч. на любительских турнирах. Годовой взнос
+# администратор клуба, и она есть в т.ч. на любительских турнирах. Годовой взнос
 # (MEMBERSHIP_FEE) — членство в федерации; эта плата — вход в один турнир.
 payment: TOURNAMENT_PAYMENT {
   shape: sql_table
@@ -152,7 +152,7 @@ payment: TOURNAMENT_PAYMENT {
   amount: "int — плата за этот турнир"
   status: "оплачено | не оплачено"
   paid_at: datetime
-  marked_by: "uuid — организатор клуба" {constraint: foreign_key}
+  marked_by: "uuid — администратор клуба" {constraint: foreign_key}
 }
 
 table_: TOURNAMENT_TABLE {
@@ -475,7 +475,7 @@ tournament.id -> application.tournament_id: получает
 tournament.id -> referee_application.tournament_id: конкурс судейства
 user.id -> referee_application.user_id: судья подаёт
 user.id -> fee.user_id: годовой взнос
-user.id -> fee.marked_by: бухгалтер отмечает
+user.id -> fee.marked_by: экономист отмечает
 tournament.id -> payment.tournament_id: плата за турнир
 user.id -> payment.user_id: платит за участие
 user.id -> payment.marked_by: организатор отмечает

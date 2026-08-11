@@ -34,7 +34,9 @@ foreach ($f in $files) {
   # next game, next match), so they must use dagre.
   # domain: elk stretches the ER chart nearly twice as wide as dagre
   # (8660x4372 vs 5575x3449), so it goes through dagre as well.
-  $layout = if ($name -like 'flow-*' -or $name -eq 'domain') { 'dagre' } else { 'elk' }
+  # roles: with the 14-role labels ELK sizes several boxes narrower than their
+  # own text and the captions collide. dagre lays the same file out correctly.
+  $layout = if ($name -like 'flow-*' -or $name -eq 'domain' -or $name -eq 'roles') { 'dagre' } else { 'elk' }
   & $d2 --layout=$layout --theme=0 --pad=40 $f.Name $svg | Out-Null
 
   if (Test-Path $browser) {
