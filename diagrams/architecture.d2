@@ -367,7 +367,7 @@ storage: "7 · ДАННЫЕ · два разных хранилища" {
       class: new
       id: uuid {constraint: primary_key}
       user_id: uuid {constraint: foreign_key}
-      kind: "десять ролей, см. ТЗ §2 (в т.ч. организатор клуба)"
+      kind: "одиннадцать ролей, см. ТЗ §2 (в т.ч. организатор и администратор клуба)"
       scope: "система | турнир | клуб | стол"
       scope_id: uuid
     }
@@ -415,15 +415,28 @@ storage: "7 · ДАННЫЕ · два разных хранилища" {
       govtype: "официальный | клубный — копия kind шаблона, денормализация под фильтр"
       city: string
       format: "олимпийка | круговая | швейцарка"
-      discipline: "одиночный | парный"
+      discipline: "одиночный | парный | командный"
       status: "состояния, см. ТЗ §4.3"
       games_to_win: int
       starts_at: datetime
 
+      # Категория календаря ФНТ РК (ТЗ §4.1). Определяет, КТО подаёт заявку (§8.2):
+      # старший тренер региона | администратор клуба | сам игрок. Это НЕ то же, что
+      # govtype: govtype — кто заводит и утверждает, category — чей это старт.
+      category: "главный республиканский | евразийская лига | открытый республиканский | клубный"
+      gender: "мужской | женский | смешанный"
+
+      # Скользящая возрастная граница (ТЗ §4.1): хранится ГОД РОЖДЕНИЯ и сезон, а не
+      # строка в названии. Каждый сезон граница +1 (2007 → 2008 → …), название вида
+      # «… 2008 г.р. и моложе» строится из этих двух полей.
+      season: "int — сезон календаря"
+      age_max_birth_year: "int — «этого г.р. и моложе»; пусто = без ограничения"
+
       # Политики — ИСТОЧНИК ПРАВДЫ поведения. Шаблон засевает их при создании,
       # дальше это собственные поля турнира. Код ветвится по approval_by /
-      # rating_pool / …, а НЕ по govtype. «Лига» и «любительский» — это один и тот
-      # же клубный турнир с разным набором значений, а не отдельные категории.
+      # rating_pool / …, а НЕ по govtype. Клубная «лига» и «любительский» — это один
+      # и тот же клубный турнир с разным набором значений, а не отдельные категории
+      # (республиканская Евразийская лига — другое, см. командную ветку ниже).
       approval_by: "none | collegium — кто утверждает систему и протокол"
       judge_appointed_by: "organizer | collegium — кто назначает главного судью"
       rating_pool: "none | internal | official — куда идёт результат"
@@ -520,11 +533,71 @@ storage: "7 · ДАННЫЕ · два разных хранилища" {
       attended: "bool — вышел на игру; неявка учитывается по регламенту (сверка явки → рейтинг)"
     }
 
+    # ——— Евразийская лига: командная ветка (ТЗ §4.10) ———
+    # Участник соревнования здесь не игрок, а КОМАНДА клуба. Личный турнир этой
+    # ветки не касается: у него team_match_id пустой. Правила встречи, очков и
+    # переходов между лигами пока не получены от федерации (QUESTIONS 11.1–11.4),
+    # поэтому здесь только каркас: дивизион → тур → командная встреча → личные матчи.
+    division: LEAGUE_DIVISION {
+      shape: sql_table
+      class: new
+      id: uuid {constraint: primary_key}
+      season: "int — сезон"
+      gender: "мужской | женский — розыгрыши раздельные"
+      name: "Суперлига | 2 лига … 6 лига"
+      level: "int — 1 = Суперлига; мужских 6, женских 2"
+    }
+
+    tour: LEAGUE_TOUR {
+      shape: sql_table
+      class: new
+      id: uuid {constraint: primary_key}
+      division_id: uuid {constraint: foreign_key}
+      number: "int — тур 1..4 за сезон"
+      city: string
+      starts_at: datetime
+    }
+
+    team: TEAM {
+      shape: sql_table
+      class: new
+      id: uuid {constraint: primary_key}
+      club_id: "uuid — команду заявляет клуб" {constraint: foreign_key}
+      division_id: "uuid — в какой лиге играет в этом сезоне" {constraint: foreign_key}
+      name: string
+      submitted_by: "uuid — администратор клуба (ТЗ §2)" {constraint: foreign_key}
+    }
+
+    # Состав. tour_id пустой = заявлен на весь сезон; иначе состав на конкретный тур
+    # (от тура к туру он может меняться — QUESTIONS 11.4).
+    team_member: TEAM_MEMBER {
+      shape: sql_table
+      class: new
+      id: uuid {constraint: primary_key}
+      team_id: uuid {constraint: foreign_key}
+      user_id: uuid {constraint: foreign_key}
+      tour_id: "uuid — пусто = на сезон" {constraint: foreign_key}
+    }
+
+    # Встреча «команда против команды». Счёт (4:2) — производная от личных матчей
+    # внутри, как MATCH не хранит 3:1. Схема встречи — QUESTIONS 11.1.
+    team_match: TEAM_MATCH {
+      shape: sql_table
+      class: new
+      id: uuid {constraint: primary_key}
+      tour_id: uuid {constraint: foreign_key}
+      team_a_id: uuid {constraint: foreign_key}
+      team_b_id: uuid {constraint: foreign_key}
+      status: "ожидает | идёт | завершена"
+      winner_team_id: uuid {constraint: foreign_key}
+    }
+
     match: MATCH {
       shape: sql_table
       class: core
       id: uuid {constraint: primary_key}
       tournament_id: uuid {constraint: foreign_key}
+      team_match_id: "uuid — личная встреча внутри командной; пусто на личном турнире" {constraint: foreign_key}
       table_id: uuid {constraint: foreign_key}
       round: "1/8 | 1/4 | финал"
       side_a_id: uuid {constraint: foreign_key}

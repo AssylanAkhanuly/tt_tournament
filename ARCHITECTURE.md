@@ -820,6 +820,17 @@ erDiagram
     ENTRY ||--o{ MATCH : "сторона матча"
     TOURNAMENT_TABLE ||--o{ MATCH : "проводит"
 
+    CLUB ||--o{ TEAM : "заявляет команду в Евразийскую лигу"
+    USER ||--o{ TEAM : "администратор клуба подаёт"
+    LEAGUE_DIVISION ||--o{ TEAM : "команды дивизиона"
+    LEAGUE_DIVISION ||--|{ LEAGUE_TOUR : "четыре тура за сезон"
+    TEAM ||--|{ TEAM_MEMBER : "состав"
+    USER ||--o{ TEAM_MEMBER : "заявлен за команду"
+    LEAGUE_TOUR |o--o{ TEAM_MEMBER : "состав на тур"
+    LEAGUE_TOUR ||--o{ TEAM_MATCH : "встречи тура"
+    TEAM ||--o{ TEAM_MATCH : "сторона встречи"
+    TEAM_MATCH ||--|{ MATCH : "личные встречи внутри командной"
+
     MATCH ||--|{ GAME : "состоит из партий"
     GAME ||--o{ RALLY : "розыгрыши"
     MATCH ||--o{ MATCH_EVENT : "смена сторон и подачи"
@@ -872,8 +883,11 @@ erDiagram
         string level "открытый (городской) | республиканский"
         string city
         string format "олимпийка | двойное выбывание | группы+плей-офф | круговая | швейцарская | все места"
-        string discipline "одиночный | парный"
+        string discipline "одиночный | парный | командный"
         string division "мужчины | женщины | микст"
+        string calendarCategory "категория календаря ТЗ §4.1: главный республиканский | евразийская лига | открытый республиканский | клубный — определяет, кто заявляет"
+        int season "сезон календаря"
+        int ageMaxBirthYear "«этого г.р. и моложе»; пусто = без ограничения. Каждый сезон +1 — граница скользит, в название не зашита"
         boolean isRated "учитывается ли в рейтинге"
         string ratingLimit "ценз по рейтингу (клубный), если задан"
         int entryFee "плата за участие (клубный), 0 если нет"
@@ -929,9 +943,45 @@ erDiagram
         int place
         boolean attended "вышел на игру; неявка по регламенту (сверка явки → рейтинг)"
     }
+    LEAGUE_DIVISION {
+        uuid id PK
+        int season
+        string gender "мужской | женский — розыгрыши раздельные"
+        string name "Суперлига | 2 лига … 6 лига"
+        int level "1 = Суперлига; мужских 6, женских 2"
+    }
+    LEAGUE_TOUR {
+        uuid id PK
+        uuid divisionId FK
+        int number "тур 1..4 за сезон"
+        string city
+        datetime startsAt
+    }
+    TEAM {
+        uuid id PK
+        uuid clubId FK "команду заявляет клуб"
+        uuid divisionId FK "в какой лиге играет в этом сезоне"
+        string name
+        uuid submittedBy FK "администратор клуба (ТЗ §2)"
+    }
+    TEAM_MEMBER {
+        uuid id PK
+        uuid teamId FK
+        uuid userId FK
+        uuid tourId FK "пусто = заявлен на весь сезон; иначе состав на конкретный тур"
+    }
+    TEAM_MATCH {
+        uuid id PK
+        uuid tourId FK
+        uuid teamAId FK
+        uuid teamBId FK
+        string status "ожидает | идёт | завершена"
+        uuid winnerTeamId FK "счёт встречи — производная от личных матчей внутри"
+    }
     MATCH {
         uuid id PK
         uuid tournamentId FK
+        uuid teamMatchId FK "личная встреча внутри командной (Евразийская лига); пусто на личном турнире"
         uuid tableId FK
         string round "1/8 | 1/4 | 1/2 | финал"
         uuid sideAId FK "ENTRY"

@@ -13,6 +13,11 @@ stats: "Аналитика\nматчи · победы · винрейт · ра
 chart: График динамики рейтинга { class: step }
 
 nearest: "Ближайший турнир\nстатус регистрации" { class: step }
+
+# Кто заявляет — зависит от категории соревнования (TZ §4.1, §8.2). Сам игрок
+# заявляется только на открытые республиканские и клубные турниры.
+kind: Какое это соревнование? { class: decide }
+via_rep: "Заявляет представитель\nна чемпионаты и Кубок РК — старший тренер региона,\nв Евразийскую лигу — администратор клуба" { class: muted }
 apply: Заявиться самому? { class: decide }
 submit: "Подаёт заявку без тренера" { class: step }
 verdict: Заявка одобрена? { class: decide }
@@ -34,7 +39,10 @@ login -> home
 home -> stats
 stats -> chart
 home -> nearest
-nearest -> apply
+nearest -> kind
+kind -> apply: "открытое республиканское или клубное"
+kind -> via_rep: "чемпионат, Кубок РК или Евразийская лига"
+via_rep -> verdict
 apply -> submit: да
 submit -> verdict
 verdict -> rejected: нет { class: back }

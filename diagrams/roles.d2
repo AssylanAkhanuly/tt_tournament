@@ -30,6 +30,7 @@ buh: "Бухгалтер\nвзносы" {
 }
 tr: "Тренер\nсвой клуб или регион" { class: good }
 org: "Организатор клуба\nклубные турниры: регламент, судья, плата" { class: good }
+adminclub: "Администратор клуба\nрегистрация клуба · заявка команды в Евразийскую лигу" { class: good }
 ss: "Судья стола\nодин стол" { class: step }
 ig: "Игрок\nсвой профиль · сайт и приложение" { class: step }
 go: "Гость\nтолько чтение" { class: muted }
@@ -40,6 +41,7 @@ adm -> psk: "заводит аккаунт\nно не судейские пра�
 adm -> tr: заводит аккаунт { class: back }
 adm -> buh: заводит аккаунт { class: back }
 adm -> org: заводит аккаунт { class: back }
+adm -> adminclub: заводит аккаунт { class: back }
 psk -> gs
 org -> gs: назначает на клубных { class: loop }
 gs -> ss
@@ -47,6 +49,7 @@ gs -> ig
 buh -> ig: допуск по взносу { class: loop }
 tr -> ig
 org -> ig: клубные турниры { class: loop }
+adminclub -> ig: заявляет в состав команды { class: loop }
 ss -> ig
 ig -> go
 
