@@ -9,6 +9,12 @@
 [ROLES.md](../ROLES.md). Маршруты в картинках — `diagrams/out/flow-roles.svg`;
 коды экранов на схеме и здесь совпадают.
 
+**Смотреть в браузере:** раздел **Флоу** в Storybook (`cd design && npm run
+storybook`, опубликовано на https://storybook-static-nu-two.vercel.app) — те же
+маршруты, где **каждый экран открывается отдельной страницей**, а по флоу можно
+ходить кликом. Содержание берётся из этих файлов: правим здесь →
+переносим в `design/src/flows/data/roleNN.ts` (см. `design/README.md`).
+
 | № | Роль | Файл | Устройство |
 |---|---|---|---|
 | 1 | Администратор Федерации | [01-admin-federacii.md](01-admin-federacii.md) | десктоп |
@@ -19,7 +25,7 @@
 | 6 | Главный судья соревнований | [06-glavnyy-sudya.md](06-glavnyy-sudya.md) | десктоп |
 | 7 | Главный секретарь соревнований | [07-glavnyy-sekretar.md](07-glavnyy-sekretar.md) | десктоп |
 | 8 | Заместитель главного судьи | [08-zam-glavnogo-sudi.md](08-zam-glavnogo-sudi.md) | десктоп ⚠ |
-| 9 | Судья | [09-sudya.md](09-sudya.md) | планшет / телефон |
+| 9 | Судья | [09-sudya.md](09-sudya.md) | адаптивный сайт: планшет за столом, телефон |
 | 10 | Инспектор / супервайзер | [10-inspektor.md](10-inspektor.md) | десктоп |
 | 11 | Главный тренер национальной команды | [11-glavnyy-trener-sbornoy.md](11-glavnyy-trener-sbornoy.md) | десктоп ⚠ |
 | 12 | Старший тренер региона | [12-starshiy-trener-regiona.md](12-starshiy-trener-regiona.md) | десктоп |
