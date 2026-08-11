@@ -10,8 +10,11 @@
 
 import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join, relative } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
-const ROOT = new URL('..', import.meta.url).pathname;
+// Через fileURLToPath, а не `.pathname`: на Windows тот отдаёт «/C:/…», и
+// join() склеивает «C:\C:\…» — проверка падала, не начав работу.
+const ROOT = fileURLToPath(new URL('..', import.meta.url));
 const SCAN = ['src', 'gen'];
 const SKIP_DIRS = new Set(['node_modules', 'out', 'assets']);
 const TOKENS_FILE = 'src/theme/tokens.css';
