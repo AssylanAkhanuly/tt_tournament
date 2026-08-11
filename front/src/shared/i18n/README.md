@@ -10,4 +10,4 @@
 
 Ключи типобезопасны через TS-augmentation (`i18next.d.ts`, `resources`).
 Контент CMS переводится отдельно (`wagtail-localize`), данные хранятся как введены
-(см. ARCHITECTURE.md → «Мультиязычность», QUESTIONS 16.1).
+(см. ARCHITECTURE.md → «Мультиязычность», QUESTIONS 14.1).
