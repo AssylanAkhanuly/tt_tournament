@@ -146,10 +146,10 @@
 показывает жизненный цикл выше, а здесь у каждой роли свой микрофлоу, и их
 удобно читать и править по одному.
 
-У председателя два шлагбаума: система проведения утверждается **до**
-публикации, итоговый протокол **после** игры. Всё, что между ними, — зона
-главного судьи турнира. Решение в обоих случаях принимает судья, председатель
-его утверждает.
+У председателя **один шлагбаум**: итоговый протокол после игры. Систему
+проведения главный судья строит сам, по регламенту и подсказке системы —
+утверждение коллегией не требуется ([TZ.md](TZ.md) §4.6). Всё, что до
+протокола, — зона главного судьи турнира.
 
 ![Администратор системы](diagrams/out/flow-adm.svg)
 
@@ -251,9 +251,10 @@ flowchart TD
 Сквозной сценарий через все роли. ПСК — председатель судейской коллегии,
 ГС — главный судья турнира, СС — судья стола.
 
-**Два шлагбаума коллегии:** система проведения утверждается до публикации,
-итоговый протокол после игры. Первый решает, состоится ли турнир в таком виде, второй
-решает, попадёт ли он в рейтинг.
+**Один шлагбаум коллегии:** итоговый протокол после игры — он решает, попадёт
+ли турнир в рейтинг. Система проведения утверждения не требует ([TZ.md](TZ.md)
+§4.6), а строится она **после сбора состава**: сетку нельзя построить раньше,
+чем известно, кто играет (§4.3).
 
 ```mermaid
 flowchart TD
@@ -261,10 +262,9 @@ flowchart TD
     openRef["Открыт приём заявок судей"]
     refApply["Судья подаёт заявку на судейство"]
     pickRef["ПСК выбирает судью: рейтинг, категория, история"]
-    organize["ГС выбирает систему проведения: формат, дисциплина, расписание, столы"]
-    gateOrg{"ПСК: система проведения утверждена?"}
-    rework["Возврат с причиной — турнир не публикуется"]
     publish["Турнир опубликован, открыт приём заявок игроков"]
+    closeApp["ГС закрывает приём заявок — состав собран"]
+    organize["ГС строит систему проведения: формат, сетка, расписание, столы"]
     coachApply["Тренер подаёт заявку со списком игроков"]
     selfApply["Игрок подаёт заявку сам"]
     review{"ГС: заявка одобрена?"}
@@ -289,11 +289,7 @@ flowchart TD
     createT --> openRef
     openRef --> refApply
     refApply --> pickRef
-    pickRef --> organize
-    organize --> gateOrg
-    gateOrg -->|"Нет"| rework
-    rework --> organize
-    gateOrg -->|"Да"| publish
+    pickRef --> publish
     publish --> coachApply
     publish --> selfApply
     coachApply --> review
@@ -301,7 +297,9 @@ flowchart TD
     review -->|"Нет"| rejected
     rejected --> publish
     review -->|"Да"| participants
-    participants --> assignTable
+    participants --> closeApp
+    closeApp --> organize
+    organize --> assignTable
     assignTable --> refGate
     refGate -->|"Нет"| blockStart
     blockStart --> assignTable
@@ -323,12 +321,10 @@ flowchart TD
     style engineGen fill:#DCCCFF,stroke:#874FFF
     style engineAdv fill:#DCCCFF,stroke:#874FFF
     style engineRating fill:#DCCCFF,stroke:#874FFF
-    style gateOrg fill:#FFECBD,stroke:#FFC943
     style gateRes fill:#FFECBD,stroke:#FFC943
     style review fill:#FFECBD,stroke:#FFC943
     style refGate fill:#FFECBD,stroke:#FFC943
     style more fill:#FFECBD,stroke:#FFC943
-    style rework fill:#FFCDC2,stroke:#FF7556
     style fixRes fill:#FFCDC2,stroke:#FF7556
     style rejected fill:#FFCDC2,stroke:#FF7556
     style blockStart fill:#FFCDC2,stroke:#FF7556
@@ -380,8 +376,6 @@ flowchart LR
     openRef["Открывает приём заявок судей"]
     inbox["Заявки судей: рейтинг, категория, история"]
     pick["Выбирает судью"]
-    gateOrg{"Система проведения утверждена?"}
-    rework["Возврат с причиной — не публикуется"]
     publish["Утверждает — турнир опубликован"]
     gateRes{"Итоговый протокол утверждён?"}
     fix["Возврат с причиной — ввод открыт"]
@@ -391,18 +385,13 @@ flowchart LR
     create --> openRef
     openRef --> inbox
     inbox --> pick
-    pick --> gateOrg
-    gateOrg -->|"Нет"| rework
-    rework --> gateOrg
-    gateOrg -->|"Да"| publish
+    pick --> publish
     publish --> gateRes
     gateRes -->|"Нет"| fix
     fix --> gateRes
     gateRes -->|"Да"| accept
 
-    style gateOrg fill:#FFECBD,stroke:#FFC943
     style gateRes fill:#FFECBD,stroke:#FFC943
-    style rework fill:#FFCDC2,stroke:#FF7556
     style fix fill:#FFCDC2,stroke:#FF7556
     style publish fill:#CDF4D3,stroke:#66D575
     style accept fill:#CDF4D3,stroke:#66D575
@@ -426,7 +415,6 @@ flowchart LR
     organize["Выбирает систему проведения: формат, дисциплина, число партий"]
     bracket["Собирает сетку: библиотека или конструктор"]
     schedule["Расписание по дням и столам"]
-    submitOrg["Отправляет систему проведения на утверждение"]
     inbox["Заявки: от тренеров и от игроков"]
     decide{"Заявка одобрена?"}
     reject["Отклоняет с причиной"]
@@ -448,8 +436,6 @@ flowchart LR
     got --> organize
     organize --> bracket
     bracket --> schedule
-    schedule --> submitOrg
-    submitOrg --> inbox
     inbox --> decide
     decide -->|"Нет"| reject
     reject --> inbox

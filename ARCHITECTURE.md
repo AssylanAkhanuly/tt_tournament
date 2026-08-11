@@ -208,9 +208,10 @@ S1–S4, расчёт расписания, инварианты (стол не 
 **Тип управления, а не категория.** Определяющее различие — кто турнир заводит:
 **официальный** (Федерация / ГСК) или **клубный** (администратор клуба). «Лига»
 и «любительский» — это клубные турниры, а их свойства (судьи, рейтинг, плата за
-турнир, ценз по рейтингу) — независимые флаги, а не следствие ярлыка. В модели
-это набор булевых полей на турнире, а не enum с зашитым поведением: иначе любое
-исключение потребует новой категории.
+турнир, ценз по рейтингу) — независимые поля-политики, а не следствие ярлыка.
+В модели это набор собственных полей турнира (`approval_by`, `rating_pool`,
+`fee_model`, …), засеянных шаблоном регламента, а не enum с зашитым поведением:
+иначе любое исключение потребует новой категории.
 
 **Счёт вводит судья стола или главный судья.** Там, где судей на столах нет
 (клубные турниры), счёт ведёт главный судья: победитель называет ему результат,
@@ -853,6 +854,12 @@ erDiagram
     TOURNAMENT ||--o{ RATING_POINT : "изменение по итогам"
     TOURNAMENT }o--o| BRACKET_TEMPLATE : "собрана по шаблону"
     USER ||--o{ BRACKET_TEMPLATE : "автор шаблона"
+    TOURNAMENT }o--o| TOURNAMENT_TEMPLATE : "заведён по пресету регламента"
+    USER |o--o{ TOURNAMENT_TEMPLATE : "владелец кастомного шаблона"
+    USER ||--o{ MEMBERSHIP_FEE : "годовой взнос федерации"
+    USER ||--o{ MEMBERSHIP_FEE : "экономист отмечает оплату"
+    USER ||--o{ NOTIFICATION : "уведомления по семи событиям"
+    USER ||--o{ PUSH_TOKEN : "устройства приложения"
     USER ||--o{ NEWS_POST : "автор публикации"
     TOURNAMENT |o--o{ NEWS_POST : "анонс про турнир"
     USER ||--o{ JUDGE_DOCUMENT : "судья подаёт"
@@ -900,12 +907,15 @@ erDiagram
         string calendarCategory "категория календаря ТЗ §4.1: главный республиканский | евразийская лига | открытый республиканский | клубный — определяет, кто заявляет"
         int season "сезон календаря"
         int ageMaxBirthYear "«этого г.р. и моложе»; пусто = без ограничения. Каждый сезон +1 — граница скользит, в название не зашита"
-        boolean isRated "учитывается ли в рейтинге"
-        string ratingLimit "ценз по рейтингу (клубный), если задан"
-        int entryFee "плата за участие (клубный), 0 если нет"
-        boolean needsTableReferees
-        boolean needsFee "годовой взнос (официальный)"
-        boolean needsApproval "утверждение коллегией (официальный)"
+        uuid templateId FK "из какого шаблона засеян регламент"
+        string approvalBy "none | collegium — кто утверждает протокол"
+        string judgeAppointedBy "organizer | collegium — кто назначает главного судью"
+        string ratingPool "none | internal | official — куда идёт результат"
+        string feeModel "none | entry_fee | annual_membership — модель денег"
+        int entryFee "сумма, если feeModel = entry_fee"
+        string ratingLimit "ценз по рейтингу, если задан"
+        boolean needsTableReferees "судьи на столах"
+        boolean needsDocuments "документы к заявке"
         string status "черновик | заявки судей | судья назначен | заявки игроков | система проведения | идёт | протокол на утверждении | завершён"
         int gamesToWin "партий до победы — обычно 3 из 5"
         datetime startsAt
@@ -1054,6 +1064,46 @@ erDiagram
         boolean isCustom "из конструктора"
         uuid createdBy FK
     }
+    TOURNAMENT_TEMPLATE {
+        uuid id PK
+        string name "«Официальный республиканский» | «Клубный» | своё"
+        string kind "официальный | клубный — класс полномочий"
+        boolean isSystem "встроенный пресет федерации"
+        uuid ownerId FK "пусто = глобальный"
+        string approvalBy "none | collegium"
+        string judgeAppointedBy "organizer | collegium"
+        string ratingPool "none | internal | official"
+        string feeModel "none | entry_fee | annual_membership"
+        int defaultEntryFee
+        boolean needsTableReferees
+        boolean needsDocuments
+        string ratingLimit
+    }
+    MEMBERSHIP_FEE {
+        uuid id PK
+        uuid userId FK
+        int year "календарный или сезон — вопрос 6.4"
+        string status "оплачен | не оплачен | просрочен"
+        datetime paidAt
+        uuid markedBy FK "экономист / бухгалтер"
+    }
+    NOTIFICATION {
+        uuid id PK
+        uuid userId FK
+        string kind "семь событий, ТЗ §10.1"
+        string title
+        string body
+        datetime createdAt
+        datetime readAt "пусто, пока не открыто"
+    }
+    PUSH_TOKEN {
+        uuid id PK
+        uuid userId FK
+        string token "токен Expo, один формат на обе ОС"
+        string platform "ios | android"
+        datetime createdAt
+        datetime revokedAt "выход или DeviceNotRegistered"
+    }
     NEWS_POST {
         uuid id PK "Wagtail Page"
         string kind "новость | анонс"
@@ -1142,11 +1192,14 @@ erDiagram
   Прежнее допущение о втором конкурсе (QUESTIONS 12) снято по замечанию Андрея.
 - **Тип управления, а не категория с зашитым поведением.** `govtype`
   (официальный / клубный) говорит, кто турнир заводит; всё остальное —
-  независимые булевы флаги: `needs_table_referees`, `is_rated`, `needs_fee`,
-  `needs_approval`, плюс `rating_limit` (ценз) и `entry_fee` (плата за турнир)
-  ([TZ.md](TZ.md) §4.1). «Лига» и «любительский» — это клубные турниры с разным
-  набором флагов, а не отдельные значения enum. Если зашить поведение в ярлык,
-  любое исключение («лига с судьями») потребует новой категории.
+  **поля-политики**, по которым и ветвится код: `approval_by`,
+  `judge_appointed_by`, `rating_pool`, `fee_model`, плюс `needs_table_referees`,
+  `needs_documents`, `rating_limit` (ценз) и `entry_fee` (плата за турнир)
+  ([TZ.md](TZ.md) §4.1). Значения засевает `TOURNAMENT_TEMPLATE` при создании,
+  дальше это собственные поля турнира. «Лига» и «любительский» — это клубные
+  турниры с разным набором значений, а не отдельные значения enum. Если зашить
+  поведение в ярлык, любое исключение («лига с судьями») потребует новой
+  категории.
 - **Два разных платежа — две сущности.** `MEMBERSHIP_FEE` — годовой членский
   взнос федерации (свой год, дата, автор-экономист, три состояния: оплачен, не
   оплачен, просрочен). `TOURNAMENT_PAYMENT` — плата за участие в конкретном
@@ -1168,7 +1221,15 @@ erDiagram
   результат расчёта, а не его правила. `RATING_POINT` — история значений, `kind`
   разделяет рейтинг игроков и судей. Так выбор методики останется правкой
   сервиса, а не переездом данных.
-- **`BRACKET_TEMPLATE`** — конструктор сеток сохраняет шаблоны в библиотеку.
+- **`TOURNAMENT_TEMPLATE`** — пресеты регламента («Официальный
+  республиканский», «Клубный», свои) живут **данными**, а не в коде: при
+  создании турнира шаблон копирует значения политик в поля турнира, и правка
+  шаблона не меняет уже созданные турниры.
+- **`BRACKET_TEMPLATE`** — конструктор сеток сохраняет шаблоны в библиотеку
+  ([TZ.md](TZ.md) §5.2). ⚠ **Расхождение:** этой таблицы нет в `domain.d2`
+  (источнике модели) — там формат сетки лежит полем на турнире. Нужно решение:
+  либо завести таблицу в `domain.d2`, либо признать, что сохранённых шаблонов
+  сетки в первой версии нет, и убрать её отсюда.
 - **`NEWS_POST` — тип страницы Wagtail, готовый CMS внутри того же Django.** Одна
   сущность на новость и анонс, различает `kind`. Анонс: `pinned`, опциональный
   `tournament_id` (кнопка «К турниру») и рассылка пушем через воркер (хук
