@@ -15,6 +15,7 @@ import { Tab, MiniTabBar } from '../respShell';
 import { Frame } from '../PlayerApp';
 import { A, AW } from '../fedCommon';
 import { Brand } from '../ui';
+import { NodeSpec, useNodeSpec } from '../flows/nodeSpec';
 import './mockups.css';
 
 export { A, AW, Tab };
@@ -130,14 +131,20 @@ export function Board({ role, children }: { role: RoleUI; children: ReactNode })
   );
 }
 
-/** Колонка борда: код экрана и его название над макетом. */
+/** Колонка борда: код экрана и его название над макетом.
+
+    Если борд обёрнут в `<Paired>` (раздел «Флоу»), под макетом встаёт карточка
+    узла — требование к этому же экрану из данных роли. В разделе «Макеты»
+    контекста нет, и колонка выглядит как раньше. */
 export function Screen({ code, cap, children }: { code: string; cap: string; children: ReactNode }) {
+  const spec = useNodeSpec(code);
   return (
     <div className="col">
       <div className="cap">
         <span className="mkcode">{code}</span> {cap}
       </div>
       {children}
+      {spec && <NodeSpec screen={spec} />}
     </div>
   );
 }

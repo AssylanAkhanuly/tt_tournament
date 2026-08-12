@@ -183,6 +183,8 @@
   --c-board-accent:      var(--seed-board-accent);
   --c-board-accent-soft: color-mix(in srgb, var(--c-board-accent) 9%,  var(--seed-white));
   --c-board-accent-line: color-mix(in srgb, var(--c-board-accent) 19%, var(--seed-white));
+  --c-board-line:        color-mix(in srgb, var(--c-board-ink) 14%, transparent);       /* рамка карточки на борде */
+  --c-board-panel:       color-mix(in srgb, var(--seed-white) 55%, var(--c-board-bg));  /* карточка узла флоу */
 
   /* фоновый орнамент: лента узора со щита логотипа ФНТ (brand/fnt/fnt-logo.svg —
      оттуда вынуты кривые орнамента, см. src/theme/ornament-logo-band.svg).

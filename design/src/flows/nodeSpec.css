@@ -1,0 +1,154 @@
+/* Карточка узла флоу под макетом экрана. Живёт на полотне борда, поэтому цвет
+   берём из board-токенов (`--c-board-*`), а не из экранных: вокруг светлая
+   подложка презентации, а не тёмный интерфейс. */
+
+.fnode {
+  align-self: stretch;
+  margin-top: 14px;
+  padding: 14px 15px 15px;
+  border: 1px solid var(--c-board-line);
+  border-radius: var(--r-md);
+  background: var(--c-board-panel);
+  display: flex;
+  flex-direction: column;
+  gap: 11px;
+  text-align: left;
+  box-sizing: border-box;
+  /* Ширину колонки задаёт МАКЕТ, а не карточка. `width: 0` убирает карточку из
+     расчёта max-content (иначе длинная строка требования растягивала колонку до
+     тысячи с лишним пикселей и уносила стрелку перехода за экран), а
+     `min-width: 100%` возвращает ей ширину колонки. */
+  width: 0;
+  min-width: 100%;
+}
+
+/* Мера строки: на десктопной колонке в 1200 px текст во всю ширину не читается */
+.fnode > * { max-width: 92ch; }
+
+/* Заголовок раздела карточки: «как попадает», «зоны», «действия», «состояния» */
+.fnode h4 {
+  margin: 0;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: .09em;
+  text-transform: uppercase;
+  color: var(--c-board-muted);
+}
+
+.fnode-sec { display: flex; flex-direction: column; gap: 6px; }
+
+.fnode ul { margin: 0; padding-left: 16px; display: flex; flex-direction: column; gap: 4px; }
+.fnode li { font-size: 12.5px; line-height: 1.5; color: var(--c-board-ink); }
+
+/* Зона экрана: название и состав через тире — плотнее, чем вложенным списком */
+.fnode-zone { font-size: 12.5px; line-height: 1.5; color: var(--c-board-ink); }
+.fnode-zone b { font-weight: 700; }
+.fnode-zone span { color: var(--c-board-muted); }
+.fnode-note { display: block; font-size: 11.5px; color: var(--c-board-muted); font-style: italic; }
+
+/* Действие: что нажимает → что происходит, с условием доступности */
+.fnode-act { font-size: 12.5px; line-height: 1.5; color: var(--c-board-ink); }
+.fnode-act b { font-weight: 700; }
+.fnode-when {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--c-board-accent);
+  background: var(--c-board-accent-soft);
+  border-radius: var(--r-pill);
+  padding: 1px 7px;
+  margin-left: 4px;
+}
+/* Переход на другой экран роли — тем же значком кода, что в подписи колонки */
+.fnode-to {
+  display: inline-block;
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: .04em;
+  color: var(--c-board-accent);
+  border: 1px solid var(--c-board-accent-line);
+  border-radius: var(--r-pill);
+  padding: 0 6px;
+  margin-left: 4px;
+}
+
+/* Состояние экрана: тон подсказывает, о чём речь — пусто, ждём, нельзя */
+.fnode-state { font-size: 12.5px; line-height: 1.5; padding-left: 9px; border-left: 2px solid var(--c-board-line); }
+.fnode-state b { font-weight: 700; color: var(--c-board-ink); }
+.fnode-state span { color: var(--c-board-muted); }
+.fnode-state.info { border-left-color: var(--c-board-accent); }
+.fnode-state.success { border-left-color: var(--c-success); }
+.fnode-state.warning { border-left-color: var(--c-warning); }
+.fnode-state.danger { border-left-color: var(--c-danger); }
+
+/* ✳ — наше решение, ждёт подтверждения федерации; ⚠ — открытый вопрос */
+.fnode-mark { font-size: 11px; margin-left: 3px; }
+.fnode-mark.ours { color: var(--c-board-accent); }
+.fnode-mark.open { color: var(--c-warning); }
+
+/* Шапка карточки: чем экран является, если из названия не видно */
+.fnode-lead { font-size: 12.5px; line-height: 1.55; color: var(--c-board-muted); margin: 0; }
+
+/* ── Парный вид целиком: вводная, борд, подвал ────────────────────
+   Одно светлое полотно на всё: борд внутри уже красит фон сам, поэтому
+   обёртка повторяет его подложку и ширину по содержимому, иначе вводная
+   висела бы на тёмном фоне истории. */
+
+.fpaired {
+  background: var(--c-board-bg);
+  color: var(--c-board-ink);
+  font-family: var(--font);
+  width: max-content;
+  -webkit-font-smoothing: antialiased;
+}
+
+.fpaired-lead {
+  padding: 36px 44px 0;
+  max-width: 900px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.fpaired-route { font-size: 14px; line-height: 1.6; }
+.fpaired-meta { display: flex; flex-wrap: wrap; gap: 14px; font-size: 12px; color: var(--c-board-muted); }
+.fpaired-meta code { font-size: 11.5px; }
+
+.fpaired-warn {
+  font-size: 12.5px;
+  line-height: 1.55;
+  padding: 9px 12px;
+  border-radius: var(--r-md);
+  border: 1px solid var(--c-warning);
+  background: var(--c-warning-soft);
+}
+
+.fpaired-legend { display: flex; flex-wrap: wrap; gap: 16px; font-size: 11.5px; color: var(--c-board-muted); }
+.fpaired-legend b.ours { color: var(--c-board-accent); }
+.fpaired-legend b.open { color: var(--c-warning); }
+
+/* Борд внутри обёртки: свой отступ сверху уже не нужен, его дала вводная */
+.fpaired .board { padding-top: 24px; }
+
+/* Стрелка перехода: в «Макетах» она по центру колонки, но здесь колонка выросла
+   на высоту карточки узла, и центр уехал бы куда-то в середину требования.
+   Прижимаем к верху — стрелка встаёт вровень с макетами. */
+.fpaired .arrow { align-self: flex-start; padding-top: 40px; }
+
+.fpaired-foot {
+  display: flex;
+  gap: 40px;
+  flex-wrap: wrap;
+  padding: 4px 44px 44px;
+  max-width: 1100px;
+}
+.fpaired-col { flex: 1 1 320px; display: flex; flex-direction: column; gap: 8px; }
+.fpaired-col h4 {
+  margin: 0;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: .09em;
+  text-transform: uppercase;
+  color: var(--c-board-muted);
+}
+.fpaired-col ul { margin: 0; padding-left: 16px; display: flex; flex-direction: column; gap: 5px; }
+.fpaired-col li { font-size: 12.5px; line-height: 1.5; }
