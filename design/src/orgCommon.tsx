@@ -2,7 +2,7 @@ import type { ReactNode } from 'react';
 import { LayoutDashboard, Network, Users, Grid2x2, Settings, Bell } from 'lucide-react';
 import { Frame } from './PlayerApp';
 import { MiniTabBar } from './respShell';
-import fntLogo from './assets/fnt-emblem.png';
+import { Brand } from './ui';
 
 /* Общее для веб-флоу главного судьи (организатора): роль, навигация, телефон.
    Флоу: Обзор (дашборд), Сетка (посев/жеребьёвка), Игроки (участники), Столы. */
@@ -32,7 +32,7 @@ export function OrgPhone({
   return (
     <Frame>
       <div className="nav">
-        <div className="brand"><img src={fntLogo} alt="ФНТ РК" /> Судья</div>
+        <Brand size="sm" sub="Судья" />
         <button className="iconbtn dot"><Bell size={17} /></button>
       </div>
       <div className="body">

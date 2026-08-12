@@ -2,7 +2,7 @@ import type { ReactNode } from 'react';
 import {
   LayoutDashboard, Network, Users, Grid2x2, Settings, Bell, Search,
 } from 'lucide-react';
-import fntLogo from './assets/fnt-emblem.png';
+import { Brand } from './ui';
 import { DeskFrame, type DeskVariant } from './deskShell';
 import { BracketFlow } from '@/widgets/bracket/BracketFlow';
 import { bigBracket } from './bigBracket';
@@ -56,8 +56,7 @@ export function RefereeDesktop({ variant = 'desktop', onNavigate }: { variant?: 
   return <DeskFrame variant={variant}>
 
     <div className="dtop">
-      <img className="logo" src={fntLogo} alt="ФНТ РК" />
-      <div><div className="bname">ФНТ РК</div></div>
+      <Brand />
       <div style={{ width: 1, height: 26, background: 'var(--c-glass-line)' }} />
       <div><div className="bname" style={{ fontSize: 14 }}>Чемпионат Казахстана 2026</div><div className="tname">Одиночный · олимпийская · г. Астана</div></div>
       <span className="live"><span className="d" />ИДЁТ</span>

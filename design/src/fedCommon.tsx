@@ -2,7 +2,7 @@ import type { ReactNode } from 'react';
 import { CalendarDays, Trophy, Scale, Users, Wallet, Bell } from 'lucide-react';
 import { Frame } from './PlayerApp';
 import { MiniTabBar } from './respShell';
-import fntLogo from './assets/fnt-emblem.png';
+import { Brand } from './ui';
 
 /* Общее для веб-флоу Федерации: роль, навигация десктопа/сайдбара, мини-таб-бар
    и телефонная обёртка. Чтобы новые флоу (Взносы, Рейтинг, Судьи, Турнир) не
@@ -33,7 +33,7 @@ export function FedPhone({ title, active, center, children }: { title: string; a
   return (
     <Frame>
       <div className="nav">
-        <div className="brand"><img src={fntLogo} alt="ФНТ РК" /> Федерация</div>
+        <Brand size="sm" sub="Федерация" />
         <button className="iconbtn dot"><Bell size={17} /></button>
       </div>
       <div className="body" style={center ? { justifyContent: 'center' } : undefined}>

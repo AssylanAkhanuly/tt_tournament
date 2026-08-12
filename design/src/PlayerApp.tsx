@@ -3,7 +3,7 @@ import {
   Bell, Home, Trophy, Swords, User, ChevronRight, ChevronLeft,
   Megaphone, CheckCircle2, TrendingUp, CalendarDays,
 } from 'lucide-react';
-import fntLogo from './assets/fnt-emblem.png';
+import { Brand as FntBrand } from './ui';
 import '../gen/frame.css';
 
 /* Экраны игрока (тёмная тема, Liquid Glass). Lucide-иконки, логотип ФНТ РК,
@@ -57,7 +57,7 @@ export function Frame({ children }: { children: ReactNode }) {
   </div></div>;
 }
 
-const Brand = () => <div className="brand"><img src={fntLogo} alt="ФНТ РК" /> ФНТ РК</div>;
+const Brand = () => <FntBrand size="sm" />;
 const BellBtn = () => <button className="iconbtn dot"><Bell size={17} /></button>;
 const SeeAll = () => <span className="a">Смотреть все <ChevronRight size={13} /></span>;
 

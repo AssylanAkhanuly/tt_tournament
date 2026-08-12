@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import { Bell, Search } from 'lucide-react';
-import fntLogo from './assets/fnt-emblem.png';
+import { Brand } from './ui';
 
 /* Общая десктоп-оболочка (верхняя панель + сайдбар + main) для флоу веба.
    variant='land' — тот же layout в горизонтальной планшетной рамке (веб на планшете
@@ -39,8 +39,7 @@ export function Desk({
   return (
     <DeskFrame variant={variant}>
       <div className="dtop">
-        <img className="logo" src={fntLogo} alt="ФНТ РК" />
-        <div><div className="bname">ФНТ РК</div></div>
+        <Brand />
         <div style={{ width: 1, height: 26, background: 'var(--c-glass-line)' }} />
         <div>
           <div className="bname" style={{ fontSize: 14 }}>{brandName ?? 'Чемпионат Казахстана 2026'}</div>

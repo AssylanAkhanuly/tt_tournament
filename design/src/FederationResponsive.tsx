@@ -2,7 +2,7 @@ import type { ReactNode } from 'react';
 import { CalendarDays, Scale, Trophy, Wallet, Bell, Plus, CheckCircle2, CornerUpLeft } from 'lucide-react';
 import { Frame } from './PlayerApp';
 import { Board, Col, Arrow, Tab, MiniTabBar } from './respShell';
-import fntLogo from './assets/fnt-emblem.png';
+import { Brand } from './ui';
 
 /* Веб → Федерация, планшет + телефон (десктоп — в FederationFlow).
    Календарь/создать → выбор судьи → приёмка результатов. */
@@ -97,7 +97,7 @@ export function FederationTabletBoard() {
 const FedPhone = ({ title, active, children }: { title: string; active: string; children: ReactNode }) => (
   <Frame>
     <div className="nav">
-      <div className="brand"><img src={fntLogo} alt="ФНТ РК" /> Федерация</div>
+      <Brand size="sm" sub="Федерация" />
       <button className="iconbtn dot"><Bell size={17} /></button>
     </div>
     <div className="body">

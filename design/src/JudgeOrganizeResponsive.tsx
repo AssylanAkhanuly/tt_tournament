@@ -2,7 +2,7 @@ import type { ReactNode } from 'react';
 import { LayoutDashboard, Network, Grid2x2, Settings, Send, Clock3, Bell } from 'lucide-react';
 import { Frame } from './PlayerApp';
 import { Board, Col, Arrow, Tab, MiniTabBar } from './respShell';
-import fntLogo from './assets/fnt-emblem.png';
+import { Brand } from './ui';
 import { FormSeg } from './segs';
 
 /* Веб → Судья · Организация турнира, планшет + телефон (десктоп — в JudgeOrganizeFlow).
@@ -80,7 +80,7 @@ export function OrganizeTabletBoard() {
 const JudgePhone = ({ title, active, center, children }: { title: string; active: string; center?: boolean; children: ReactNode }) => (
   <Frame>
     <div className="nav">
-      <div className="brand"><img src={fntLogo} alt="ФНТ РК" /> Судья</div>
+      <Brand size="sm" sub="Судья" />
       <button className="iconbtn dot"><Bell size={17} /></button>
     </div>
     <div className="body" style={center ? { justifyContent: 'center' } : undefined}>

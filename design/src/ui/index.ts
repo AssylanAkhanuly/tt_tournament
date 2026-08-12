@@ -1,6 +1,7 @@
 /* Библиотека примитивов дизайн-системы ФНТ РК — единая точка входа.
 
    Разделы:
+   • `brand`    — Brand: знак ФНТ РК со словесной частью, шапка любой роли.
    • `base`     — стекло и статусы: Button, Card, Panel, Pill, Badge, Stat,
                   Avatar, IconButton, SectionTitle, Segmented, Field.
    • `forms`    — Input, SearchField, Textarea, Select, Checkbox, Radio,
@@ -16,6 +17,7 @@
    всё перекрашивается переключателем «Тема» в тулбаре. Витрины — истории
    «Дизайн-система → Компоненты». */
 
+export * from './brand';
 export * from './base';
 export * from './forms';
 export * from './nav';

@@ -14,7 +14,7 @@ import { Desk, type DeskVariant } from '../deskShell';
 import { Tab, MiniTabBar } from '../respShell';
 import { Frame } from '../PlayerApp';
 import { A, AW } from '../fedCommon';
-import fntLogo from '../assets/fnt-emblem.png';
+import { Brand } from '../ui';
 import './mockups.css';
 
 export { A, AW, Tab };
@@ -101,9 +101,7 @@ export function RolePhone({ brand, tabs, active, center, children }: {
   return (
     <Frame>
       <div className="nav">
-        <div className="brand">
-          <img src={fntLogo} alt="ФНТ РК" /> {brand}
-        </div>
+        <Brand size="sm" sub={brand === 'ФНТ РК' ? undefined : brand} />
         <button className="iconbtn dot">
           <Bell size={17} />
         </button>

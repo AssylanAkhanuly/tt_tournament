@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import fntLogo from './assets/fnt-emblem.png';
+import { Brand } from './ui';
 import '../gen/frame.css';
 import '../gen/desktop.css';
 import './tournament.css';
@@ -35,7 +35,7 @@ export function Tab({
   return (
     <div className="tabframe"><div className="tabscreen">
       <div className="ttop">
-        <div className="brand"><img src={fntLogo} alt="ФНТ РК" /> ФНТ РК</div>
+        <Brand />
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontSize: 15, fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{title}</div>
           <div style={{ fontSize: 12, color: 'var(--c-muted)', marginTop: 2 }}>{sub}</div>

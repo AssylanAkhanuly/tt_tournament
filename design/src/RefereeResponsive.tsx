@@ -3,7 +3,7 @@ import { Bell, LayoutDashboard, Grid2x2, Network, Users } from 'lucide-react';
 import { Frame } from './PlayerApp';
 import { MiniTabBar } from './respShell';
 import { ORG_TABS } from './orgCommon';
-import fntLogo from './assets/fnt-emblem.png';
+import { Brand } from './ui';
 import '../gen/frame.css';
 import '../gen/desktop.css';
 import './tournament.css';
@@ -57,7 +57,7 @@ export function RefereeTablet() {
   return (
     <div className="tabframe"><div className="tabscreen">
       <div className="ttop">
-        <div className="brand"><img src={fntLogo} alt="ФНТ РК" /> ФНТ РК</div>
+        <Brand />
         <div style={{ flex: 1 }}>
           <div style={{ fontSize: 15, fontWeight: 700 }}>Чемпионат Казахстана 2026</div>
           <div style={{ fontSize: 12, color: 'var(--c-muted)', marginTop: 2 }}>Одиночный · олимпийская · г. Астана</div>
@@ -92,7 +92,7 @@ export function RefereeMobile({ onNavigate }: { onNavigate?: (item: string) => v
   return (
     <Frame>
       <div className="nav">
-        <div className="brand"><img src={fntLogo} alt="ФНТ РК" /> Судья</div>
+        <Brand size="sm" sub="Судья" />
         <button className="iconbtn dot"><Bell size={17} /></button>
       </div>
       <div className="body">
