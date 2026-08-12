@@ -48,7 +48,7 @@ export function Fees2_1() {
             sub={f.sub}
             val={f.when}
             pill={{ t: f.st, cls: f.cls }}
-            action={f.cls === 'live' ? undefined : 'Отметить оплату'}
+            action={f.cls === 'live' ? undefined : 'Отметить вручную'}
           />
         ))}
       </Rows>
@@ -82,8 +82,8 @@ export function Fee2_2() {
               <div className="dval">14.01.2026</div>
             </div>
             <div className="dfield">
-              <div className="k">Кто отметил</div>
-              <div className="dval">Сериков Н.</div>
+              <div className="k">Как оплачен</div>
+              <div className="dval">картой · Halyk ePay · платёж 4172-8830</div>
             </div>
             <div className="dfield wide">
               <div className="k">Приложенный документ</div>

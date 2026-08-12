@@ -440,17 +440,28 @@ export function Profile14_7() {
       <div className="card">
         <span className="pill live">ОПЛАЧЕН · 2026</span>
         <div className="nm2">Членский взнос ФНТ РК · ₸ 10 000</div>
-        <div className="mt2">оплачен 09.01.2026 · отметку поставил экономист федерации</div>
+        <div className="mt2">оплачен картой 09.01.2026 · Halyk ePay · платёж 4172‑8830</div>
         <HintBox icon={<Wallet size={13} />} top={10}>
           Взнос нужен на главных стартах и на тех турнирах, где организатор включил требование.
           Состояние видно и вашему тренеру.
         </HintBox>
+        <HintBox icon={<CircleCheckBig size={13} />} top={10}>
+          Оплатили — состояние меняется само, по подтверждению банка. Бухгалтер ничего не
+          подтверждает вручную, ждать его не нужно.
+        </HintBox>
+      </div>
+
+      <div className="sect">Взнос за 2027 год</div>
+      <div className="card">
+        <span className="pill wait">НЕ ОПЛАЧЕН</span>
+        <div className="nm2">Членский взнос ФНТ РК · ₸ 10 000</div>
+        <div className="mt2">приём открыт с 01.01.2027</div>
         <div style={{ marginTop: 10 }}>
-          <button className="dpickbtn">Как оплатить взнос</button>
+          <Submit>Оплатить взнос картой</Submit>
         </div>
-        <HintBox icon={<TriangleAlert size={13} />} top={10}>
-          Принимает ли система платежи или оплата идёт вне системы с отметкой экономиста — не
-          решено; пока кнопка ведёт на инструкцию.
+        <HintBox icon={<Lock size={13} />} top={10}>
+          Оплата на защищённой странице Халык Банка, с возвратом обратно в приложение. Приложение
+          можно закрыть сразу после оплаты — взнос всё равно станет оплаченным.
         </HintBox>
       </div>
     </Ph>
