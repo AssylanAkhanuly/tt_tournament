@@ -13,7 +13,7 @@
 
 import type { CSSProperties, ReactNode } from 'react';
 import { Brand } from './ui';
-import { FINDINGS, GROUPS, TOTAL_QUERIES, TOTAL_REFS } from './references';
+import { FINDINGS, GROUPS, SITE_REFS, TOTAL_QUERIES, TOTAL_REFS } from './references';
 import type { Ref } from './references';
 import oldEmblem from './assets/fnt-emblem.png';
 import shield from '../../brand/fnt/fnt-logo.svg';
@@ -70,6 +70,11 @@ const S: Record<string, CSSProperties> = {
     background: 'var(--c-accent-soft)', borderRadius: 'var(--r-pill)', padding: '4px 11px',
   },
   grid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: 12 },
+  shot: {
+    display: 'block', width: '100%', height: 'auto', borderRadius: 10,
+    border: '1px solid var(--c-glass-line)',
+  },
+  shotName: { fontSize: 14, fontWeight: 700, marginTop: 2 },
   ladder: { display: 'flex', alignItems: 'flex-end', gap: 22, flexWrap: 'wrap' },
   ladderCol: { display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 7 },
   ladderCap: { fontSize: 10.5, color: 'var(--c-dim)' },
@@ -118,7 +123,9 @@ export function ReferenceBoard() {
       </p>
 
       <div style={S.counters}>
-        <Counter n={TOTAL_REFS} label="экранов" />
+        <Counter n={TOTAL_REFS + SITE_REFS.length} label="референсов" />
+        <Counter n={TOTAL_REFS} label="экранов из Mobbin" />
+        <Counter n={SITE_REFS.length} label="сайтов федераций, снято живьём" />
         <Counter n={TOTAL_QUERIES} label="запросов в Mobbin" />
         <Counter n={FINDINGS.filter((f) => f.done).length} label="выводов внедрено" />
         <Counter n={FINDINGS.filter((f) => !f.done).length} label="осталось рекомендацией" />
@@ -187,6 +194,26 @@ export function ReferenceBoard() {
         </p>
       </div>
 
+      <h2 style={S.h2}>Сайты федераций — снято живьём, {SITE_REFS.length} шапок</h2>
+      <p style={S.lead}>
+        Первый заход был целиком по Mobbin, а сайтов настоящих спортивных федераций там нет —
+        получилось 82 экрана из мира продуктовых интерфейсов и ни одного из мира федераций. Здесь
+        снято прямо с живых сайтов, картинки наши собственные. Снимок на 12.08.2026: сайты
+        меняются, ссылка ведёт на оригинал.
+      </p>
+      <div style={S.grid}>
+        {SITE_REFS.map((s) => (
+          <div key={s.url} style={S.card}>
+            <a href={s.url} target="_blank" rel="noreferrer">
+              <img src={s.img} alt={`Шапка сайта ${s.name}`} style={S.shot} />
+            </a>
+            <div style={S.shotName}>{s.name}</div>
+            <p style={S.fText}>{s.note}</p>
+            <Links refs={[{ app: 'Открыть сайт', url: s.url }]} />
+          </div>
+        ))}
+      </div>
+
       <h2 style={S.h2}>Выводы</h2>
       {FINDINGS.map((f, i) => (
         <div key={f.title} style={S.card}>
@@ -219,10 +246,11 @@ export function ReferenceBoard() {
       </div>
 
       <p style={{ ...S.fText, borderTop: '1px solid var(--c-glass-line)', paddingTop: 16 }}>
-        Честно про слабые места: сайтов настоящих спортивных федераций в Mobbin нет — запрос про
-        витрину организации вернул SaaS-лендинги, и выводов на них не строили. По турнирным
-        сеткам тоже пусто: отдался один экран, и тот не про спорт. Оба набора помечены выше.
-        Тот же разбор текстом — <code>design/REFERENCES.md</code>.
+        Честно про слабые места: в Mobbin нет ни сайтов настоящих спортивных федераций (запрос про
+        витрину организации вернул SaaS-лендинги), ни турнирных сеток — там отдался один экран, и
+        тот не про спорт. Оба набора помечены выше, выводов на них не строили. Первый пробел
+        закрыт вторым источником — сайтами федераций живьём; по сеткам опереться по-прежнему не на
+        что. Тот же разбор текстом — <code>design/REFERENCES.md</code>.
       </p>
     </div>
   );

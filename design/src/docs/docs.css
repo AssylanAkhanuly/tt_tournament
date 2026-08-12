@@ -1,0 +1,91 @@
+/* Чтение документа проекта в Storybook. Экранная тема (тёмная), мера строки
+   ограничена — документы длинные, и во всю ширину монитора они не читаются. */
+
+.doc {
+  padding: 30px 34px 70px;
+  color: var(--c-ink);
+  background: var(--c-screen-1);
+  min-height: 100%;
+  font-family: var(--font);
+}
+
+.doc-head {
+  max-width: 78ch;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  padding-bottom: 16px;
+  margin-bottom: 22px;
+  border-bottom: 1px solid var(--c-glass-line);
+}
+.doc-path {
+  align-self: flex-start;
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: .04em;
+  color: var(--c-accent);
+  background: var(--c-accent-soft);
+  border: 1px solid var(--c-accent-line);
+  border-radius: var(--r-pill);
+  padding: 3px 10px;
+}
+.doc-hint { font-size: 13.5px; line-height: 1.6; color: var(--c-muted); }
+
+/* Сам markdown */
+.doc-body { max-width: 78ch; font-size: 14.5px; line-height: 1.7; }
+.doc-body > *:first-child { margin-top: 0; }
+
+.doc-body h1 { font-size: 27px; font-weight: 800; letter-spacing: -.4px; margin: 34px 0 14px; }
+.doc-body h2 {
+  font-size: 20px; font-weight: 800; letter-spacing: -.2px;
+  margin: 34px 0 12px; padding-top: 16px; border-top: 1px solid var(--c-glass-line);
+}
+.doc-body h3 { font-size: 16.5px; font-weight: 700; margin: 26px 0 10px; }
+.doc-body h4 { font-size: 14.5px; font-weight: 700; margin: 20px 0 8px; color: var(--c-muted); }
+
+.doc-body p { margin: 12px 0; }
+.doc-body ul, .doc-body ol { margin: 12px 0; padding-left: 22px; }
+.doc-body li { margin: 5px 0; }
+.doc-body li::marker { color: var(--c-dim); }
+
+.doc-body a { color: var(--c-accent); text-decoration: none; border-bottom: 1px solid var(--c-accent-line); }
+
+.doc-body code {
+  font-family: ui-monospace, "JetBrains Mono", Consolas, monospace;
+  font-size: 12.5px;
+  background: var(--c-panel-2);
+  border: 1px solid var(--c-glass-line);
+  border-radius: 5px;
+  padding: 1px 5px;
+}
+.doc-body pre {
+  background: var(--c-panel);
+  border: 1px solid var(--c-glass-line);
+  border-radius: var(--r-md);
+  padding: 13px 15px;
+  overflow-x: auto;
+}
+.doc-body pre code { background: none; border: 0; padding: 0; font-size: 12.5px; line-height: 1.55; }
+
+.doc-body blockquote {
+  margin: 14px 0;
+  padding: 2px 0 2px 15px;
+  border-left: 3px solid var(--c-accent-line-3);
+  color: var(--c-muted);
+}
+
+/* Таблицы — в документах их много (роли, категории, значения). Широкие таблицы
+   прокручиваются внутри себя, а не растягивают страницу. */
+.doc-table { overflow-x: auto; margin: 16px 0; }
+.doc-body table { border-collapse: collapse; width: 100%; font-size: 13px; }
+.doc-body th, .doc-body td {
+  border: 1px solid var(--c-glass-line);
+  padding: 7px 10px;
+  text-align: left;
+  vertical-align: top;
+}
+.doc-body th { background: var(--c-panel-2); font-weight: 700; }
+.doc-body tr:nth-child(even) td { background: var(--c-panel-3); }
+
+.doc-body hr { border: 0; border-top: 1px solid var(--c-glass-line); margin: 28px 0; }
+.doc-body img { max-width: 100%; height: auto; border-radius: var(--r-md); }

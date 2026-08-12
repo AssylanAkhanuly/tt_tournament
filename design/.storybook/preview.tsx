@@ -22,6 +22,7 @@ const preview: Preview = {
       storySort: {
         order: [
           'Обзор',
+          'Документы',
           'Флоу',
           ['Обзор', '*'],
           'Макеты',
