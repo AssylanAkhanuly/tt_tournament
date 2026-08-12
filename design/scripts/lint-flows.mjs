@@ -112,6 +112,23 @@ for (const file of dataFiles) {
     );
   }
 
+  /* Парный вид: узлы маршрута и макеты в одной истории. Проверяем именно
+     проводку — историю, данные роли в неё и борд макетов, — иначе после
+     переименования борда раздел молча остался бы без макетов. */
+  const roleName = file.replace(/\.ts$/, '');
+  const boardName = `Role${roleName.slice('role'.length)}Board`;
+  if (!new RegExp(`name: 'Узлы и макеты · ${tsScreens.size} экран`).test(stories)) {
+    problems.push(
+      `${storiesFile}: нет парной истории «Узлы и макеты» на ${tsScreens.size} экранов — запустите npm run gen:flows`,
+    );
+  }
+  if (!stories.includes(`<Paired flow={${roleName}}>`)) {
+    problems.push(`${storiesFile}: в парную историю не подан flow={${roleName}} — запустите npm run gen:flows`);
+  }
+  if (!stories.includes(`import { ${boardName} } from '../mockups/${roleName}'`)) {
+    problems.push(`${storiesFile}: парная история не подключает борд ${boardName} — запустите npm run gen:flows`);
+  }
+
   // Макеты роли: на каждый экран флоу — своя колонка борда с тем же кодом.
   const mockFile = file.replace(/\.ts$/, '.tsx');
   const mockPath = join(MOCKUPS_DIR, mockFile);
@@ -120,6 +137,10 @@ for (const file of dataFiles) {
     continue;
   }
   const mock = readFileSync(mockPath, 'utf8');
+  // Борд роли — то, что парная история импортирует по имени.
+  if (!new RegExp(`export function ${boardName}\\b`).test(mock)) {
+    problems.push(`${mockFile}: нет борда ${boardName} — его импортирует парная история раздела «Флоу»`);
+  }
   const mockCodes = new Set(all(MOCK_CODE, mock).map((m) => m[1]));
   for (const [id, title] of tsScreens) {
     if (!mockCodes.has(id)) {

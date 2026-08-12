@@ -4,10 +4,24 @@
 
 import scheme from '../../../diagrams/out/flow-role-07.png';
 import { Scheme } from './scheme';
+import { Paired } from './paired';
+import { role07 } from './data/role07';
+import { Role07Board } from '../mockups/role07';
 
 export default {
   title: 'Флоу/07 · Главный секретарь соревнований',
   parameters: { layout: 'fullscreen' },
+};
+
+/* Парный вид первым: под каждым узлом маршрута стоит его макет — требование и
+   картинка читаются вместе, а не в двух разных разделах дерева. */
+export const Nodes = {
+  name: 'Узлы и макеты · 5 экранов',
+  render: () => (
+    <Paired flow={role07}>
+      <Role07Board />
+    </Paired>
+  ),
 };
 
 export const Sheme = {

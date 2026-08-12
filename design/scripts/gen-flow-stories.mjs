@@ -60,20 +60,38 @@ for (const file of files) {
   // Имя файла схемы: `flow-role-01`, у пары ролей — `flow-role-03-04`.
   const scheme = `flow-role-${pad(num, '-')}`;
 
+  // Борд макетов той же роли: `role0304.tsx` → `Role0304Board`.
+  const board = `Role${name.slice('role'.length)}Board`;
+  const count = plural(screens, 'экран', 'экрана', 'экранов');
+
   const out = `/* Сгенерировано: npm run gen:flows (источник — data/${file}).
    Руками не правим — правим данные роли, затем: npm run gen:diagrams →
    powershell -File diagrams/build.ps1 → npm run gen:flows. */
 
 import scheme from '../../../diagrams/out/${scheme}.png';
 import { Scheme } from './scheme';
+import { Paired } from './paired';
+import { ${name} } from './data/${name}';
+import { ${board} } from '../mockups/${name}';
 
 export default {
   title: 'Флоу/${pad(num)} · ${title}',
   parameters: { layout: 'fullscreen' },
 };
 
+/* Парный вид первым: под каждым узлом маршрута стоит его макет — требование и
+   картинка читаются вместе, а не в двух разных разделах дерева. */
+export const Nodes = {
+  name: 'Узлы и макеты · ${count}',
+  render: () => (
+    <Paired flow={${name}}>
+      <${board} />
+    </Paired>
+  ),
+};
+
 export const Sheme = {
-  name: 'Схема · ${plural(screens, 'экран', 'экрана', 'экранов')}',
+  name: 'Схема · ${count}',
   render: () => <Scheme src={scheme} alt="Флоу роли ${num} · ${title}" source="${source}" />,
 };
 `;
