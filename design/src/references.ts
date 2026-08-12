@@ -10,7 +10,6 @@
    иначе «82 экрана» разъедется с фактическим списком при первой же правке. */
 
 import fedTtfrk from './assets/refs/fed-ttfrk.jpg';
-import fedIttf from './assets/refs/fed-ittf.jpg';
 import fedEttu from './assets/refs/fed-ettu.jpg';
 import fedAttu from './assets/refs/fed-attu.jpg';
 import fedOlympicKz from './assets/refs/fed-olympic-kz.jpg';
@@ -18,7 +17,6 @@ import fedWorldAthletics from './assets/refs/fed-worldathletics.jpg';
 import fedUefa from './assets/refs/fed-uefa.jpg';
 import fedWorldAquatics from './assets/refs/fed-worldaquatics.jpg';
 import fedFie from './assets/refs/fed-fie.jpg';
-import fedBwf from './assets/refs/fed-bwf.jpg';
 
 const S = (id: string) => `https://mobbin.com/screens/${id}`;
 const SEC = (id: string) => `https://mobbin.com/sites/sections/${id}`;
@@ -61,12 +59,6 @@ export const SITE_REFS: SiteRef[] = [
       'которой мы пришли в шапке продукта.',
   },
   {
-    name: 'ITTF — международная федерация',
-    url: 'https://www.ittf.com/',
-    img: fedIttf,
-    note: 'Головная организация нашего вида спорта: знак в шапке мелкий, работу делает типографика.',
-  },
-  {
     name: 'ETTU — европейская федерация',
     url: 'https://www.ettu.org/',
     img: fedEttu,
@@ -104,12 +96,17 @@ export const SITE_REFS: SiteRef[] = [
     img: fedFie,
     note: 'Федерация сопоставимого с нами размера — видно, как подаётся герб без большого бюджета.',
   },
-  {
-    name: 'BWF — бадминтон',
-    url: 'https://bwfbadminton.com/',
-    img: fedBwf,
-    note: 'Ближайший к настольному теннису вид спорта по формату соревнований.',
-  },
+];
+
+/* Сняли двенадцать сайтов, в набор попали восемь. Выпали не по вкусу, а
+   технически: ITTF и BWF закрыты защитой от ботов и вместо страницы отдают
+   «Performing security verification» и «Sorry, you have been blocked», FIBA
+   вернула пустую страницу. Обидно, что среди них ITTF — головная федерация
+   нашего вида спорта; открыть её глазами можно, автоматически снять нельзя. */
+export const BLOCKED_SITES = [
+  { name: 'ITTF', url: 'https://www.ittf.com/', why: 'проверка Cloudflare вместо страницы' },
+  { name: 'BWF', url: 'https://bwfbadminton.com/', why: '«Sorry, you have been blocked»' },
+  { name: 'FIBA', url: 'https://www.fiba.basketball/', why: 'пустая страница' },
 ];
 
 export type Ref = { app: string; url: string };

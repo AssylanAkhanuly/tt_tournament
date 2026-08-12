@@ -13,7 +13,7 @@
 
 import type { CSSProperties, ReactNode } from 'react';
 import { Brand } from './ui';
-import { FINDINGS, GROUPS, SITE_REFS, TOTAL_QUERIES, TOTAL_REFS } from './references';
+import { BLOCKED_SITES, FINDINGS, GROUPS, SITE_REFS, TOTAL_QUERIES, TOTAL_REFS } from './references';
 import type { Ref } from './references';
 import oldEmblem from './assets/fnt-emblem.png';
 import shield from '../../brand/fnt/fnt-logo.svg';
@@ -200,6 +200,18 @@ export function ReferenceBoard() {
         получилось 82 экрана из мира продуктовых интерфейсов и ни одного из мира федераций. Здесь
         снято прямо с живых сайтов, картинки наши собственные. Снимок на 12.08.2026: сайты
         меняются, ссылка ведёт на оригинал.
+      </p>
+      <p style={S.lead}>
+        Сняли двенадцать, в набор попали {SITE_REFS.length}. Выпали не по вкусу, а технически —
+        защита от ботов отдала вместо страницы заглушку:{' '}
+        {BLOCKED_SITES.map((b, i) => (
+          <span key={b.url}>
+            {i > 0 && ', '}
+            <b>{b.name}</b> ({b.why})
+          </span>
+        ))}
+        . Обиднее всего ITTF — головная федерация нашего вида спорта: глазами сайт открывается,
+        автоматически снять нельзя.
       </p>
       <div style={S.grid}>
         {SITE_REFS.map((s) => (
