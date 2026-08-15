@@ -175,7 +175,7 @@ export function Starts12_2() {
       </ActionBar>
       <Rows>
         {STARTS.map((s) => (
-          <Row key={s.nm} nm={s.nm} sub={s.sub} val={s.win} pill={s.pill} action={s.action} />
+          <Row key={s.nm} to="Э12.3" nm={s.nm} sub={s.sub} val={s.win} pill={s.pill} action={s.action} />
         ))}
       </Rows>
     </RoleScreen>
@@ -270,26 +270,26 @@ export function Apps12_4() {
       <div className="mkcols">
         <Panel title="Заявки региона за сезон">
           <Rows>
-            <Row
+            <Row to="Э12.5"
               nm="Чемпионат Республики Казахстан"
               sub="подана 20.01.2026 · 14 спортсменов"
               val="г. Астана"
               pill={{ t: 'ПРИНЯТА', cls: 'live' }}
               action="Свои на турнире"
             />
-            <Row
+            <Row to="Э12.5"
               nm="Кубок Республики Казахстан"
               sub="подана 02.03.2026 · 11 спортсменов"
               val="г. Алматы"
               pill={{ t: 'НА РАССМОТРЕНИИ', cls: 'wait' }}
             />
-            <Row
+            <Row to="Э12.5"
               nm="Молодёжный чемпионат Республики Казахстан"
               sub="подана 24.03.2026 · 9 спортсменов"
               val="г. Шымкент"
               pill={{ t: 'ОТКЛОНЕНА', cls: 'bad' }}
             />
-            <Row
+            <Row to="Э12.5"
               nm="Чемпионат РК среди спортсменов 2007 г.р. и моложе"
               sub="черновик · 6 спортсменов в составе"
               val="г. Караганда"

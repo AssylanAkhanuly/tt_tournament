@@ -65,7 +65,7 @@ const TOURS: Tour[] = [
 /** Строка календаря. `judge` — показывать ли колонку главного судьи:
     не назначен — прочерк с подсветкой, как требует флоу. */
 export const TourRow = ({ t, judge }: { t: Tour; judge?: boolean }) => (
-  <div className="drow">
+  <div className="drow" data-to="Э1.3">
     <div className="who">
       <div className="nm">{t.nm}</div>
       <div className="rl">{t.mt}</div>
@@ -99,7 +99,7 @@ export const TodayRows = ({ act = true }: { act?: boolean }) => (
       { nm: 'Суперлига · мужчины', sub: 'Евразийская лига, 2-й тур · Караганда · столы 1–6', v: '34 из 60' },
       { nm: 'Суперлига · женщины', sub: 'Евразийская лига, 2-й тур · Караганда · столы 7–10', v: '26 из 48' },
     ].map((r) => (
-      <div className="drow" key={r.nm}>
+      <div className="drow" key={r.nm} data-to="Э1.3">
         <div className="who">
           <div className="nm">{r.nm}</div>
           <div className="rl">{r.sub}</div>
@@ -951,7 +951,7 @@ export function Reg1_6() {
       </ActionBar>
       <Rows>
         {ATHLETES.map((p) => (
-          <Row key={p.nm} av={p.av} nm={p.nm} sub={p.sub} val={`рейтинг ${p.rt}`} pill={{ t: p.st, cls: p.cls }} action="Открыть" />
+          <Row key={p.nm} av={p.av} nm={p.nm} sub={p.sub} val={`рейтинг ${p.rt}`} pill={{ t: p.st, cls: p.cls }} action="Открыть" to="Э1.12" />
         ))}
       </Rows>
     </RoleScreen>
@@ -1340,6 +1340,7 @@ const NewsRow = ({ n }: { n: News }) => (
       ))}
     </div>
     <P t={n.st} cls={n.cls} />
+    <Ghost>Править</Ghost>
     <button className="dpickbtn">{n.cls === 'live' ? 'Снять с публикации' : 'Опубликовать'}</button>
   </div>
 );

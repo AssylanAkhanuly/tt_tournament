@@ -115,5 +115,48 @@
 .fmap-shot { overflow: hidden; padding: 18px; }
 .fmap-scale { width: max-content; }
 
+/* Элемент макета, который куда-то ведёт: по нему можно кликнуть и уйти на тот
+   экран, что записан в данных. Помечаем прямо в макете — так видно, что уже
+   связано, а полоса ниже показывает, чего не хватает. */
+.fmap-hot {
+  cursor: pointer;
+  box-shadow: 0 0 0 2px var(--c-accent-line-3);
+}
+.fmap-hot:hover { box-shadow: 0 0 0 2px var(--c-accent), 0 0 18px -4px var(--c-accent-glow); }
+
+.fmap-links { padding: 4px 18px 14px; display: flex; flex-direction: column; gap: 6px; }
+.fmap-links h4 {
+  margin: 0 0 2px;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: .09em;
+  text-transform: uppercase;
+  color: var(--c-board-muted);
+}
+.fmap-link {
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 8px;
+  padding: 8px 11px;
+  border: 1px solid var(--c-board-line);
+  border-radius: var(--r-xs);
+  background: var(--c-board-panel);
+  color: var(--c-board-ink);
+}
+.fmap-link:hover { border-color: var(--c-board-accent); }
+.fmap-link b { font-size: 12.5px; font-weight: 700; }
+.fmap-link span { font-size: 11.5px; color: var(--c-board-muted); }
+/* Переход описан, а кнопки для него в макете нет — дыра, её и ищем. */
+.fmap-link.miss { border-color: var(--c-danger); }
+.fmap-link.miss em { color: var(--c-danger); }
+/* Кнопки нет законно: действие доступно в другом состоянии экрана. */
+.fmap-link.cond { border-color: var(--c-warning); }
+.fmap-link.cond em { color: var(--c-warning); }
+.fmap-link em { flex: 1 0 100%; font-size: 11px; font-style: normal; }
+
 .fmap-spec { padding: 0 18px; }
 .fmap-spec .fnode { width: auto; min-width: 0; margin-top: 0; }

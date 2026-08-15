@@ -196,7 +196,7 @@ export function Tours10_1() {
       </ActionBar>
       <Rows>
         {TOURS.map((t) => (
-          <Row
+          <Row to="Э10.2"
             key={t.nm}
             nm={t.nm}
             sub={t.sub}

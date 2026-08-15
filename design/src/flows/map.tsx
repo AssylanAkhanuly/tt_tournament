@@ -34,6 +34,10 @@ import './map.css';
 const COL = 290;
 const ROW = 104;
 
+/** Подпись действия и подпись кнопки к общему виду: ««Выдать роль»» → «выдать роль». */
+const norm = (s: string) =>
+  s.toLowerCase().replace(/[«»"'`]/g, '').replace(/[·—–]/g, ' ').replace(/\s+/g, ' ').trim();
+
 type NodeData = {
   code: string;
   screen: Screen;
@@ -204,6 +208,60 @@ export function FlowMap({ flow, screens }: { flow: RoleFlow; screens: ScreenMap 
 
   const spec = byId.get(selected);
 
+  /* Переходы прямо в макете: кнопка на экране ведёт туда же, куда написано в
+     данных. Ищем её по подписи действия — так проверяется и сам макет: у
+     действия с переходом нашлась кнопка или нарисовать её забыли. Элемент, у
+     которого переход задан руками (строка списка, плитка), помечается
+     атрибутом `data-to` — по нему совпадение точное. */
+  const [links, setLinks] = useState<{ el: string; to: string; when?: string; found: boolean }[]>([]);
+
+  useEffect(() => {
+    const root = inner.current;
+    if (!root) return;
+    root.querySelectorAll<HTMLElement>('[data-goto]').forEach((el) => {
+      el.removeAttribute('data-goto');
+      el.classList.remove('fmap-hot');
+    });
+    const targets = (spec?.actions ?? []).filter((a) => a.to);
+    const cands = [
+      ...root.querySelectorAll<HTMLElement>(
+        'button, .drow, .item, .ttab, .dchip, .dseg2 span, .jstart, .jbtn, [data-to]',
+      ),
+    ];
+    setLinks(
+      targets.map((a) => {
+        const want = norm(a.el);
+        /* Три способа узнать элемент, по порядку надёжности: переход задан
+           руками; строка списка сама называет код экрана («Э6.2 · приём открыт
+           до 12.03» — так подписаны строки «что сейчас требуется»); подпись
+           кнопки совпадает с подписью действия. */
+        const hit =
+          cands.find((c) => c.dataset.to === a.to) ??
+          cands.find(
+            (c) =>
+              (c.classList.contains('drow') || c.classList.contains('item')) &&
+              (c.textContent ?? '').includes(a.to!),
+          ) ??
+          cands.find((c) => want.length > 2 && norm(c.textContent ?? '').includes(want));
+        if (hit) {
+          hit.dataset.goto = a.to!;
+          hit.classList.add('fmap-hot');
+        }
+        return { el: a.el, to: a.to!, when: a.when, found: !!hit };
+      }),
+    );
+  }, [selected, spec, scale]);
+
+  const go = (e: React.MouseEvent) => {
+    const hit = (e.target as HTMLElement).closest<HTMLElement>('[data-goto]');
+    const to = hit?.dataset.goto;
+    if (to && screens[to]) {
+      e.preventDefault();
+      setSelected(to);
+      pane.current?.scrollTo({ top: 0 });
+    }
+  };
+
   return (
     <div className="fmap">
       <div className="fmap-graph">
@@ -243,7 +301,7 @@ export function FlowMap({ flow, screens }: { flow: RoleFlow; screens: ScreenMap 
           </div>
         </div>
 
-        <div className="fmap-shot" style={{ height: height || undefined }}>
+        <div className="fmap-shot" style={{ height: height || undefined }} onClickCapture={go}>
           <div
             ref={inner}
             className="fmap-scale"
@@ -252,6 +310,30 @@ export function FlowMap({ flow, screens }: { flow: RoleFlow; screens: ScreenMap 
             {screens[selected]?.view()}
           </div>
         </div>
+
+        {links.length > 0 && (
+          <div className="fmap-links">
+            <h4>Переходы с этого экрана — подсвечены прямо в макете</h4>
+            {links.map((l) => (
+              <button
+                key={l.el + l.to}
+                type="button"
+                className={'fmap-link' + (l.found ? '' : l.when ? ' cond' : ' miss')}
+                onClick={() => screens[l.to] && setSelected(l.to)}
+              >
+                <b>{l.el}</b>
+                <span>→ {l.to} · {screens[l.to]?.cap ?? 'экрана нет в макетах'}</span>
+                {!l.found && (
+                  <em>
+                    {l.when
+                      ? `кнопки на этом кадре нет — она доступна: ${l.when}`
+                      : 'кнопки на макете не нашлось — действие не нарисовано'}
+                  </em>
+                )}
+              </button>
+            ))}
+          </div>
+        )}
 
         {spec && (
           <div className="fmap-spec">

@@ -43,7 +43,7 @@ export function Fees2_1() {
       </ActionBar>
       <Rows>
         {FEES.map((f) => (
-          <Row
+          <Row to="Э2.2"
             key={f.nm}
             av={f.av}
             nm={f.nm}

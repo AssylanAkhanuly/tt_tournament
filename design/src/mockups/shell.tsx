@@ -189,11 +189,18 @@ export function Arrow({ lbl }: { lbl: string }) {
 /* ── Мелочи, которые повторяются на экранах ─────────────────────── */
 
 /** Плитки-счётчики над рабочей областью: «заявок 128 · столов 12». */
-export function Chips({ items }: { items: { v: string; k: string; tone?: 'g' | 'a' | 'b' }[] }) {
+export function Chips({
+  items,
+  to,
+}: {
+  items: { v: string; k: string; tone?: 'g' | 'a' | 'b'; to?: string }[];
+  /** Куда ведут все плитки сразу; у отдельной плитки `to` перебивает общий. */
+  to?: string;
+}) {
   return (
     <div className="dchips">
       {items.map((c) => (
-        <div key={c.k} className={'dchip' + (c.tone ? ` ${c.tone}` : '')}>
+        <div key={c.k} className={'dchip' + (c.tone ? ` ${c.tone}` : '')} data-to={c.to ?? to}>
           <div className="v">{c.v}</div>
           <div className="k">{c.k}</div>
         </div>
@@ -220,6 +227,7 @@ export function Row({
   val,
   pill,
   action,
+  to,
 }: {
   av?: string;
   nm: string;
@@ -228,9 +236,13 @@ export function Row({
   /** Тон значка — из макетного слоя: `gen/frame.css` + `src/ui/ui.css`. */
   pill?: { t: string; cls: 'live' | 'wait' | 'bad' | 'reg' | 'done' };
   action?: string;
+  /** Куда ведёт строка (`Э1.12`): на карте флоу по ней можно кликнуть и уйти
+      на этот экран. У кнопок переход находится по подписи, а у строки подпись —
+      имя человека или турнира, поэтому её задаём явно. */
+  to?: string;
 }) {
   return (
-    <div className="drow">
+    <div className="drow" data-to={to}>
       {av && <img src={av} alt="" />}
       <div className="who">
         <div className="nm">{nm}</div>

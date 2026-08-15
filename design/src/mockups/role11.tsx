@@ -175,7 +175,7 @@ export function Cands11_1() {
 
       <Rows>
         {CANDS.map((c) => (
-          <div className="drow" key={c.nm}>
+          <div className="drow" key={c.nm} data-to="Э11.2">
             <div className="rank">{c.pl}</div>
             <img src={c.av} alt="" />
             <div className="who">

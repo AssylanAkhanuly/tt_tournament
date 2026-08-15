@@ -28,8 +28,8 @@ const Ghost = ({ children }: { children: ReactNode }) => (
   <button className="dsubmit" style={{ ...GHOST, fontSize: 13 }}>{children}</button>
 );
 
-const GhostPick = ({ children }: { children: ReactNode }) => (
-  <button className="dpickbtn" style={{ ...GHOST, display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+const GhostPick = ({ to, children }: { to?: string; children: ReactNode }) => (
+  <button className="dpickbtn" data-to={to} style={{ ...GHOST, display: 'inline-flex', alignItems: 'center', gap: 6 }}>
     {children}
   </button>
 );
@@ -62,17 +62,17 @@ export function Queues5_1() {
       <div className="mkcols">
         <Panel title="Ждут назначения судьи" extra={<P t="3 ТУРНИРА" cls="wait" />}>
           <Rows>
-            <Row
+            <Row to="Э5.2"
               nm="Кубок Республики Казахстан 2026"
               sub="Караганда · 12–15.09 · подано 9 заявок судей"
               pill={{ t: '31 ДЕНЬ ДО СТАРТА', cls: 'reg' }}
             />
-            <Row
+            <Row to="Э5.2"
               nm="Первенство РК до 19 лет"
               sub="Шымкент · 24–27.08 · подано 6 заявок судей"
               pill={{ t: '12 ДНЕЙ ДО СТАРТА', cls: 'wait' }}
             />
-            <Row
+            <Row to="Э5.2"
               nm="Открытый турнир «Тараз Опен»"
               sub="Тараз · 16–17.08 · подано 3 заявки судей"
               pill={{ t: '4 ДНЯ ДО СТАРТА', cls: 'bad' }}
@@ -82,12 +82,12 @@ export function Queues5_1() {
 
         <Panel title="Ждут утверждения протокола" extra={<P t="2 ПРОТОКОЛА" cls="wait" />}>
           <Rows>
-            <Row
+            <Row to="Э5.4"
               nm="«Алатау Опен» 2026"
               sub="сыгран 09.08 · главный судья Оспанов Т."
               pill={{ t: 'ЖДЁТ 3 ДНЯ', cls: 'wait' }}
             />
-            <Row
+            <Row to="Э5.4"
               nm="Первенство РК до 15 лет"
               sub="сыгран 02.08 · главный судья Токаев М."
               pill={{ t: 'ЖДЁТ 10 ДНЕЙ', cls: 'bad' }}
@@ -372,13 +372,13 @@ export function Rating5_5() {
       <Chips
         items={[
           { v: '86', k: 'Судей в рейтинге', tone: 'b' },
-          { v: '7', k: 'Документов на проверке', tone: 'a' },
-          { v: '05.08', k: 'Последняя публикация', tone: 'g' },
+          { v: '7', k: 'Документов на проверке', tone: 'a', to: 'Э5.6' },
+          { v: '05.08', k: 'Последняя публикация', tone: 'g', to: 'Э5.7' },
           { v: '5', k: 'Без зачёта' },
         ]}
       />
       <div className="mkcols" style={{ gridTemplateColumns: '1.7fr 1fr' }}>
-        <Panel title="Таблица рейтинга" extra={<GhostPick>Документы на проверке · 7</GhostPick>}>
+        <Panel title="Таблица рейтинга" extra={<GhostPick to="Э5.6">Документы на проверке · 7</GhostPick>}>
           <Rows>
             {RANK.map((j) => <RankRow key={j.pl} j={j} />)}
           </Rows>

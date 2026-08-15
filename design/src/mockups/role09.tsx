@@ -79,7 +79,7 @@ export function Tours9_1() {
     <RoleTablet title="Судья · Оралбай Ержан" sub="Мои назначения и открытые приёмы заявок" badge="СЕЗОН 2026">
       <div className="sect">Мои назначения</div>
       {ASSIGN.map((a) => (
-        <div className="item" key={a.t} style={{ marginTop: 0 }}>
+        <div className="item" key={a.t} style={{ marginTop: 0 }} data-to="Э9.2">
           <div className="ic"><Trophy size={17} /></div>
           <div className="tx">
             <div className="tt">{a.t}</div>
@@ -271,7 +271,7 @@ export function Score9_3() {
       </div>
 
       <div style={{ display: 'flex', gap: 9, flex: 'none' }}>
-        <div className="jbtn ghost" style={{ flex: 1, padding: 13 }}><History size={15} />История матча</div>
+        <div className="jbtn ghost" data-to="Э9.4" style={{ flex: 1, padding: 13 }}><History size={15} />История матча</div>
         <div className="jbtn pri" style={{ flex: 2, padding: 13 }}><Check size={15} />Подтвердить результат</div>
       </div>
 
