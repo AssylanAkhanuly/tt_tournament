@@ -11,7 +11,7 @@
 import { Bell, Download, Printer } from 'lucide-react';
 import { A, ActionBar, Arrow, AW, Board, Chips, Hint, Panel, RoleScreen, Row, Rows, Screen } from './shell';
 import { R0304 } from './roles';
-import { ATTENTION, Btn, Notes, P, TourRow, TodayEmpty } from './role01';
+import { ATTENTION, Btn, Notes, P, TourRow, TodayRows } from './role01';
 
 /* Те же соревнования, что у администратора Федерации (Э1.2) — здесь на чтение. */
 type Tour = { nm: string; mt: string; apps: string; judge?: string; st: string; cls: string };
@@ -19,7 +19,7 @@ type Tour = { nm: string; mt: string; apps: string; judge?: string; st: string; 
 const TOURS: Tour[] = [
   { nm: 'Кубок Республики Казахстан 2026', mt: 'Главный старт · Астана · 18–20 мая', apps: '128 / 96', judge: 'Оспанов Т.', st: 'СУДЬЯ НАЗНАЧЕН', cls: 'reg' },
   { nm: 'Первенство РК · 2010 г.р. и моложе', mt: 'Главный старт · Алматы · 3–5 июня', apps: '96 / 71', judge: 'Токаев М.', st: 'ЗАЯВКИ ИГРОКОВ', cls: 'live' },
-  { nm: 'Евразийская лига · 2-й тур', mt: 'Лига · Караганда · 11–12 апреля', apps: '12 команд', judge: 'Пак С.', st: 'СИСТЕМА ПРОВЕДЕНИЯ', cls: 'wait' },
+  { nm: 'Евразийская лига · 2-й тур', mt: 'Лига · Караганда · 14–16 апреля', apps: '12 команд', judge: 'Пак С.', st: 'ИДЁТ', cls: 'live' },
   { nm: 'ОРТ «Кубок Иртыша»', mt: 'ОРТ · Павлодар · 25 апреля', apps: '34 / 34', st: 'ЗАЯВКИ СУДЕЙ', cls: 'wait' },
   { nm: 'ОРТ «Шымкент Open»', mt: 'ОРТ · Шымкент · 9 мая', apps: '— / —', st: 'ЧЕРНОВИК', cls: 'done' },
 ];
@@ -50,7 +50,7 @@ export function Dash3_1() {
           </Rows>
         </Panel>
         <Panel title="Сегодня идут">
-          <TodayEmpty />
+          <TodayRows act={false} />
           <Notes>
             <Hint>
               Кнопки «Завести соревнование» здесь нет — и не будет серой: недоступное действие не
@@ -132,7 +132,7 @@ type Sub = { nm: string; st: string; cls: string; next: string; on: boolean };
 const SUBS: Sub[] = [
   { nm: 'Кубок Республики Казахстан 2026', st: 'СУДЬЯ НАЗНАЧЕН', cls: 'reg', next: 'публикация и приём заявок — 20 апреля', on: true },
   { nm: 'Первенство РК · 2010 г.р. и моложе', st: 'ЗАЯВКИ ИГРОКОВ', cls: 'live', next: 'закрытие приёма — 27 мая', on: true },
-  { nm: 'Евразийская лига · 2-й тур', st: 'СИСТЕМА ПРОВЕДЕНИЯ', cls: 'wait', next: 'жеребьёвка — 10 апреля', on: true },
+  { nm: 'Евразийская лига · 2-й тур', st: 'ИДЁТ', cls: 'live', next: 'день 2 из 3 · сыграно 34 матча из 60', on: true },
   { nm: 'ОРТ «Кубок Иртыша»', st: 'ЗАЯВКИ СУДЕЙ', cls: 'wait', next: 'выбор главного судьи — 18 апреля', on: true },
   { nm: 'ОРТ «Шымкент Open»', st: 'ЧЕРНОВИК', cls: 'done', next: 'дата не назначена', on: false },
 ];

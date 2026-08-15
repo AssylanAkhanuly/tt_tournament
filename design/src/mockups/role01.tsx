@@ -1,15 +1,27 @@
 /* Роль 1 · Администратор Федерации — макеты по флоу.
-   Экраны Э1.1–Э1.8 (см. `flows/01-admin-federacii.md` и схему роли).
+   Экраны Э1.1–Э1.14 (см. `flows/01-admin-federacii.md` и схему роли).
 
    Роль работает с десктопа и видит всю систему: календарь и турниры, роли,
    реестры, журнал, контент. Полный доступ безопасен потому, что система
-   именная — каждое действие попадает в журнал (TZ §12). */
+   именная — каждое действие попадает в журнал (TZ §12).
+
+   Под каждым экраном стоит полка `States` — тот же экран в других ситуациях
+   (пусто, поле не заполнено, действие запрещено). Подписи кадров повторяют
+   `states[]` из данных роли: `src/flows/data/role01.ts`.
+
+   Сегодня в макете — 15 апреля 2026: идёт 2-й тур Евразийской лиги, ближайший
+   главный старт (Кубок РК) — 18 мая. От этой даты считаются все «сегодня»,
+   «через сколько дней» и записи журнала. */
 
 import type { ReactNode } from 'react';
-import { Download, Eye, Merge, Plus, Send, UserPlus } from 'lucide-react';
 import {
-  A, ActionBar, Arrow, AW, Board, Chips, Empty, Field, Form, Hint, Panel, RoleScreen, Row, Rows, Screen,
+  AlertTriangle, Download, Eye, GitMerge, Image, Link2, Merge, Plus, Search, Send, UserPlus,
+} from 'lucide-react';
+import {
+  A, ActionBar, Arrow, AW, Board, Chips, Empty, Field, Form, Ghost, Hint, Modal, Panel, RoleScreen,
+  Row, Rows, Screen, Shot, States,
 } from './shell';
+import type { DeskVariant } from '../deskShell';
 import { R01 } from './roles';
 
 /* ── Общие мелочи роли ──────────────────────────────────────────── */
@@ -27,6 +39,42 @@ export const Btn = ({ children }: { children: ReactNode }) => (
   </button>
 );
 
+/** Неактивная главная кнопка: действие видно, но пока запрещено. */
+export const Off = ({ children }: { children: ReactNode }) => (
+  <button
+    className="dsubmit"
+    style={{ padding: '12px 18px', background: 'var(--c-panel-3)', color: 'var(--c-dim)', boxShadow: 'none' }}
+  >
+    {children}
+  </button>
+);
+
+const ALERT_INK = {
+  warning: 'var(--c-warning)',
+  danger: 'var(--c-danger)',
+  success: 'var(--c-success)',
+} as const;
+
+/** Плашка с тоном: то же место, что у подсказки, но говорит о запрете или риске. */
+export const Alert = ({
+  tone = 'warning',
+  children,
+}: {
+  tone?: keyof typeof ALERT_INK;
+  children: ReactNode;
+}) => (
+  <div className="dhintbox" style={{ color: ALERT_INK[tone] }}>{children}</div>
+);
+
+/** Раздел диалога с отбивкой: без неё подпись раздела читается как подпись к
+    предыдущему полю формы. */
+export const Block = ({ title, children }: { title: string; children: ReactNode }) => (
+  <div style={{ borderTop: '1px solid var(--c-glass-line)', paddingTop: 12 }}>
+    <div className="dcount" style={{ marginBottom: 8 }}>{title}</div>
+    {children}
+  </div>
+);
+
 /** Пара строк-подсказок под списком: чтобы плашки не слипались. */
 export const Notes = ({ children }: { children: ReactNode }) => (
   <div style={{ display: 'grid', gap: 10, marginTop: 12 }}>{children}</div>
@@ -38,7 +86,7 @@ type Tour = { nm: string; mt: string; apps: string; judge?: string; st: string; 
 const TOURS: Tour[] = [
   { nm: 'Кубок Республики Казахстан 2026', mt: 'Главный старт · Астана · 18–20 мая', apps: '128 / 96', judge: 'Оспанов Т.', st: 'СУДЬЯ НАЗНАЧЕН', cls: 'reg' },
   { nm: 'Первенство РК · 2010 г.р. и моложе', mt: 'Главный старт · Алматы · 3–5 июня', apps: '96 / 71', judge: 'Токаев М.', st: 'ЗАЯВКИ ИГРОКОВ', cls: 'live' },
-  { nm: 'Евразийская лига · 2-й тур', mt: 'Лига · Караганда · 11–12 апреля', apps: '12 команд', judge: 'Пак С.', st: 'СИСТЕМА ПРОВЕДЕНИЯ', cls: 'wait' },
+  { nm: 'Евразийская лига · 2-й тур', mt: 'Лига · Караганда · 14–16 апреля', apps: '12 команд', judge: 'Пак С.', st: 'ИДЁТ', cls: 'live' },
   { nm: 'ОРТ «Кубок Иртыша»', mt: 'ОРТ · Павлодар · 25 апреля', apps: '34 / 34', st: 'ЗАЯВКИ СУДЕЙ', cls: 'wait' },
   { nm: 'ОРТ «Шымкент Open»', mt: 'ОРТ · Шымкент · 9 мая', apps: '— / —', st: 'ЧЕРНОВИК', cls: 'done' },
   { nm: 'Открытие сезона 2026', mt: 'Главный старт · Астана · 17–19 января', apps: '142 / 138', judge: 'Мукашев Б.', st: 'ЗАВЕРШЁН', cls: 'done' },
@@ -71,23 +119,47 @@ export const ATTENTION = [
   { v: '96', k: 'Взносы не оплачены', tone: 'b' as const },
 ];
 
-/** «Сегодня идут» — пустая зона: сегодня ни один турнир не в состоянии «Идёт». */
+/** «Сегодня идут»: тур Лиги идёт двумя дивизионами сразу, на разных столах.
+
+    `act` — показывать ли переход в ход турнира. У ролей 3 и 4 (наблюдатели)
+    кнопок на экранах нет вовсе, поэтому они берут ту же зону без неё. */
+export const TodayRows = ({ act = true }: { act?: boolean }) => (
+  <Rows>
+    {[
+      { nm: 'Суперлига · мужчины', sub: 'Евразийская лига, 2-й тур · Караганда · столы 1–6', v: '34 из 60' },
+      { nm: 'Суперлига · женщины', sub: 'Евразийская лига, 2-й тур · Караганда · столы 7–10', v: '26 из 48' },
+    ].map((r) => (
+      <div className="drow" key={r.nm}>
+        <div className="who">
+          <div className="nm">{r.nm}</div>
+          <div className="rl">{r.sub}</div>
+        </div>
+        <div className="amt">{r.v}</div>
+        <P t="ИДЁТ" cls="live" />
+        {act && <button className="dpickbtn">Ход турнира</button>}
+      </div>
+    ))}
+  </Rows>
+);
+
+/** «Сегодня идут» в межсезонье — пустая зона (её же показывают роли 3 и 4). */
 export const TodayEmpty = () => (
   <Empty
     title="Сегодня матчей нет"
-    text="Ближайший старт — Кубок Республики Казахстан, 18 мая, Астана. Здесь появятся турниры в состоянии «Идёт» со счётом сыгранных матчей."
+    text="Здесь появляются турниры в состоянии «Идёт» со счётом сыгранных матчей и ссылкой на ход турнира."
   />
 );
 
 /* ── Э1.1 · Панель Федерации ───────────────────────────────────── */
 
-export function Dash1_1() {
+export function Dash1_1({ variant }: { variant?: DeskVariant }) {
   return (
     <RoleScreen
+      variant={variant}
       role={R01}
       nav="Панель"
       title="Панель Федерации"
-      sub="Сезон 2026 · 8 главных стартов, 24 ОРТ, Евразийская лига — 4 тура"
+      sub="Сезон 2026 · 15 апреля · 8 главных стартов, 24 ОРТ, Евразийская лига — 4 тура"
       hint="Полный доступ безопасен потому, что система именная: каждое действие пишется в журнал с автором и временем (§12)."
     >
       <Chips items={ATTENTION} />
@@ -99,15 +171,15 @@ export function Dash1_1() {
       <div className="mkcols">
         <Panel title="Ближайшие старты">
           <Rows>
-            {TOURS.slice(0, 5).map((t) => (
+            {TOURS.slice(0, 4).map((t) => (
               <TourRow key={t.nm} t={t} />
             ))}
           </Rows>
         </Panel>
         <Panel title="Сегодня идут">
-          <TodayEmpty />
+          <TodayRows />
           <Notes>
-            <Hint>Зона «Требует внимания» пустеет так же — с подписью «всё в порядке».</Hint>
+            <Hint>Счёт сыгранных матчей идёт от судей на столах — панель его только показывает.</Hint>
           </Notes>
         </Panel>
       </div>
@@ -115,11 +187,46 @@ export function Dash1_1() {
   );
 }
 
+const Dash1_1States = () => (
+  <States>
+    <Shot
+      tone="success"
+      title="Всё разобрано"
+      text="Зона «Требует внимания» пустая, с подписью «всё в порядке»."
+    >
+      <Chips
+        items={[
+          { v: '0', k: 'Без главного судьи' },
+          { v: '0', k: 'Регламент не заполнен' },
+          { v: '0', k: 'Заявки без решения' },
+        ]}
+      />
+      <Empty
+        title="Всё в порядке"
+        text="Нерешённых дел по календарю нет. Плитки вернутся, как только появится турнир без судьи или зависшая заявка."
+      />
+    </Shot>
+
+    <Shot
+      tone="info"
+      title="Межсезонье"
+      text="Вместо ближайших стартов — приглашение завести сезон, «Сегодня идут» пустая."
+    >
+      <Empty
+        title="Сезон 2027 ещё не заведён"
+        text="Календарь сезона пуст: заведите первое соревнование или скопируйте прошлогодний календарь."
+      />
+      <TodayEmpty />
+    </Shot>
+  </States>
+);
+
 /* ── Э1.2 · Календарь сезона ───────────────────────────────────── */
 
-export function Cal1_2() {
+export function Cal1_2({ variant }: { variant?: DeskVariant }) {
   return (
     <RoleScreen
+      variant={variant}
       role={R01}
       nav="Календарь"
       title="Календарь сезона"
@@ -157,6 +264,118 @@ export function Cal1_2() {
   );
 }
 
+const Cal1_2States = () => (
+  <States>
+    <Shot tone="info" title="Пустой сезон" text="Приглашение завести первое соревнование." wide>
+      <ActionBar count="0 соревнований · сезон 2027">
+        <button className="dsubmit" style={{ padding: '10px 14px' }}>
+          <Plus size={15} /> Завести соревнование
+        </button>
+      </ActionBar>
+      <Empty
+        title="В сезоне 2027 соревнований нет"
+        text="Календарь наполняется по мере заведения: главные старты, туры Евразийской лиги, открытые республиканские турниры."
+      />
+    </Shot>
+  </States>
+);
+
+/* ── Э1.4 · Форма «Завести соревнование» ───────────────────────── */
+
+const STEPS = ['1 · Категория', '2 · Основное', '3 · Допуск', '4 · Флаги', '5 · Столы'];
+
+const NewFlags = () => (
+  <Rows>
+    <Row nm="Годовой взнос федерации" sub="умолчание категории «Главный старт»" pill={{ t: 'ВКЛЮЧЁН', cls: 'live' }} />
+    <Row nm="Документы к заявке" sub="удостоверение личности, медицинский допуск" pill={{ t: 'ВКЛЮЧЁН', cls: 'live' }} />
+    <div className="drow">
+      <div className="who">
+        <div className="nm">Ценз по рейтингу</div>
+        <div className="rl">переопределён вручную для первенства</div>
+      </div>
+      <P t="ВЫКЛЮЧЕН" cls="done" />
+    </div>
+  </Rows>
+);
+
+export function New1_4() {
+  return (
+    <RoleScreen
+      role={R01}
+      nav="Календарь"
+      title="Завести соревнование"
+      sub="Шаг 5 из 5 · столы и трансляция"
+      hint="Соревнование создаётся в состоянии «Черновик»: публично не видно, пока не опубликовано."
+    >
+      <div className="dseg2">
+        {STEPS.map((s) => (
+          <span key={s} className={s === '5 · Столы' ? 'on' : undefined}>{s}</span>
+        ))}
+      </div>
+      <div className="mkcols">
+        <Panel title="Шаги 1–3 · категория, основное, допуск">
+          <Form>
+            <Field label="Категория" value="Главный старт" />
+            <Field label="Название" value="Первенство РК · 2012 г.р. и моложе" />
+            <Field label="Город" value="Актобе · ДС «Коктем»" />
+            <Field label="Окно дат" value="12–14 сентября 2026" />
+            <Field label="Разряды" value="Одиночный · парный" />
+            <Field label="Ценз по рейтингу" value="не требуется" />
+            <Field
+              label="Возрастная граница"
+              value="правило от сезона: «2012 г.р. и моложе» — не строка в названии"
+              wide
+            />
+          </Form>
+        </Panel>
+
+        <Panel title="Шаг 4 · флаги допуска · Шаг 5 · столы">
+          <NewFlags />
+          <div style={{ marginTop: 12 }}>
+            <Form>
+              <Field label="Сколько столов" value="12" />
+              <Field label="С трансляцией" value="столы 1 и 2" />
+            </Form>
+          </div>
+        </Panel>
+      </div>
+      <div className="dactionbar">
+        <div className="dcount">
+          Обязательные поля заполнены · соревнование создастся в состоянии «Черновик»
+        </div>
+        <button className="dsubmit" style={{ padding: '12px 18px' }}>
+          Создать
+        </button>
+      </div>
+    </RoleScreen>
+  );
+}
+
+const New1_4States = () => (
+  <States>
+    <Shot
+      tone="danger"
+      title="Обязательные поля не заполнены"
+      text="«Создать» неактивна, с пояснением."
+      wide
+    >
+      <Form>
+        <Field label="Название" value="Первенство РК · 2012 г.р. и моложе" />
+        <div className="dfield">
+          <div className="k">Окно дат</div>
+          <div className="dval" style={{ color: 'var(--c-warning)' }}>— не выбрано</div>
+        </div>
+      </Form>
+      <div className="dactionbar">
+        <div className="dcount" style={{ color: 'var(--c-warning)' }}>
+          Заполните обязательное поле «Окно дат» — без него соревнование не создать
+        </div>
+        <Off>Создать</Off>
+      </div>
+    </Shot>
+  </States>
+);
+
 /* ── Э1.3 · Карточка турнира ───────────────────────────────────── */
 
 /** Восемь состояний турнира (TZ §4.3) — шкала с подсветкой текущего. */
@@ -174,6 +393,43 @@ const NOW_STAGE = 'Судья назначен';
 
 const TABS = ['Регламент', 'Заявки', 'Сетка', 'Расписание', 'Судьи', 'Протокол', 'Журнал'];
 
+/** Шкала жизненного цикла: `now` — подсвеченное состояние. */
+const Stages = ({ now = NOW_STAGE }: { now?: string }) => (
+  <div>
+    <div className="dcount" style={{ marginBottom: 8 }}>Состояние турнира — восемь состояний по §4.3</div>
+    <div className="dseg2">
+      {STAGES.map((s) => (
+        <span key={s} className={s === now ? 'on' : undefined}>{s}</span>
+      ))}
+    </div>
+  </div>
+);
+
+const TourTabs = ({ on = 'Регламент' }: { on?: string }) => (
+  <div className="ttabs">
+    {TABS.map((t) => (
+      <span key={t} className={'ttab' + (t === on ? ' on' : '')}>{t}</span>
+    ))}
+  </div>
+);
+
+/** Регламент турнира — он же подложка диалога отмены (Э1.9). */
+const TourRules = () => (
+  <Form>
+    <Field label="Даты" value="18–20 мая 2026" />
+    <Field label="Город" value="Астана · ДС «Барыс»" />
+    <Field label="Разряды" value="Одиночный · парный" />
+    <Field label="Формат" value="Олимпийская с группами" />
+    <Field label="Столов" value="16 · трансляция со столов 1–4" />
+    <Field label="Возрастная граница" value="без ограничения" />
+    <Field
+      label="Условия допуска (§4.2)"
+      value="годовой взнос обязателен · документы к заявке обязательны · ценз по рейтингу не требуется"
+      wide
+    />
+  </Form>
+);
+
 export function Tour1_3() {
   return (
     <RoleScreen
@@ -183,34 +439,11 @@ export function Tour1_3() {
       sub="Главный старт · г. Астана · 18–20 мая · подано 128 заявок, принято 96"
       hint="«Опубликовать» доступно в состоянии «Судья назначен»: турнир становится виден публично и открывается приём заявок игроков."
     >
-      <div>
-        <div className="dcount" style={{ marginBottom: 8 }}>Состояние турнира — восемь состояний по §4.3</div>
-        <div className="dseg2">
-          {STAGES.map((s) => (
-            <span key={s} className={s === NOW_STAGE ? 'on' : undefined}>{s}</span>
-          ))}
-        </div>
-      </div>
-      <div className="ttabs">
-        {TABS.map((t) => (
-          <span key={t} className={'ttab' + (t === 'Регламент' ? ' on' : '')}>{t}</span>
-        ))}
-      </div>
+      <Stages />
+      <TourTabs />
       <div className="mkcols">
         <Panel title="Регламент" extra={<P t={NOW_STAGE.toUpperCase()} cls="reg" />}>
-          <Form>
-            <Field label="Даты" value="18–20 мая 2026" />
-            <Field label="Город" value="Астана · ДС «Барыс»" />
-            <Field label="Разряды" value="Одиночный · парный" />
-            <Field label="Формат" value="Олимпийская с группами" />
-            <Field label="Столов" value="16 · трансляция со столов 1–4" />
-            <Field label="Возрастная граница" value="без ограничения" />
-            <Field
-              label="Условия допуска (§4.2)"
-              value="годовой взнос обязателен · документы к заявке обязательны · ценз по рейтингу не требуется"
-              wide
-            />
-          </Form>
+          <TourRules />
           <div className="dactionbar" style={{ marginTop: 12 }}>
             <div className="dcount">Правка после «Черновика» сохраняется с автором и уходит в журнал</div>
             <button className="dpickbtn">Править регламент</button>
@@ -238,78 +471,154 @@ export function Tour1_3() {
   );
 }
 
-/* ── Э1.4 · Форма «Завести соревнование» ───────────────────────── */
+const Tour1_3States = () => (
+  <States>
+    <Shot
+      tone="warning"
+      title="«Черновик» — незаполненные обязательные поля"
+      text="Поля подсвечены; с ними нельзя публиковать."
+    >
+      <Form>
+        <Field label="Даты" value="9 мая 2026" />
+        <div className="dfield">
+          <div className="k">Формат</div>
+          <div className="dval" style={{ color: 'var(--c-warning)' }}>— не выбран</div>
+        </div>
+        <div className="dfield">
+          <div className="k">Столов</div>
+          <div className="dval" style={{ color: 'var(--c-warning)' }}>— не указано</div>
+        </div>
+      </Form>
+      <Alert>Пока регламент не заполнен, турнир нельзя опубликовать и на него нельзя открыть приём заявок судей.</Alert>
+      <Off>Опубликовать</Off>
+    </Shot>
 
-const STEPS = ['1 · Категория', '2 · Основное', '3 · Допуск', '4 · Флаги', '5 · Столы'];
+    <Shot
+      tone="info"
+      title="После состояния «Завершён»"
+      text="Всё только чтение, кнопок правки нет."
+    >
+      <Stages now="Завершён" />
+      <Rows>
+        <Row nm="Итоговый протокол" sub="утверждён председателем ГСК · 21.01.2026" pill={{ t: 'ЗАКРЫТ', cls: 'done' }} action="Печать" />
+        <Row nm="Рейтинг" sub="пересчитан по 142 матчам · 21.01.2026" pill={{ t: 'УЧТЁН', cls: 'done' }} />
+      </Rows>
+      <Hint>Правка регламента, отмена и перенос из завершённого турнира убраны — осталась печать и журнал.</Hint>
+    </Shot>
+  </States>
+);
 
-export function New1_4() {
+/* ── Э1.9 · Отмена или перенос соревнования ────────────────────── */
+
+export function Cancel1_9() {
   return (
     <RoleScreen
       role={R01}
       nav="Календарь"
-      title="Завести соревнование"
-      sub="Шаг 5 из 5 · столы и трансляция"
-      hint="Соревнование создаётся в состоянии «Черновик»: публично не видно, пока не опубликовано."
+      title="Кубок Республики Казахстан 2026"
+      sub="Главный старт · г. Астана · 18–20 мая · подано 128 заявок, принято 96"
+      hint="Причина обязательна: она уходит и в уведомление заявителям, и в журнал действий."
     >
-      <div className="dseg2">
-        {STEPS.map((s) => (
-          <span key={s} className={s === '5 · Столы' ? 'on' : undefined}>{s}</span>
-        ))}
-      </div>
-      <div className="mkcols">
-        <Panel title="Шаги 1–3 · категория, основное, допуск">
-          <Form>
-            <Field label="Категория" value="Главный старт" />
-            <Field label="Название" value="Первенство РК · 2012 г.р. и моложе" />
-            <Field label="Город" value="Актобе" />
-            <div className="dfield">
-              <div className="k">Окно дат</div>
-              <div className="dval" style={{ color: 'var(--c-warning)' }}>— не выбрано</div>
-            </div>
-            <Field label="Разряды" value="Одиночный · парный" />
-            <Field label="Ценз по рейтингу" value="не требуется" />
-            <Field
-              label="Возрастная граница"
-              value="правило от сезона: «2012 г.р. и моложе» — не строка в названии"
-              wide
-            />
-          </Form>
-        </Panel>
+      <Stages />
+      <TourTabs />
+      <Panel title="Регламент" extra={<P t={NOW_STAGE.toUpperCase()} cls="reg" />}>
+        <TourRules />
+      </Panel>
 
-        <Panel title="Шаг 4 · флаги допуска · Шаг 5 · столы">
-          <Rows>
-            <Row nm="Годовой взнос федерации" sub="умолчание категории «Главный старт»" pill={{ t: 'ВКЛЮЧЁН', cls: 'live' }} />
-            <Row nm="Документы к заявке" sub="удостоверение личности, медицинский допуск" pill={{ t: 'ВКЛЮЧЁН', cls: 'live' }} />
-            <div className="drow">
-              <div className="who">
-                <div className="nm">Ценз по рейтингу</div>
-                <div className="rl">переопределён вручную для первенства</div>
-              </div>
-              <P t="ВЫКЛЮЧЕН" cls="done" />
+      <Modal
+        title="Отменить или перенести соревнование"
+        sub="Кубок Республики Казахстан 2026 · 18–20 мая · Астана"
+        foot={
+          <>
+            <div className="dcount">Причина уйдёт заявителям и в журнал</div>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <Ghost>Закрыть</Ghost>
+              <button className="dsubmit" style={{ padding: '11px 16px' }}>Перенести</button>
             </div>
-          </Rows>
-          <div style={{ marginTop: 12 }}>
-            <Form>
-              <Field label="Сколько столов" value="12" />
-              <Field label="С трансляцией" value="столы 1 и 2" />
-            </Form>
-          </div>
-        </Panel>
-      </div>
-      <div className="dactionbar">
-        <div className="dcount" style={{ color: 'var(--c-warning)' }}>
-          Заполните обязательное поле «Окно дат» — без него соревнование не создать
+          </>
+        }
+      >
+        <div className="dseg2">
+          <span className="on">Перенести</span>
+          <span>Отменить совсем</span>
         </div>
-        <button
-          className="dsubmit"
-          style={{ padding: '12px 18px', background: 'var(--c-panel-3)', color: 'var(--c-dim)', boxShadow: 'none' }}
-        >
-          Создать
-        </button>
-      </div>
+        <Form>
+          <Field label="Было" value="18–20 мая 2026" />
+          <Field label="Новое окно дат" value="1–3 июня 2026" />
+          <Field
+            label="Причина"
+            value="ДС «Барыс» занят под другое мероприятие; зал подтвердил новые даты"
+            wide
+          />
+        </Form>
+        <Block title="Кого затрагивает">
+          <Chips
+            items={[
+              { v: '128', k: 'Заявок подано' },
+              { v: '96', k: 'Принято', tone: 'g' },
+              { v: '14', k: 'Судей в наряде', tone: 'b' },
+            ]}
+          />
+        </Block>
+        <Hint>
+          Заявки сохраняются и переезжают на новые даты; уведомление уйдёт всем, кто подал заявку, —
+          игрокам, тренерам и судьям наряда (§10.1).
+        </Hint>
+      </Modal>
     </RoleScreen>
   );
 }
+
+const Cancel1_9States = () => (
+  <States>
+    <Shot tone="danger" title="Причина не заполнена" text="Обе кнопки неактивны, с пояснением.">
+      <div className="dfield">
+        <div className="k">Причина</div>
+        <div className="dval" style={{ color: 'var(--c-danger)' }}>— не заполнена</div>
+      </div>
+      <Alert tone="danger">
+        Без причины ни перенести, ни отменить нельзя: она уходит людям в уведомление и остаётся в журнале.
+      </Alert>
+      <div style={{ display: 'flex', gap: 8 }}>
+        <Off>Перенести</Off>
+        <Off>Отменить соревнование</Off>
+      </div>
+    </Shot>
+
+    <Shot
+      tone="warning"
+      title="Турнир в состоянии «Идёт» ✳"
+      text="Предупреждение, что часть матчей уже сыграна и отмена их результаты не удаляет."
+    >
+      <Rows>
+        <Row nm="Сыграно матчей" sub="Суперлига (мужчины) · день 2 из 3" val="34 из 60" pill={{ t: 'ИДЁТ', cls: 'live' }} />
+      </Rows>
+      <Alert>
+        <AlertTriangle size={13} style={{ verticalAlign: '-2px' }} /> Турнир уже идёт: сыгранные матчи
+        останутся в журнале и в истории игроков, но турнир не будет доигран.
+      </Alert>
+    </Shot>
+
+    <Shot
+      tone="warning"
+      title="⚠ вопрос 2.2 — чем становится отменённый турнир"
+      text="Среди восьми состояний §4.3 «отменён» нет, и кто именно отменяет — тоже открыто."
+      wide
+    >
+      <div className="dseg2">
+        {STAGES.map((s) => (
+          <span key={s}>{s}</span>
+        ))}
+        <span style={{ color: 'var(--c-danger)', borderColor: 'var(--c-danger-line)' }}>Отменён — ⚠ такого состояния в §4.3 нет</span>
+      </div>
+      <Alert tone="danger">
+        Пока не решено: остаётся ли отменённый турнир в календаре, кто его отменяет — председатель ГСК
+        (так в §4.3) или администратор Федерации по «полному доступу», и что происходит с уже сыгранными
+        матчами. В макете это место помечено, а не придумано.
+      </Alert>
+    </Shot>
+  </States>
+);
 
 /* ── Э1.5 · Пользователи и роли ────────────────────────────────── */
 
@@ -372,6 +681,266 @@ export function Users1_5() {
   );
 }
 
+const Users1_5States = () => (
+  <States>
+    <Shot
+      tone="warning"
+      title="Попытка выдать роль «главный судья» ✳"
+      text="Подсказка, что на официальный турнир судью назначает председатель ГСК через заявки, а не этот экран."
+    >
+      <Rows>
+        <div className="drow">
+          <img src={A(76)} alt="" />
+          <div className="who">
+            <div className="nm">Оспанов Тимур</div>
+            <div className="rl">Главный судья · Кубок РК · назначил председатель ГСК, 12.04.2026</div>
+          </div>
+          <P t="НАЗНАЧЕН ГСК" cls="reg" />
+        </div>
+      </Rows>
+      <Alert>
+        У этой роли нет ни «Выдать», ни «Отозвать»: она появилась из решения по заявке судьи (§4.4).
+        Снять её можно только сменой главного судьи на турнире.
+      </Alert>
+    </Shot>
+
+    <Shot
+      tone="warning"
+      title="⚠ 12.8 — один аккаунт на федерацию или несколько"
+      text="Не решено и то, нужен ли технический администратор без доступа к спортивным решениям."
+    >
+      <Rows>
+        <Row av={AW(44)} nm="Абаева Динара" sub="Администратор Федерации · система · бессрочно" pill={{ t: 'АКТИВЕН', cls: 'live' }} />
+        <Row av={A(60)} nm="Сериков Нурлан" sub="Экономист · система · бессрочно" pill={{ t: 'АКТИВЕН', cls: 'live' }} />
+      </Rows>
+      <Alert>
+        Сколько людей держат роль администратора и нужен ли отдельный технический администратор —
+        без доступа к спортивным решениям и персональным данным — федерация ещё не ответила.
+      </Alert>
+    </Shot>
+  </States>
+);
+
+/* ── Э1.10 · Форма «Завести аккаунт» ───────────────────────────── */
+
+export function NewUser1_10() {
+  return (
+    <RoleScreen
+      role={R01}
+      nav="Пользователи"
+      title="Завести аккаунт"
+      sub="Учётная запись без ролей: права выдаются отдельно, на экране выдачи роли"
+      hint="Аккаунт заводится неактивным и включается сам, когда человек принял приглашение и задал пароль."
+    >
+      <div className="mkcols">
+        <Panel title="Человек и контакты">
+          <Form>
+            <Field label="Фамилия" value="Абдрахманова" />
+            <Field label="Имя, отчество" value="Айгерим Ерлановна" />
+            <Field label="Год рождения ✳" value="1994" />
+            <Field label="Телефон" value="+7 707 118 44 03" />
+            <Field label="Почта" value="a.abdrakhmanova@ttfrk.kz" />
+            <Field label="Хотя бы один контакт ✳" value="телефон и почта заполнены" wide />
+          </Form>
+        </Panel>
+
+        <Panel title="Связь с реестром ✳">
+          <ActionBar count="Поиск: «абдрахманова»">
+            <Btn>
+              <Search size={14} /> Искать в реестрах
+            </Btn>
+          </ActionBar>
+          <Rows>
+            <div className="drow">
+              <img src={AW(32)} alt="" />
+              <div className="who">
+                <div className="nm">Абдрахманова Айгерим</div>
+                <div className="rl">Реестр судей · вторая категория · Астана</div>
+              </div>
+              <button className="dpickbtn">
+                <Link2 size={14} /> Связать
+              </button>
+            </div>
+          </Rows>
+          <Notes>
+            <Hint>
+              Аккаунт привязывается к существующей записи реестра, а не заводит вторую: несвязанные
+              записи — и есть источник дублей (Э1.13).
+            </Hint>
+          </Notes>
+        </Panel>
+      </div>
+
+      <Panel title="Приглашение ✳">
+        <div className="dactionbar">
+          <div className="dseg2">
+            <span className="on">На почту</span>
+            <span>SMS</span>
+          </div>
+          <div className="dcount">Пароль человек задаёт сам по ссылке — мы его не знаем и не храним</div>
+        </div>
+      </Panel>
+
+      <div className="dactionbar">
+        <div className="dcount">Заведение аккаунта пишется в журнал: кто завёл, когда, кому отправлено приглашение</div>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <Ghost>Выдать роль сразу</Ghost>
+          <button className="dsubmit" style={{ padding: '12px 18px' }}>
+            <Send size={15} /> Завести и пригласить
+          </button>
+        </div>
+      </div>
+    </RoleScreen>
+  );
+}
+
+const NewUser1_10States = () => (
+  <States>
+    <Shot
+      tone="warning"
+      title="Найден похожий человек ✳"
+      text="Предложение связать с существующей записью, а не заводить новую."
+    >
+      <Rows>
+        <div className="drow">
+          <img src={AW(32)} alt="" />
+          <div className="who">
+            <div className="nm">Абдрахманова Айгерим Ерлановна</div>
+            <div className="rl">1994 · Астана · судья второй категории · есть в реестре</div>
+          </div>
+          <P t="СОВПАДЕНИЕ" cls="wait" />
+        </div>
+      </Rows>
+      <div style={{ display: 'flex', gap: 8 }}>
+        <button className="dpickbtn">Связать с этой записью</button>
+        <Ghost>Всё равно завести новую</Ghost>
+      </div>
+    </Shot>
+
+    <Shot
+      tone="danger"
+      title="Приглашение не доставлено ✳"
+      text="Контакт помечен, есть «отправить ещё раз»."
+    >
+      <Rows>
+        <div className="drow">
+          <div className="who">
+            <div className="nm">a.abdrakhmanova@ttfrk.kz</div>
+            <div className="rl" style={{ color: 'var(--c-danger)' }}>письмо вернулось: адрес не существует</div>
+          </div>
+          <P t="НЕ ДОСТАВЛЕНО" cls="bad" />
+          <button className="dpickbtn">Отправить ещё раз</button>
+        </div>
+      </Rows>
+      <Alert tone="danger">Аккаунт остаётся неактивным: человек не задал пароль и войти не может.</Alert>
+    </Shot>
+  </States>
+);
+
+/* ── Э1.11 · Выдача роли ───────────────────────────────────────── */
+
+/* Список ролей в диалоге показан не целиком: их четырнадцать, и в макете важно
+   не перечислить все, а показать, как выглядит выбор. Полный перечень — ROLES.md. */
+const ROLE_PICK = [
+  'Экономист',
+  'Председатель ГСК',
+  'Главный судья',
+  'Судья',
+  'Инспектор',
+  'Ещё 9 ролей',
+];
+
+export function GrantRole1_11() {
+  return (
+    <RoleScreen
+      role={R01}
+      nav="Пользователи"
+      title="Пользователи и роли"
+      sub="214 учётных записей · выдача роли открыта поверх списка"
+      hint="Роль — это всегда «роль · область · срок»: без области роль ничего не значит, без срока её потом некому снять."
+    >
+      <Rows>
+        {USERS.slice(0, 4).map((u) => (
+          <Row key={u.nm} av={u.av} nm={u.nm} sub={u.roles} pill={{ t: u.st, cls: 'live' }} />
+        ))}
+      </Rows>
+
+      <Modal
+        title="Выдать роль"
+        sub="Пак Сергей · +7 705 431 20 18 · уже есть роль «Судья стола · стол 4»"
+        foot={
+          <>
+            <div className="dcount">Выдача пишется в журнал: кто выдал, кому, когда</div>
+            <button className="dsubmit" style={{ padding: '11px 16px' }}>Выдать</button>
+          </>
+        }
+      >
+        <div>
+          <div className="dcount" style={{ marginBottom: 8 }}>Роль — из четырнадцати по документу федерации</div>
+          <div className="dseg2">
+            {ROLE_PICK.map((r) => (
+              <span key={r} className={r === 'Судья' ? 'on' : undefined}>{r}</span>
+            ))}
+          </div>
+        </div>
+        <Block title="Область — состав зависит от роли">
+          <div className="dseg2">
+            <span>Система</span>
+            <span className="on">Турнир</span>
+            <span>Клуб</span>
+            <span>Стол</span>
+          </div>
+          <div style={{ marginTop: 12 }}>
+            <Form>
+              <Field label="Турнир" value="Кубок Республики Казахстан 2026" />
+              <Field label="Срок — по последний день турнира" value="до 20.05.2026" />
+            </Form>
+          </div>
+        </Block>
+        <Block title="Что человек сможет ✳">
+          <Rows>
+            <Row nm="Вести счёт на своём столе" sub="матч не стартует, пока стол без судьи (§4.7)" pill={{ t: 'ДА', cls: 'live' }} />
+            <Row nm="Видеть расписание и вызовы" sub="уведомление о вызове пары приходит мгновенно" pill={{ t: 'ДА', cls: 'live' }} />
+            <Row nm="Править чужие результаты" sub="это делает главный судья соревнований" pill={{ t: 'НЕТ', cls: 'done' }} />
+          </Rows>
+        </Block>
+      </Modal>
+    </RoleScreen>
+  );
+}
+
+const GrantRole1_11States = () => (
+  <States>
+    <Shot
+      tone="danger"
+      title="Выбрана роль «Главный судья соревнований»"
+      text="Выдать нельзя: на официальный турнир судью назначает председатель ГСК через заявки (§4.4)."
+    >
+      <div className="dseg2">
+        <span>Судья</span>
+        <span style={{ color: 'var(--c-danger)', borderColor: 'var(--c-danger-line)' }}>Главный судья</span>
+        <span>Инспектор</span>
+      </div>
+      <Alert tone="danger">
+        Эта роль не раздаётся руками: судьи подают заявки на судейство, председатель ГСК выбирает одного,
+        и он становится главным судьёй турнира.
+      </Alert>
+      <Off>Выдать</Off>
+    </Shot>
+
+    <Shot tone="warning" title="Срок указан в прошлом" text="«Выдать» неактивна.">
+      <Form>
+        <Field label="Роль и область" value="Судья · Кубок Республики Казахстан 2026" />
+        <div className="dfield">
+          <div className="k">Срок</div>
+          <div className="dval" style={{ color: 'var(--c-warning)' }}>до 20.05.2025 — дата уже прошла</div>
+        </div>
+      </Form>
+      <Off>Выдать</Off>
+    </Shot>
+  </States>
+);
+
 /* ── Э1.6 · Реестры ────────────────────────────────────────────── */
 
 type Athlete = { av: string; nm: string; sub: string; rt: string; st: string; cls: 'live' | 'wait' | 'bad' };
@@ -412,12 +981,285 @@ export function Reg1_6() {
       </ActionBar>
       <Rows>
         {ATHLETES.map((p) => (
-          <Row key={p.nm} av={p.av} nm={p.nm} sub={p.sub} val={`рейтинг ${p.rt}`} pill={{ t: p.st, cls: p.cls }} action="Править" />
+          <Row key={p.nm} av={p.av} nm={p.nm} sub={p.sub} val={`рейтинг ${p.rt}`} pill={{ t: p.st, cls: p.cls }} action="Открыть" />
         ))}
       </Rows>
     </RoleScreen>
   );
 }
+
+const Reg1_6States = () => (
+  <States>
+    <Shot
+      tone="info"
+      title="Запись заведена клубом или самим человеком ✳"
+      text="Виден источник записи — «завёл клуб „Достык“, 03.02.2026»."
+    >
+      <Rows>
+        <div className="drow">
+          <img src={AW(21)} alt="" />
+          <div className="who">
+            <div className="nm">Тлеуова Аружан</div>
+            <div className="rl">завёл клуб «Достык», 03.02.2026 · 2009 · Шымкент</div>
+          </div>
+          <P t="ЗАВЁЛ КЛУБ" cls="wait" />
+        </div>
+        <div className="drow">
+          <img src={A(32)} alt="" />
+          <div className="who">
+            <div className="nm">Смагулов Алан</div>
+            <div className="rl">зарегистрировался сам, 11.01.2026 · 2004 · Алматы</div>
+          </div>
+          <P t="САМ" cls="reg" />
+        </div>
+      </Rows>
+    </Shot>
+
+    <Shot
+      tone="warning"
+      title="⚠ 12.10 — стык ручного заведения с самостоятельной регистрацией"
+      text="Как ручное заведение записи стыкуется с регистрацией спортсмена и заведением через клуб — не решено."
+    >
+      <Rows>
+        <Row av={A(75)} nm="Ерлан Бекзат · 2006" sub="завела федерация, 14.01.2026" pill={{ t: 'ДУБЛЬ?', cls: 'wait' }} />
+        <Row av={A(75)} nm="Ерлан Бекзат · 2006" sub="зарегистрировался сам, 02.03.2026" pill={{ t: 'ДУБЛЬ?', cls: 'wait' }} />
+      </Rows>
+      <Alert>
+        Один человек тремя путями попадает в реестр — сам, через клуб, руками федерации. Пока правило не
+        принято, система показывает подозрение на дубль и отдаёт решение человеку (Э1.13).
+      </Alert>
+    </Shot>
+  </States>
+);
+
+/* ── Э1.12 · Карточка спортсмена ───────────────────────────────── */
+
+export function Athlete1_12() {
+  return (
+    <RoleScreen
+      role={R01}
+      nav="Реестры"
+      title="Смагулов Алан"
+      sub="2004 · Алматы · клуб «Алатау» · тренер Смагулов А. · КМС · рейтинг 2456"
+      hint="Состояние взноса здесь только показывается: отмечает его экономист, и правка идёт с его экрана (§9.2)."
+    >
+      <ActionBar count="Каждая правка профиля пишется в журнал: кто, когда, было → стало">
+        <div style={{ display: 'flex', gap: 8 }}>
+          <Btn>Действия по человеку</Btn>
+          <Ghost>
+            <GitMerge size={14} /> Объединить с другой записью
+          </Ghost>
+          <button className="dpickbtn">Править</button>
+        </div>
+      </ActionBar>
+
+      <div className="mkcols">
+        <div style={{ display: 'grid', gap: 12 }}>
+          <Panel title="Профиль" extra={<P t="ЗАРЕГИСТРИРОВАЛСЯ САМ" cls="reg" />}>
+            <Form>
+              <Field label="Год рождения · пол" value="2004 · мужской" />
+              <Field label="Разряд" value="кандидат в мастера спорта" />
+              <Field label="Регион и клуб" value="Алматы · «Алатау»" />
+              <Field label="Тренер" value="Смагулов Асхат" />
+              <Field label="Источник записи ✳" value="зарегистрировался сам, 11.01.2026 · подтвердил клуб «Алатау»" wide />
+            </Form>
+          </Panel>
+
+          <Panel title="История матчей" extra={<span className="dcount">42 матча за две кампании</span>}>
+            <Rows>
+              <Row av={A(44)} nm="Ким Георгий" sub="Открытие сезона 2026 · 1/4 финала · 19.01.2026" val="2 : 4" pill={{ t: 'ПОРАЖЕНИЕ', cls: 'bad' }} />
+              <Row av={A(13)} nm="Пак Сергей" sub="Открытие сезона 2026 · 1/8 финала · 18.01.2026" val="4 : 1" pill={{ t: 'ПОБЕДА', cls: 'live' }} />
+            </Rows>
+          </Panel>
+        </div>
+
+        <div style={{ display: 'grid', gap: 12 }}>
+          <Panel title="Рейтинг (§7.1)">
+            <Chips
+              items={[
+                { v: '2456', k: 'Рейтинг', tone: 'b' },
+                { v: '7', k: 'Место в РК' },
+                { v: '+38', k: 'За сезон', tone: 'g' },
+              ]}
+            />
+            <div style={{ marginTop: 10 }}>
+              <Rows>
+                <Row nm="Открытие сезона 2026" sub="1/4 финала · 19.01.2026" val="+22" pill={{ t: 'РЕЙТИНГОВЫЙ', cls: 'reg' }} />
+                <Row nm="ОРТ «Кубок Иртыша» 2025" sub="финал · 26.10.2025" val="+16" pill={{ t: 'РЕЙТИНГОВЫЙ', cls: 'reg' }} />
+              </Rows>
+            </div>
+          </Panel>
+
+          <Panel title="Годовой взнос" extra={<P t="ОПЛАЧЕН" cls="live" />}>
+            <Row nm="2026 · ₸ 10 000" sub="оплачен 14.01.2026 · картой через Halyk ePay" />
+            <Notes>
+              <Hint>Отметил экономист — здесь только просмотр (Э2.2).</Hint>
+            </Notes>
+          </Panel>
+        </div>
+      </div>
+    </RoleScreen>
+  );
+}
+
+const Athlete1_12States = () => (
+  <States>
+    <Shot
+      tone="warning"
+      title="Взнос не оплачен"
+      text="Плашка, что заявки на турниры с обязательным взносом не пройдут (§9.2)."
+    >
+      <div className="dactionbar">
+        <div className="dcount">Годовой взнос 2026</div>
+        <P t="НЕ ОПЛАЧЕН" cls="wait" />
+      </div>
+      <Alert>
+        Пока взнос не отмечен, заявки этого спортсмена на турниры с включённым флагом взноса приниматься
+        не будут. Отметку ставит экономист — с этого экрана её не поставить.
+      </Alert>
+    </Shot>
+
+    <Shot
+      tone="info"
+      title="Запись заведена клубом или самим человеком ✳"
+      text="Виден источник записи."
+    >
+      <Form>
+        <Field label="Спортсмен" value="Тлеуова Аружан · 2009 · Шымкент" />
+        <Field label="Источник записи" value="завёл клуб «Достык», 03.02.2026 · федерация не правила" wide />
+      </Form>
+      <Hint>Источник виден всегда: по нему разбирают дубли и понимают, кому писать при расхождении.</Hint>
+    </Shot>
+  </States>
+);
+
+/* ── Э1.13 · Объединение дублей ────────────────────────────────── */
+
+const MergeCol = ({
+  main,
+  nm,
+  sub,
+  born,
+  city,
+  club,
+  rating,
+}: {
+  main?: boolean;
+  nm: string;
+  sub: string;
+  born: string;
+  city: string;
+  club: string;
+  rating: string;
+}) => (
+  <Panel
+    title={nm}
+    extra={<P t={main ? 'ГЛАВНАЯ ЗАПИСЬ' : 'ДУБЛЬ'} cls={main ? 'live' : 'wait'} />}
+  >
+    <Form>
+      <Field label="Источник записи" value={sub} wide />
+      <Field label="Год рождения · город" value={`${born} · ${city}`} />
+      <Field label="Клуб" value={club} />
+      <Field label="Рейтинг" value={rating} wide />
+    </Form>
+    <div style={{ marginTop: 12 }}>
+      {main ? <Hint>Значения этой записи остаются, если не выбрано иное.</Hint> : <Btn>Сделать главной</Btn>}
+    </div>
+  </Panel>
+);
+
+export function Merge1_13() {
+  return (
+    <RoleScreen
+      role={R01}
+      nav="Реестры"
+      title="Объединение дублей"
+      sub="Реестр спортсменов · две записи об одном человеке"
+      hint="Объединение видно в журнале, но само не откатывается: сначала убеждаемся, что это один человек."
+    >
+      <div className="mkcols" style={{ gridTemplateColumns: '1fr 1fr' }}>
+        <MergeCol
+          main
+          nm="Ерлан Бекзат"
+          sub="завела федерация, 14.01.2026"
+          born="2006"
+          city="Актобе"
+          club="спортшкола №3"
+          rating="2105 · 34 матча"
+        />
+        <MergeCol
+          nm="Ерлан Бекзат"
+          sub="зарегистрировался сам, 02.03.2026"
+          born="2006"
+          city="Актобе"
+          club="— не указан"
+          rating="1840 · 8 матчей"
+        />
+      </div>
+
+      <Panel
+        title="Что переедет в главную запись ✳"
+        extra={<span className="dcount">совпали ФИО, год рождения и город — пара предложена как дубль</span>}
+      >
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+          <Row nm="История матчей" sub="34 + 8 матчей — в одну историю" val="42" pill={{ t: 'ПЕРЕЕДЕТ', cls: 'live' }} />
+          <Row nm="Взносы" sub="2025 и 2026 оплачены" val="2 года" pill={{ t: 'ПЕРЕЕДЕТ', cls: 'live' }} />
+          <Row nm="Заявки на турниры" sub="в том числе одна на Кубок РК" val="6" pill={{ t: 'ПЕРЕЕДЕТ', cls: 'live' }} />
+          <Row nm="Рейтинг" sub="2105 и 1840 — что остаётся, не решено" val="⚠" pill={{ t: 'ВОПРОС', cls: 'bad' }} />
+        </div>
+      </Panel>
+
+      <div className="dactionbar">
+        <Alert>Объединение пишется в журнал, но само не откатывается: разделять придётся руками.</Alert>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <Ghost>Это разные люди</Ghost>
+          <button className="dsubmit" style={{ padding: '12px 18px' }}>
+            <Merge size={15} /> Объединить
+          </button>
+        </div>
+      </div>
+    </RoleScreen>
+  );
+}
+
+const Merge1_13States = () => (
+  <States>
+    <Shot
+      tone="danger"
+      title="Пол или год рождения расходятся ✳"
+      text="Предупреждение, что это, возможно, разные люди: объединять без проверки нельзя."
+    >
+      <Rows>
+        <Row nm="Ерлан Бекзат · 2006 · мужской" sub="завела федерация, 14.01.2026" pill={{ t: 'ЗАПИСЬ A', cls: 'reg' }} />
+        <Row nm="Ерлан Бекзат · 2009 · мужской" sub="завёл клуб «Достык», 03.02.2026" pill={{ t: 'ЗАПИСЬ Б', cls: 'wait' }} />
+      </Rows>
+      <Alert tone="danger">
+        Год рождения расходится на три года — это может быть однофамилец. Объединение закрыто, пока
+        расхождение не разобрано.
+      </Alert>
+      <Off>Объединить</Off>
+    </Shot>
+
+    <Shot
+      tone="warning"
+      title="⚠ У обеих записей есть рейтинг"
+      text="Не решено, какой рейтинг остаётся у объединённой записи и пересчитывается ли история."
+    >
+      <div className="dactionbar">
+        <div className="dcount">Рейтинг записи A</div>
+        <div className="amt">2105 · 34 матча</div>
+      </div>
+      <div className="dactionbar">
+        <div className="dcount">Рейтинг записи Б</div>
+        <div className="amt">1840 · 8 матчей</div>
+      </div>
+      <Alert>
+        Взять больший, взять рейтинг главной записи или пересчитать движком по объединённой истории —
+        решение за федерацией и движком рейтинга (§7.1). В макете место помечено вопросом.
+      </Alert>
+    </Shot>
+  </States>
+);
 
 /* ── Э1.7 · Журнал действий ────────────────────────────────────── */
 
@@ -431,6 +1273,20 @@ const LOG: Log[] = [
   { av: A(76), act: 'Изменил расписание', who: 'Оспанов Т. · Кубок РК · 15.04.2026, 18:03', was: 'стол 4, 10:00', now: 'стол 6, 11:30', obj: 'РАСПИСАНИЕ', cls: 'reg' },
   { av: A(45), act: 'Завёл спортсмена', who: 'Досжан М. · клуб «Алатау» · 03.02.2026, 14:05', was: 'нет записи', now: 'Ахметов Диас', obj: 'РЕЕСТР', cls: 'wait' },
 ];
+
+const LogRow = ({ l }: { l: Log }) => (
+  <div className="drow">
+    <img src={l.av} alt="" />
+    <div className="who">
+      <div className="nm">{l.act}</div>
+      <div className="rl">{l.who}</div>
+    </div>
+    <div className="amt" style={{ color: 'var(--c-muted)' }}>{l.was}</div>
+    <span style={{ color: 'var(--c-dim)', fontWeight: 800 }}>→</span>
+    <div className="amt">{l.now}</div>
+    <P t={l.obj} cls={l.cls} />
+  </div>
+);
 
 export function Log1_7() {
   return (
@@ -463,22 +1319,31 @@ export function Log1_7() {
       </ActionBar>
       <Rows>
         {LOG.map((l) => (
-          <div className="drow" key={l.act + l.who}>
-            <img src={l.av} alt="" />
-            <div className="who">
-              <div className="nm">{l.act}</div>
-              <div className="rl">{l.who}</div>
-            </div>
-            <div className="amt" style={{ color: 'var(--c-muted)' }}>{l.was}</div>
-            <span style={{ color: 'var(--c-dim)', fontWeight: 800 }}>→</span>
-            <div className="amt">{l.now}</div>
-            <P t={l.obj} cls={l.cls} />
-          </div>
+          <LogRow key={l.act + l.who} l={l} />
         ))}
       </Rows>
     </RoleScreen>
   );
 }
+
+const Log1_7States = () => (
+  <States>
+    <Shot
+      tone="info"
+      title="По фильтру записей нет ✳"
+      text="Журнал пуст только по фильтру, а не вообще: видно, какой фильтр это дал."
+      wide
+    >
+      <ActionBar count="0 записей · человек: Тлеуова А. · тип: взносы · период: 7 дней">
+        <Btn>Сбросить фильтр</Btn>
+      </ActionBar>
+      <Empty
+        title="За выбранный период этот человек ничего не делал"
+        text="Записи журнала не удаляются: пусто здесь означает только то, что под фильтр ничего не попало."
+      />
+    </Shot>
+  </States>
+);
 
 /* ── Э1.8 · Новости и страницы ─────────────────────────────────── */
 
@@ -492,6 +1357,22 @@ const NEWS: News[] = [
   { nm: 'Судейский семинар в Астане', mt: 'Новость · 02.04.2026', langs: ['RU'], st: 'ЧЕРНОВИК', cls: 'done' },
   { nm: 'Как считается рейтинг игрока', mt: 'Страница · 18.02.2026', langs: ['RU', 'KZ', 'EN'], st: 'ОПУБЛИКОВАНО', cls: 'live' },
 ];
+
+const NewsRow = ({ n }: { n: News }) => (
+  <div className="drow">
+    <div className="who">
+      <div className="nm">{n.nm}</div>
+      <div className="rl">{n.mt}</div>
+    </div>
+    <div style={{ display: 'flex', gap: 4 }}>
+      {['RU', 'KZ', 'EN'].map((l) => (
+        <P key={l} t={l} cls={n.langs.includes(l) ? 'reg' : 'done'} />
+      ))}
+    </div>
+    <P t={n.st} cls={n.cls} />
+    <button className="dpickbtn">{n.cls === 'live' ? 'Снять с публикации' : 'Опубликовать'}</button>
+  </div>
+);
 
 export function News1_8() {
   return (
@@ -519,24 +1400,128 @@ export function News1_8() {
       </ActionBar>
       <Rows>
         {NEWS.map((n) => (
-          <div className="drow" key={n.nm}>
-            <div className="who">
-              <div className="nm">{n.nm}</div>
-              <div className="rl">{n.mt}</div>
-            </div>
-            <div style={{ display: 'flex', gap: 4 }}>
-              {['RU', 'KZ', 'EN'].map((l) => (
-                <P key={l} t={l} cls={n.langs.includes(l) ? 'reg' : 'done'} />
-              ))}
-            </div>
-            <P t={n.st} cls={n.cls} />
-            <button className="dpickbtn">{n.cls === 'live' ? 'Снять с публикации' : 'Опубликовать'}</button>
-          </div>
+          <NewsRow key={n.nm} n={n} />
         ))}
       </Rows>
     </RoleScreen>
   );
 }
+
+const News1_8States = () => (
+  <States>
+    <Shot
+      tone="warning"
+      title="Язык не заполнен ✳"
+      text="Индикатор пустого перевода; на публичном сайте показывается заполненный язык."
+      wide
+    >
+      <Rows>
+        <NewsRow n={NEWS[2]} />
+        <NewsRow n={NEWS[4]} />
+      </Rows>
+      <Alert>
+        Серый индикатор — язык пустой. Материал от этого не прячется: посетителю с казахским интерфейсом
+        покажется русская версия, а не пустая страница.
+      </Alert>
+    </Shot>
+  </States>
+);
+
+/* ── Э1.14 · Редактор материала ────────────────────────────────── */
+
+export function Editor1_14() {
+  return (
+    <RoleScreen
+      role={R01}
+      nav="Новости"
+      title="Кубок Республики: приём заявок открыт"
+      sub="Новость · черновик · публикация 12.04.2026"
+      hint="Языки живут в одном материале: переключатель меняет поля, а не создаёт вторую новость."
+    >
+      <div className="ttabs">
+        <span className="ttab on">RU · заполнен</span>
+        <span className="ttab">KZ · заполнен</span>
+        <span className="ttab" style={{ color: 'var(--c-warning)' }}>EN · пусто</span>
+      </div>
+      <div className="mkcols">
+        <Panel title="Текст · русский">
+          <Form>
+            <Field label="Заголовок" value="Кубок Республики: приём заявок открыт" wide />
+            <Field
+              label="Лид"
+              value="Заявки на Кубок Республики Казахстан 2026 принимаются до 10 мая через личный кабинет спортсмена."
+              wide
+            />
+            <Field
+              label="Текст"
+              value="Соревнование пройдёт 18–20 мая в Астане, ДС «Барыс». Главный судья — Оспанов Т. Допуск: годовой взнос федерации и документы к заявке…"
+              wide
+            />
+          </Form>
+        </Panel>
+
+        <div style={{ display: 'grid', gap: 12 }}>
+          <Panel title="Материал">
+            <Form>
+              <Field label="Тип" value="Новость" />
+              <Field label="Дата публикации" value="12.04.2026" />
+            </Form>
+            <div style={{ marginTop: 12 }}>
+              <Empty title="Обложка 16:9" text="jpg или png, от 1600 px по ширине" />
+            </div>
+          </Panel>
+
+          <Panel title="Предпросмотр ✳" extra={<Image size={15} />}>
+            <Hint>Показывает, как материал встанет на публичном сайте — в списке новостей и на своей странице.</Hint>
+          </Panel>
+        </div>
+      </div>
+      <div className="dactionbar">
+        <div className="dcount">Английская версия пустая — на сайте вместо неё покажется русская</div>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <Ghost>Сохранить черновик</Ghost>
+          <button className="dsubmit" style={{ padding: '12px 18px' }}>
+            <Send size={15} /> Опубликовать
+          </button>
+        </div>
+      </div>
+    </RoleScreen>
+  );
+}
+
+const Editor1_14States = () => (
+  <States>
+    <Shot
+      tone="warning"
+      title="Язык не заполнен ✳"
+      text="Индикатор пустого перевода и пояснение, чем он подменится на сайте."
+    >
+      <div className="ttabs">
+        <span className="ttab on">RU · заполнен</span>
+        <span className="ttab">KZ · заполнен</span>
+        <span className="ttab" style={{ color: 'var(--c-warning)' }}>EN · пусто</span>
+      </div>
+      <Empty title="Английская версия не заполнена" text="Скопировать русский текст и перевести — или оставить пустым." />
+      <Alert>Публикация не блокируется: посетителю с английским интерфейсом покажется русская версия.</Alert>
+    </Shot>
+
+    <Shot
+      tone="info"
+      title="Правка опубликованного материала ✳"
+      text="Изменения видны сразу, и каждая версия пишется в журнал."
+    >
+      <div className="dactionbar">
+        <div className="dcount">Материал опубликован 12.04.2026</div>
+        <P t="ОПУБЛИКОВАНО" cls="live" />
+      </div>
+      <Rows>
+        <Row nm="Версия 2 · сейчас" sub="Абаева Д. · 15.04.2026, 09:20 · правка лида" pill={{ t: 'ТЕКУЩАЯ', cls: 'reg' }} />
+        <Row nm="Версия 1" sub="Абаева Д. · 12.04.2026, 11:05 · публикация" />
+      </Rows>
+      <Hint>Правка уходит на сайт сразу — снимать материал с публикации ради этого не нужно.</Hint>
+    </Shot>
+  </States>
+);
 
 /* ── Борд роли ─────────────────────────────────────────────────── */
 
@@ -545,34 +1530,72 @@ export function Role01Board() {
     <Board role={R01}>
       <Screen code="Э1.1" cap="Панель Федерации">
         <Dash1_1 />
+        <Dash1_1States />
       </Screen>
       <Arrow lbl="пункт «Календарь»" />
       <Screen code="Э1.2" cap="Календарь сезона">
         <Cal1_2 />
-      </Screen>
-      <Arrow lbl="строка соревнования" />
-      <Screen code="Э1.3" cap="Карточка турнира">
-        <Tour1_3 />
+        <Cal1_2States />
       </Screen>
       <Arrow lbl="«Завести соревнование»" />
       <Screen code="Э1.4" cap="Форма «Завести соревнование»">
         <New1_4 />
+        <New1_4States />
+      </Screen>
+      <Arrow lbl="«Создать»" />
+      <Screen code="Э1.3" cap="Карточка турнира">
+        <Tour1_3 />
+        <Tour1_3States />
+      </Screen>
+      <Arrow lbl="«Отменить / перенести»" />
+      <Screen code="Э1.9" cap="Отмена или перенос">
+        <Cancel1_9 />
+        <Cancel1_9States />
       </Screen>
       <Arrow lbl="пункт «Пользователи»" />
       <Screen code="Э1.5" cap="Пользователи и роли">
         <Users1_5 />
+        <Users1_5States />
+      </Screen>
+      <Arrow lbl="«Завести аккаунт»" />
+      <Screen code="Э1.10" cap="Форма «Завести аккаунт»">
+        <NewUser1_10 />
+        <NewUser1_10States />
+      </Screen>
+      <Arrow lbl="«Выдать роль сразу»" />
+      <Screen code="Э1.11" cap="Выдача роли">
+        <GrantRole1_11 />
+        <GrantRole1_11States />
       </Screen>
       <Arrow lbl="пункт «Реестры»" />
       <Screen code="Э1.6" cap="Реестры">
         <Reg1_6 />
+        <Reg1_6States />
+      </Screen>
+      <Arrow lbl="строка спортсмена" />
+      <Screen code="Э1.12" cap="Карточка спортсмена">
+        <Athlete1_12 />
+        <Athlete1_12States />
+      </Screen>
+      <Arrow lbl="«Объединить с другой записью»" />
+      <Screen code="Э1.13" cap="Объединение дублей">
+        <Merge1_13 />
+        <Merge1_13States />
       </Screen>
       <Arrow lbl="пункт «Журнал»" />
       <Screen code="Э1.7" cap="Журнал действий">
         <Log1_7 />
+        <Log1_7States />
       </Screen>
       <Arrow lbl="пункт «Новости»" />
       <Screen code="Э1.8" cap="Новости и страницы">
         <News1_8 />
+        <News1_8States />
+      </Screen>
+      <Arrow lbl="«Править»" />
+      <Screen code="Э1.14" cap="Редактор материала">
+        <Editor1_14 />
+        <Editor1_14States />
       </Screen>
     </Board>
   );
