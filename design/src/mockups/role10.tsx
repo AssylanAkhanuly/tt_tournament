@@ -13,6 +13,7 @@ import { Bookmark, Download, Eye, FileText, Paperclip, Send } from 'lucide-react
 import {
   A, ActionBar, Arrow, Board, Chips, Form, Hint, Panel, Row, Rows, RoleScreen, Screen,
 } from './shell';
+import type { ScreenMap } from './shell';
 import { R10 } from './roles';
 import { Login0_1 } from './role00';
 
@@ -395,28 +396,34 @@ export function Report10_4() {
 
 /* ── борд роли ───────────────────────────────────────────────────── */
 
+/** Экраны роли по кодам: из этой карты собираются и борд, и карта флоу. */
+export const SCREENS: ScreenMap = {
+  'Э0.1': {
+    cap: 'Вход',
+    view: () => <Login0_1 />,
+    next: 'первый экран роли',
+  },
+  'Э10.1': {
+    cap: 'Соревнования на контроле',
+    view: () => <Tours10_1 />,
+    next: 'строка турнира',
+  },
+  'Э10.2': {
+    cap: 'Ход турнира глазами инспектора',
+    view: () => <Live10_2 />,
+    next: 'вкладка «журнал правок»',
+  },
+  'Э10.3': {
+    cap: 'Журнал правок и спорных ситуаций',
+    view: () => <Journal10_3 />,
+    next: 'эпизоды в заключение',
+  },
+  'Э10.4': {
+    cap: 'Заключение',
+    view: () => <Report10_4 />,
+  },
+};
+
 export function Role10Board() {
-  return (
-    <Board role={R10}>
-      <Screen code="Э0.1" cap="Вход">
-        <Login0_1 />
-      </Screen>
-      <Arrow lbl="первый экран роли" />
-      <Screen code="Э10.1" cap="Соревнования на контроле">
-        <Tours10_1 />
-      </Screen>
-      <Arrow lbl="строка турнира" />
-      <Screen code="Э10.2" cap="Ход турнира глазами инспектора">
-        <Live10_2 />
-      </Screen>
-      <Arrow lbl="вкладка «журнал правок»" />
-      <Screen code="Э10.3" cap="Журнал правок и спорных ситуаций">
-        <Journal10_3 />
-      </Screen>
-      <Arrow lbl="эпизоды в заключение" />
-      <Screen code="Э10.4" cap="Заключение">
-        <Report10_4 />
-      </Screen>
-    </Board>
-  );
+  return <Board role={R10} screens={SCREENS} />;
 }

@@ -13,6 +13,7 @@ import {
   ActionBar, Board, Chips, Hint, Panel, Row, Rows, RoleScreen, Screen, Arrow, Submit,
   Form, Field, A, AW,
 } from './shell';
+import type { ScreenMap } from './shell';
 import { R12 } from './roles';
 import { Login0_1 } from './role00';
 
@@ -403,32 +404,39 @@ export function Mine12_5() {
   );
 }
 
+/** Экраны роли по кодам: из этой карты собираются и борд, и карта флоу. */
+export const SCREENS: ScreenMap = {
+  'Э0.1': {
+    cap: 'Вход',
+    view: () => <Login0_1 />,
+    next: 'первый экран роли',
+  },
+  'Э12.1': {
+    cap: 'Мой регион',
+    view: () => <Region12_1 />,
+    next: 'меню «Главные старты»',
+  },
+  'Э12.2': {
+    cap: 'Календарь главных стартов',
+    view: () => <Starts12_2 />,
+    next: 'старт с открытым приёмом',
+  },
+  'Э12.3': {
+    cap: 'Формирование состава',
+    view: () => <Squad12_3 />,
+    next: 'подать заявку',
+  },
+  'Э12.4': {
+    cap: 'Мои заявки',
+    view: () => <Apps12_4 />,
+    next: 'принятая заявка',
+  },
+  'Э12.5': {
+    cap: 'Свои на турнире',
+    view: () => <Mine12_5 />,
+  },
+};
+
 export function Role12Board() {
-  return (
-    <Board role={R12}>
-      <Screen code="Э0.1" cap="Вход">
-        <Login0_1 />
-      </Screen>
-      <Arrow lbl="первый экран роли" />
-      <Screen code="Э12.1" cap="Мой регион">
-        <Region12_1 />
-      </Screen>
-      <Arrow lbl="меню «Главные старты»" />
-      <Screen code="Э12.2" cap="Календарь главных стартов">
-        <Starts12_2 />
-      </Screen>
-      <Arrow lbl="старт с открытым приёмом" />
-      <Screen code="Э12.3" cap="Формирование состава">
-        <Squad12_3 />
-      </Screen>
-      <Arrow lbl="подать заявку" />
-      <Screen code="Э12.4" cap="Мои заявки">
-        <Apps12_4 />
-      </Screen>
-      <Arrow lbl="принятая заявка" />
-      <Screen code="Э12.5" cap="Свои на турнире">
-        <Mine12_5 />
-      </Screen>
-    </Board>
-  );
+  return <Board role={R12} screens={SCREENS} />;
 }

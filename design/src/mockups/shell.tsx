@@ -8,7 +8,7 @@
    Один экран флоу = одна колонка борда с кодом Э№.№ в подписи: по коду макет
    сходится со схемой роли (раздел «Флоу») и с текстом в корневом `flows/`. */
 
-import type { ReactNode } from 'react';
+import { Fragment, type ReactNode } from 'react';
 import { ArrowRight, Bell, X } from 'lucide-react';
 import { Desk, type DeskVariant } from '../deskShell';
 import { Tab, MiniTabBar } from '../respShell';
@@ -115,7 +115,26 @@ export function RolePhone({ brand, tabs, active, center, children }: {
 
 /* ── Борд: экраны роли по порядку маршрута ──────────────────────── */
 
-export function Board({ role, children }: { role: RoleUI; children: ReactNode }) {
+/** Один экран роли: макет, подпись колонки и подпись стрелки к следующему.
+
+    Раньше борд был написан руками — колонка за колонкой, и код экрана жил
+    только в разметке. Теперь роль отдаёт карту «код → экран», и из неё
+    собирается и борд, и узлы карты флоу: по клику на узел мы знаем, что
+    рисовать, а разъехаться этим двум видам больше нечем. */
+export type ScreenEntry = {
+  /** Подпись колонки рядом с кодом. */
+  cap: string;
+  /** Макет экрана вместе с его состояниями — то, что видно в колонке борда. */
+  view: () => ReactNode;
+  /** Подпись стрелки к следующей колонке: чем человек туда переходит. */
+  next?: string;
+};
+
+/** Экраны роли по кодам Э№.№, в порядке маршрута (порядок ключей значим). */
+export type ScreenMap = Record<string, ScreenEntry>;
+
+export function Board({ role, screens }: { role: RoleUI; screens: ScreenMap }) {
+  const items = Object.entries(screens);
   return (
     <div className="board">
       <div className="board-h">
@@ -123,10 +142,19 @@ export function Board({ role, children }: { role: RoleUI; children: ReactNode })
           {role.num} · {role.title.toUpperCase()} — МАКЕТЫ ПО ФЛОУ
         </div>
         <div className="board-tag">
-          коды экранов Э№ — те же, что в схеме роли и в flows/
+          коды экранов Э№ — те же, что на карте флоу и в flows/
         </div>
       </div>
-      <div className="row">{children}</div>
+      <div className="row">
+        {items.map(([code, s], i) => (
+          <Fragment key={code}>
+            <Screen code={code} cap={s.cap}>
+              {s.view()}
+            </Screen>
+            {i < items.length - 1 && <Arrow lbl={s.next ?? ''} />}
+          </Fragment>
+        ))}
+      </div>
     </div>
   );
 }

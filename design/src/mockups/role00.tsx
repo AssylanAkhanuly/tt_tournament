@@ -15,6 +15,7 @@ import {
   A, ActionBar, Alert, Also, Arrow, AW, Board, Ghost, Hint, Off, P, Panel, RoleScreen, Row, Rows,
   Screen, Shot, States, Tab,
 } from './shell';
+import type { ScreenMap } from './shell';
 import { DeskFrame } from '../deskShell';
 import { Frame } from '../PlayerApp';
 import { Brand, Input } from '../ui';
@@ -518,10 +519,12 @@ const Public0_4States = () => (
 
 /* ── Борд сквозных экранов ─────────────────────────────────────── */
 
-export function Role00Board() {
-  return (
-    <Board role={R00}>
-      <Screen code="Э0.1" cap="Вход">
+/** Экраны роли по кодам: из этой карты собираются и борд, и карта флоу. */
+export const SCREENS: ScreenMap = {
+  'Э0.1': {
+    cap: 'Вход',
+    view: () => (
+      <>
         <Login0_1 />
         <Also cap="Следующий шаг, если ролей несколько ✳">
           <Context0_1 />
@@ -530,22 +533,41 @@ export function Role00Board() {
           <Code0_1 />
         </Also>
         <Login0_1States />
-      </Screen>
-      <Arrow lbl="имя и фото в шапке" />
-      <Screen code="Э0.2" cap="Свой профиль">
+      </>
+    ),
+    next: 'имя и фото в шапке',
+  },
+  'Э0.2': {
+    cap: 'Свой профиль',
+    view: () => (
+      <>
         <Profile0_2 />
         <Profile0_2States />
-      </Screen>
-      <Arrow lbl="счётчик в шапке" />
-      <Screen code="Э0.3" cap="Уведомления">
+      </>
+    ),
+    next: 'счётчик в шапке',
+  },
+  'Э0.3': {
+    cap: 'Уведомления',
+    view: () => (
+      <>
         <Notif0_3 />
         <Notif0_3States />
-      </Screen>
-      <Arrow lbl="выход — обратно на сайт" />
-      <Screen code="Э0.4" cap="Публичные страницы">
+      </>
+    ),
+    next: 'выход — обратно на сайт',
+  },
+  'Э0.4': {
+    cap: 'Публичные страницы',
+    view: () => (
+      <>
         <Public0_4 />
         <Public0_4States />
-      </Screen>
-    </Board>
-  );
+      </>
+    ),
+  },
+};
+
+export function Role00Board() {
+  return <Board role={R00} screens={SCREENS} />;
 }

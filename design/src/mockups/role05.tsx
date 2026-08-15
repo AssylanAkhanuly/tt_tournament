@@ -10,6 +10,7 @@
 import type { ReactNode } from 'react';
 import { BadgeCheck, Ban, Check, Megaphone, Paperclip, Undo2, UserPlus } from 'lucide-react';
 import { ActionBar, Arrow, Board, Chips, Field, Form, Hint, Panel, Row, Rows, RoleScreen, Screen, A, AW } from './shell';
+import type { ScreenMap } from './shell';
 import { R05 } from './roles';
 import { Login0_1 } from './role00';
 
@@ -545,40 +546,49 @@ export function Publish5_7() {
 
 /* ── Борд роли: семь экранов маршрута подряд ─────────────────────── */
 
+/** Экраны роли по кодам: из этой карты собираются и борд, и карта флоу. */
+export const SCREENS: ScreenMap = {
+  'Э0.1': {
+    cap: 'Вход',
+    view: () => <Login0_1 />,
+    next: 'первый экран роли',
+  },
+  'Э5.1': {
+    cap: 'Мои соревнования',
+    view: () => <Queues5_1 />,
+    next: 'очередь «ждут назначения»',
+  },
+  'Э5.2': {
+    cap: 'Заявки судей',
+    view: () => <Applications5_2 />,
+    next: 'назначен главный судья',
+  },
+  'Э5.3': {
+    cap: 'Наряд судей',
+    view: () => <Brigade5_3 />,
+    next: 'турнир сыгран · вторая очередь',
+  },
+  'Э5.4': {
+    cap: 'Протокол на утверждении',
+    view: () => <Protocol5_4 />,
+    next: 'меню «Рейтинг судей»',
+  },
+  'Э5.5': {
+    cap: 'Рейтинг судей',
+    view: () => <Rating5_5 />,
+    next: 'счётчик документов',
+  },
+  'Э5.6': {
+    cap: 'Документы на проверке',
+    view: () => <Docs5_6 />,
+    next: 'публикация рейтинга',
+  },
+  'Э5.7': {
+    cap: 'Публикация и апелляции',
+    view: () => <Publish5_7 />,
+  },
+};
+
 export function Role05Board() {
-  return (
-    <Board role={R05}>
-      <Screen code="Э0.1" cap="Вход">
-        <Login0_1 />
-      </Screen>
-      <Arrow lbl="первый экран роли" />
-      <Screen code="Э5.1" cap="Мои соревнования">
-        <Queues5_1 />
-      </Screen>
-      <Arrow lbl="очередь «ждут назначения»" />
-      <Screen code="Э5.2" cap="Заявки судей">
-        <Applications5_2 />
-      </Screen>
-      <Arrow lbl="назначен главный судья" />
-      <Screen code="Э5.3" cap="Наряд судей">
-        <Brigade5_3 />
-      </Screen>
-      <Arrow lbl="турнир сыгран · вторая очередь" />
-      <Screen code="Э5.4" cap="Протокол на утверждении">
-        <Protocol5_4 />
-      </Screen>
-      <Arrow lbl="меню «Рейтинг судей»" />
-      <Screen code="Э5.5" cap="Рейтинг судей">
-        <Rating5_5 />
-      </Screen>
-      <Arrow lbl="счётчик документов" />
-      <Screen code="Э5.6" cap="Документы на проверке">
-        <Docs5_6 />
-      </Screen>
-      <Arrow lbl="публикация рейтинга" />
-      <Screen code="Э5.7" cap="Публикация и апелляции">
-        <Publish5_7 />
-      </Screen>
-    </Board>
-  );
+  return <Board role={R05} screens={SCREENS} />;
 }

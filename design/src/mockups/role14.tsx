@@ -13,6 +13,7 @@ import {
   ShieldCheck, Swords, TriangleAlert, User, Wallet, ZoomIn,
 } from 'lucide-react';
 import { Board, RolePhone, Screen, Arrow, Submit, A } from './shell';
+import type { ScreenMap } from './shell';
 import { FormSeg } from '../segs';
 import { R14 } from './roles';
 import { LoginPhone0_1 } from './role00';
@@ -469,40 +470,49 @@ export function Profile14_7() {
   );
 }
 
+/** Экраны роли по кодам: из этой карты собираются и борд, и карта флоу. */
+export const SCREENS: ScreenMap = {
+  'Э0.1': {
+    cap: 'Вход в приложении',
+    view: () => <LoginPhone0_1 />,
+    next: 'первый экран роли',
+  },
+  'Э14.1': {
+    cap: 'Главная',
+    view: () => <Home14_1 />,
+    next: 'вкладка «Календарь»',
+  },
+  'Э14.2': {
+    cap: 'Календарь',
+    view: () => <Calendar14_2 />,
+    next: '«Заявиться» на ОРТ',
+  },
+  'Э14.3': {
+    cap: 'Заявка на ОРТ',
+    view: () => <Apply14_3 />,
+    next: 'подал заявку',
+  },
+  'Э14.4': {
+    cap: 'Моя заявка',
+    view: () => <MyApp14_4 />,
+    next: 'вызвали на стол',
+  },
+  'Э14.5': {
+    cap: 'Мой турнир и мой матч',
+    view: () => <Match14_5 />,
+    next: 'рейтинг пересчитан',
+  },
+  'Э14.6': {
+    cap: 'Аналитика',
+    view: () => <Stats14_6 />,
+    next: 'вкладка «Профиль»',
+  },
+  'Э14.7': {
+    cap: 'Профиль и взнос',
+    view: () => <Profile14_7 />,
+  },
+};
+
 export function Role14Board() {
-  return (
-    <Board role={R14}>
-      <Screen code="Э0.1" cap="Вход в приложении">
-        <LoginPhone0_1 />
-      </Screen>
-      <Arrow lbl="первый экран роли" />
-      <Screen code="Э14.1" cap="Главная">
-        <Home14_1 />
-      </Screen>
-      <Arrow lbl="вкладка «Календарь»" />
-      <Screen code="Э14.2" cap="Календарь">
-        <Calendar14_2 />
-      </Screen>
-      <Arrow lbl="«Заявиться» на ОРТ" />
-      <Screen code="Э14.3" cap="Заявка на ОРТ">
-        <Apply14_3 />
-      </Screen>
-      <Arrow lbl="подал заявку" />
-      <Screen code="Э14.4" cap="Моя заявка">
-        <MyApp14_4 />
-      </Screen>
-      <Arrow lbl="вызвали на стол" />
-      <Screen code="Э14.5" cap="Мой турнир и мой матч">
-        <Match14_5 />
-      </Screen>
-      <Arrow lbl="рейтинг пересчитан" />
-      <Screen code="Э14.6" cap="Аналитика">
-        <Stats14_6 />
-      </Screen>
-      <Arrow lbl="вкладка «Профиль»" />
-      <Screen code="Э14.7" cap="Профиль и взнос">
-        <Profile14_7 />
-      </Screen>
-    </Board>
-  );
+  return <Board role={R14} screens={SCREENS} />;
 }

@@ -11,6 +11,7 @@ import {
   ActionBar, Board, Chips, Hint, Panel, Row, Rows, RoleScreen, Screen, Arrow, Submit,
   Form, Field, A, AW,
 } from './shell';
+import type { ScreenMap } from './shell';
 import { FormSeg } from '../segs';
 import { R13 } from './roles';
 import { Login0_1 } from './role00';
@@ -279,24 +280,29 @@ export function League13_3() {
   );
 }
 
+/** Экраны роли по кодам: из этой карты собираются и борд, и карта флоу. */
+export const SCREENS: ScreenMap = {
+  'Э0.1': {
+    cap: 'Вход',
+    view: () => <Login0_1 />,
+    next: 'первый экран роли',
+  },
+  'Э13.1': {
+    cap: 'Мой клуб',
+    view: () => <Club13_1 />,
+    next: '«завести человека»',
+  },
+  'Э13.2': {
+    cap: 'Регистрация людей',
+    view: () => <Person13_2 />,
+    next: 'меню «Команды Лиги»',
+  },
+  'Э13.3': {
+    cap: 'Команды Лиги',
+    view: () => <League13_3 />,
+  },
+};
+
 export function Role13Board() {
-  return (
-    <Board role={R13}>
-      <Screen code="Э0.1" cap="Вход">
-        <Login0_1 />
-      </Screen>
-      <Arrow lbl="первый экран роли" />
-      <Screen code="Э13.1" cap="Мой клуб">
-        <Club13_1 />
-      </Screen>
-      <Arrow lbl="«завести человека»" />
-      <Screen code="Э13.2" cap="Регистрация людей">
-        <Person13_2 />
-      </Screen>
-      <Arrow lbl="меню «Команды Лиги»" />
-      <Screen code="Э13.3" cap="Команды Лиги">
-        <League13_3 />
-      </Screen>
-    </Board>
-  );
+  return <Board role={R13} screens={SCREENS} />;
 }

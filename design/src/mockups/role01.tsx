@@ -21,6 +21,7 @@ import {
   A, ActionBar, Alert, Arrow, AW, Board, Chips, Empty, Field, Form, Ghost, Hint, Modal, Off, P, Panel,
   RoleScreen, Row, Rows, Screen, Shot, States,
 } from './shell';
+import type { ScreenMap } from './shell';
 import type { DeskVariant } from '../deskShell';
 import { R01 } from './roles';
 import { Login0_1 } from './role00';
@@ -1494,82 +1495,154 @@ const Editor1_14States = () => (
 
 /* ── Борд роли ─────────────────────────────────────────────────── */
 
-export function Role01Board() {
-  return (
-    <Board role={R01}>
-      <Screen code="Э0.1" cap="Вход">
-        <Login0_1 />
-      </Screen>
-      <Arrow lbl="первый экран роли" />
-      <Screen code="Э1.1" cap="Панель Федерации">
+/** Экраны роли по кодам: из этой карты собираются и борд, и карта флоу. */
+export const SCREENS: ScreenMap = {
+  'Э0.1': {
+    cap: 'Вход',
+    view: () => <Login0_1 />,
+    next: 'первый экран роли',
+  },
+  'Э1.1': {
+    cap: 'Панель Федерации',
+    view: () => (
+      <>
         <Dash1_1 />
         <Dash1_1States />
-      </Screen>
-      <Arrow lbl="пункт «Календарь»" />
-      <Screen code="Э1.2" cap="Календарь сезона">
+      </>
+    ),
+    next: 'пункт «Календарь»',
+  },
+  'Э1.2': {
+    cap: 'Календарь сезона',
+    view: () => (
+      <>
         <Cal1_2 />
         <Cal1_2States />
-      </Screen>
-      <Arrow lbl="«Завести соревнование»" />
-      <Screen code="Э1.4" cap="Форма «Завести соревнование»">
+      </>
+    ),
+    next: '«Завести соревнование»',
+  },
+  'Э1.4': {
+    cap: 'Форма «Завести соревнование»',
+    view: () => (
+      <>
         <New1_4 />
         <New1_4States />
-      </Screen>
-      <Arrow lbl="«Создать»" />
-      <Screen code="Э1.3" cap="Карточка турнира">
+      </>
+    ),
+    next: '«Создать»',
+  },
+  'Э1.3': {
+    cap: 'Карточка турнира',
+    view: () => (
+      <>
         <Tour1_3 />
         <Tour1_3States />
-      </Screen>
-      <Arrow lbl="«Отменить / перенести»" />
-      <Screen code="Э1.9" cap="Отмена или перенос">
+      </>
+    ),
+    next: '«Отменить / перенести»',
+  },
+  'Э1.9': {
+    cap: 'Отмена или перенос',
+    view: () => (
+      <>
         <Cancel1_9 />
         <Cancel1_9States />
-      </Screen>
-      <Arrow lbl="пункт «Пользователи»" />
-      <Screen code="Э1.5" cap="Пользователи и роли">
+      </>
+    ),
+    next: 'пункт «Пользователи»',
+  },
+  'Э1.5': {
+    cap: 'Пользователи и роли',
+    view: () => (
+      <>
         <Users1_5 />
         <Users1_5States />
-      </Screen>
-      <Arrow lbl="«Завести аккаунт»" />
-      <Screen code="Э1.10" cap="Форма «Завести аккаунт»">
+      </>
+    ),
+    next: '«Завести аккаунт»',
+  },
+  'Э1.10': {
+    cap: 'Форма «Завести аккаунт»',
+    view: () => (
+      <>
         <NewUser1_10 />
         <NewUser1_10States />
-      </Screen>
-      <Arrow lbl="«Выдать роль сразу»" />
-      <Screen code="Э1.11" cap="Выдача роли">
+      </>
+    ),
+    next: '«Выдать роль сразу»',
+  },
+  'Э1.11': {
+    cap: 'Выдача роли',
+    view: () => (
+      <>
         <GrantRole1_11 />
         <GrantRole1_11States />
-      </Screen>
-      <Arrow lbl="пункт «Реестры»" />
-      <Screen code="Э1.6" cap="Реестры">
+      </>
+    ),
+    next: 'пункт «Реестры»',
+  },
+  'Э1.6': {
+    cap: 'Реестры',
+    view: () => (
+      <>
         <Reg1_6 />
         <Reg1_6States />
-      </Screen>
-      <Arrow lbl="строка спортсмена" />
-      <Screen code="Э1.12" cap="Карточка спортсмена">
+      </>
+    ),
+    next: 'строка спортсмена',
+  },
+  'Э1.12': {
+    cap: 'Карточка спортсмена',
+    view: () => (
+      <>
         <Athlete1_12 />
         <Athlete1_12States />
-      </Screen>
-      <Arrow lbl="«Объединить с другой записью»" />
-      <Screen code="Э1.13" cap="Объединение дублей">
+      </>
+    ),
+    next: '«Объединить с другой записью»',
+  },
+  'Э1.13': {
+    cap: 'Объединение дублей',
+    view: () => (
+      <>
         <Merge1_13 />
         <Merge1_13States />
-      </Screen>
-      <Arrow lbl="пункт «Журнал»" />
-      <Screen code="Э1.7" cap="Журнал действий">
+      </>
+    ),
+    next: 'пункт «Журнал»',
+  },
+  'Э1.7': {
+    cap: 'Журнал действий',
+    view: () => (
+      <>
         <Log1_7 />
         <Log1_7States />
-      </Screen>
-      <Arrow lbl="пункт «Новости»" />
-      <Screen code="Э1.8" cap="Новости и страницы">
+      </>
+    ),
+    next: 'пункт «Новости»',
+  },
+  'Э1.8': {
+    cap: 'Новости и страницы',
+    view: () => (
+      <>
         <News1_8 />
         <News1_8States />
-      </Screen>
-      <Arrow lbl="«Править»" />
-      <Screen code="Э1.14" cap="Редактор материала">
+      </>
+    ),
+    next: '«Править»',
+  },
+  'Э1.14': {
+    cap: 'Редактор материала',
+    view: () => (
+      <>
         <Editor1_14 />
         <Editor1_14States />
-      </Screen>
-    </Board>
-  );
+      </>
+    ),
+  },
+};
+
+export function Role01Board() {
+  return <Board role={R01} screens={SCREENS} />;
 }

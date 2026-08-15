@@ -10,6 +10,7 @@ import {
   Check, Clock, History, Pause, Radio, RefreshCw, Trophy, Undo2, Upload, UserX,
 } from 'lucide-react';
 import { A, Arrow, Board, Hint, RoleTablet, Screen } from './shell';
+import type { ScreenMap } from './shell';
 import { R09 } from './roles';
 import { Code0_1 } from './role00';
 
@@ -401,32 +402,39 @@ export function Rating9_5() {
 
 /* ── борд роли ───────────────────────────────────────────────────── */
 
+/** Экраны роли по кодам: из этой карты собираются и борд, и карта флоу. */
+export const SCREENS: ScreenMap = {
+  'Э0.1': {
+    cap: 'Вход по короткому коду',
+    view: () => <Code0_1 />,
+    next: 'первый экран роли',
+  },
+  'Э9.1': {
+    cap: 'Мои турниры',
+    view: () => <Tours9_1 />,
+    next: 'строка назначения',
+  },
+  'Э9.2': {
+    cap: 'Мой стол',
+    view: () => <Table9_2 />,
+    next: 'принять вызов пары',
+  },
+  'Э9.3': {
+    cap: 'Ввод счёта',
+    view: () => <Score9_3 />,
+    next: 'кнопка «история»',
+  },
+  'Э9.4': {
+    cap: 'История матча',
+    view: () => <Log9_4 />,
+    next: 'пункт «Мой рейтинг»',
+  },
+  'Э9.5': {
+    cap: 'Мой рейтинг судьи',
+    view: () => <Rating9_5 />,
+  },
+};
+
 export function Role09Board() {
-  return (
-    <Board role={R09}>
-      <Screen code="Э0.1" cap="Вход по короткому коду">
-        <Code0_1 />
-      </Screen>
-      <Arrow lbl="первый экран роли" />
-      <Screen code="Э9.1" cap="Мои турниры">
-        <Tours9_1 />
-      </Screen>
-      <Arrow lbl="строка назначения" />
-      <Screen code="Э9.2" cap="Мой стол">
-        <Table9_2 />
-      </Screen>
-      <Arrow lbl="принять вызов пары" />
-      <Screen code="Э9.3" cap="Ввод счёта">
-        <Score9_3 />
-      </Screen>
-      <Arrow lbl="кнопка «история»" />
-      <Screen code="Э9.4" cap="История матча">
-        <Log9_4 />
-      </Screen>
-      <Arrow lbl="пункт «Мой рейтинг»" />
-      <Screen code="Э9.5" cap="Мой рейтинг судьи">
-        <Rating9_5 />
-      </Screen>
-    </Board>
-  );
+  return <Board role={R09} screens={SCREENS} />;
 }

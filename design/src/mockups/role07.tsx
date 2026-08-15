@@ -9,6 +9,7 @@
 import type { ReactNode } from 'react';
 import { Printer, RefreshCw, Send, Shuffle } from 'lucide-react';
 import { ActionBar, Arrow, Board, Chips, Field, Form, Hint, Panel, Row, Rows, RoleScreen, Screen, A } from './shell';
+import type { ScreenMap } from './shell';
 import { FormSeg, PanelSeg } from '../segs';
 import { R07 } from './roles';
 import { Login0_1 } from './role00';
@@ -433,32 +434,39 @@ export function Protocols7_5() {
 
 /* ── Борд роли: пять экранов маршрута подряд ─────────────────────── */
 
+/** Экраны роли по кодам: из этой карты собираются и борд, и карта флоу. */
+export const SCREENS: ScreenMap = {
+  'Э0.1': {
+    cap: 'Вход',
+    view: () => <Login0_1 />,
+    next: 'первый экран роли',
+  },
+  'Э7.1': {
+    cap: 'Рабочий стол секретаря',
+    view: () => <Desk7_1 />,
+    next: 'работа «Жеребьёвка»',
+  },
+  'Э7.2': {
+    cap: 'Жеребьёвка',
+    view: () => <Draw7_2 />,
+    next: 'после жеребьёвки',
+  },
+  'Э7.3': {
+    cap: 'Сетка — сборка',
+    view: () => <Bracket7_3 />,
+    next: 'работа «Расписание»',
+  },
+  'Э7.4': {
+    cap: 'Расписание',
+    view: () => <Schedule7_4 />,
+    next: 'матчи сыграны',
+  },
+  'Э7.5': {
+    cap: 'Протоколы',
+    view: () => <Protocols7_5 />,
+  },
+};
+
 export function Role07Board() {
-  return (
-    <Board role={R07}>
-      <Screen code="Э0.1" cap="Вход">
-        <Login0_1 />
-      </Screen>
-      <Arrow lbl="первый экран роли" />
-      <Screen code="Э7.1" cap="Рабочий стол секретаря">
-        <Desk7_1 />
-      </Screen>
-      <Arrow lbl="работа «Жеребьёвка»" />
-      <Screen code="Э7.2" cap="Жеребьёвка">
-        <Draw7_2 />
-      </Screen>
-      <Arrow lbl="после жеребьёвки" />
-      <Screen code="Э7.3" cap="Сетка — сборка">
-        <Bracket7_3 />
-      </Screen>
-      <Arrow lbl="работа «Расписание»" />
-      <Screen code="Э7.4" cap="Расписание">
-        <Schedule7_4 />
-      </Screen>
-      <Arrow lbl="матчи сыграны" />
-      <Screen code="Э7.5" cap="Протоколы">
-        <Protocols7_5 />
-      </Screen>
-    </Board>
-  );
+  return <Board role={R07} screens={SCREENS} />;
 }

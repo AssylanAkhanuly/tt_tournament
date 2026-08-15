@@ -3,6 +3,7 @@
 
 import { Download, FileWarning, Undo2 } from 'lucide-react';
 import { ActionBar, Board, Chips, Hint, Panel, Row, Rows, RoleScreen, Screen, Arrow, A, AW } from './shell';
+import type { ScreenMap } from './shell';
 import { R02 } from './roles';
 import { Login0_1 } from './role00';
 
@@ -113,20 +114,24 @@ export function Fee2_2() {
   );
 }
 
+/** Экраны роли по кодам: из этой карты собираются и борд, и карта флоу. */
+export const SCREENS: ScreenMap = {
+  'Э0.1': {
+    cap: 'Вход',
+    view: () => <Login0_1 />,
+    next: 'первый экран роли',
+  },
+  'Э2.1': {
+    cap: 'Взносы за сезон',
+    view: () => <Fees2_1 />,
+    next: 'строка спортсмена',
+  },
+  'Э2.2': {
+    cap: 'Карточка взноса',
+    view: () => <Fee2_2 />,
+  },
+};
+
 export function Role02Board() {
-  return (
-    <Board role={R02}>
-      <Screen code="Э0.1" cap="Вход">
-        <Login0_1 />
-      </Screen>
-      <Arrow lbl="первый экран роли" />
-      <Screen code="Э2.1" cap="Взносы за сезон">
-        <Fees2_1 />
-      </Screen>
-      <Arrow lbl="строка спортсмена" />
-      <Screen code="Э2.2" cap="Карточка взноса">
-        <Fee2_2 />
-      </Screen>
-    </Board>
-  );
+  return <Board role={R02} screens={SCREENS} />;
 }

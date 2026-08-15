@@ -19,6 +19,7 @@ import {
   A, ActionBar, Arrow, AW, Board, Chips, Hint, Panel, Row, Rows, RoleScreen,
   Screen, Submit,
 } from './shell';
+import type { ScreenMap } from './shell';
 import { FormSeg, PanelSeg } from '../segs';
 import { R06 } from './roles';
 import { Login0_1 } from './role00';
@@ -824,40 +825,49 @@ export function Protocol6_7() {
 
 /* ── Борд роли ──────────────────────────────────────────────────── */
 
+/** Экраны роли по кодам: из этой карты собираются и борд, и карта флоу. */
+export const SCREENS: ScreenMap = {
+  'Э0.1': {
+    cap: 'Вход',
+    view: () => <Login0_1 />,
+    next: 'первый экран роли',
+  },
+  'Э6.1': {
+    cap: 'Мой турнир',
+    view: () => <Tournament6_1 />,
+    next: '8 заявок ждут решения',
+  },
+  'Э6.2': {
+    cap: 'Заявки участников',
+    view: () => <Bids6_2 />,
+    next: 'закрыть приём',
+  },
+  'Э6.3': {
+    cap: 'Сетка: формат, посев, сборка',
+    view: () => <Bracket6_3 />,
+    next: 'сетка собрана',
+  },
+  'Э6.4': {
+    cap: 'Расписание и столы',
+    view: () => <Schedule6_4 />,
+    next: 'матчи разложены',
+  },
+  'Э6.5': {
+    cap: 'Судьи на столах',
+    view: () => <Judges6_5 />,
+    next: 'столы укомплектованы',
+  },
+  'Э6.6': {
+    cap: 'Ход турнира',
+    view: () => <Live6_6 />,
+    next: 'все матчи сыграны',
+  },
+  'Э6.7': {
+    cap: 'Итоговый протокол',
+    view: () => <Protocol6_7 />,
+  },
+};
+
 export function Role06Board() {
-  return (
-    <Board role={R06}>
-      <Screen code="Э0.1" cap="Вход">
-        <Login0_1 />
-      </Screen>
-      <Arrow lbl="первый экран роли" />
-      <Screen code="Э6.1" cap="Мой турнир">
-        <Tournament6_1 />
-      </Screen>
-      <Arrow lbl="8 заявок ждут решения" />
-      <Screen code="Э6.2" cap="Заявки участников">
-        <Bids6_2 />
-      </Screen>
-      <Arrow lbl="закрыть приём" />
-      <Screen code="Э6.3" cap="Сетка: формат, посев, сборка">
-        <Bracket6_3 />
-      </Screen>
-      <Arrow lbl="сетка собрана" />
-      <Screen code="Э6.4" cap="Расписание и столы">
-        <Schedule6_4 />
-      </Screen>
-      <Arrow lbl="матчи разложены" />
-      <Screen code="Э6.5" cap="Судьи на столах">
-        <Judges6_5 />
-      </Screen>
-      <Arrow lbl="столы укомплектованы" />
-      <Screen code="Э6.6" cap="Ход турнира">
-        <Live6_6 />
-      </Screen>
-      <Arrow lbl="все матчи сыграны" />
-      <Screen code="Э6.7" cap="Итоговый протокол">
-        <Protocol6_7 />
-      </Screen>
-    </Board>
-  );
+  return <Board role={R06} screens={SCREENS} />;
 }

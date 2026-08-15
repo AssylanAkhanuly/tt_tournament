@@ -16,6 +16,7 @@ import {
 import {
   A, Arrow, Board, Chips, Hint, Panel, Row, Rows, RoleScreen, Screen, Submit,
 } from './shell';
+import type { ScreenMap } from './shell';
 import { LiveCards, NeedRow, QueuePanel, Stages, TableMap, type Need } from './role06';
 import { R08 } from './roles';
 import { Login0_1 } from './role00';
@@ -273,24 +274,29 @@ export function Rating8_3() {
 
 /* ── Борд роли ──────────────────────────────────────────────────── */
 
+/** Экраны роли по кодам: из этой карты собираются и борд, и карта флоу. */
+export const SCREENS: ScreenMap = {
+  'Э0.1': {
+    cap: 'Вход',
+    view: () => <Login0_1 />,
+    next: 'первый экран роли',
+  },
+  'Э8.1': {
+    cap: 'Мой турнир — режим замещения',
+    view: () => <Shift8_1 />,
+    next: 'принять смену',
+  },
+  'Э8.2': {
+    cap: 'Ход турнира — когда замещает',
+    view: () => <Live8_2 />,
+    next: 'ветка роли',
+  },
+  'Э8.3': {
+    cap: 'Мой рейтинг судьи',
+    view: () => <Rating8_3 />,
+  },
+};
+
 export function Role08Board() {
-  return (
-    <Board role={R08}>
-      <Screen code="Э0.1" cap="Вход">
-        <Login0_1 />
-      </Screen>
-      <Arrow lbl="первый экран роли" />
-      <Screen code="Э8.1" cap="Мой турнир — режим замещения">
-        <Shift8_1 />
-      </Screen>
-      <Arrow lbl="принять смену" />
-      <Screen code="Э8.2" cap="Ход турнира — когда замещает">
-        <Live8_2 />
-      </Screen>
-      <Arrow lbl="ветка роли" />
-      <Screen code="Э8.3" cap="Мой рейтинг судьи">
-        <Rating8_3 />
-      </Screen>
-    </Board>
-  );
+  return <Board role={R08} screens={SCREENS} />;
 }

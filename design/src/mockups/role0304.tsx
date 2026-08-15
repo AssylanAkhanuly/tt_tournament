@@ -10,6 +10,7 @@
 
 import { Bell, Download, Printer } from 'lucide-react';
 import { A, ActionBar, Arrow, AW, Board, Chips, Hint, P, Panel, RoleScreen, Row, Rows, Screen } from './shell';
+import type { ScreenMap } from './shell';
 import { R0304 } from './roles';
 import { Login0_1 } from './role00';
 import { ATTENTION, Btn, Notes, TourRow, TodayRows } from './role01';
@@ -190,24 +191,29 @@ export function Subs3_3() {
 
 /* ── Борд ролей ────────────────────────────────────────────────── */
 
+/** Экраны роли по кодам: из этой карты собираются и борд, и карта флоу. */
+export const SCREENS: ScreenMap = {
+  'Э0.1': {
+    cap: 'Вход',
+    view: () => <Login0_1 />,
+    next: 'первый экран роли',
+  },
+  'Э3.1': {
+    cap: 'Обзорная панель',
+    view: () => <Dash3_1 />,
+    next: 'пункт меню модуля',
+  },
+  'Э3.2': {
+    cap: 'Модули в режиме чтения',
+    view: () => <Read3_2 />,
+    next: '«Подписаться» в карточке',
+  },
+  'Э3.3': {
+    cap: 'Подписки',
+    view: () => <Subs3_3 />,
+  },
+};
+
 export function Role0304Board() {
-  return (
-    <Board role={R0304}>
-      <Screen code="Э0.1" cap="Вход">
-        <Login0_1 />
-      </Screen>
-      <Arrow lbl="первый экран роли" />
-      <Screen code="Э3.1" cap="Обзорная панель">
-        <Dash3_1 />
-      </Screen>
-      <Arrow lbl="пункт меню модуля" />
-      <Screen code="Э3.2" cap="Модули в режиме чтения">
-        <Read3_2 />
-      </Screen>
-      <Arrow lbl="«Подписаться» в карточке" />
-      <Screen code="Э3.3" cap="Подписки">
-        <Subs3_3 />
-      </Screen>
-    </Board>
-  );
+  return <Board role={R0304} screens={SCREENS} />;
 }

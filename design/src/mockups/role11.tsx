@@ -12,6 +12,7 @@ import { Download, Eye, Star } from 'lucide-react';
 import {
   A, ActionBar, Arrow, Board, Chips, Form, Hint, Panel, Rows, RoleScreen, Screen,
 } from './shell';
+import type { ScreenMap } from './shell';
 import { R11 } from './roles';
 import { Login0_1 } from './role00';
 
@@ -368,24 +369,29 @@ export function Compare11_3() {
 
 /* ── борд роли ───────────────────────────────────────────────────── */
 
+/** Экраны роли по кодам: из этой карты собираются и борд, и карта флоу. */
+export const SCREENS: ScreenMap = {
+  'Э0.1': {
+    cap: 'Вход',
+    view: () => <Login0_1 />,
+    next: 'первый экран роли',
+  },
+  'Э11.1': {
+    cap: 'Кандидаты в сборную',
+    view: () => <Cands11_1 />,
+    next: 'строка спортсмена',
+  },
+  'Э11.2': {
+    cap: 'Карточка спортсмена — чтение',
+    view: () => <Card11_2 />,
+    next: 'отмечены трое · сравнить',
+  },
+  'Э11.3': {
+    cap: 'Сравнение кандидатов',
+    view: () => <Compare11_3 />,
+  },
+};
+
 export function Role11Board() {
-  return (
-    <Board role={R11}>
-      <Screen code="Э0.1" cap="Вход">
-        <Login0_1 />
-      </Screen>
-      <Arrow lbl="первый экран роли" />
-      <Screen code="Э11.1" cap="Кандидаты в сборную">
-        <Cands11_1 />
-      </Screen>
-      <Arrow lbl="строка спортсмена" />
-      <Screen code="Э11.2" cap="Карточка спортсмена — чтение">
-        <Card11_2 />
-      </Screen>
-      <Arrow lbl="отмечены трое · сравнить" />
-      <Screen code="Э11.3" cap="Сравнение кандидатов">
-        <Compare11_3 />
-      </Screen>
-    </Board>
-  );
+  return <Board role={R11} screens={SCREENS} />;
 }
