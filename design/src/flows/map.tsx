@@ -31,8 +31,8 @@ import './map.css';
 /* Дерево растёт слева направо: слой — колонка, соседи по слою стоят друг под
    другом. Сверху вниз оно расползалось по ширине (у первого экрана роли до
    восьми веток сразу), и в половине экрана граф ужимался до нечитаемого. */
-const COL = 290;
-const ROW = 104;
+const COL = 250;
+const ROW = 96;
 
 /** Подпись действия и подпись кнопки к общему виду: ««Выдать роль»» → «выдать роль». */
 const norm = (s: string) =>
@@ -69,106 +69,127 @@ const nodeTypes = { screen: ScreenNode };
 
 /* ── Раскладка ──────────────────────────────────────────────────── */
 
-/** Связи маршрута: переходы `to:` из действий + вход в разделы с первого экрана.
+/** Дерево маршрута: у каждого экрана ровно один родитель.
 
-    Экран, в который никто не ведёт явно, — это пункт меню: такие вешаем на
-    первый экран роли и подписываем тем, как в него попадают (`entry`). */
+    Раньше рисовались все переходы сразу, и картинка превращалась в клубок:
+    из диалога отмены линия возвращалась в карточку турнира, из выдачи роли —
+    в список пользователей, и всё это шло поверх соседних веток. Читать такой
+    граф нельзя.
+
+    Теперь ветка — это линия: календарь и турниры, пользователи и роли,
+    реестры, журнал, контент. Родитель выбирается по данным роли:
+
+    1. первый экран роли растёт из входа;
+    2. раздел, который открывают пунктом меню, — из первого экрана;
+    3. остальное — из того экрана маршрута, который в него ведёт (`to:`).
+
+    Возвраты и переходы через ветку не потеряны: они показываются пунктиром у
+    того экрана, который выбран, — то есть тогда, когда про них спрашивают. */
 function build(flow: RoleFlow, screens: ScreenMap, selected: string) {
   const known = new Set(flow.screens.map((s) => s.id));
   const commons = new Map(role00.screens.map((s) => [s.id, s]));
   const codes = Object.keys(screens);
   const byId = new Map<string, Screen>(
-    codes.map((c) => [c, flow.screens.find((s) => s.id === c) ?? commons.get(c)!]).filter(([, s]) => !!s) as [string, Screen][],
+    codes
+      .map((c) => [c, flow.screens.find((s) => s.id === c) ?? commons.get(c)!])
+      .filter(([, s]) => !!s) as [string, Screen][],
   );
 
-  const edges: Edge[] = [];
-  const seen = new Set<string>();
-  const add = (from: string, to: string, label: string) => {
-    const key = `${from}->${to}`;
-    if (from === to || seen.has(key) || !byId.has(from) || !byId.has(to)) return;
-    seen.add(key);
-    edges.push({
-      id: key,
-      source: from,
-      target: to,
-      label,
-      animated: false,
-      style: { stroke: 'var(--c-board-line)' },
-      labelStyle: { fill: 'var(--c-board-muted)', fontSize: 11, fontWeight: 600 },
-      labelBgStyle: { fill: 'var(--c-board-bg)' },
-    });
-  };
-
-  // Вход (Э0.1) ведёт на первый экран самой роли.
   const first = flow.screens[0].id;
   const entry = codes.find((c) => !known.has(c));
-  if (entry) add(entry, first, 'вход под своей ролью');
-
-  for (const code of codes) {
-    const s = byId.get(code);
-    if (!s) continue;
-    for (const a of s.actions) if (a.to) add(code, a.to, a.el.replace(/^«|»$/g, ''));
-  }
-
-  /* Слой = число шагов от входа, обходом в ширину. Именно в ширину: в маршруте
-     есть петли (из диалога отмены можно вернуться в карточку турнира), и поиск
-     самого длинного пути на них раскручивался до двадцати слоёв — граф уезжал
-     за экран и ужимался до нечитаемого. */
   const root = entry ?? first;
-  const walk = () => {
-    const layer = new Map<string, number>([[root, 0]]);
-    const queue = [root];
-    while (queue.length) {
-      const cur = queue.shift()!;
-      const step = layer.get(cur)! + 1;
-      for (const e of edges) {
-        if (e.source !== cur || layer.has(e.target)) continue;
-        layer.set(e.target, step);
-        queue.push(e.target);
+  const short = (t: string) => t.replace(/^«|»$/g, '').slice(0, 28);
+
+  const parent = new Map<string, string>();
+  const via = new Map<string, string>();
+  codes.forEach((code, i) => {
+    if (code === root) return;
+    const sc = byId.get(code);
+    if (!sc) return;
+    if (code === first) {
+      parent.set(code, root);
+      via.set(code, 'вход под своей ролью');
+      return;
+    }
+    if (/меню/i.test(sc.entry.join(' '))) {
+      parent.set(code, first);
+      via.set(code, short((sc.entry[0] ?? '').replace(/^Пункт меню /, '')));
+      return;
+    }
+    for (let j = i - 1; j >= 0; j -= 1) {
+      const act = byId.get(codes[j])?.actions.find((a) => a.to === code);
+      if (act) {
+        parent.set(code, codes[j]);
+        via.set(code, short(act.el));
+        return;
       }
     }
-    return layer;
+    parent.set(code, codes[i - 1] ?? first);
+    via.set(code, short(sc.entry[0] ?? ''));
+  });
+
+  const kids = new Map<string, string[]>();
+  codes.forEach((c) => {
+    const p = parent.get(c);
+    if (p) kids.set(p, [...(kids.get(p) ?? []), c]);
+  });
+
+  /* Раскладка «в строку на ветку»: глубина даёт колонку, а строку получает
+     каждый лист; родитель встаёт по центру своих детей. */
+  const depth = new Map<string, number>([[root, 0]]);
+  const line = new Map<string, number>();
+  let row = 0;
+  const walk = (n: string) => {
+    const ch = kids.get(n) ?? [];
+    ch.forEach((c) => {
+      depth.set(c, (depth.get(n) ?? 0) + 1);
+      walk(c);
+    });
+    line.set(n, ch.length === 0 ? row++ : ch.reduce((sum, c) => sum + (line.get(c) ?? 0), 0) / ch.length);
+  };
+  walk(root);
+
+  const edgeBase = {
+    labelStyle: { fill: 'var(--c-board-muted)', fontSize: 11, fontWeight: 600 },
+    labelBgStyle: { fill: 'var(--c-board-bg)' },
+    labelBgPadding: [4, 2] as [number, number],
   };
 
-  /* Разделы роли открываются из меню, а не переходом, — в графе переходов они
-     висят в воздухе. Вешаем их на первый экран и подписываем тем, как в них
-     попадают. Пункт меню узнаём по самим данным (`entry`), а не по форме
-     графа: в реестры (Э1.6) ведёт и объединение дублей (Э1.13), но это их же
-     ветка, и по связям «Реестры» оказались бы под своей карточкой. */
-  const label = (code: string) =>
-    (byId.get(code)?.entry[0] ?? '').replace(/^Пункт меню /, '').slice(0, 28);
-  for (const code of codes) {
-    if (code === first || code === entry) continue;
-    if (/меню/i.test(byId.get(code)?.entry.join(' ') ?? '')) add(first, code, label(code));
-  }
+  const edges: Edge[] = codes
+    .filter((c) => parent.has(c))
+    .map((c) => ({
+      ...edgeBase,
+      id: `${parent.get(c)}->${c}`,
+      source: parent.get(c)!,
+      target: c,
+      label: via.get(c),
+      type: 'smoothstep',
+      style: { stroke: 'var(--c-board-line)' },
+    }));
 
-  // Что и после этого недостижимо — подвешиваем по порядку маршрута: первый
-  // экран осиротевшей ветки становится её корнем, остальные встают под него.
-  let layer = walk();
-  for (const code of codes) {
-    if (layer.has(code)) continue;
-    add(first, code, label(code));
-    layer = walk();
-  }
-
-  const rows = new Map<number, string[]>();
-  for (const code of codes) {
-    const l = layer.get(code) ?? 1;
-    rows.set(l, [...(rows.get(l) ?? []), code]);
-  }
-
-  const nodes: Node[] = codes.map((code) => {
-    const l = layer.get(code) ?? 1;
-    const row = rows.get(l)!;
-    const i = row.indexOf(code);
-    return {
-      id: code,
-      type: 'screen',
-      position: { x: l * COL, y: (i - (row.length - 1) / 2) * ROW },
-      data: { code, screen: byId.get(code)!, selected: code === selected, common: !known.has(code) },
-      draggable: false,
-    };
+  /* Переходы выбранного экрана, которых нет в дереве: возвраты и связи веток.
+     Номер действия в ключе обязателен: с одного экрана в другой ведут два
+     разных действия («Перенести» и «Закрыть» — оба в карточку турнира). */
+  (byId.get(selected)?.actions ?? []).forEach((a, i) => {
+    if (!a.to || a.to === selected || parent.get(a.to) === selected || !byId.has(a.to)) return;
+    edges.push({
+      ...edgeBase,
+      id: `x-${selected}-${i}-${a.to}`,
+      source: selected,
+      target: a.to,
+      label: short(a.el),
+      type: 'default',
+      style: { stroke: 'var(--c-board-accent)', strokeDasharray: '5 4' },
+    });
   });
+
+  const nodes: Node[] = codes.map((code) => ({
+    id: code,
+    type: 'screen',
+    position: { x: (depth.get(code) ?? 1) * COL, y: (line.get(code) ?? 0) * ROW },
+    data: { code, screen: byId.get(code)!, selected: code === selected, common: !known.has(code) },
+    draggable: false,
+  }));
 
   return { nodes, edges, byId };
 }
@@ -293,7 +314,10 @@ export function FlowMap({ flow, screens }: { flow: RoleFlow; screens: ScreenMap 
           nodeTypes={nodeTypes}
           onNodeClick={(_, n) => setSelected(n.id)}
           fitView
-          fitViewOptions={{ padding: 0.15 }}
+          /* Не ужимаем до нечитаемого: ветка календаря уходит на пять шагов
+             вправо, и «вписать целиком» в половину окна делает подписи узлов
+             кашей. Ниже 0.55 не опускаемся — дальше человек листает сам. */
+          fitViewOptions={{ padding: 0.12, minZoom: 0.55, maxZoom: 1 }}
           minZoom={0.2}
           maxZoom={1.5}
           proOptions={{ hideAttribution: true }}

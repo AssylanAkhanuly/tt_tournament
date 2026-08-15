@@ -13,7 +13,7 @@
    главный старт (Кубок РК) — 18 мая. От этой даты считаются все «сегодня»,
    «через сколько дней» и записи журнала. */
 
-import type { ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import {
   AlertTriangle, Download, Eye, GitMerge, Image, Link2, Merge, Plus, Search, Send, UserPlus,
 } from 'lucide-react';
@@ -268,13 +268,22 @@ const NewFlags = () => (
   </Rows>
 );
 
-/** Оболочка мастера: шаги сверху, текущий подсвечен.
+/** Оболочка мастера: шаги сверху, текущий подсвечен, по ним можно листать.
 
-    Мастер показываем всеми пятью шагами подряд, а не одним итоговым кадром:
-    человек проходит его с начала, и «шаг 5 из 5» первым экраном — это уже не
-    флоу, а сводка. Первый кадр — шаг 1, остальные идут кадрами «то же на
-    следующем шаге». */
-const Wizard = ({ step, sub, children }: { step: number; sub: string; children: ReactNode }) => (
+    Раньше мастер стоял пятью кадрами подряд, и до второго шага надо было
+    доскроллить — в карте флоу он выглядел экраном с одним шагом. Теперь это
+    один экран, который листается: так он и работает у человека. */
+const Wizard = ({
+  step,
+  onStep,
+  sub,
+  children,
+}: {
+  step: number;
+  onStep: (n: number) => void;
+  sub: string;
+  children: ReactNode;
+}) => (
   <RoleScreen
     role={R01}
     nav="Календарь"
@@ -284,28 +293,65 @@ const Wizard = ({ step, sub, children }: { step: number; sub: string; children: 
   >
     <div className="dseg2">
       {STEPS.map((s, i) => (
-        <span key={s} className={i + 1 === step ? 'on' : undefined}>{s}</span>
+        <button
+          key={s}
+          type="button"
+          className={i + 1 === step ? 'on' : undefined}
+          onClick={() => onStep(i + 1)}
+        >
+          {s}
+        </button>
       ))}
     </div>
     {children}
   </RoleScreen>
 );
 
-/** Полоса «дальше»: сколько шагов позади и главное действие шага. */
-const WizardBar = ({ note, btn }: { note: string; btn: string }) => (
+/** Полоса шага: что позади, что впереди и главное действие. */
+const WizardBar = ({
+  step,
+  onStep,
+  note,
+  btn,
+}: {
+  step: number;
+  onStep: (n: number) => void;
+  note: string;
+  btn: string;
+}) => (
   <div className="dactionbar">
     <div className="dcount">{note}</div>
     <div style={{ display: 'flex', gap: 8 }}>
-      <Ghost>Назад</Ghost>
-      <button className="dsubmit" style={{ padding: '12px 18px' }}>{btn}</button>
+      {step > 1 && (
+        <button
+          type="button"
+          className="dpickbtn"
+          style={{
+            background: 'var(--c-panel-2)',
+            color: 'var(--c-ink)',
+            boxShadow: 'inset 0 1px 0 var(--c-glass-hi)',
+          }}
+          onClick={() => onStep(step - 1)}
+        >
+          Назад
+        </button>
+      )}
+      <button
+        type="button"
+        className="dsubmit"
+        style={{ padding: '12px 18px' }}
+        onClick={() => onStep(Math.min(5, step + 1))}
+      >
+        {btn}
+      </button>
     </div>
   </div>
 );
 
-/** Шаг 1 — категория: от неё зависят остальные шаги, поэтому она первая. */
-export function New1_4() {
-  return (
-    <Wizard step={1} sub="категория соревнования">
+/* Тело каждого шага. На пятом — сводка: перед «Создать» видно, что создастся. */
+const STEP_BODY: Record<number, () => ReactNode> = {
+  1: () => (
+    <>
       <div className="mkcols" style={{ gridTemplateColumns: '1fr 1fr 1fr' }}>
         <Panel title="Главный старт" extra={<P t="ВЫБРАНО" cls="live" />}>
           <Hint>
@@ -327,14 +373,9 @@ export function New1_4() {
         Категория определяет остальные шаги: у Лиги вместо одного соревнования заводится сезон с
         дивизионами, у ОРТ проще допуск.
       </Hint>
-      <WizardBar note="Шаг 1 из 5 · дальше — название, город и окно дат" btn="Дальше · основное" />
-    </Wizard>
-  );
-}
-
-/** Шаг 2 — основное. */
-export const New1_4Step2 = () => (
-  <Wizard step={2} sub="название, город, даты">
+    </>
+  ),
+  2: () => (
     <Panel title="Основное">
       <Form>
         <Field label="Название" value="Первенство РК · 2012 г.р. и моложе" wide />
@@ -350,13 +391,8 @@ export const New1_4Step2 = () => (
         </Hint>
       </Notes>
     </Panel>
-    <WizardBar note="Шаг 2 из 5 · дальше — условия допуска" btn="Дальше · допуск" />
-  </Wizard>
-);
-
-/** Шаг 3 — допуск. */
-export const New1_4Step3 = () => (
-  <Wizard step={3} sub="возрастная граница и ценз">
+  ),
+  3: () => (
     <Panel title="Допуск">
       <Form>
         <Field label="Возрастная граница" value="2012 г.р. и моложе — правило от сезона" wide />
@@ -370,26 +406,16 @@ export const New1_4Step3 = () => (
         </Hint>
       </Notes>
     </Panel>
-    <WizardBar note="Шаг 3 из 5 · дальше — флаги допуска" btn="Дальше · флаги" />
-  </Wizard>
-);
-
-/** Шаг 4 — флаги допуска с умолчаниями от категории. */
-export const New1_4Step4 = () => (
-  <Wizard step={4} sub="флаги допуска">
+  ),
+  4: () => (
     <Panel title="Флаги допуска (§4.2)" extra={<span className="dcount">умолчания от категории</span>}>
       <NewFlags />
       <Notes>
         <Hint>Каждый флаг можно переопределить: умолчание подставляет категория, решает человек.</Hint>
       </Notes>
     </Panel>
-    <WizardBar note="Шаг 4 из 5 · дальше — столы и трансляция" btn="Дальше · столы" />
-  </Wizard>
-);
-
-/** Шаг 5 — столы, сводка всех шагов и «Создать». */
-export const New1_4Step5 = () => (
-  <Wizard step={5} sub="столы и трансляция">
+  ),
+  5: () => (
     <div className="mkcols">
       <Panel title="Столы">
         <Form>
@@ -410,17 +436,35 @@ export const New1_4Step5 = () => (
         </Form>
       </Panel>
     </div>
-    <div className="dactionbar">
-      <div className="dcount">
-        Обязательные поля заполнены · соревнование создастся в состоянии «Черновик»
-      </div>
-      <div style={{ display: 'flex', gap: 8 }}>
-        <Ghost>Назад</Ghost>
-        <button className="dsubmit" style={{ padding: '12px 18px' }}>Создать</button>
-      </div>
-    </div>
-  </Wizard>
-);
+  ),
+};
+
+const STEP_SUB: Record<number, string> = {
+  1: 'категория соревнования',
+  2: 'название, город, даты',
+  3: 'возрастная граница и ценз',
+  4: 'флаги допуска',
+  5: 'столы и трансляция',
+};
+
+const STEP_NEXT: Record<number, [string, string]> = {
+  1: ['дальше — название, город и окно дат', 'Дальше · основное'],
+  2: ['дальше — условия допуска', 'Дальше · допуск'],
+  3: ['дальше — флаги допуска', 'Дальше · флаги'],
+  4: ['дальше — столы и трансляция', 'Дальше · столы'],
+  5: ['обязательные поля заполнены · создастся «Черновик»', 'Создать'],
+};
+
+export function New1_4() {
+  const [step, setStep] = useState(1);
+  const [note, btn] = STEP_NEXT[step];
+  return (
+    <Wizard step={step} onStep={setStep} sub={STEP_SUB[step]}>
+      {STEP_BODY[step]()}
+      <WizardBar step={step} onStep={setStep} note={`Шаг ${step} из 5 · ${note}`} btn={btn} />
+    </Wizard>
+  );
+}
 
 const New1_4States = () => (
   <States>
@@ -1629,18 +1673,6 @@ export const SCREENS: ScreenMap = {
     view: () => (
       <>
         <New1_4 />
-        <Also cap="Шаг 2 · основное">
-          <New1_4Step2 />
-        </Also>
-        <Also cap="Шаг 3 · допуск">
-          <New1_4Step3 />
-        </Also>
-        <Also cap="Шаг 4 · флаги допуска">
-          <New1_4Step4 />
-        </Also>
-        <Also cap="Шаг 5 · столы и «Создать»">
-          <New1_4Step5 />
-        </Also>
         <New1_4States />
       </>
     ),
