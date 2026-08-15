@@ -13,7 +13,7 @@ import { A, ActionBar, Arrow, AW, Board, Chips, Hint, P, Panel, RoleScreen, Row,
 import type { ScreenMap } from './shell';
 import { R0304 } from './roles';
 import { Login0_1 } from './role00';
-import { ATTENTION, Btn, Notes, TourRow, TodayRows } from './role01';
+import { Attention, Btn, KPI, TourRow, TodayRows } from './role01';
 
 /* Те же соревнования, что у администратора Федерации (Э1.2) — здесь на чтение. */
 type Tour = { nm: string; mt: string; apps: string; judge?: string; st: string; cls: string };
@@ -34,15 +34,15 @@ export function Dash3_1() {
       role={R0304}
       nav="Обзор"
       title="Обзорная панель"
-      sub="Сезон 2026 · те же зоны, что на Панели Федерации, — без кнопок записи"
-      hint="Ни одной кнопки, меняющей данные: право на чтение и право на запись проверяются раздельно."
+      sub="Сезон 2026 · только чтение"
     >
-      <Chips items={ATTENTION} to="Э3.2" />
-      <ActionBar count="Требует внимания · каждая плитка открывает список на чтение">
+      <Chips items={KPI} to="Э3.2" />
+      <div className="dactionbar">
+        <Attention act={false} />
         <Btn>
           <Download size={14} /> Выгрузить сводку
         </Btn>
-      </ActionBar>
+      </div>
       <div className="mkcols">
         <Panel title="Ближайшие старты">
           <Rows>
@@ -53,12 +53,6 @@ export function Dash3_1() {
         </Panel>
         <Panel title="Сегодня идут">
           <TodayRows act={false} />
-          <Notes>
-            <Hint>
-              Кнопки «Завести соревнование» здесь нет — и не будет серой: недоступное действие не
-              показывается вовсе.
-            </Hint>
-          </Notes>
         </Panel>
       </div>
     </RoleScreen>
@@ -73,8 +67,7 @@ export function Read3_2() {
       role={R0304}
       nav="Календарь"
       title="Календарь сезона · чтение"
-      sub="Экран-источник Э1.2 · те же списки, колонки и карточки, но без кнопок действий"
-      hint="Вместо кнопок действий доступны фильтр, поиск, открытие карточек, выгрузка и печать."
+      sub="Календарь сезона · только чтение"
     >
       <Chips
         items={[
@@ -107,9 +100,6 @@ export function Read3_2() {
               <TourRow key={t.nm} t={t} judge />
             ))}
           </Rows>
-          <Notes>
-            <Hint>Строка открывает карточку турнира (Э1.3) на чтение: регламент, заявки, сетка, протокол, журнал турнира.</Hint>
-          </Notes>
         </Panel>
 
         <Panel title="Взносы · экран-источник Э2.1">
@@ -118,9 +108,6 @@ export function Read3_2() {
             <Row av={A(22)} nm="Жумабеков Расул" sub="Караганда · «Шахтёр»" pill={{ t: 'НЕ ОПЛАЧЕН', cls: 'wait' }} />
             <Row av={AW(21)} nm="Тлеуова Аружан" sub="Шымкент · «Достык»" pill={{ t: 'НЕ ОПЛАЧЕН', cls: 'wait' }} />
           </Rows>
-          <Notes>
-            <Hint>Состояние взноса видно, а кнопки «Отметить оплату» на этом экране нет — отмечает только экономист (Э2.1).</Hint>
-          </Notes>
         </Panel>
       </div>
     </RoleScreen>
@@ -145,8 +132,7 @@ export function Subs3_3() {
       role={R0304}
       nav="Подписки"
       title="Мои подписки"
-      sub="4 соревнования из 32 · уведомления о смене состояния, протоколе и отмене"
-      hint="«Подписаться» — единственная кнопка роли: она не меняет данные турнира, а только включает уведомления."
+      sub="4 соревнования из 32"
     >
       <ActionBar count="Отслеживается 4 из 32 соревнований сезона">
         <Btn>
@@ -180,9 +166,6 @@ export function Subs3_3() {
               <Bell size={13} /> Уведомления — всё, что даёт подписка
             </div>
           </div>
-          <Notes>
-            <Hint>Права вмешаться в ход турнира подписка не даёт: кнопок, меняющих турнир, на экране нет.</Hint>
-          </Notes>
         </Panel>
       </div>
     </RoleScreen>
