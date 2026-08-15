@@ -15,15 +15,25 @@
 
 import { createContext, useContext } from 'react';
 import type { Mark, RoleFlow, Screen } from './types';
+import { role00 } from './data/role00';
 import './nodeSpec.css';
 
 /** Флоу роли для парного вида. `null` — обычный борд «Макетов», без узлов. */
 export const FlowSpecContext = createContext<RoleFlow | null>(null);
 
-/** Узел флоу по коду экрана — `null`, если показываем борд сам по себе. */
+/** Узел флоу по коду экрана — `null`, если показываем борд сам по себе.
+
+    Сквозные экраны (Э0.x — вход, профиль, уведомления) описаны один раз, в
+    `data/role00.ts`, а стоят в бордах всех ролей: маршрут роли начинается со
+    входа. Поэтому не нашли у роли — ищем среди сквозных. */
 export function useNodeSpec(code: string): Screen | null {
   const flow = useContext(FlowSpecContext);
-  return flow?.screens.find((s) => s.id === code) ?? null;
+  if (!flow) return null;
+  return (
+    flow.screens.find((s) => s.id === code) ??
+    role00.screens.find((s) => s.id === code) ??
+    null
+  );
 }
 
 const MARK: Record<Mark, string> = { ours: '✳', open: '⚠' };

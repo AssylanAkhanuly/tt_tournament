@@ -40,6 +40,15 @@ const all = (re, text) => [...text.matchAll(re)];
 /** Хвост пометки в заголовке markdown («… ⚠ 12.6») в данных не повторяется. */
 const clean = (s) => s.replace(/\s*[—–-]?\s*(только просмотр\s*)?[✳⚠].*$/u, '').trim();
 
+/* Сквозные экраны Э0.x (вход, свой профиль, уведомления, публичная часть)
+   описаны один раз в `data/role00.ts` и разрешены и в переходах, и в макетах
+   любой роли: борд роли начинается со входа, иначе маршрут обрывается на
+   середине. Дублировать их в четырнадцати файлах не нужно. */
+const COMMON = new Set(
+  all(TS_SCREEN, readFileSync(join(DATA_DIR, 'role00.ts'), 'utf8')).map((m) => m[1]),
+);
+if (COMMON.size === 0) problems.push('data/role00.ts: сквозные экраны Э0.x не найдены');
+
 // Только файлы ролей: рядом лежит `all.ts` — общий список для обзорной страницы.
 const dataFiles = readdirSync(DATA_DIR).filter((f) => /^role.*\.ts$/.test(f));
 if (dataFiles.length === 0) problems.push('Нет ни одного файла данных в src/flows/data');
@@ -81,7 +90,9 @@ for (const file of dataFiles) {
   }
 
   for (const [, to] of all(TS_TO, ts)) {
-    if (!tsScreens.has(to)) problems.push(`${file}: переход to: '${to}' — такого экрана у роли нет`);
+    if (!tsScreens.has(to) && !COMMON.has(to)) {
+      problems.push(`${file}: переход to: '${to}' — такого экрана у роли нет`);
+    }
   }
 
   // Файл историй роли: показывает её схему, и схема должна быть отрисована.
@@ -148,8 +159,9 @@ for (const file of dataFiles) {
     }
   }
   for (const id of mockCodes) {
-    if (!tsScreens.has(id)) {
-      problems.push(`${mockFile}: макет ${id} — такого экрана у роли нет`);
+    // Сквозной экран в борде роли — это норма: маршрут начинается со входа.
+    if (!tsScreens.has(id) && !COMMON.has(id)) {
+      problems.push(`${mockFile}: макет ${id} — такого экрана нет ни у роли, ни среди сквозных`);
     }
   }
 }
