@@ -8,8 +8,9 @@
 import type { ReactNode } from 'react';
 import { ShieldCheck, TriangleAlert, UserPlus } from 'lucide-react';
 import {
-  A, AW, ActionBar, Alert, Arrow, Board, Chips, Empty, Field, Form, Ghost, Hint, Modal, Off, Panel, RoleScreen, Row, Rows, Screen, Shot, States, Submit,
+  A, AW, ActionBar, Alert, Arrow, Board, Chips, Empty, Field, Form, Ghost, Hint, Modal, Off, Panel, Queue, RoleScreen, Row, Rows, Screen, Shot, States, Submit,
 } from './shell';
+import type { DeskVariant } from '../deskShell';
 import type { ScreenMap } from './shell';
 import { FormSeg } from '../segs';
 import { R13 } from './roles';
@@ -36,9 +37,10 @@ const OTHERS = [
 ];
 
 /* Э13.1 — карточка клуба и три списка состава. */
-export function Club13_1() {
+export function Club13_1({ variant }: { variant?: DeskVariant }) {
   return (
     <RoleScreen
+      variant={variant}
       role={R13}
       nav="Мой клуб"
       title="Клуб «Алатау»"
@@ -49,9 +51,9 @@ export function Club13_1() {
           { v: '48', k: 'Людей в клубе' },
           { v: '2', k: 'Команды в Лиге', tone: 'b' },
           { v: '21–23.03', k: 'Ближайший тур · Астана' },
-          { v: '1', k: 'Состав на тур не подтверждён', tone: 'a' },
         ]}
       />
+      <Queue items={[{ n: '1', t: 'состав на тур не подтверждён', to: 'Э13.3' }]} />
 
       <Panel
         title="Карточка клуба"
@@ -61,7 +63,7 @@ export function Club13_1() {
           <Field label="Город" value="г. Алматы" />
           <Field label="Тип организации" value="Клуб (не спортшкола)" />
           <Field label="Администратор" value="Досжан Мади · с 12.11.2019" />
-          <Field label="Зарегистрирован" value="12.11.2019 · запись в реестре № 41" />
+          <Field label="В реестре" value="№ 41 · с 12.11.2019" />
         </Form>
       </Panel>
 
@@ -74,21 +76,21 @@ export function Club13_1() {
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12, alignItems: 'start' }}>
         <Panel title="Спортсмены · 38">
           <Rows>
-            {ATHLETES.map((a) => (
+            {ATHLETES.slice(0, 2).map((a) => (
               <Row key={a.nm} av={a.av} nm={a.nm} sub={a.sub} pill={a.pill} />
             ))}
           </Rows>
         </Panel>
         <Panel title="Тренеры · 6">
           <Rows>
-            {COACHES.map((c) => (
+            {COACHES.slice(0, 2).map((c) => (
               <Row key={c.nm} av={c.av} nm={c.nm} sub={c.sub} />
             ))}
           </Rows>
         </Panel>
         <Panel title="Иные лица · 4">
           <Rows>
-            {OTHERS.map((o) => (
+            {OTHERS.slice(0, 1).map((o) => (
               <Row key={o.nm} av={o.av} nm={o.nm} sub={o.sub} />
             ))}
           </Rows>

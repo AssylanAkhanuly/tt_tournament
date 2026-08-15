@@ -11,6 +11,7 @@ import { Printer, RefreshCw, Send, Shuffle } from 'lucide-react';
 import {
   A, ActionBar, Alert, Arrow, Board, Chips, Field, Form, Hint, Panel, RoleScreen, Row, Rows, Screen, Shot, States,
 } from './shell';
+import type { DeskVariant } from '../deskShell';
 import type { ScreenMap } from './shell';
 import { FormSeg, PanelSeg } from '../segs';
 import { R07 } from './roles';
@@ -50,9 +51,10 @@ const ToJudge = ({ children }: { children: ReactNode }) => (
 
 /* ── Э7.1 · Рабочий стол: список работ и решение судьи ───────────── */
 
-export function Desk7_1() {
+export function Desk7_1({ variant }: { variant?: DeskVariant }) {
   return (
     <RoleScreen
+      variant={variant}
       role={R07}
       nav="Рабочий стол"
       title="Рабочий стол секретаря"

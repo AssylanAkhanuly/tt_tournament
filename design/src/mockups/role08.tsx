@@ -14,6 +14,7 @@ import { ArrowRightLeft, Ban, Clock, Lock, Megaphone, Pencil, Shield, Upload } f
 import {
   A, Alert, Arrow, Board, Chips, Hint, Panel, RoleScreen, Row, Rows, Screen, Shot, States, Submit,
 } from './shell';
+import type { DeskVariant } from '../deskShell';
 import type { ScreenMap } from './shell';
 import { LiveCards, NeedRow, QueuePanel, Stages, TableMap, type Need } from './role06';
 import { R08 } from './roles';
@@ -41,9 +42,10 @@ const NEEDS: Need[] = [
   },
 ];
 
-export function Shift8_1() {
+export function Shift8_1({ variant }: { variant?: DeskVariant }) {
   return (
     <RoleScreen
+      variant={variant}
       role={R08}
       nav="Мой турнир"
       title="Чемпионат Казахстана 2026"

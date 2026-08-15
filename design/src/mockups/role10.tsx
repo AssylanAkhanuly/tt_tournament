@@ -13,6 +13,7 @@ import { Bookmark, Download, Eye, FileText, Paperclip, Send } from 'lucide-react
 import {
   A, ActionBar, Alert, Arrow, Board, Chips, Form, Hint, Panel, RoleScreen, Row, Rows, Screen, Shot, States,
 } from './shell';
+import type { DeskVariant } from '../deskShell';
 import type { ScreenMap } from './shell';
 import { R10 } from './roles';
 import { Login0_1 } from './role00';
@@ -172,9 +173,10 @@ function NoteRow({ n, w }: { n: Note; w: number }) {
 
 /* ── Э10.1 · Соревнования на контроле ────────────────────────────── */
 
-export function Tours10_1() {
+export function Tours10_1({ variant }: { variant?: DeskVariant }) {
   return (
     <RoleScreen
+      variant={variant}
       role={R10}
       nav="На контроле"
       title="Соревнования на контроле"

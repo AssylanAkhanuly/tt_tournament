@@ -10,8 +10,9 @@ import {
   CalendarClock, Filter, Paperclip, TriangleAlert, Undo2, UserPlus, Eye,
 } from 'lucide-react';
 import {
-  A, AW, ActionBar, Alert, Arrow, Board, Chips, Empty, Field, Form, Hint, Panel, RoleScreen, Row, Rows, Screen, Shot, States, Submit,
+  A, AW, ActionBar, Alert, Arrow, Board, Chips, Empty, Field, Form, Hint, Panel, Queue, RoleScreen, Row, Rows, Screen, Shot, States, Submit,
 } from './shell';
+import type { DeskVariant } from '../deskShell';
 import type { ScreenMap } from './shell';
 import { R12 } from './roles';
 import { Login0_1 } from './role00';
@@ -110,9 +111,10 @@ const STARTS: Start[] = [
 ];
 
 /* Э12.1 — реестр региона: взнос виден до подачи заявки (§9.2). */
-export function Region12_1() {
+export function Region12_1({ variant }: { variant?: DeskVariant }) {
   return (
     <RoleScreen
+      variant={variant}
       role={R12}
       nav="Мой регион"
       title="Спортсмены региона"
@@ -122,10 +124,10 @@ export function Region12_1() {
         items={[
           { v: '184', k: 'Спортсменов региона' },
           { v: '142', k: 'Взнос оплачен', tone: 'g' },
-          { v: '42', k: 'Без взноса', tone: 'a' },
           { v: '9', k: 'Клубов региона', tone: 'b' },
         ]}
       />
+      <Queue items={[{ n: '42', t: 'без годового взноса', to: 'Э12.1' }]} />
       <ActionBar count="Фильтры: год рождения · пол · клуб · взнос">
         <button className="dpickbtn">
           <Filter size={14} /> Фильтры

@@ -12,6 +12,7 @@ import { Download, Eye, Star } from 'lucide-react';
 import {
   A, ActionBar, Arrow, Board, Chips, Form, Hint, Panel, RoleScreen, Row, Rows, Screen, Shot, States,
 } from './shell';
+import type { DeskVariant } from '../deskShell';
 import type { ScreenMap } from './shell';
 import { R11 } from './roles';
 import { Login0_1 } from './role00';
@@ -125,9 +126,10 @@ const cellV = {
 
 /* ── Э11.1 · Кандидаты в сборную ─────────────────────────────────── */
 
-export function Cands11_1() {
+export function Cands11_1({ variant }: { variant?: DeskVariant }) {
   return (
     <RoleScreen
+      variant={variant}
       role={R11}
       nav="Кандидаты"
       title="Кандидаты в сборную"

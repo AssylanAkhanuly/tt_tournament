@@ -10,8 +10,9 @@
 import type { ReactNode } from 'react';
 import { BadgeCheck, Ban, Check, Megaphone, Paperclip, Undo2, UserPlus } from 'lucide-react';
 import {
-  A, AW, ActionBar, Alert, Arrow, Board, Chips, Empty, Field, Form, Ghost, Hint, Modal, Off, Panel, RoleScreen, Row, Rows, Screen, Shot, States,
+  A, AW, ActionBar, Alert, Arrow, Board, Chips, Empty, Field, Form, Ghost, Hint, Modal, Off, Panel, Queue, RoleScreen, Row, Rows, Screen, Shot, States,
 } from './shell';
+import type { DeskVariant } from '../deskShell';
 import type { ScreenMap } from './shell';
 import { R05 } from './roles';
 import { Login0_1 } from './role00';
@@ -43,9 +44,10 @@ const P = ({ t, cls }: { t: string; cls: Cls }) => (
 
 /* ── Э5.1 · Мои соревнования: две очереди решений ────────────────── */
 
-export function Queues5_1() {
+export function Queues5_1({ variant }: { variant?: DeskVariant }) {
   return (
     <RoleScreen
+      variant={variant}
       role={R05}
       nav="Мои соревнования"
       title="Мои соревнования"
@@ -53,10 +55,16 @@ export function Queues5_1() {
     >
       <Chips
         items={[
-          { v: '3', k: 'Ждут назначения судьи', tone: 'a' },
-          { v: '2', k: 'Ждут утверждения протокола', tone: 'b' },
-          { v: '41', k: 'Заявок судей подано', tone: 'g' },
           { v: '8', k: 'Официальных стартов' },
+          { v: '41', k: 'Заявок судей подано', tone: 'g' },
+          { v: '12', k: 'Протоколов утверждено', tone: 'b' },
+          { v: '86', k: 'Судей в рейтинге' },
+        ]}
+      />
+      <Queue
+        items={[
+          { n: '3', t: 'ждут назначения судьи', to: 'Э5.2' },
+          { n: '2', t: 'ждут утверждения протокола', to: 'Э5.4' },
         ]}
       />
 

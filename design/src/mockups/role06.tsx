@@ -18,6 +18,7 @@ import {
 import {
   A, AW, ActionBar, Alert, Arrow, Board, Chips, Empty, Field, Form, Ghost, Hint, Modal, Off, Panel, RoleScreen, Row, Rows, Screen, Shot, States, Submit,
 } from './shell';
+import type { DeskVariant } from '../deskShell';
 import type { ScreenMap } from './shell';
 import { FormSeg, PanelSeg } from '../segs';
 import { R06 } from './roles';
@@ -202,9 +203,10 @@ const NEEDS: Need[] = [
   },
 ];
 
-export function Tournament6_1() {
+export function Tournament6_1({ variant }: { variant?: DeskVariant }) {
   return (
     <RoleScreen
+      variant={variant}
       role={at('ПРИЁМ ЗАЯВОК')}
       nav="Мой турнир"
       title="Чемпионат Казахстана 2026"
@@ -227,7 +229,7 @@ export function Tournament6_1() {
           extra={<span className="pill wait" style={{ margin: 0 }}>ПРИЁМ ЗАЯВОК ИГРОКОВ</span>}
         >
           <Rows>
-            {NEEDS.map((n) => <NeedRow key={n.t} n={n} />)}
+            {NEEDS.slice(0, 2).map((n) => <NeedRow key={n.t} n={n} />)}
           </Rows>
           <div style={{ marginTop: 10 }}>
           </div>

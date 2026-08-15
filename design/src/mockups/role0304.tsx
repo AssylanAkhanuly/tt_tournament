@@ -12,6 +12,7 @@ import { Bell, Download, Printer } from 'lucide-react';
 import {
   A, AW, ActionBar, Alert, Arrow, Board, Chips, Ghost, Hint, P, Panel, RoleScreen, Row, Rows, Screen, Shot, States,
 } from './shell';
+import type { DeskVariant } from '../deskShell';
 import type { ScreenMap } from './shell';
 import { R0304 } from './roles';
 import { Login0_1 } from './role00';
@@ -30,9 +31,10 @@ const TOURS: Tour[] = [
 
 /* ── Э3.1 · Обзорная панель ────────────────────────────────────── */
 
-export function Dash3_1() {
+export function Dash3_1({ variant }: { variant?: DeskVariant }) {
   return (
     <RoleScreen
+      variant={variant}
       role={R0304}
       nav="Обзор"
       title="Обзорная панель"
@@ -48,7 +50,7 @@ export function Dash3_1() {
       <div className="mkcols">
         <Panel title="Ближайшие старты">
           <Rows>
-            {TOURS.map((t) => (
+            {TOURS.slice(0, 3).map((t) => (
               <TourRow key={t.nm} t={t} />
             ))}
           </Rows>

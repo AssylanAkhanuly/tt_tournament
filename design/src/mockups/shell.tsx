@@ -381,6 +381,27 @@ export const P = ({ t, cls }: { t: string; cls: string }) => (
   <span className={'pill ' + cls} style={{ margin: 0, whiteSpace: 'nowrap' }}>{t}</span>
 );
 
+/** Рабочая очередь строкой: счётчики дел под плитками показателей.
+
+    Плитка отвечает на «как идёт сезон», очередь — на «что от меня ждут».
+    Смешивать их в одном ряду нельзя: долги вытесняют показатели. */
+export function Queue({
+  items,
+}: {
+  items: { n: string; t: string; to?: string }[];
+}) {
+  return (
+    <div className="mkattn">
+      <span className="mkattn-h">Требует внимания</span>
+      {items.map((i) => (
+        <span className="mkattn-i" key={i.t} data-to={i.to}>
+          <b>{i.n}</b> {i.t}
+        </span>
+      ))}
+    </div>
+  );
+}
+
 /** Ещё один кадр того же экрана: следующий шаг или другое устройство.
     Не состояние — поэтому стоит отдельной полкой, а не в `States`. */
 export function Also({ cap, children }: { cap: string; children: ReactNode }) {
