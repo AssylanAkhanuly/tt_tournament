@@ -1,12 +1,10 @@
 /* Сгенерировано: npm run gen:flows (источник — data/role08.ts).
-   Руками не правим — правим данные роли, затем: npm run gen:diagrams →
-   powershell -File diagrams/build.ps1 → npm run gen:flows. */
+   Руками не правим — правим данные роли и её макеты, затем: npm run gen:flows. */
 
-import scheme from '../../../diagrams/out/flow-role-08.png';
-import { Scheme } from './scheme';
 import { Paired } from './paired';
+import { FlowMap } from './map';
 import { role08 } from './data/role08';
-import { Role08Board } from '../mockups/role08';
+import { Role08Board, SCREENS } from '../mockups/role08';
 
 export default {
   title: 'Флоу/08 · Заместитель главного судьи',
@@ -16,7 +14,7 @@ export default {
 /* Парный вид первым: под каждым узлом маршрута стоит его макет — требование и
    картинка читаются вместе, а не в двух разных разделах дерева. */
 export const Nodes = {
-  name: 'Узлы и макеты · 3 экрана',
+  name: 'Узлы и макеты · 4 экрана',
   render: () => (
     <Paired flow={role08}>
       <Role08Board />
@@ -24,7 +22,8 @@ export const Nodes = {
   ),
 };
 
-export const Sheme = {
-  name: 'Схема · 3 экрана',
-  render: () => <Scheme src={scheme} alt="Флоу роли 8 · Заместитель главного судьи" source="flows/08-zam-glavnogo-sudi.md" />,
+/* Карта: граф маршрута и макет выбранного экрана рядом. */
+export const Route = {
+  name: 'Карта · 4 экрана',
+  render: () => <FlowMap flow={role08} screens={SCREENS} />,
 };

@@ -1,0 +1,119 @@
+/* Карта флоу: половина экрана — граф маршрута, половина — макет выбранного
+   экрана. Живёт на светлой подложке борда, поэтому цвет берём из board-токенов:
+   вокруг презентация, а не тёмный интерфейс. */
+
+.fmap {
+  display: grid;
+  grid-template-columns: minmax(420px, 46%) 1fr;
+  height: 100vh;
+  background: var(--c-board-bg);
+  color: var(--c-board-ink);
+  font-family: var(--font);
+  -webkit-font-smoothing: antialiased;
+}
+
+.fmap-graph { position: relative; border-right: 1px solid var(--c-board-line); min-width: 0; }
+
+.fmap-legend {
+  position: absolute;
+  left: 14px;
+  top: 14px;
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 10px 12px;
+  border: 1px solid var(--c-board-line);
+  border-radius: var(--r-sm);
+  background: var(--c-board-panel);
+  font-size: 11.5px;
+  color: var(--c-board-muted);
+  max-width: 300px;
+}
+.fmap-legend b { font-size: 13px; color: var(--c-board-ink); }
+.fmap-legend code { font-size: 11px; }
+
+/* ── Узел ───────────────────────────────────────────────────────── */
+
+.fmn {
+  width: 220px;
+  padding: 10px 12px;
+  border: 1px solid var(--c-board-line);
+  border-radius: var(--r-sm);
+  background: color-mix(in srgb, var(--seed-white) 92%, var(--c-board-bg));
+  box-shadow: var(--sh-light);
+  cursor: pointer;
+  text-align: left;
+}
+.fmn:hover { border-color: var(--c-board-accent); }
+.fmn.on {
+  border-color: var(--c-board-accent);
+  box-shadow: 0 0 0 2px var(--c-board-accent-line), var(--sh-light);
+  background: var(--c-board-accent-soft);
+}
+/* Сквозной экран (Э0.x) — общий для всех ролей, описан в разделе 00. */
+.fmn.common { border-style: dashed; }
+
+.fmn-code {
+  display: inline-block;
+  padding: 1px 6px;
+  margin-bottom: 5px;
+  border-radius: var(--r-xs);
+  background: var(--c-board-accent-soft);
+  border: 1px solid var(--c-board-accent-line);
+  color: var(--c-board-accent);
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: .04em;
+}
+.fmn-code sup { margin-left: 3px; }
+.fmn-title { font-size: 13px; font-weight: 700; line-height: 1.3; }
+.fmn-meta { margin-top: 4px; font-size: 10.5px; color: var(--c-board-muted); }
+
+/* Точки-порты у узла не нужны: связи и так читаются, а точки шумят. */
+.fmap-graph .react-flow__handle { opacity: 0; }
+
+/* ── Правая половина: макет ─────────────────────────────────────── */
+
+.fmap-view { overflow: auto; min-width: 0; padding-bottom: 40px; }
+
+.fmap-bar {
+  position: sticky;
+  top: 0;
+  z-index: 4;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 18px;
+  border-bottom: 1px solid var(--c-board-line);
+  background: var(--c-board-bg);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.fmap-zoom { display: flex; gap: 4px; }
+.fmap-zoom button {
+  font: inherit;
+  font-size: 11.5px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 5px 10px;
+  border: 1px solid var(--c-board-line);
+  border-radius: var(--r-xs);
+  background: transparent;
+  color: var(--c-board-muted);
+}
+.fmap-zoom button.on {
+  color: var(--c-board-accent);
+  border-color: var(--c-board-accent-line);
+  background: var(--c-board-accent-soft);
+}
+
+/* Макет ужимается целиком: обёртка держит его высоту после масштабирования,
+   иначе под ним оставалась бы дыра в натуральную величину. */
+.fmap-shot { overflow: hidden; padding: 18px; }
+.fmap-scale { width: max-content; }
+
+.fmap-spec { padding: 0 18px; }
+.fmap-spec .fnode { width: auto; min-width: 0; margin-top: 0; }

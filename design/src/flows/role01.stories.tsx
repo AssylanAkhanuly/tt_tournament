@@ -1,12 +1,10 @@
 /* Сгенерировано: npm run gen:flows (источник — data/role01.ts).
-   Руками не правим — правим данные роли, затем: npm run gen:diagrams →
-   powershell -File diagrams/build.ps1 → npm run gen:flows. */
+   Руками не правим — правим данные роли и её макеты, затем: npm run gen:flows. */
 
-import scheme from '../../../diagrams/out/flow-role-01.png';
-import { Scheme } from './scheme';
 import { Paired } from './paired';
+import { FlowMap } from './map';
 import { role01 } from './data/role01';
-import { Role01Board } from '../mockups/role01';
+import { Role01Board, SCREENS } from '../mockups/role01';
 
 export default {
   title: 'Флоу/01 · Администратор Федерации',
@@ -16,7 +14,7 @@ export default {
 /* Парный вид первым: под каждым узлом маршрута стоит его макет — требование и
    картинка читаются вместе, а не в двух разных разделах дерева. */
 export const Nodes = {
-  name: 'Узлы и макеты · 14 экранов',
+  name: 'Узлы и макеты · 15 экранов',
   render: () => (
     <Paired flow={role01}>
       <Role01Board />
@@ -24,7 +22,8 @@ export const Nodes = {
   ),
 };
 
-export const Sheme = {
-  name: 'Схема · 14 экранов',
-  render: () => <Scheme src={scheme} alt="Флоу роли 1 · Администратор Федерации" source="flows/01-admin-federacii.md" />,
+/* Карта: граф маршрута и макет выбранного экрана рядом. */
+export const Route = {
+  name: 'Карта · 15 экранов',
+  render: () => <FlowMap flow={role01} screens={SCREENS} />,
 };

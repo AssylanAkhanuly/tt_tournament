@@ -1,12 +1,10 @@
 /* Сгенерировано: npm run gen:flows (источник — data/role00.ts).
-   Руками не правим — правим данные роли, затем: npm run gen:diagrams →
-   powershell -File diagrams/build.ps1 → npm run gen:flows. */
+   Руками не правим — правим данные роли и её макеты, затем: npm run gen:flows. */
 
-import scheme from '../../../diagrams/out/flow-role-00.png';
-import { Scheme } from './scheme';
 import { Paired } from './paired';
+import { FlowMap } from './map';
 import { role00 } from './data/role00';
-import { Role00Board } from '../mockups/role00';
+import { Role00Board, SCREENS } from '../mockups/role00';
 
 export default {
   title: 'Флоу/00 · Сквозные экраны',
@@ -24,7 +22,8 @@ export const Nodes = {
   ),
 };
 
-export const Sheme = {
-  name: 'Схема · 4 экрана',
-  render: () => <Scheme src={scheme} alt="Флоу роли 0 · Сквозные экраны" source="flows/00-obshchie-ekrany.md" />,
+/* Карта: граф маршрута и макет выбранного экрана рядом. */
+export const Route = {
+  name: 'Карта · 4 экрана',
+  render: () => <FlowMap flow={role00} screens={SCREENS} />,
 };

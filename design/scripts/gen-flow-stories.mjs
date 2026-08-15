@@ -1,17 +1,16 @@
 /* Генератор историй раздела «Флоу»: `src/flows/data/roleNN.ts` →
    `src/flows/roleNN.stories.tsx`.
 
-   История роли — одна: её СХЕМА (PNG из `diagrams/out/`, собранный из
-   `diagrams/flow-role-NN.d2`). Картинка подключается прямо из `diagrams/out`,
-   без копии в `design/` — иначе те же несколько мегабайт лежали бы в
-   репозитории дважды.
+   У роли две истории: «Узлы и макеты» (борд с требованиями под каждым экраном)
+   и «Карта» — граф маршрута, где клик по узлу открывает макет во второй
+   половине экрана. Обе собираются из карты экранов роли (`SCREENS` в
+   `mockups/roleNN.tsx`), поэтому число экранов в подписи берём оттуда же.
 
    Заголовок раздела и имя истории обязаны быть строковыми литералами:
    Storybook строит дерево статическим разбором файла. Писать их руками —
    гарантированный дрейф с данными, поэтому файлы собираются отсюда.
 
-   Порядок: `npm run gen:diagrams` → `powershell -File diagrams/build.ps1` →
-   `npm run gen:flows`. Проверка: `npm run lint:flows`. */
+   Запуск: `npm run gen:flows`. Проверка: `npm run lint:flows`. */
 
 import { readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -24,7 +23,8 @@ const DATA = join(FLOWS, 'data');
 const ROLE_NUM = /\bnum:\s*'([^']+)'/;
 const ROLE_TITLE = /\bnum:\s*'[^']+',\s*\n\s*title:\s*'([^']+)'/;
 const ROLE_SOURCE = /\bsource:\s*'([^']+)'/;
-const SCREEN = /id:\s*'(Э\d+\.\d+)'/g;
+/** Экран в карте экранов роли: `'Э6.2': {`. */
+const MAP_CODE = /'(Э\d+\.\d+)':\s*\{/g;
 
 /** Номер с ведущим нулём — иначе Storybook сортирует 1, 10, 11, …, 2.
     Пара ролей («3 и 4») → `03–04`. Повторяет `pad` из `src/flows/types.ts`. */
@@ -40,6 +40,7 @@ function plural(n, one, few, many) {
 }
 
 // Только файлы ролей: рядом лежит `all.ts` — общий список ролей.
+const MOCKUPS = join(ROOT, 'src', 'mockups');
 const files = readdirSync(DATA).filter((f) => /^role.*\.ts$/.test(f));
 let written = 0;
 
@@ -56,23 +57,23 @@ for (const file of files) {
     continue;
   }
 
-  const screens = [...src.matchAll(SCREEN)].length;
-  // Имя файла схемы: `flow-role-01`, у пары ролей — `flow-role-03-04`.
-  const scheme = `flow-role-${pad(num, '-')}`;
+  /* Считаем по карте экранов роли, а не по данным: в борде и на карте стоит
+     ещё и сквозной вход (Э0.1), и подпись истории должна говорить правду о
+     том, что человек видит. */
+  const mock = readFileSync(join(MOCKUPS, `${name}.tsx`), 'utf8');
+  const screens = [...mock.matchAll(MAP_CODE)].length;
 
   // Борд макетов той же роли: `role0304.tsx` → `Role0304Board`.
   const board = `Role${name.slice('role'.length)}Board`;
   const count = plural(screens, 'экран', 'экрана', 'экранов');
 
   const out = `/* Сгенерировано: npm run gen:flows (источник — data/${file}).
-   Руками не правим — правим данные роли, затем: npm run gen:diagrams →
-   powershell -File diagrams/build.ps1 → npm run gen:flows. */
+   Руками не правим — правим данные роли и её макеты, затем: npm run gen:flows. */
 
-import scheme from '../../../diagrams/out/${scheme}.png';
-import { Scheme } from './scheme';
 import { Paired } from './paired';
+import { FlowMap } from './map';
 import { ${name} } from './data/${name}';
-import { ${board} } from '../mockups/${name}';
+import { ${board}, SCREENS } from '../mockups/${name}';
 
 export default {
   title: 'Флоу/${pad(num)} · ${title}',
@@ -90,9 +91,10 @@ export const Nodes = {
   ),
 };
 
-export const Sheme = {
-  name: 'Схема · ${count}',
-  render: () => <Scheme src={scheme} alt="Флоу роли ${num} · ${title}" source="${source}" />,
+/* Карта: граф маршрута и макет выбранного экрана рядом. */
+export const Route = {
+  name: 'Карта · ${count}',
+  render: () => <FlowMap flow={${name}} screens={SCREENS} />,
 };
 `;
 

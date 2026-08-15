@@ -10,9 +10,11 @@
    2. Набор кодов экранов в данных совпадает с заголовками markdown.
    3. Названия экранов совпадают (по коду).
    4. Каждый переход `to:` ведёт на код, описанный у той же роли.
-   5. Файл историй роли собран по данным: есть история на каждый экран, имена
-      совпадают (файлы генерируются `npm run gen:flows`, но их могли поправить
-      руками).
+   5. Макеты роли собраны картой «код → экран» (`SCREENS`), и она покрывает все
+      экраны роли.
+   6. Истории роли собраны по данным: борд и карта маршрута на месте, число
+      экранов в подписях совпадает (файлы генерируются `npm run gen:flows`, но
+      их могли поправить руками).
 
    Запуск: `npm run lint:flows`. */
 
@@ -31,8 +33,8 @@ const MD_SCREEN = /^##\s+(Э\d+\.\d+)\s+·\s+(.+?)\s*$/gm;
 /** Экран в данных: `id: 'Э6.2'` + следующий за ним `title: '…'`. */
 const TS_SCREEN = /id:\s*'(Э\d+\.\d+)',\s*\n\s*title:\s*'([^']+)'/g;
 const TS_TO = /\bto:\s*'(Э\d+\.\d+)'/g;
-/** Колонка борда макетов: `<Screen code="Э6.2" …>`. */
-const MOCK_CODE = /code="(Э\d+\.\d+)"/g;
+/** Экран в карте экранов роли: `'Э6.2': {`. */
+const MOCK_CODE = /'(Э\d+\.\d+)':\s*\{/g;
 const TS_SOURCE = /\bsource:\s*'([^']+)'/;
 
 const problems = [];
@@ -95,52 +97,11 @@ for (const file of dataFiles) {
     }
   }
 
-  // Файл историй роли: показывает её схему, и схема должна быть отрисована.
-  const storiesFile = file.replace(/\.ts$/, '.stories.tsx');
-  const storiesPath = join(FLOWS_DIR, storiesFile);
-  if (!existsSync(storiesPath)) {
-    problems.push(`${storiesFile}: нет файла историй — запустите npm run gen:flows`);
-    continue;
-  }
-  const stories = readFileSync(storiesPath, 'utf8');
-  const scheme = stories.match(/diagrams\/out\/(flow-role-[\d-]+)\.png/)?.[1];
-  if (!scheme) {
-    problems.push(`${storiesFile}: история не подключает схему — запустите npm run gen:flows`);
-    continue;
-  }
-  if (!existsSync(join(REPO, 'diagrams', `${scheme}.d2`))) {
-    problems.push(`${scheme}.d2: схема роли не сгенерирована — запустите npm run gen:diagrams`);
-  }
-  if (!existsSync(join(REPO, 'diagrams', 'out', `${scheme}.png`))) {
-    problems.push(
-      `${scheme}.png: схема не отрисована — powershell -File diagrams/build.ps1`,
-    );
-  }
-  // Число экранов в подписи истории — из данных, чтобы не разъезжалось.
-  if (!new RegExp(`name: 'Схема · ${tsScreens.size} экран`).test(stories)) {
-    problems.push(
-      `${storiesFile}: в подписи истории не ${tsScreens.size} экранов — запустите npm run gen:flows`,
-    );
-  }
-
-  /* Парный вид: узлы маршрута и макеты в одной истории. Проверяем именно
-     проводку — историю, данные роли в неё и борд макетов, — иначе после
-     переименования борда раздел молча остался бы без макетов. */
+  /* Макеты роли: карта «код экрана → макет». Из неё собираются и борд, и карта
+     флоу, поэтому разъехаться этим двум видам нечем — но сама карта обязана
+     покрывать все экраны роли. */
   const roleName = file.replace(/\.ts$/, '');
   const boardName = `Role${roleName.slice('role'.length)}Board`;
-  if (!new RegExp(`name: 'Узлы и макеты · ${tsScreens.size} экран`).test(stories)) {
-    problems.push(
-      `${storiesFile}: нет парной истории «Узлы и макеты» на ${tsScreens.size} экранов — запустите npm run gen:flows`,
-    );
-  }
-  if (!stories.includes(`<Paired flow={${roleName}}>`)) {
-    problems.push(`${storiesFile}: в парную историю не подан flow={${roleName}} — запустите npm run gen:flows`);
-  }
-  if (!stories.includes(`import { ${boardName} } from '../mockups/${roleName}'`)) {
-    problems.push(`${storiesFile}: парная история не подключает борд ${boardName} — запустите npm run gen:flows`);
-  }
-
-  // Макеты роли: на каждый экран флоу — своя колонка борда с тем же кодом.
   const mockFile = file.replace(/\.ts$/, '.tsx');
   const mockPath = join(MOCKUPS_DIR, mockFile);
   if (!existsSync(mockPath)) {
@@ -148,9 +109,11 @@ for (const file of dataFiles) {
     continue;
   }
   const mock = readFileSync(mockPath, 'utf8');
-  // Борд роли — то, что парная история импортирует по имени.
+  if (!/export const SCREENS: ScreenMap/.test(mock)) {
+    problems.push(`${mockFile}: нет карты экранов SCREENS — из неё собираются борд и карта флоу`);
+  }
   if (!new RegExp(`export function ${boardName}\\b`).test(mock)) {
-    problems.push(`${mockFile}: нет борда ${boardName} — его импортирует парная история раздела «Флоу»`);
+    problems.push(`${mockFile}: нет борда ${boardName} — его импортирует история «Узлы и макеты»`);
   }
   const mockCodes = new Set(all(MOCK_CODE, mock).map((m) => m[1]));
   for (const [id, title] of tsScreens) {
@@ -163,6 +126,35 @@ for (const file of dataFiles) {
     if (!tsScreens.has(id) && !COMMON.has(id)) {
       problems.push(`${mockFile}: макет ${id} — такого экрана нет ни у роли, ни среди сквозных`);
     }
+  }
+
+  /* Истории роли: борд с требованиями и карта маршрута. Проверяем проводку —
+     данные роли, борд и карту экранов, — иначе после переименования раздел
+     молча остался бы пустым. Число в подписи — по карте экранов: столько
+     колонок человек и видит (в них есть ещё и сквозной вход). */
+  const storiesFile = file.replace(/\.ts$/, '.stories.tsx');
+  const storiesPath = join(FLOWS_DIR, storiesFile);
+  if (!existsSync(storiesPath)) {
+    problems.push(`${storiesFile}: нет файла историй — запустите npm run gen:flows`);
+    continue;
+  }
+  const stories = readFileSync(storiesPath, 'utf8');
+  const shown = mockCodes.size;
+  for (const [story, label] of [['Узлы и макеты', 'борда'], ['Карта', 'карты']]) {
+    if (!new RegExp(`name: '${story} · ${shown} экран`).test(stories)) {
+      problems.push(
+        `${storiesFile}: в подписи ${label} не ${shown} экранов — запустите npm run gen:flows`,
+      );
+    }
+  }
+  if (!stories.includes(`<Paired flow={${roleName}}>`)) {
+    problems.push(`${storiesFile}: в парную историю не подан flow={${roleName}} — запустите npm run gen:flows`);
+  }
+  if (!stories.includes(`<FlowMap flow={${roleName}} screens={SCREENS} />`)) {
+    problems.push(`${storiesFile}: карта не подключена — запустите npm run gen:flows`);
+  }
+  if (!stories.includes(`import { ${boardName}, SCREENS } from '../mockups/${roleName}'`)) {
+    problems.push(`${storiesFile}: истории не подключают ${boardName} и SCREENS — запустите npm run gen:flows`);
   }
 }
 
