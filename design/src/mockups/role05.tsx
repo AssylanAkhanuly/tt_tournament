@@ -10,7 +10,7 @@
 import type { ReactNode } from 'react';
 import { BadgeCheck, Ban, Check, Megaphone, Paperclip, Undo2, UserPlus } from 'lucide-react';
 import {
-  A, AW, ActionBar, Alert, Arrow, Board, Chips, Empty, Field, Form, Hint, Panel, RoleScreen, Row, Rows, Screen, Shot, States,
+  A, AW, ActionBar, Alert, Arrow, Board, Chips, Empty, Field, Form, Ghost, Hint, Modal, Off, Panel, RoleScreen, Row, Rows, Screen, Shot, States,
 } from './shell';
 import type { ScreenMap } from './shell';
 import { R05 } from './roles';
@@ -18,20 +18,20 @@ import { Login0_1 } from './role00';
 
 /* ── мелочи, общие для экранов роли ─────────────────────────────── */
 
-/** Второстепенное действие: форма кнопки та же, заливки акцентом нет. */
-const GHOST = {
-  background: 'var(--c-panel)',
-  color: 'var(--c-ink)',
-  border: '1px solid var(--c-glass-line)',
-  boxShadow: 'none',
-} as const;
-
-const Ghost = ({ children }: { children: ReactNode }) => (
-  <button className="dsubmit" style={{ ...GHOST, fontSize: 13 }}>{children}</button>
-);
-
+/** Второстепенное действие с переходом: та же тихая кнопка, что в каркасе. */
 const GhostPick = ({ to, children }: { to?: string; children: ReactNode }) => (
-  <button className="dpickbtn" data-to={to} style={{ ...GHOST, display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+  <button
+    className="dpickbtn"
+    data-to={to}
+    style={{
+      display: 'inline-flex',
+      alignItems: 'center',
+      gap: 6,
+      background: 'var(--c-panel-2)',
+      color: 'var(--c-ink)',
+      boxShadow: 'inset 0 1px 0 var(--c-glass-hi)',
+    }}
+  >
     {children}
   </button>
 );
@@ -601,6 +601,132 @@ const Publish5_7States = () => (
   </States>
 );
 
+/* ── Э5.8 · Выбор судьи в наряд ────────────────────────────────── */
+
+/** Судья в списке выбора: по чему председатель решает — категория, рейтинг,
+    занятость на эти же даты. */
+const PICK = [
+  { av: A(76), nm: 'Оспанов Тимур', sub: 'национальная категория · 42 турнира', r: 'R 27,5 · №1', busy: false },
+  { av: A(51), nm: 'Токаев Марат', sub: 'национальная категория · 31 турнир', r: 'R 24,1 · №2', busy: false },
+  { av: A(13), nm: 'Пак Сергей', sub: 'первая категория · 28 турниров', r: 'R 21,8 · №4', busy: true },
+  { av: A(64), nm: 'Сериков Нурлан', sub: 'вторая категория · 12 турниров', r: 'R 14,2 · №9', busy: false },
+];
+
+export function PickJudge5_8() {
+  return (
+    <RoleScreen role={R05} nav="Наряд" title="Наряд судей" sub="Кубок Республики Казахстан 2026 · 14 из 20">
+      <Rows>
+        <Row nm="Стол 1 · Мұқанов Талғат" sub="национальная категория" pill={{ t: 'В НАРЯДЕ', cls: 'live' }} />
+        <Row nm="Стол 2 · Ибраев Қанат" sub="первая категория" pill={{ t: 'В НАРЯДЕ', cls: 'live' }} />
+      </Rows>
+
+      <Modal
+        title="Добавить судью в наряд"
+        sub="Кубок Республики Казахстан 2026 · 18–20 мая · Астана"
+        foot={
+          <>
+            <div className="dcount">Вместе с добавлением выдаётся роль «судья» на этот турнир</div>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <Ghost>Закрыть</Ghost>
+              <button className="dsubmit" style={{ padding: '11px 16px' }}>Добавить</button>
+            </div>
+          </>
+        }
+      >
+        <ActionBar count="214 судей в реестре · категория: любая · регион: все" />
+        <Rows>
+          {PICK.map((j) => (
+            <Row
+              key={j.nm}
+              av={j.av}
+              nm={j.nm}
+              sub={j.busy ? j.sub + ' · занят 18–20 мая на «Кубке Иртыша»' : j.sub}
+              val={j.r}
+              pill={j.busy ? { t: 'ЗАНЯТ', cls: 'wait' } : undefined}
+              action="Выбрать"
+            />
+          ))}
+        </Rows>
+      </Modal>
+    </RoleScreen>
+  );
+}
+
+const PickJudge5_8States = () => (
+  <States>
+    <Shot
+      tone="warning"
+      title="Судья занят на эти даты ✳"
+      text="Строка помечена; добавить можно, но с предупреждением."
+    >
+      <Rows>
+        <Row av={A(13)} nm="Пак Сергей" sub="в наряде «Кубка Иртыша», 18–20 мая" pill={{ t: 'ЗАНЯТ', cls: 'wait' }} action="Выбрать" />
+      </Rows>
+      <Alert>Два наряда на одни даты — решение председателя, система только показывает пересечение.</Alert>
+    </Shot>
+
+    <Shot tone="info" title="По фильтру никого нет" text="Пустой список с подсказкой снять фильтр.">
+      <Empty title="Судей не нашлось" text="Фильтр: национальная категория · регион Актобе. Снимите один из фильтров." />
+    </Shot>
+  </States>
+);
+
+/* ── Э5.9 · Отказ с причиной ───────────────────────────────────── */
+
+export function Reject5_9() {
+  return (
+    <RoleScreen role={R05} nav="Заявки судей" title="Заявки судей на турнир" sub="Кубок Республики Казахстан 2026 · 9 заявок">
+      <Rows>
+        <Row av={A(76)} nm="Оспанов Тимур" sub="национальная категория · R 27,5" pill={{ t: 'ЗАЯВКА', cls: 'reg' }} />
+        <Row av={A(64)} nm="Сериков Нурлан" sub="вторая категория · R 14,2" pill={{ t: 'ЗАЯВКА', cls: 'reg' }} />
+      </Rows>
+
+      <Modal
+        title="Отклонить заявку с причиной"
+        sub="Сериков Нурлан · заявка на судейство Кубка РК"
+        foot={
+          <>
+            <div className="dcount">Причина уйдёт судье в уведомление и останется в журнале</div>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <Ghost>Закрыть</Ghost>
+              <button className="dsubmit" style={{ padding: '11px 16px' }}>Отклонить</button>
+            </div>
+          </>
+        }
+      >
+        <Form>
+          <Field label="Что отклоняется" value="Заявка на судейство · Сериков Н." wide />
+          <Field label="Причина" value="на главный старт нужна первая или национальная категория" wide />
+        </Form>
+        <Alert>Приём заявок открыт до 18.04 — судья может подать снова, и это сказано в уведомлении.</Alert>
+      </Modal>
+    </RoleScreen>
+  );
+}
+
+const Reject5_9States = () => (
+  <States>
+    <Shot tone="danger" title="Причина не заполнена" text="Кнопка неактивна, с пояснением.">
+      <div className="dfield">
+        <div className="k">Причина</div>
+        <div className="dval" style={{ color: 'var(--c-danger)' }}>— не заполнена</div>
+      </div>
+      <Off>Отклонить</Off>
+    </Shot>
+
+    <Shot
+      tone="warning"
+      title="Приём заявок уже закрыт ✳"
+      text="В тексте уведомления не обещаем «подайте снова»."
+    >
+      <Rows>
+        <Row nm="Приём заявок судей" sub="закрыт 18.04.2026" pill={{ t: 'ЗАКРЫТ', cls: 'done' }} />
+      </Rows>
+      <Alert>Уведомление уходит без строки «можно подать снова»: приём уже не открыт.</Alert>
+    </Shot>
+  </States>
+);
+
 /** Экраны роли по кодам: из этой карты собираются и борд, и карта флоу. */
 export const SCREENS: ScreenMap = {
   'Э0.1': {
@@ -633,6 +759,16 @@ export const SCREENS: ScreenMap = {
     view: () => <Brigade5_3 />,
     next: 'турнир сыгран · вторая очередь',
   },
+  'Э5.8': {
+    cap: 'Выбор судьи в наряд',
+    view: () => (
+      <>
+        <PickJudge5_8 />
+        <PickJudge5_8States />
+      </>
+    ),
+    next: 'протокол на утверждении',
+  },
   'Э5.4': {
     cap: 'Протокол на утверждении',
     view: () => (
@@ -664,6 +800,15 @@ export const SCREENS: ScreenMap = {
       <>
         <Publish5_7 />
         <Publish5_7States />
+      </>
+    ),
+  },
+  'Э5.9': {
+    cap: 'Отказ с причиной',
+    view: () => (
+      <>
+        <Reject5_9 />
+        <Reject5_9States />
       </>
     ),
   },

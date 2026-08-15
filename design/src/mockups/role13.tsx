@@ -8,7 +8,7 @@
 import type { ReactNode } from 'react';
 import { ShieldCheck, TriangleAlert, UserPlus } from 'lucide-react';
 import {
-  A, AW, ActionBar, Alert, Arrow, Board, Chips, Empty, Field, Form, Hint, Panel, RoleScreen, Row, Rows, Screen, Shot, States, Submit,
+  A, AW, ActionBar, Alert, Arrow, Board, Chips, Empty, Field, Form, Ghost, Hint, Modal, Off, Panel, RoleScreen, Row, Rows, Screen, Shot, States, Submit,
 } from './shell';
 import type { ScreenMap } from './shell';
 import { FormSeg } from '../segs';
@@ -308,6 +308,62 @@ const League13_3States = () => (
   </States>
 );
 
+/* ── Э13.4 · Подтверждение состава на тур ──────────────────────── */
+
+export function Confirm13_4() {
+  return (
+    <RoleScreen role={R13} nav="Команды Лиги" title="Команды Лиги" sub="Клуб «Алатау» · Суперлига">
+      <Rows>
+        <Row nm="Суперлига · мужчины" sub="2-й тур · Караганда, 14–16 апреля" pill={{ t: 'СОСТАВ НЕ ПОДТВЕРЖДЁН', cls: 'wait' }} />
+      </Rows>
+
+      <Modal
+        title="Подтвердить состав на 2-й тур"
+        sub="Суперлига · мужчины · Караганда, 14–16 апреля"
+        foot={
+          <>
+            <div className="dcount">После подтверждения состав доступен только на чтение</div>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <Ghost>Закрыть</Ghost>
+              <button className="dsubmit" style={{ padding: '11px 16px' }}>Подтвердить</button>
+            </div>
+          </>
+        }
+      >
+        <Rows>
+          <Row nm="Абдрахманов Данияр" sub="2004 · МС · рейтинг 2456" pill={{ t: 'ВЗНОС ОПЛАЧЕН', cls: 'live' }} />
+          <Row nm="Байжанов Ерасыл" sub="2011 · 1 разряд · 1786" pill={{ t: 'ВЗНОС ОПЛАЧЕН', cls: 'live' }} />
+          <Row nm="Ким Георгий" sub="2003 · МС · 2401" pill={{ t: 'ВЗНОС ОПЛАЧЕН', cls: 'live' }} />
+        </Rows>
+        <Alert>
+          Состав может меняться от тура к туру: на следующий тур заявляется заново. Подтверждённый
+          состав видят главный судья тура и соперники.
+        </Alert>
+      </Modal>
+    </RoleScreen>
+  );
+}
+
+const Confirm13_4States = () => (
+  <States>
+    <Shot tone="info" title="Окно подтверждения не открыто" text="Кнопки нет, показана дата открытия.">
+      <Rows>
+        <Row nm="3-й тур" sub="окно подтверждения — с 05.05" pill={{ t: 'ЗАКРЫТО', cls: 'done' }} />
+      </Rows>
+    </Shot>
+
+    <Shot
+      tone="warning"
+      title="В составе игрок с неоплаченным взносом"
+      text="⚠ 6.1: блокирует ли это заявку — не решено; показываем предупреждение."
+    >
+      <Rows>
+        <Row nm="Жақсылық Аружан" sub="2012 · 2 разряд" pill={{ t: 'НЕТ ВЗНОСА', cls: 'wait' }} />
+      </Rows>
+    </Shot>
+  </States>
+);
+
 /** Экраны роли по кодам: из этой карты собираются и борд, и карта флоу. */
 export const SCREENS: ScreenMap = {
   'Э0.1': {
@@ -341,6 +397,15 @@ export const SCREENS: ScreenMap = {
       <>
         <League13_3 />
         <League13_3States />
+      </>
+    ),
+  },
+  'Э13.4': {
+    cap: 'Подтверждение состава на тур',
+    view: () => (
+      <>
+        <Confirm13_4 />
+        <Confirm13_4States />
       </>
     ),
   },

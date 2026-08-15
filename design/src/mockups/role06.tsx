@@ -16,7 +16,7 @@ import {
   Radio, Shield, TriangleAlert, X,
 } from 'lucide-react';
 import {
-  A, AW, ActionBar, Alert, Arrow, Board, Chips, Empty, Hint, Panel, RoleScreen, Row, Rows, Screen, Shot, States, Submit,
+  A, AW, ActionBar, Alert, Arrow, Board, Chips, Empty, Field, Form, Ghost, Hint, Modal, Off, Panel, RoleScreen, Row, Rows, Screen, Shot, States, Submit,
 } from './shell';
 import type { ScreenMap } from './shell';
 import { FormSeg, PanelSeg } from '../segs';
@@ -884,6 +884,114 @@ const Protocol6_7States = () => (
   </States>
 );
 
+/* ── Э6.8 · Отклонение заявки с причиной ───────────────────────── */
+
+export function Reject6_8() {
+  return (
+    <RoleScreen role={R06} nav="Заявки" title="Заявки участников" sub="Приём открыт до 12.03, 18:00">
+      <Rows>
+        <Row nm="Жумабеков Расул" sub="2007 · Караганда · «Шахтёр»" pill={{ t: 'НЕ ПРОХОДИТ', cls: 'bad' }} />
+        <Row nm="Ерлан Бекзат" sub="2006 · Актобе · спортшкола №3" pill={{ t: 'ЗАЯВКА', cls: 'reg' }} />
+      </Rows>
+
+      <Modal
+        title="Отклонить заявку с причиной"
+        sub="Жумабеков Расул · одиночный разряд"
+        foot={
+          <>
+            <div className="dcount">Причина уйдёт заявителю и останется в журнале</div>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <Ghost>Закрыть</Ghost>
+              <button className="dsubmit" style={{ padding: '11px 16px' }}>Отклонить</button>
+            </div>
+          </>
+        }
+      >
+        <Rows>
+          <Row nm="Годовой взнос" sub="не оплачен" pill={{ t: 'НЕ ПРОХОДИТ', cls: 'bad' }} />
+          <Row nm="Медицинский допуск" sub="документ не приложен" pill={{ t: 'НЕ ПРОХОДИТ', cls: 'bad' }} />
+          <Row nm="Возраст" sub="2007 · граница «без ограничения»" pill={{ t: 'ПРОХОДИТ', cls: 'live' }} />
+        </Rows>
+        <Form>
+          <Field label="Причина" value="нет медицинского допуска и не оплачен годовой взнос" wide />
+        </Form>
+        <Alert>Проверку система сделала сама, но решение — судьи: он может принять и с замечанием.</Alert>
+      </Modal>
+    </RoleScreen>
+  );
+}
+
+const Reject6_8States = () => (
+  <States>
+    <Shot tone="danger" title="Причина не заполнена" text="Кнопка неактивна.">
+      <div className="dfield">
+        <div className="k">Причина</div>
+        <div className="dval" style={{ color: 'var(--c-danger)' }}>— не заполнена</div>
+      </div>
+      <Off>Отклонить</Off>
+    </Shot>
+
+    <Shot tone="warning" title="Приём уже закрыт ✳" text="В уведомлении не обещаем повторную подачу.">
+      <Rows>
+        <Row nm="Приём заявок" sub="закрыт 12.03, 18:00" pill={{ t: 'ЗАКРЫТ', cls: 'done' }} />
+      </Rows>
+    </Shot>
+  </States>
+);
+
+/* ── Э6.9 · Формирование итогового протокола ───────────────────── */
+
+export function Finish6_9() {
+  return (
+    <RoleScreen role={R06} nav="Протокол" title="Итоговый протокол" sub="Чемпионат Казахстана 2026">
+      <Rows>
+        <Row nm="Сыграно матчей" sub="127 из 127" pill={{ t: 'ВСЁ СЫГРАНО', cls: 'live' }} />
+      </Rows>
+
+      <Modal
+        title="Сформировать итоговый протокол"
+        sub="Чемпионат Казахстана 2026 · шаг необратим"
+        foot={
+          <>
+            <div className="dcount">После формирования ввод результатов закрыт</div>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <Ghost>Закрыть</Ghost>
+              <button className="dsubmit" style={{ padding: '11px 16px' }}>Сформировать</button>
+            </div>
+          </>
+        }
+      >
+        <Rows>
+          <Row nm="Все матчи сыграны" sub="127 из 127" pill={{ t: 'ДА', cls: 'live' }} />
+          <Row nm="Незакрытых протестов нет" sub="проверено" pill={{ t: 'ДА', cls: 'live' }} />
+          <Row nm="Столы освобождены" sub="20 из 20" pill={{ t: 'ДА', cls: 'live' }} />
+        </Rows>
+        <Alert>
+          Ввод результатов закроется, турнир перейдёт в «Итоговый протокол», а сам протокол уйдёт
+          председателю ГСК на утверждение (§4.8).
+        </Alert>
+      </Modal>
+    </RoleScreen>
+  );
+}
+
+const Finish6_9States = () => (
+  <States>
+    <Shot tone="danger" title="Есть несыгранные матчи" text="«Сформировать» неактивна со списком того, что мешает.">
+      <Rows>
+        <Row nm="Не сыграно матчей" sub="стол 4 — 1/4 финала, стол 9 — за 3-е место" val="2" pill={{ t: 'МЕШАЕТ', cls: 'bad' }} />
+      </Rows>
+      <Off>Сформировать</Off>
+    </Shot>
+
+    <Shot tone="info" title="Протокол уже сформирован" text="Вместо кнопки — состояние «на утверждении».">
+      <Rows>
+        <Row nm="Протокол отправлен" sub="председателю ГСК · 20.05, 19:10" pill={{ t: 'НА УТВЕРЖДЕНИИ', cls: 'wait' }} />
+      </Rows>
+    </Shot>
+  </States>
+);
+
 /** Экраны роли по кодам: из этой карты собираются и борд, и карта флоу. */
 export const SCREENS: ScreenMap = {
   'Э0.1': {
@@ -957,6 +1065,25 @@ export const SCREENS: ScreenMap = {
       <>
         <Protocol6_7 />
         <Protocol6_7States />
+      </>
+    ),
+  },
+  'Э6.8': {
+    cap: 'Отклонение заявки с причиной',
+    view: () => (
+      <>
+        <Reject6_8 />
+        <Reject6_8States />
+      </>
+    ),
+    next: 'формирование протокола',
+  },
+  'Э6.9': {
+    cap: 'Формирование итогового протокола',
+    view: () => (
+      <>
+        <Finish6_9 />
+        <Finish6_9States />
       </>
     ),
   },
