@@ -16,7 +16,7 @@ export default {
 /* Парный вид первым: под каждым узлом маршрута стоит его макет — требование и
    картинка читаются вместе, а не в двух разных разделах дерева. */
 export const Nodes = {
-  name: 'Узлы и макеты · 8 экранов',
+  name: 'Узлы и макеты · 14 экранов',
   render: () => (
     <Paired flow={role01}>
       <Role01Board />
@@ -25,6 +25,6 @@ export const Nodes = {
 };
 
 export const Sheme = {
-  name: 'Схема · 8 экранов',
+  name: 'Схема · 14 экранов',
   render: () => <Scheme src={scheme} alt="Флоу роли 1 · Администратор Федерации" source="flows/01-admin-federacii.md" />,
 };
