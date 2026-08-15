@@ -9,7 +9,7 @@
    сходится со схемой роли (раздел «Флоу») и с текстом в корневом `flows/`. */
 
 import type { ReactNode } from 'react';
-import { ArrowRight, Bell } from 'lucide-react';
+import { ArrowRight, Bell, X } from 'lucide-react';
 import { Desk, type DeskVariant } from '../deskShell';
 import { Tab, MiniTabBar } from '../respShell';
 import { Frame } from '../PlayerApp';
@@ -197,7 +197,8 @@ export function Row({
   nm: string;
   sub: string;
   val?: string;
-  pill?: { t: string; cls: 'live' | 'wait' | 'bad' | 'reg' };
+  /** Тон значка — из макетного слоя: `gen/frame.css` + `src/ui/ui.css`. */
+  pill?: { t: string; cls: 'live' | 'wait' | 'bad' | 'reg' | 'done' };
   action?: string;
 }) {
   return (
@@ -242,6 +243,27 @@ export function Submit({ children }: { children: ReactNode }) {
   );
 }
 
+/** Тихая кнопка рядом с главной: «Закрыть», «Сохранить черновик», «Это разные
+    люди». Отличается от `dpickbtn` тем, что не спорит с главным действием за
+    внимание — акцент в полосе действий должен быть один. */
+export function Ghost({ children }: { children: ReactNode }) {
+  return (
+    <button
+      className="dpickbtn"
+      style={{
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: 6,
+        background: 'var(--c-panel-2)',
+        color: 'var(--c-ink)',
+        boxShadow: 'inset 0 1px 0 var(--c-glass-hi)',
+      }}
+    >
+      {children}
+    </button>
+  );
+}
+
 /** Поле формы (только вид — макет, не форма). */
 export function Field({ label, value, wide }: { label: string; value: string; wide?: boolean }) {
   return (
@@ -260,6 +282,92 @@ export function Empty({ title, text }: { title: string; text: string }) {
     <div className="mkempty">
       <div className="t">{title}</div>
       <div className="s">{text}</div>
+    </div>
+  );
+}
+
+/* ── Состояния экрана ───────────────────────────────────────────── */
+
+/* Раньше состояния («пусто», «поле не заполнено», «действие запрещено») жили
+   только текстом в карточке узла: нарисован был один — удачный — кадр экрана.
+   Но именно в состояниях и решается дизайн: как выглядит запрет, чем пустой
+   список отличается от загрузки, что человек читает вместо данных.
+
+   Полка состояний стоит между макетом и карточкой требования, и в ней тот же
+   экран показан в другой ситуации — фрагментом, а не целой оболочкой: важно то
+   место, которое меняется. Подписи кадров повторяют `states[]` данных роли. */
+
+/** Тон состояния — тот же, что в данных роли (`State.tone`). */
+export type Tone = 'info' | 'success' | 'warning' | 'danger';
+
+export function States({ children }: { children: ReactNode }) {
+  return (
+    <div className="mkstates">
+      <div className="mkstates-h">Состояния экрана — тот же экран в другой ситуации</div>
+      <div className="mkstates-g">{children}</div>
+    </div>
+  );
+}
+
+/** Кадр состояния: подпись из данных роли и фрагмент экрана в этом состоянии. */
+export function Shot({
+  tone = 'info',
+  title,
+  text,
+  wide,
+  children,
+}: {
+  tone?: Tone;
+  title: string;
+  /** Пояснение из данных роли — почему экран выглядит так. */
+  text?: string;
+  /** Кадр во всю ширину колонки: когда фрагмент — не панель, а полоса. */
+  wide?: boolean;
+  children: ReactNode;
+}) {
+  return (
+    <div className={'mkshot' + (wide ? ' wide' : '')}>
+      <div className={'mkshot-h ' + tone}>
+        <b>{title}</b>
+        {text && <span>{text}</span>}
+      </div>
+      <div className="mkshot-b">{children}</div>
+    </div>
+  );
+}
+
+/* ── Диалог поверх экрана ───────────────────────────────────────── */
+
+/** Диалог: рабочая область родительского экрана видна и притушена под ним.
+
+    Так нарисованы экраны-действия (отмена турнира, выдача роли): человек не
+    уходит со своего места, а решает поверх него — и в макете видно, откуда он
+    пришёл. */
+export function Modal({
+  title,
+  sub,
+  foot,
+  children,
+}: {
+  title: string;
+  sub: string;
+  /** Полоса решений внизу диалога: главное действие и отказ. */
+  foot?: ReactNode;
+  children: ReactNode;
+}) {
+  return (
+    <div className="mkoverlay">
+      <div className="mkdialog">
+        <div className="mkdialog-h">
+          <div>
+            <div className="t">{title}</div>
+            <div className="s">{sub}</div>
+          </div>
+          <span className="mkdialog-x"><X size={16} /></span>
+        </div>
+        <div className="mkdialog-b">{children}</div>
+        {foot && <div className="mkdialog-f">{foot}</div>}
+      </div>
     </div>
   );
 }

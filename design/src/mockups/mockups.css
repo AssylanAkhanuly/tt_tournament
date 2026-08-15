@@ -57,5 +57,122 @@
 .drow { flex-wrap: wrap; }
 .drow .who { min-width: 170px; flex: 1 1 170px; }
 
+/* Полоса действий переносится: на планшете (`variant="land"`) рабочая область
+   уже десктопной, и без переноса кнопка уезжала за край экрана. */
+.dactionbar { flex-wrap: wrap; }
+
 /* Две колонки в рабочей области, когда на экране список и панель рядом. */
 .mkcols { display: grid; grid-template-columns: 1.35fr 1fr; gap: var(--s-3); align-items: start; }
+
+/* ── Полка состояний под макетом ────────────────────────────────── */
+/* Живёт на светлой подложке борда рядом с карточкой узла, поэтому подписи —
+   в board-токенах, а сами кадры — тёмные: это куски интерфейса. Ширину
+   колонки задаёт макет (тот же приём, что в `.fnode`): `width: 0` убирает
+   полку из расчёта max-content, `min-width: 100%` возвращает ей ширину. */
+.mkstates {
+  align-self: stretch;
+  width: 0;
+  min-width: 100%;
+  margin-top: 14px;
+  box-sizing: border-box;
+}
+.mkstates-h {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: .09em;
+  text-transform: uppercase;
+  color: var(--c-board-muted);
+  text-align: left;
+  margin-bottom: 8px;
+}
+.mkstates-g { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; align-items: start; }
+
+.mkshot {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  text-align: left;
+  min-width: 0;
+}
+.mkshot.wide { grid-column: 1 / -1; }
+
+.mkshot-h { display: flex; flex-direction: column; gap: 2px; padding-left: 14px; position: relative; }
+.mkshot-h::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 5px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--c-board-muted);
+}
+.mkshot-h.success::before { background: var(--c-success); }
+.mkshot-h.warning::before { background: var(--c-warning); }
+.mkshot-h.danger::before  { background: var(--c-danger); }
+.mkshot-h.info::before    { background: var(--c-board-accent); }
+.mkshot-h b { font-size: 12.5px; font-weight: 700; color: var(--c-board-ink); }
+.mkshot-h span { font-size: 11.5px; line-height: 1.5; color: var(--c-board-muted); }
+
+/* Кадр состояния — кусок интерфейса, поэтому подложка экранная, а не бордовая. */
+.mkshot-b {
+  flex: 1;
+  padding: 13px;
+  border-radius: var(--r-md);
+  border: 1px solid var(--c-glass-line);
+  background: var(--c-screen-1);
+  color: var(--c-ink);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+}
+
+/* ── Диалог поверх рабочей области ──────────────────────────────── */
+/* Подложка диалога кроет `.dmain` — рабочую область оболочки: экран, с
+   которого пришли, остаётся виден и притушен. */
+.dmain { position: relative; }
+
+.mkoverlay {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 22px;
+  background: color-mix(in srgb, var(--c-screen-deep) 72%, transparent);
+}
+.mkdialog {
+  width: 100%;
+  max-width: 620px;
+  max-height: 100%;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  border-radius: var(--r-lg);
+  border: 1px solid var(--c-glass-line);
+  background: var(--c-panel);
+  box-shadow: var(--sh-panel);
+}
+.mkdialog-h {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 15px 17px;
+  border-bottom: 1px solid var(--c-glass-line);
+}
+.mkdialog-h .t { font-size: 15px; font-weight: 800; letter-spacing: -.2px; }
+.mkdialog-h .s { font-size: 12px; color: var(--c-muted); margin-top: 3px; }
+.mkdialog-x { color: var(--c-dim); display: flex; }
+.mkdialog-b { padding: 15px 17px; display: flex; flex-direction: column; gap: var(--s-3); overflow: auto; }
+.mkdialog-f {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 13px 17px;
+  border-top: 1px solid var(--c-glass-line);
+  background: var(--c-panel-3);
+}
