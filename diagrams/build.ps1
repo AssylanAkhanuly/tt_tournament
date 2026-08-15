@@ -1,8 +1,11 @@
 # Renders every .d2 to SVG + PNG.
 #   powershell -ExecutionPolicy Bypass -File diagrams/build.ps1
 #
-# PNG goes through headless Brave on purpose: d2's own PNG export pulls in
-# Playwright, whose driver CDN currently 404s.
+# PNG goes through a headless Chromium browser on purpose: d2's own PNG export
+# pulls in Playwright, whose driver CDN currently 404s. Brave first (that is
+# what this machine started with), Chrome as a fallback: when the hardcoded
+# Brave path was missing, the script silently rendered SVG only and the PNGs
+# in out/ - the ones Storybook imports - stayed stale.
 #
 # NOTE: keep this file ASCII-only. Windows PowerShell 5.1 reads .ps1 as ANSI
 # unless there is a BOM, so Cyrillic here becomes mojibake and breaks parsing.
@@ -12,7 +15,12 @@ $here = Split-Path -Parent $MyInvocation.MyCommand.Path
 Push-Location $here
 
 $d2 = "C:\Program Files\D2\d2.exe"
-$browser = "C:\Program Files\BraveSoftware\Brave-Browser\Application\brave.exe"
+$browser = @(
+  "C:\Program Files\BraveSoftware\Brave-Browser\Application\brave.exe",
+  "C:\Program Files\Google\Chrome\Application\chrome.exe",
+  "C:\Program Files (x86)\Google\Chrome\Application\chrome.exe"
+) | Where-Object { Test-Path $_ } | Select-Object -First 1
+if (-not $browser) { Write-Host "WARNING: no Brave/Chrome found - PNG step skipped, SVG only" }
 $out = Join-Path $here 'out'
 New-Item -ItemType Directory -Force $out | Out-Null
 
@@ -39,7 +47,7 @@ foreach ($f in $files) {
   $layout = if ($name -like 'flow-*' -or $name -eq 'domain' -or $name -eq 'roles') { 'dagre' } else { 'elk' }
   & $d2 --layout=$layout --theme=0 --pad=40 $f.Name $svg | Out-Null
 
-  if (Test-Path $browser) {
+  if ($browser) {
     $png = Join-Path $out "$name.png"
     [xml]$x = Get-Content $svg -Raw
     $vb = ($x.svg.viewBox -split '\s+')
