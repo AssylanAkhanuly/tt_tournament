@@ -18,8 +18,8 @@ import {
   AlertTriangle, Download, Eye, GitMerge, Image, Link2, Merge, Plus, Search, Send, UserPlus,
 } from 'lucide-react';
 import {
-  A, ActionBar, Alert, Arrow, AW, Board, Chips, Empty, Field, Form, Ghost, Hint, Modal, Off, P, Panel,
-  RoleScreen, Row, Rows, Screen, Shot, States,
+  A, ActionBar, Alert, Also, Arrow, AW, Board, Chips, Empty, Field, Form, Ghost, Hint, Modal, Off, P,
+  Panel, RoleScreen, Row, Rows, Screen, Shot, States,
 } from './shell';
 import type { ScreenMap } from './shell';
 import type { DeskVariant } from '../deskShell';
@@ -268,58 +268,159 @@ const NewFlags = () => (
   </Rows>
 );
 
+/** Оболочка мастера: шаги сверху, текущий подсвечен.
+
+    Мастер показываем всеми пятью шагами подряд, а не одним итоговым кадром:
+    человек проходит его с начала, и «шаг 5 из 5» первым экраном — это уже не
+    флоу, а сводка. Первый кадр — шаг 1, остальные идут кадрами «то же на
+    следующем шаге». */
+const Wizard = ({ step, sub, children }: { step: number; sub: string; children: ReactNode }) => (
+  <RoleScreen
+    role={R01}
+    nav="Календарь"
+    title="Завести соревнование"
+    sub={`Шаг ${step} из 5 · ${sub}`}
+    hint="Соревнование создаётся в состоянии «Черновик»: публично не видно, пока не опубликовано."
+  >
+    <div className="dseg2">
+      {STEPS.map((s, i) => (
+        <span key={s} className={i + 1 === step ? 'on' : undefined}>{s}</span>
+      ))}
+    </div>
+    {children}
+  </RoleScreen>
+);
+
+/** Полоса «дальше»: сколько шагов позади и главное действие шага. */
+const WizardBar = ({ note, btn }: { note: string; btn: string }) => (
+  <div className="dactionbar">
+    <div className="dcount">{note}</div>
+    <div style={{ display: 'flex', gap: 8 }}>
+      <Ghost>Назад</Ghost>
+      <button className="dsubmit" style={{ padding: '12px 18px' }}>{btn}</button>
+    </div>
+  </div>
+);
+
+/** Шаг 1 — категория: от неё зависят остальные шаги, поэтому она первая. */
 export function New1_4() {
   return (
-    <RoleScreen
-      role={R01}
-      nav="Календарь"
-      title="Завести соревнование"
-      sub="Шаг 5 из 5 · столы и трансляция"
-      hint="Соревнование создаётся в состоянии «Черновик»: публично не видно, пока не опубликовано."
-    >
-      <div className="dseg2">
-        {STEPS.map((s) => (
-          <span key={s} className={s === '5 · Столы' ? 'on' : undefined}>{s}</span>
-        ))}
-      </div>
-      <div className="mkcols">
-        <Panel title="Шаги 1–3 · категория, основное, допуск">
-          <Form>
-            <Field label="Категория" value="Главный старт" />
-            <Field label="Название" value="Первенство РК · 2012 г.р. и моложе" />
-            <Field label="Город" value="Актобе · ДС «Коктем»" />
-            <Field label="Окно дат" value="12–14 сентября 2026" />
-            <Field label="Разряды" value="Одиночный · парный" />
-            <Field label="Ценз по рейтингу" value="не требуется" />
-            <Field
-              label="Возрастная граница"
-              value="правило от сезона: «2012 г.р. и моложе» — не строка в названии"
-              wide
-            />
-          </Form>
+    <Wizard step={1} sub="категория соревнования">
+      <div className="mkcols" style={{ gridTemplateColumns: '1fr 1fr 1fr' }}>
+        <Panel title="Главный старт" extra={<P t="ВЫБРАНО" cls="live" />}>
+          <Hint>
+            Восемь республиканских стартов календаря: чемпионат, молодёжный, пять возрастных
+            первенств и Кубок РК. Заявляет старший тренер региона (§4.1).
+          </Hint>
         </Panel>
-
-        <Panel title="Шаг 4 · флаги допуска · Шаг 5 · столы">
-          <NewFlags />
-          <div style={{ marginTop: 12 }}>
-            <Form>
-              <Field label="Сколько столов" value="12" />
-              <Field label="С трансляцией" value="столы 1 и 2" />
-            </Form>
-          </div>
+        <Panel title="Евразийская лига">
+          <Hint>
+            Командная, четыре тура: мужская — Суперлига и 2–6 лиги, женская — Суперлига и 2 лига.
+            Создастся сезон с дивизионами и датами туров (§4.10).
+          </Hint>
+        </Panel>
+        <Panel title="ОРТ">
+          <Hint>Открытый республиканский турнир: спортсмен заявляется сам.</Hint>
         </Panel>
       </div>
-      <div className="dactionbar">
-        <div className="dcount">
-          Обязательные поля заполнены · соревнование создастся в состоянии «Черновик»
-        </div>
-        <button className="dsubmit" style={{ padding: '12px 18px' }}>
-          Создать
-        </button>
-      </div>
-    </RoleScreen>
+      <Hint>
+        Категория определяет остальные шаги: у Лиги вместо одного соревнования заводится сезон с
+        дивизионами, у ОРТ проще допуск.
+      </Hint>
+      <WizardBar note="Шаг 1 из 5 · дальше — название, город и окно дат" btn="Дальше · основное" />
+    </Wizard>
   );
 }
+
+/** Шаг 2 — основное. */
+export const New1_4Step2 = () => (
+  <Wizard step={2} sub="название, город, даты">
+    <Panel title="Основное">
+      <Form>
+        <Field label="Название" value="Первенство РК · 2012 г.р. и моложе" wide />
+        <Field label="Город" value="Актобе · ДС «Коктем»" />
+        <Field label="Окно дат" value="12–14 сентября 2026" />
+        <Field label="Разряды" value="Одиночный · парный" />
+        <Field label="Сезон" value="2026" />
+      </Form>
+      <Notes>
+        <Hint>
+          Название возрастного первенства собирается из сезона и правила «год рождения и моложе»
+          (§4.1) — руками год в название не пишут.
+        </Hint>
+      </Notes>
+    </Panel>
+    <WizardBar note="Шаг 2 из 5 · дальше — условия допуска" btn="Дальше · допуск" />
+  </Wizard>
+);
+
+/** Шаг 3 — допуск. */
+export const New1_4Step3 = () => (
+  <Wizard step={3} sub="возрастная граница и ценз">
+    <Panel title="Допуск">
+      <Form>
+        <Field label="Возрастная граница" value="2012 г.р. и моложе — правило от сезона" wide />
+        <Field label="Ценз по рейтингу" value="не требуется" />
+        <Field label="Пол" value="раздельно: мужчины и женщины" />
+      </Form>
+      <Notes>
+        <Hint>
+          Граница хранится правилом, а не строкой: в следующем сезоне то же первенство считается от
+          нового года без переименования.
+        </Hint>
+      </Notes>
+    </Panel>
+    <WizardBar note="Шаг 3 из 5 · дальше — флаги допуска" btn="Дальше · флаги" />
+  </Wizard>
+);
+
+/** Шаг 4 — флаги допуска с умолчаниями от категории. */
+export const New1_4Step4 = () => (
+  <Wizard step={4} sub="флаги допуска">
+    <Panel title="Флаги допуска (§4.2)" extra={<span className="dcount">умолчания от категории</span>}>
+      <NewFlags />
+      <Notes>
+        <Hint>Каждый флаг можно переопределить: умолчание подставляет категория, решает человек.</Hint>
+      </Notes>
+    </Panel>
+    <WizardBar note="Шаг 4 из 5 · дальше — столы и трансляция" btn="Дальше · столы" />
+  </Wizard>
+);
+
+/** Шаг 5 — столы, сводка всех шагов и «Создать». */
+export const New1_4Step5 = () => (
+  <Wizard step={5} sub="столы и трансляция">
+    <div className="mkcols">
+      <Panel title="Столы">
+        <Form>
+          <Field label="Сколько столов" value="12" />
+          <Field label="С трансляцией" value="столы 1 и 2" />
+        </Form>
+        <Notes>
+          <Hint>Столы с трансляцией отмечает главный судья при распределении — здесь только их число.</Hint>
+        </Notes>
+      </Panel>
+
+      <Panel title="Что создастся" extra={<P t="ЧЕРНОВИК" cls="done" />}>
+        <Form>
+          <Field label="Категория" value="Главный старт" />
+          <Field label="Название" value="Первенство РК · 2012 г.р. и моложе" wide />
+          <Field label="Город и даты" value="Актобе · 12–14 сентября 2026" wide />
+          <Field label="Допуск" value="взнос и документы обязательны · ценз не требуется" wide />
+        </Form>
+      </Panel>
+    </div>
+    <div className="dactionbar">
+      <div className="dcount">
+        Обязательные поля заполнены · соревнование создастся в состоянии «Черновик»
+      </div>
+      <div style={{ display: 'flex', gap: 8 }}>
+        <Ghost>Назад</Ghost>
+        <button className="dsubmit" style={{ padding: '12px 18px' }}>Создать</button>
+      </div>
+    </div>
+  </Wizard>
+);
 
 const New1_4States = () => (
   <States>
@@ -1528,6 +1629,18 @@ export const SCREENS: ScreenMap = {
     view: () => (
       <>
         <New1_4 />
+        <Also cap="Шаг 2 · основное">
+          <New1_4Step2 />
+        </Also>
+        <Also cap="Шаг 3 · допуск">
+          <New1_4Step3 />
+        </Also>
+        <Also cap="Шаг 4 · флаги допуска">
+          <New1_4Step4 />
+        </Also>
+        <Also cap="Шаг 5 · столы и «Создать»">
+          <New1_4Step5 />
+        </Also>
         <New1_4States />
       </>
     ),

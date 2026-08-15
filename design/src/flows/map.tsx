@@ -222,6 +222,28 @@ export function FlowMap({ flow, screens }: { flow: RoleFlow; screens: ScreenMap 
       el.removeAttribute('data-goto');
       el.classList.remove('fmap-hot');
     });
+    /* Пункты сайдбара тоже ведут по разделам: какой пункт открывает экран,
+       написано в самих данных («Пункт меню «Календарь»»). Не нашли по меню —
+       пробуем по названию экрана: в макете пункт называется «Новости», а экран
+       — «Новости и страницы». */
+    const menu = (code: string, screen: Screen) => {
+      const byMenu = screen.entry.join(' ').match(/Пункт меню «(.+?)»/)?.[1];
+      return { code, byMenu: byMenu ? norm(byMenu) : null, title: norm(screen.title) };
+    };
+    const sections = [...byId.entries()].map(([code, sc]) => menu(code, sc));
+    root.querySelectorAll<HTMLElement>('.dni, .tabbar .tab').forEach((nav) => {
+      const label = norm(nav.textContent ?? '');
+      if (!label) return;
+      const hit =
+        sections.find((x) => x.byMenu === label) ??
+        sections.find((x) => x.title === label) ??
+        sections.find((x) => label.length > 3 && x.title.startsWith(label));
+      if (hit && hit.code !== selected) {
+        nav.dataset.goto = hit.code;
+        nav.classList.add('fmap-hot');
+      }
+    });
+
     const targets = (spec?.actions ?? []).filter((a) => a.to);
     const cands = [
       ...root.querySelectorAll<HTMLElement>(
@@ -250,7 +272,7 @@ export function FlowMap({ flow, screens }: { flow: RoleFlow; screens: ScreenMap 
         return { el: a.el, to: a.to!, when: a.when, found: !!hit };
       }),
     );
-  }, [selected, spec, scale]);
+  }, [selected, spec, scale, byId]);
 
   const go = (e: React.MouseEvent) => {
     const hit = (e.target as HTMLElement).closest<HTMLElement>('[data-goto]');

@@ -124,6 +124,11 @@
 }
 .fmap-hot:hover { box-shadow: 0 0 0 2px var(--c-accent), 0 0 18px -4px var(--c-accent-glow); }
 
+/* Пункты меню кликабельны на каждом экране — если обводить их все, оболочка
+   превращается в ёлку. Им достаточно подсветки по наведению. */
+.dni.fmap-hot,
+.tab.fmap-hot { box-shadow: none; }
+
 .fmap-links { padding: 4px 18px 14px; display: flex; flex-direction: column; gap: 6px; }
 .fmap-links h4 {
   margin: 0 0 2px;
