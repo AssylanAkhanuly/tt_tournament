@@ -16,8 +16,7 @@ import {
   Radio, Shield, TriangleAlert, X,
 } from 'lucide-react';
 import {
-  A, ActionBar, Arrow, AW, Board, Chips, Hint, Panel, Row, Rows, RoleScreen,
-  Screen, Submit,
+  A, AW, ActionBar, Alert, Arrow, Board, Chips, Empty, Hint, Panel, RoleScreen, Row, Rows, Screen, Shot, States, Submit,
 } from './shell';
 import type { ScreenMap } from './shell';
 import { FormSeg, PanelSeg } from '../segs';
@@ -777,6 +776,114 @@ export function Protocol6_7() {
 
 /* ── Борд роли ──────────────────────────────────────────────────── */
 
+const Tournament6_1States = () => (
+  <States>
+    <Shot tone="info" title="Состояние «Приём заявок игроков»" text="«N заявок ждут решения» со ссылкой на Э6.2.">
+      <Rows>
+        <Row nm="8 заявок ждут решения" sub="Э6.2 · приём открыт до 12.03, 18:00" pill={{ t: 'СРОЧНО', cls: 'bad' }} />
+      </Rows>
+    </Shot>
+
+    <Shot tone="info" title="Состояние «Система проведения»" text="«Сетка не собрана», «на 2 столах нет судьи» — ссылки на Э6.3 и Э6.5.">
+      <Rows>
+        <Row nm="Сетка не собрана" sub="Э6.3 · состав закрыт, можно строить" pill={{ t: 'ПОРА', cls: 'wait' }} />
+        <Row nm="На 2 столах нет судьи" sub="Э6.5 · матч не стартует без судьи" pill={{ t: 'ДО СТАРТА', cls: 'wait' }} />
+      </Rows>
+    </Shot>
+
+    <Shot tone="info" title="Состояние «Идёт»" text="«3 пары ждут стола» — ссылка на Э6.6.">
+      <Rows>
+        <Row nm="3 пары ждут стола" sub="Э6.6 · свободных столов нет" pill={{ t: 'ОЧЕРЕДЬ', cls: 'reg' }} />
+      </Rows>
+    </Shot>
+  </States>
+);
+
+const Bids6_2States = () => (
+  <States>
+    <Shot tone="info" title="Заявок нет" text="Пустое состояние со сроком приёма.">
+      <Empty title="Заявок пока нет" text="Приём открыт до 12.03, 18:00." />
+    </Shot>
+
+    <Shot tone="warning" title="Заявка с непроходящим игроком" text="Кнопка «Принять» остаётся, но с предупреждением ✳.">
+      <Rows>
+        <Row nm="Жумабеков Расул" sub="взнос не оплачен · медицинский допуск не приложен" pill={{ t: 'НЕ ПРОХОДИТ', cls: 'bad' }} />
+      </Rows>
+      <Alert>Решение за судьёй: система показывает несоответствие, но не решает за него.</Alert>
+    </Shot>
+
+    <Shot tone="info" title="Приём закрыт" text="Списки только на чтение." wide>
+      <Rows>
+        <Row nm="112 участников · приём закрыт 12.03" sub="решения приняты, состав зафиксирован" pill={{ t: 'СОСТАВ СОБРАН', cls: 'live' }} />
+      </Rows>
+    </Shot>
+  </States>
+);
+
+const Bracket6_3States = () => (
+  <States>
+    <Shot tone="danger" title="Состав не собран" text="Экран закрыт с пояснением: сетку раньше состава не строят.">
+      <Empty title="Сетку строить рано" text="Приём заявок ещё открыт: сетка собирается по закрытому составу (§4.3)." />
+    </Shot>
+
+    <Shot
+      tone="warning"
+      title="Ни одна система не укладывается в столы и часы"
+      text="Все варианты с красным светофором, судья решает сам."
+    >
+      <Rows>
+        <Row nm="Олимпийская с группами" sub="нужно 9 часов · есть 8" pill={{ t: 'НЕ ВЛЕЗАЕТ', cls: 'bad' }} />
+        <Row nm="Круговая" sub="нужно 14 часов · есть 8" pill={{ t: 'НЕ ВЛЕЗАЕТ', cls: 'bad' }} />
+      </Rows>
+    </Shot>
+  </States>
+);
+
+const Schedule6_4States = () => (
+  <States>
+    <Shot tone="info" title="Сетки ещё нет" text="Экран пуст, со ссылкой на Э6.3." wide>
+      <Empty title="Расписание строится по сетке" text="Сначала соберите сетку — Э6.3." />
+    </Shot>
+  </States>
+);
+
+const Judges6_5States = () => (
+  <States>
+    <Shot tone="danger" title="На столе нет судьи" text="Слот подсвечен; стол не примет матчи, пока судья не назначен." wide>
+      <Rows>
+        <Row nm="Стол 7" sub="судья не назначен" pill={{ t: 'НЕТ СУДЬИ', cls: 'bad' }} action="Назначить" />
+      </Rows>
+      <Alert tone="danger">Матч не стартует, пока на стол не назначен судья (§4.7).</Alert>
+    </Shot>
+  </States>
+);
+
+const Live6_6States = () => (
+  <States>
+    <Shot tone="danger" title="Матч не может стартовать" text="На карточке стола причина — «нет судьи».">
+      <Rows>
+        <Row nm="Стол 7 · Ерлан — Пак" sub="пара вызвана, судьи нет" pill={{ t: 'НЕ СТАРТУЕТ', cls: 'bad' }} />
+      </Rows>
+    </Shot>
+
+    <Shot tone="warning" title="Обрыв связи у стола" text="Карточка помечена; при расхождении приоритет у судьи стола (§12).">
+      <Rows>
+        <Row nm="Стол 4" sub="связи нет 2 минуты · счёт ведётся локально" pill={{ t: 'БЕЗ СВЯЗИ', cls: 'wait' }} />
+      </Rows>
+    </Shot>
+  </States>
+);
+
+const Protocol6_7States = () => (
+  <States>
+    <Shot tone="info" title="Ожидание решения ГСК" text="Экран «протокол на утверждении» — без кнопок правки." wide>
+      <Rows>
+        <Row nm="Протокол отправлен" sub="председателю ГСК · 20.05, 19:10" pill={{ t: 'НА УТВЕРЖДЕНИИ', cls: 'wait' }} />
+      </Rows>
+    </Shot>
+  </States>
+);
+
 /** Экраны роли по кодам: из этой карты собираются и борд, и карта флоу. */
 export const SCREENS: ScreenMap = {
   'Э0.1': {
@@ -786,37 +893,72 @@ export const SCREENS: ScreenMap = {
   },
   'Э6.1': {
     cap: 'Мой турнир',
-    view: () => <Tournament6_1 />,
+    view: () => (
+      <>
+        <Tournament6_1 />
+        <Tournament6_1States />
+      </>
+    ),
     next: '8 заявок ждут решения',
   },
   'Э6.2': {
     cap: 'Заявки участников',
-    view: () => <Bids6_2 />,
+    view: () => (
+      <>
+        <Bids6_2 />
+        <Bids6_2States />
+      </>
+    ),
     next: 'закрыть приём',
   },
   'Э6.3': {
     cap: 'Сетка: формат, посев, сборка',
-    view: () => <Bracket6_3 />,
+    view: () => (
+      <>
+        <Bracket6_3 />
+        <Bracket6_3States />
+      </>
+    ),
     next: 'сетка собрана',
   },
   'Э6.4': {
     cap: 'Расписание и столы',
-    view: () => <Schedule6_4 />,
+    view: () => (
+      <>
+        <Schedule6_4 />
+        <Schedule6_4States />
+      </>
+    ),
     next: 'матчи разложены',
   },
   'Э6.5': {
     cap: 'Судьи на столах',
-    view: () => <Judges6_5 />,
+    view: () => (
+      <>
+        <Judges6_5 />
+        <Judges6_5States />
+      </>
+    ),
     next: 'столы укомплектованы',
   },
   'Э6.6': {
     cap: 'Ход турнира',
-    view: () => <Live6_6 />,
+    view: () => (
+      <>
+        <Live6_6 />
+        <Live6_6States />
+      </>
+    ),
     next: 'все матчи сыграны',
   },
   'Э6.7': {
     cap: 'Итоговый протокол',
-    view: () => <Protocol6_7 />,
+    view: () => (
+      <>
+        <Protocol6_7 />
+        <Protocol6_7States />
+      </>
+    ),
   },
 };
 

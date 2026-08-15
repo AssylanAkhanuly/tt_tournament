@@ -278,7 +278,7 @@ export function Card11_2() {
 
           <div className="qsec">Личные встречи с соперниками</div>
           <Rows>
-            {H2H.map(([nm, sc, sub]) => (
+            {H2H.slice(0, 2).map(([nm, sc, sub]) => (
               <div className="drow" key={nm} style={{ cursor: 'default', padding: '9px 13px' }}>
                 <div className="who">
                   <div className="nm">{nm}</div>

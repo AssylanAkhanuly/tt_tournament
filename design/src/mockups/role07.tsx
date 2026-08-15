@@ -8,7 +8,9 @@
 
 import type { ReactNode } from 'react';
 import { Printer, RefreshCw, Send, Shuffle } from 'lucide-react';
-import { ActionBar, Arrow, Board, Chips, Field, Form, Hint, Panel, Row, Rows, RoleScreen, Screen, A } from './shell';
+import {
+  A, ActionBar, Alert, Arrow, Board, Chips, Field, Form, Hint, Panel, RoleScreen, Row, Rows, Screen, Shot, States,
+} from './shell';
 import type { ScreenMap } from './shell';
 import { FormSeg, PanelSeg } from '../segs';
 import { R07 } from './roles';
@@ -423,6 +425,43 @@ export function Protocols7_5() {
 
 /* ── Борд роли: пять экранов маршрута подряд ─────────────────────── */
 
+const Desk7_1States = () => (
+  <States>
+    <Shot
+      tone="info"
+      title="До «Системы проведения» работы закрыты"
+      text="Пояснение «идёт приём заявок»; экрана заявок у секретаря нет."
+      wide
+    >
+      <Rows>
+        <Row nm="Жеребьёвка" sub="откроется, когда закроется приём заявок" pill={{ t: 'ЖДЁТ СОСТАВА', cls: 'done' }} />
+        <Row nm="Сетка" sub="строится после жеребьёвки" pill={{ t: 'ЖДЁТ', cls: 'done' }} />
+      </Rows>
+      <Alert>Состав ещё собирается: заявки принимает главный судья, секретарь их не видит.</Alert>
+    </Shot>
+  </States>
+);
+
+const Protocols7_5States = () => (
+  <States>
+    <Shot
+      tone="warning"
+      title="Протокол возвращён коллегией"
+      text="Секретарь видит причину и правит оформление; исправление результатов — не его право."
+      wide
+    >
+      <Rows>
+        <Row
+          nm="Кубок Республики Казахстан 2026"
+          sub="вернул Мукашев Б., 21.05 · «в парном разряде не указан второй номер пары»"
+          pill={{ t: 'ВОЗВРАЩЁН', cls: 'bad' }}
+        />
+      </Rows>
+      <Alert>Правится оформление протокола. Счёт и результаты меняет главный судья.</Alert>
+    </Shot>
+  </States>
+);
+
 /** Экраны роли по кодам: из этой карты собираются и борд, и карта флоу. */
 export const SCREENS: ScreenMap = {
   'Э0.1': {
@@ -432,7 +471,12 @@ export const SCREENS: ScreenMap = {
   },
   'Э7.1': {
     cap: 'Рабочий стол секретаря',
-    view: () => <Desk7_1 />,
+    view: () => (
+      <>
+        <Desk7_1 />
+        <Desk7_1States />
+      </>
+    ),
     next: 'работа «Жеребьёвка»',
   },
   'Э7.2': {
@@ -452,7 +496,12 @@ export const SCREENS: ScreenMap = {
   },
   'Э7.5': {
     cap: 'Протоколы',
-    view: () => <Protocols7_5 />,
+    view: () => (
+      <>
+        <Protocols7_5 />
+        <Protocols7_5States />
+      </>
+    ),
   },
 };
 

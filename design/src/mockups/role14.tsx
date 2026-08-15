@@ -12,7 +12,9 @@ import {
   BarChart3, CalendarDays, CircleCheckBig, Home, Lock, Megaphone, Paperclip, Pencil,
   ShieldCheck, Swords, TriangleAlert, User, Wallet, ZoomIn,
 } from 'lucide-react';
-import { Board, RolePhone, Screen, Arrow, Submit, A } from './shell';
+import {
+  A, Alert, Arrow, Board, Empty, RolePhone, Row, Rows, Screen, Shot, States, Submit,
+} from './shell';
 import type { ScreenMap } from './shell';
 import { FormSeg } from '../segs';
 import { R14 } from './roles';
@@ -470,6 +472,119 @@ export function Profile14_7() {
   );
 }
 
+const Home14_1States = () => (
+  <States>
+    <Shot tone="info" title="Ближайшего турнира нет" text="Вместо карточки турнира — подводка к календарю.">
+      <Empty title="Заявок нет" text="Ближайшие открытые ОРТ — в календаре." />
+    </Shot>
+
+    <Shot tone="info" title="Турнир идёт" text="Появляется блок «Сейчас играю»: текущий или следующий матч — соперник, стол, время.">
+      <Rows>
+        <Row nm="Стол 4 · сейчас" sub="соперник Ким Г. · 1/8 финала" pill={{ t: 'ИДЁТ', cls: 'live' }} />
+      </Rows>
+    </Shot>
+  </States>
+);
+
+const Calendar14_2States = () => (
+  <States>
+    <Shot tone="info" title="Приём не открыт / закрыт" text="Кнопка заменена сроком.">
+      <Rows>
+        <Row nm="ОРТ «Шымкент Open»" sub="приём откроется 20.04" pill={{ t: 'ЖДЁМ', cls: 'done' }} />
+      </Rows>
+    </Shot>
+
+    <Shot tone="warning" title="Взнос не оплачен, а турнир его требует" text="Кнопка с предупреждением — ⚠ 6.1.">
+      <Rows>
+        <Row nm="Кубок Республики Казахстан" sub="нужен годовой взнос федерации" pill={{ t: 'ВЗНОС НЕ ОПЛАЧЕН', cls: 'wait' }} />
+      </Rows>
+      <Alert>Заявку подать можно, но допуск может не пройти — решение федерации не получено.</Alert>
+    </Shot>
+  </States>
+);
+
+const Apply14_3States = () => (
+  <States>
+    <Shot
+      tone="warning"
+      title="Пара — подтверждение вторым игроком"
+      text="⚠ Не описано, как именно партнёр подтверждает пару; дальше не проектируем."
+      wide
+    >
+      <Rows>
+        <Row nm="Парный разряд · Пак С." sub="ждём подтверждения партнёра" pill={{ t: 'ВОПРОС', cls: 'bad' }} />
+      </Rows>
+    </Shot>
+  </States>
+);
+
+const MyApp14_4States = () => (
+  <States>
+    <Shot tone="danger" title="Заявка отклонена" text="Причина — текст судьи, видна сразу; пока приём открыт можно исправить и подать снова.">
+      <Rows>
+        <Row nm="ОРТ «Кубок Иртыша»" sub="«нет медицинского допуска»" pill={{ t: 'ОТКЛОНЕНА', cls: 'bad' }} />
+      </Rows>
+    </Shot>
+
+    <Shot tone="success" title="Заявка принята" text="Дальше — вызов на стол уведомлением, экран матча (Э14.5).">
+      <Rows>
+        <Row nm="Кубок Республики Казахстан" sub="принята 14.04 · ждите жеребьёвку" pill={{ t: 'ПРИНЯТА', cls: 'live' }} to="Э14.5" />
+      </Rows>
+    </Shot>
+  </States>
+);
+
+const Match14_5States = () => (
+  <States>
+    <Shot tone="danger" title="Счёт своего матча спортсмен не вводит" text="Счёт ведёт судья на столе; спортсмен его не вводит и не подтверждает.">
+      <Rows>
+        <Row nm="Счёт матча" sub="ведёт судья стола" pill={{ t: 'ТОЛЬКО СМОТРИМ', cls: 'done' }} />
+      </Rows>
+    </Shot>
+
+    <Shot tone="success" title="Вас вызвали" text="«Подойдите к столу N» — после вызова главным судьёй.">
+      <Rows>
+        <Row nm="Подойдите к столу 4" sub="вызвал главный судья · сейчас" pill={{ t: 'ВЫЗОВ', cls: 'live' }} />
+      </Rows>
+    </Shot>
+  </States>
+);
+
+const Stats14_6States = () => (
+  <States>
+    <Shot
+      tone="warning"
+      title="Расширенная аналитика — заглушка"
+      text="Состав расширенной аналитики и её оплата не зафиксированы; до решения не проектируем."
+      wide
+    >
+      <Empty title="Расширенная аналитика" text="⚠ Что в неё входит и платная ли она — решения федерации нет." />
+    </Shot>
+  </States>
+);
+
+const Profile14_7States = () => (
+  <States>
+    <Shot tone="success" title="Оплачено" text="Состояние меняется само, по подтверждению банка, и видно также тренеру.">
+      <Rows>
+        <Row nm="Взнос 2026" sub="оплачен картой 14.01" pill={{ t: 'ОПЛАЧЕН', cls: 'live' }} />
+      </Rows>
+    </Shot>
+
+    <Shot tone="info" title="Ждём подтверждения банка" text="«Платёж обрабатывается»: вкладку держать не нужно.">
+      <Rows>
+        <Row nm="Платёж отправлен" sub="Halyk ePay · обрабатывается" pill={{ t: 'ЖДЁМ', cls: 'wait' }} />
+      </Rows>
+    </Shot>
+
+    <Shot tone="danger" title="Оплата не прошла" text="Причина от банка и кнопка повторить.">
+      <Rows>
+        <Row nm="Платёж отклонён" sub="банк: недостаточно средств" pill={{ t: 'НЕ ПРОШЛА', cls: 'bad' }} action="Повторить" />
+      </Rows>
+    </Shot>
+  </States>
+);
+
 /** Экраны роли по кодам: из этой карты собираются и борд, и карта флоу. */
 export const SCREENS: ScreenMap = {
   'Э0.1': {
@@ -479,37 +594,72 @@ export const SCREENS: ScreenMap = {
   },
   'Э14.1': {
     cap: 'Главная',
-    view: () => <Home14_1 />,
+    view: () => (
+      <>
+        <Home14_1 />
+        <Home14_1States />
+      </>
+    ),
     next: 'вкладка «Календарь»',
   },
   'Э14.2': {
     cap: 'Календарь',
-    view: () => <Calendar14_2 />,
+    view: () => (
+      <>
+        <Calendar14_2 />
+        <Calendar14_2States />
+      </>
+    ),
     next: '«Заявиться» на ОРТ',
   },
   'Э14.3': {
     cap: 'Заявка на ОРТ',
-    view: () => <Apply14_3 />,
+    view: () => (
+      <>
+        <Apply14_3 />
+        <Apply14_3States />
+      </>
+    ),
     next: 'подал заявку',
   },
   'Э14.4': {
     cap: 'Моя заявка',
-    view: () => <MyApp14_4 />,
+    view: () => (
+      <>
+        <MyApp14_4 />
+        <MyApp14_4States />
+      </>
+    ),
     next: 'вызвали на стол',
   },
   'Э14.5': {
     cap: 'Мой турнир и мой матч',
-    view: () => <Match14_5 />,
+    view: () => (
+      <>
+        <Match14_5 />
+        <Match14_5States />
+      </>
+    ),
     next: 'рейтинг пересчитан',
   },
   'Э14.6': {
     cap: 'Аналитика',
-    view: () => <Stats14_6 />,
+    view: () => (
+      <>
+        <Stats14_6 />
+        <Stats14_6States />
+      </>
+    ),
     next: 'вкладка «Профиль»',
   },
   'Э14.7': {
     cap: 'Профиль и взнос',
-    view: () => <Profile14_7 />,
+    view: () => (
+      <>
+        <Profile14_7 />
+        <Profile14_7States />
+      </>
+    ),
   },
 };
 

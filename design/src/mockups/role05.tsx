@@ -9,7 +9,9 @@
 
 import type { ReactNode } from 'react';
 import { BadgeCheck, Ban, Check, Megaphone, Paperclip, Undo2, UserPlus } from 'lucide-react';
-import { ActionBar, Arrow, Board, Chips, Field, Form, Hint, Panel, Row, Rows, RoleScreen, Screen, A, AW } from './shell';
+import {
+  A, AW, ActionBar, Alert, Arrow, Board, Chips, Empty, Field, Form, Hint, Panel, RoleScreen, Row, Rows, Screen, Shot, States,
+} from './shell';
 import type { ScreenMap } from './shell';
 import { R05 } from './roles';
 import { Login0_1 } from './role00';
@@ -522,6 +524,83 @@ export function Publish5_7() {
 
 /* ── Борд роли: семь экранов маршрута подряд ─────────────────────── */
 
+const Queues5_1States = () => (
+  <States>
+    <Shot tone="info" title="Обе очереди пустые" text="«Решений не ждёт ничего»." wide>
+      <Empty title="Решений не ждёт ничего" text="Ни одного турнира без судьи и ни одного протокола на утверждении." />
+    </Shot>
+  </States>
+);
+
+const Applications5_2States = () => (
+  <States>
+    <Shot
+      tone="warning"
+      title="Заявок нет"
+      text="⚠ Что делать в этом случае — не определено (QUESTIONS 3). Показываем пустую очередь и срок."
+      wide
+    >
+      <Empty title="Заявок на судейство нет" text="Приём открыт до 18.04. Что делать, если заявок не будет вовсе, — вопрос к федерации." />
+    </Shot>
+  </States>
+);
+
+const Protocol5_4States = () => (
+  <States>
+    <Shot
+      tone="warning"
+      title="Протокол возвращён и ещё не переотправлен"
+      text="Строка в Э5.1 с пометкой «на исправлении»."
+      wide
+    >
+      <Rows>
+        <Row nm="«Алатау Опен» 2026" sub="возвращён 12.08 · «нет второго номера пары»" pill={{ t: 'НА ИСПРАВЛЕНИИ', cls: 'wait' }} />
+      </Rows>
+    </Shot>
+  </States>
+);
+
+const Docs5_6States = () => (
+  <States>
+    <Shot
+      tone="warning"
+      title="Документ подан позже 10 дней"
+      text="⚠ Последствие пропуска срока в Положении не указано, уточняется у федерации."
+      wide
+    >
+      <Rows>
+        <Row nm="Оспанов Т. · семинар S3" sub="подан на 14-й день · срок по §2.4 — 10 дней" pill={{ t: 'ПОЗЖЕ СРОКА', cls: 'bad' }} />
+      </Rows>
+      <Alert>Засчитывать или нет — решения нет: балл не проставляем, документ остаётся в очереди.</Alert>
+    </Shot>
+  </States>
+);
+
+const Publish5_7States = () => (
+  <States>
+    <Shot
+      tone="info"
+      title="Окно апелляций закрыто"
+      text="Форма подачи у судей исчезает, поздние обращения не принимаются."
+    >
+      <Rows>
+        <Row nm="Апелляции сезона 2026" sub="окно было открыто до 15.08" pill={{ t: 'ЗАКРЫТО', cls: 'done' }} />
+      </Rows>
+    </Shot>
+
+    <Shot
+      tone="success"
+      title="Итоги года"
+      text="Номинации Gold / Silver / Bronze (топ-10) на публичной странице рейтинга."
+    >
+      <Rows>
+        <Row nm="Оспанов Тимур" sub="R 27,5 · 1 место" pill={{ t: 'GOLD', cls: 'live' }} />
+        <Row nm="Токаев Марат" sub="R 24,1 · 2 место" pill={{ t: 'SILVER', cls: 'reg' }} />
+      </Rows>
+    </Shot>
+  </States>
+);
+
 /** Экраны роли по кодам: из этой карты собираются и борд, и карта флоу. */
 export const SCREENS: ScreenMap = {
   'Э0.1': {
@@ -531,12 +610,22 @@ export const SCREENS: ScreenMap = {
   },
   'Э5.1': {
     cap: 'Мои соревнования',
-    view: () => <Queues5_1 />,
+    view: () => (
+      <>
+        <Queues5_1 />
+        <Queues5_1States />
+      </>
+    ),
     next: 'очередь «ждут назначения»',
   },
   'Э5.2': {
     cap: 'Заявки судей',
-    view: () => <Applications5_2 />,
+    view: () => (
+      <>
+        <Applications5_2 />
+        <Applications5_2States />
+      </>
+    ),
     next: 'назначен главный судья',
   },
   'Э5.3': {
@@ -546,7 +635,12 @@ export const SCREENS: ScreenMap = {
   },
   'Э5.4': {
     cap: 'Протокол на утверждении',
-    view: () => <Protocol5_4 />,
+    view: () => (
+      <>
+        <Protocol5_4 />
+        <Protocol5_4States />
+      </>
+    ),
     next: 'меню «Рейтинг судей»',
   },
   'Э5.5': {
@@ -556,12 +650,22 @@ export const SCREENS: ScreenMap = {
   },
   'Э5.6': {
     cap: 'Документы на проверке',
-    view: () => <Docs5_6 />,
+    view: () => (
+      <>
+        <Docs5_6 />
+        <Docs5_6States />
+      </>
+    ),
     next: 'публикация рейтинга',
   },
   'Э5.7': {
     cap: 'Публикация и апелляции',
-    view: () => <Publish5_7 />,
+    view: () => (
+      <>
+        <Publish5_7 />
+        <Publish5_7States />
+      </>
+    ),
   },
 };
 

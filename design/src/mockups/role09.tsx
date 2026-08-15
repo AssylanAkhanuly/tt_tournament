@@ -9,7 +9,9 @@
 import {
   Check, Clock, History, Pause, Radio, RefreshCw, Trophy, Undo2, Upload, UserX,
 } from 'lucide-react';
-import { A, Arrow, Board, Hint, RoleTablet, Screen } from './shell';
+import {
+  A, Alert, Arrow, Board, Empty, Hint, RoleTablet, Row, Rows, Screen, Shot, States,
+} from './shell';
 import type { ScreenMap } from './shell';
 import { R09 } from './roles';
 import { Code0_1 } from './role00';
@@ -375,6 +377,85 @@ export function Rating9_5() {
 
 /* ── борд роли ───────────────────────────────────────────────────── */
 
+const Tours9_1States = () => (
+  <States>
+    <Shot tone="info" title="Назначений нет" text="Пустое состояние со списком открытых приёмов.">
+      <Empty title="Назначений нет" text="Открыт приём заявок на два турнира — можно подать заявку на судейство." />
+    </Shot>
+
+    <Shot
+      tone="warning"
+      title="Заявки на судейство или прямое назначение — не решено"
+      text="⚠ 12.6: сохраняется ли конкурс заявок. От ответа зависит, есть ли на экране кнопка «Подать заявку»."
+    >
+      <Rows>
+        <Row nm="Конкурс заявок" sub="наше допущение — судья подаёт заявку сам" pill={{ t: 'СЕЙЧАС ТАК', cls: 'reg' }} />
+        <Row nm="Прямое назначение" sub="если так — кнопки подачи не будет" pill={{ t: 'ВОПРОС', cls: 'bad' }} />
+      </Rows>
+    </Shot>
+  </States>
+);
+
+const Table9_2States = () => (
+  <States>
+    <Shot tone="info" title="Матча нет — «стол свободен»" text="Показываем очередь стола.">
+      <Empty title="Стол свободен" text="Следующая пара — Ерлан Б. — Пак С., вызов придёт от главного судьи." />
+    </Shot>
+
+    <Shot
+      tone="info"
+      title="На турнире включён режим по очкам"
+      text="Об этом сказано в карточке матча заранее."
+    >
+      <Rows>
+        <Row nm="Матч до 3 побед в партиях" sub="партия до 11 очков, разница 2" pill={{ t: 'ПО ОЧКАМ', cls: 'reg' }} />
+      </Rows>
+    </Shot>
+  </States>
+);
+
+const Score9_3States = () => (
+  <States>
+    <Shot
+      tone="warning"
+      title="Обрыв связи"
+      text="Ввод продолжается локально, счётчик очереди растёт; после восстановления всё уходит на сервер."
+    >
+      <Rows>
+        <Row nm="Связи нет" sub="ввод продолжается на планшете" val="7 событий в очереди" pill={{ t: 'ЛОКАЛЬНО', cls: 'wait' }} />
+      </Rows>
+      <Alert>Счёт вести можно: судья стола — источник правды по матчу (§12).</Alert>
+    </Shot>
+
+    <Shot
+      tone="info"
+      title="Расхождение после синхронизации"
+      text="Приоритет у судьи стола — он видит игру (TZ §12)."
+    >
+      <Rows>
+        <Row nm="На планшете" sub="11:9 · третья партия" pill={{ t: 'ПРИНЯТО', cls: 'live' }} />
+        <Row nm="На сервере" sub="11:8 · пришло с другого устройства" pill={{ t: 'ОТКЛОНЕНО', cls: 'done' }} />
+      </Rows>
+    </Shot>
+
+    <Shot tone="warning" title="Подтверждение при обрыве" text="Результат уйдёт после синхронизации ✳.">
+      <Rows>
+        <Row nm="Результат матча подтверждён" sub="уйдёт на сервер, когда появится связь" pill={{ t: 'В ОЧЕРЕДИ', cls: 'wait' }} />
+      </Rows>
+    </Shot>
+  </States>
+);
+
+const Rating9_5States = () => (
+  <States>
+    <Shot tone="info" title="Окно апелляции закрыто" text="Формы нет, только история решений." wide>
+      <Rows>
+        <Row nm="Апелляции по сезону 2026" sub="окно было открыто до 15.08.2026" pill={{ t: 'ЗАКРЫТО', cls: 'done' }} />
+      </Rows>
+    </Shot>
+  </States>
+);
+
 /** Экраны роли по кодам: из этой карты собираются и борд, и карта флоу. */
 export const SCREENS: ScreenMap = {
   'Э0.1': {
@@ -384,17 +465,32 @@ export const SCREENS: ScreenMap = {
   },
   'Э9.1': {
     cap: 'Мои турниры',
-    view: () => <Tours9_1 />,
+    view: () => (
+      <>
+        <Tours9_1 />
+        <Tours9_1States />
+      </>
+    ),
     next: 'строка назначения',
   },
   'Э9.2': {
     cap: 'Мой стол',
-    view: () => <Table9_2 />,
+    view: () => (
+      <>
+        <Table9_2 />
+        <Table9_2States />
+      </>
+    ),
     next: 'принять вызов пары',
   },
   'Э9.3': {
     cap: 'Ввод счёта',
-    view: () => <Score9_3 />,
+    view: () => (
+      <>
+        <Score9_3 />
+        <Score9_3States />
+      </>
+    ),
     next: 'кнопка «история»',
   },
   'Э9.4': {
@@ -404,7 +500,12 @@ export const SCREENS: ScreenMap = {
   },
   'Э9.5': {
     cap: 'Мой рейтинг судьи',
-    view: () => <Rating9_5 />,
+    view: () => (
+      <>
+        <Rating9_5 />
+        <Rating9_5States />
+      </>
+    ),
   },
 };
 

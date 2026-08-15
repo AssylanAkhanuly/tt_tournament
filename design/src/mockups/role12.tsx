@@ -10,8 +10,7 @@ import {
   CalendarClock, Filter, Paperclip, TriangleAlert, Undo2, UserPlus, Eye,
 } from 'lucide-react';
 import {
-  ActionBar, Board, Chips, Hint, Panel, Row, Rows, RoleScreen, Screen, Arrow, Submit,
-  Form, Field, A, AW,
+  A, AW, ActionBar, Alert, Arrow, Board, Chips, Empty, Field, Form, Hint, Panel, RoleScreen, Row, Rows, Screen, Shot, States, Submit,
 } from './shell';
 import type { ScreenMap } from './shell';
 import { R12 } from './roles';
@@ -175,7 +174,7 @@ export function Squad12_3() {
       role={R12}
       nav="Состав"
       title="Формирование состава"
-      sub="Чемпионат РК среди спортсменов 2009 г.р. и моложе · г. Тараз · 09–13.06.2026 · приём до 26.05"
+      sub="Чемпионат РК · 2009 г.р. и моложе · приём до 26.05"
     >
       <div className="mkcols">
         <Panel
@@ -183,7 +182,7 @@ export function Squad12_3() {
           extra={<span className="pill reg" style={{ margin: 0 }}>2009 Г.Р. И МОЛОЖЕ</span>}
         >
           <Rows>
-            {CANDS.map((a) => (
+            {CANDS.slice(0, 4).map((a) => (
               <Row
                 key={a.nm}
                 av={a.av}
@@ -205,8 +204,6 @@ export function Squad12_3() {
           <Rows>
             <Row nm="Нургалиев Санжар" sub="2009 · рейтинг 2118" pill={PAID} action="Убрать" />
             <Row nm="Оралбек Диас" sub="2009 · рейтинг 2042" pill={UNPAID} action="Убрать" />
-            <Row nm="Байжанов Ерасыл" sub="2011 · рейтинг 1786" pill={PAID} action="Убрать" />
-            <Row nm="Жақсылық Аружан" sub="2012 · рейтинг 1654" pill={PAID} action="Убрать" />
           </Rows>
           <div className="dcount" style={{ margin: '12px 0 8px' }}>Парный разряд</div>
           <Rows>
@@ -369,6 +366,73 @@ export function Mine12_5() {
   );
 }
 
+const Region12_1States = () => (
+  <States>
+    <Shot
+      tone="warning"
+      title="Регистрация спортсмена не спроектирована"
+      text="⚠ 12.10 — пока не решено, как сходятся три пути регистрации, форму не рисуем."
+      wide
+    >
+      <Alert>
+        Спортсмен регистрируется сам, его заводит клуб, его заводит федерация. Кто «владелец»
+        записи и как пути сходятся — вопрос к федерации; до ответа у региона только чтение.
+      </Alert>
+    </Shot>
+  </States>
+);
+
+const Squad12_3States = () => (
+  <States>
+    <Shot
+      tone="warning"
+      title="В составе игрок с неоплаченным взносом"
+      text="Подача с предупреждением — ⚠ 6.1: блокирует ли неоплаченный взнос заявку, не решено."
+    >
+      <Rows>
+        <Row nm="Жумабеков Расул" sub="2007 · Караганда" pill={{ t: 'ВЗНОС НЕ ОПЛАЧЕН', cls: 'wait' }} />
+      </Rows>
+      <Alert>Заявку подать можно, но допуск на месте может не пройти (§9.2).</Alert>
+    </Shot>
+
+    <Shot
+      tone="info"
+      title="Проходящих по возрасту нет"
+      text="Пустой список кандидатов с пояснением возрастной границы старта."
+    >
+      <Empty
+        title="Кандидатов нет"
+        text="Первенство «2012 г.р. и моложе»: в регионе нет спортсменов этого возраста с действующим взносом."
+      />
+    </Shot>
+  </States>
+);
+
+const Apps12_4States = () => (
+  <States>
+    <Shot
+      tone="danger"
+      title="Заявка отклонена"
+      text="Причина видна сразу; пока приём открыт — «исправить и подать снова»."
+    >
+      <Rows>
+        <Row nm="Кубок Республики Казахстан" sub="отклонил Оспанов Т. · «нет медицинского допуска у двоих»" pill={{ t: 'ОТКЛОНЕНА', cls: 'bad' }} />
+      </Rows>
+      <button className="dsubmit" style={{ padding: '11px 16px' }}>Исправить и подать снова</button>
+    </Shot>
+
+    <Shot
+      tone="success"
+      title="Заявка принята"
+      text="Открывается просмотр своих спортсменов на турнире (Э12.5)."
+    >
+      <Rows>
+        <Row nm="Первенство РК · 2010 г.р. и моложе" sub="принята 19.01 · 6 спортсменов" pill={{ t: 'ПРИНЯТА', cls: 'live' }} to="Э12.5" />
+      </Rows>
+    </Shot>
+  </States>
+);
+
 /** Экраны роли по кодам: из этой карты собираются и борд, и карта флоу. */
 export const SCREENS: ScreenMap = {
   'Э0.1': {
@@ -378,7 +442,12 @@ export const SCREENS: ScreenMap = {
   },
   'Э12.1': {
     cap: 'Мой регион',
-    view: () => <Region12_1 />,
+    view: () => (
+      <>
+        <Region12_1 />
+        <Region12_1States />
+      </>
+    ),
     next: 'меню «Главные старты»',
   },
   'Э12.2': {
@@ -388,12 +457,22 @@ export const SCREENS: ScreenMap = {
   },
   'Э12.3': {
     cap: 'Формирование состава',
-    view: () => <Squad12_3 />,
+    view: () => (
+      <>
+        <Squad12_3 />
+        <Squad12_3States />
+      </>
+    ),
     next: 'подать заявку',
   },
   'Э12.4': {
     cap: 'Мои заявки',
-    view: () => <Apps12_4 />,
+    view: () => (
+      <>
+        <Apps12_4 />
+        <Apps12_4States />
+      </>
+    ),
     next: 'принятая заявка',
   },
   'Э12.5': {

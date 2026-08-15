@@ -11,7 +11,7 @@
 
 import { Bookmark, Download, Eye, FileText, Paperclip, Send } from 'lucide-react';
 import {
-  A, ActionBar, Arrow, Board, Chips, Form, Hint, Panel, Row, Rows, RoleScreen, Screen,
+  A, ActionBar, Alert, Arrow, Board, Chips, Form, Hint, Panel, RoleScreen, Row, Rows, Screen, Shot, States,
 } from './shell';
 import type { ScreenMap } from './shell';
 import { R10 } from './roles';
@@ -325,17 +325,11 @@ export function Report10_4() {
               <div className="k">Главный судья</div>
               <div className="dval">Оспанов Талгат</div>
             </div>
-            <div className="dfield">
-              <div className="k">Судей в наряде</div>
-              <div className="dval">24 · столов 20</div>
-            </div>
             <div className="dfield wide">
               <div className="k">Текст заключения — свободная форма</div>
               <div className="dval" style={{ fontWeight: 500, lineHeight: 1.55, color: 'var(--c-muted)' }}>
                 Соревнование проведено по регламенту. Замечания: четыре правки счёта после
-                подтверждения за один день, две из них — по одному столу; техническая победа на столе
-                2 присуждена без приложенного протокола неявки. Предлагаю разбор с судьями столов 4 и
-                9 до следующего старта.
+                подтверждения, техническая победа на столе 2 без протокола неявки.
               </div>
             </div>
           </Form>
@@ -350,7 +344,7 @@ export function Report10_4() {
         <Panel title="Материалы" extra={<span className="pill reg" style={{ margin: 0 }}>4 ЭПИЗОДА · 3 ФАЙЛА</span>}>
           <div className="qsec">Отмеченные эпизоды из хода турнира</div>
           <Rows>
-            {EPISODES.map((e) => (
+            {EPISODES.slice(0, 2).map((e) => (
               <div className="drow" key={e.nm} style={{ cursor: 'default' }}>
                 <Bookmark size={16} />
                 <div className="who">
@@ -362,7 +356,7 @@ export function Report10_4() {
           </Rows>
           <div className="qsec">Приложенные файлы</div>
           <Rows>
-            {FILES.map((f) => (
+            {FILES.slice(0, 2).map((f) => (
               <div className="drow" key={f.nm} style={{ cursor: 'default' }}>
                 <FileText size={16} />
                 <div className="who">
@@ -381,6 +375,46 @@ export function Report10_4() {
 
 /* ── борд роли ───────────────────────────────────────────────────── */
 
+const Live10_2States = () => (
+  <States>
+    <Shot
+      tone="danger"
+      title="Только просмотр"
+      text="Кнопок вызова пары и ввода счёта нет — инспектор турниром не управляет."
+      wide
+    >
+      <Rows>
+        <Row nm="Стол 4 · Смагулов — Ким" sub="2 : 1 · идёт" pill={{ t: 'ИДЁТ', cls: 'live' }} />
+      </Rows>
+      <Alert tone="danger">
+        У главного судьи в этой строке «Вызвать» и «Править счёт». У инспектора их нет вовсе —
+        он наблюдает и пишет заключение.
+      </Alert>
+    </Shot>
+  </States>
+);
+
+const Report10_4States = () => (
+  <States>
+    <Shot tone="success" title="Отправленное заключение" text="Только чтение.">
+      <Rows>
+        <Row nm="Заключение по Кубку РК" sub="отправлено 21.05.2026, 18:40" pill={{ t: 'ОТПРАВЛЕНО', cls: 'live' }} />
+      </Rows>
+    </Shot>
+
+    <Shot
+      tone="warning"
+      title="Что меняет заключение — не определено"
+      text="⚠ 12.7: кому уходит заключение и что оно меняет — рейтинг судьи, допуск, результат."
+    >
+      <Rows>
+        <Row nm="Рейтинг судьи" sub="влияет ли заключение" pill={{ t: 'ВОПРОС', cls: 'bad' }} />
+        <Row nm="Допуск к следующим турнирам" sub="влияет ли заключение" pill={{ t: 'ВОПРОС', cls: 'bad' }} />
+      </Rows>
+    </Shot>
+  </States>
+);
+
 /** Экраны роли по кодам: из этой карты собираются и борд, и карта флоу. */
 export const SCREENS: ScreenMap = {
   'Э0.1': {
@@ -395,7 +429,12 @@ export const SCREENS: ScreenMap = {
   },
   'Э10.2': {
     cap: 'Ход турнира глазами инспектора',
-    view: () => <Live10_2 />,
+    view: () => (
+      <>
+        <Live10_2 />
+        <Live10_2States />
+      </>
+    ),
     next: 'вкладка «журнал правок»',
   },
   'Э10.3': {
@@ -405,7 +444,12 @@ export const SCREENS: ScreenMap = {
   },
   'Э10.4': {
     cap: 'Заключение',
-    view: () => <Report10_4 />,
+    view: () => (
+      <>
+        <Report10_4 />
+        <Report10_4States />
+      </>
+    ),
   },
 };
 
