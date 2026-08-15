@@ -4,6 +4,7 @@
 import { Download, FileWarning, Undo2 } from 'lucide-react';
 import { ActionBar, Board, Chips, Hint, Panel, Row, Rows, RoleScreen, Screen, Arrow, A, AW } from './shell';
 import { R02 } from './roles';
+import { Login0_1 } from './role00';
 
 type Fee = { av: string; nm: string; sub: string; st: 'ОПЛАЧЕН' | 'НЕ ОПЛАЧЕН' | 'ПРОСРОЧЕН'; cls: 'live' | 'wait' | 'bad'; when: string };
 
@@ -115,6 +116,10 @@ export function Fee2_2() {
 export function Role02Board() {
   return (
     <Board role={R02}>
+      <Screen code="Э0.1" cap="Вход">
+        <Login0_1 />
+      </Screen>
+      <Arrow lbl="первый экран роли" />
       <Screen code="Э2.1" cap="Взносы за сезон">
         <Fees2_1 />
       </Screen>

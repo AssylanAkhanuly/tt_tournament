@@ -14,6 +14,7 @@ import {
   Form, Field, A, AW,
 } from './shell';
 import { R12 } from './roles';
+import { Login0_1 } from './role00';
 
 /** Подсказка со значком: значок не должен рвать строку (svg у нас display: block). */
 const IconHint = ({ icon, children }: { icon: ReactNode; children: ReactNode }) => (
@@ -405,6 +406,10 @@ export function Mine12_5() {
 export function Role12Board() {
   return (
     <Board role={R12}>
+      <Screen code="Э0.1" cap="Вход">
+        <Login0_1 />
+      </Screen>
+      <Arrow lbl="первый экран роли" />
       <Screen code="Э12.1" cap="Мой регион">
         <Region12_1 />
       </Screen>

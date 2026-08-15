@@ -13,6 +13,7 @@ import {
   A, ActionBar, Arrow, Board, Chips, Form, Hint, Panel, Rows, RoleScreen, Screen,
 } from './shell';
 import { R11 } from './roles';
+import { Login0_1 } from './role00';
 
 /* ── данные экранов ──────────────────────────────────────────────── */
 
@@ -370,6 +371,10 @@ export function Compare11_3() {
 export function Role11Board() {
   return (
     <Board role={R11}>
+      <Screen code="Э0.1" cap="Вход">
+        <Login0_1 />
+      </Screen>
+      <Arrow lbl="первый экран роли" />
       <Screen code="Э11.1" cap="Кандидаты в сборную">
         <Cands11_1 />
       </Screen>

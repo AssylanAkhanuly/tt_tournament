@@ -18,6 +18,7 @@ import {
 } from './shell';
 import { LiveCards, NeedRow, QueuePanel, Stages, TableMap, type Need } from './role06';
 import { R08 } from './roles';
+import { Login0_1 } from './role00';
 
 const CHIEF = A(76);   // Оспанов Талғат — главный судья турнира (роль 6)
 const DEP = A(37);     // Сагинтаев Дархан — заместитель, пользователь этих экранов
@@ -275,6 +276,10 @@ export function Rating8_3() {
 export function Role08Board() {
   return (
     <Board role={R08}>
+      <Screen code="Э0.1" cap="Вход">
+        <Login0_1 />
+      </Screen>
+      <Arrow lbl="первый экран роли" />
       <Screen code="Э8.1" cap="Мой турнир — режим замещения">
         <Shift8_1 />
       </Screen>

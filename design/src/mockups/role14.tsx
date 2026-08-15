@@ -15,6 +15,7 @@ import {
 import { Board, RolePhone, Screen, Arrow, Submit, A } from './shell';
 import { FormSeg } from '../segs';
 import { R14 } from './roles';
+import { LoginPhone0_1 } from './role00';
 
 /* Спортсмен макета — Ким Георгий (тот же, что в реестрах ролей 2 и 12). */
 const ME = A(44);
@@ -471,6 +472,10 @@ export function Profile14_7() {
 export function Role14Board() {
   return (
     <Board role={R14}>
+      <Screen code="Э0.1" cap="Вход в приложении">
+        <LoginPhone0_1 />
+      </Screen>
+      <Arrow lbl="первый экран роли" />
       <Screen code="Э14.1" cap="Главная">
         <Home14_1 />
       </Screen>

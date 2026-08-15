@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { A, Arrow, Board, Hint, RoleTablet, Screen } from './shell';
 import { R09 } from './roles';
+import { Code0_1 } from './role00';
 
 /* ── данные экранов ──────────────────────────────────────────────── */
 
@@ -403,6 +404,10 @@ export function Rating9_5() {
 export function Role09Board() {
   return (
     <Board role={R09}>
+      <Screen code="Э0.1" cap="Вход по короткому коду">
+        <Code0_1 />
+      </Screen>
+      <Arrow lbl="первый экран роли" />
       <Screen code="Э9.1" cap="Мои турниры">
         <Tours9_1 />
       </Screen>

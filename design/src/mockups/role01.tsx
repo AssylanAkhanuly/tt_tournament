@@ -18,18 +18,14 @@ import {
   AlertTriangle, Download, Eye, GitMerge, Image, Link2, Merge, Plus, Search, Send, UserPlus,
 } from 'lucide-react';
 import {
-  A, ActionBar, Arrow, AW, Board, Chips, Empty, Field, Form, Ghost, Hint, Modal, Panel, RoleScreen,
-  Row, Rows, Screen, Shot, States,
+  A, ActionBar, Alert, Arrow, AW, Board, Chips, Empty, Field, Form, Ghost, Hint, Modal, Off, P, Panel,
+  RoleScreen, Row, Rows, Screen, Shot, States,
 } from './shell';
 import type { DeskVariant } from '../deskShell';
 import { R01 } from './roles';
+import { Login0_1 } from './role00';
 
 /* ── Общие мелочи роли ──────────────────────────────────────────── */
-
-/** Значок состояния: те же классы, что у принятых экранов (`pill live|wait|bad|reg|done`). */
-export const P = ({ t, cls }: { t: string; cls: string }) => (
-  <span className={'pill ' + cls} style={{ margin: 0, whiteSpace: 'nowrap' }}>{t}</span>
-);
 
 /** Второстепенная кнопка с иконкой: `dpickbtn` — не флекс-контейнер, а иконки
     в макетном слое блочные, поэтому раскладку задаём здесь. */
@@ -37,33 +33,6 @@ export const Btn = ({ children }: { children: ReactNode }) => (
   <button className="dpickbtn" style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
     {children}
   </button>
-);
-
-/** Неактивная главная кнопка: действие видно, но пока запрещено. */
-export const Off = ({ children }: { children: ReactNode }) => (
-  <button
-    className="dsubmit"
-    style={{ padding: '12px 18px', background: 'var(--c-panel-3)', color: 'var(--c-dim)', boxShadow: 'none' }}
-  >
-    {children}
-  </button>
-);
-
-const ALERT_INK = {
-  warning: 'var(--c-warning)',
-  danger: 'var(--c-danger)',
-  success: 'var(--c-success)',
-} as const;
-
-/** Плашка с тоном: то же место, что у подсказки, но говорит о запрете или риске. */
-export const Alert = ({
-  tone = 'warning',
-  children,
-}: {
-  tone?: keyof typeof ALERT_INK;
-  children: ReactNode;
-}) => (
-  <div className="dhintbox" style={{ color: ALERT_INK[tone] }}>{children}</div>
 );
 
 /** Раздел диалога с отбивкой: без неё подпись раздела читается как подпись к
@@ -1528,6 +1497,10 @@ const Editor1_14States = () => (
 export function Role01Board() {
   return (
     <Board role={R01}>
+      <Screen code="Э0.1" cap="Вход">
+        <Login0_1 />
+      </Screen>
+      <Arrow lbl="первый экран роли" />
       <Screen code="Э1.1" cap="Панель Федерации">
         <Dash1_1 />
         <Dash1_1States />

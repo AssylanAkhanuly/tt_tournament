@@ -14,6 +14,7 @@ import {
   A, ActionBar, Arrow, Board, Chips, Form, Hint, Panel, Row, Rows, RoleScreen, Screen,
 } from './shell';
 import { R10 } from './roles';
+import { Login0_1 } from './role00';
 
 /* ── данные экранов ──────────────────────────────────────────────── */
 
@@ -397,6 +398,10 @@ export function Report10_4() {
 export function Role10Board() {
   return (
     <Board role={R10}>
+      <Screen code="Э0.1" cap="Вход">
+        <Login0_1 />
+      </Screen>
+      <Arrow lbl="первый экран роли" />
       <Screen code="Э10.1" cap="Соревнования на контроле">
         <Tours10_1 />
       </Screen>

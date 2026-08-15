@@ -21,6 +21,7 @@ import {
 } from './shell';
 import { FormSeg, PanelSeg } from '../segs';
 import { R06 } from './roles';
+import { Login0_1 } from './role00';
 
 /* ── Люди турнира ───────────────────────────────────────────────── */
 
@@ -826,6 +827,10 @@ export function Protocol6_7() {
 export function Role06Board() {
   return (
     <Board role={R06}>
+      <Screen code="Э0.1" cap="Вход">
+        <Login0_1 />
+      </Screen>
+      <Arrow lbl="первый экран роли" />
       <Screen code="Э6.1" cap="Мой турнир">
         <Tournament6_1 />
       </Screen>

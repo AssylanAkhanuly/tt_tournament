@@ -13,6 +13,7 @@ import {
 } from './shell';
 import { FormSeg } from '../segs';
 import { R13 } from './roles';
+import { Login0_1 } from './role00';
 
 /** Подсказка со значком: значок не должен рвать строку (svg у нас display: block). */
 const IconHint = ({ icon, children }: { icon: ReactNode; children: ReactNode }) => (
@@ -281,6 +282,10 @@ export function League13_3() {
 export function Role13Board() {
   return (
     <Board role={R13}>
+      <Screen code="Э0.1" cap="Вход">
+        <Login0_1 />
+      </Screen>
+      <Arrow lbl="первый экран роли" />
       <Screen code="Э13.1" cap="Мой клуб">
         <Club13_1 />
       </Screen>

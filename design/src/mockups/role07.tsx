@@ -11,6 +11,7 @@ import { Printer, RefreshCw, Send, Shuffle } from 'lucide-react';
 import { ActionBar, Arrow, Board, Chips, Field, Form, Hint, Panel, Row, Rows, RoleScreen, Screen, A } from './shell';
 import { FormSeg, PanelSeg } from '../segs';
 import { R07 } from './roles';
+import { Login0_1 } from './role00';
 
 /* ── мелочи, общие для экранов роли ─────────────────────────────── */
 
@@ -435,6 +436,10 @@ export function Protocols7_5() {
 export function Role07Board() {
   return (
     <Board role={R07}>
+      <Screen code="Э0.1" cap="Вход">
+        <Login0_1 />
+      </Screen>
+      <Arrow lbl="первый экран роли" />
       <Screen code="Э7.1" cap="Рабочий стол секретаря">
         <Desk7_1 />
       </Screen>

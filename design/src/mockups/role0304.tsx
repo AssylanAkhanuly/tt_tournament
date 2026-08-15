@@ -9,9 +9,10 @@
    отсутствием. */
 
 import { Bell, Download, Printer } from 'lucide-react';
-import { A, ActionBar, Arrow, AW, Board, Chips, Hint, Panel, RoleScreen, Row, Rows, Screen } from './shell';
+import { A, ActionBar, Arrow, AW, Board, Chips, Hint, P, Panel, RoleScreen, Row, Rows, Screen } from './shell';
 import { R0304 } from './roles';
-import { ATTENTION, Btn, Notes, P, TourRow, TodayRows } from './role01';
+import { Login0_1 } from './role00';
+import { ATTENTION, Btn, Notes, TourRow, TodayRows } from './role01';
 
 /* Те же соревнования, что у администратора Федерации (Э1.2) — здесь на чтение. */
 type Tour = { nm: string; mt: string; apps: string; judge?: string; st: string; cls: string };
@@ -192,6 +193,10 @@ export function Subs3_3() {
 export function Role0304Board() {
   return (
     <Board role={R0304}>
+      <Screen code="Э0.1" cap="Вход">
+        <Login0_1 />
+      </Screen>
+      <Arrow lbl="первый экран роли" />
       <Screen code="Э3.1" cap="Обзорная панель">
         <Dash3_1 />
       </Screen>

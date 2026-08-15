@@ -11,6 +11,7 @@ import type { ReactNode } from 'react';
 import { BadgeCheck, Ban, Check, Megaphone, Paperclip, Undo2, UserPlus } from 'lucide-react';
 import { ActionBar, Arrow, Board, Chips, Field, Form, Hint, Panel, Row, Rows, RoleScreen, Screen, A, AW } from './shell';
 import { R05 } from './roles';
+import { Login0_1 } from './role00';
 
 /* ── мелочи, общие для экранов роли ─────────────────────────────── */
 
@@ -547,6 +548,10 @@ export function Publish5_7() {
 export function Role05Board() {
   return (
     <Board role={R05}>
+      <Screen code="Э0.1" cap="Вход">
+        <Login0_1 />
+      </Screen>
+      <Arrow lbl="первый экран роли" />
       <Screen code="Э5.1" cap="Мои соревнования">
         <Queues5_1 />
       </Screen>
