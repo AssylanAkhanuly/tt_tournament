@@ -336,6 +336,49 @@ export function Shot({
   );
 }
 
+/** Значок состояния: тона из макетного слоя (`pill live|wait|bad|reg|done`). */
+export const P = ({ t, cls }: { t: string; cls: string }) => (
+  <span className={'pill ' + cls} style={{ margin: 0, whiteSpace: 'nowrap' }}>{t}</span>
+);
+
+/** Ещё один кадр того же экрана: следующий шаг или другое устройство.
+    Не состояние — поэтому стоит отдельной полкой, а не в `States`. */
+export function Also({ cap, children }: { cap: string; children: ReactNode }) {
+  return (
+    <div className="mkalso">
+      <div className="mkalso-h">{cap}</div>
+      {children}
+    </div>
+  );
+}
+
+/** Неактивная главная кнопка: действие видно, но пока запрещено. */
+export function Off({ children }: { children: ReactNode }) {
+  return (
+    <button
+      className="dsubmit"
+      style={{ padding: '12px 18px', background: 'var(--c-panel-3)', color: 'var(--c-dim)', boxShadow: 'none' }}
+    >
+      {children}
+    </button>
+  );
+}
+
+const ALERT_INK = {
+  warning: 'var(--c-warning)',
+  danger: 'var(--c-danger)',
+  success: 'var(--c-success)',
+} as const;
+
+/** Плашка с тоном: то же место, что у подсказки, но говорит о запрете или риске. */
+export const Alert = ({
+  tone = 'warning',
+  children,
+}: {
+  tone?: keyof typeof ALERT_INK;
+  children: ReactNode;
+}) => <div className="dhintbox" style={{ color: ALERT_INK[tone] }}>{children}</div>;
+
 /* ── Диалог поверх экрана ───────────────────────────────────────── */
 
 /** Диалог: рабочая область родительского экрана видна и притушена под ним.

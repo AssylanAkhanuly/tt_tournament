@@ -128,6 +128,75 @@
   min-width: 0;
 }
 
+/* Ещё один кадр того же экрана — следующий шаг или другое устройство. */
+.mkalso {
+  align-self: stretch;
+  width: 0;
+  min-width: 100%;
+  margin-top: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  box-sizing: border-box;
+}
+.mkalso-h {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--c-board-muted);
+  text-align: center;
+}
+
+/* ── Экран входа: карточка по центру пустой оболочки ────────────── */
+.mkauth {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  min-height: 0;
+}
+.mkauth-card {
+  width: 430px;
+  max-width: 100%;
+  padding: 26px 26px 22px;
+  border-radius: var(--r-lg);
+  border: 1px solid var(--c-glass-line);
+  background: var(--c-panel);
+  box-shadow: var(--sh-panel);
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);
+}
+.mkauth-card .t { font-size: 19px; font-weight: 800; letter-spacing: -.3px; }
+.mkauth-card .s { font-size: 12.5px; color: var(--c-muted); margin-top: -8px; }
+.mkauth-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.mkauth-sep {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 11px;
+  color: var(--c-dim);
+  text-transform: uppercase;
+  letter-spacing: .08em;
+}
+.mkauth-sep::before,
+.mkauth-sep::after { content: ""; flex: 1; height: 1px; background: var(--c-glass-line); }
+
+/* Публичная часть: шапка сайта без сайдбара и без профиля. */
+.mkpub {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  padding: 0 22px;
+  height: 58px;
+  border-bottom: 1px solid var(--c-glass-line);
+  background: var(--c-panel);
+}
+.mkpub-nav { display: flex; gap: 16px; font-size: 13px; font-weight: 600; color: var(--c-muted); }
+.mkpub-nav .on { color: var(--c-ink); }
+.mkpub-body { flex: 1; padding: 20px 22px; display: flex; flex-direction: column; gap: 16px; min-width: 0; overflow: hidden; }
+
 /* ── Диалог поверх рабочей области ──────────────────────────────── */
 /* Подложка диалога кроет `.dmain` — рабочую область оболочки: экран, с
    которого пришли, остаётся виден и притушен. */
