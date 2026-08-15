@@ -10,7 +10,7 @@
 import { Fragment } from 'react';
 import { Download, Eye, Star } from 'lucide-react';
 import {
-  A, ActionBar, Arrow, Board, Chips, Form, Hint, Panel, Rows, RoleScreen, Screen,
+  A, ActionBar, Arrow, Board, Chips, Form, Hint, Panel, RoleScreen, Row, Rows, Screen, Shot, States,
 } from './shell';
 import type { ScreenMap } from './shell';
 import { R11 } from './roles';
@@ -354,6 +354,22 @@ export function Compare11_3() {
 
 /* ── борд роли ───────────────────────────────────────────────────── */
 
+const Cands11_1States = () => (
+  <States>
+    <Shot
+      tone="warning"
+      title="Охват списка не решён"
+      text="Видит ли роль всех спортсменов страны или только кандидатский список — не решено (⚠ 12.1)."
+      wide
+    >
+      <Rows>
+        <Row nm="Весь реестр — 5 210 спортсменов" sub="наше допущение: показываем всех, на чтение" pill={{ t: 'СЕЙЧАС ТАК', cls: 'reg' }} />
+        <Row nm="Только кандидатский список" sub="если федерация подтвердит — экран сузится" pill={{ t: 'ВОПРОС', cls: 'bad' }} />
+      </Rows>
+    </Shot>
+  </States>
+);
+
 /** Экраны роли по кодам: из этой карты собираются и борд, и карта флоу. */
 export const SCREENS: ScreenMap = {
   'Э0.1': {
@@ -363,7 +379,12 @@ export const SCREENS: ScreenMap = {
   },
   'Э11.1': {
     cap: 'Кандидаты в сборную',
-    view: () => <Cands11_1 />,
+    view: () => (
+      <>
+        <Cands11_1 />
+        <Cands11_1States />
+      </>
+    ),
     next: 'строка спортсмена',
   },
   'Э11.2': {

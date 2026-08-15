@@ -8,8 +8,7 @@
 import type { ReactNode } from 'react';
 import { ShieldCheck, TriangleAlert, UserPlus } from 'lucide-react';
 import {
-  ActionBar, Board, Chips, Hint, Panel, Row, Rows, RoleScreen, Screen, Arrow, Submit,
-  Form, Field, A, AW,
+  A, AW, ActionBar, Alert, Arrow, Board, Chips, Empty, Field, Form, Hint, Panel, RoleScreen, Row, Rows, Screen, Shot, States, Submit,
 } from './shell';
 import type { ScreenMap } from './shell';
 import { FormSeg } from '../segs';
@@ -254,6 +253,61 @@ export function League13_3() {
   );
 }
 
+const Club13_1States = () => (
+  <States>
+    <Shot
+      tone="warning"
+      title="Клуб ещё не зарегистрирован"
+      text="До регистрации клуба остальные экраны закрыты — доступна только сама регистрация."
+      wide
+    >
+      <Empty
+        title="Клуб не зарегистрирован"
+        text="Заполните карточку клуба: название, город, контакты. После регистрации откроются состав, заявки и команды Лиги."
+      />
+      <button className="dsubmit" style={{ padding: '11px 16px' }}>Зарегистрировать клуб</button>
+    </Shot>
+  </States>
+);
+
+const Person13_2States = () => (
+  <States>
+    <Shot
+      tone="warning"
+      title="⚠ 12.10 — спортсмен уже зарегистрировался сам или заведён регионом"
+      text="Как пути сходятся и кто «владелец» записи, не решено; форма слияния не проектируется."
+      wide
+    >
+      <Rows>
+        <Row nm="Ахметов Диас · 2007" sub="зарегистрировался сам, 02.03.2026" pill={{ t: 'УЖЕ ЕСТЬ', cls: 'wait' }} />
+        <Row nm="Ахметов Диас · 2007" sub="заводит клуб «Алатау» сейчас" pill={{ t: 'ДУБЛЬ?', cls: 'bad' }} />
+      </Rows>
+      <Alert>До ответа федерации показываем совпадение и отдаём решение человеку.</Alert>
+    </Shot>
+  </States>
+);
+
+const League13_3States = () => (
+  <States>
+    <Shot tone="info" title="Окно подтверждения не открыто" text="Состав на чтение с датой окна.">
+      <Rows>
+        <Row nm="Суперлига · мужчины" sub="окно подтверждения состава — с 20.04" pill={{ t: 'ЗАКРЫТО', cls: 'done' }} />
+      </Rows>
+    </Shot>
+
+    <Shot
+      tone="warning"
+      title="⚠ 11.1–11.5 — схема командной встречи"
+      text="Очки в таблицу и переходы между лигами не получены: экраны встречи и таблицы дальше не проектируем."
+    >
+      <Alert>
+        Без регламента Лиги (сколько игр в матче, как считаются очки, кто переходит между лигами)
+        рисовать таблицу нельзя — придумаем не то.
+      </Alert>
+    </Shot>
+  </States>
+);
+
 /** Экраны роли по кодам: из этой карты собираются и борд, и карта флоу. */
 export const SCREENS: ScreenMap = {
   'Э0.1': {
@@ -263,17 +317,32 @@ export const SCREENS: ScreenMap = {
   },
   'Э13.1': {
     cap: 'Мой клуб',
-    view: () => <Club13_1 />,
+    view: () => (
+      <>
+        <Club13_1 />
+        <Club13_1States />
+      </>
+    ),
     next: '«завести человека»',
   },
   'Э13.2': {
     cap: 'Регистрация людей',
-    view: () => <Person13_2 />,
+    view: () => (
+      <>
+        <Person13_2 />
+        <Person13_2States />
+      </>
+    ),
     next: 'меню «Команды Лиги»',
   },
   'Э13.3': {
     cap: 'Команды Лиги',
-    view: () => <League13_3 />,
+    view: () => (
+      <>
+        <League13_3 />
+        <League13_3States />
+      </>
+    ),
   },
 };
 

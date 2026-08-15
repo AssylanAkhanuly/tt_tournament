@@ -10,11 +10,9 @@
    поверх них живёт ИНДИКАТОР СМЕНЫ. Пока смена у главного, кнопок действий нет:
    на макете это видно на каждой строке — «ЧТЕНИЕ» вместо «Открыть». */
 
+import { ArrowRightLeft, Ban, Clock, Lock, Megaphone, Pencil, Shield, Upload } from 'lucide-react';
 import {
-  ArrowRightLeft, Ban, Clock, Lock, Megaphone, Pencil, Shield, Upload,
-} from 'lucide-react';
-import {
-  A, Arrow, Board, Chips, Hint, Panel, Row, Rows, RoleScreen, Screen, Submit,
+  A, Alert, Arrow, Board, Chips, Hint, Panel, RoleScreen, Row, Rows, Screen, Shot, States, Submit,
 } from './shell';
 import type { ScreenMap } from './shell';
 import { LiveCards, NeedRow, QueuePanel, Stages, TableMap, type Need } from './role06';
@@ -249,6 +247,43 @@ export function Rating8_3() {
 
 /* ── Борд роли ──────────────────────────────────────────────────── */
 
+const Shift8_1States = () => (
+  <States>
+    <Shot tone="info" title="Смена не передана" text="Всё на чтение, кнопок действий нет." wide>
+      <Rows>
+        <Row nm="Смена главного судьи" sub="Оспанов Т. · за пультом сейчас" pill={{ t: 'НЕ ПЕРЕДАНА', cls: 'done' }} />
+      </Rows>
+      <Alert>Пока смена не передана, заместитель видит турнир, но ничего в нём не меняет.</Alert>
+    </Shot>
+  </States>
+);
+
+const Live8_2States = () => (
+  <States>
+    <Shot
+      tone="warning"
+      title="Смена не активна"
+      text="Действия открыты только при активной смене (Э8.1) — иначе экран на просмотр."
+    >
+      <Rows>
+        <Row nm="Вызвать пару на стол" sub="доступно при активной смене" pill={{ t: 'ЗАКРЫТО', cls: 'done' }} />
+        <Row nm="Правка счёта" sub="доступно при активной смене" pill={{ t: 'ЗАКРЫТО', cls: 'done' }} />
+      </Rows>
+    </Shot>
+
+    <Shot
+      tone="warning"
+      title="Протокол и утверждение сетки"
+      text="⚠ Может ли их заместитель — не знаем; до ответа федерации кнопки только у главного судьи."
+    >
+      <Alert>
+        Вопрос 12.1: функционал роли в документе федерации не заполнен. Дальше описанного не
+        проектируем — место помечено.
+      </Alert>
+    </Shot>
+  </States>
+);
+
 /** Экраны роли по кодам: из этой карты собираются и борд, и карта флоу. */
 export const SCREENS: ScreenMap = {
   'Э0.1': {
@@ -258,12 +293,22 @@ export const SCREENS: ScreenMap = {
   },
   'Э8.1': {
     cap: 'Мой турнир — режим замещения',
-    view: () => <Shift8_1 />,
+    view: () => (
+      <>
+        <Shift8_1 />
+        <Shift8_1States />
+      </>
+    ),
     next: 'принять смену',
   },
   'Э8.2': {
     cap: 'Ход турнира — когда замещает',
-    view: () => <Live8_2 />,
+    view: () => (
+      <>
+        <Live8_2 />
+        <Live8_2States />
+      </>
+    ),
     next: 'ветка роли',
   },
   'Э8.3': {

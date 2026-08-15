@@ -9,7 +9,9 @@
    отсутствием. */
 
 import { Bell, Download, Printer } from 'lucide-react';
-import { A, ActionBar, Arrow, AW, Board, Chips, Hint, P, Panel, RoleScreen, Row, Rows, Screen } from './shell';
+import {
+  A, AW, ActionBar, Alert, Arrow, Board, Chips, Ghost, Hint, P, Panel, RoleScreen, Row, Rows, Screen, Shot, States,
+} from './shell';
 import type { ScreenMap } from './shell';
 import { R0304 } from './roles';
 import { Login0_1 } from './role00';
@@ -174,6 +176,32 @@ export function Subs3_3() {
 
 /* ── Борд ролей ────────────────────────────────────────────────── */
 
+const Read3_2States = () => (
+  <States>
+    <Shot
+      tone="success"
+      title="Ни одной кнопки, меняющей данные"
+      text="Ни «сохранить», ни «утвердить», ни «отклонить», ни отметки оплаты — их нет, а не «серые»."
+      wide
+    >
+      <div className="dactionbar">
+        <div className="dcount">Календарь сезона · чтение</div>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <Ghost>Выгрузить</Ghost>
+          <Ghost>Печать</Ghost>
+        </div>
+      </div>
+      <Rows>
+        <Row nm="Кубок Республики Казахстан 2026" sub="Астана · 18–20 мая" pill={{ t: 'СУДЬЯ НАЗНАЧЕН', cls: 'reg' }} />
+      </Rows>
+      <Alert tone="success">
+        У пишущей роли в этой строке стоят «Править» и «Опубликовать». Здесь их нет вовсе: право на
+        чтение и право на запись проверяются раздельно.
+      </Alert>
+    </Shot>
+  </States>
+);
+
 /** Экраны роли по кодам: из этой карты собираются и борд, и карта флоу. */
 export const SCREENS: ScreenMap = {
   'Э0.1': {
@@ -188,7 +216,12 @@ export const SCREENS: ScreenMap = {
   },
   'Э3.2': {
     cap: 'Модули в режиме чтения',
-    view: () => <Read3_2 />,
+    view: () => (
+      <>
+        <Read3_2 />
+        <Read3_2States />
+      </>
+    ),
     next: '«Подписаться» в карточке',
   },
   'Э3.3': {
