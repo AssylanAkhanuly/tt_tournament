@@ -156,6 +156,18 @@ for (const file of dataFiles) {
   if (!stories.includes(`import { ${boardName}, SCREENS } from '../mockups/${roleName}'`)) {
     problems.push(`${storiesFile}: истории не подключают ${boardName} и SCREENS — запустите npm run gen:flows`);
   }
+
+  /* Раздел «Макеты» пишется руками, и число экранов в его подписи разъезжалось
+     молча: добавили экран в карту, а подпись осталась старой. */
+  const mockStories = join(MOCKUPS_DIR, file.replace(/\.ts$/, '.stories.tsx'));
+  if (existsSync(mockStories)) {
+    const text = readFileSync(mockStories, 'utf8');
+    if (!new RegExp(`name: 'Макеты по флоу · ${shown} экран`).test(text)) {
+      problems.push(
+        `${roleName}.stories.tsx (макеты): в подписи не ${shown} экранов — столько в карте SCREENS`,
+      );
+    }
+  }
 }
 
 if (problems.length) {
