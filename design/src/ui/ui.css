@@ -12,11 +12,11 @@
 .ui-btn {
   display: inline-flex; align-items: center; justify-content: center; gap: 7px;
   font-family: var(--font); font-weight: 700; white-space: nowrap;
-  border: 1px solid transparent; border-radius: 12px; cursor: pointer;
+  border: 1px solid transparent; border-radius: var(--r-sm); cursor: pointer;
 }
-.ui-btn--sm { font-size: 11.5px; padding: 7px 12px; border-radius: 9px; }
+.ui-btn--sm { font-size: 11.5px; padding: 7px 12px; border-radius: var(--r-xs); }
 .ui-btn--md { font-size: 13px;   padding: 10px 16px; }
-.ui-btn--lg { font-size: 14px;   padding: 14px 18px; font-weight: 800; border-radius: 14px; }
+.ui-btn--lg { font-size: 14px;   padding: 14px 18px; font-weight: 800; border-radius: var(--r-sm); }
 .ui-btn--block { display: flex; width: 100%; }
 
 .ui-btn--accent {
@@ -47,7 +47,7 @@
 .pill.down { background: var(--c-danger-soft-2); color: var(--c-danger); }
 
 /* ── сегмент-контрол ─────────────────────────────────────────── */
-.ui-seg { display: inline-flex; gap: 2px; background: var(--c-panel-seg); border-radius: 9px; padding: 2px; }
+.ui-seg { display: inline-flex; gap: 2px; background: var(--c-panel-seg); border-radius: var(--r-xs); padding: 2px; }
 .ui-seg button {
   font-family: var(--font); font-size: 11px; font-weight: 600; color: var(--c-muted);
   padding: 4px 10px; border-radius: var(--r-xs); border: 0; background: none; cursor: pointer;
@@ -62,7 +62,7 @@
 /* ── подложки для специменов дизайн-системы ──────────────────── */
 .ui-canvas {
   background: var(--c-screen); color: var(--c-ink); font-family: var(--font);
-  padding: 22px; border-radius: 20px; display: flex; flex-direction: column; gap: 18px;
+  padding: 22px; border-radius: var(--r-md); display: flex; flex-direction: column; gap: 18px;
 }
 .ui-canvas--light { background: var(--c-board-bg); color: var(--c-board-ink); }
 .ui-row { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
@@ -71,7 +71,7 @@
 .ui-note { font-size: 12px; color: var(--c-muted); line-height: 1.5; }
 
 /* карточка токена в специмене «Цвета» */
-.ui-swatch { color: var(--c-ink); display: flex; align-items: center; gap: 11px; padding: 9px 11px; border-radius: 12px; background: var(--c-panel); border: 1px solid var(--c-glass-line); }
+.ui-swatch { color: var(--c-ink); display: flex; align-items: center; gap: 11px; padding: 9px 11px; border-radius: var(--r-sm); background: var(--c-panel); border: 1px solid var(--c-glass-line); }
 /* полупрозрачные токены показываем поверх «шахматки» из самих же токенов —
    иначе rgba-стекло на тёмном фоне выглядит просто пустым квадратом */
 .ui-swatch .chip {

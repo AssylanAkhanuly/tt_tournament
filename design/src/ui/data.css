@@ -19,7 +19,7 @@
 /* ── строка реестра (карточка-строка) ───────────────────────── */
 .ui-row-item {
   display: flex; align-items: center; gap: 12px;
-  background: var(--c-panel); border: 1px solid var(--c-glass-line); border-radius: 12px;
+  background: var(--c-panel); border: 1px solid var(--c-glass-line); border-radius: var(--r-sm);
   padding: 11px 13px;
 }
 .ui-row-item.sel { border-color: var(--c-accent-line-3); box-shadow: 0 0 0 1px var(--c-accent-halo); }
@@ -44,7 +44,7 @@
 
 /* ── прогресс ───────────────────────────────────────────────── */
 .ui-prog { display: grid; gap: 6px; }
-.ui-prog .bar { height: 7px; border-radius: var(--r-pill); background: var(--c-panel-2); overflow: hidden; }
+.ui-prog .bar { height: 7px; border-radius: var(--r-xs); background: var(--c-panel-2); overflow: hidden; }
 .ui-prog .fill { height: 100%; border-radius: inherit; background: var(--c-accent); }
 .ui-prog.g .fill { background: var(--c-success); }
 .ui-prog.a .fill { background: var(--c-warning); }

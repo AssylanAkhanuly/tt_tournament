@@ -5,7 +5,7 @@
 .dwrap { background: var(--c-board-bg); padding: 44px; width: max-content; font-family: var(--font); -webkit-font-smoothing: antialiased; }
 
 .laptop {
-  width: 1200px; height: 760px; border-radius: 20px; overflow: hidden; position: relative;
+  width: 1200px; height: 760px; border-radius: var(--r-device-laptop); overflow: hidden; position: relative;
   color: var(--c-ink); display: flex; flex-direction: column;
   box-shadow: var(--sh-laptop), 0 0 0 1px color-mix(in srgb, var(--c-board-ink) 10%, transparent), inset 0 0 0 1px var(--c-glass-edge);
   background: var(--fx-pattern) 0 0 / var(--fx-pattern-size) repeat, var(--c-screen-desk);
@@ -17,7 +17,7 @@
 .dtop .bname { font-weight: 700; font-size: 15px; letter-spacing: .2px; }
 .dtop .tname { color: var(--c-muted); font-size: 13px; }
 .dtop .sp { flex: 1; }
-.dtop .live { display: inline-flex; align-items: center; gap: 6px; font-size: 11px; font-weight: 800; letter-spacing: .5px; color: var(--c-success); background: var(--c-success-soft); padding: 5px 10px; border-radius: var(--r-pill); }
+.dtop .live { display: inline-flex; align-items: center; gap: 6px; font-size: 11px; font-weight: 800; letter-spacing: .5px; color: var(--c-success); background: var(--c-success-soft); padding: 5px 10px; border-radius: var(--r-xs); }
 .dtop .live .d { width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
 .dtop .me { display: flex; align-items: center; gap: 9px; }
 .dtop .me img { width: 32px; height: 32px; border-radius: 50%; object-fit: cover; box-shadow: 0 0 0 1px var(--c-glass-ring); }
@@ -29,7 +29,7 @@
    приложения, узор-обои сквозь него не просвечивают. Фон чуть темнее карточек,
    чтобы колонка читалась отдельно от рабочей области. */
 .dside { background: var(--c-panel-3); border-right: 1px solid var(--c-glass-line); padding: 16px 12px; display: flex; flex-direction: column; gap: 3px; }
-.dni { font: inherit; color: inherit; background: none; border: 0; text-align: left; cursor: pointer; display: flex; align-items: center; gap: 11px; padding: 10px 12px; border-radius: 12px; color: var(--c-muted); font-size: 13.5px; font-weight: 600; }
+.dni { font: inherit; color: inherit; background: none; border: 0; text-align: left; cursor: pointer; display: flex; align-items: center; gap: 11px; padding: 10px 12px; border-radius: var(--r-sm); color: var(--c-muted); font-size: 13.5px; font-weight: 600; }
 .dni.on { color: var(--c-ink); background: var(--c-panel-2); border: 1px solid var(--c-glass-line); box-shadow: inset 0 1px 0 var(--c-glass-hi); }
 .dni:hover:not(.on) { color: var(--c-ink); background: var(--c-panel); }
 .dside .grow { flex: 1; }
@@ -41,14 +41,14 @@
 .dtitle p { color: var(--c-muted); font-size: 12.5px; margin-top: 2px; }
 
 .dchips { display: flex; gap: 10px; }
-.dchip { flex: 1; background: var(--c-panel); border: 1px solid var(--c-glass-line); border-radius: 14px; padding: 12px 14px; box-shadow: inset 0 1px 0 var(--c-glass-hi); }
+.dchip { flex: 1; background: var(--c-panel); border: 1px solid var(--c-glass-line); border-radius: var(--r-sm); padding: 12px 14px; box-shadow: inset 0 1px 0 var(--c-glass-hi); }
 .dchip .v { font-size: 22px; font-weight: 800; font-variant-numeric: tabular-nums; letter-spacing: -.5px; }
 .dchip .k { font-size: 11.5px; color: var(--c-muted); margin-top: 2px; }
 .dchip.g .v { color: var(--c-success); } .dchip.b .v { color: var(--c-accent); } .dchip.a .v { color: var(--c-warning); }
 
 /* столы — компактная сетка на много столов (20 в две строки) */
 .dtables { display: grid; grid-template-columns: repeat(10,1fr); gap: 8px; }
-.dtable { background: var(--c-panel); border: 1px solid var(--c-glass-line); border-radius: 11px; padding: 9px; box-shadow: inset 0 1px 0 var(--c-glass-hi); }
+.dtable { background: var(--c-panel); border: 1px solid var(--c-glass-line); border-radius: var(--r-sm); padding: 9px; box-shadow: inset 0 1px 0 var(--c-glass-hi); }
 .dtable { cursor: pointer; }
 .dtable:hover { border-color: var(--c-accent-line); }
 .dtable .tn { display: flex; align-items: center; justify-content: space-between; font-size: 11px; color: var(--c-muted); font-weight: 700; }
@@ -63,7 +63,7 @@
 .panel { background: var(--c-panel); border: 1px solid var(--c-glass-line); border-radius: var(--r-md); box-shadow: inset 0 1px 0 var(--c-glass-hi), var(--sh-panel); display: flex; flex-direction: column; min-height: 0; overflow: hidden; }
 .phead { display: flex; align-items: center; justify-content: space-between; padding: 13px 15px; border-bottom: 1px solid var(--c-glass-line); }
 .phead .t { font-size: 13.5px; font-weight: 700; }
-.phead .seg { display: flex; gap: 2px; background: var(--c-panel-seg); border-radius: 9px; padding: 2px; }
+.phead .seg { display: flex; gap: 2px; background: var(--c-panel-seg); border-radius: var(--r-xs); padding: 2px; }
 .phead .seg span, .phead .seg button { font: inherit; background: none; border: 0; cursor: pointer; font-size: 11px; font-weight: 600; color: var(--c-muted); padding: 4px 10px; border-radius: var(--r-xs); }
 .phead .seg span.on, .phead .seg button.on { color: var(--c-ink); background: var(--c-panel-2); }
 .phead .seg button:hover:not(.on) { color: var(--c-ink); }
@@ -76,7 +76,7 @@
 .bracket { display: flex; gap: 26px; height: 100%; }
 .bround { display: flex; flex-direction: column; justify-content: space-around; gap: 12px; flex: 1; }
 .brt { font-size: 10.5px; font-weight: 700; letter-spacing: .8px; text-transform: uppercase; color: var(--c-dim); text-align: center; margin-bottom: 2px; }
-.bmatch { background: var(--c-panel-2); border: 1px solid var(--c-glass-line); border-radius: 11px; overflow: hidden; box-shadow: inset 0 1px 0 var(--c-glass-hi); }
+.bmatch { background: var(--c-panel-2); border: 1px solid var(--c-glass-line); border-radius: var(--r-sm); overflow: hidden; box-shadow: inset 0 1px 0 var(--c-glass-hi); }
 .bmatch.now { border-color: var(--c-accent-line-3); box-shadow: inset 0 1px 0 var(--c-glass-hi), 0 0 0 1px var(--c-accent-halo); }
 .bp { display: flex; align-items: center; gap: 8px; padding: 7px 9px; }
 .bp + .bp { border-top: 1px solid var(--c-glass-line); }
@@ -88,7 +88,7 @@
 /* очередь / живые матчи */
 .qsec { font-size: 10.5px; font-weight: 700; letter-spacing: .7px; text-transform: uppercase; color: var(--c-dim); margin: 2px 0 8px; }
 .qsec:not(:first-child) { margin-top: 16px; }
-.livem { background: var(--c-panel-2); border: 1px solid var(--c-accent-line); border-radius: 12px; padding: 10px 11px; margin-bottom: 8px; box-shadow: inset 0 1px 0 var(--c-glass-hi); }
+.livem { background: var(--c-panel-2); border: 1px solid var(--c-accent-line); border-radius: var(--r-sm); padding: 10px 11px; margin-bottom: 8px; box-shadow: inset 0 1px 0 var(--c-glass-hi); }
 .livem .top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
 .livem .tbl { font-size: 10.5px; font-weight: 800; color: var(--c-accent); letter-spacing: .4px; }
 .livem .liv { display: inline-flex; align-items: center; gap: 5px; font-size: 9.5px; font-weight: 800; color: var(--c-success); }
@@ -103,7 +103,7 @@
 .qitem:hover .q .n { color: var(--c-accent); }
 .qav { display: flex; } .qav img { width: 26px; height: 26px; border-radius: 50%; object-fit: cover; box-shadow: 0 0 0 2px var(--c-screen-3); } .qav img + img { margin-left: -9px; }
 .qitem .q { flex: 1; min-width: 0; } .qitem .q .n { font-size: 12.5px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } .qitem .q .r { font-size: 10.5px; color: var(--c-muted); }
-.callbtn { font-size: 11.5px; font-weight: 700; color: var(--c-accent-ink); background: var(--c-accent); border-radius: 9px; padding: 7px 12px; box-shadow: 0 6px 14px -4px var(--c-accent-glow), inset 0 1px 0 var(--c-glass-hi-3); white-space: nowrap; }
+.callbtn { font-size: 11.5px; font-weight: 700; color: var(--c-accent-ink); background: var(--c-accent); border-radius: var(--r-xs); padding: 7px 12px; box-shadow: 0 6px 14px -4px var(--c-accent-glow), inset 0 1px 0 var(--c-glass-hi-3); white-space: nowrap; }
 
 /* десктоп-флоу: форма организации, выбор судьи, приёмка */
 .dform { flex: 1; display: grid; grid-template-columns: 1fr 1fr; gap: 16px; min-height: 0; }
@@ -121,7 +121,7 @@
 .djudge { display: flex; align-items: center; justify-content: space-between; background: var(--c-panel); border: 1px solid var(--c-glass-line); border-radius: var(--r-sm); padding: 9px 11px; }
 .djudge .tn { font-size: 12px; color: var(--c-muted); font-weight: 700; }
 .djudge .jn { font-size: 12.5px; font-weight: 600; } .djudge .jn.empty { color: var(--c-dim); }
-.dsubmit { display: flex; align-items: center; justify-content: center; gap: 8px; padding: 14px; border-radius: 14px; font-size: 14px; font-weight: 800; color: var(--c-accent-ink); background: var(--c-accent); box-shadow: var(--sh-accent), inset 0 1px 0 var(--c-glass-hi-4); }
+.dsubmit { display: flex; align-items: center; justify-content: center; gap: 8px; padding: 14px; border-radius: var(--r-sm); font-size: 14px; font-weight: 800; color: var(--c-accent-ink); background: var(--c-accent); box-shadow: var(--sh-accent), inset 0 1px 0 var(--c-glass-hi-4); }
 .dsubmit.ok { background: var(--c-success); color: var(--c-success-ink); box-shadow: var(--sh-success); }
 .dcenter { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; text-align: center; }
 
@@ -129,7 +129,7 @@
    планшетной рамке ~1024x720 — так веб реально выглядит на планшете лёжа. */
 .tabframe.land { width: auto; }
 .deskland {
-  width: 1024px; height: 720px; border-radius: 32px; overflow: hidden; position: relative;
+  width: 1024px; height: 720px; border-radius: var(--r-device-land); overflow: hidden; position: relative;
   color: var(--c-ink); display: flex; flex-direction: column;
   box-shadow: inset 0 0 0 1px var(--c-glass-edge);
   background: var(--fx-pattern) 0 0 / var(--fx-pattern-size) repeat, var(--c-screen-desk);
@@ -140,7 +140,7 @@
 
 /* выбор судьи из заявок / приёмка результатов — список-строки */
 .drows { display: flex; flex-direction: column; gap: 8px; overflow: auto; }
-.drow { display: flex; align-items: center; gap: 12px; background: var(--c-panel); border: 1px solid var(--c-glass-line); border-radius: 12px; padding: 11px 13px; }
+.drow { display: flex; align-items: center; gap: 12px; background: var(--c-panel); border: 1px solid var(--c-glass-line); border-radius: var(--r-sm); padding: 11px 13px; }
 .drow.pick { border-color: var(--c-accent-line-3); box-shadow: 0 0 0 1px var(--c-accent-halo); }
 .drow { cursor: pointer; }
 .drow:hover { border-color: var(--c-accent-line); }
@@ -151,7 +151,7 @@
 .drow .rt { display: flex; gap: 16px; text-align: center; }
 .drow .rt .v { font-size: 15px; font-weight: 800; font-variant-numeric: tabular-nums; }
 .drow .rt .k { font-size: 10px; color: var(--c-muted); }
-.dpickbtn { font-size: 12px; font-weight: 700; color: var(--c-accent-ink); background: var(--c-accent); border-radius: 9px; padding: 8px 14px; box-shadow: inset 0 1px 0 var(--c-glass-hi-3); white-space: nowrap; }
+.dpickbtn { font-size: 12px; font-weight: 700; color: var(--c-accent-ink); background: var(--c-accent); border-radius: var(--r-xs); padding: 8px 14px; box-shadow: inset 0 1px 0 var(--c-glass-hi-3); white-space: nowrap; }
 .dactionbar { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
 .dcount { font-size: 12.5px; color: var(--c-muted); font-weight: 600; }
 .dsubmit { flex: none; }

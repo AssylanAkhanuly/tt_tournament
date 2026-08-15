@@ -32,7 +32,7 @@ const S: Record<string, CSSProperties> = {
   counters: { display: 'flex', gap: 10, flexWrap: 'wrap' },
   counter: {
     background: 'var(--c-panel)', border: '1px solid var(--c-glass-line)',
-    borderRadius: 12, padding: '9px 14px', display: 'flex', alignItems: 'baseline', gap: 8,
+    borderRadius: 'var(--r-sm)', padding: '9px 14px', display: 'flex', alignItems: 'baseline', gap: 8,
   },
   counterN: { fontSize: 20, fontWeight: 800, fontFamily: 'var(--font-brand)', color: 'var(--c-ink)' },
   counterL: { fontSize: 11.5, color: 'var(--c-muted)', letterSpacing: '.4px' },
@@ -42,12 +42,12 @@ const S: Record<string, CSSProperties> = {
 
   card: {
     background: 'var(--c-panel)', border: '1px solid var(--c-glass-line)',
-    borderRadius: 16, padding: 18, display: 'flex', flexDirection: 'column', gap: 12,
+    borderRadius: 'var(--r-sm)', padding: 18, display: 'flex', flexDirection: 'column', gap: 12,
   },
   bar: {
     display: 'flex', alignItems: 'center', gap: 14, padding: '0 18px', height: 58,
     background: 'var(--c-panel-2)', border: '1px solid var(--c-glass-line)',
-    borderRadius: 12,
+    borderRadius: 'var(--r-sm)',
   },
   barName: { fontWeight: 700, fontSize: 14 },
   barSub: { color: 'var(--c-muted)', fontSize: 12.5 },
@@ -56,7 +56,7 @@ const S: Record<string, CSSProperties> = {
   tag: {
     fontSize: 10.5, fontWeight: 700, letterSpacing: '.7px', textTransform: 'uppercase',
     color: 'var(--c-muted)', background: 'var(--c-panel-3)',
-    border: '1px solid var(--c-glass-line)', borderRadius: 'var(--r-pill)', padding: '3px 9px',
+    border: '1px solid var(--c-glass-line)', borderRadius: 'var(--r-xs)', padding: '3px 9px',
   },
   ok: { color: 'var(--c-success)', background: 'var(--c-success-soft)', border: 0 },
   open: { color: 'var(--c-warning)', background: 'var(--c-warning-soft)', border: 0 },
@@ -67,11 +67,11 @@ const S: Record<string, CSSProperties> = {
   links: { display: 'flex', flexWrap: 'wrap', gap: 7 },
   link: {
     fontSize: 12, fontWeight: 600, color: 'var(--c-accent)', textDecoration: 'none',
-    background: 'var(--c-accent-soft)', borderRadius: 'var(--r-pill)', padding: '4px 11px',
+    background: 'var(--c-accent-soft)', borderRadius: 'var(--r-xs)', padding: '4px 11px',
   },
   grid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: 12 },
   shot: {
-    display: 'block', width: '100%', height: 'auto', borderRadius: 10,
+    display: 'block', width: '100%', height: 'auto', borderRadius: 'var(--r-xs)',
     border: '1px solid var(--c-glass-line)',
   },
   shotName: { fontSize: 14, fontWeight: 700, marginTop: 2 },
@@ -175,7 +175,7 @@ export function ReferenceBoard() {
         <div style={S.ladder}>
           {SIZES.map((h) => (
             <div key={'m' + h} style={S.ladderCol}>
-              <img src={mark} alt="" style={{ height: h, width: h, borderRadius: h * 0.12 }} />
+              <img src={mark} alt="" style={{ height: h, width: h, borderRadius: 'var(--r-sm)' }} />
               <span style={S.ladderCap}>{h} px</span>
             </div>
           ))}

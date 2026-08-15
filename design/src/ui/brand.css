@@ -10,7 +10,7 @@
   display: block;
   height: 34px;
   width: 34px;
-  border-radius: 9px;
+  border-radius: var(--r-xs);
   box-shadow: 0 2px 10px var(--c-accent-line-2);
 }
 
@@ -45,12 +45,12 @@
 
 /* Телефон и узкие шапки */
 .ui-brand.sm { gap: 9px; }
-.ui-brand.sm .mark { height: 28px; width: 28px; border-radius: 8px; }
+.ui-brand.sm .mark { height: 28px; width: 28px; border-radius: var(--r-xs); }
 .ui-brand.sm .wm b { font-size: 16px; }
 .ui-brand.sm .wm i { font-size: 8.5px; letter-spacing: 1px; margin-top: 2px; }
 
 /* Крупная подача: титульные экраны и витрины */
 .ui-brand.lg { gap: 14px; }
-.ui-brand.lg .mark { height: 44px; width: 44px; border-radius: 12px; }
+.ui-brand.lg .mark { height: 44px; width: 44px; border-radius: var(--r-sm); }
 .ui-brand.lg .wm b { font-size: 25px; letter-spacing: .8px; }
 .ui-brand.lg .wm i { font-size: 11px; margin-top: 4px; }

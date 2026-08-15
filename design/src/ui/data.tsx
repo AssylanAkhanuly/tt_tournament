@@ -158,8 +158,19 @@ export function Progress({
 
 /* ── Скелет, спиннер, разделитель ───────────────────────────── */
 
-export function Skeleton({ width = '100%', height = 14, radius }: { width?: number | string; height?: number | string; radius?: number }) {
-  return <span className="ui-skel" style={{ display: 'block', width, height, borderRadius: radius }} />;
+export function Skeleton({
+  width = '100%',
+  height = 14,
+  /** Своя форма — только круглой заглушке под фото: `50%`. Иначе форма из токена. */
+  radius,
+}: {
+  width?: number | string;
+  height?: number | string;
+  radius?: '50%';
+}) {
+  return (
+    <span className="ui-skel" style={{ display: 'block', width, height, borderRadius: radius ?? 'var(--r-xs)' }} />
+  );
 }
 
 export function Spinner({ size = 20 }: { size?: number }) {

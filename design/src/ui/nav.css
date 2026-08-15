@@ -11,10 +11,10 @@
 .ui-tabs button.on { color: var(--c-ink); }
 .ui-tabs button.on::after {
   content: ""; position: absolute; left: 0; right: 0; bottom: -1px; height: 2px;
-  background: var(--c-accent); border-radius: 2px;
+  background: var(--c-accent); border-radius: var(--r-xs);
 }
 .ui-tabs .count {
-  font-size: 10.5px; font-weight: 700; padding: 1px 6px; border-radius: var(--r-pill);
+  font-size: 10.5px; font-weight: 700; padding: 1px 6px; border-radius: var(--r-xs);
   background: var(--c-panel-2); color: var(--c-muted);
 }
 .ui-tabs button.on .count { background: var(--c-accent-soft); color: var(--c-accent); }
@@ -24,13 +24,13 @@
 /* в витрине показываем меню шириной с настоящий сайдбар роли */
 .ui-nav-demo { width: 240px; }
 .ui-navitem {
-  display: flex; align-items: center; gap: 11px; padding: 10px 12px; border-radius: 12px;
+  display: flex; align-items: center; gap: 11px; padding: 10px 12px; border-radius: var(--r-sm);
   color: var(--c-muted); font-size: 13.5px; font-weight: 600; cursor: pointer;
   border: 1px solid transparent; background: none; font-family: var(--font); text-align: left;
 }
 .ui-navitem .grow { flex: 1; }
 .ui-navitem .badge {
-  font-size: 10.5px; font-weight: 800; padding: 1px 7px; border-radius: var(--r-pill);
+  font-size: 10.5px; font-weight: 800; padding: 1px 7px; border-radius: var(--r-xs);
   background: var(--c-accent-soft); color: var(--c-accent);
 }
 .ui-navitem.on {

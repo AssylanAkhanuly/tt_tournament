@@ -4,7 +4,7 @@
 /* ── плашка ─────────────────────────────────────────────────── */
 .ui-notice {
   display: flex; gap: 11px; align-items: flex-start;
-  border: 1px solid var(--c-glass-line); border-radius: 12px; padding: 12px 13px;
+  border: 1px solid var(--c-glass-line); border-radius: var(--r-sm); padding: 12px 13px;
   background: var(--c-panel); box-shadow: inset 0 1px 0 var(--c-glass-hi);
 }
 .ui-notice .ic { flex: none; display: grid; place-items: center; width: 20px; height: 20px; color: var(--c-accent); }
@@ -24,7 +24,7 @@
 .ui-toast {
   display: flex; align-items: center; gap: 11px; max-width: 380px;
   background: var(--c-panel-2);
-  border: 1px solid var(--c-glass-line); border-radius: 14px; padding: 12px 14px;
+  border: 1px solid var(--c-glass-line); border-radius: var(--r-sm); padding: 12px 14px;
   box-shadow: inset 0 1px 0 var(--c-glass-hi), var(--sh-panel);
 }
 .ui-toast .ic {

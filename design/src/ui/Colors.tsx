@@ -220,7 +220,7 @@ export function ColorSpecimen() {
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(270px, 1fr))', gap: 10 }}>
             {g.tokens.map(([name, desc]) => (
-              <div key={name} style={{ background: 'var(--c-screen-1)', borderRadius: 14, padding: 4 }}>
+              <div key={name} style={{ background: 'var(--c-screen-1)', borderRadius: 'var(--r-sm)', padding: 4 }}>
                 <Swatch name={name} desc={desc} value={values[name] ?? ''} />
               </div>
             ))}

@@ -98,7 +98,7 @@ const CodeCell = ({ d }: { d: string }) => (
       fontSize: 28,
       fontWeight: 800,
       fontVariantNumeric: 'tabular-nums',
-      borderRadius: 14,
+      borderRadius: 'var(--r-sm)',
       border: '1px solid var(--c-glass-line)',
       background: 'var(--c-panel)',
       color: d ? 'var(--c-ink)' : 'var(--c-dim)',
@@ -329,7 +329,7 @@ const NRow = ({
         flex: 'none',
         display: 'grid',
         placeItems: 'center',
-        borderRadius: 11,
+        borderRadius: 'var(--r-sm)',
         background: unread ? 'var(--c-accent-soft)' : 'var(--c-panel-2)',
         color: unread ? 'var(--c-accent)' : 'var(--c-dim)',
       }}

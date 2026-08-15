@@ -26,7 +26,7 @@
   color: var(--c-accent);
   background: var(--c-accent-soft);
   border: 1px solid var(--c-accent-line);
-  border-radius: var(--r-pill);
+  border-radius: var(--r-xs);
   padding: 3px 10px;
 }
 .doc-hint { font-size: 13.5px; line-height: 1.6; color: var(--c-muted); }
@@ -55,7 +55,7 @@
   font-size: 12.5px;
   background: var(--c-panel-2);
   border: 1px solid var(--c-glass-line);
-  border-radius: 5px;
+  border-radius: var(--r-xs);
   padding: 1px 5px;
 }
 .doc-body pre {

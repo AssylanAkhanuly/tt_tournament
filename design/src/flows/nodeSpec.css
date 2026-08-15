@@ -55,7 +55,7 @@
   font-weight: 600;
   color: var(--c-board-accent);
   background: var(--c-board-accent-soft);
-  border-radius: var(--r-pill);
+  border-radius: var(--r-xs);
   padding: 1px 7px;
   margin-left: 4px;
 }
@@ -67,7 +67,7 @@
   letter-spacing: .04em;
   color: var(--c-board-accent);
   border: 1px solid var(--c-board-accent-line);
-  border-radius: var(--r-pill);
+  border-radius: var(--r-xs);
   padding: 0 6px;
   margin-left: 4px;
 }
