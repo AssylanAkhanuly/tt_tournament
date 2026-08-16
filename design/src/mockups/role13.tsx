@@ -8,7 +8,7 @@
 import type { ReactNode } from 'react';
 import { ShieldCheck, TriangleAlert, UserPlus } from 'lucide-react';
 import {
-  A, AW, ActionBar, Alert, Arrow, Board, Chips, Empty, Field, Form, Ghost, Hint, Input, Modal, Off, Panel, Queue, RoleScreen, Row, Rows, Screen, Shot, States, Submit,
+  A, AW, ActionBar, Alert, Arrow, Board, Chips, Empty, Field, Form, Ghost, Hint, Input, Modal, Off, Panel, Queue, RoleScreen, Row, Rows, Screen, Shot, States, Submit, TabPanel,
 } from './shell';
 import type { DeskVariant } from '../deskShell';
 import type { ScreenMap } from './shell';
@@ -105,7 +105,56 @@ export function Club13_1({ variant }: { variant?: DeskVariant }) {
   );
 }
 
-/* Э13.2 — форма заведения человека; привязка к клубу автоматическая. */
+/* Э13.2 — форма заведения человека; привязка к клубу автоматическая.
+   Три типа записи — три набора полей: спортсмену нужен разряд, тренеру —
+   подопечные, иному лицу — должность. */
+const AthleteForm13_2 = () => (
+  <>
+    <Form>
+      <Input label="Фамилия" value="Нұрланұлы" />
+      <Input label="Имя" value="Алихан" />
+      <Input label="Дата рождения" value="14.05.2011" />
+      <Field label="Пол" value="Мужской" />
+      <Input label="Разряд" value="2 разряд" />
+      <Field label="Клуб" value="«Алатау» · подставлен автоматически" />
+      <Field label="Город" value="г. Алматы · из клуба" wide />
+    </Form>
+    <div style={{ marginTop: 12 }}>
+      <Submit>Завести</Submit>
+    </div>
+  </>
+);
+
+const CoachForm13_2 = () => (
+  <>
+    <Form>
+      <Input label="Фамилия" value="Тлеуова" />
+      <Input label="Имя" value="Аружан" />
+      <Input label="Дата рождения" value="02.08.1988" />
+      <Input label="Квалификация" value="тренер высшей категории" />
+      <Field label="Подопечные" value="назначаются после заведения" />
+      <Field label="Клуб" value="«Алатау» · подставлен автоматически" />
+    </Form>
+    <div style={{ marginTop: 12 }}>
+      <Submit>Завести</Submit>
+    </div>
+  </>
+);
+
+const StaffForm13_2 = () => (
+  <>
+    <Form>
+      <Input label="Фамилия" value="Ерлан" />
+      <Input label="Имя" value="Бекзат" />
+      <Input label="Должность" value="механик-настройщик инвентаря" wide />
+      <Field label="Клуб" value="«Алатау» · подставлен автоматически" wide />
+    </Form>
+    <div style={{ marginTop: 12 }}>
+      <Submit>Завести</Submit>
+    </div>
+  </>
+);
+
 export function Person13_2() {
   return (
     <RoleScreen
@@ -115,23 +164,16 @@ export function Person13_2() {
       sub="Клуб «Алатау» · привязка к клубу проставляется автоматически"
     >
       <div className="mkcols">
-        <Panel
-          title="Карточка спортсмена"
-          extra={<FormSeg items={['Спортсмен', 'Тренер', 'Иное лицо']} />}
-        >
-          <Form>
-            <Input label="Фамилия" value="Нұрланұлы" />
-            <Input label="Имя" value="Алихан" />
-            <Input label="Дата рождения" value="14.05.2011" />
-            <Field label="Пол" value="Мужской" />
-            <Input label="Разряд" value="2 разряд" />
-            <Field label="Клуб" value="«Алатау» · подставлен автоматически" />
-            <Field label="Город" value="г. Алматы · из клуба" wide />
-          </Form>
-          <div style={{ marginTop: 12 }}>
-            <Submit>Завести</Submit>
-          </div>
-        </Panel>
+        {/* Тип записи — вкладка, а не украшение: у спортсмена, тренера и иного
+            лица разные поля, и форма меняется целиком. */}
+        <TabPanel
+          title="Карточка человека"
+          items={[
+            { t: 'Спортсмен', view: <AthleteForm13_2 /> },
+            { t: 'Тренер', view: <CoachForm13_2 /> },
+            { t: 'Иное лицо', view: <StaffForm13_2 /> },
+          ]}
+        />
 
         <Panel title="Что произойдёт после «Завести»">
           <Rows>

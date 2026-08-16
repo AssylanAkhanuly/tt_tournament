@@ -34,11 +34,11 @@ const sides: Side[] = NAMES.map((name, i) => ({
 
 /* Первый круг сыгран целиком, во втором наш матч идёт, остальные тоже сыграны:
    так на экране видно и свой путь, и что турнир живёт вокруг. Дальше — пусто. */
-function build(): Match[] {
+function build(rounds: number, seeds: Side[]): Match[] {
   const matches: Match[] = [];
-  let round: (Side | null)[] = sides;
+  let round: (Side | null)[] = seeds;
 
-  for (let r = 0; r < 5; r++) {
+  for (let r = 0; r < rounds; r++) {
     const winners: (Side | null)[] = [];
     for (let s = 0; s < round.length / 2; s++) {
       const a = round[2 * s] ?? null;
@@ -73,5 +73,61 @@ function build(): Match[] {
 export const myBracket: Bracket = {
   format: 'single_elimination',
   title: 'Кубок Алматы 2026',
-  matches: build(),
+  matches: build(5, sides),
+};
+
+/* ── Групповой этап с плей-офф ──────────────────────────────────────
+   Второй формат из ТЗ (§5.1): сначала группы, из каждой выходят двое, дальше
+   сетка на выбывание. Сетка здесь короче — в плей-офф попадают шестнадцать, —
+   а порядок в ней задан не рейтингом, а местами в группах. */
+
+/** Группа: четверо, круговая внутри группы, двое выходят в плей-офф. */
+export type GroupRow = {
+  nm: string;
+  /** Победы — поражения по матчам. */
+  wl: string;
+  /** Партии: выиграно — проиграно. */
+  sets: string;
+  place: number;
+  /** Вышел ли в плей-офф. */
+  out: boolean;
+  me?: boolean;
+};
+
+export const MY_GROUP: GroupRow[] = [
+  { nm: 'Смагулов Алан', wl: '3 — 0', sets: '9 — 2', place: 1, out: true },
+  { nm: 'Ким Георгий', wl: '2 — 1', sets: '7 — 5', place: 2, out: true, me: true },
+  { nm: 'Оралбек Диас', wl: '1 — 2', sets: '4 — 7', place: 3, out: false },
+  { nm: 'Цой Артём', wl: '0 — 3', sets: '1 — 9', place: 4, out: false },
+];
+
+/** Остальные группы — коротко: кто вышел и с каким результатом. */
+export const OTHER_GROUPS = [
+  { nm: 'Группа B', out: 'Токаев М. · Абиш Н.', sub: 'сыграна · 6 матчей из 6' },
+  { nm: 'Группа C', out: 'Байжанов Е. · Пак С.', sub: 'сыграна · 6 матчей из 6' },
+  { nm: 'Группа D', out: 'Гладун И. · Мурат К.', sub: 'идёт · 4 матча из 6' },
+];
+
+const PLAYOFF_NAMES = [
+  'Смагулов А.', 'Абиш Н.', 'Ким Георгий', 'Токаев М.',
+  'Байжанов Е.', 'Мурат К.', 'Пак Сергей', 'Гладун И.',
+  'Оспанов Т.', 'Асан Б.', 'Кайрат А.', 'Бекзат Ж.',
+  'Нурлан Е.', 'Садык М.', 'Тлеу Р.', 'Жанибек А.',
+];
+
+const playoffSides: Side[] = PLAYOFF_NAMES.map((name, i) => ({
+  id: 'g' + i,
+  name,
+  ...(i === 2 ? { avatarUrl: A(44) } : null),
+}));
+
+/** Плей-офф после групп: шестнадцать вышедших, наш спортсмен — второй в группе. */
+export const playoffBracket: Bracket = {
+  format: 'single_elimination',
+  title: 'Кубок Алматы 2026 · плей-офф',
+  matches: build(4, playoffSides).map((m) =>
+    /* В плей-офф наш матч тоже идёт: `build` ставит live во втором круге, а наш
+       спортсмен здесь под другим идентификатором. */
+    m.a?.id === 'g2' || m.b?.id === 'g2' ? m : m,
+  ),
 };

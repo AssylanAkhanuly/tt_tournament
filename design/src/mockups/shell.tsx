@@ -281,6 +281,109 @@ export function Row({
 
 export const Rows = ({ children }: { children: ReactNode }) => <div className="drows">{children}</div>;
 
+/* ── Вкладки и фильтры ─────────────────────────────────────────── */
+
+/** Вкладка: подпись и то, что под ней показывается. */
+export type TabItem = { t: string; view: ReactNode };
+
+/** Вкладки экрана: полоса переключателей и содержимое активной вкладки.
+
+    Переключатель обязан переключать: макет, где вкладка только подсвечивается,
+    врёт про интерфейс. Поэтому содержимое живёт здесь же, рядом с подписью, а
+    не в трёх отдельных компонентах.
+
+    Каждая вкладка описана во флоу роли (`flows/*.md`, зона «Вкладки») — иначе
+    в макете появляется экран, которого нет в сценарии. */
+export function Tabs({ items, active }: { items: TabItem[]; active?: string }) {
+  const [cur, setCur] = useState(active ?? items[0].t);
+  const hit = items.find((i) => i.t === cur) ?? items[0];
+  return (
+    <>
+      <div className="dseg2">
+        {items.map((i) => (
+          <button
+            key={i.t}
+            type="button"
+            className={i.t === cur ? 'on' : undefined}
+            aria-selected={i.t === cur}
+            onClick={() => setCur(i.t)}
+          >
+            {i.t}
+          </button>
+        ))}
+      </div>
+      {hit.view}
+    </>
+  );
+}
+
+/** Панель с вкладками: переключатель стоит в её заголовке, меняется тело. */
+export function TabPanel({
+  title,
+  items,
+  active,
+  body,
+}: {
+  title: string;
+  items: TabItem[];
+  active?: string;
+  body?: string;
+}) {
+  const [cur, setCur] = useState(active ?? items[0].t);
+  const hit = items.find((i) => i.t === cur) ?? items[0];
+  return (
+    <Panel
+      title={title}
+      body={body}
+      extra={
+        <span className="seg">
+          {items.map((i) => (
+            <button
+              key={i.t}
+              type="button"
+              className={i.t === cur ? 'on' : undefined}
+              aria-selected={i.t === cur}
+              onClick={() => setCur(i.t)}
+            >
+              {i.t}
+            </button>
+          ))}
+        </span>
+      }
+    >
+      {hit.view}
+    </Panel>
+  );
+}
+
+/** Фильтр списка: те же кнопки, но выбор не меняет экран, а сужает список.
+    `onPick` обязателен — фильтр без реакции на клик тоже врёт. */
+export function Filter({
+  items,
+  active,
+  onPick,
+}: {
+  items: string[];
+  active: string;
+  onPick: (v: string) => void;
+}) {
+  return (
+    <div className="dseg2">
+      {items.map((i) => (
+        <button
+          key={i}
+          type="button"
+          className={i === active ? 'on' : undefined}
+          aria-pressed={i === active}
+          onClick={() => onPick(i)}
+        >
+          {i}
+        </button>
+      ))}
+    </div>
+  );
+}
+
 /** Панель с заголовком — основной блок рабочей области.
     `body` — класс на тело панели: нужен там, где содержимому задаётся своя
     высота (холст сетки), а не обычный поток. */

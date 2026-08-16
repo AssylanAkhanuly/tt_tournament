@@ -8,9 +8,10 @@
    Недоступное действие не показывается вовсе — не серой кнопкой, а её
    отсутствием. */
 
+import { useState } from 'react';
 import { Bell, Download, Printer } from 'lucide-react';
 import {
-  A, AW, ActionBar, Alert, Arrow, Board, Chips, Ghost, Hint, P, Panel, RoleScreen, Row, Rows, Screen, Shot, States,
+  A, AW, ActionBar, Alert, Arrow, Board, Chips, Filter, Ghost, Hint, P, Panel, RoleScreen, Row, Rows, Screen, Shot, States,
 } from './shell';
 import type { DeskVariant } from '../deskShell';
 import type { ScreenMap } from './shell';
@@ -64,7 +65,11 @@ export function Dash3_1({ variant }: { variant?: DeskVariant }) {
 
 /* ── Э3.2 · Модули в режиме чтения ─────────────────────────────── */
 
+const CATS3_2 = ['Все категории', 'Главный старт', 'Лига', 'ОРТ'];
+
 export function Read3_2() {
+  const [cat, setCat] = useState(CATS3_2[0]);
+  const tours = UPCOMING.filter((t) => cat === CATS3_2[0] || t.cat === cat);
   return (
     <RoleScreen
       role={R0304}
@@ -81,12 +86,9 @@ export function Read3_2() {
         ]}
       />
       <div className="dactionbar">
-        <div className="dseg2">
-          <span className="on">Все категории</span>
-          <span>Главный старт</span>
-          <span>Лига</span>
-          <span>ОРТ</span>
-        </div>
+        {/* Фильтр рабочий: у роли нет ни одной кнопки, меняющей данные, но
+            смотреть календарь по категориям она должна. */}
+        <Filter items={CATS3_2} active={cat} onPick={setCat} />
         <div style={{ display: 'flex', gap: 8 }}>
           <Btn>
             <Download size={14} /> Выгрузить
@@ -97,9 +99,12 @@ export function Read3_2() {
         </div>
       </div>
       <div className="mkcols">
-        <Panel title="Календарь сезона · экран-источник Э1.2">
+        <Panel
+          title="Календарь сезона · экран-источник Э1.2"
+          extra={<span className="dcount">{tours.length} по фильтру</span>}
+        >
           <Rows>
-            {UPCOMING.slice(0, 4).map((t) => (
+            {tours.slice(0, 4).map((t) => (
               <TourRow key={t.nm} t={t} judge />
             ))}
           </Rows>

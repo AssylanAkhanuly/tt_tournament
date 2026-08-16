@@ -13,13 +13,12 @@ import type { ReactNode } from 'react';
 import { BarChart3, Check, CreditCard, Lock, Pencil, Send } from 'lucide-react';
 import {
   A, ActionBar, Alert, Also, Arrow, Board, Chips, Empty, Field, Form, Ghost, Input, Modal, Off, P,
-  Panel, Queue, RoleScreen, Row, Rows, Screen, Shot, States,
+  Panel, Queue, RoleScreen, Row, Rows, Screen, Shot, States, Tabs,
 } from './shell';
 import { Select } from '../ui';
-import { FormSeg } from '../segs';
 import { BracketFlow } from '@/widgets/bracket/BracketFlow';
 import { DeskFrame, type DeskVariant } from '../deskShell';
-import { myBracket } from './myBracket';
+import { MY_GROUP, OTHER_GROUPS, myBracket, playoffBracket } from './myBracket';
 import type { ScreenMap } from './shell';
 import { R14 } from './roles';
 import { Login0_1, SignUp0_5, SignUp0_5States } from './role00';
@@ -103,37 +102,56 @@ const MINE = [
   { nm: 'Евразийская лига · 3-й тур', mt: 'Шымкент · 16–18 мая', by: 'заявил клуб · команда «СКА», мужская 2 лига' },
 ];
 
-export function Calendar14_2() {
+/** Вкладка «Куда могу заявиться»: только открытые республиканские — те, куда
+    спортсмен подаёт заявку сам. */
+const Open14_2 = () => (
+  <>
+    <div className="dcount">
+      Главные старты и Лигу заявляют регион и клуб — они во вкладке «Мои турниры»
+    </div>
+    <Rows>
+      {OPEN.map((t) => (
+        <div className="drow" key={t.nm}>
+          <div className="who">
+            <div className="nm">{t.nm}</div>
+            <div className="rl">ОРТ · {t.mt} · {t.till}</div>
+          </div>
+          {t.fee && <P t="НУЖЕН ГОДОВОЙ ВЗНОС" cls="reg" />}
+          <button className="dpickbtn" data-to="Э14.3">Заявиться</button>
+        </div>
+      ))}
+    </Rows>
+  </>
+);
+
+/** Вкладка «Мои турниры»: где я уже заявлен, включая заявки региона и клуба. */
+const Mine14_2 = () => (
+  <>
+    <div className="dcount">Заявлен, но заявку подавал не я</div>
+    <Rows>
+      {MINE.map((t) => (
+        <Row key={t.nm} nm={t.nm} sub={`${t.mt} · ${t.by}`} pill={{ t: 'ЗАЯВЛЕН', cls: 'live' }} to="Э14.4" />
+      ))}
+      <Row
+        nm="Кубок Алматы 2026"
+        sub="Алматы · 12–14 сентября · заявился сам"
+        pill={{ t: 'ЗАЯВКА ПРИНЯТА', cls: 'live' }}
+        to="Э14.4"
+      />
+    </Rows>
+  </>
+);
+
+export function Calendar14_2({ tab }: { tab?: string }) {
   return (
     <RoleScreen role={R14} nav="Календарь" title="Календарь" sub="Открытые республиканские · сезон 2026">
-      <div className="dactionbar">
-        <div className="dseg2">
-          <span className="on">Куда могу заявиться · 3</span>
-          <span>Мои турниры · 3</span>
-        </div>
-        <div className="dcount">Главные старты и Лигу заявляют регион и клуб — они во вкладке «Мои турниры»</div>
-      </div>
-
-      <Rows>
-        {OPEN.map((t) => (
-          <div className="drow" key={t.nm}>
-            <div className="who">
-              <div className="nm">{t.nm}</div>
-              <div className="rl">ОРТ · {t.mt} · {t.till}</div>
-            </div>
-            {t.fee && <P t="НУЖЕН ГОДОВОЙ ВЗНОС" cls="reg" />}
-            <button className="dpickbtn" data-to="Э14.3">Заявиться</button>
-          </div>
-        ))}
-      </Rows>
-
-      <Panel title="Мои турниры" extra={<span className="dcount">заявлен, но заявку подавал не я</span>}>
-        <Rows>
-          {MINE.map((t) => (
-            <Row key={t.nm} nm={t.nm} sub={`${t.mt} · ${t.by}`} pill={{ t: 'ЗАЯВЛЕН', cls: 'live' }} to="Э14.4" />
-          ))}
-        </Rows>
-      </Panel>
+      <Tabs
+        active={tab}
+        items={[
+          { t: 'Куда могу заявиться · 3', view: <Open14_2 /> },
+          { t: 'Мои турниры · 3', view: <Mine14_2 /> },
+        ]}
+      />
     </RoleScreen>
   );
 }
@@ -281,68 +299,116 @@ const PLAYERS = [
   { s: 7, av: A(75), nm: 'Оспанов Тимур', sub: 'Павлодар · «Иртыш» · рейтинг 2201' },
 ];
 
-export function Match14_5() {
-  return (
-    <RoleScreen role={R14} nav="Мой матч" title="Кубок Алматы 2026" sub="1/8 финала · стол 5">
-      <FormSeg items={TABS14_5} active="Мой матч" />
-      <div className="mkcols">
-        <Panel title="Мой матч" extra={<P t="ИДЁТ" cls="live" />}>
-          <Rows>
-            <Row av={ME} nm="Ким Георгий" sub="рейтинг 2456" val="2" pill={{ t: 'ВЫ', cls: 'reg' }} />
-            <Row av={A(22)} nm="Жумабеков Расул" sub="рейтинг 2312" val="1" />
-          </Rows>
-          <div className="dactionbar" style={{ marginTop: 12 }}>
-            <div className="dcount">Счёт ведёт судья стола — вводить и подтверждать его не нужно</div>
-            <P t="ТОЛЬКО СМОТРИМ" cls="done" />
-          </div>
-        </Panel>
-
-        <Panel title="Мой путь по сетке">
-          <Rows>
-            <Row nm="1/16 финала" sub="Оралбек Д. · 4:1" pill={{ t: 'ПОБЕДА', cls: 'live' }} />
-            <Row nm="1/8 финала" sub="Жумабеков Р. · идёт" pill={{ t: 'СЕЙЧАС', cls: 'reg' }} />
-            <Row nm="1/4 финала" sub="соперник определится" pill={{ t: 'ПОТОМ', cls: 'done' }} />
-          </Rows>
-        </Panel>
+/** Вкладка «Мой матч»: с кем играю сейчас и как шёл по сетке. */
+const MyMatch14_5 = () => (
+  <div className="mkcols">
+    <Panel title="Мой матч" extra={<P t="ИДЁТ" cls="live" />}>
+      <Rows>
+        <Row av={ME} nm="Ким Георгий" sub="рейтинг 2456" val="2" pill={{ t: 'ВЫ', cls: 'reg' }} />
+        <Row av={A(22)} nm="Жумабеков Расул" sub="рейтинг 2312" val="1" />
+      </Rows>
+      <div className="dactionbar" style={{ marginTop: 12 }}>
+        <div className="dcount">Счёт ведёт судья стола — вводить и подтверждать его не нужно</div>
+        <P t="ТОЛЬКО СМОТРИМ" cls="done" />
       </div>
-    </RoleScreen>
-  );
-}
+    </Panel>
+
+    <Panel title="Мой путь по сетке">
+      <Rows>
+        <Row nm="1/16 финала" sub="Оралбек Д. · 4:1" pill={{ t: 'ПОБЕДА', cls: 'live' }} />
+        <Row nm="1/8 финала" sub="Жумабеков Р. · идёт" pill={{ t: 'СЕЙЧАС', cls: 'reg' }} />
+        <Row nm="1/4 финала" sub="соперник определится" pill={{ t: 'ПОТОМ', cls: 'done' }} />
+      </Rows>
+    </Panel>
+  </div>
+);
 
 /** Вкладка «Участники»: весь состав турнира, свои строки помечены. */
-export function Players14_5() {
-  return (
-    <RoleScreen role={R14} nav="Мой матч" title="Кубок Алматы 2026" sub="1/8 финала · стол 5">
-      <FormSeg items={TABS14_5} active="Участники" />
-      <Panel
-        title="Участники · 32"
-        extra={<span className="dcount">посев по рейтингу на день жеребьёвки</span>}
-      >
-        <Rows>
-          {PLAYERS.map((p) => (
-            <Row key={p.nm} av={p.av} nm={p.nm} sub={p.sub} val={`№ ${p.s}`} pill={p.p} />
-          ))}
-        </Rows>
-        <div className="dcount" style={{ marginTop: 10 }}>показаны первые 7 из 32</div>
-      </Panel>
-    </RoleScreen>
-  );
-}
+const Players14_5 = () => (
+  <Panel
+    title="Участники · 32"
+    extra={<span className="dcount">посев по рейтингу на день жеребьёвки</span>}
+  >
+    <Rows>
+      {PLAYERS.map((p) => (
+        <Row key={p.nm} av={p.av} nm={p.nm} sub={p.sub} val={`№ ${p.s}`} pill={p.p} />
+      ))}
+    </Rows>
+    <div className="dcount" style={{ marginTop: 10 }}>показаны первые 7 из 32</div>
+  </Panel>
+);
 
 /** Вкладка «Сетка»: сетку рисует тот же компонент, что и на фронте — не
     картинка и не свои прямоугольники, а настоящий холст по общей модели
-    сетки. Рядом с ней ничего не ставим: сетка занимает экран целиком. */
-export function Bracket14_5() {
+    сетки. Ни заголовка, ни подписей: сетка занимает экран целиком, а что это
+    за турнир — написано в шапке экрана. */
+const Bracket14_5 = () => (
+  <div className="mkbracket mkbracket-fill">
+    <BracketFlow bracket={myBracket} minZoom={0.15} fitPadding={0.06} />
+  </div>
+);
+
+/** Вкладка «Группы» — только у формата «групповой этап с плей-офф» (TZ §5.1).
+    Спортсмену тут важно одно: выхожу я из группы или нет, поэтому место и
+    «выходит / не выходит» стоят в строке, а не считаются в уме. */
+const Groups14_5 = () => (
+  <div className="mkcols">
+    <Panel title="Моя группа · A" extra={<P t="ВЫХОДЯТ ДВОЕ" cls="reg" />}>
+      <Rows>
+        {MY_GROUP.map((g) => (
+          <Row
+            key={g.nm}
+            av={g.me ? ME : undefined}
+            nm={`${g.place} · ${g.nm}`}
+            sub={`${g.wl} по матчам · партии ${g.sets}`}
+            val={g.me ? 'вы' : undefined}
+            pill={g.out ? { t: 'В ПЛЕЙ-ОФФ', cls: 'live' } : { t: 'ВЫБЫЛ', cls: 'done' }}
+          />
+        ))}
+      </Rows>
+      <div className="dcount" style={{ marginTop: 10 }}>
+        Группа сыграна · дальше — плей-офф на соседней вкладке
+      </div>
+    </Panel>
+
+    <Panel title="Остальные группы · 8">
+      <Rows>
+        {OTHER_GROUPS.map((g) => (
+          <Row key={g.nm} nm={g.nm} sub={g.sub} val={g.out} />
+        ))}
+      </Rows>
+    </Panel>
+  </div>
+);
+
+/** Плей-офф после групп: сетка короче, и в неё попадают вышедшие из групп. */
+const Playoff14_5 = () => (
+  <div className="mkbracket mkbracket-fill">
+    <BracketFlow bracket={playoffBracket} minZoom={0.15} fitPadding={0.06} />
+  </div>
+);
+
+/** Экран турнира. `tab` — с какой вкладки открыт: переключатель рабочий, и
+    борд показывает те же вкладки открытыми, чтобы их было видно без кликов.
+    `groups` — формат с групповым этапом: добавляется вкладка «Группы», а
+    «Сетка» показывает плей-офф из вышедших. */
+export function Match14_5({ tab, groups }: { tab?: string; groups?: boolean }) {
   return (
-    <RoleScreen role={R14} nav="Мой матч" title="Кубок Алматы 2026" sub="1/8 финала · стол 5">
-      <FormSeg items={TABS14_5} active="Сетка" />
-      <Panel
-        title="Сетка турнира"
-        extra={<span className="dcount">32 участника · олимпийская · мой матч подсвечен</span>}
-        body="mkbracket mkbracket-lg"
-      >
-        <BracketFlow bracket={myBracket} minZoom={0.15} fitPadding={0.06} />
-      </Panel>
+    <RoleScreen
+      role={R14}
+      nav="Мой матч"
+      title="Кубок Алматы 2026"
+      sub={groups ? 'Группы и плей-офф · группа A · стол 5' : '1/8 финала · стол 5'}
+    >
+      <Tabs
+        active={tab}
+        items={[
+          { t: TABS14_5[0], view: <MyMatch14_5 /> },
+          { t: TABS14_5[1], view: <Players14_5 /> },
+          ...(groups ? [{ t: 'Группы', view: <Groups14_5 /> }] : []),
+          { t: TABS14_5[2], view: groups ? <Playoff14_5 /> : <Bracket14_5 /> },
+        ]}
+      />
     </RoleScreen>
   );
 }
@@ -696,6 +762,9 @@ export const SCREENS: ScreenMap = {
     view: () => (
       <>
         <Calendar14_2 />
+        <Also cap="Вкладка «Мои турниры» — куда меня заявили регион и клуб">
+          <Calendar14_2 tab="Мои турниры · 3" />
+        </Also>
         <Calendar14_2States />
       </>
     ),
@@ -727,10 +796,13 @@ export const SCREENS: ScreenMap = {
       <>
         <Match14_5 />
         <Also cap="Вкладка «Участники» — весь состав турнира">
-          <Players14_5 />
+          <Match14_5 tab="Участники" />
         </Also>
         <Also cap="Вкладка «Сетка» — на весь экран, тот же компонент, что на фронте">
-          <Bracket14_5 />
+          <Match14_5 tab="Сетка" />
+        </Also>
+        <Also cap="Формат «группы + плей-офф»: появляется вкладка «Группы», а «Сетка» — это плей-офф">
+          <Match14_5 tab="Группы" groups />
         </Also>
         <Match14_5States />
       </>

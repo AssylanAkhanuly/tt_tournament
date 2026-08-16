@@ -10,6 +10,7 @@ import { Banknote, Download, FileWarning, RefreshCw, Undo2 } from 'lucide-react'
 import {
   A, AW, ActionBar, Alert, Arrow, Board, Chips, Empty, Field, Form, Ghost, Hint, Input, Modal, Off, P, Panel, RoleScreen, Row, Rows, Screen, Shot, States,
 } from './shell';
+import { FormSeg } from '../segs';
 import type { DeskVariant } from '../deskShell';
 import type { ScreenMap } from './shell';
 import { R02 } from './roles';
@@ -207,11 +208,9 @@ export function Mark2_3() {
           </>
         }
       >
-        <div className="dseg2">
-          <span className="on">Квитанция</span>
-          <span>Перевод на счёт федерации</span>
-          <span>Оплата на месте</span>
-        </div>
+        {/* Чем платёж подтверждается — выбор рабочий: от него зависит, что
+            писать в основание. */}
+        <FormSeg items={['Квитанция', 'Перевод на счёт федерации', 'Оплата на месте']} />
         <Form>
           <Input label="Основание ✳" value="квитанция № 4471" />
           <Input label="Дата платежа" value="22.02.2026" />

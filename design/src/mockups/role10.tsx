@@ -9,10 +9,12 @@
    про собственные материалы инспектора: отметить эпизод, выгрузить, отправить
    заключение. */
 
+import { useState } from 'react';
 import { Bookmark, Download, Eye, FileText, Paperclip, Send } from 'lucide-react';
 import {
-  A, ActionBar, Alert, Arrow, Board, Chips, Form, Hint, Panel, RoleScreen, Row, Rows, Screen, Shot, States,
+  A, ActionBar, Alert, Arrow, Board, Chips, Filter, Form, Hint, Panel, RoleScreen, Row, Rows, Screen, Shot, States,
 } from './shell';
+import { FormSeg } from '../segs';
 import type { DeskVariant } from '../deskShell';
 import type { ScreenMap } from './shell';
 import { R10 } from './roles';
@@ -264,7 +266,16 @@ export function Live10_2() {
 
 /* ── Э10.3 · Журнал правок и спорных ситуаций ────────────────────── */
 
+const KINDS10_3 = ['Все события', 'Правки счёта', 'Неявки', 'Задержки'];
+const KIND_ST: Record<string, string> = {
+  'Правки счёта': 'ПРАВКА СЧЁТА',
+  Неявки: 'НЕЯВКА',
+  Задержки: 'ЗАДЕРЖКА',
+};
+
 export function Journal10_3() {
+  const [kind, setKind] = useState(KINDS10_3[0]);
+  const rows = kind === KINDS10_3[0] ? JOURNAL : JOURNAL.filter((n) => n.st === KIND_ST[kind]);
   return (
     <RoleScreen
       role={R10}
@@ -272,14 +283,11 @@ export function Journal10_3() {
       title="Журнал правок и спорных ситуаций"
       sub="Чемпионат Казахстана 2026 · день 2, 13 марта · было → стало, кто исправил, причина"
     >
-      <ActionBar count="7 записей за день · фильтры: все столы, все судьи, все типы событий">
+      <ActionBar count={`${rows.length} записей на экране · фильтр: ${kind.toLowerCase()}`}>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-          <div className="dseg2">
-            <span className="on">Все события</span>
-            <span>Правки счёта</span>
-            <span>Неявки</span>
-            <span>Задержки</span>
-          </div>
+          {/* Фильтр рабочий: инспектор смотрит журнал по типу события — правки
+              счёта и неявки разбираются по-разному. */}
+          <Filter items={KINDS10_3} active={kind} onPick={setKind} />
           <button className="dpickbtn">
             <Bookmark size={14} /> Отметить эпизод
           </button>
@@ -290,7 +298,7 @@ export function Journal10_3() {
       </ActionBar>
 
       <Rows>
-        {JOURNAL.map((n) => (
+        {rows.map((n) => (
           <NoteRow key={n.at + n.nm} n={n} w={46} />
         ))}
       </Rows>
@@ -310,9 +318,10 @@ export function Report10_4() {
     >
       <div className="mkcols">
         <Panel title="Заключение" extra={<span className="pill wait" style={{ margin: 0 }}>ЧЕРНОВИК</span>}>
-          <div className="dseg2" style={{ marginBottom: 14 }}>
-            <span className="on">По соревнованию</span>
-            <span>По конкретному судье</span>
+          {/* Заключение бывает двух видов: по соревнованию целиком и по
+              конкретному судье — они уходят разным адресатам. */}
+          <div style={{ marginBottom: 14 }}>
+            <FormSeg items={['По соревнованию', 'По конкретному судье']} />
           </div>
           <Form>
             <div className="dfield">

@@ -10,7 +10,7 @@ import {
   Check, Clock, History, Pause, Radio, RefreshCw, Trophy, Undo2, Upload, UserX,
 } from 'lucide-react';
 import {
-  A, Alert, Arrow, Board, Empty, Hint, RoleTablet, Row, Rows, Screen, Shot, States,
+  A, Alert, Arrow, Board, Empty, Hint, RoleTablet, Row, Rows, Screen, Shot, States, Tabs,
 } from './shell';
 import type { ScreenMap } from './shell';
 import { R09 } from './roles';
@@ -225,42 +225,87 @@ function Half({ av, nm, city, pts, sets, serve }: {
   );
 }
 
-export function Score9_3() {
+/** Ввод по очкам (TZ §6.2): каждое очко отдельной кнопкой, счёт видно с
+    расстояния, последнее действие отменяется. */
+const ByPoints9_3 = () => (
+  <>
+    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, flex: 'none' }}>
+      <Half av={A(32)} nm="Смагулов Алан" city="Алматы · «Алатау»" pts="8" sets="2" serve />
+      <Half av={A(51)} nm="Токаев Марат" city="Астана · «Барыс»" pts="6" sets="1" />
+    </div>
+
+    <div className="lvs" style={{ flex: 'none' }}>
+      <span className="setscore">2</span>
+      <span className="vs">СЧЁТ ПО ПАРТИЯМ</span>
+      <span className="setscore">1</span>
+    </div>
+
+    <div className="sets" style={{ flex: 'none' }}>
+      <span className="setchip"><b>11</b>–9</span>
+      <span className="setchip">9–<b>11</b></span>
+      <span className="setchip"><b>11</b>–7</span>
+      <span className="setchip">партия 4 · идёт</span>
+    </div>
+
+    <div style={{ display: 'flex', gap: 9, flex: 'none' }}>
+      <div className="jbtn ghost" style={{ padding: 12 }}><Undo2 size={15} />Отменить последнее</div>
+      <div className="jbtn ghost" style={{ padding: 12 }}><RefreshCw size={15} />Смена сторон</div>
+      <div className="jbtn ghost" style={{ padding: 12 }}><Pause size={15} />Пауза</div>
+    </div>
+  </>
+);
+
+/** Ввод по партиям (TZ §6.1): судья вводит итог партии, итог матча система
+    считает сама — руками его не задают. */
+const BySets9_3 = () => (
+  <>
+    <div className="sect">Итоги партий · матч до 3 побед из 5</div>
+    <div className="card" style={{ padding: 15, display: 'grid', gap: 10 }}>
+      {[
+        { n: 'Партия 1', a: '11', b: '9', done: true },
+        { n: 'Партия 2', a: '9', b: '11', done: true },
+        { n: 'Партия 3', a: '11', b: '7', done: true },
+        { n: 'Партия 4', a: '—', b: '—', done: false },
+      ].map((s) => (
+        <div
+          key={s.n}
+          style={{ display: 'flex', alignItems: 'center', gap: 12, fontSize: 15, fontWeight: 700 }}
+        >
+          <span style={{ flex: 1, color: 'var(--c-muted)', fontSize: 13 }}>{s.n}</span>
+          <span className="setchip" style={{ minWidth: 54, textAlign: 'center' }}>{s.a}</span>
+          <span style={{ color: 'var(--c-dim)' }}>:</span>
+          <span className="setchip" style={{ minWidth: 54, textAlign: 'center' }}>{s.b}</span>
+          <span style={{ fontSize: 11, fontWeight: 800, color: s.done ? 'var(--c-success)' : 'var(--c-dim)' }}>
+            {s.done ? 'ВВЕДЕНА' : 'ИДЁТ'}
+          </span>
+        </div>
+      ))}
+    </div>
+    <div className="dhintbox">
+      Итог матча считается из партий: вручную его не задают. Правка партии пишется в журнал с
+      автором и временем.
+    </div>
+  </>
+);
+
+export function Score9_3({ tab }: { tab?: string }) {
   return (
     <RoleTablet title="Стол 4 · ввод счёта" sub="Смагулов Алан — Токаев Марат · 1/8 финала · партия 4" badge="ИДЁТ">
       <div className="dactionbar">
-        <div className="dseg2">
-          <span className="on">По очкам</span>
-          <span>По партиям</span>
-        </div>
         <span className="pill live" style={{ margin: 0 }}>
           <span className="d" />СВЯЗЬ ЕСТЬ · 0 СОБЫТИЙ В ОЧЕРЕДИ
         </span>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, flex: 'none' }}>
-        <Half av={A(32)} nm="Смагулов Алан" city="Алматы · «Алатау»" pts="8" sets="2" serve />
-        <Half av={A(51)} nm="Токаев Марат" city="Астана · «Барыс»" pts="6" sets="1" />
-      </div>
-
-      <div className="lvs" style={{ flex: 'none' }}>
-        <span className="setscore">2</span>
-        <span className="vs">СЧЁТ ПО ПАРТИЯМ</span>
-        <span className="setscore">1</span>
-      </div>
-
-      <div className="sets" style={{ flex: 'none' }}>
-        <span className="setchip"><b>11</b>–9</span>
-        <span className="setchip">9–<b>11</b></span>
-        <span className="setchip"><b>11</b>–7</span>
-        <span className="setchip">партия 4 · идёт</span>
-      </div>
-
-      <div style={{ display: 'flex', gap: 9, flex: 'none' }}>
-        <div className="jbtn ghost" style={{ padding: 12 }}><Undo2 size={15} />Отменить последнее</div>
-        <div className="jbtn ghost" style={{ padding: 12 }}><RefreshCw size={15} />Смена сторон</div>
-        <div className="jbtn ghost" style={{ padding: 12 }}><Pause size={15} />Пауза</div>
-      </div>
+      {/* Два способа вести счёт — это два разных экрана под одной шапкой, а не
+          украшение: по очкам режим включает главный судья соревнований. */}
+      <Tabs
+        active={tab}
+        items={[
+          { t: 'По очкам', view: <ByPoints9_3 /> },
+          { t: 'По партиям', view: <BySets9_3 /> },
+        ]}
+      />
 
       <div style={{ display: 'flex', gap: 9, flex: 'none' }}>
         <div className="jbtn ghost" data-to="Э9.4" style={{ flex: 1, padding: 13 }}><History size={15} />История матча</div>

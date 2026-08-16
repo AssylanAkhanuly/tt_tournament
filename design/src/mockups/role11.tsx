@@ -7,10 +7,10 @@
    меняет — единственная «запись» на экране — личная звёздочка кандидата, она
    живёт в списке тренера и на реестр не влияет. */
 
-import { Fragment } from 'react';
+import { Fragment, useState } from 'react';
 import { Download, Eye, Star } from 'lucide-react';
 import {
-  A, ActionBar, Arrow, Board, Chips, Form, Hint, Panel, RoleScreen, Row, Rows, Screen, Shot, States,
+  A, ActionBar, Arrow, Board, Chips, Filter, Form, Hint, Panel, RoleScreen, Row, Rows, Screen, Shot, States,
 } from './shell';
 import type { DeskVariant } from '../deskShell';
 import type { ScreenMap } from './shell';
@@ -126,7 +126,24 @@ const cellV = {
 
 /* ── Э11.1 · Кандидаты в сборную ─────────────────────────────────── */
 
+const REGIONS11 = ['Все регионы', 'Астана', 'Алматы'];
+
+/** Год рождения из подписи строки: «2004 г.р. · Алматы …» — так же, как это
+    читает человек, глядя в реестр. */
+const bornOf = (sub: string) => Number(sub.match(/(\d{4}) г\.р\./)?.[1] ?? 0);
+
 export function Cands11_1({ variant }: { variant?: DeskVariant }) {
+  const [sex, setSex] = useState('Мужчины');
+  const [age, setAge] = useState('Взрослые');
+  const [region, setRegion] = useState(REGIONS11[0]);
+  const [period, setPeriod] = useState('Сезон 2026');
+  const rows = CANDS.filter((c) => {
+    const born = bornOf(c.sub);
+    const byAge =
+      age === 'Взрослые' ? true : age === 'До 19 лет' ? born >= 2007 : born >= 2011;
+    const byRegion = region === REGIONS11[0] || c.sub.includes(region);
+    return byAge && byRegion;
+  });
   return (
     <RoleScreen
       variant={variant}
@@ -144,28 +161,17 @@ export function Cands11_1({ variant }: { variant?: DeskVariant }) {
         ]}
       />
 
+      {/* Отбор кандидатов — это и есть работа роли, поэтому фильтры рабочие:
+          список под ними сужается сразу, а строка-счётчик говорит, по чему
+          именно он сужен. */}
       <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-        <div className="dseg2">
-          <span className="on">Мужчины</span>
-          <span>Женщины</span>
-        </div>
-        <div className="dseg2">
-          <span className="on">Взрослые</span>
-          <span>До 19 лет</span>
-          <span>До 15 лет</span>
-        </div>
-        <div className="dseg2">
-          <span className="on">Все регионы</span>
-          <span>Астана</span>
-          <span>Алматы</span>
-        </div>
-        <div className="dseg2">
-          <span className="on">Сезон 2026</span>
-          <span>Год</span>
-        </div>
+        <Filter items={['Мужчины', 'Женщины']} active={sex} onPick={setSex} />
+        <Filter items={['Взрослые', 'До 19 лет', 'До 15 лет']} active={age} onPick={setAge} />
+        <Filter items={REGIONS11} active={region} onPick={setRegion} />
+        <Filter items={['Сезон 2026', 'Год']} active={period} onPick={setPeriod} />
       </div>
 
-      <ActionBar count="214 спортсменов · мужчины, взрослые, все регионы · период: сезон 2026">
+      <ActionBar count={`${rows.length} из ${CANDS.length} на экране · ${sex.toLowerCase()}, ${age.toLowerCase()}, ${region.toLowerCase()} · период: ${period.toLowerCase()}`}>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
           <button className="dpickbtn">Сравнить отмеченных (3)</button>
           <button className="dpickbtn">
@@ -175,7 +181,7 @@ export function Cands11_1({ variant }: { variant?: DeskVariant }) {
       </ActionBar>
 
       <Rows>
-        {CANDS.map((c) => (
+        {rows.map((c) => (
           <div className="drow" key={c.nm} data-to="Э11.2">
             <div className="rank">{c.pl}</div>
             <img src={c.av} alt="" />

@@ -130,8 +130,16 @@
 .mkbracket { padding: 0; position: relative; flex: none; height: 300px; }
 .mkbracket > div { position: absolute; inset: 0; height: 100% !important; }
 
-/* Сетка на весь экран — отдельная вкладка, рядом с ней ничего нет. */
-.mkbracket-lg { height: 520px; }
+/* Сетка на весь экран — отдельная вкладка: ни заголовка, ни подписей, холст
+   занимает всю оставшуюся высоту рабочей области (`.dmain` — колонка). */
+.mkbracket-fill {
+  flex: 1 1 auto;
+  height: auto;
+  min-height: 0;
+  border: 1px solid var(--c-glass-line);
+  border-radius: var(--r-sm);
+  background: var(--c-panel);
+}
 
 /* ── Полка состояний под макетом ────────────────────────────────── */
 /* Живёт на светлой подложке борда рядом с карточкой узла, поэтому подписи —

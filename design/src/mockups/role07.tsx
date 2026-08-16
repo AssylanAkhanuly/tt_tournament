@@ -9,11 +9,11 @@
 import type { ReactNode } from 'react';
 import { Printer, RefreshCw, Send, Shuffle } from 'lucide-react';
 import {
-  A, ActionBar, Alert, Arrow, Board, Chips, Field, Form, Hint, Panel, RoleScreen, Row, Rows, Screen, Shot, States,
+  A, ActionBar, Alert, Arrow, Board, Chips, Field, Form, Hint, Panel, RoleScreen, Row, Rows, Screen, Shot, States, TabPanel, Tabs,
 } from './shell';
 import type { DeskVariant } from '../deskShell';
 import type { ScreenMap } from './shell';
-import { FormSeg, PanelSeg } from '../segs';
+import { FormSeg } from '../segs';
 import { R07 } from './roles';
 import { Login0_1 } from './role00';
 
@@ -159,13 +159,41 @@ export function Draw7_2() {
         ]}
       />
       <div className="mkcols">
-        <Panel title="Предпросмотр слотов" extra={<PanelSeg items={['Слоты', 'Список участников']} />}>
-          <ActionBar count="Столбец слева — номер слота в сетке; основание посева видно в строке" />
-          <div style={{ height: 10 }} />
-          <Rows>
-            {SLOTS.map((s) => <SlotLine key={s.slot} s={s} />)}
-          </Rows>
-        </Panel>
+        {/* Один и тот же состав двумя взглядами: по слотам сетки — проверить
+            развод сеяных, по алфавиту — найти конкретного человека. */}
+        <TabPanel
+          title="Предпросмотр слотов"
+          items={[
+            {
+              t: 'Слоты',
+              view: (
+                <>
+                  <ActionBar count="Столбец слева — номер слота в сетке; основание посева видно в строке" />
+                  <div style={{ height: 10 }} />
+                  <Rows>
+                    {SLOTS.map((s) => <SlotLine key={s.slot} s={s} />)}
+                  </Rows>
+                </>
+              ),
+            },
+            {
+              t: 'Список участников',
+              view: (
+                <>
+                  <ActionBar count="Тот же состав по алфавиту — так ищут конкретного человека" />
+                  <div style={{ height: 10 }} />
+                  <Rows>
+                    {[...SLOTS]
+                      .sort((a, b) => a.nm.localeCompare(b.nm, 'ru'))
+                      .map((s) => (
+                        <Row key={s.nm} av={s.av} nm={s.nm} sub={`${s.club} · рейтинг ${s.rt}`} val={`слот ${s.slot}`} pill={{ t: s.tag, cls: s.cls }} />
+                      ))}
+                  </Rows>
+                </>
+              ),
+            },
+          ]}
+        />
 
         <Panel title="Способ распределения" extra={<P t="ЧЕРНОВИК ЖРЕБИЯ" cls="wait" />}>
           <div className="dfield">
@@ -219,8 +247,42 @@ export function Bracket7_3() {
         ]}
       />
       <div className="mkcols">
-        <Panel title="Предпросмотр сетки" extra={<PanelSeg items={['Дерево', 'Таблица групп']} />}>
-          <div className="bracket" style={{ height: 360 }}>
+        {/* Два формата — два взгляда: олимпийку смотрят деревом, групповой этап
+            таблицами. Вкладка «Таблица групп» — для формата «группы + плей-офф»
+            (TZ §5.1): пока группы не сыграны, дерево пустое. */}
+        <TabPanel
+          title="Предпросмотр сетки"
+          items={[
+            { t: 'Дерево', view: <Tree7_3 /> },
+            { t: 'Таблица групп', view: <GroupTables7_3 /> },
+          ]}
+        />
+
+        <Panel title="Вводные от судьи" extra={<P t="СОБРАНА 15.05" cls="live" />}>
+          <Form>
+            <Field label="Система проведения" value="Олимпийская" />
+            <Field label="Партий в матче" value="до 3 из 5" />
+            <Field label="Жеребьёвка" value="проведена 14.05" />
+            <Field label="Утешительная сетка" value="нет" />
+          </Form>
+          <div style={{ height: 12 }} />
+          <div className="dhintbox">
+            Подсказка системы: 128 участников на 20 столах укладываются в 2 игровых дня по 8 часов.
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 12 }}>
+            <ToJudge>Передать главному судье на утверждение</ToJudge>
+            <Ghost><RefreshCw size={15} />Пересобрать сетку</Ghost>
+          </div>
+          <div style={{ height: 12 }} />
+        </Panel>
+      </div>
+    </RoleScreen>
+  );
+}
+
+/** Вкладка «Дерево»: собранная сетка на выбывание. */
+const Tree7_3 = () => (
+  <div className="bracket" style={{ height: 360 }}>
             <div className="bround">
               <div className="brt">1/8 финала</div>
               <BMatch>
@@ -251,37 +313,45 @@ export function Bracket7_3() {
                 <BPlayer nm="победитель 4" sc="—" />
               </BMatch>
             </div>
-            <div className="bround">
-              <div className="brt">1/2 финала</div>
-              <BMatch>
-                <BPlayer nm="верхняя половина" sc="—" />
-                <BPlayer nm="нижняя половина" sc="—" />
-              </BMatch>
-            </div>
-          </div>
-        </Panel>
+    <div className="bround">
+      <div className="brt">1/2 финала</div>
+      <BMatch>
+        <BPlayer nm="верхняя половина" sc="—" />
+        <BPlayer nm="нижняя половина" sc="—" />
+      </BMatch>
+    </div>
+  </div>
+);
 
-        <Panel title="Вводные от судьи" extra={<P t="СОБРАНА 15.05" cls="live" />}>
-          <Form>
-            <Field label="Система проведения" value="Олимпийская" />
-            <Field label="Партий в матче" value="до 3 из 5" />
-            <Field label="Жеребьёвка" value="проведена 14.05" />
-            <Field label="Утешительная сетка" value="нет" />
-          </Form>
-          <div style={{ height: 12 }} />
-          <div className="dhintbox">
-            Подсказка системы: 128 участников на 20 столах укладываются в 2 игровых дня по 8 часов.
-          </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 12 }}>
-            <ToJudge>Передать главному судье на утверждение</ToJudge>
-            <Ghost><RefreshCw size={15} />Пересобрать сетку</Ghost>
-          </div>
-          <div style={{ height: 12 }} />
-        </Panel>
-      </div>
-    </RoleScreen>
-  );
-}
+/** Вкладка «Таблица групп»: формат «группы + плей-офф» — из каждой группы
+    выходят двое, и до конца групп сетка плей-офф стоит без имён. */
+const GROUPS7_3 = [
+  { nm: 'Группа A', rows: 'Смагулов А. · Ким Г. · Оралбек Д. · Цой А.', st: 'сыграна · выходят Смагулов А., Ким Г.', cls: 'live' as const },
+  { nm: 'Группа B', rows: 'Токаев М. · Абиш Н. · Сериков Н. · Ли В.', st: 'сыграна · выходят Токаев М., Абиш Н.', cls: 'live' as const },
+  { nm: 'Группа C', rows: 'Байжанов Е. · Пак С. · Мурат К. · Асан Б.', st: 'идёт · 4 матча из 6', cls: 'wait' as const },
+  { nm: 'Группа D', rows: 'Гладун И. · Оспанов Т. · Бекзат Ж. · Кайрат А.', st: 'не начата', cls: 'done' as const },
+];
+
+const GroupTables7_3 = () => (
+  <>
+    <ActionBar count="32 группы по 4 · из каждой выходят двое · плей-офф собирается по местам в группах" />
+    <div style={{ height: 10 }} />
+    <Rows>
+      {GROUPS7_3.map((g) => (
+        <Row
+          key={g.nm}
+          nm={g.nm}
+          sub={g.rows}
+          pill={{
+            t: g.cls === 'live' ? 'СЫГРАНА' : g.cls === 'wait' ? 'ИДЁТ' : 'НЕ НАЧАТА',
+            cls: g.cls,
+          }}
+          val={g.st}
+        />
+      ))}
+    </Rows>
+  </>
+);
 
 /* ── Э7.4 · Расписание: дни × столы, конфликты подсвечены ────────── */
 
@@ -316,6 +386,23 @@ const Tile = ({ s }: { s: Slot }) => (
   </div>
 );
 
+/** Один игровой день: та же раскладка столов, но со своими парами. К третьему
+    дню в игре остаётся несколько столов — финалы играют не на двадцати. */
+const Day7_4 = ({ shift }: { shift: number }) => (
+  <div className="dtables">
+    {GRID.map((s, i) => {
+      const busy = i + shift < GRID.length - 6 - shift;
+      const src = GRID[(i + shift) % GRID.length];
+      return (
+        <Tile
+          key={s.n}
+          s={busy ? { n: s.n, time: src.time, pair: src.pair, clash: shift === 0 && src.clash } : { n: s.n }}
+        />
+      );
+    })}
+  </div>
+);
+
 export function Schedule7_4() {
   return (
     <RoleScreen
@@ -332,14 +419,16 @@ export function Schedule7_4() {
           { v: '2', k: 'Конфликта', tone: 'a' },
         ]}
       />
-      <Panel
+      {/* День выбирают вкладкой: у каждого дня своя раскладка столов, и
+          конфликты бывают не во всех днях. */}
+      <TabPanel
         title="Дни × столы"
-        extra={<PanelSeg items={['День 1 · 18.05', 'День 2 · 19.05', 'День 3 · 20.05']} />}
-      >
-        <div className="dtables">
-          {GRID.map((s) => <Tile key={s.n} s={s} />)}
-        </div>
-      </Panel>
+        items={[
+          { t: 'День 1 · 18.05', view: <Day7_4 shift={0} /> },
+          { t: 'День 2 · 19.05', view: <Day7_4 shift={4} /> },
+          { t: 'День 3 · 20.05', view: <Day7_4 shift={8} /> },
+        ]}
+      />
       <ActionBar count="2 конфликта · подсвечены на плитках столов">
         <GhostPick>Передать главному судье на проверку</GhostPick>
       </ActionBar>
@@ -397,13 +486,40 @@ export function Protocols7_5() {
         ]}
       />
       <div className="mkcols">
-        <Panel title="Итоговый протокол" extra={<PanelSeg items={['Итоговый', 'Протоколы матчей']} />}>
-          <ActionBar count="Места 1–5 из 128 · таблица собрана из результатов матчей" />
-          <div style={{ height: 10 }} />
-          <Rows>
-            {RESULTS.map((r) => <ResRow key={r.pl} r={r} />)}
-          </Rows>
-        </Panel>
+        {/* Итоговая таблица собирается из протоколов матчей — вторая вкладка
+            показывает, из чего именно, чтобы спор о месте решался на месте. */}
+        <TabPanel
+          title="Итоговый протокол"
+          items={[
+            {
+              t: 'Итоговый',
+              view: (
+                <>
+                  <ActionBar count="Места 1–5 из 128 · таблица собрана из результатов матчей" />
+                  <div style={{ height: 10 }} />
+                  <Rows>
+                    {RESULTS.map((r) => <ResRow key={r.pl} r={r} />)}
+                  </Rows>
+                </>
+              ),
+            },
+            {
+              t: 'Протоколы матчей',
+              view: (
+                <>
+                  <ActionBar count="127 матчей · счёт по партиям, судья стола и время" />
+                  <div style={{ height: 10 }} />
+                  <Rows>
+                    <Row nm="Финал · Смагулов А. — Ким Г." sub="20.05, 17:20 · стол 1 · судья Пак С." val="4 : 2" pill={{ t: 'ПОДТВЕРЖДЁН', cls: 'live' }} />
+                    <Row nm="1/2 · Ким Г. — Токаев М." sub="20.05, 14:00 · стол 2 · судья Ерлан Б." val="4 : 3" pill={{ t: 'ПОДТВЕРЖДЁН', cls: 'live' }} />
+                    <Row nm="1/2 · Смагулов А. — Пак С." sub="20.05, 14:00 · стол 1 · судья Ахметов К." val="4 : 1" pill={{ t: 'ПОДТВЕРЖДЁН', cls: 'live' }} />
+                    <Row nm="1/4 · Байжанов А. — неявка" sub="19.05, 11:20 · стол 4" val="—" pill={{ t: 'ТЕХПОБЕДА', cls: 'wait' }} />
+                  </Rows>
+                </>
+              ),
+            },
+          ]}
+        />
 
         <Panel title="Оформление" extra={<P t="В РАБОТЕ" cls="wait" />}>
           <Form>

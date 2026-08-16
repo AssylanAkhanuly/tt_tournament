@@ -16,6 +16,7 @@ import type { ReactNode } from 'react';
 import { CalendarDays, History, LayoutDashboard, Search } from 'lucide-react';
 import { Board as RespBoard, Col, Arrow } from '../respShell';
 import { RolePhone } from './shell';
+import { FormSeg } from '../segs';
 import { Cal1_2, Dash1_1 } from './role01';
 
 /* ── Планшет: та же оболочка, плотнее ───────────────────────────── */
@@ -111,12 +112,7 @@ function Phone1_2() {
         <Search size={16} />
         <div style={{ fontSize: 13, color: 'var(--c-muted)' }}>Поиск по названию · сезон 2026</div>
       </div>
-      <div className="dseg2">
-        <span className="on">Все</span>
-        <span>Главный старт</span>
-        <span>Лига</span>
-        <span>ОРТ</span>
-      </div>
+      <FormSeg items={['Все', 'Главный старт', 'Лига', 'ОРТ']} />
       <div className="sect">32 соревнования</div>
       {[
         { st: 'ИДЁТ', cls: 'live', nm: 'Евразийская лига · 2-й тур', mt: 'Караганда · 14–16 апреля · судья Пак С.' },
@@ -138,12 +134,7 @@ function Phone1_7() {
   return (
     <RolePhone brand="ФНТ РК" tabs={PTABS} active="Журнал">
       <div className="title">Журнал</div>
-      <div className="dseg2">
-        <span className="on">Все</span>
-        <span>Турниры</span>
-        <span>Роли</span>
-        <span>Взносы</span>
-      </div>
+      <FormSeg items={['Все', 'Турниры', 'Роли', 'Взносы']} />
       <div className="sect">15 апреля</div>
       <Item
         ic={<History size={17} />}

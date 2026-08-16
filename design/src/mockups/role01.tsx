@@ -19,9 +19,10 @@ import {
   Merge, Minus, Plus, Search, Send, UserPlus,
 } from 'lucide-react';
 import {
-  A, AW, ActionBar, Alert, Also, Arrow, Board, Chips, Derived, Empty, Field, Form, Ghost, Hint, Input, Modal, Off, P, Panel, RoleScreen, Row, Rows, Screen, Select, Shot, States,
+  A, AW, ActionBar, Alert, Also, Arrow, Board, Chips, Derived, Empty, Field, Filter, Form, Ghost, Hint, Input, Modal, Off, P, Panel, RoleScreen, Row, Rows, Screen, Select, Shot, States,
 } from './shell';
 import type { ScreenMap } from './shell';
+import { FormSeg } from '../segs';
 import type { DeskVariant } from '../deskShell';
 import { R01 } from './roles';
 import { Login0_1 } from './role00';
@@ -1072,10 +1073,9 @@ export function Cancel1_9() {
           </>
         }
       >
-        <div className="dseg2">
-          <span className="on">Перенести</span>
-          <span>Отменить совсем</span>
-        </div>
+        {/* Перенос и отмена — один диалог с двумя режимами: решение принимают в
+            одном месте, и видно, что вместо переноса можно отменить. */}
+        <FormSeg items={['Перенести', 'Отменить совсем']} />
         <Form>
           <Field label="Было" value="18–20 мая 2026" />
           <Input label="Новое окно дат" value="1–3 июня 2026" />
@@ -2512,39 +2512,49 @@ const LogRow = ({ l }: { l: Log }) => (
   </div>
 );
 
+/* Фильтры журнала: тип записи и период. Оба рабочие — фильтр, который только
+   подсвечивается, обещает выборку, которой не будет. */
+const LOG_KINDS = ['Все действия', 'Турниры', 'Роли', 'Взносы', 'Реестры'] as const;
+const LOG_OBJ: Record<string, string[]> = {
+  Турниры: ['ТУРНИР', 'РАСПИСАНИЕ'],
+  Роли: ['РОЛЬ'],
+  Взносы: ['ВЗНОС'],
+  Реестры: ['РЕЕСТР'],
+};
+const LOG_PERIODS = ['7 дней', '30 дней', 'Сезон'];
+
 export function Log1_7() {
+  const [kind, setKind] = useState<string>(LOG_KINDS[0]);
+  const [period, setPeriod] = useState(LOG_PERIODS[0]);
+  const rows = kind === LOG_KINDS[0] ? LOG : LOG.filter((l) => LOG_OBJ[kind]?.includes(l.obj));
   return (
     <RoleScreen
       role={R01}
       nav="Журнал"
       title="Журнал действий"
-      sub="1 248 записей за 7 дней"
+      sub={`1 248 записей · ${period.toLowerCase()}`}
     >
       <div className="dactionbar">
-        <div className="dseg2">
-          <span className="on">Все действия</span>
-          <span>Турниры</span>
-          <span>Роли</span>
-          <span>Взносы</span>
-          <span>Реестры</span>
-          <span>Результаты</span>
-        </div>
-        <div className="dseg2">
-          <span className="on">7 дней</span>
-          <span>30 дней</span>
-          <span>Сезон</span>
-        </div>
+        <Filter items={[...LOG_KINDS]} active={kind} onPick={setKind} />
+        <Filter items={LOG_PERIODS} active={period} onPick={setPeriod} />
       </div>
-      <ActionBar count="1 248 записей · фильтры: человек — все, турнир — все, период — 7 дней">
+      <ActionBar count={`${rows.length} записей на экране · тип: ${kind.toLowerCase()} · период: ${period.toLowerCase()}`}>
         <Btn>
           <Download size={14} /> Выгрузить журнал
         </Btn>
       </ActionBar>
-      <Rows>
-        {LOG.map((l) => (
-          <LogRow key={l.act + l.who} l={l} />
-        ))}
-      </Rows>
+      {rows.length ? (
+        <Rows>
+          {rows.map((l) => (
+            <LogRow key={l.act + l.who} l={l} />
+          ))}
+        </Rows>
+      ) : (
+        <Empty
+          title="По этому фильтру записей нет"
+          text="Записи журнала не удаляются: пусто здесь означает только то, что под фильтр ничего не попало."
+        />
+      )}
     </RoleScreen>
   );
 }

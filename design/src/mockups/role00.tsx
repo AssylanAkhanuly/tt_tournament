@@ -15,6 +15,7 @@ import {
   A, AW, ActionBar, Alert, Also, Arrow, Board, Field, Form, Ghost, Hint, Off, P, Panel, RoleScreen, Row, Rows, Screen, Shot, States, Tab,
 } from './shell';
 import type { ScreenMap } from './shell';
+import { FormSeg } from '../segs';
 import { DeskFrame } from '../deskShell';
 import { Frame } from '../PlayerApp';
 import { Brand, Checkbox, Input, Select } from '../ui';
@@ -31,13 +32,9 @@ const Auth = ({ wide, children }: { wide?: boolean; children: ReactNode }) => (
   </DeskFrame>
 );
 
-const Langs = () => (
-  <div className="dseg2">
-    <span className="on">RU</span>
-    <span>KZ</span>
-    <span>EN</span>
-  </div>
-);
+/* Язык интерфейса переключается прямо на входе: до входа человек не может
+   поменять его в профиле, а система трёхъязычная (TZ §3.1). */
+const Langs = () => <FormSeg items={['RU', 'KZ', 'EN']} />;
 
 export function Login0_1() {
   return (
@@ -191,11 +188,7 @@ export function Profile0_2() {
             <Input label="Почта" value="d.abaeva@ttfrk.kz" size="sm" />
           </div>
           <div className="dactionbar" style={{ marginTop: 12 }}>
-            <div className="dseg2">
-              <span className="on">RU</span>
-              <span>KZ</span>
-              <span>EN</span>
-            </div>
+            <FormSeg items={['RU', 'KZ', 'EN']} />
             <button className="dpickbtn">Сохранить</button>
           </div>
         </Panel>

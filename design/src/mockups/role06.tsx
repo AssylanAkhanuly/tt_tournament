@@ -16,11 +16,11 @@ import {
   Radio, Shield, TriangleAlert, X,
 } from 'lucide-react';
 import {
-  A, AW, ActionBar, Alert, Arrow, Board, Chips, Empty, Field, Form, Ghost, Hint, Input, Modal, Off, Panel, RoleScreen, Row, Rows, Screen, Shot, States, Submit,
+  A, AW, ActionBar, Alert, Arrow, Board, Chips, Empty, Field, Form, Ghost, Hint, Input, Modal, Off, Panel, RoleScreen, Row, Rows, Screen, Shot, States, Submit, TabPanel, Tabs,
 } from './shell';
 import type { DeskVariant } from '../deskShell';
 import type { ScreenMap } from './shell';
-import { FormSeg, PanelSeg } from '../segs';
+import { FormSeg } from '../segs';
 import { R06 } from './roles';
 import { Login0_1 } from './role00';
 
@@ -294,17 +294,42 @@ const BIDS = [
   { nm: 'Сборная Тараза · 3 игрока', sub: 'Бектұров Р. · 11.03, 08:30', who: 'РЕГИОН' },
 ];
 
-export function Bids6_2() {
-  return (
-    <RoleScreen
-      role={at('ПРИЁМ ЗАЯВОК')}
-      nav="Заявки"
-      title="Заявки участников"
-      sub="Заявка № 14 · 6 игроков"
-    >
-      <FormSeg items={['Ждут решения · 8', 'Приняты · 104', 'Отклонены · 12', 'Отозваны · 4']} />
+/* Решённые заявки: вкладки «Приняты», «Отклонены» и «Отозваны» — то же
+   соревнование, но заявки, по которым решение уже есть. Судье они нужны, чтобы
+   свериться, кого он допустил и по какой причине отказал: причина отказа видна
+   заявителю, и спорят потом именно о ней. */
+const DECIDED: Record<string, { nm: string; sub: string; p: string; cls: 'live' | 'bad' | 'done' }[]> = {
+  Приняты: [
+    { nm: 'Сборная Астаны · 8 игроков', sub: 'Мукашев Б. · принята 08.03, 12:40', p: 'ПРИНЯТА', cls: 'live' },
+    { nm: 'Сборная Актобе · 5 игроков', sub: 'Ержанов Д. · принята 08.03, 16:05', p: 'ПРИНЯТА', cls: 'live' },
+    { nm: 'Сборная Костаная · 6 игроков', sub: 'Сейтқали А. · принята 09.03, 09:15', p: 'ПРИНЯТА', cls: 'live' },
+  ],
+  Отклонены: [
+    { nm: 'Сборная Атырау · 4 игрока', sub: 'причина: «нет медицинского допуска у троих» · 09.03', p: 'ОТКЛОНЕНА', cls: 'bad' },
+    { nm: 'Сборная Тараза · 3 игрока', sub: 'причина: «состав подан после закрытия приёма» · 12.03', p: 'ОТКЛОНЕНА', cls: 'bad' },
+  ],
+  Отозваны: [
+    { nm: 'Сборная Уральска · 5 игроков', sub: 'отозвал старший тренер региона · 10.03', p: 'ОТОЗВАНА', cls: 'done' },
+  ],
+};
 
-      <ActionBar count="8 заявок ждут решения · приём открыт до 12.03, 18:00">
+const DecidedBids = ({ kind }: { kind: string }) => (
+  <Panel
+    title={`${kind} · ${DECIDED[kind].length}`}
+    extra={<span className="dcount">решение уже принято, состав не меняется</span>}
+  >
+    <Rows>
+      {DECIDED[kind].map((b) => (
+        <Row key={b.nm} nm={b.nm} sub={b.sub} pill={{ t: b.p, cls: b.cls }} />
+      ))}
+    </Rows>
+  </Panel>
+);
+
+/** Вкладка «Ждут решения»: разбор одной заявки — состав, проверки и решение. */
+const Waiting6_2 = () => (
+  <>
+    <ActionBar count="8 заявок ждут решения · приём открыт до 12.03, 18:00">
         <button className="dpickbtn">
           <Lock size={13} style={{ display: 'inline-block', verticalAlign: '-2px', marginRight: 5 }} />
           Закрыть приём
@@ -354,7 +379,27 @@ export function Bids6_2() {
             ))}
           </Rows>
         </Panel>
-      </div>
+    </div>
+  </>
+);
+
+export function Bids6_2({ tab }: { tab?: string }) {
+  return (
+    <RoleScreen
+      role={at('ПРИЁМ ЗАЯВОК')}
+      nav="Заявки"
+      title="Заявки участников"
+      sub="Заявка № 14 · 6 игроков"
+    >
+      <Tabs
+        active={tab}
+        items={[
+          { t: 'Ждут решения · 8', view: <Waiting6_2 /> },
+          { t: 'Приняты · 104', view: <DecidedBids kind="Приняты" /> },
+          { t: 'Отклонены · 12', view: <DecidedBids kind="Отклонены" /> },
+          { t: 'Отозваны · 4', view: <DecidedBids kind="Отозваны" /> },
+        ]}
+      />
     </RoleScreen>
   );
 }
@@ -398,6 +443,53 @@ const SYSTEMS: Sys[] = [
   },
 ];
 
+/** Вкладка «Свод»: варианты системы целиком — сколько матчей, часов и ресурса
+    зала съедает каждый. */
+const Systems6_3 = () => (
+  <Rows>
+    {SYSTEMS.map((s) => (
+      <div
+        className={'drow' + (s.on ? ' pick' : '')}
+        key={s.nm}
+        style={{ alignItems: 'flex-start', padding: '9px 12px' }}
+      >
+        <div className="who">
+          <div className="nm">
+            {s.nm}
+            {s.on && <span className="pill reg" style={{ margin: '0 0 0 8px' }}>РЕКОМЕНДУЕМ</span>}
+          </div>
+          <div className="rl">{s.sum}</div>
+          <div className="rl" style={{ fontSize: 11, color: 'var(--c-dim)' }}>{s.calc}</div>
+          <div className="rl" style={{ fontSize: 11, color: 'var(--c-dim)' }}>{s.idle}</div>
+        </div>
+        <span className={'pill ' + s.cls} style={{ margin: 0 }}>{s.p}</span>
+      </div>
+    ))}
+  </Rows>
+);
+
+/** Вкладка «По кругам»: тот же рекомендуемый вариант, но разложенный по кругам
+    — из этого видно, какой день чем занят и где зал простаивает. */
+const ROUNDS6_3 = [
+  { nm: 'Групповой этап · 28 групп по 4', sub: 'день 1 · 168 матчей · 20 столов заняты', v: '98 стол-часов' },
+  { nm: '1/32 и 1/16 плей-офф', sub: 'день 2 · 40 матчей · 20 столов заняты', v: '23 стол-часа' },
+  { nm: '1/8 и 1/4', sub: 'день 2 · 12 матчей · 12 столов', v: '7 стол-часов' },
+  { nm: '1/2, финал и матч за 3-е место', sub: 'день 3 · 3 матча · 2 стола', v: '2 стол-часа' },
+];
+
+const ByRounds6_3 = () => (
+  <>
+    <Rows>
+      {ROUNDS6_3.map((r) => (
+        <Row key={r.nm} nm={r.nm} sub={r.sub} val={r.v} />
+      ))}
+    </Rows>
+    <div className="dcount" style={{ marginTop: 10 }}>
+      Итого 223 матча · 130 стол-часов из 480 · третий день зал занят на два стола
+    </div>
+  </>
+);
+
 export function Bracket6_3() {
   return (
     <RoleScreen
@@ -417,33 +509,13 @@ export function Bracket6_3() {
       />
 
       <div className="dcols">
-        <Panel
+        <TabPanel
           title="Подсказка системы: чем провести"
-          extra={<PanelSeg items={['Свод', 'По кругам']} />}
-        >
-          <Rows>
-            {SYSTEMS.map((s) => (
-              <div
-                className={'drow' + (s.on ? ' pick' : '')}
-                key={s.nm}
-                style={{ alignItems: 'flex-start', padding: '9px 12px' }}
-              >
-                <div className="who">
-                  <div className="nm">
-                    {s.nm}
-                    {s.on && <span className="pill reg" style={{ margin: '0 0 0 8px' }}>РЕКОМЕНДУЕМ</span>}
-                  </div>
-                  <div className="rl">{s.sum}</div>
-                  <div className="rl" style={{ fontSize: 11, color: 'var(--c-dim)' }}>{s.calc}</div>
-                  <div className="rl" style={{ fontSize: 11, color: 'var(--c-dim)' }}>{s.idle}</div>
-                </div>
-                <span className={'pill ' + s.cls} style={{ margin: 0 }}>{s.p}</span>
-              </div>
-            ))}
-          </Rows>
-          <div style={{ marginTop: 10 }}>
-          </div>
-        </Panel>
+          items={[
+            { t: 'Свод', view: <Systems6_3 /> },
+            { t: 'По кругам', view: <ByRounds6_3 /> },
+          ]}
+        />
 
         <Panel title="Формат и расстановка">
           <div className="dfield" style={{ marginBottom: 14 }}>
@@ -487,7 +559,100 @@ const CONFLICT: Record<string, string> = {
 };
 const EMPTY = new Set(['2-8', '3-7', '3-8']);
 
-export function Schedule6_4() {
+/** Три дня игры: в каждом свои круги сетки — на третий день играют финалы, и
+    столов в работе остаётся меньше. Конфликты подсвечены только в том дне, где
+    они есть: день без конфликтов должен выглядеть спокойным. */
+const DAYS6_4 = [
+  { t: 'День 1 · 12.03', cap: 'День 1 · 12 марта · столы 1–8 из 20', rounds: ['1/32', '1/32', '1/16', '1/16'], bad: true },
+  { t: 'День 2 · 13.03', cap: 'День 2 · 13 марта · столы 1–8 из 20', rounds: ['1/8', '1/8', '1/4', '1/4'], bad: false },
+  { t: 'День 3 · 14.03', cap: 'День 3 · 14 марта · столы 1–2 из 20', rounds: ['1/2', '1/2', 'Финал', 'За 3-е место'], bad: false },
+];
+
+/** Сетка «дни × столы» одного дня. */
+const Grid6_4 = ({ day }: { day: (typeof DAYS6_4)[number] }) => {
+  const conflict = day.bad ? CONFLICT : {};
+  return (
+    <div style={{ display: 'grid', gridTemplateColumns: '54px repeat(8, minmax(0, 1fr))', gap: 8 }}>
+          <div />
+          {TABLES8.map((n) => (
+            <div
+              key={n}
+              style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4,
+                fontSize: 11, fontWeight: 700, color: 'var(--c-muted)',
+              }}
+            >
+              Стол {n}
+              {STREAM.includes(n) && <Radio size={11} style={{ color: 'var(--c-broadcast)' }} />}
+            </div>
+          ))}
+
+      {HOURS.map((h, r) => (
+        <Fragment key={h}>
+          <div style={{ alignSelf: 'center', fontSize: 11, fontWeight: 700, color: 'var(--c-dim)' }}>{h}</div>
+          {TABLES8.map((c) => {
+            const key = `${r}-${c}`;
+            const bad = conflict[key];
+            if (EMPTY.has(key)) {
+              return (
+                <div key={key} className="dtable free" style={{ padding: 7 }}>
+                  <div className="tn">—<span className="st" /></div>
+                  <div className="pl">свободно</div>
+                </div>
+              );
+            }
+            return (
+              <div
+                key={key}
+                className="dtable busy"
+                style={bad ? { padding: 7, borderColor: 'var(--c-danger)' } : { padding: 7 }}
+              >
+                <div className="tn">{day.rounds[r]}<span className="st" /></div>
+                <div className="pl">{PAIRS[(r * 3 + c) % PAIRS.length]}</div>
+                {bad && (
+                  <div style={{ marginTop: 4, fontSize: 10, fontWeight: 800, color: 'var(--c-danger)' }}>{bad}</div>
+                )}
+              </div>
+            );
+          })}
+        </Fragment>
+      ))}
+    </div>
+  );
+};
+
+/** Тот же день списком: когда, где, кто и какой круг — по порядку времени. */
+const List6_4 = ({ day }: { day: (typeof DAYS6_4)[number] }) => (
+  <Rows>
+    {HOURS.map((h, r) =>
+      TABLES8.slice(0, 3).map((c) => (
+        <Row
+          key={`${h}-${c}`}
+          nm={PAIRS[(r * 3 + c) % PAIRS.length]}
+          sub={`${h} · стол ${c} · ${day.rounds[r]}`}
+          pill={
+            day.bad && CONFLICT[`${r}-${c}`]
+              ? { t: 'КОНФЛИКТ', cls: 'bad' }
+              : { t: 'РАССТАВЛЕН', cls: 'reg' }
+          }
+        />
+      )),
+    )}
+  </Rows>
+);
+
+/** День расписания: сетка «дни × столы» или тот же день списком. */
+const Day6_4 = ({ day }: { day: (typeof DAYS6_4)[number] }) => (
+  <TabPanel
+    title={day.cap}
+    items={[
+      { t: 'Дни × столы', view: <Grid6_4 day={day} /> },
+      { t: 'Списком', view: <List6_4 day={day} /> },
+    ]}
+  />
+);
+
+export function Schedule6_4({ tab }: { tab?: string }) {
   return (
     <RoleScreen
       role={at('СИСТЕМА ПРОВЕДЕНИЯ')}
@@ -504,59 +669,7 @@ export function Schedule6_4() {
           { v: '2', k: 'Трансляционных стола' },
         ]}
       />
-      <FormSeg items={['День 1 · 12.03', 'День 2 · 13.03', 'День 3 · 14.03']} />
-
-      <Panel
-        title="День 1 · 12 марта · столы 1–8 из 20"
-        extra={<PanelSeg items={['Дни × столы', 'Списком']} />}
-      >
-        <div style={{ display: 'grid', gridTemplateColumns: '54px repeat(8, minmax(0, 1fr))', gap: 8 }}>
-          <div />
-          {TABLES8.map((n) => (
-            <div
-              key={n}
-              style={{
-                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4,
-                fontSize: 11, fontWeight: 700, color: 'var(--c-muted)',
-              }}
-            >
-              Стол {n}
-              {STREAM.includes(n) && <Radio size={11} style={{ color: 'var(--c-broadcast)' }} />}
-            </div>
-          ))}
-
-          {HOURS.map((h, r) => (
-            <Fragment key={h}>
-              <div style={{ alignSelf: 'center', fontSize: 11, fontWeight: 700, color: 'var(--c-dim)' }}>{h}</div>
-              {TABLES8.map((c) => {
-                const key = `${r}-${c}`;
-                const bad = CONFLICT[key];
-                if (EMPTY.has(key)) {
-                  return (
-                    <div key={key} className="dtable free" style={{ padding: 7 }}>
-                      <div className="tn">—<span className="st" /></div>
-                      <div className="pl">свободно</div>
-                    </div>
-                  );
-                }
-                return (
-                  <div
-                    key={key}
-                    className="dtable busy"
-                    style={bad ? { padding: 7, borderColor: 'var(--c-danger)' } : { padding: 7 }}
-                  >
-                    <div className="tn">{ROUNDS[r]}<span className="st" /></div>
-                    <div className="pl">{PAIRS[(r * 3 + c) % PAIRS.length]}</div>
-                    {bad && (
-                      <div style={{ marginTop: 4, fontSize: 10, fontWeight: 800, color: 'var(--c-danger)' }}>{bad}</div>
-                    )}
-                  </div>
-                );
-              })}
-            </Fragment>
-          ))}
-        </div>
-      </Panel>
+      <Tabs active={tab} items={DAYS6_4.map((d) => ({ t: d.t, view: <Day6_4 day={d} /> }))} />
     </RoleScreen>
   );
 }
