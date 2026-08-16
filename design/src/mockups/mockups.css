@@ -431,6 +431,51 @@ button.mkattn-i.on svg { color: var(--c-accent); transform: rotate(180deg); }
   margin-right: 4px;
 }
 
+/* ── Реестр таблицей ────────────────────────────────────────────── */
+/* Список с подписанными колонками, а не свободные строки: подпись у колонки
+   одна, а не повторяется в каждой строке словом «рейтинг». Ширины колонок
+   фиксированы — числа должны стоять в столбик, иначе их не сравнить. */
+.rtab { display: grid; gap: 6px; }
+.rtab-h,
+.rrow { display: grid; grid-template-columns: 1fr 110px 84px 96px; align-items: center; gap: 12px; }
+.rtab-h { padding: 0 13px 2px; }
+.rtab-h span {
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  color: var(--c-dim);
+}
+.rrow {
+  padding: 10px 13px;
+  background: var(--c-panel);
+  border: 1px solid var(--c-glass-line);
+  border-radius: var(--r-sm);
+}
+.rrow:hover { border-color: var(--c-accent-line); }
+.rrow .who { display: flex; align-items: center; gap: 11px; min-width: 0; }
+.rrow .who img { width: 34px; height: 34px; border-radius: 50%; object-fit: cover; flex: none; }
+.rrow .nm { font-size: 13.5px; font-weight: 700; }
+.rrow .rl { font-size: 11.5px; color: var(--c-muted); margin-top: 2px; }
+/* Число — вправо и моноширинными цифрами: колонку чисел читают сравнением. */
+.rtab-h .num,
+.rrow .num { text-align: right; font-size: 13.5px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.rtab-h .mid,
+.rrow .mid { text-align: center; }
+/* Состояние галочкой: зелёная — да, жёлтая — нет. Слов нет, их заменяет
+   заголовок колонки; что именно значит — в подсказке при наведении. */
+.rchk {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 21px;
+  height: 21px;
+  border-radius: var(--r-xs);
+  cursor: default;
+}
+.rchk.ok { color: var(--c-success); background: var(--c-success-soft-2); box-shadow: inset 0 0 0 1px var(--c-success-line); }
+.rchk.no { color: var(--c-warning); background: var(--c-warning-soft); box-shadow: inset 0 0 0 1px var(--c-warning-fill); }
+
 /* ── Сетка месяцев ──────────────────────────────────────────────── */
 /* Второй вид календаря: список отвечает на «что в сезоне», сетка — на «как он
    разложен по времени». Двенадцать плиток в четыре колонки: год виден целиком
