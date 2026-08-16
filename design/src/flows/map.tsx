@@ -234,7 +234,9 @@ export function FlowMap({ flow, screens }: { flow: RoleFlow; screens: ScreenMap 
      действия с переходом нашлась кнопка или нарисовать её забыли. Элемент, у
      которого переход задан руками (строка списка, плитка), помечается
      атрибутом `data-to` — по нему совпадение точное. */
-  const [links, setLinks] = useState<{ el: string; to: string; when?: string; found: boolean }[]>([]);
+  const [links, setLinks] = useState<
+    { el: string; to: string; when?: string; found: boolean; common: boolean }[]
+  >([]);
 
   useEffect(() => {
     const root = inner.current;
@@ -290,7 +292,14 @@ export function FlowMap({ flow, screens }: { flow: RoleFlow; screens: ScreenMap 
           hit.dataset.goto = a.to!;
           hit.classList.add('fmap-hot');
         }
-        return { el: a.el, to: a.to!, when: a.when, found: !!hit };
+        return {
+          el: a.el,
+          to: a.to!,
+          when: a.when,
+          found: !!hit,
+          // Сквозной экран может жить в разделе 00, а не в борде этой роли.
+          common: !screens[a.to!] && role00.screens.some((sc) => sc.id === a.to),
+        };
       }),
     );
   }, [selected, spec, scale, byId]);
@@ -364,14 +373,21 @@ export function FlowMap({ flow, screens }: { flow: RoleFlow; screens: ScreenMap 
               <button
                 key={l.el + l.to}
                 type="button"
-                className={'fmap-link' + (l.found ? '' : l.when ? ' cond' : ' miss')}
+                className={
+                  'fmap-link' + (l.found ? '' : l.common ? ' cond' : l.when ? ' cond' : ' miss')
+                }
                 onClick={() => screens[l.to] && setSelected(l.to)}
               >
                 <b>{l.el}</b>
-                <span>→ {l.to} · {screens[l.to]?.cap ?? 'экрана нет в макетах'}</span>
+                <span>
+                  → {l.to} ·{' '}
+                  {screens[l.to]?.cap ?? (l.common ? 'сквозной экран — раздел 00' : 'экрана нет в макетах')}
+                </span>
                 {!l.found && (
                   <em>
-                    {l.when
+                    {l.common
+                      ? 'экран описан в сквозных (раздел 00) — в борде этой роли его нет'
+                      : l.when
                       ? `кнопки на этом кадре нет — она доступна: ${l.when}`
                       : 'кнопки на макете не нашлось — действие не нарисовано'}
                   </em>

@@ -9,15 +9,16 @@
    Роль — единственная, кто заявляется сам, и единственная, кто платит взнос
    картой. Счёт своего матча спортсмен не вводит: его ведёт судья стола. */
 
-import { BarChart3, CreditCard, Send } from 'lucide-react';
+import type { ReactNode } from 'react';
+import { BarChart3, CreditCard, Lock, Send } from 'lucide-react';
 import {
   A, ActionBar, Alert, Arrow, Board, Chips, Empty, Field, Form, Ghost, Modal, Off, P, Panel, Queue,
   RoleScreen, Row, Rows, Screen, Shot, States,
 } from './shell';
-import type { DeskVariant } from '../deskShell';
+import { DeskFrame, type DeskVariant } from '../deskShell';
 import type { ScreenMap } from './shell';
 import { R14 } from './roles';
-import { Login0_1 } from './role00';
+import { Login0_1, SignUp0_5, SignUp0_5States } from './role00';
 
 /* Спортсмен макета — Ким Георгий (тот же, что в реестрах ролей 2 и 12). */
 const ME = A(44);
@@ -368,7 +369,7 @@ export function Profile14_7() {
             <Field label="Срок" value="до 31 марта" />
           </Form>
           <div style={{ marginTop: 12 }}>
-            <button className="dsubmit" style={{ width: '100%' }}>
+            <button className="dsubmit" style={{ width: '100%' }} data-to="Э14.8">
               <CreditCard size={15} /> Оплатить картой
             </button>
           </div>
@@ -406,9 +407,104 @@ const Profile14_7States = () => (
 
 /* ── Экраны роли ───────────────────────────────────────────────── */
 
+/* ── Э14.8 · Оплата взноса картой ──────────────────────────────── */
+
+/** Страница банка: наша оболочка сюда не приходит — человек ушёл на ePay.
+    Форму рисует банк, поэтому макет условный: важно, что происходит до и
+    после, а не как выглядят поля карты. */
+const BankPage = ({ children }: { children: ReactNode }) => (
+  <DeskFrame>
+    <div className="mkpub">
+      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 7, fontSize: 12.5, color: 'var(--c-muted)' }}>
+        <Lock size={14} /> epay.homebank.kz · защищённое соединение
+      </span>
+      <div style={{ flex: 1 }} />
+      <span style={{ fontSize: 12.5, color: 'var(--c-muted)' }}>Halyk Bank · ePay</span>
+    </div>
+    <div className="mkauth">
+      <div className="mkauth-card">{children}</div>
+    </div>
+  </DeskFrame>
+);
+
+export function Pay14_8() {
+  return (
+    <BankPage>
+      <div className="t">Оплата картой</div>
+      <div className="s">Федерация настольного тенниса РК · годовой взнос 2026</div>
+
+      <Rows>
+        <Row nm="К оплате" sub="номер заказа 100416" val="₸ 10 000" />
+      </Rows>
+
+      <Form>
+        <Field label="Номер карты" value="4400 43•• •••• 1234" wide />
+        <Field label="Срок" value="09 / 28" />
+        <Field label="CVC" value="•••" />
+        <Field label="Держатель карты" value="GEORGIY KIM" wide />
+      </Form>
+
+      <button className="dsubmit">
+        <CreditCard size={15} /> Оплатить ₸ 10 000
+      </button>
+      <div className="mkauth-row">
+        <span style={{ fontSize: 12.5, color: 'var(--c-muted)' }}>
+          Форму и 3-D Secure показывает банк — номер карты в систему федерации не попадает
+        </span>
+        <span style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--c-accent)' }} data-to="Э14.7">
+          Отмена
+        </span>
+      </div>
+    </BankPage>
+  );
+}
+
+const Pay14_8States = () => (
+  <States>
+    <Shot tone="info" title="3-D Secure" text="Поле кода от банка.">
+      <Rows>
+        <Row nm="Код из SMS банка" sub="отправлен на +7 705 •• •• 03" val="• • • •" pill={{ t: 'ЖДЁМ КОД', cls: 'wait' }} />
+      </Rows>
+      <Alert>Этот шаг тоже у банка: мы не видим ни кода, ни номера карты.</Alert>
+    </Shot>
+
+    <Shot tone="danger" title="Оплата отклонена" text="Причина от банка и «повторить».">
+      <Rows>
+        <Row nm="Платёж отклонён" sub="банк: недостаточно средств" pill={{ t: 'НЕ ПРОШЛА', cls: 'bad' }} action="Повторить" />
+      </Rows>
+    </Shot>
+
+    <Shot
+      tone="success"
+      title="Человек закрыл вкладку ✳"
+      text="Возврата не было, но взнос станет оплаченным по подтверждению банка."
+      wide
+    >
+      <Rows>
+        <Row nm="Взнос 2026" sub="подтверждение банка пришло на сервер · возврата в браузере не было" pill={{ t: 'ОПЛАЧЕН', cls: 'live' }} />
+      </Rows>
+      <Alert tone="success">
+        Состояние ставит серверное сообщение банка, а не возврат в приложение (§9.2) — держать
+        вкладку открытой не нужно.
+      </Alert>
+    </Shot>
+  </States>
+);
+
+
 /** Экраны роли по кодам: из этой карты собираются и борд, и карта флоу. */
 export const SCREENS: ScreenMap = {
-  'Э0.1': { cap: 'Вход', view: () => <Login0_1 />, next: 'первый экран роли' },
+  'Э0.1': { cap: 'Вход', view: () => <Login0_1 />, next: '«Зарегистрироваться»' },
+  'Э0.5': {
+    cap: 'Регистрация спортсмена',
+    view: () => (
+      <>
+        <SignUp0_5 />
+        <SignUp0_5States />
+      </>
+    ),
+    next: 'зарегистрировался — своя Главная',
+  },
   'Э14.1': {
     cap: 'Главная',
     view: () => (
@@ -475,6 +571,16 @@ export const SCREENS: ScreenMap = {
       <>
         <Profile14_7 />
         <Profile14_7States />
+      </>
+    ),
+    next: '«Оплатить картой»',
+  },
+  'Э14.8': {
+    cap: 'Оплата взноса картой',
+    view: () => (
+      <>
+        <Pay14_8 />
+        <Pay14_8States />
       </>
     ),
   },

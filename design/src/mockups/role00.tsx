@@ -58,6 +58,15 @@ export function Login0_1() {
       <Ghost>
         <KeyRound size={14} /> Войти по короткому коду — судье за столом
       </Ghost>
+      <div className="mkauth-row">
+        <span style={{ fontSize: 12.5, color: 'var(--c-muted)' }}>Впервые здесь?</span>
+        <span
+          style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--c-accent)' }}
+          data-to="Э0.5"
+        >
+          Зарегистрироваться
+        </span>
+      </div>
     </Auth>
   );
 }
@@ -550,7 +559,7 @@ export function SignUp0_5() {
   );
 }
 
-const SignUp0_5States = () => (
+export const SignUp0_5States = () => (
   <States>
     <Shot
       tone="warning"
