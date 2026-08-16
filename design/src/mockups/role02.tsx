@@ -8,8 +8,7 @@
 
 import { Banknote, Download, FileWarning, RefreshCw, Undo2 } from 'lucide-react';
 import {
-  A, ActionBar, Alert, Arrow, AW, Board, Chips, Empty, Field, Form, Ghost, Hint, Modal, Off, P,
-  Panel, RoleScreen, Row, Rows, Screen, Shot, States,
+  A, AW, ActionBar, Alert, Arrow, Board, Chips, Empty, Field, Form, Ghost, Hint, Input, Modal, Off, P, Panel, RoleScreen, Row, Rows, Screen, Shot, States,
 } from './shell';
 import type { DeskVariant } from '../deskShell';
 import type { ScreenMap } from './shell';
@@ -102,7 +101,7 @@ const Fees2_1States = () => (
     <Shot
       tone="success"
       title="Обычный ход — бухгалтер не участвует"
-      text="Спортсмен платит картой сам, строка становится «оплачен» по подтверждению банка (§9.2)."
+      text="Спортсмен платит картой сам, строка становится «оплачен» по подтверждению банка."
     >
       <Rows>
         <Row
@@ -214,8 +213,8 @@ export function Mark2_3() {
           <span>Оплата на месте</span>
         </div>
         <Form>
-          <Field label="Основание ✳" value="квитанция № 4471" />
-          <Field label="Дата платежа" value="22.02.2026" />
+          <Input label="Основание ✳" value="квитанция № 4471" />
+          <Input label="Дата платежа" value="22.02.2026" />
         </Form>
         <Alert>
           Обычно спортсмен платит картой и строка становится «оплачен» сама. Ручная отметка —
@@ -276,10 +275,10 @@ export function Unmark2_4() {
         }
       >
         <Form>
-          <Field label="Причина ✳" value="квитанция не подтвердилась в банке" wide />
+          <Input label="Причина ✳" value="квитанция не подтвердилась в банке" wide />
         </Form>
         <Alert>
-          После снятия заявки спортсмена на турниры с флагом взноса перестанут проходить (§9.2).
+          После снятия заявки спортсмена на турниры с флагом взноса перестанут проходить.
         </Alert>
       </Modal>
     </RoleScreen>

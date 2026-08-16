@@ -509,7 +509,7 @@ export function Role14AppBoard() {
     <div className="board">
       <div className="board-h">
         <div className="board-title">14 · СПОРТСМЕН — ПРИЛОЖЕНИЕ (ПОЗЖЕ)</div>
-        <div className="board-tag">сейчас проектируем веб; приложение — TZ §10, нарисовано впрок</div>
+        <div className="board-tag">сейчас проектируем веб; приложение — нарисовано впрок</div>
       </div>
       <div className="row">
         <Col cap="Э0.1 · Вход"><LoginPhone0_1 /></Col>

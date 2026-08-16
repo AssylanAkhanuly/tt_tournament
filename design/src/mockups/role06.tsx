@@ -16,7 +16,7 @@ import {
   Radio, Shield, TriangleAlert, X,
 } from 'lucide-react';
 import {
-  A, AW, ActionBar, Alert, Arrow, Board, Chips, Empty, Field, Form, Ghost, Hint, Modal, Off, Panel, RoleScreen, Row, Rows, Screen, Shot, States, Submit,
+  A, AW, ActionBar, Alert, Arrow, Board, Chips, Empty, Field, Form, Ghost, Hint, Input, Modal, Off, Panel, RoleScreen, Row, Rows, Screen, Shot, States, Submit,
 } from './shell';
 import type { DeskVariant } from '../deskShell';
 import type { ScreenMap } from './shell';
@@ -199,7 +199,7 @@ const NEEDS: Need[] = [
   },
   {
     ic: <Grid3x3 size={16} />, t: 'Сетку соберём после закрытия приёма',
-    s: 'Э6.3 · строить сетку раньше состава нельзя (§4.3)', p: 'ПОЗЖЕ', cls: 'reg',
+    s: 'Э6.3 · строить сетку раньше состава нельзя', p: 'ПОЗЖЕ', cls: 'reg',
   },
 ];
 
@@ -243,7 +243,7 @@ export function Tournament6_1({ variant }: { variant?: DeskVariant }) {
             <div className="dfield"><label>Документы к заявке</label><div className="dval">паспорт, мед. допуск, согласие</div></div>
             <div className="dfield wide">
               <label>Кто вправе подать заявку</label>
-              <div className="dval">старший тренер региона — списком (§8.2)</div>
+              <div className="dval">старший тренер региона — списком</div>
             </div>
           </div>
         </Panel>
@@ -661,7 +661,7 @@ export function Live6_6() {
         <Panel title="Идут сейчас" extra={<span className="pill live" style={{ margin: 0 }}>12 СТОЛОВ В ИГРЕ</span>}>
           <LiveCards />
           <div className="dactionbar" style={{ marginTop: 12 }}>
-            <div className="dcount">Правка — в пределах лимита ⚠ §13.1, в журнал с автором</div>
+            <div className="dcount">Правка — в пределах лимита, в журнал с автором</div>
             <div style={{ display: 'flex', gap: 8 }}>
               <button className="dpickbtn">
                 <Pencil size={13} style={{ display: 'inline-block', verticalAlign: '-2px', marginRight: 5 }} />
@@ -825,7 +825,7 @@ const Bids6_2States = () => (
 const Bracket6_3States = () => (
   <States>
     <Shot tone="danger" title="Состав не собран" text="Экран закрыт с пояснением: сетку раньше состава не строят.">
-      <Empty title="Сетку строить рано" text="Приём заявок ещё открыт: сетка собирается по закрытому составу (§4.3)." />
+      <Empty title="Сетку строить рано" text="Приём заявок ещё открыт: сетка собирается по закрытому составу." />
     </Shot>
 
     <Shot
@@ -855,7 +855,7 @@ const Judges6_5States = () => (
       <Rows>
         <Row nm="Стол 7" sub="судья не назначен" pill={{ t: 'НЕТ СУДЬИ', cls: 'bad' }} action="Назначить" />
       </Rows>
-      <Alert tone="danger">Матч не стартует, пока на стол не назначен судья (§4.7).</Alert>
+      <Alert tone="danger">Матч не стартует, пока на стол не назначен судья.</Alert>
     </Shot>
   </States>
 );
@@ -868,7 +868,7 @@ const Live6_6States = () => (
       </Rows>
     </Shot>
 
-    <Shot tone="warning" title="Обрыв связи у стола" text="Карточка помечена; при расхождении приоритет у судьи стола (§12).">
+    <Shot tone="warning" title="Обрыв связи у стола" text="Карточка помечена; при расхождении приоритет у судьи стола.">
       <Rows>
         <Row nm="Стол 4" sub="связи нет 2 минуты · счёт ведётся локально" pill={{ t: 'БЕЗ СВЯЗИ', cls: 'wait' }} />
       </Rows>
@@ -915,7 +915,7 @@ export function Reject6_8() {
           <Row nm="Возраст" sub="2007 · граница «без ограничения»" pill={{ t: 'ПРОХОДИТ', cls: 'live' }} />
         </Rows>
         <Form>
-          <Field label="Причина" value="нет медицинского допуска и не оплачен годовой взнос" wide />
+          <Input label="Причина" value="нет медицинского допуска и не оплачен годовой взнос" wide />
         </Form>
         <Alert>Проверку система сделала сама, но решение — судьи: он может принять и с замечанием.</Alert>
       </Modal>
@@ -970,7 +970,7 @@ export function Finish6_9() {
         </Rows>
         <Alert>
           Ввод результатов закроется, турнир перейдёт в «Итоговый протокол», а сам протокол уйдёт
-          председателю ГСК на утверждение (§4.8).
+          председателю ГСК на утверждение.
         </Alert>
       </Modal>
     </RoleScreen>

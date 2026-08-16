@@ -10,7 +10,7 @@
 import type { ReactNode } from 'react';
 import { BadgeCheck, Ban, Check, Megaphone, Paperclip, Undo2, UserPlus } from 'lucide-react';
 import {
-  A, AW, ActionBar, Alert, Arrow, Board, Chips, Empty, Field, Form, Ghost, Hint, Modal, Off, Panel, Queue, RoleScreen, Row, Rows, Screen, Shot, States,
+  A, AW, ActionBar, Alert, Arrow, Board, Chips, Empty, Field, Form, Ghost, Hint, Input, Modal, Off, Panel, Queue, RoleScreen, Row, Rows, Screen, Shot, States,
 } from './shell';
 import type { DeskVariant } from '../deskShell';
 import type { ScreenMap } from './shell';
@@ -577,7 +577,7 @@ const Docs5_6States = () => (
       wide
     >
       <Rows>
-        <Row nm="Оспанов Т. · семинар S3" sub="подан на 14-й день · срок по §2.4 — 10 дней" pill={{ t: 'ПОЗЖЕ СРОКА', cls: 'bad' }} />
+        <Row nm="Оспанов Т. · семинар S3" sub="подан на 14-й день · срок подачи — 10 дней" pill={{ t: 'ПОЗЖЕ СРОКА', cls: 'bad' }} />
       </Rows>
       <Alert>Засчитывать или нет — решения нет: балл не проставляем, документ остаётся в очереди.</Alert>
     </Shot>
@@ -704,7 +704,7 @@ export function Reject5_9() {
       >
         <Form>
           <Field label="Что отклоняется" value="Заявка на судейство · Сериков Н." wide />
-          <Field label="Причина" value="на главный старт нужна первая или национальная категория" wide />
+          <Input label="Причина" value="на главный старт нужна первая или национальная категория" wide />
         </Form>
         <Alert>Приём заявок открыт до 18.04 — судья может подать снова, и это сказано в уведомлении.</Alert>
       </Modal>
