@@ -1,5 +1,5 @@
 import { useState, type ReactNode } from 'react';
-import { ArrowLeft, Bell, ChevronDown, LogOut, Search, User } from 'lucide-react';
+import { ArrowLeft, Bell, ChevronDown, LogOut, User } from 'lucide-react';
 import { Brand } from './ui';
 
 /* Общая десктоп-оболочка (верхняя панель + сайдбар + main) для флоу веба.
@@ -62,7 +62,8 @@ export function Desk({
         </div>
         {badge !== false && <span className="live"><span className="d" />{badge}</span>}
         <div className="sp" />
-        <button className="iconbtn"><Search size={16} /></button>
+        {/* Поиска в шапке нет: единого «поиска по всему» у нас не проектируется,
+            искать человека или турнир идут в свой реестр, где есть фильтры. */}
         <button className="iconbtn dot"><Bell size={16} /></button>
         <div className="dme">
           <button type="button" className="me" onClick={() => setMenu(!menu)} aria-expanded={menu}>
