@@ -133,6 +133,11 @@ export type ScreenEntry = {
   view: () => ReactNode;
   /** Подпись стрелки к следующей колонке: чем человек туда переходит. */
   next?: string;
+  /** Экран, открытый на конкретной вкладке: карта флоу показывает его, когда
+      выбран узел вкладки. Нужен там, где вкладка бывает не у каждого турнира
+      (у «Групп» другой турнир — с групповым этапом), и одним переключателем в
+      основном макете её не показать. */
+  tabView?: (tab: string) => ReactNode;
 };
 
 /** Экраны роли по кодам Э№.№, в порядке маршрута (порядок ключей значим). */
@@ -365,6 +370,67 @@ export function TabPanel({
     >
       {hit.view}
     </Panel>
+  );
+}
+
+/** Поиск по списку: поле управляется снаружи — от него зависит, что показано,
+    и внутреннее состояние тут только мешало бы. */
+export function Search({
+  value,
+  onChange,
+  placeholder,
+  wide,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  placeholder?: string;
+  wide?: boolean;
+}) {
+  return (
+    <div className={'dfield' + (wide ? ' wide' : '')}>
+      <label className="k">
+        Поиск
+        <input
+          className="dinput"
+          value={value}
+          placeholder={placeholder}
+          onChange={(e) => onChange(e.target.value)}
+        />
+      </label>
+    </div>
+  );
+}
+
+/** Страницы длинного списка: назад, номера, вперёд. Без них в списке на сотню
+    строк человек ищет глазами, а это единственное, чего он делать не должен. */
+export function Pager({
+  page,
+  pages,
+  onPick,
+}: {
+  page: number;
+  pages: number;
+  onPick: (p: number) => void;
+}) {
+  return (
+    <div className="mkpager">
+      <button type="button" disabled={page === 0} onClick={() => onPick(page - 1)}>
+        Назад
+      </button>
+      {Array.from({ length: pages }, (_, i) => (
+        <button
+          key={i}
+          type="button"
+          className={i === page ? 'on' : undefined}
+          onClick={() => onPick(i)}
+        >
+          {i + 1}
+        </button>
+      ))}
+      <button type="button" disabled={page >= pages - 1} onClick={() => onPick(page + 1)}>
+        Вперёд
+      </button>
+    </div>
   );
 }
 

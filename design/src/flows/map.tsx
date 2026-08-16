@@ -124,6 +124,8 @@ function build(flow: RoleFlow, screens: ScreenMap, selected: string) {
 
   const parent = new Map<string, string>();
   const via = new Map<string, string>();
+  /** Связь только для раскладки: экран стоит в ветке, но стрелки к нему нет. */
+  const weak = new Set<string>();
   codes.forEach((code, i) => {
     if (code === root) return;
     const sc = byId.get(code);
@@ -146,8 +148,12 @@ function build(flow: RoleFlow, screens: ScreenMap, selected: string) {
         return;
       }
     }
+    /* Перехода в этот экран в данных нет: ставим его в дерево к предыдущему,
+       но стрелку не рисуем — она сказала бы о переходе, которого нет. Экраны
+       так и должны выглядеть: стоят в маршруте, а входят в них по-другому
+       (уведомлением, из состояния, из чужой роли). */
     parent.set(code, codes[i - 1] ?? first);
-    via.set(code, short(sc.entry[0] ?? ''));
+    weak.add(code);
   });
 
   const kids = new Map<string, string[]>();
@@ -233,7 +239,7 @@ function build(flow: RoleFlow, screens: ScreenMap, selected: string) {
   };
 
   const edges: Edge[] = codes
-    .filter((c) => parent.has(c))
+    .filter((c) => parent.has(c) && !weak.has(c))
     .map((c) => ({
       ...edgeBase,
       id: `${parent.get(c)}->${c}`,
@@ -503,7 +509,10 @@ export function FlowMap({ flow, screens }: { flow: RoleFlow; screens: ScreenMap 
             className="fmap-scale"
             style={{ transform: `scale(${scale})`, transformOrigin: 'top left' }}
           >
-            {screens[selected]?.view()}
+            {/* Экран на выбранной вкладке: если роль отдала `tabView`, карта
+                показывает именно его — иначе тот же экран, а вкладку в нём
+                нажимает эффект ниже. */}
+            {(tab && screens[selected]?.tabView?.(tab)) || screens[selected]?.view()}
           </div>
         </div>
 

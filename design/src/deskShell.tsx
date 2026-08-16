@@ -12,6 +12,16 @@ import { Brand } from './ui';
 
 export type DeskVariant = 'desktop' | 'land';
 
+/* Последние уведомления в шапке. Перечень событий — TZ §10.1; каждое ведёт на
+   свой экран, поэтому у строки есть код перехода. Роли берут одну оболочку, и
+   набор здесь общий: у судьи и спортсмена он выглядел бы по-разному, но
+   поведение — одно, и проверяем мы его. */
+const NOTES: { t: string; s: string; at: string; to: string }[] = [
+  { t: 'Заявка принята', s: 'Кубок Алматы 2026 · решение главного судьи', at: '10:42', to: 'Э0.3' },
+  { t: 'Пара вызвана на стол', s: 'стол 5 · 1/8 финала', at: '09:15', to: 'Э0.3' },
+  { t: 'Рейтинг пересчитан', s: 'турнир завершён · +8', at: 'вчера', to: 'Э0.3' },
+];
+
 // рамка: десктоп (ноутбук 1200x760) либо планшет-альбом (1024x720)
 export function DeskFrame({ variant = 'desktop', children }: { variant?: DeskVariant; children: ReactNode }) {
   if (variant === 'land') return <div className="tabframe land"><div className="deskland">{children}</div></div>;
@@ -51,6 +61,10 @@ export function Desk({
      я» и «выйти» — одно место. Одним кликом по имени не выходим — случайный
      выход посреди турнира стоит дороже лишнего клика. */
   const [menu, setMenu] = useState(false);
+  /* Уведомления. Колокольчик не просто счётчик: по клику открывается лента
+     последних, и каждое уведомление ведёт на свой экран (TZ §10.1) — заявка в
+     свою заявку, вызов в матч. Внизу — выход в полную ленту (Э0.3). */
+  const [bell, setBell] = useState(false);
   return (
     <DeskFrame variant={variant}>
       <div className="dtop">
@@ -64,7 +78,34 @@ export function Desk({
         <div className="sp" />
         {/* Поиска в шапке нет: единого «поиска по всему» у нас не проектируется,
             искать человека или турнир идут в свой реестр, где есть фильтры. */}
-        <button className="iconbtn dot"><Bell size={16} /></button>
+        <div className="dme">
+          <button
+            type="button"
+            className="iconbtn dot"
+            onClick={() => setBell(!bell)}
+            aria-expanded={bell}
+          >
+            <Bell size={16} />
+          </button>
+          {bell && (
+            <div className="dmenu dnotes">
+              <div className="dmenu-h">Уведомления<span>3 непрочитанных</span></div>
+              {NOTES.map((n) => (
+                <button type="button" className="dnote" key={n.t} data-to={n.to}>
+                  <span className="d" />
+                  <span>
+                    <b>{n.t}</b>
+                    <i>{n.s}</i>
+                  </span>
+                  <em>{n.at}</em>
+                </button>
+              ))}
+              <button type="button" className="dmenu-i" data-to="Э0.3">
+                Все уведомления
+              </button>
+            </div>
+          )}
+        </div>
         <div className="dme">
           <button type="button" className="me" onClick={() => setMenu(!menu)} aria-expanded={menu}>
             <img src={role.av} alt="" />

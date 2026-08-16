@@ -37,6 +37,17 @@
 .dmenu-i.out { border-top: 1px solid var(--c-glass-line); }
 .dmenu-i.out:hover { color: var(--c-danger); }
 
+/* Лента уведомлений под колокольчиком: каждое ведёт на свой экран (TZ §10.1),
+   внизу — выход в полную ленту. Панель шире меню профиля: в строке помещается
+   и событие, и что именно случилось. */
+.dnotes { min-width: 320px; }
+.dnote { display: grid; grid-template-columns: 8px 1fr auto; align-items: start; gap: 9px; width: 100%; padding: 10px 12px; font: inherit; color: var(--c-ink); background: none; border: 0; border-top: 1px solid var(--c-glass-line); text-align: left; cursor: pointer; }
+.dnote:hover { background: var(--c-panel-2); }
+.dnote .d { width: 7px; height: 7px; margin-top: 5px; border-radius: var(--r-round); background: var(--c-accent); }
+.dnote b { display: block; font-size: 12.5px; font-weight: 700; }
+.dnote i { display: block; margin-top: 2px; font-size: 11px; font-style: normal; color: var(--c-muted); }
+.dnote em { font-size: 10.5px; font-style: normal; color: var(--c-dim); }
+
 .dgrid { flex: 1; display: grid; grid-template-columns: 212px 1fr; min-height: 0; }
 
 /* боковая навигация. Заливка непрозрачная, как у шапки: сайдбар — это хром

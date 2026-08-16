@@ -9,11 +9,11 @@
    Роль — единственная, кто заявляется сам, и единственная, кто платит взнос
    картой. Счёт своего матча спортсмен не вводит: его ведёт судья стола. */
 
-import type { ReactNode } from 'react';
-import { BarChart3, Check, CreditCard, Lock, Pencil, Send } from 'lucide-react';
+import { useState, type ReactNode } from 'react';
+import { ArrowUpDown, BarChart3, Check, CreditCard, Lock, Pencil, Send } from 'lucide-react';
 import {
   A, ActionBar, Alert, Also, Arrow, Board, Chips, Empty, Field, Form, Ghost, Input, Modal, Off, P,
-  Panel, Queue, RoleScreen, Row, Rows, Screen, Shot, States, Tabs,
+  Pager, Panel, Queue, RoleScreen, Row, Rows, Screen, Search, Shot, States, Tabs,
 } from './shell';
 import { Select } from '../ui';
 import { BracketFlow } from '@/widgets/bracket/BracketFlow';
@@ -287,16 +287,41 @@ const MyApp14_4States = () => (
    панель в углу: рядом с ней ничего не помещается. */
 const TABS14_5 = ['Мой матч', 'Участники', 'Сетка'];
 
-/* Участники турнира: посев, рейтинг, клуб. Себя и своего соперника человек
-   должен находить в списке сразу — они помечены. */
-const PLAYERS = [
-  { s: 1, av: A(32), nm: 'Смагулов Алан', sub: 'Астана · СКА · рейтинг 2612' },
-  { s: 2, av: A(44), nm: 'Ким Георгий', sub: 'Астана · СКА · рейтинг 2456', p: { t: 'ВЫ', cls: 'reg' as const } },
-  { s: 3, av: A(51), nm: 'Токаев Марат', sub: 'Шымкент · «Жетісу» · рейтинг 2398' },
-  { s: 4, av: A(22), nm: 'Жумабеков Расул', sub: 'Алматы · «Алатау» · рейтинг 2312', p: { t: 'ВАШ СОПЕРНИК', cls: 'live' as const } },
-  { s: 5, av: A(13), nm: 'Пак Сергей', sub: 'Караганда · «Шахтёр» · рейтинг 2287' },
-  { s: 6, av: A(56), nm: 'Гладун Игорь', sub: 'Алматы · «Алатау» · рейтинг 2244' },
-  { s: 7, av: A(75), nm: 'Оспанов Тимур', sub: 'Павлодар · «Иртыш» · рейтинг 2201' },
+/* Участники турнира: посев, рейтинг, регион и клуб. Список большой (128 на
+   главном старте), поэтому это таблица с поиском, сортировкой и страницами по
+   30 — глазами в такой список не ищут. Себя и своего соперника человек должен
+   находить сразу, поэтому их строки помечены. */
+type Ply14 = { s: number; nm: string; city: string; club: string; r: number; me?: boolean; foe?: boolean };
+
+const SURNAMES = [
+  'Смагулов', 'Ким', 'Токаев', 'Жумабеков', 'Пак', 'Гладун', 'Оспанов', 'Байжанов',
+  'Абиш', 'Сериков', 'Цой', 'Ли', 'Мурат', 'Асан', 'Бекзат', 'Кайрат',
+  'Нурлан', 'Тлеу', 'Садык', 'Жанибек', 'Алтай', 'Ерасыл', 'Мади', 'Арман',
+];
+const FIRSTS = ['Алан', 'Георгий', 'Марат', 'Расул', 'Сергей', 'Игорь', 'Тимур', 'Ерасыл', 'Данияр', 'Асхат'];
+const CITIES: [string, string][] = [
+  ['Астана', 'СКА'], ['Алматы', '«Алатау»'], ['Шымкент', '«Жетісу»'], ['Караганда', '«Шахтёр»'],
+  ['Павлодар', '«Иртыш»'], ['Актобе', '«Актобе»'], ['Тараз', 'без клуба'], ['Костанай', '«Тобол»'],
+];
+
+/** 128 участников: посев по рейтингу, рейтинг убывает от первого номера.
+    Фамилия и имя не повторяются парами — иначе в списке появляется второй
+    «Ким Георгий», и непонятно, кто из них ты. */
+const PLAYERS: Ply14[] = Array.from({ length: 128 }, (_, i) => {
+  const [city, club] = CITIES[i % CITIES.length];
+  const nm = `${SURNAMES[i % SURNAMES.length]} ${FIRSTS[Math.floor(i / SURNAMES.length) % FIRSTS.length]}`;
+  return { s: i + 1, nm, city, club, r: 2612 - i * 7 - (i % 5) };
+});
+PLAYERS[1] = { ...PLAYERS[1], nm: 'Ким Георгий', city: 'Астана', club: 'СКА', r: 2456, me: true };
+PLAYERS[3] = { ...PLAYERS[3], nm: 'Жумабеков Расул', city: 'Алматы', club: '«Алатау»', r: 2312, foe: true };
+
+const PER_PAGE = 30;
+/** Колонки таблицы участников: по каким сортируют. */
+const COLS14: { k: 's' | 'nm' | 'club' | 'r'; t: string; num?: boolean }[] = [
+  { k: 's', t: '№ посева', num: true },
+  { k: 'nm', t: 'Участник' },
+  { k: 'club', t: 'Регион и клуб' },
+  { k: 'r', t: 'Рейтинг', num: true },
 ];
 
 /** Вкладка «Мой матч»: с кем играю сейчас и как шёл по сетке. */
@@ -323,20 +348,90 @@ const MyMatch14_5 = () => (
   </div>
 );
 
-/** Вкладка «Участники»: весь состав турнира, свои строки помечены. */
-const Players14_5 = () => (
-  <Panel
-    title="Участники · 32"
-    extra={<span className="dcount">посев по рейтингу на день жеребьёвки</span>}
-  >
-    <Rows>
-      {PLAYERS.map((p) => (
-        <Row key={p.nm} av={p.av} nm={p.nm} sub={p.sub} val={`№ ${p.s}`} pill={p.p} />
-      ))}
-    </Rows>
-    <div className="dcount" style={{ marginTop: 10 }}>показаны первые 7 из 32</div>
-  </Panel>
-);
+/** Вкладка «Участники»: таблица состава — поиск, сортировка, страницы по 30.
+
+    Списком строк это не работает: на главном старте 128 участников, и человек
+    ищет в нём либо себя, либо конкретного соперника. Поэтому поиск по фамилии,
+    сортировка по любому столбцу и страницы — как в реестрах федерации. */
+function Players14_5() {
+  const [q, setQ] = useState('');
+  const [sort, setSort] = useState<{ k: (typeof COLS14)[number]['k']; up: boolean }>({ k: 's', up: true });
+  const [page, setPage] = useState(0);
+
+  const found = PLAYERS.filter((p) => {
+    const t = q.trim().toLowerCase();
+    return !t || p.nm.toLowerCase().includes(t) || p.club.toLowerCase().includes(t) || p.city.toLowerCase().includes(t);
+  });
+  const rows = [...found].sort((a, b) => {
+    const k = sort.k;
+    const v = k === 'nm' || k === 'club' ? String(a[k]).localeCompare(String(b[k]), 'ru') : Number(a[k]) - Number(b[k]);
+    return sort.up ? v : -v;
+  });
+  const pages = Math.max(1, Math.ceil(rows.length / PER_PAGE));
+  const cur = Math.min(page, pages - 1);
+  const shown = rows.slice(cur * PER_PAGE, cur * PER_PAGE + PER_PAGE);
+
+  /* Панели вокруг таблицы нет: заголовок «Участники» повторял бы подпись
+     вкладки, а счётчик и без него стоит в строке поиска. */
+  return (
+    <>
+      <div className="dactionbar">
+        <Search
+          value={q}
+          placeholder="Фамилия, клуб или регион"
+          onChange={(v) => { setQ(v); setPage(0); }}
+          wide
+        />
+        <span className="dcount">
+          {rows.length === PLAYERS.length ? `${PLAYERS.length} участников` : `найдено ${rows.length} из ${PLAYERS.length}`}
+        </span>
+      </div>
+
+      <div className="mktable">
+        <div className="mktable-h">
+          {COLS14.map((c) => (
+            <button
+              key={c.k}
+              type="button"
+              className={(c.num ? 'num' : '') + (sort.k === c.k ? ' on' : '')}
+              onClick={() => setSort({ k: c.k, up: sort.k === c.k ? !sort.up : true })}
+            >
+              {c.t}
+              {sort.k === c.k && <ArrowUpDown size={11} />}
+            </button>
+          ))}
+          <span />
+        </div>
+        <div className="mktable-b">
+          {shown.map((p) => (
+            <div className={'mktable-r' + (p.me ? ' me' : '')} key={p.s}>
+              <span className="num">{p.s}</span>
+              <span className="nm">{p.nm}</span>
+              <span>{p.city} · {p.club}</span>
+              <span className="num">{p.r}</span>
+              <span>
+                {p.me && <P t="ВЫ" cls="reg" />}
+                {p.foe && <P t="ВАШ СОПЕРНИК" cls="live" />}
+              </span>
+            </div>
+          ))}
+          {shown.length === 0 && (
+            <div className="dcount" style={{ padding: '14px 12px' }}>
+              По запросу «{q}» никого нет — проверьте написание фамилии.
+            </div>
+          )}
+        </div>
+      </div>
+
+      <div className="dactionbar" style={{ marginTop: 10 }}>
+        <span className="dcount">
+          {rows.length ? `${cur * PER_PAGE + 1}–${cur * PER_PAGE + shown.length} из ${rows.length}` : '0 из 0'}
+        </span>
+        <Pager page={cur} pages={pages} onPick={setPage} />
+      </div>
+    </>
+  );
+}
 
 /** Вкладка «Сетка»: сетку рисует тот же компонент, что и на фронте — не
     картинка и не свои прямоугольники, а настоящий холст по общей модели
@@ -792,6 +887,10 @@ export const SCREENS: ScreenMap = {
   },
   'Э14.5': {
     cap: 'Мой турнир и мой матч',
+    /* Узел вкладки на карте открывает экран сразу на ней. «Группы» бывают не у
+       каждого турнира, поэтому для них показываем турнир с групповым этапом —
+       иначе вкладки, о которой спрашивают, на экране просто нет. */
+    tabView: (tab) => <Match14_5 tab={tab} groups={tab === 'Группы'} />,
     view: () => (
       <>
         <Match14_5 />
