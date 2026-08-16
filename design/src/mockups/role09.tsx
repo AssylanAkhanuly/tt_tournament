@@ -14,7 +14,7 @@ import {
 } from './shell';
 import type { ScreenMap } from './shell';
 import { R09 } from './roles';
-import { Code0_1 } from './role00';
+import { Login0_1 } from './role00';
 
 /* ── данные экранов ──────────────────────────────────────────────── */
 
@@ -307,7 +307,7 @@ export function Log9_4() {
 
 export function Rating9_5() {
   return (
-    <RoleTablet title="Мой рейтинг судьи" sub="Сезон 2026 · R = S1 + S2 + S3 + S4 (§7.2)" badge="ОПУБЛИКОВАН">
+    <RoleTablet title="Мой рейтинг судьи" sub="Сезон 2026 · R = S1 + S2 + S3 + S4" badge="ОПУБЛИКОВАН">
       <div className="card pcard">
         <img className="avatar" src={A(39)} alt="" />
         <div className="who">
@@ -424,13 +424,13 @@ const Score9_3States = () => (
       <Rows>
         <Row nm="Связи нет" sub="ввод продолжается на планшете" val="7 событий в очереди" pill={{ t: 'ЛОКАЛЬНО', cls: 'wait' }} />
       </Rows>
-      <Alert>Счёт вести можно: судья стола — источник правды по матчу (§12).</Alert>
+      <Alert>Счёт вести можно: судья стола — источник правды по матчу.</Alert>
     </Shot>
 
     <Shot
       tone="info"
       title="Расхождение после синхронизации"
-      text="Приоритет у судьи стола — он видит игру (TZ §12)."
+      text="Приоритет у судьи стола — он видит игру."
     >
       <Rows>
         <Row nm="На планшете" sub="11:9 · третья партия" pill={{ t: 'ПРИНЯТО', cls: 'live' }} />
@@ -459,8 +459,8 @@ const Rating9_5States = () => (
 /** Экраны роли по кодам: из этой карты собираются и борд, и карта флоу. */
 export const SCREENS: ScreenMap = {
   'Э0.1': {
-    cap: 'Вход по короткому коду',
-    view: () => <Code0_1 />,
+    cap: 'Вход',
+    view: () => <Login0_1 />,
     next: 'первый экран роли',
   },
   'Э9.1': {

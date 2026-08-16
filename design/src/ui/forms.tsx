@@ -45,6 +45,7 @@ export function Input({
   error,
   className,
   style,
+  format,
 }: FieldWrap & {
   value?: string;
   placeholder?: string;
@@ -53,8 +54,17 @@ export function Input({
   size?: 'sm' | 'md';
   focused?: boolean;
   disabled?: boolean;
+  /** `date` — поле само расставляет точки: 01012009 → 01.01.2009. */
+  format?: 'date';
 }) {
   const [inner, setInner] = useState(value ?? '');
+  /* Форматтер, а не свободный ввод: дату набирают цифрами, а точки и длину
+     держит поле — иначе каждый пишет по-своему и её потом не разобрать. */
+  const fmt = (raw: string) => {
+    if (format !== 'date') return raw;
+    const d = raw.replace(/\D/g, '').slice(0, 8);
+    return [d.slice(0, 2), d.slice(2, 4), d.slice(4)].filter(Boolean).join('.');
+  };
   return (
     <Wrap label={label} hint={hint} error={error} className={className} style={style}>
       <div
@@ -67,7 +77,7 @@ export function Input({
         )}
       >
         {icon && <span className="ui-input-ic">{icon}</span>}
-        <input value={inner} placeholder={placeholder} disabled={disabled} onChange={(e) => setInner(e.target.value)} />
+        <input value={inner} placeholder={placeholder} disabled={disabled} onChange={(e) => setInner(fmt(e.target.value))} />
         {suffix && <span className="ui-input-suffix">{suffix}</span>}
       </div>
     </Wrap>
