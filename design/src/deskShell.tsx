@@ -30,7 +30,7 @@ export function DeskFrame({ variant = 'desktop', children }: { variant?: DeskVar
 
 export function Desk({
   variant = 'desktop', brandName, brandSub, badge = 'ИДЁТ', title, sub, back, nav, activeNav,
-  onNavigate, role, hint, children,
+  onNavigate, role, roles, hint, children,
 }: {
   variant?: DeskVariant;
   brandName?: string;
@@ -53,6 +53,9 @@ export function Desk({
   /** передан — сайдбар становится кликабельным (живой прототип роли) */
   onNavigate?: (item: string) => void;
   role: { nm: string; rl: string; av: string };
+  /** Роли этого человека, если их несколько: переключаются здесь же, в меню
+      профиля. Одна роль — раздела нет, выбирать не из чего. */
+  roles?: string[];
   hint?: string;
   children: ReactNode;
 }) {
@@ -65,6 +68,11 @@ export function Desk({
      последних, и каждое уведомление ведёт на свой экран (TZ §10.1) — заявка в
      свою заявку, вызов в матч. Внизу — выход в полную ленту (Э0.3). */
   const [bell, setBell] = useState(false);
+  /* Роль, под которой человек работает. Переключается здесь же, в меню профиля:
+     это единственное место, где написано, кто ты сейчас, — там же логично и
+     сменить. Отдельного экрана «выбор роли» после входа нет: он заставлял бы
+     выходить и заходить заново ради переключения. */
+  const [cur, setCur] = useState(role.rl);
   return (
     <DeskFrame variant={variant}>
       <div className="dtop">
@@ -109,14 +117,33 @@ export function Desk({
         <div className="dme">
           <button type="button" className="me" onClick={() => setMenu(!menu)} aria-expanded={menu}>
             <img src={role.av} alt="" />
-            <div><div className="nm">{role.nm}</div><div className="rl">{role.rl}</div></div>
+            <div><div className="nm">{role.nm}</div><div className="rl">{cur}</div></div>
             <ChevronDown size={14} />
           </button>
           {menu && (
             <div className="dmenu">
               {/* Под каким аккаунтом сидишь — прямо над выходом: у одного
                   человека бывает несколько ролей, и выйти он может не из той. */}
-              <div className="dmenu-h">{role.nm}<span>{role.rl}</span></div>
+              <div className="dmenu-h">{role.nm}<span>{cur}</span></div>
+              {/* Переключение роли: интерфейс меняется под выбранную — меню,
+                  права и экраны у ролей разные. Раздел появляется только когда
+                  ролей правда несколько. */}
+              {roles && roles.length > 1 && (
+                <div className="dmenu-roles">
+                  <div className="dmenu-sec">Работать как</div>
+                  {roles.map((r) => (
+                    <button
+                      key={r}
+                      type="button"
+                      className={'dmenu-role' + (r === cur ? ' on' : '')}
+                      onClick={() => setCur(r)}
+                    >
+                      <span className="d" />
+                      {r}
+                    </button>
+                  ))}
+                </div>
+              )}
               {/* В свой профиль (Э0.2) попадают «по имени и фото в шапке» —
                   так и записано во флоу сквозных экранов. */}
               <button type="button" className="dmenu-i" data-to="Э0.2">

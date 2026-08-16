@@ -37,6 +37,16 @@
 .dmenu-i.out { border-top: 1px solid var(--c-glass-line); }
 .dmenu-i.out:hover { color: var(--c-danger); }
 
+/* Переключение роли в меню профиля: у человека их бывает несколько, и под
+   какой он работает — написано тут же, в шапке. Выбранная помечена точкой. */
+.dmenu-roles { border-top: 1px solid var(--c-glass-line); border-bottom: 1px solid var(--c-glass-line); padding: 6px 0; }
+.dmenu-sec { padding: 4px 12px 6px; font-size: 10px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: var(--c-dim); }
+.dmenu-role { display: flex; align-items: center; gap: 9px; width: 100%; padding: 8px 12px; font: inherit; font-size: 12.5px; font-weight: 600; color: var(--c-muted); background: none; border: 0; text-align: left; cursor: pointer; }
+.dmenu-role:hover { background: var(--c-panel-2); color: var(--c-ink); }
+.dmenu-role .d { width: 7px; height: 7px; border-radius: var(--r-round); background: var(--c-glass-line); }
+.dmenu-role.on { color: var(--c-ink); }
+.dmenu-role.on .d { background: var(--c-accent); box-shadow: 0 0 8px var(--c-accent); }
+
 /* Лента уведомлений под колокольчиком: каждое ведёт на свой экран (TZ §10.1),
    внизу — выход в полную ленту. Панель шире меню профиля: в строке помещается
    и событие, и что именно случилось. */
@@ -61,7 +71,13 @@
 .dside .hint { font-size: 11px; color: var(--c-dim); padding: 10px 12px; line-height: 1.5; }
 
 /* основная область */
-.dmain { padding: 20px 22px; min-width: 0; overflow: hidden; display: flex; flex-direction: column; gap: 16px; }
+/* Рабочая область прокручивается, как настоящая страница: шапка и сайдбар
+   остаются на месте, а длинный экран (профиль со взносом, реестр) не обрезается
+   рамкой ноутбука. Полосу держим тонкой — это хром, а не содержимое. */
+.dmain { padding: 20px 22px; min-width: 0; overflow-y: auto; overflow-x: hidden; display: flex; flex-direction: column; gap: 16px; scrollbar-width: thin; scrollbar-color: var(--c-glass-line) transparent; }
+.dmain::-webkit-scrollbar { width: 10px; }
+.dmain::-webkit-scrollbar-thumb { background: var(--c-glass-line); border-radius: var(--r-round); border: 3px solid transparent; background-clip: content-box; }
+.dmain::-webkit-scrollbar-thumb:hover { background: var(--c-glass-ring); background-clip: content-box; }
 /* Возврат над заголовком: тихая кнопка, а не заметная — она уводит с экрана,
    а главное действие здесь другое. */
 .dback { display: inline-flex; align-items: center; gap: 6px; margin-bottom: 8px; padding: 4px 10px 4px 7px; font: inherit; font-size: 11.5px; font-weight: 600; color: var(--c-muted); background: none; border: 1px solid var(--c-glass-line); border-radius: var(--r-xs); cursor: pointer; }

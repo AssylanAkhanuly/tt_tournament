@@ -585,34 +585,59 @@ const Stats14_6States = () => (
   </States>
 );
 
-/* ── Э14.7 · Профиль и взнос ───────────────────────────────────── */
+/* ── Э14.7 · Мой профиль ───────────────────────────────────────── */
 
+/** Один профиль вместо двух: сквозной «свой профиль» (контакты, язык, пароль) и
+    спортивная карточка со взносом — это один экран, и человек ходил между ними
+    зря. У спортсмена сюда же попадают по имени и фото в шапке. */
 export function Profile14_7() {
   return (
-    <RoleScreen role={R14} nav="Профиль" title="Профиль" sub="Ким Георгий · 2003 · Астана">
+    <RoleScreen role={R14} nav="Профиль" title="Мой профиль" sub="Ким Георгий · 2003 · Астана · СКА">
       <div className="mkcols">
-        {/* Профиль — на чтение. Правка вынесена отдельным экраном (Э14.9):
+        {/* Данные — на чтение. Правка вынесена отдельным экраном (Э14.9):
             телефон и почта меняются сразу, клуб — только после подтверждения
             клубом, и на одном экране эти два поведения путаются. */}
-        <Panel
-          title="Профиль"
-          extra={
-            <button className="dpickbtn" data-to="Э14.9">
-              <Pencil size={14} /> Изменить данные
-            </button>
-          }
-        >
-          <Form>
-            <Field label="Дата рождения" value="14.06.2003" />
-            <Field label="Разряд" value="мастер спорта" />
-            <Field label="Регион" value="Астана" />
-            <Field label="Тренер" value="Гладун Игорь" />
-            <Field label="Телефон" value="+7 705 118 44 03" />
-            <Field label="Почта" value="g.kim@mail.kz" />
-            <Field label="Клуб" value="СКА · Астана" />
-            <Field label="Принадлежность к клубу" value="подтвердил клуб «СКА», 12.01.2026" />
-          </Form>
-        </Panel>
+        <div style={{ display: 'grid', gap: 12 }}>
+          <Panel
+            title="Профиль"
+            extra={
+              <button className="dpickbtn" data-to="Э14.9">
+                <Pencil size={14} /> Изменить данные
+              </button>
+            }
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 14 }}>
+              <img
+                src={ME}
+                alt=""
+                style={{ width: 56, height: 56, borderRadius: 'var(--r-round)', objectFit: 'cover' }}
+              />
+              <div>
+                <div style={{ fontSize: 15, fontWeight: 700 }}>Ким Георгий</div>
+                <div style={{ fontSize: 12, color: 'var(--c-muted)', marginTop: 3 }}>
+                  Спортсмен · рейтинг 2456 · 7-е место в РК
+                </div>
+              </div>
+            </div>
+            <Form>
+              <Field label="Дата рождения" value="14.06.2003" />
+              <Field label="Разряд" value="мастер спорта" />
+              <Field label="Регион" value="Астана" />
+              <Field label="Тренер" value="Гладун Игорь" />
+              <Field label="Телефон" value="+7 705 118 44 03" />
+              <Field label="Почта" value="g.kim@mail.kz" />
+              <Field label="Клуб" value="СКА · Астана" />
+              <Field label="Принадлежность к клубу" value="подтвердил клуб «СКА», 12.01.2026" />
+            </Form>
+          </Panel>
+
+          <Panel title="Безопасность и язык">
+            <Rows>
+              <Row nm="Пароль" sub="изменён 02.02.2026" action="Сменить" />
+              <Row nm="Язык интерфейса" sub="письма и уведомления приходят на нём же" val="Русский" />
+            </Rows>
+          </Panel>
+        </div>
 
         <Panel
           title="Годовой взнос 2026"
@@ -624,7 +649,7 @@ export function Profile14_7() {
         >
           <Form>
             <Field label="Сумма" value="₸ 10 000" />
-            <Input label="Срок" value="до 31 марта" />
+            <Field label="Срок" value="до 31 марта" />
           </Form>
           <div style={{ marginTop: 12 }}>
             <button className="dsubmit" style={{ width: '100%' }} data-to="Э14.8">
@@ -1142,7 +1167,7 @@ export const SCREENS: ScreenMap = {
     next: 'пункт «Профиль»',
   },
   'Э14.7': {
-    cap: 'Профиль и взнос',
+    cap: 'Мой профиль',
     view: () => (
       <>
         <Profile14_7 />

@@ -31,11 +31,25 @@ import './map.css';
 
 /* Экраны из шапки: они есть на каждом экране системы и потому у каждой роли.
    В борд роли их не ставим (это не шаг маршрута), а на карте они нужны — иначе
-   клик по колокольчику или по имени в шапке упирается в пустоту. */
-const FROM_HEADER: [string, string][] = [
-  ['Э0.3', 'колокольчик в шапке'],
-  ['Э0.2', 'имя и фото в шапке'],
+   клик по колокольчику или по имени в шапке упирается в пустоту.
+
+   `own` — по какому слову в подписи видно, что у роли есть свой такой экран: у
+   спортсмена профиль объединён со взносом (Э14.7), и сквозной подставлять не
+   нужно — получилось бы два «моих профиля» в одном маршруте. */
+const FROM_HEADER: { code: string; via: string; own?: string }[] = [
+  { code: 'Э0.3', via: 'колокольчик в шапке' },
+  { code: 'Э0.2', via: 'имя и фото в шапке', own: 'профиль' },
 ];
+
+/** Какие экраны из шапки подставить этой роли: только те, которых у неё нет
+    своих. */
+const fromHeader = (screens: ScreenMap) =>
+  FROM_HEADER.filter(
+    (h) =>
+      !screens[h.code] &&
+      COMMON_SCREENS[h.code] &&
+      !(h.own && Object.values(screens).some((s) => s.cap.toLowerCase().includes(h.own!))),
+  );
 
 /* Дерево растёт слева направо: слой — колонка, соседи по слою стоят друг под
    другом. Сверху вниз оно расползалось по ширине (у первого экрана роли до
@@ -119,10 +133,7 @@ const nodeTypes = { screen: ScreenNode, tab: TabNode };
 function build(flow: RoleFlow, screens: ScreenMap, selected: string) {
   const known = new Set(flow.screens.map((s) => s.id));
   const commons = new Map(role00.screens.map((s) => [s.id, s]));
-  const codes = [
-    ...Object.keys(screens),
-    ...FROM_HEADER.map(([c]) => c).filter((c) => !screens[c] && COMMON_SCREENS[c]),
-  ];
+  const codes = [...Object.keys(screens), ...fromHeader(screens).map((h) => h.code)];
   const byId = new Map<string, Screen>(
     codes
       .map((c) => [c, flow.screens.find((s) => s.id === c) ?? commons.get(c)!])
@@ -147,10 +158,10 @@ function build(flow: RoleFlow, screens: ScreenMap, selected: string) {
       via.set(code, 'вход под своей ролью');
       return;
     }
-    const header = FROM_HEADER.find(([c]) => c === code);
+    const header = FROM_HEADER.find((h) => h.code === code);
     if (header) {
       parent.set(code, first);
-      via.set(code, header[1]);
+      via.set(code, header.via);
       return;
     }
     if (/меню/i.test(sc.entry.join(' '))) {
@@ -327,9 +338,7 @@ export function FlowMap({ flow, screens: own }: { flow: RoleFlow; screens: Scree
   /* Экраны роли плюс те, что открываются из шапки на любом экране: макеты у
      них общие (раздел 00), и карта показывает их так же, как свои. */
   const screens = useMemo<ScreenMap>(() => {
-    const extra = Object.fromEntries(
-      FROM_HEADER.filter(([c]) => !own[c] && COMMON_SCREENS[c]).map(([c]) => [c, COMMON_SCREENS[c]]),
-    );
+    const extra = Object.fromEntries(fromHeader(own).map((h) => [h.code, COMMON_SCREENS[h.code]]));
     return { ...own, ...extra };
   }, [own]);
   const codes = Object.keys(screens);

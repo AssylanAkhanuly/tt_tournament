@@ -36,6 +36,8 @@ export type RoleUI = {
   brandSub?: string;
   /** Значок состояния в шапке: «ИДЁТ» уместен только внутри турнира. */
   badge?: string | false;
+  /** Роли этого человека, если их несколько: переключаются в меню профиля. */
+  roles?: string[];
 };
 
 /* ── Оболочка экрана роли ───────────────────────────────────────── */
@@ -74,6 +76,7 @@ export function RoleScreen({
       nav={role.nav}
       activeNav={nav}
       role={role.person}
+      roles={role.roles}
       hint={hint}
     >
       {children}
