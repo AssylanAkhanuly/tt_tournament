@@ -8,7 +8,7 @@
 import type { ReactNode } from 'react';
 import { ShieldCheck, TriangleAlert, UserPlus } from 'lucide-react';
 import {
-  A, AW, ActionBar, Alert, Arrow, Board, Chips, Empty, Field, Form, Ghost, Hint, Modal, Off, Panel, Queue, RoleScreen, Row, Rows, Screen, Shot, States, Submit,
+  A, AW, ActionBar, Alert, Arrow, Board, Chips, Empty, Field, Form, Ghost, Hint, Input, Modal, Off, Panel, Queue, RoleScreen, Row, Rows, Screen, Shot, States, Submit,
 } from './shell';
 import type { DeskVariant } from '../deskShell';
 import type { ScreenMap } from './shell';
@@ -53,7 +53,12 @@ export function Club13_1({ variant }: { variant?: DeskVariant }) {
           { v: '21–23.03', k: 'Ближайший тур · Астана' },
         ]}
       />
-      <Queue items={[{ n: '1', t: 'состав на тур не подтверждён', to: 'Э13.3' }]} />
+      <Queue
+        items={[
+          { n: '2', t: 'заявки на вступление в клуб', to: 'Э13.5' },
+          { n: '1', t: 'состав на тур не подтверждён', to: 'Э13.3' },
+        ]}
+      />
 
       <Panel
         title="Карточка клуба"
@@ -115,11 +120,11 @@ export function Person13_2() {
           extra={<FormSeg items={['Спортсмен', 'Тренер', 'Иное лицо']} />}
         >
           <Form>
-            <Field label="Фамилия" value="Нұрланұлы" />
-            <Field label="Имя" value="Алихан" />
-            <Field label="Дата рождения" value="14.05.2011" />
+            <Input label="Фамилия" value="Нұрланұлы" />
+            <Input label="Имя" value="Алихан" />
+            <Input label="Дата рождения" value="14.05.2011" />
             <Field label="Пол" value="Мужской" />
-            <Field label="Разряд" value="2 разряд" />
+            <Input label="Разряд" value="2 разряд" />
             <Field label="Клуб" value="«Алатау» · подставлен автоматически" />
             <Field label="Город" value="г. Алматы · из клуба" wide />
           </Form>
@@ -366,6 +371,93 @@ const Confirm13_4States = () => (
   </States>
 );
 
+/* ── Э13.5 · Заявки на вступление в клуб ───────────────────────── */
+
+/** Спортсмен заводит себя сам и сам выбирает клуб у себя в профиле (Э14.9).
+    Пока клуб не подтвердил, состав не меняется: подтверждает администратор
+    клуба — иначе в чужой состав вписался бы кто угодно. */
+export function Join13_5() {
+  return (
+    <RoleScreen
+      role={R13}
+      nav="Мой клуб"
+      title="Заявки на вступление"
+      sub="Клуб «Алатау» · спортсмены, выбравшие клуб у себя в профиле"
+      back={{ label: 'Мой клуб', to: 'Э13.1' }}
+    >
+      <Panel title="Ждут решения · 2">
+        <Rows>
+          <Row
+            av={A(44)}
+            nm="Ким Георгий"
+            sub="14.06.2003 · МС · рейтинг 2456 · сейчас СКА · Астана"
+            val="14.02"
+            pill={{ t: 'ЖДЁТ', cls: 'wait' }}
+          />
+          <Row
+            av={AW(28)}
+            nm="Сагындыкова Асель"
+            sub="02.09.2010 · 1 разряд · рейтинг 1712 · без клуба"
+            val="13.02"
+            pill={{ t: 'ЖДЁТ', cls: 'wait' }}
+          />
+        </Rows>
+      </Panel>
+
+      <Modal
+        title="Ким Георгий просится в клуб"
+        sub="Заявка от 14.02.2026 · сейчас СКА · Астана"
+        foot={
+          <>
+            <div className="dcount">Пока не приняли, в профиле спортсмена остаётся прежний клуб</div>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <Ghost>Отклонить</Ghost>
+              <button className="dsubmit" style={{ padding: '11px 16px' }}>Принять в клуб</button>
+            </div>
+          </>
+        }
+      >
+        <Form>
+          <Field label="Дата рождения" value="14.06.2003" />
+          <Field label="Разряд" value="мастер спорта" />
+          <Field label="Рейтинг" value="2456 · 7-е место в РК" />
+          <Field label="Текущий клуб" value="СКА · Астана" />
+        </Form>
+        <Alert>
+          После «Принять» спортсмен появится в составе клуба, и его можно будет заявлять в команды
+          Лиги. ⚠ 12.11 — нужно ли согласие прежнего клуба, не решено.
+        </Alert>
+      </Modal>
+    </RoleScreen>
+  );
+}
+
+const Join13_5States = () => (
+  <States>
+    <Shot tone="info" title="Заявок нет" text="Пустой список: никто не выбирал этот клуб.">
+      <Empty title="Заявок на вступление нет" text="Здесь появятся спортсмены, выбравшие клуб «Алатау» у себя в профиле." />
+    </Shot>
+
+    <Shot tone="success" title="Приняли" text="Спортсмен в составе клуба, у него в профиле новый клуб.">
+      <Rows>
+        <Row nm="Ким Георгий" sub="принял Досжан М., 16.02 · в составе клуба" pill={{ t: 'В КЛУБЕ', cls: 'live' }} />
+      </Rows>
+    </Shot>
+
+    <Shot tone="danger" title="Отклонили" text="Причина уходит спортсмену, прежний клуб у него остаётся.">
+      <Rows>
+        <Row nm="Ким Георгий" sub="отказ: «не тренируется у нас» · 16.02" pill={{ t: 'ОТКАЗ', cls: 'bad' }} />
+      </Rows>
+    </Shot>
+
+    <Shot tone="warning" title="Заявку отозвали" text="Строка помечена и решения не требует.">
+      <Rows>
+        <Row nm="Сагындыкова Асель" sub="отозвала заявку 15.02" pill={{ t: 'ОТОЗВАНА', cls: 'done' }} />
+      </Rows>
+    </Shot>
+  </States>
+);
+
 /** Экраны роли по кодам: из этой карты собираются и борд, и карта флоу. */
 export const SCREENS: ScreenMap = {
   'Э0.1': {
@@ -408,6 +500,15 @@ export const SCREENS: ScreenMap = {
       <>
         <Confirm13_4 />
         <Confirm13_4States />
+      </>
+    ),
+  },
+  'Э13.5': {
+    cap: 'Заявки на вступление в клуб',
+    view: () => (
+      <>
+        <Join13_5 />
+        <Join13_5States />
       </>
     ),
   },

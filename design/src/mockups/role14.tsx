@@ -10,12 +10,16 @@
    картой. Счёт своего матча спортсмен не вводит: его ведёт судья стола. */
 
 import type { ReactNode } from 'react';
-import { BarChart3, CreditCard, Lock, Send } from 'lucide-react';
+import { BarChart3, Check, CreditCard, Lock, Pencil, Send } from 'lucide-react';
 import {
-  A, ActionBar, Alert, Arrow, Board, Chips, Empty, Field, Form, Ghost, Modal, Off, P, Panel, Queue,
-  RoleScreen, Row, Rows, Screen, Shot, States,
+  A, ActionBar, Alert, Also, Arrow, Board, Chips, Empty, Field, Form, Ghost, Input, Modal, Off, P,
+  Panel, Queue, RoleScreen, Row, Rows, Screen, Shot, States,
 } from './shell';
+import { Select } from '../ui';
+import { FormSeg } from '../segs';
+import { BracketFlow } from '@/widgets/bracket/BracketFlow';
 import { DeskFrame, type DeskVariant } from '../deskShell';
+import { myBracket } from './myBracket';
 import type { ScreenMap } from './shell';
 import { R14 } from './roles';
 import { Login0_1, SignUp0_5, SignUp0_5States } from './role00';
@@ -171,9 +175,9 @@ export function Apply14_3() {
       <div className="mkcols">
         <Panel title="Заявка">
           <Form>
-            <Field label="Разряд" value="Одиночный" />
-            <Field label="Возрастная группа" value="Взрослые" />
-            <Field label="Парный разряд ✳" value="партнёр не выбран" wide />
+            <Input label="Разряд" value="Одиночный" />
+            <Input label="Возрастная группа" value="Взрослые" />
+            <Input label="Парный разряд ✳" value="партнёр не выбран" wide />
           </Form>
           <div className="dactionbar" style={{ marginTop: 12 }}>
             <div className="dcount">Решение принимает главный судья турнира</div>
@@ -183,7 +187,7 @@ export function Apply14_3() {
           </div>
         </Panel>
 
-        <Panel title="Условия допуска (§4.2)">
+        <Panel title="Условия допуска">
           <Rows>
             <Row nm="Годовой взнос федерации" sub="оплачен 14.01.2026" pill={{ t: 'ПРОХОДИТ', cls: 'live' }} />
             <Row nm="Удостоверение личности" sub="приложено" pill={{ t: 'ПРОХОДИТ', cls: 'live' }} />
@@ -260,9 +264,27 @@ const MyApp14_4States = () => (
 
 /* ── Э14.5 · Мой турнир и мой матч ─────────────────────────────── */
 
+/* Экран турнира — три вкладки: свой матч, участники и сетка. Сетке нужен весь
+   экран (её и на фронте так смотрят), поэтому это отдельная вкладка, а не
+   панель в углу: рядом с ней ничего не помещается. */
+const TABS14_5 = ['Мой матч', 'Участники', 'Сетка'];
+
+/* Участники турнира: посев, рейтинг, клуб. Себя и своего соперника человек
+   должен находить в списке сразу — они помечены. */
+const PLAYERS = [
+  { s: 1, av: A(32), nm: 'Смагулов Алан', sub: 'Астана · СКА · рейтинг 2612' },
+  { s: 2, av: A(44), nm: 'Ким Георгий', sub: 'Астана · СКА · рейтинг 2456', p: { t: 'ВЫ', cls: 'reg' as const } },
+  { s: 3, av: A(51), nm: 'Токаев Марат', sub: 'Шымкент · «Жетісу» · рейтинг 2398' },
+  { s: 4, av: A(22), nm: 'Жумабеков Расул', sub: 'Алматы · «Алатау» · рейтинг 2312', p: { t: 'ВАШ СОПЕРНИК', cls: 'live' as const } },
+  { s: 5, av: A(13), nm: 'Пак Сергей', sub: 'Караганда · «Шахтёр» · рейтинг 2287' },
+  { s: 6, av: A(56), nm: 'Гладун Игорь', sub: 'Алматы · «Алатау» · рейтинг 2244' },
+  { s: 7, av: A(75), nm: 'Оспанов Тимур', sub: 'Павлодар · «Иртыш» · рейтинг 2201' },
+];
+
 export function Match14_5() {
   return (
     <RoleScreen role={R14} nav="Мой матч" title="Кубок Алматы 2026" sub="1/8 финала · стол 5">
+      <FormSeg items={TABS14_5} active="Мой матч" />
       <div className="mkcols">
         <Panel title="Мой матч" extra={<P t="ИДЁТ" cls="live" />}>
           <Rows>
@@ -287,6 +309,44 @@ export function Match14_5() {
   );
 }
 
+/** Вкладка «Участники»: весь состав турнира, свои строки помечены. */
+export function Players14_5() {
+  return (
+    <RoleScreen role={R14} nav="Мой матч" title="Кубок Алматы 2026" sub="1/8 финала · стол 5">
+      <FormSeg items={TABS14_5} active="Участники" />
+      <Panel
+        title="Участники · 32"
+        extra={<span className="dcount">посев по рейтингу на день жеребьёвки</span>}
+      >
+        <Rows>
+          {PLAYERS.map((p) => (
+            <Row key={p.nm} av={p.av} nm={p.nm} sub={p.sub} val={`№ ${p.s}`} pill={p.p} />
+          ))}
+        </Rows>
+        <div className="dcount" style={{ marginTop: 10 }}>показаны первые 7 из 32</div>
+      </Panel>
+    </RoleScreen>
+  );
+}
+
+/** Вкладка «Сетка»: сетку рисует тот же компонент, что и на фронте — не
+    картинка и не свои прямоугольники, а настоящий холст по общей модели
+    сетки. Рядом с ней ничего не ставим: сетка занимает экран целиком. */
+export function Bracket14_5() {
+  return (
+    <RoleScreen role={R14} nav="Мой матч" title="Кубок Алматы 2026" sub="1/8 финала · стол 5">
+      <FormSeg items={TABS14_5} active="Сетка" />
+      <Panel
+        title="Сетка турнира"
+        extra={<span className="dcount">32 участника · олимпийская · мой матч подсвечен</span>}
+        body="mkbracket mkbracket-lg"
+      >
+        <BracketFlow bracket={myBracket} minZoom={0.15} fitPadding={0.06} />
+      </Panel>
+    </RoleScreen>
+  );
+}
+
 const Match14_5States = () => (
   <States>
     <Shot tone="danger" title="Счёт своего матча спортсмен не вводит" text="Счёт ведёт судья на столе; спортсмен его не вводит и не подтверждает.">
@@ -298,6 +358,19 @@ const Match14_5States = () => (
     <Shot tone="success" title="Вас вызвали" text="«Подойдите к столу N» — после вызова главным судьёй.">
       <Rows>
         <Row nm="Подойдите к столу 5" sub="вызвал главный судья · сейчас" pill={{ t: 'ВЫЗОВ', cls: 'live' }} />
+      </Rows>
+    </Shot>
+
+    <Shot
+      tone="info"
+      title="Турнир завершён"
+      text="Тот же экран открывается строкой турнира из аналитики: сетка на чтение, мои матчи, дельта рейтинга."
+      wide
+    >
+      <Rows>
+        <Row nm="1/16 финала" sub="Оралбек Д. · 4:1" val="+11" pill={{ t: 'ПОБЕДА', cls: 'live' }} />
+        <Row nm="1/8 финала" sub="Жумабеков Р. · 2:4" val="−3" pill={{ t: 'ПОРАЖЕНИЕ', cls: 'bad' }} />
+        <Row nm="Итог турнира" sub="1/8 финала · рейтинг пересчитан 15.09" val="+8" pill={{ t: 'ЗАВЕРШЁН', cls: 'done' }} />
       </Rows>
     </Shot>
   </States>
@@ -317,11 +390,14 @@ export function Stats14_6() {
         ]}
       />
       <div className="mkcols">
-        <Panel title="Рейтинг по турнирам (§7.1)">
+        {/* Строка турнира открывает тот же экран, что и по ходу игры (Э14.5),
+            но завершённый: сетка с моим путём, мои матчи и из чего сложилась
+            дельта рейтинга. Отдельного экрана «прошлый турнир» не заводим. */}
+        <Panel title="Рейтинг по турнирам">
           <Rows>
-            <Row nm="Кубок Алматы 2026" sub="1/8 финала · 14.09" val="+8" pill={{ t: 'РЕЙТИНГОВЫЙ', cls: 'reg' }} />
-            <Row nm="Открытие сезона 2026" sub="1/4 финала · 19.01" val="+22" pill={{ t: 'РЕЙТИНГОВЫЙ', cls: 'reg' }} />
-            <Row nm="ОРТ «Кубок Иртыша» 2025" sub="финал · 26.10" val="+16" pill={{ t: 'РЕЙТИНГОВЫЙ', cls: 'reg' }} />
+            <Row nm="Кубок Алматы 2026" sub="1/8 финала · 14.09" val="+8" pill={{ t: 'МОЯ СЕТКА И МАТЧИ', cls: 'reg' }} to="Э14.5" />
+            <Row nm="Открытие сезона 2026" sub="1/4 финала · 19.01" val="+22" pill={{ t: 'МОЯ СЕТКА И МАТЧИ', cls: 'reg' }} to="Э14.5" />
+            <Row nm="ОРТ «Кубок Иртыша» 2025" sub="финал · 26.10" val="+16" pill={{ t: 'МОЯ СЕТКА И МАТЧИ', cls: 'reg' }} to="Э14.5" />
           </Rows>
         </Panel>
 
@@ -352,21 +428,33 @@ export function Profile14_7() {
   return (
     <RoleScreen role={R14} nav="Профиль" title="Профиль" sub="Ким Георгий · 2003 · Астана">
       <div className="mkcols">
-        <Panel title="Профиль">
+        {/* Профиль — на чтение. Правка вынесена отдельным экраном (Э14.9):
+            телефон и почта меняются сразу, клуб — только после подтверждения
+            клубом, и на одном экране эти два поведения путаются. */}
+        <Panel
+          title="Профиль"
+          extra={
+            <button className="dpickbtn" data-to="Э14.9">
+              <Pencil size={14} /> Изменить данные
+            </button>
+          }
+        >
           <Form>
-            <Field label="Год рождения" value="2003" />
+            <Field label="Дата рождения" value="14.06.2003" />
             <Field label="Разряд" value="мастер спорта" />
-            <Field label="Регион и клуб" value="Астана · СКА" />
+            <Field label="Регион" value="Астана" />
             <Field label="Тренер" value="Гладун Игорь" />
             <Field label="Телефон" value="+7 705 118 44 03" />
             <Field label="Почта" value="g.kim@mail.kz" />
+            <Field label="Клуб" value="СКА · Астана" />
+            <Field label="Принадлежность к клубу" value="подтвердил клуб «СКА», 12.01.2026" />
           </Form>
         </Panel>
 
         <Panel title="Годовой взнос 2026" extra={<P t="НЕ ОПЛАЧЕН" cls="wait" />}>
           <Form>
             <Field label="Сумма" value="₸ 10 000" />
-            <Field label="Срок" value="до 31 марта" />
+            <Input label="Срок" value="до 31 марта" />
           </Form>
           <div style={{ marginTop: 12 }}>
             <button className="dsubmit" style={{ width: '100%' }} data-to="Э14.8">
@@ -375,7 +463,7 @@ export function Profile14_7() {
           </div>
           <Alert>
             Оплата идёт на платёжной странице Халык Банка. Состояние поставится само, по
-            подтверждению банка — держать вкладку открытой не нужно (§9.2).
+            подтверждению банка — держать вкладку открытой не нужно.
           </Alert>
         </Panel>
       </div>
@@ -401,6 +489,94 @@ const Profile14_7States = () => (
       <Rows>
         <Row nm="Платёж отклонён" sub="банк: недостаточно средств" pill={{ t: 'НЕ ПРОШЛА', cls: 'bad' }} action="Повторить" />
       </Rows>
+    </Shot>
+
+    <Shot tone="info" title="Смена клуба ждёт клуб" text="В профиле ещё прежний клуб.">
+      <Rows>
+        <Row nm="СКА · Астана" sub="заявка в «Алатау» · Алматы отправлена 14.02" pill={{ t: 'ЖДЁМ КЛУБ', cls: 'wait' }} />
+      </Rows>
+    </Shot>
+  </States>
+);
+
+/* ── Э14.9 · Изменение данных ──────────────────────────────────── */
+
+/** Телефон и почта — свои: человек меняет их сам. Клуб — утверждение о
+    принадлежности к чужой организации, и подтверждает его администратор
+    этого клуба (Э13.5): иначе в состав любого клуба вписался бы кто угодно. */
+export function Edit14_9() {
+  return (
+    <RoleScreen
+      role={R14}
+      nav="Профиль"
+      title="Изменение данных"
+      sub="Ким Георгий · телефон, почта и клуб"
+      back={{ label: 'Профиль', to: 'Э14.7' }}
+    >
+      <div className="mkcols">
+        <Panel title="Контакты" extra={<P t="МЕНЯЮТСЯ СРАЗУ" cls="live" />}>
+          <Form>
+            <Input label="Телефон" value="+7 705 118 44 03" wide />
+            <Input label="Почта" value="g.kim@mail.kz" wide />
+          </Form>
+          <div style={{ marginTop: 12 }}>
+            <button className="dsubmit" style={{ width: '100%' }} data-to="Э14.7">
+              <Check size={15} /> Сохранить контакты
+            </button>
+          </div>
+        </Panel>
+
+        <Panel title="Клуб" extra={<P t="ЧЕРЕЗ ПОДТВЕРЖДЕНИЕ КЛУБА" cls="wait" />}>
+          <Form>
+            <Field label="Сейчас" value="СКА · Астана" />
+            <Select label="Новый клуб" options={['«Алатау» · Алматы', 'СКА · Астана', 'без клуба']} />
+          </Form>
+          <div style={{ marginTop: 12 }}>
+            <button className="dsubmit" style={{ width: '100%' }} data-to="Э14.7">
+              <Send size={15} /> Отправить в клуб
+            </button>
+          </div>
+          <Alert>
+            До подтверждения в профиле остаётся прежний клуб. Заявка уходит администратору клуба
+            «Алатау» — принять в состав или отказать решает он.
+          </Alert>
+        </Panel>
+      </div>
+    </RoleScreen>
+  );
+}
+
+const Edit14_9States = () => (
+  <States>
+    <Shot tone="info" title="Заявка уже отправлена" text="Выбор клуба заблокирован, есть «отозвать».">
+      <Rows>
+        <Row nm="«Алатау» · Алматы" sub="заявка отправлена 14.02, ждёт администратора клуба" pill={{ t: 'ЖДЁМ', cls: 'wait' }} action="Отозвать" />
+      </Rows>
+    </Shot>
+
+    <Shot tone="success" title="Клуб подтвердил" text="Новый клуб в профиле, прежний — в истории.">
+      <Rows>
+        <Row nm="«Алатау» · Алматы" sub="принял Досжан М., 16.02" pill={{ t: 'МОЙ КЛУБ', cls: 'live' }} />
+        <Row nm="СКА · Астана" sub="до 16.02.2026" pill={{ t: 'В ИСТОРИИ', cls: 'done' }} />
+      </Rows>
+    </Shot>
+
+    <Shot tone="danger" title="Клуб отказал" text="Прежний клуб остался, выбрать можно снова.">
+      <Rows>
+        <Row nm="«Алатау» · Алматы" sub="отказ: «не тренируется у нас» · 16.02" pill={{ t: 'ОТКАЗ', cls: 'bad' }} />
+      </Rows>
+    </Shot>
+
+    <Shot
+      tone="warning"
+      title="⚠ 12.11 — прежний клуб"
+      text="Нужно ли его согласие на уход и что с местом в заявках и составах — не решено."
+      wide
+    >
+      <Alert>
+        Рисуем только подтверждение принимающим клубом. Уходит ли спортсмен из уже поданных заявок
+        и составов команд прежнего клуба сразу или доигрывает сезон — вопрос к федерации.
+      </Alert>
     </Shot>
   </States>
 );
@@ -438,10 +614,10 @@ export function Pay14_8() {
       </Rows>
 
       <Form>
-        <Field label="Номер карты" value="4400 43•• •••• 1234" wide />
+        <Input label="Номер карты" value="4400 43•• •••• 1234" wide />
         <Field label="Срок" value="09 / 28" />
-        <Field label="CVC" value="•••" />
-        <Field label="Держатель карты" value="GEORGIY KIM" wide />
+        <Input label="CVC" value="•••" />
+        <Input label="Держатель карты" value="GEORGIY KIM" wide />
       </Form>
 
       <button className="dsubmit">
@@ -484,7 +660,7 @@ const Pay14_8States = () => (
         <Row nm="Взнос 2026" sub="подтверждение банка пришло на сервер · возврата в браузере не было" pill={{ t: 'ОПЛАЧЕН', cls: 'live' }} />
       </Rows>
       <Alert tone="success">
-        Состояние ставит серверное сообщение банка, а не возврат в приложение (§9.2) — держать
+        Состояние ставит серверное сообщение банка, а не возврат в приложение — держать
         вкладку открытой не нужно.
       </Alert>
     </Shot>
@@ -550,6 +726,12 @@ export const SCREENS: ScreenMap = {
     view: () => (
       <>
         <Match14_5 />
+        <Also cap="Вкладка «Участники» — весь состав турнира">
+          <Players14_5 />
+        </Also>
+        <Also cap="Вкладка «Сетка» — на весь экран, тот же компонент, что на фронте">
+          <Bracket14_5 />
+        </Also>
         <Match14_5States />
       </>
     ),
@@ -581,6 +763,15 @@ export const SCREENS: ScreenMap = {
       <>
         <Pay14_8 />
         <Pay14_8States />
+      </>
+    ),
+  },
+  'Э14.9': {
+    cap: 'Изменение данных',
+    view: () => (
+      <>
+        <Edit14_9 />
+        <Edit14_9States />
       </>
     ),
   },

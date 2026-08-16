@@ -281,15 +281,27 @@ export function Row({
 
 export const Rows = ({ children }: { children: ReactNode }) => <div className="drows">{children}</div>;
 
-/** Панель с заголовком — основной блок рабочей области. */
-export function Panel({ title, extra, children }: { title: string; extra?: ReactNode; children: ReactNode }) {
+/** Панель с заголовком — основной блок рабочей области.
+    `body` — класс на тело панели: нужен там, где содержимому задаётся своя
+    высота (холст сетки), а не обычный поток. */
+export function Panel({
+  title,
+  extra,
+  body,
+  children,
+}: {
+  title: string;
+  extra?: ReactNode;
+  body?: string;
+  children: ReactNode;
+}) {
   return (
     <div className="panel">
       <div className="phead">
         {title}
         {extra}
       </div>
-      <div className="pbody">{children}</div>
+      <div className={body ? `pbody ${body}` : 'pbody'}>{children}</div>
     </div>
   );
 }
