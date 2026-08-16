@@ -19,8 +19,7 @@ import {
   Merge, Minus, Plus, Search, Send, UserPlus,
 } from 'lucide-react';
 import {
-  A, ActionBar, Alert, Also, Arrow, AW, Board, Chips, Derived, Empty, Field, Form, Ghost, Hint, Input,
-  Modal, Off, P, Panel, RoleScreen, Row, Rows, Screen, Select, Shot, States,
+  A, AW, ActionBar, Alert, Also, Arrow, Board, Chips, Derived, Empty, Field, Form, Ghost, Hint, Input, Modal, Off, P, Panel, RoleScreen, Row, Rows, Screen, Select, Shot, States,
 } from './shell';
 import type { ScreenMap } from './shell';
 import type { DeskVariant } from '../deskShell';
@@ -161,7 +160,7 @@ export const TourRow = ({ t, judge }: { t: Tour; judge?: boolean }) => (
         <div className="amt" style={{ color: 'var(--c-warning)' }}>— судьи нет</div>
       ))}
     {/* У Лиги в этой колонке не «заявок подано / принято», а команды: заявляется
-        клуб, и мужской с женским розыгрышем идут отдельными лигами (TZ §4.1).
+        клуб, и мужской с женским розыгрышем идут отдельными лигами.
         Одним числом их не свести — «12 команд» скрывало, что розыгрыша два. */}
     {t.teams ? (
       <div className="amt tteams">
@@ -360,11 +359,12 @@ export const ATTENTION: AttnItem[] = [
 /** Список за счётчиком: чем дело снимается и кто его снимает. */
 const AttnList = ({ item, act }: { item: AttnItem; act: boolean }) => (
   <div className="mkattn-d">
-    <div className="mkattn-d-h">
-      <b>{item.n} {item.t}</b>
-    </div>
+    {/* Заголовка у списка нет: он повторял бы подпись раскрытого счётчика прямо
+        над ним. В раскрытом счётчике показываем две строки — панель обязана
+        поместиться на экран целиком вместе с календарём под ней, а весь список
+        и так открывается кнопкой ниже. */}
     <div className="mkattn-d-b">
-      {item.rows.map((r) => (
+      {item.rows.slice(0, 2).map((r) => (
         <div className="mkattn-r" key={r.nm} data-to={act ? r.to : undefined}>
           <div>
             <div className="nm">{r.nm}</div>
@@ -375,13 +375,14 @@ const AttnList = ({ item, act }: { item: AttnItem; act: boolean }) => (
         </div>
       ))}
     </div>
+    {/* У наблюдателей (роли 3 и 4) переходов и кнопок нет — очередь им
+        показывает, кого ждёт дело, а не куда нажать. Выхода «показать все»
+        отдельной кнопкой тут нет: в полный список ведёт сам счётчик. */}
     <div className="mkattn-d-f">
-      {/* У наблюдателей (роли 3 и 4) переходов и кнопок нет — очередь им
-          показывает, кого ждёт дело, а не куда нажать. */}
-      <span>{act ? 'Строка ведёт туда, где дело снимается' : 'Только просмотр: переходов и действий у роли нет'}</span>
-      {/* Выход в полный список — тихой кнопкой: главное действие экрана одно,
-          и это «Завести соревнование». */}
-      {act && <Ghost>Показать все в списке с фильтром</Ghost>}
+      <span>
+        {act ? 'Строка ведёт туда, где дело снимается' : 'Только просмотр: переходов и действий у роли нет'}
+        {' · '}показаны 2 из {item.n}
+      </span>
     </div>
   </div>
 );
@@ -432,14 +433,13 @@ export const TodayRows = ({ act = true }: { act?: boolean }) => (
       { nm: 'Суперлига · мужчины', sub: 'Евразийская лига, 2-й тур · Караганда · столы 1–6', v: '34 из 60' },
       { nm: 'Суперлига · женщины', sub: 'Евразийская лига, 2-й тур · Караганда · столы 7–10', v: '26 из 48' },
     ].map((r) => (
-      <div className="drow" key={r.nm} data-to="Э1.3">
+      <div className="drow" key={r.nm} data-to={act ? 'Э1.3' : undefined}>
         <div className="who">
           <div className="nm">{r.nm}</div>
           <div className="rl">{r.sub}</div>
         </div>
         <div className="amt">{r.v}</div>
         <P t="ИДЁТ" cls="live" />
-        {act && <button className="dpickbtn">Ход турнира</button>}
       </div>
     ))}
   </Rows>
@@ -472,16 +472,21 @@ export function Dash1_1({ variant }: { variant?: DeskVariant }) {
           </button>
         }
       />
+      {/* «Сегодня идут» — в широкой колонке: в узкой её строки переносили кнопку
+          «Ход турнира» на вторую строку, и панель вырастала вдвое. */}
       <div className="mkcols">
+        <Panel title="Сегодня идут">
+          <TodayRows />
+        </Panel>
         <Panel title="Ближайшие старты">
           <Rows>
-            {UPCOMING.slice(0, 3).map((t) => (
+            {UPCOMING.slice(0, 1).map((t) => (
               <TourRow key={t.nm} t={t} />
             ))}
           </Rows>
-        </Panel>
-        <Panel title="Сегодня идут">
-          <TodayRows />
+          <div className="dcount" style={{ marginTop: 10 }}>
+            ещё {UPCOMING.length - 1} впереди — весь список в календаре
+          </div>
         </Panel>
       </div>
     </RoleScreen>
@@ -801,25 +806,25 @@ const STEP_BODY: Record<number, () => ReactNode> = {
   2: () => (
     <Panel title="Основное">
       <Form>
-        <Field label="Название" value="Первенство РК · 2012 г.р. и моложе" wide />
-        <Field label="Город" value="Актобе · ДС «Коктем»" />
-        <Field label="Окно дат" value="12–14 сентября 2026" />
-        <Field label="Разряды" value="Одиночный · парный" />
-        <Field label="Сезон" value="2026" />
+        <Input label="Название" value="Первенство РК · 2012 г.р. и моложе" wide />
+        <Input label="Город" value="Актобе · ДС «Коктем»" />
+        <Input label="Окно дат" value="12–14 сентября 2026" />
+        <Input label="Разряды" value="Одиночный · парный" />
+        <Input label="Сезон" value="2026" />
       </Form>
     </Panel>
   ),
   3: () => (
     <Panel title="Допуск">
       <Form>
-        <Field label="Возрастная граница" value="2012 г.р. и моложе — правило от сезона" wide />
-        <Field label="Ценз по рейтингу" value="не требуется" />
+        <Input label="Возрастная граница" value="2012 г.р. и моложе — правило от сезона" wide />
+        <Input label="Ценз по рейтингу" value="не требуется" />
         <Field label="Пол" value="раздельно: мужчины и женщины" />
       </Form>
     </Panel>
   ),
   4: () => (
-    <Panel title="Флаги допуска (§4.2)" extra={<span className="dcount">умолчания от категории</span>}>
+    <Panel title="Флаги допуска" extra={<span className="dcount">умолчания от категории</span>}>
       <NewFlags />
     </Panel>
   ),
@@ -827,8 +832,8 @@ const STEP_BODY: Record<number, () => ReactNode> = {
     <div className="mkcols">
       <Panel title="Столы">
         <Form>
-          <Field label="Сколько столов" value="12" />
-          <Field label="С трансляцией" value="столы 1 и 2" />
+          <Input label="Сколько столов" value="12" />
+          <Input label="С трансляцией" value="столы 1 и 2" />
         </Form>
       </Panel>
 
@@ -916,7 +921,7 @@ const TABS = ['Регламент', 'Заявки', 'Сетка', 'Распис�
 /** Шкала жизненного цикла: `now` — подсвеченное состояние. */
 const Stages = ({ now = NOW_STAGE }: { now?: string }) => (
   <div>
-    <div className="dcount" style={{ marginBottom: 8 }}>Состояние турнира — восемь состояний по §4.3</div>
+    <div className="dcount" style={{ marginBottom: 8 }}>Состояние турнира — восемь состояний</div>
     <div className="dseg2">
       {STAGES.map((s) => (
         <span key={s} className={s === now ? 'on' : undefined}>{s}</span>
@@ -943,7 +948,7 @@ const TourRules = () => (
     <Field label="Столов" value="16 · трансляция со столов 1–4" />
     <Field label="Возрастная граница" value="без ограничения" />
     <Field
-      label="Условия допуска (§4.2)"
+      label="Условия допуска"
       value="годовой взнос обязателен · документы к заявке обязательны · ценз по рейтингу не требуется"
       wide
     />
@@ -1073,7 +1078,7 @@ export function Cancel1_9() {
         </div>
         <Form>
           <Field label="Было" value="18–20 мая 2026" />
-          <Field label="Новое окно дат" value="1–3 июня 2026" />
+          <Input label="Новое окно дат" value="1–3 июня 2026" />
           <Field
             label="Причина"
             value="ДС «Барыс» занят под другое мероприятие; зал подтвердил новые даты"
@@ -1128,19 +1133,19 @@ const Cancel1_9States = () => (
     <Shot
       tone="warning"
       title="⚠ вопрос 2.2 — чем становится отменённый турнир"
-      text="Среди восьми состояний §4.3 «отменён» нет, и кто именно отменяет — тоже открыто."
+      text="Среди восьми состояний турнира «отменён» нет, и кто именно отменяет — тоже открыто."
       wide
     >
       <div className="dseg2">
         {STAGES.map((s) => (
           <span key={s}>{s}</span>
         ))}
-        <span style={{ color: 'var(--c-danger)', borderColor: 'var(--c-danger-line)' }}>Отменён — ⚠ такого состояния в §4.3 нет</span>
+        <span style={{ color: 'var(--c-danger)', borderColor: 'var(--c-danger-line)' }}>Отменён — ⚠ такого состояния нет</span>
       </div>
       <Alert tone="danger">
         Пока не решено: остаётся ли отменённый турнир в календаре, кто его отменяет — председатель ГСК
-        (так в §4.3) или администратор Федерации по «полному доступу», и что происходит с уже сыгранными
-        матчами. В макете это место помечено, а не придумано.
+        или администратор Федерации по «полному доступу», и что происходит с уже сыгранными матчами.
+        В макете это место помечено, а не придумано.
       </Alert>
     </Shot>
   </States>
@@ -1276,7 +1281,7 @@ const Users1_5States = () => (
         </div>
       </Rows>
       <Alert>
-        У этой роли нет ни «Выдать», ни «Отозвать»: она появилась из решения по заявке судьи (§4.4).
+        У этой роли нет ни «Выдать», ни «Отозвать»: она появилась из решения по заявке судьи.
         Снять её можно только сменой главного судьи на турнире.
       </Alert>
     </Shot>
@@ -1596,7 +1601,7 @@ const GRANTS: Grant[] = [
     scopes: ['Турнир'],
     block:
       'Эта роль не раздаётся руками: судьи подают заявки на судейство, председатель ГСК выбирает ' +
-      'одного, и он становится главным судьёй турнира (§4.4).',
+      'одного, и он становится главным судьёй турнира.',
     can: [
       { nm: 'Принимать заявки и собирать сетку', sub: 'посев или жеребьёвка, расписание по столам' },
       { nm: 'Ставить судей на столы и вести протокол', sub: 'исправление счёта идёт через него' },
@@ -1622,7 +1627,7 @@ const GRANTS: Grant[] = [
     nm: 'Судья',
     scopes: ['Турнир', 'Стол'],
     can: [
-      { nm: 'Вести счёт на своём столе', sub: 'матч не стартует, пока стол без судьи (§4.7)' },
+      { nm: 'Вести счёт на своём столе', sub: 'матч не стартует, пока стол без судьи' },
       { nm: 'Видеть расписание и вызовы', sub: 'уведомление о вызове пары приходит мгновенно' },
     ],
   },
@@ -1782,7 +1787,7 @@ const GrantRole1_11States = () => (
     <Shot
       tone="danger"
       title="Выбрана роль «Главный судья соревнований»"
-      text="Выдать нельзя: на официальный турнир судью назначает председатель ГСК через заявки (§4.4)."
+      text="Выдать нельзя: на официальный турнир судью назначает председатель ГСК через заявки."
     >
       <div className="dseg2">
         <span>Судья</span>
@@ -1881,7 +1886,7 @@ const REGISTRIES: Registry[] = [
       },
       {
         av: A(22), nm: 'Жумабеков Расул', sub: '2007 · Караганда · «Шахтёр» · тренер Досжан М. · 1 разряд',
-        val: '2290', ok: false, st: 'Взнос не оплачен — заявки на турниры с флагом взноса не пройдут (§9.2)',
+        val: '2290', ok: false, st: 'Взнос не оплачен — заявки на турниры с флагом взноса не пройдут',
         card: [
           { k: 'Год рождения · пол', v: '2007 · мужской' },
           { k: 'Разряд', v: 'первый разряд' },
@@ -1891,7 +1896,7 @@ const REGISTRIES: Registry[] = [
       },
       {
         av: AW(21), nm: 'Тлеуова Аружан', sub: 'завёл клуб «Достык», 03.02.2026 · 2009 · Шымкент · 2 разряд',
-        val: '1980', ok: false, st: 'Взнос не оплачен — заявки на турниры с флагом взноса не пройдут (§9.2)',
+        val: '1980', ok: false, st: 'Взнос не оплачен — заявки на турниры с флагом взноса не пройдут',
         card: [
           { k: 'Год рождения · пол', v: '2009 · женский' },
           { k: 'Разряд', v: 'второй разряд' },
@@ -2295,7 +2300,7 @@ export function Athlete1_12() {
         </div>
 
         <div style={{ display: 'grid', gap: 12 }}>
-          <Panel title="Рейтинг (§7.1)">
+          <Panel title="Рейтинг">
             <Chips
               items={[
                 { v: '2456', k: 'Рейтинг', tone: 'b' },
@@ -2325,7 +2330,7 @@ const Athlete1_12States = () => (
     <Shot
       tone="warning"
       title="Взнос не оплачен"
-      text="Плашка, что заявки на турниры с обязательным взносом не пройдут (§9.2)."
+      text="Плашка, что заявки на турниры с обязательным взносом не пройдут."
     >
       <div className="dactionbar">
         <div className="dcount">Годовой взнос 2026</div>
@@ -2474,7 +2479,7 @@ const Merge1_13States = () => (
       </div>
       <Alert>
         Взять больший, взять рейтинг главной записи или пересчитать движком по объединённой истории —
-        решение за федерацией и движком рейтинга (§7.1). В макете место помечено вопросом.
+        решение за федерацией и движком рейтинга. В макете место помечено вопросом.
       </Alert>
     </Shot>
   </States>
@@ -2664,7 +2669,7 @@ export function Editor1_14() {
       <div className="mkcols">
         <Panel title="Текст · русский">
           <Form>
-            <Field label="Заголовок" value="Кубок Республики: приём заявок открыт" wide />
+            <Input label="Заголовок" value="Кубок Республики: приём заявок открыт" wide />
             <Field
               label="Лид"
               value="Заявки на Кубок Республики Казахстан 2026 принимаются до 10 мая через личный кабинет спортсмена."

@@ -41,16 +41,21 @@ export function Dash3_1({ variant }: { variant?: DeskVariant }) {
           </Btn>
         }
       />
+      {/* Тот же порядок панелей, что на Панели Федерации: «Сегодня идут» — в
+          широкой колонке, иначе строки переносятся и панель растёт вдвое. */}
       <div className="mkcols">
+        <Panel title="Сегодня идут">
+          <TodayRows act={false} />
+        </Panel>
         <Panel title="Ближайшие старты">
           <Rows>
-            {UPCOMING.slice(0, 3).map((t) => (
+            {UPCOMING.slice(0, 1).map((t) => (
               <TourRow key={t.nm} t={t} />
             ))}
           </Rows>
-        </Panel>
-        <Panel title="Сегодня идут">
-          <TodayRows act={false} />
+          <div className="dcount" style={{ marginTop: 10 }}>
+            ещё {UPCOMING.length - 1} впереди — весь список в календаре
+          </div>
         </Panel>
       </div>
     </RoleScreen>
