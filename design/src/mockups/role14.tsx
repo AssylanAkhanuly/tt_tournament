@@ -15,8 +15,8 @@ import {
   Trophy, X,
 } from 'lucide-react';
 import {
-  A, ActionBar, Alert, Also, Arrow, Board, Chips, Empty, Field, Form, Ghost, Input, Modal, Off, P,
-  Pager, Panel, Queue, RoleScreen, Row, Rows, Screen, Search, Shot, States, Tabs,
+  A, ActionBar, Alert, Also, Arrow, Board, Chips, Empty, Field, Filter, Form, Ghost, Input, Modal,
+  Off, P, Pager, Panel, Queue, RoleScreen, Row, Rows, Screen, Search, Shot, States, Tabs,
 } from './shell';
 import { Select } from '../ui';
 import { BracketFlow } from '@/widgets/bracket/BracketFlow';
@@ -743,42 +743,87 @@ const Profile14_7States = () => (
 
 /* ── Э14.13 · Новости федерации ────────────────────────────────── */
 
-/** Читают новости из системы, а не с публичного сайта: человек уже вошёл, и
-    выгонять его наружу ради объявления о сроке взноса незачем. Материалы те
-    же, что публикует администратор Федерации (Э1.8) — своей редакции у
-    спортсмена нет, поэтому экран только на чтение. */
-export function News14_13() {
-  return (
-    <RoleScreen role={R14} nav="Новости" title="Новости федерации" sub="Объявления, положения и итоги турниров">
-      <div className="mkcols">
-        <Panel title="Открытая новость" extra={<P t="КАЛЕНДАРЬ" cls="reg" />}>
-          <div style={{ fontSize: 16, fontWeight: 700 }}>Календарь сезона 2026 опубликован</div>
-          <div className="dcount" style={{ marginTop: 4 }}>15 апреля 2026 · Федерация настольного тенниса РК</div>
-          <div style={{ marginTop: 12, fontSize: 13, lineHeight: 1.6, color: 'var(--c-muted)' }}>
-            В сезоне восемь главных стартов, четыре тура Евразийской лиги и двадцать открытых
-            республиканских турниров. Приём заявок на ОРТ открывается за месяц до старта; на главные
-            старты состав подаёт старший тренер региона, в Лигу — клуб.
-          </div>
-          <div style={{ marginTop: 12 }}>
-            <Rows>
-              <Row nm="Календарь сезона" sub="все старты с датами и городами" to="Э14.2" action="Открыть" />
-            </Rows>
-          </div>
-        </Panel>
+/** Обычный новостной портал: лента карточек с обложкой, темой и датой.
 
-        <Panel title="Все новости" extra={<span className="dcount">{NEWS.length} материала</span>}>
-          <Rows>
-            {NEWS.map((n, i) => (
-              <Row
-                key={n.nm}
-                nm={n.nm}
-                sub={`${n.at} · ${n.sub}`}
-                pill={i === 0 ? { t: 'ЧИТАЮ', cls: 'live' } : { t: n.tag, cls: 'reg' }}
-              />
-            ))}
-          </Rows>
-        </Panel>
+    Материалы редактирует федерация в своей админке (Э1.8 и редактор Э1.14) —
+    сюда они приходят готовыми, поэтому у спортсмена экран только на чтение.
+    Читают из системы: человек уже вошёл, и выгонять его на публичный сайт ради
+    объявления о сроке взноса незачем. */
+const TOPICS = ['Все', 'Календарь', 'Взносы', 'Рейтинг', 'Результаты'];
+
+const NewsCard = ({ n, wide }: { n: (typeof NEWS)[number]; wide?: boolean }) => (
+  <article className={'mknews-card' + (wide ? ' wide' : '')}>
+    <div className="mknews-cover" />
+    <div className="mknews-body">
+      <div className="mknews-meta">
+        <span className="pill reg">{n.tag}</span>
+        <span>{n.at} 2026</span>
       </div>
+      <h3>{n.nm}</h3>
+      <p>{n.sub}</p>
+    </div>
+  </article>
+);
+
+export function News14_13() {
+  const [topic, setTopic] = useState(TOPICS[0]);
+  const rows = NEWS.filter((n) => topic === TOPICS[0] || n.tag === topic.toUpperCase());
+  return (
+    <RoleScreen role={R14} nav="Новости" title="Новости" sub="Объявления федерации, положения и итоги турниров">
+      <div className="dactionbar">
+        <Filter items={TOPICS} active={topic} onPick={setTopic} />
+        <span className="dcount">{rows.length} материала</span>
+      </div>
+
+      {rows.length ? (
+        <div className="mknews">
+          {/* Первая новость — крупной карточкой: в ленте всегда есть главное
+              за неделю, и оно не должно теряться среди одинаковых плиток. */}
+          <NewsCard n={rows[0]} wide />
+          <div className="mknews-grid">
+            {rows.slice(1).map((n) => (
+              <NewsCard key={n.nm} n={n} />
+            ))}
+          </div>
+          <button type="button" className="mknews-more">Показать ещё</button>
+        </div>
+      ) : (
+        <Empty title="По этой теме материалов нет" text="Выберите другую тему или посмотрите все новости." />
+      )}
+    </RoleScreen>
+  );
+}
+
+/** Сама новость: та же лента, но открытая на материале. */
+export function Article14_13() {
+  return (
+    <RoleScreen
+      role={R14}
+      nav="Новости"
+      title="Календарь сезона 2026 опубликован"
+      sub="15 апреля 2026 · Федерация настольного тенниса РК"
+      back={{ label: 'Новости', to: 'Э14.13' }}
+    >
+      <article className="mknews-read">
+        <div className="mknews-cover tall" />
+        <span className="pill reg">КАЛЕНДАРЬ</span>
+        <p>
+          В сезоне восемь главных стартов, четыре тура Евразийской лиги и двадцать открытых
+          республиканских турниров.
+        </p>
+        <p>
+          Приём заявок на ОРТ открывается за месяц до старта: заявляется спортсмен сам. На главные
+          старты состав подаёт старший тренер региона, в Евразийскую лигу команду заявляет клуб —
+          у этих турниров кнопки «заявиться» в календаре нет.
+        </p>
+        <p>
+          Годовой взнос за 2026 год оплачивается до 31 марта. Без него заявки на турниры, где взнос
+          обязателен, не проходят.
+        </p>
+        <Rows>
+          <Row nm="Календарь сезона" sub="все старты с датами, городами и сроками приёма" to="Э14.2" action="Открыть" />
+        </Rows>
+      </article>
     </RoleScreen>
   );
 }
@@ -792,6 +837,12 @@ const News14_13States = () => (
     <Shot tone="info" title="Материал на трёх языках ✳" text="Читается на языке интерфейса; нет перевода — показываем русский с пометкой.">
       <Rows>
         <Row nm="Положение о рейтинге" sub="есть RU · KZ · перевода на EN нет" pill={{ t: 'RU · KZ', cls: 'reg' }} />
+      </Rows>
+    </Shot>
+
+    <Shot tone="warning" title="Обложки у материала нет" text="Редакция не приложила картинку — карточка живёт без неё.">
+      <Rows>
+        <Row nm="Изменения в положении о соревнованиях" sub="12 марта · без обложки" pill={{ t: 'ПОЛОЖЕНИЕ', cls: 'reg' }} />
       </Rows>
     </Shot>
   </States>
@@ -1312,6 +1363,9 @@ export const SCREENS: ScreenMap = {
     view: () => (
       <>
         <News14_13 />
+        <Also cap="Открытая новость — материал целиком">
+          <Article14_13 />
+        </Also>
         <News14_13States />
       </>
     ),

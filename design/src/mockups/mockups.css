@@ -178,6 +178,62 @@
 .mkpager button.on { color: var(--c-ink); background: var(--c-accent-soft); border-color: var(--c-accent-line); }
 .mkpager button:disabled { opacity: .45; cursor: default; }
 
+/* ── Лента новостей ─────────────────────────────────────────────── */
+/* Обычный новостной портал: карточка с обложкой, темой и датой. Материалы
+   редактирует федерация в своей админке — сюда они приходят готовыми, поэтому
+   у ленты нет ни кнопок правки, ни «моих» состояний. Обложка в макете —
+   заливка с орнаментом: настоящую картинку кладёт редакция. */
+.mknews { display: grid; gap: 14px; }
+.mknews-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+
+.mknews-card {
+  display: grid;
+  border: 1px solid var(--c-glass-line);
+  border-radius: var(--r-sm);
+  background: var(--c-panel);
+  overflow: hidden;
+  cursor: pointer;
+}
+.mknews-card:hover { border-color: var(--c-accent-line); }
+/* Главный материал — шире и с картинкой слева: в ленте всегда есть главное. */
+.mknews-card.wide { grid-template-columns: 280px 1fr; }
+
+.mknews-cover {
+  min-height: 104px;
+  background:
+    var(--fx-pattern) 0 0 / var(--fx-pattern-size) repeat,
+    linear-gradient(140deg, var(--c-panel-2), var(--c-panel-3));
+  border-bottom: 1px solid var(--c-glass-line);
+}
+.mknews-card.wide .mknews-cover { min-height: 148px; border-bottom: 0; border-right: 1px solid var(--c-glass-line); }
+.mknews-cover.tall { min-height: 190px; border-radius: var(--r-sm); border: 1px solid var(--c-glass-line); }
+
+.mknews-body { padding: 12px 14px; display: grid; align-content: start; gap: 6px; }
+.mknews-meta { display: flex; align-items: center; gap: 8px; font-size: 11px; color: var(--c-dim); }
+.mknews-meta .pill { margin: 0; }
+.mknews-body h3 { font-size: 14px; font-weight: 700; line-height: 1.35; color: var(--c-ink); }
+.mknews-card.wide .mknews-body h3 { font-size: 18px; letter-spacing: -.2px; }
+.mknews-body p { font-size: 12.5px; line-height: 1.5; color: var(--c-muted); }
+
+.mknews-more {
+  justify-self: center;
+  padding: 9px 18px;
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--c-ink);
+  background: var(--c-panel);
+  border: 1px solid var(--c-glass-line);
+  border-radius: var(--r-sm);
+  cursor: pointer;
+}
+.mknews-more:hover { border-color: var(--c-accent-line); }
+
+/* Сам материал: колонка текста шириной в чтение, а не во весь экран. */
+.mknews-read { display: grid; gap: 12px; max-width: 720px; }
+.mknews-read .pill { justify-self: start; margin: 0; }
+.mknews-read p { font-size: 13.5px; line-height: 1.65; color: var(--c-muted); }
+
 /* ── Страница-результат: оплата прошла / не прошла ──────────────── */
 /* Ответ один и посреди экрана: из банка возвращаются с вопросом «прошло или
    нет» и ни с каким другим. Ниже — то, ради чего платили, и одна кнопка. */
