@@ -8,7 +8,7 @@
    Один экран флоу = одна колонка борда с кодом Э№.№ в подписи: по коду макет
    сходится со схемой роли (раздел «Флоу») и с текстом в корневом `flows/`. */
 
-import { Fragment, useState, type ReactNode } from 'react';
+import { Fragment, useRef, useState, type ReactNode } from 'react';
 import { ArrowRight, Bell, X } from 'lucide-react';
 import { Desk, type DeskVariant } from '../deskShell';
 import { Tab, MiniTabBar } from '../respShell';
@@ -57,7 +57,7 @@ export function RoleScreen({
   /** Не задан — строки под заголовком нет вовсе. */
   sub?: string;
   /** Возврат над заголовком — у экранов, куда приходят из списка. */
-  back?: { label: string; to?: string };
+  back?: { label: string; to?: string; onClick?: () => void };
   hint?: string;
   variant?: DeskVariant;
   children: ReactNode;
@@ -140,8 +140,20 @@ export type ScreenMap = Record<string, ScreenEntry>;
 
 export function Board({ role, screens }: { role: RoleUI; screens: ScreenMap }) {
   const items = Object.entries(screens);
+  const root = useRef<HTMLDivElement>(null);
+  /* Переходы работают и на борде, а не только на карте флоу: клик по элементу
+     с `data-to` подкручивает борд к нужной колонке. Без этого «← Календарь
+     сезона» выглядел кнопкой, но не делал ничего — а на борде переход и есть
+     соседняя колонка, до неё достаточно доехать. */
+  const go = (e: React.MouseEvent) => {
+    const to = (e.target as HTMLElement).closest<HTMLElement>('[data-to]')?.dataset.to;
+    if (!to) return;
+    root.current
+      ?.querySelector<HTMLElement>(`[data-code="${to}"]`)
+      ?.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+  };
   return (
-    <div className="board">
+    <div className="board" ref={root} onClickCapture={go}>
       <div className="board-h">
         <div className="board-title">
           {role.num} · {role.title.toUpperCase()} — МАКЕТЫ ПО ФЛОУ
@@ -172,7 +184,7 @@ export function Board({ role, screens }: { role: RoleUI; screens: ScreenMap }) {
 export function Screen({ code, cap, children }: { code: string; cap: string; children: ReactNode }) {
   const spec = useNodeSpec(code);
   return (
-    <div className="col">
+    <div className="col" data-code={code}>
       <div className="cap">
         <span className="mkcode">{code}</span> {cap}
       </div>

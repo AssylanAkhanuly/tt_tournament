@@ -37,46 +37,53 @@
 /* Подпись поля. В макетном слое стилизован только `.dfield > label`, а хелпер
    `Field` рисует подпись как `.k` — без этого правила она шла дефолтными 16px
    и спорила со значением. */
+/* Подпись поля — обычным письмом, с заглавной только первая буква. Капслок с
+   разрядкой читается по буквам, а не словом, и на форме из восьми полей это
+   восемь мелких препятствий подряд. */
 .dfield .k {
   display: block;
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: .04em;
-  text-transform: uppercase;
-  color: var(--c-muted);
-  margin-bottom: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--c-dim);
+  margin-bottom: 6px;
 }
 
 /* ── Ввод и выбор ───────────────────────────────────────────────── */
-/* Поле, куда печатают, и выбор из списка. В макетном слое их не было — форма
-   рисовалась готовыми значениями, и по макету не было видно, где вообще можно
-   поставить курсор. Подпись у обоих та же `.k`, поэтому рамка — единственное,
-   чем ввод отличается от показа: этого достаточно и не разводит два языка. */
+/* Поле, куда печатают, и выбор из списка.
+
+   Рамок у них нет: восемь обведённых прямоугольников подряд сами становятся
+   рисунком и мешают читать то, что внутри. Признак «сюда пишут» — заливка:
+   налито — правится, не налито — показ. Правило простое и держится одним
+   свойством, а рамка возвращается только под курсором и на фокусе, когда она
+   и нужна. */
 .dinput,
 .dselect {
   display: block;
   width: 100%;
   font: inherit;
-  font-size: 13.5px;
+  font-size: 14px;
   font-weight: 600;
+  line-height: 1.4;
   letter-spacing: normal;
   text-transform: none;
   color: var(--c-ink);
   background: var(--c-panel-2);
-  border: 1px solid var(--c-glass-line);
-  border-radius: var(--r-xs);
-  padding: 9px 11px;
+  border: 0;
+  border-radius: var(--r-sm);
+  padding: 10px 12px;
 }
 .dinput::placeholder { color: var(--c-dim); font-weight: 500; }
+.dinput:hover,
+.dselect:hover { background: var(--c-panel-3); }
 .dinput:focus,
 .dselect:focus {
   outline: none;
-  border-color: var(--c-accent-line);
   background: var(--c-panel-3);
+  box-shadow: inset 0 0 0 1px var(--c-accent-line);
 }
-/* Поле не прошло проверку: рамка та же, меняется только цвет — иначе ошибка
+/* Поле не прошло проверку: та же заливка, меняется только цвет — иначе ошибка
    читается как другой тип поля. */
-.dinput.bad { border-color: var(--c-danger-line); color: var(--c-danger); }
+.dinput.bad { color: var(--c-danger); box-shadow: inset 0 0 0 1px var(--c-danger-line); }
 .dselect { cursor: pointer; }
 
 /* Поле в полосе действий тянется на всё свободное место: рядом с ним стоит
@@ -84,25 +91,19 @@
    иначе ссылка приглашения обрезается на трети. */
 .dactionbar > .dfield { flex: 1; min-width: 0; }
 
-/* Выведенное значение: подпись слева, значение справа. Рамки нет — рядом стоят
-   обведённые селекторы, и её отсутствие само говорит, что здесь не выбирают. */
+/* Выведенное значение: подпись слева, значение справа. Заливки нет — она стала
+   признаком «сюда пишут», и здесь её быть не должно: это значение считает
+   система. */
 .dderived {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
   gap: 12px;
-  padding: 9px 11px;
-  border-radius: var(--r-xs);
-  background: var(--c-panel-3);
+  padding: 10px 0;
+  box-shadow: inset 0 1px 0 var(--c-glass-line);
 }
-.dderived span {
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: .04em;
-  text-transform: uppercase;
-  color: var(--c-dim);
-}
-.dderived b { font-size: 13.5px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.dderived span { font-size: 12px; font-weight: 600; color: var(--c-dim); }
+.dderived b { font-size: 14px; font-weight: 700; font-variant-numeric: tabular-nums; }
 
 /* Кнопки-действия в строках: иконка рядом с подписью, а не строкой выше
    (у `svg` в макетном слое `display: block`). */
@@ -450,13 +451,162 @@ button.mkattn-i.on svg { color: var(--c-accent); transform: rotate(180deg); }
   margin-right: 4px;
 }
 
+/* ── Список людей без рамок ─────────────────────────────────────── */
+/* Шесть обведённых карточек подряд читаются как шесть отдельных блоков, хотя
+   это один список. Рамок нет, разделяет строки волосяная линия; подсветка
+   появляется под курсором. */
+.plist { display: grid; }
+.plist-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 11px 4px;
+  border-radius: var(--r-sm);
+}
+.plist-row + .plist-row { box-shadow: inset 0 1px 0 var(--c-glass-line); }
+.plist-row:hover { background: var(--c-panel-2); box-shadow: none; }
+.plist-row img { width: 36px; height: 36px; border-radius: 50%; object-fit: cover; flex: none; }
+.plist-row .who { flex: 1; min-width: 0; }
+.plist-row .nm { font-size: 13.5px; font-weight: 700; }
+.plist-row .rl { font-size: 11.5px; color: var(--c-muted); margin-top: 2px; }
+
+/* ── Место в наряде ─────────────────────────────────────────────── */
+/* Три кнопки в ряд, одинаковые в каждой строке: колонка читается сверху вниз,
+   и видно, кто на что поставлен. Главный судья и секретарь на турнире по
+   одному — назначил другого, прежний освободился; столов много. */
+.rchips { display: flex; gap: 4px; flex: none; }
+.rchip {
+  font: inherit;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--c-muted);
+  background: none;
+  border: 1px solid var(--c-glass-line);
+  border-radius: var(--r-xs);
+  padding: 5px 10px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.rchip:hover { color: var(--c-ink); border-color: var(--c-accent-line); }
+.rchip.on {
+  color: var(--c-accent-ink);
+  background: var(--c-accent);
+  border-color: transparent;
+  font-weight: 700;
+}
+
+/* ── Решение по заявке ──────────────────────────────────────────── */
+/* Два действия, три состояния: «без решения» — не третья кнопка, а то, что
+   получается, когда не нажата ни одна. */
+.vset { display: flex; align-items: center; gap: 6px; flex: none; }
+.vwait { font-size: 11px; color: var(--c-dim); margin-right: 4px; white-space: nowrap; }
+.vbtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  color: var(--c-dim);
+  background: none;
+  border: 1px solid var(--c-glass-line);
+  border-radius: var(--r-xs);
+  cursor: pointer;
+}
+.vbtn.yes:hover { color: var(--c-success); border-color: var(--c-success-line); }
+.vbtn.no:hover { color: var(--c-danger); border-color: var(--c-danger-line); }
+.vbtn.yes.on { color: var(--c-success); background: var(--c-success-soft-2); border-color: var(--c-success-line); }
+.vbtn.no.on { color: var(--c-danger); background: var(--c-danger-soft-2); border-color: var(--c-danger-line); }
+
+/* ── Флаги списком ──────────────────────────────────────────────── */
+/* Условия допуска: тумблер и название, без рамок и подложек. Обведённые строки
+   читались как три отдельных блока, хотя это один список из трёх переключателей
+   под общей подписью. */
+.dflags { display: grid; }
+.dflag {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 7px 0;
+  font-size: 13px;
+  color: var(--c-ink);
+}
+.dflag + .dflag { box-shadow: inset 0 1px 0 var(--c-glass-line); }
+
+/* ── Шкала состояний турнира ────────────────────────────────────── */
+/* Восемь состояний по §4.3. Это шкала, а не переключатель: состояние не
+   выбирают, в него приходят действиями. Поэтому ни рамок, ни фона у пунктов —
+   только цвет и разделитель, и нажимать здесь нечего. */
+.dstages { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 4px; }
+.dstage {
+  font: inherit;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--c-dim);
+  white-space: nowrap;
+  background: none;
+  border: 0;
+  padding: 4px 8px;
+  border-radius: var(--r-xs);
+  cursor: pointer;
+}
+/* Пройденное читается спокойно, впереди — тише всего. */
+.dstage.past { color: var(--c-muted); }
+/* Текущее состояние — акцентом по тексту, без заливки: заливка тяжелее самой
+   шкалы и спорит со вкладками под ней. Синим наливается то, на что наведён
+   курсор, — так видно, что состояние можно посмотреть. */
+.dstage.now { color: var(--c-accent); font-weight: 800; box-shadow: inset 0 -2px 0 var(--c-accent); }
+.dstage:hover { color: var(--c-accent-ink); background: var(--c-accent); box-shadow: none; }
+.dstage + .dstage::before {
+  content: "›";
+  margin-right: 8px;
+  color: var(--c-glass-line);
+  font-weight: 400;
+}
+
+/* ── Выбор карточкой ────────────────────────────────────────────── */
+/* Категория соревнования: от неё зависят остальные шаги мастера, поэтому
+   выбирают её карточками — рядом с названием видно, чем категории отличаются.
+   Карточка — кнопка, и ведёт себя как кнопка: светлеет под курсором. */
+.mkpick { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--s-3); }
+.mkpick-i {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 15px 16px;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  border: 1px solid var(--c-glass-line);
+  border-radius: var(--r-md);
+  background: var(--c-panel);
+  box-shadow: inset 0 1px 0 var(--c-glass-hi), var(--sh-panel);
+}
+.mkpick-i:hover { border-color: var(--c-accent-line); background: var(--c-panel-2); }
+/* Выбранная — акцентной рамкой и подложкой: выбор виден и без значка, значок
+   лишь называет его словом. */
+.mkpick-i.on { border-color: var(--c-accent-line); background: var(--c-accent-soft); }
+.mkpick-i .t {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 15px;
+  font-weight: 700;
+}
+.mkpick-i .s { font-size: 12.5px; color: var(--c-muted); line-height: 1.5; }
+
 /* ── Реестр таблицей ────────────────────────────────────────────── */
 /* Список с подписанными колонками, а не свободные строки: подпись у колонки
    одна, а не повторяется в каждой строке словом «рейтинг». Ширины колонок
    фиксированы — числа должны стоять в столбик, иначе их не сравнить. */
 .rtab { display: grid; gap: 6px; }
 .rtab-h,
-.rrow { display: grid; grid-template-columns: 1fr 110px 84px 96px; align-items: center; gap: 12px; }
+.rrow { display: grid; grid-template-columns: 1fr 110px 84px; align-items: center; gap: 12px; }
+/* На экране пользователей у строки есть ещё «Выдать роль». */
+.rtab.wide .rtab-h,
+.rtab.wide .rrow { grid-template-columns: 1fr 110px 84px 112px; }
 .rtab-h { padding: 0 13px 2px; }
 .rtab-h span {
   font-size: 10.5px;
@@ -471,16 +621,25 @@ button.mkattn-i.on svg { color: var(--c-accent); transform: rotate(180deg); }
   border: 1px solid var(--c-glass-line);
   border-radius: var(--r-sm);
 }
+/* Строка сама открывает карточку — отсюда курсор и подсветка имени: кнопки
+   «Открыть» больше нет, и клик должен быть заметен без неё. */
+.rrow.open { cursor: pointer; }
 .rrow:hover { border-color: var(--c-accent-line); }
+.rrow.open:hover .nm { color: var(--c-accent); }
 .rrow .who { display: flex; align-items: center; gap: 11px; min-width: 0; }
 .rrow .who img { width: 34px; height: 34px; border-radius: 50%; object-fit: cover; flex: none; }
 .rrow .nm { font-size: 13.5px; font-weight: 700; }
 .rrow .rl { font-size: 11.5px; color: var(--c-muted); margin-top: 2px; }
-/* Число — вправо и моноширинными цифрами: колонку чисел читают сравнением. */
+/* Выравнивание общее у заголовка и строки — иначе подпись не встанет над своей
+   колонкой. А кегль у них разный: заголовок остаётся подписью (правило
+   `.rtab-h span` выше), число — числом. Раньше эти две вещи стояли в одном
+   правиле, и «Рейтинг» набирался кеглем числа, а «Взнос» — кеглем подписи. */
 .rtab-h .num,
-.rrow .num { text-align: right; font-size: 13.5px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.rrow .num { text-align: right; }
 .rtab-h .mid,
 .rrow .mid { text-align: center; }
+/* Число — моноширинными цифрами: колонку чисел читают сравнением. */
+.rrow .num { font-size: 13.5px; font-weight: 700; font-variant-numeric: tabular-nums; }
 /* Состояние галочкой: зелёная — да, жёлтая — нет. Слов нет, их заменяет
    заголовок колонки; что именно значит — в подсказке при наведении. */
 .rchk {

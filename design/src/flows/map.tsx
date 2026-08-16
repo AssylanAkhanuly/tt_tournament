@@ -363,7 +363,7 @@ export function FlowMap({ flow, screens }: { flow: RoleFlow; screens: ScreenMap 
   useEffect(() => {
     const root = inner.current;
     if (!root) return;
-    root.querySelectorAll<HTMLElement>('[data-goto]').forEach((el) => {
+    root.querySelectorAll<HTMLElement>('[data-goto], .fmap-hot').forEach((el) => {
       el.removeAttribute('data-goto');
       el.classList.remove('fmap-hot');
     });
@@ -389,6 +389,19 @@ export function FlowMap({ flow, screens }: { flow: RoleFlow; screens: ScreenMap 
       }
     });
 
+    /* Элемент с явным `data-to` — уже переход, и ждать для него действия в
+       данных не нужно: раньше размечались только те элементы, которым нашлось
+       действие с `to:`, и возврат «← Календарь сезона» в карте не работал.
+
+       Метку `data-goto` таким элементам не ставим — только подсветку. Метку
+       вешает эффект, а он не знает про состояние внутри макета: на четвёртом
+       шаге мастера возврат ведёт на предыдущий шаг и `data-to` у него уже нет,
+       но метка с первого шага осталась бы висеть и уводила в календарь. */
+    root.querySelectorAll<HTMLElement>('[data-to]').forEach((el) => {
+      const to = el.dataset.to;
+      if (to && to !== selected && screens[to]) el.classList.add('fmap-hot');
+    });
+
     const targets = (spec?.actions ?? []).filter((a) => a.to);
     const cands = [
       ...root.querySelectorAll<HTMLElement>(
@@ -411,7 +424,7 @@ export function FlowMap({ flow, screens }: { flow: RoleFlow; screens: ScreenMap 
           ) ??
           cands.find((c) => want.length > 2 && norm(c.textContent ?? '').includes(want));
         if (hit) {
-          hit.dataset.goto = a.to!;
+          if (!hit.dataset.to) hit.dataset.goto = a.to!;
           hit.classList.add('fmap-hot');
         }
         return {
@@ -424,11 +437,13 @@ export function FlowMap({ flow, screens }: { flow: RoleFlow; screens: ScreenMap 
         };
       }),
     );
-  }, [selected, spec, scale, byId]);
+  }, [selected, spec, scale, byId, screens]);
 
   const go = (e: React.MouseEvent) => {
-    const hit = (e.target as HTMLElement).closest<HTMLElement>('[data-goto]');
-    const to = hit?.dataset.goto;
+    const hit = (e.target as HTMLElement).closest<HTMLElement>('[data-to], [data-goto]');
+    /* Живой `data-to` важнее метки: метку ставит эффект, и она устаревает при
+       смене состояния внутри макета. */
+    const to = hit?.dataset.to ?? hit?.dataset.goto;
     if (to && screens[to]) {
       e.preventDefault();
       setSelected(to);

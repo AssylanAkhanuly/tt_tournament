@@ -37,7 +37,7 @@ export function Desk({
       форма, карточка, мастер. Пункт меню у них тот же, что у списка, и без этой
       кнопки уйти обратно нечем — разве что снова жать пункт сайдбара, теряя
       место в списке. */
-  back?: { label: string; to?: string };
+  back?: { label: string; to?: string; onClick?: () => void };
   nav: [ReactNode, string][];
   activeNav: string;
   /** передан — сайдбар становится кликабельным (живой прототип роли) */
@@ -106,7 +106,7 @@ export function Desk({
         <main className="dmain">
           <div className="dtitle">
             {back && (
-              <button type="button" className="dback" data-to={back.to}>
+              <button type="button" className="dback" data-to={back.to} onClick={back.onClick}>
                 <ArrowLeft size={14} /> {back.label}
               </button>
             )}

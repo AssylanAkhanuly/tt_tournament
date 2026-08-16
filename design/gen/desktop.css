@@ -54,7 +54,8 @@
 /* Возврат над заголовком: тихая кнопка, а не заметная — она уводит с экрана,
    а главное действие здесь другое. */
 .dback { display: inline-flex; align-items: center; gap: 6px; margin-bottom: 8px; padding: 4px 10px 4px 7px; font: inherit; font-size: 11.5px; font-weight: 600; color: var(--c-muted); background: none; border: 1px solid var(--c-glass-line); border-radius: var(--r-xs); cursor: pointer; }
-.dback:hover { color: var(--c-ink); border-color: var(--c-accent-line); }
+.dback:hover { color: var(--c-ink); border-color: var(--c-accent-line); background: var(--c-panel-2); }
+.dback:active { background: var(--c-panel-3); }
 .dtitle h2 { font-size: 21px; font-weight: 800; letter-spacing: -.3px; }
 .dtitle p { color: var(--c-muted); font-size: 12.5px; margin-top: 2px; }
 

@@ -43,7 +43,6 @@ export const R01: RoleUI = {
     [<LayoutDashboard size={18} />, 'Панель'],
     [<CalendarDays size={18} />, 'Календарь'],
     [<UserCog size={18} />, 'Пользователи'],
-    [<Users size={18} />, 'Реестры'],
     [<History size={18} />, 'Журнал'],
     [<Newspaper size={18} />, 'Новости'],
   ],
