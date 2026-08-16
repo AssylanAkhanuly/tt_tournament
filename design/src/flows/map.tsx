@@ -26,7 +26,16 @@ import type { RoleFlow, Screen, ScreenTab } from './types';
 import type { ScreenMap } from '../mockups/shell';
 import { NodeSpec } from './nodeSpec';
 import { role00 } from './data/role00';
+import { SCREENS as COMMON_SCREENS } from '../mockups/role00';
 import './map.css';
+
+/* Экраны из шапки: они есть на каждом экране системы и потому у каждой роли.
+   В борд роли их не ставим (это не шаг маршрута), а на карте они нужны — иначе
+   клик по колокольчику или по имени в шапке упирается в пустоту. */
+const FROM_HEADER: [string, string][] = [
+  ['Э0.3', 'колокольчик в шапке'],
+  ['Э0.2', 'имя и фото в шапке'],
+];
 
 /* Дерево растёт слева направо: слой — колонка, соседи по слою стоят друг под
    другом. Сверху вниз оно расползалось по ширине (у первого экрана роли до
@@ -110,7 +119,10 @@ const nodeTypes = { screen: ScreenNode, tab: TabNode };
 function build(flow: RoleFlow, screens: ScreenMap, selected: string) {
   const known = new Set(flow.screens.map((s) => s.id));
   const commons = new Map(role00.screens.map((s) => [s.id, s]));
-  const codes = Object.keys(screens);
+  const codes = [
+    ...Object.keys(screens),
+    ...FROM_HEADER.map(([c]) => c).filter((c) => !screens[c] && COMMON_SCREENS[c]),
+  ];
   const byId = new Map<string, Screen>(
     codes
       .map((c) => [c, flow.screens.find((s) => s.id === c) ?? commons.get(c)!])
@@ -133,6 +145,12 @@ function build(flow: RoleFlow, screens: ScreenMap, selected: string) {
     if (code === first) {
       parent.set(code, root);
       via.set(code, 'вход под своей ролью');
+      return;
+    }
+    const header = FROM_HEADER.find(([c]) => c === code);
+    if (header) {
+      parent.set(code, first);
+      via.set(code, header[1]);
       return;
     }
     if (/меню/i.test(sc.entry.join(' '))) {
@@ -305,7 +323,15 @@ function build(flow: RoleFlow, screens: ScreenMap, selected: string) {
 
 /* ── Карта ──────────────────────────────────────────────────────── */
 
-export function FlowMap({ flow, screens }: { flow: RoleFlow; screens: ScreenMap }) {
+export function FlowMap({ flow, screens: own }: { flow: RoleFlow; screens: ScreenMap }) {
+  /* Экраны роли плюс те, что открываются из шапки на любом экране: макеты у
+     них общие (раздел 00), и карта показывает их так же, как свои. */
+  const screens = useMemo<ScreenMap>(() => {
+    const extra = Object.fromEntries(
+      FROM_HEADER.filter(([c]) => !own[c] && COMMON_SCREENS[c]).map(([c]) => [c, COMMON_SCREENS[c]]),
+    );
+    return { ...own, ...extra };
+  }, [own]);
   const codes = Object.keys(screens);
   const [selected, setSelected] = useState(codes[0]);
   /* Какая вкладка выбранного экрана открыта: карта нажимает переключатель в
@@ -398,6 +424,7 @@ export function FlowMap({ flow, screens }: { flow: RoleFlow; screens: ScreenMap 
     /* Элемент с явным `data-to` — уже переход, и ждать для него действия в
        данных не нужно: раньше размечались только те элементы, которым нашлось
        действие с `to:`, и возврат «← Календарь сезона» в карте не работал.
+       Так же устроены колокольчик и имя в шапке.
 
        Метку `data-goto` таким элементам не ставим — только подсветку. Метку
        вешает эффект, а он не знает про состояние внутри макета: на четвёртом
@@ -443,12 +470,15 @@ export function FlowMap({ flow, screens }: { flow: RoleFlow; screens: ScreenMap 
         };
       }),
     );
-  }, [selected, spec, scale, byId, screens]);
+    /* `tab` в зависимостях: после переключения вкладки в макете другие кнопки,
+       и переходы надо разметить заново. */
+  }, [selected, spec, scale, byId, screens, tab]);
 
   const go = (e: React.MouseEvent) => {
     const hit = (e.target as HTMLElement).closest<HTMLElement>('[data-to], [data-goto]');
     /* Живой `data-to` важнее метки: метку ставит эффект, и она устаревает при
-       смене состояния внутри макета. */
+       смене состояния внутри макета. Он же ловит переходы, которые появились
+       после отрисовки, — меню профиля и ленту уведомлений. */
     const to = hit?.dataset.to ?? hit?.dataset.goto;
     if (to && screens[to]) {
       e.preventDefault();
