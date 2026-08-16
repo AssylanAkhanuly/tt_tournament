@@ -36,6 +36,7 @@ export function Dash3_1({ variant }: { variant?: DeskVariant }) {
       <Chips items={KPI} to="Э3.2" />
       <Attention
         act={false}
+        max={2}
         action={
           <Btn>
             <Download size={14} /> Выгрузить сводку
@@ -46,17 +47,17 @@ export function Dash3_1({ variant }: { variant?: DeskVariant }) {
           широкой колонке, иначе строки переносятся и панель растёт вдвое. */}
       <div className="mkcols">
         <Panel title="Сегодня идут">
-          <TodayRows act={false} />
+          <TodayRows act={false} one />
         </Panel>
-        <Panel title="Ближайшие старты">
+        <Panel
+          title="Ближайшие старты"
+          extra={<span className="dcount">ещё {UPCOMING.length - 1} в календаре</span>}
+        >
           <Rows>
             {UPCOMING.slice(0, 1).map((t) => (
               <TourRow key={t.nm} t={t} />
             ))}
           </Rows>
-          <div className="dcount" style={{ marginTop: 10 }}>
-            ещё {UPCOMING.length - 1} впереди — весь список в календаре
-          </div>
         </Panel>
       </div>
     </RoleScreen>

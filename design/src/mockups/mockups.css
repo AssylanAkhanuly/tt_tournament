@@ -464,6 +464,8 @@ button.mkattn-i.on svg { color: var(--c-accent); transform: rotate(180deg); }
   background: var(--c-panel-3);
 }
 .mkattn-d-h b { font-size: 12px; color: var(--c-ink); }
+/* «показаны 2 из 12» — когда список в панели укорочен: молча резать нельзя. */
+.mkattn-d-h span { font-size: 11px; color: var(--c-dim); }
 .mkattn-d-b { padding: 9px 11px; display: grid; gap: 7px; }
 .mkattn-r {
   display: grid;

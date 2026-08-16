@@ -660,6 +660,136 @@ const Profile14_7States = () => (
   </States>
 );
 
+/* ── Э14.10 · Оплата прошла · Э14.11 · Оплата не прошла ────────── */
+
+/** Страница возврата: банк отправил человека обратно к нам, и первое, что он
+    должен увидеть, — прошёл платёж или нет. Одной плашки в профиле мало: из
+    банка возвращаются в тревоге, «где мои деньги» — вопрос этой секунды. */
+const Back14 = ({
+  ok,
+  title,
+  sub,
+  children,
+}: {
+  ok: boolean;
+  title: string;
+  sub: string;
+  children: ReactNode;
+}) => (
+  <RoleScreen role={R14} nav="Профиль" title={title} sub={sub}>
+    <div className="mkcols">
+      <Panel
+        title={ok ? 'Годовой взнос 2026' : 'Платёж не прошёл'}
+        extra={ok ? <P t="ОПЛАЧЕН" cls="live" /> : <P t="НЕ ПРОШЛА" cls="bad" />}
+      >
+        {children}
+      </Panel>
+
+      <Panel title="Что дальше">
+        {ok ? (
+          <>
+            <Rows>
+              <Row nm="Заявки на турниры со взносом" sub="проходят с этой минуты" pill={{ t: 'ОТКРЫТО', cls: 'live' }} />
+              <Row nm="Отметка у тренера и в реестре" sub="видна сразу, отмечать вручную не нужно" pill={{ t: 'СРАЗУ', cls: 'live' }} />
+              <Row nm="Квитанция" sub="приходит на почту от банка" pill={{ t: 'ОТ БАНКА', cls: 'reg' }} />
+            </Rows>
+            <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
+              <button className="dsubmit" style={{ padding: '11px 16px' }} data-to="Э14.7">
+                <Check size={15} /> В профиль
+              </button>
+              <Ghost>Заявиться на турнир</Ghost>
+            </div>
+          </>
+        ) : (
+          <>
+            <Rows>
+              <Row nm="Деньги не списаны" sub="банк отклонил операцию до списания" pill={{ t: 'ВАЖНО', cls: 'reg' }} />
+              <Row nm="Взнос остался неоплаченным" sub="заявки на турниры со взносом пока не пройдут" pill={{ t: 'НЕ ОПЛАЧЕН', cls: 'wait' }} />
+              <Row nm="Можно повторить" sub="или оплатить другой картой" pill={{ t: 'СЕЙЧАС', cls: 'live' }} />
+            </Rows>
+            <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
+              <button className="dsubmit" style={{ padding: '11px 16px' }} data-to="Э14.8">
+                <CreditCard size={15} /> Повторить оплату
+              </button>
+              <Ghost>В профиль</Ghost>
+            </div>
+          </>
+        )}
+      </Panel>
+    </div>
+  </RoleScreen>
+);
+
+export function Paid14_10() {
+  return (
+    <Back14 ok title="Взнос оплачен" sub="Годовой взнос 2026 · Ким Георгий">
+      <Form>
+        <Field label="Сумма" value="₸ 10 000" />
+        <Field label="Номер заказа" value="100416" />
+        <Field label="Когда" value="14.01.2026, 10:42" />
+        <Field label="Карта" value="•••• 1234 · Halyk ePay" />
+        <Field label="Взнос действует" value="до 31.03.2027" wide />
+      </Form>
+      <Alert tone="success">
+        Состояние поставило серверное подтверждение банка, а не эта страница: даже если бы возврата
+        не было, взнос всё равно стал бы оплаченным.
+      </Alert>
+    </Back14>
+  );
+}
+
+const Paid14_10States = () => (
+  <States>
+    <Shot tone="info" title="Банк ещё подтверждает" text="Возврат пришёл раньше подтверждения — редко, но бывает.">
+      <Rows>
+        <Row nm="Платёж отправлен" sub="Halyk ePay · обрабатывается" pill={{ t: 'ЖДЁМ', cls: 'wait' }} />
+      </Rows>
+      <Alert>Страница сама обновится: держать её открытой не нужно.</Alert>
+    </Shot>
+
+    <Shot tone="success" title="Взнос уже был оплачен" text="Повторный платёж не проходит: система его не создаёт.">
+      <Rows>
+        <Row nm="Взнос 2026" sub="оплачен 14.01, картой •••• 1234" pill={{ t: 'ОПЛАЧЕН', cls: 'live' }} />
+      </Rows>
+    </Shot>
+  </States>
+);
+
+export function Declined14_11() {
+  return (
+    <Back14 ok={false} title="Оплата не прошла" sub="Годовой взнос 2026 · Ким Георгий">
+      <Form>
+        <Field label="Сумма" value="₸ 10 000" />
+        <Field label="Номер заказа" value="100416" />
+        <Field label="Когда" value="14.01.2026, 10:44" />
+        <Field label="Причина от банка" value="недостаточно средств на карте" wide />
+      </Form>
+      <Alert tone="danger">
+        Причину пишет банк — мы её только показываем. Ни номера карты, ни кода из SMS у нас нет.
+      </Alert>
+    </Back14>
+  );
+}
+
+const Declined14_11States = () => (
+  <States>
+    <Shot tone="warning" title="Человек нажал «Отмена» у банка" text="Та же страница, причина другая — платёж не начинался.">
+      <Rows>
+        <Row nm="Оплата отменена" sub="возврат с платёжной страницы банка" pill={{ t: 'ОТМЕНЕНА', cls: 'done' }} />
+      </Rows>
+    </Shot>
+
+    <Shot tone="danger" title="Банк не отвечает ✳" text="Состояние неизвестно: проверяем сами, деньги не теряются.">
+      <Rows>
+        <Row nm="Ответа от банка нет" sub="проверим состояние платежа и обновим сами" pill={{ t: 'ПРОВЕРЯЕМ', cls: 'wait' }} />
+      </Rows>
+      <Alert>
+        Если деньги списались, взнос станет оплаченным без участия человека — по сверке с банком.
+      </Alert>
+    </Shot>
+  </States>
+);
+
 /* ── Э14.9 · Изменение данных ──────────────────────────────────── */
 
 /** Телефон и почта — свои: человек меняет их сам. Клуб — утверждение о
@@ -781,14 +911,16 @@ export function Pay14_8() {
         <Input label="Держатель карты" value="GEORGIY KIM" wide />
       </Form>
 
-      <button className="dsubmit">
+      {/* Кнопка банка ведёт на нашу страницу возврата: успех — Э14.10,
+          отказ и отмена — Э14.11. */}
+      <button className="dsubmit" data-to="Э14.10">
         <CreditCard size={15} /> Оплатить ₸ 10 000
       </button>
       <div className="mkauth-row">
         <span style={{ fontSize: 12.5, color: 'var(--c-muted)' }}>
           Форму и 3-D Secure показывает банк — номер карты в систему федерации не попадает
         </span>
-        <span style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--c-accent)' }} data-to="Э14.7">
+        <span style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--c-accent)' }} data-to="Э14.11">
           Отмена
         </span>
       </div>
@@ -934,6 +1066,25 @@ export const SCREENS: ScreenMap = {
       <>
         <Pay14_8 />
         <Pay14_8States />
+      </>
+    ),
+    next: 'банк вернул человека к нам',
+  },
+  'Э14.10': {
+    cap: 'Взнос оплачен',
+    view: () => (
+      <>
+        <Paid14_10 />
+        <Paid14_10States />
+      </>
+    ),
+  },
+  'Э14.11': {
+    cap: 'Оплата не прошла',
+    view: () => (
+      <>
+        <Declined14_11 />
+        <Declined14_11States />
       </>
     ),
   },

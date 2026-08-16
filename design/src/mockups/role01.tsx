@@ -359,13 +359,14 @@ export const ATTENTION: AttnItem[] = [
 ];
 
 /** Список за счётчиком: чем дело снимается и кто его снимает. */
-const AttnList = ({ item, act }: { item: AttnItem; act: boolean }) => (
+const AttnList = ({ item, act, max }: { item: AttnItem; act: boolean; max?: number }) => (
   <div className="mkattn-d">
     <div className="mkattn-d-h">
       <b>{item.n} {item.t}</b>
+      {max && max < item.rows.length && <span>показаны {max} из {item.n}</span>}
     </div>
     <div className="mkattn-d-b">
-      {item.rows.map((r) => (
+      {item.rows.slice(0, max ?? item.rows.length).map((r) => (
         <div className="mkattn-r" key={r.nm} data-to={act ? r.to : undefined}>
           <div>
             <div className="nm">{r.nm}</div>
@@ -395,7 +396,18 @@ const AttnList = ({ item, act }: { item: AttnItem; act: boolean }) => (
     `action` — главная кнопка экрана, она стоит в одном ряду со счётчиками:
     раньше ряд собирался снаружи полосой `dactionbar`, но теперь под ним
     раскрывается список, и полоса разъезжалась. */
-export const Attention = ({ act = true, action }: { act?: boolean; action?: ReactNode }) => {
+export const Attention = ({
+  act = true,
+  action,
+  max,
+}: {
+  act?: boolean;
+  action?: ReactNode;
+  /** Сколько строк показывать в раскрытом счётчике. У наблюдателей (роли 3 и 4)
+      очередь показывает объём, а не разбор, и длинный список только вытесняет
+      календарь за нижний край экрана. */
+  max?: number;
+}) => {
   const [open, setOpen] = useState<string | null>(ATTENTION[0].t);
   const cur = ATTENTION.find((a) => a.t === open);
   return (
@@ -418,7 +430,7 @@ export const Attention = ({ act = true, action }: { act?: boolean; action?: Reac
         </div>
         {action}
       </div>
-      {cur && <AttnList item={cur} act={act} />}
+      {cur && <AttnList item={cur} act={act} max={max} />}
     </div>
   );
 };
@@ -427,12 +439,12 @@ export const Attention = ({ act = true, action }: { act?: boolean; action?: Reac
 
     `act` — показывать ли переход в ход турнира. У ролей 3 и 4 (наблюдатели)
     кнопок на экранах нет вовсе, поэтому они берут ту же зону без неё. */
-export const TodayRows = ({ act = true }: { act?: boolean }) => (
+export const TodayRows = ({ act = true, one }: { act?: boolean; one?: boolean }) => (
   <Rows>
     {[
       { nm: 'Суперлига · мужчины', sub: 'Евразийская лига, 2-й тур · Караганда · столы 1–6', v: '34 из 60' },
       { nm: 'Суперлига · женщины', sub: 'Евразийская лига, 2-й тур · Караганда · столы 7–10', v: '26 из 48' },
-    ].map((r) => (
+    ].slice(0, one ? 1 : undefined).map((r) => (
       <div className="drow" key={r.nm} data-to="Э1.3">
         <div className="who">
           <div className="nm">{r.nm}</div>
