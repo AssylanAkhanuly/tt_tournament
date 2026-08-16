@@ -1,474 +1,69 @@
-/* Роль 14 · Спортсмен — макеты по флоу.
-   Экраны Э14.1–Э14.7 (см. `flows/14-sportsmen.md` и схему роли).
+/* Роль 14 · Спортсмен — макеты по флоу. Экраны Э14.1–Э14.7
+   (см. `flows/14-sportsmen.md` и карту роли).
 
-   Единственная роль с мобильным приложением (TZ §10), поэтому макеты рисуем на
-   телефоне: `RolePhone` — тот же корпус и те же карточки, что у принятых экранов
-   игрока (`PlayerApp.tsx`). Два правила, которые макет обязан показывать:
-   спортсмен не вводит и не подтверждает счёт своего матча, а заявиться сам он
-   может только на открытый республиканский турнир (§8.2). */
+   Сейчас проектируем **веб**: у спортсмена те же семь экранов, что были
+   нарисованы телефоном, но десктопом — как у остальных ролей. Мобильное
+   приложение (TZ §10) остаётся на потом, его экраны лежат рядом в
+   `role14app.tsx` и показываются историей «Приложение · позже».
 
-import type { ReactNode } from 'react';
+   Роль — единственная, кто заявляется сам, и единственная, кто платит взнос
+   картой. Счёт своего матча спортсмен не вводит: его ведёт судья стола. */
+
+import { BarChart3, CalendarDays, CreditCard, Lock, Send, TriangleAlert } from 'lucide-react';
 import {
-  BarChart3, CalendarDays, CircleCheckBig, Home, Lock, Megaphone, Paperclip, Pencil,
-  ShieldCheck, Swords, TriangleAlert, User, Wallet, ZoomIn,
-} from 'lucide-react';
-import {
-  A, Alert, Arrow, Board, Empty, RolePhone, Row, Rows, Screen, Shot, States, Submit,
+  A, ActionBar, Alert, Arrow, Board, Chips, Empty, Field, Form, Ghost, Modal, Off, P, Panel, Queue,
+  RoleScreen, Row, Rows, Screen, Shot, States,
 } from './shell';
+import type { DeskVariant } from '../deskShell';
 import type { ScreenMap } from './shell';
-import { FormSeg } from '../segs';
 import { R14 } from './roles';
-import { LoginPhone0_1 } from './role00';
+import { Login0_1 } from './role00';
 
 /* Спортсмен макета — Ким Георгий (тот же, что в реестрах ролей 2 и 12). */
 const ME = A(44);
 
-const TABS: [ReactNode, string][] = [
-  [<Home size={20} />, 'Главная'],
-  [<CalendarDays size={20} />, 'Календарь'],
-  [<Swords size={20} />, 'Матч'],
-  [<BarChart3 size={20} />, 'Аналитика'],
-  [<User size={20} />, 'Профиль'],
-];
+/* ── Э14.1 · Главная ───────────────────────────────────────────── */
 
-const Ph = ({ tab, children }: { tab: string; children: ReactNode }) => (
-  <RolePhone brand="ФНТ РК" tabs={TABS} active={tab}>{children}</RolePhone>
-);
-
-/* ── мелочи телефона ──────────────────────────────────────────── */
-
-const Stat = ({ v, k, tone }: { v: string; k: string; tone?: 'g' | 'r' | 'b' }) => (
-  <div className={'stat' + (tone ? ' ' + tone : '')}>
-    <div className="v">{v}</div>
-    <div className="k">{k}</div>
-  </div>
-);
-
-/** Строка списка на телефоне: аватар, кто, справа — значение. */
-const MRow = ({ av, nm, mt, right }: { av?: string; nm: string; mt?: string; right?: ReactNode }) => (
-  <div className="match">
-    {av && <img className="avatar sm" src={av} alt="" />}
-    <div className="who">
-      <div className="nm">{nm}</div>
-      {mt && <div className="mt">{mt}</div>}
-    </div>
-    {right && <div className="sc">{right}</div>}
-  </div>
-);
-
-/** Подсказка-плашка на телефоне; значок не должен рвать строку (svg — display: block). */
-const HintBox = ({ icon, top, children }: { icon?: ReactNode; top?: number; children: ReactNode }) => (
-  <div
-    className="dhintbox"
-    style={{ marginTop: top, display: 'flex', gap: 7, alignItems: 'flex-start' }}
-  >
-    {icon && <span style={{ flex: 'none', marginTop: 1 }}>{icon}</span>}
-    <span>{children}</span>
-  </div>
-);
-
-/** Строка «поле — значение» в карточке профиля. */
-const KRow = ({ k, v }: { k: string; v: string }) => (
-  <div className="match">
-    <div className="who">
-      <div className="mt">{k}</div>
-      <div className="nm">{v}</div>
-    </div>
-  </div>
-);
-
-/** График рейтинга — тот же приём, что на принятых экранах игрока. */
-function Chart({ pts }: { pts: string }) {
-  const last = pts.trim().split(' ').pop()!.split(',');
+export function Home14_1({ variant }: { variant?: DeskVariant }) {
   return (
-    <svg className="chart" viewBox="0 0 260 68" preserveAspectRatio="none">
-      <defs>
-        <linearGradient id="r14g" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0" stopColor="var(--c-accent)" stopOpacity="0.32" />
-          <stop offset="1" stopColor="var(--c-accent)" stopOpacity="0" />
-        </linearGradient>
-      </defs>
-      <polyline fill="url(#r14g)" stroke="none" points={`0,68 ${pts} 260,68`} />
-      <polyline
-        fill="none"
-        stroke="var(--c-accent)"
-        strokeWidth="2.5"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        points={pts}
+    <RoleScreen variant={variant} role={R14} nav="Главная" title="Ким Георгий" sub="Астана · СКА · КМС">
+      <Chips
+        items={[
+          { v: '2456', k: 'Рейтинг', tone: 'b' },
+          { v: '7', k: 'Место в РК' },
+          { v: '+24', k: 'За турнир', tone: 'g' },
+          { v: '128', k: 'Матчей сыграно' },
+        ]}
       />
-      <circle cx={last[0]} cy={last[1]} r="3.5" fill="var(--c-accent)" />
-    </svg>
-  );
-}
+      <Queue items={[{ n: '1', t: 'заявка ждёт решения судьи', to: 'Э14.4' }]} />
 
-/** Карточка турнира в календаре: категория, условия и то, что стоит вместо кнопки. */
-function TourCard({
-  cat, nm, mt, rule, ruleIcon, btn,
-}: {
-  cat: string;
-  nm: string;
-  mt: string;
-  rule: string;
-  ruleIcon: ReactNode;
-  btn?: string;
-}) {
-  return (
-    <div className="card">
-      <span className="pill reg">{cat}</span>
-      <div className="nm2">{nm}</div>
-      <div className="mt2">{mt}</div>
-      <HintBox icon={ruleIcon} top={10}>{rule}</HintBox>
-      {btn && <div style={{ marginTop: 10 }}><Submit>{btn}</Submit></div>}
-    </div>
-  );
-}
+      <div className="mkcols">
+        <Panel title="Сейчас играю" extra={<P t="ВАС ВЫЗВАЛИ · СТОЛ 5" cls="live" />}>
+          <Rows>
+            <Row
+              av={A(22)}
+              nm="Жумабеков Расул"
+              sub="1/8 финала · рейтинг 2312"
+              val="14:20"
+              pill={{ t: 'ПОДОЙДИТЕ К СТОЛУ', cls: 'live' }}
+              to="Э14.5"
+            />
+          </Rows>
+        </Panel>
 
-/* ── Э14.1 · Главная ──────────────────────────────────────────── */
-export function Home14_1() {
-  return (
-    <Ph tab="Главная">
-      <div className="card pcard">
-        <img className="avatar" src={ME} alt="" />
-        <div className="who">
-          <div className="nm">Ким Георгий</div>
-          <div className="mt">г. Астана · клуб СКА · КМС</div>
-        </div>
-        <div className="rt">
-          <div className="k">Рейтинг</div>
-          <div className="v">2456</div>
-        </div>
+        <Panel title="Ближайший турнир">
+          <Rows>
+            <Row
+              nm="Кубок Алматы 2026"
+              sub="ОРТ · Алматы · 12–14 сентября"
+              pill={{ t: 'ЗАЯВКА ПОДАНА', cls: 'reg' }}
+              to="Э14.4"
+            />
+            <Row nm="Чемпионат Республики Казахстан" sub="Главный старт · Астана · 18–22 сентября" pill={{ t: 'ЗАЯВЛЯЕТ РЕГИОН', cls: 'done' }} />
+          </Rows>
+        </Panel>
       </div>
-
-      <div className="stats">
-        <Stat v="2456" k="Рейтинг" tone="b" />
-        <Stat v="7" k="Место в РК" />
-        <Stat v="+24" k="За турнир" tone="g" />
-        <Stat v="128" k="Матчей" />
-      </div>
-
-      <div className="sect">Сейчас играю</div>
-      <div className="card" style={{ borderColor: 'var(--c-success-line-2)' }}>
-        <span className="pill live"><span className="d" />ВАС ВЫЗВАЛИ · СТОЛ 5</span>
-        <MRow
-          av={A(22)}
-          nm="Жумабеков Расул"
-          mt="1/8 финала · рейтинг 2312"
-          right="14:20"
-        />
-      </div>
-
-      <div className="sect">Ближайший турнир</div>
-      <div className="card">
-        <span className="pill reg">ОТКРЫТЫЙ РЕСПУБЛИКАНСКИЙ</span>
-        <div className="nm2">Кубок Алматы 2026</div>
-        <div className="mt2">г. Алматы · 12–14.09 · заявка на рассмотрении</div>
-      </div>
-
-      <div className="sect">Лента</div>
-      <div className="item live">
-        <div className="ic"><Megaphone size={18} /></div>
-        <div className="tx">
-          <div className="tt">Пара вызвана на стол 5</div>
-          <div className="ss">Чемпионат Астаны · 1/8 финала</div>
-        </div>
-        <div className="rt">2 мин</div>
-      </div>
-      <div className="item">
-        <div className="ic"><CircleCheckBig size={18} /></div>
-        <div className="tx">
-          <div className="tt">Заявка принята</div>
-          <div className="ss">Чемпионат Астаны · подал тренер</div>
-        </div>
-        <div className="rt">1 ч</div>
-      </div>
-    </Ph>
-  );
-}
-
-/* ── Э14.2 · Календарь: как в турнир попадают — прямо в карточке ── */
-export function Calendar14_2() {
-  return (
-    <Ph tab="Календарь">
-      <div className="title">Календарь</div>
-
-      <TourCard
-        cat="ГЛАВНЫЙ СТАРТ"
-        nm="Чемпионат Республики Казахстан"
-        mt="г. Астана · 18–22.09.2026 · без возрастной границы"
-        ruleIcon={<Lock size={13} />}
-        rule="Состав подаёт старший тренер региона — заявиться самому нельзя, кнопки нет."
-      />
-
-      <TourCard
-        cat="ЕВРАЗИЙСКАЯ ЛИГА"
-        nm="Евразийская лига · 3-й тур"
-        mt="г. Шымкент · 16–18.05.2026 · командное соревнование"
-        ruleIcon={<ShieldCheck size={13} />}
-        rule="Заявляет клуб. Вы заявлены за команду «СКА» — мужская 2 лига."
-      />
-
-      <TourCard
-        cat="ОТКРЫТЫЙ РЕСПУБЛИКАНСКИЙ"
-        nm="Кубок Алматы 2026"
-        mt="г. Алматы · 12–14.09.2026 · приём заявок до 05.09"
-        ruleIcon={<CircleCheckBig size={13} />}
-        rule="Допуск: возраст без границы · ценз рейтинга от 1800 — ваш 2456 проходит · нужен годовой взнос — оплачен · нужна медсправка."
-        btn="Заявиться"
-      />
-
-      <TourCard
-        cat="ОТКРЫТЫЙ РЕСПУБЛИКАНСКИЙ"
-        nm="Мангистау кап 2026"
-        mt="г. Актау · 03–05.10.2026 · приём заявок до 25.09"
-        ruleIcon={<TriangleAlert size={13} />}
-        rule="Ценз по рейтингу: от 2600. Ваш рейтинг 2456 — не проходит, заявиться нельзя."
-      />
-    </Ph>
-  );
-}
-
-/* ── Э14.3 · Заявка на ОРТ ────────────────────────────────────── */
-export function Apply14_3() {
-  return (
-    <Ph tab="Календарь">
-      <div className="title">Заявка</div>
-      <div className="card">
-        <span className="pill reg">ОТКРЫТЫЙ РЕСПУБЛИКАНСКИЙ</span>
-        <div className="nm2">Кубок Алматы 2026</div>
-        <div className="mt2">г. Алматы · 12–14.09.2026 · приём до 05.09</div>
-      </div>
-
-      <div className="sect">Разряд</div>
-      <FormSeg items={['Одиночный', 'Парный']} active="Парный" />
-
-      <div className="card">
-        <MRow av={A(13)} nm="Пак Сергей" mt="партнёр по паре · рейтинг 2201 · СКА" right="выбран" />
-        <HintBox icon={<TriangleAlert size={13} />} top={8}>
-          Как партнёр подтверждает пару — в документе федерации не описано; дальше этот шаг не
-          проектируем.
-        </HintBox>
-      </div>
-
-      <div className="sect">Документы</div>
-      <div className="card">
-        <div className="mt2" style={{ marginTop: 0 }}>Турнир требует медицинскую справку.</div>
-        <div style={{ marginTop: 10 }}>
-          <button className="dpickbtn"><Paperclip size={14} /> Приложить файл</button>
-        </div>
-      </div>
-
-      <div className="sect">Проверки перед подачей</div>
-      <div className="card list">
-        <MRow nm="Возрастная граница" mt="без ограничений" right={<CircleCheckBig size={16} />} />
-        <MRow nm="Ценз по рейтингу" mt="от 1800 · ваш 2456" right={<CircleCheckBig size={16} />} />
-        <MRow nm="Годовой взнос 2026" mt="оплачен 09.01.2026" right={<CircleCheckBig size={16} />} />
-      </div>
-
-      <Submit>Подать заявку</Submit>
-      <HintBox>
-        Заявка уходит главному судье турнира, решение придёт уведомлением. Тренер может подать
-        заявку за вас — тогда в «Моей заявке» видно, кто подал.
-      </HintBox>
-    </Ph>
-  );
-}
-
-/* ── Э14.4 · Моя заявка ───────────────────────────────────────── */
-export function MyApp14_4() {
-  return (
-    <Ph tab="Календарь">
-      <div className="title">Мои заявки</div>
-
-      <div className="sect">Активные</div>
-      <div className="card">
-        <span className="pill wait">НА РАССМОТРЕНИИ</span>
-        <div className="nm2">Кубок Алматы 2026</div>
-        <div className="mt2">подана 02.09.2026 · вами · парный разряд</div>
-        <div style={{ marginTop: 10 }}>
-          <button className="dpickbtn">Отозвать заявку</button>
-        </div>
-      </div>
-
-      <div className="card">
-        <span className="pill live">ПРИНЯТА</span>
-        <div className="nm2">Чемпионат Астаны 2026</div>
-        <div className="mt2">подана 12.08.2026 · тренером Оспановым Т. · одиночный</div>
-      </div>
-
-      <div className="sect">Отклонённые</div>
-      <div className="card">
-        <span className="pill bad">ОТКЛОНЕНА</span>
-        <div className="nm2">Кубок Тараза 2026</div>
-        <div className="mt2">подана 20.07.2026 · вами · одиночный</div>
-        <HintBox top={10}>
-          Причина судьи: приложена медицинская справка не того образца — нужна справка с допуском
-          к соревнованиям.
-        </HintBox>
-        <div style={{ marginTop: 10 }}>
-          <Submit>Исправить и подать снова</Submit>
-        </div>
-      </div>
-    </Ph>
-  );
-}
-
-/* ── Э14.5 · Мой турнир и мой матч ────────────────────────────── */
-export function Match14_5() {
-  return (
-    <Ph tab="Матч">
-      <div className="card" style={{ borderColor: 'var(--c-success-line-2)' }}>
-        <span className="pill live"><span className="d" />ВАС ВЫЗВАЛИ</span>
-        <div className="title" style={{ padding: 0 }}>Подойдите к столу 5</div>
-        <div className="mt2">1/8 финала · вызов главного судьи в 14:18</div>
-      </div>
-
-      <div className="sect">Мой матч</div>
-      <div className="card list">
-        <MRow av={ME} nm="Ким Георгий" mt="рейтинг 2456 · вы" right="2" />
-        <MRow av={A(22)} nm="Жумабеков Расул" mt="рейтинг 2312 · Караганда" right="1" />
-      </div>
-      <HintBox icon={<Swords size={13} />}>Личные встречи с соперником: 3 : 1 в вашу пользу.</HintBox>
-
-      <div className="sect">Счёт</div>
-      <div className="card">
-        <div className="chart-h">
-          <span className="t">Партии · в реальном времени</span>
-          <span className="pill reg" style={{ margin: 0 }}>СЧЁТ ВЕДЁТ СУДЬЯ</span>
-        </div>
-        <div className="stats">
-          <Stat v="11:7" k="1-я партия" tone="g" />
-          <Stat v="9:11" k="2-я партия" tone="r" />
-          <Stat v="11:8" k="3-я партия" tone="g" />
-          <Stat v="6:4" k="идёт" tone="b" />
-        </div>
-        <HintBox icon={<Lock size={13} />} top={10}>
-          Счёт ведёт судья на столе. Вы его не вводите и не подтверждаете — на этом экране счёт
-          только показывается, кнопок ввода и подтверждения здесь нет.
-        </HintBox>
-      </div>
-
-      <div className="sect">Моя сетка</div>
-      <div className="card list">
-        <MRow nm="1/32 финала" mt="Оспанов Тимур" right="3:0" />
-        <MRow nm="1/16 финала" mt="Ерлан Бекзат" right="3:1" />
-        <MRow nm="1/8 финала" mt="Жумабеков Расул · идёт" right="2:1" />
-        <MRow nm="1/4 финала" mt="соперник определяется" right="—" />
-      </div>
-      <HintBox icon={<ZoomIn size={13} />}>
-        Сетка целиком открывается щипком — ваш путь подсвечен.
-      </HintBox>
-    </Ph>
-  );
-}
-
-/* ── Э14.6 · Аналитика ────────────────────────────────────────── */
-export function Stats14_6() {
-  return (
-    <Ph tab="Аналитика">
-      <div className="title">Аналитика</div>
-
-      <div className="card">
-        <div className="chart-h">
-          <span className="t">Динамика рейтинга · сезон 2026</span>
-          <span className="pill live" style={{ margin: 0 }}>+24</span>
-        </div>
-        <Chart pts="4,54 40,50 76,52 112,38 148,42 184,26 220,30 256,12" />
-      </div>
-
-      <div className="stats">
-        <Stat v="128" k="Матчи" />
-        <Stat v="98" k="Победы" tone="g" />
-        <Stat v="30" k="Поражения" tone="r" />
-        <Stat v="76%" k="Винрейт" tone="b" />
-      </div>
-
-      <div className="sect">Личные встречи</div>
-      <div className="card list">
-        <MRow av={A(22)} nm="Жумабеков Расул" mt="Караганда · «Шахтёр»" right="5:2" />
-        <MRow av={A(56)} nm="Гладун Игорь" mt="Тараз" right="1:3" />
-        <MRow av={A(13)} nm="Пак Сергей" mt="Астана · СКА" right="4:4" />
-      </div>
-
-      <div className="sect">История матчей</div>
-      <div className="card list">
-        <MRow nm="Чемпионат Астаны · 1/8" mt="Жумабеков Р. · 11:7, 9:11, 11:8, 11:6" right="3:1" />
-        <MRow nm="Кубок Алматы 2025 · 1/4" mt="Гладун И. · 8:11, 11:9, 6:11, 9:11" right="1:3" />
-      </div>
-
-      <div className="sect">Расширенная аналитика</div>
-      <div className="card">
-        <span className="pill reg">ПЛАТНАЯ</span>
-        <div className="nm2">Длина розыгрышей и ход партий</div>
-        <div className="mt2">Считается по вводу счёта по очкам, если судья вёл матч по очкам.</div>
-        <HintBox icon={<TriangleAlert size={13} />} top={10}>
-          Состав расширенной аналитики и способ оплаты пока не зафиксированы — кнопка ведёт на
-          заглушку.
-        </HintBox>
-        <div style={{ marginTop: 10 }}>
-          <Submit>Подключить расширенную</Submit>
-        </div>
-      </div>
-    </Ph>
-  );
-}
-
-/* ── Э14.7 · Профиль и взнос ──────────────────────────────────── */
-export function Profile14_7() {
-  return (
-    <Ph tab="Профиль">
-      <div className="card pcard">
-        <img className="avatar" src={ME} alt="" />
-        <div className="who">
-          <div className="nm">Ким Георгий</div>
-          <div className="mt">2003 г.р. · г. Астана</div>
-        </div>
-        <div className="rt">
-          <div className="k">Рейтинг</div>
-          <div className="v">2456</div>
-        </div>
-      </div>
-
-      <div className="sect">Мои данные</div>
-      <div className="card list">
-        <KRow k="Клуб" v="СКА · г. Астана" />
-        <KRow k="Тренер" v="Оспанов Тимур" />
-        <KRow k="Разряд" v="Кандидат в мастера спорта" />
-        <KRow k="Регион" v="Астана" />
-      </div>
-      <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-        <button className="dpickbtn"><Pencil size={14} /> Править контакты</button>
-      </div>
-
-      <div className="sect">Годовой взнос</div>
-      <div className="card">
-        <span className="pill live">ОПЛАЧЕН · 2026</span>
-        <div className="nm2">Членский взнос ФНТ РК · ₸ 10 000</div>
-        <div className="mt2">оплачен картой 09.01.2026 · Halyk ePay · платёж 4172‑8830</div>
-        <HintBox icon={<Wallet size={13} />} top={10}>
-          Взнос нужен на главных стартах и на тех турнирах, где организатор включил требование.
-          Состояние видно и вашему тренеру.
-        </HintBox>
-        <HintBox icon={<CircleCheckBig size={13} />} top={10}>
-          Оплатили — состояние меняется само, по подтверждению банка. Бухгалтер ничего не
-          подтверждает вручную, ждать его не нужно.
-        </HintBox>
-      </div>
-
-      <div className="sect">Взнос за 2027 год</div>
-      <div className="card">
-        <span className="pill wait">НЕ ОПЛАЧЕН</span>
-        <div className="nm2">Членский взнос ФНТ РК · ₸ 10 000</div>
-        <div className="mt2">приём открыт с 01.01.2027</div>
-        <div style={{ marginTop: 10 }}>
-          <Submit>Оплатить взнос картой</Submit>
-        </div>
-        <HintBox icon={<Lock size={13} />} top={10}>
-          Оплата на защищённой странице Халык Банка, с возвратом обратно в приложение. Приложение
-          можно закрыть сразу после оплаты — взнос всё равно станет оплаченным.
-        </HintBox>
-      </div>
-    </Ph>
+    </RoleScreen>
   );
 }
 
@@ -478,13 +73,72 @@ const Home14_1States = () => (
       <Empty title="Заявок нет" text="Ближайшие открытые ОРТ — в календаре." />
     </Shot>
 
-    <Shot tone="info" title="Турнир идёт" text="Появляется блок «Сейчас играю»: текущий или следующий матч — соперник, стол, время.">
+    <Shot tone="info" title="Турнир идёт" text="Появляется блок «Сейчас играю»: соперник, стол, время.">
       <Rows>
-        <Row nm="Стол 4 · сейчас" sub="соперник Ким Г. · 1/8 финала" pill={{ t: 'ИДЁТ', cls: 'live' }} />
+        <Row av={A(22)} nm="Стол 5 · сейчас" sub="соперник Жумабеков Р. · 1/8 финала" pill={{ t: 'ИДЁТ', cls: 'live' }} />
       </Rows>
     </Shot>
   </States>
 );
+
+/* ── Э14.2 · Календарь ─────────────────────────────────────────── */
+
+/** Турнир в календаре: главное — кто заявляет, от этого зависит кнопка. */
+const TOURS = [
+  {
+    nm: 'Кубок Алматы 2026',
+    mt: 'ОРТ · Алматы · 12–14 сентября · приём до 05.09',
+    rule: 'Открытый республиканский: заявляетесь сами',
+    can: true,
+  },
+  {
+    nm: 'Чемпионат Республики Казахстан',
+    mt: 'Главный старт · Астана · 18–22 сентября · без возрастной границы',
+    rule: 'Состав подаёт старший тренер региона — заявиться самому нельзя',
+    can: false,
+  },
+  {
+    nm: 'Евразийская лига · 3-й тур',
+    mt: 'Лига · Шымкент · 16–18 мая · командное соревнование',
+    rule: 'Заявляет клуб. Вы заявлены за команду «СКА» — мужская 2 лига',
+    can: false,
+  },
+];
+
+export function Calendar14_2() {
+  return (
+    <RoleScreen role={R14} nav="Календарь" title="Календарь" sub="Сезон 2026 · 32 соревнования">
+      <div className="dactionbar">
+        <div className="dseg2">
+          <span className="on">Все</span>
+          <span>Куда могу заявиться</span>
+          <span>Мои турниры</span>
+        </div>
+        <div className="dcount">Показаны старты, открытые для заявок</div>
+      </div>
+
+      <Rows>
+        {TOURS.map((t) => (
+          <div className="drow" key={t.nm}>
+            <div className="who">
+              <div className="nm">{t.nm}</div>
+              <div className="rl">{t.mt}</div>
+            </div>
+            <div className="amt" style={{ color: 'var(--c-muted)', maxWidth: 320, whiteSpace: 'normal' }}>
+              {t.can ? null : <Lock size={12} style={{ verticalAlign: '-2px', marginRight: 4 }} />}
+              {t.rule}
+            </div>
+            {t.can ? (
+              <button className="dpickbtn">Заявиться</button>
+            ) : (
+              <P t="НЕ ВАМИ" cls="done" />
+            )}
+          </div>
+        ))}
+      </Rows>
+    </RoleScreen>
+  );
+}
 
 const Calendar14_2States = () => (
   <States>
@@ -503,6 +157,39 @@ const Calendar14_2States = () => (
   </States>
 );
 
+/* ── Э14.3 · Заявка на ОРТ ─────────────────────────────────────── */
+
+export function Apply14_3() {
+  return (
+    <RoleScreen role={R14} nav="Календарь" title="Заявка на турнир" sub="Кубок Алматы 2026 · ОРТ">
+      <div className="mkcols">
+        <Panel title="Заявка">
+          <Form>
+            <Field label="Разряд" value="Одиночный" />
+            <Field label="Возрастная группа" value="Взрослые" />
+            <Field label="Парный разряд ✳" value="партнёр не выбран" wide />
+          </Form>
+          <div className="dactionbar" style={{ marginTop: 12 }}>
+            <div className="dcount">Решение принимает главный судья турнира</div>
+            <button className="dsubmit" style={{ padding: '11px 16px' }}>
+              <Send size={15} /> Подать заявку
+            </button>
+          </div>
+        </Panel>
+
+        <Panel title="Условия допуска (§4.2)">
+          <Rows>
+            <Row nm="Годовой взнос федерации" sub="оплачен 14.01.2026" pill={{ t: 'ПРОХОДИТ', cls: 'live' }} />
+            <Row nm="Удостоверение личности" sub="приложено" pill={{ t: 'ПРОХОДИТ', cls: 'live' }} />
+            <Row nm="Медицинский допуск" sub="действует до 30.11.2026" pill={{ t: 'ПРОХОДИТ', cls: 'live' }} />
+            <Row nm="Ценз по рейтингу" sub="не требуется" pill={{ t: 'НЕ НУЖЕН', cls: 'done' }} />
+          </Rows>
+        </Panel>
+      </div>
+    </RoleScreen>
+  );
+}
+
 const Apply14_3States = () => (
   <States>
     <Shot
@@ -518,21 +205,81 @@ const Apply14_3States = () => (
   </States>
 );
 
+/* ── Э14.4 · Моя заявка ────────────────────────────────────────── */
+
+export function MyApp14_4() {
+  return (
+    <RoleScreen role={R14} nav="Моя заявка" title="Моя заявка" sub="Кубок Алматы 2026 · подана 02.09">
+      <div className="mkcols">
+        <Panel title="Состояние" extra={<P t="НА РАССМОТРЕНИИ" cls="wait" />}>
+          <Form>
+            <Field label="Турнир" value="Кубок Алматы 2026 · ОРТ" wide />
+            <Field label="Разряд" value="Одиночный" />
+            <Field label="Подана" value="02.09.2026, 19:40" />
+          </Form>
+          <div className="dactionbar" style={{ marginTop: 12 }}>
+            <div className="dcount">Пока приём открыт, заявку можно отозвать</div>
+            <Ghost>Отозвать заявку</Ghost>
+          </div>
+        </Panel>
+
+        <Panel title="Что дальше">
+          <Rows>
+            <Row nm="Решение судьи" sub="придёт уведомлением" pill={{ t: 'ЖДЁМ', cls: 'wait' }} />
+            <Row nm="Жеребьёвка" sub="после закрытия приёма, 05.09" pill={{ t: 'ПОТОМ', cls: 'done' }} />
+            <Row nm="Вызов на стол" sub="в день игры, уведомлением" pill={{ t: 'ПОТОМ', cls: 'done' }} />
+          </Rows>
+        </Panel>
+      </div>
+    </RoleScreen>
+  );
+}
+
 const MyApp14_4States = () => (
   <States>
     <Shot tone="danger" title="Заявка отклонена" text="Причина — текст судьи, видна сразу; пока приём открыт можно исправить и подать снова.">
       <Rows>
         <Row nm="ОРТ «Кубок Иртыша»" sub="«нет медицинского допуска»" pill={{ t: 'ОТКЛОНЕНА', cls: 'bad' }} />
       </Rows>
+      <button className="dsubmit" style={{ padding: '11px 16px' }}>Исправить и подать снова</button>
     </Shot>
 
     <Shot tone="success" title="Заявка принята" text="Дальше — вызов на стол уведомлением, экран матча (Э14.5).">
       <Rows>
-        <Row nm="Кубок Республики Казахстан" sub="принята 14.04 · ждите жеребьёвку" pill={{ t: 'ПРИНЯТА', cls: 'live' }} to="Э14.5" />
+        <Row nm="Кубок Алматы 2026" sub="принята 03.09 · ждите жеребьёвку" pill={{ t: 'ПРИНЯТА', cls: 'live' }} to="Э14.5" />
       </Rows>
     </Shot>
   </States>
 );
+
+/* ── Э14.5 · Мой турнир и мой матч ─────────────────────────────── */
+
+export function Match14_5() {
+  return (
+    <RoleScreen role={R14} nav="Мой матч" title="Кубок Алматы 2026" sub="1/8 финала · стол 5">
+      <div className="mkcols">
+        <Panel title="Мой матч" extra={<P t="ИДЁТ" cls="live" />}>
+          <Rows>
+            <Row av={ME} nm="Ким Георгий" sub="рейтинг 2456" val="2" pill={{ t: 'ВЫ', cls: 'reg' }} />
+            <Row av={A(22)} nm="Жумабеков Расул" sub="рейтинг 2312" val="1" />
+          </Rows>
+          <div className="dactionbar" style={{ marginTop: 12 }}>
+            <div className="dcount">Счёт ведёт судья стола — вводить и подтверждать его не нужно</div>
+            <P t="ТОЛЬКО СМОТРИМ" cls="done" />
+          </div>
+        </Panel>
+
+        <Panel title="Мой путь по сетке">
+          <Rows>
+            <Row nm="1/16 финала" sub="Оралбек Д. · 4:1" pill={{ t: 'ПОБЕДА', cls: 'live' }} />
+            <Row nm="1/8 финала" sub="Жумабеков Р. · идёт" pill={{ t: 'СЕЙЧАС', cls: 'reg' }} />
+            <Row nm="1/4 финала" sub="соперник определится" pill={{ t: 'ПОТОМ', cls: 'done' }} />
+          </Rows>
+        </Panel>
+      </div>
+    </RoleScreen>
+  );
+}
 
 const Match14_5States = () => (
   <States>
@@ -544,11 +291,41 @@ const Match14_5States = () => (
 
     <Shot tone="success" title="Вас вызвали" text="«Подойдите к столу N» — после вызова главным судьёй.">
       <Rows>
-        <Row nm="Подойдите к столу 4" sub="вызвал главный судья · сейчас" pill={{ t: 'ВЫЗОВ', cls: 'live' }} />
+        <Row nm="Подойдите к столу 5" sub="вызвал главный судья · сейчас" pill={{ t: 'ВЫЗОВ', cls: 'live' }} />
       </Rows>
     </Shot>
   </States>
 );
+
+/* ── Э14.6 · Аналитика ─────────────────────────────────────────── */
+
+export function Stats14_6() {
+  return (
+    <RoleScreen role={R14} nav="Аналитика" title="Аналитика" sub="Сезон 2026 · 128 матчей">
+      <Chips
+        items={[
+          { v: '2456', k: 'Рейтинг', tone: 'b' },
+          { v: '+24', k: 'За сезон', tone: 'g' },
+          { v: '68%', k: 'Побед' },
+          { v: '7', k: 'Турниров сыграно' },
+        ]}
+      />
+      <div className="mkcols">
+        <Panel title="Рейтинг по турнирам (§7.1)">
+          <Rows>
+            <Row nm="Кубок Алматы 2026" sub="1/8 финала · 14.09" val="+8" pill={{ t: 'РЕЙТИНГОВЫЙ', cls: 'reg' }} />
+            <Row nm="Открытие сезона 2026" sub="1/4 финала · 19.01" val="+22" pill={{ t: 'РЕЙТИНГОВЫЙ', cls: 'reg' }} />
+            <Row nm="ОРТ «Кубок Иртыша» 2025" sub="финал · 26.10" val="+16" pill={{ t: 'РЕЙТИНГОВЫЙ', cls: 'reg' }} />
+          </Rows>
+        </Panel>
+
+        <Panel title="Расширенная аналитика ⚠" extra={<BarChart3 size={15} />}>
+          <Empty title="Пока не проектируем" text="⚠ Что в неё входит и платная ли она — решения федерации нет." />
+        </Panel>
+      </div>
+    </RoleScreen>
+  );
+}
 
 const Stats14_6States = () => (
   <States>
@@ -562,6 +339,43 @@ const Stats14_6States = () => (
     </Shot>
   </States>
 );
+
+/* ── Э14.7 · Профиль и взнос ───────────────────────────────────── */
+
+export function Profile14_7() {
+  return (
+    <RoleScreen role={R14} nav="Профиль" title="Профиль" sub="Ким Георгий · 2003 · Астана">
+      <div className="mkcols">
+        <Panel title="Профиль">
+          <Form>
+            <Field label="Год рождения" value="2003" />
+            <Field label="Разряд" value="мастер спорта" />
+            <Field label="Регион и клуб" value="Астана · СКА" />
+            <Field label="Тренер" value="Гладун Игорь" />
+            <Field label="Телефон" value="+7 705 118 44 03" />
+            <Field label="Почта" value="g.kim@mail.kz" />
+          </Form>
+        </Panel>
+
+        <Panel title="Годовой взнос 2026" extra={<P t="НЕ ОПЛАЧЕН" cls="wait" />}>
+          <Form>
+            <Field label="Сумма" value="₸ 10 000" />
+            <Field label="Срок" value="до 31 марта" />
+          </Form>
+          <div style={{ marginTop: 12 }}>
+            <button className="dsubmit" style={{ width: '100%' }}>
+              <CreditCard size={15} /> Оплатить картой
+            </button>
+          </div>
+          <Alert>
+            Оплата идёт на платёжной странице Халык Банка. Состояние поставится само, по
+            подтверждению банка — держать вкладку открытой не нужно (§9.2).
+          </Alert>
+        </Panel>
+      </div>
+    </RoleScreen>
+  );
+}
 
 const Profile14_7States = () => (
   <States>
@@ -585,13 +399,11 @@ const Profile14_7States = () => (
   </States>
 );
 
+/* ── Экраны роли ───────────────────────────────────────────────── */
+
 /** Экраны роли по кодам: из этой карты собираются и борд, и карта флоу. */
 export const SCREENS: ScreenMap = {
-  'Э0.1': {
-    cap: 'Вход в приложении',
-    view: () => <LoginPhone0_1 />,
-    next: 'первый экран роли',
-  },
+  'Э0.1': { cap: 'Вход', view: () => <Login0_1 />, next: 'первый экран роли' },
   'Э14.1': {
     cap: 'Главная',
     view: () => (
@@ -600,7 +412,7 @@ export const SCREENS: ScreenMap = {
         <Home14_1States />
       </>
     ),
-    next: 'вкладка «Календарь»',
+    next: 'пункт «Календарь»',
   },
   'Э14.2': {
     cap: 'Календарь',
@@ -620,7 +432,7 @@ export const SCREENS: ScreenMap = {
         <Apply14_3States />
       </>
     ),
-    next: 'подал заявку',
+    next: '«Подать заявку»',
   },
   'Э14.4': {
     cap: 'Моя заявка',
@@ -630,7 +442,7 @@ export const SCREENS: ScreenMap = {
         <MyApp14_4States />
       </>
     ),
-    next: 'вызвали на стол',
+    next: 'заявка принята',
   },
   'Э14.5': {
     cap: 'Мой турнир и мой матч',
@@ -640,7 +452,7 @@ export const SCREENS: ScreenMap = {
         <Match14_5States />
       </>
     ),
-    next: 'рейтинг пересчитан',
+    next: 'пункт «Аналитика»',
   },
   'Э14.6': {
     cap: 'Аналитика',
@@ -650,7 +462,7 @@ export const SCREENS: ScreenMap = {
         <Stats14_6States />
       </>
     ),
-    next: 'вкладка «Профиль»',
+    next: 'пункт «Профиль»',
   },
   'Э14.7': {
     cap: 'Профиль и взнос',
