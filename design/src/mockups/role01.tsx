@@ -2184,7 +2184,16 @@ export function Reg1_6() {
               {/* Полная карточка со всей историей — отдельный экран: рейтинг по
                   турнирам, матчи и платежи в окно не влезают и мельком не
                   читаются. */}
-              {r.to && <Btn>Открыть полностью</Btn>}
+              {r.to && (
+                <button
+                  type="button"
+                  className="dpickbtn"
+                  data-to={r.to}
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}
+                >
+                  Открыть полностью
+                </button>
+              )}
             </>
           }
         >
