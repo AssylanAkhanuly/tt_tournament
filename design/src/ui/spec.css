@@ -1,0 +1,69 @@
+/* Страница компонента: описание слева, живые примеры справа.
+
+   Живёт на светлой подложке (как борды флоу), а сами примеры — тёмные: это
+   куски интерфейса, и смотреть их надо в том цвете, в каком они работают.
+   Цвет и форма — только токены. */
+
+.spec {
+  min-height: 100vh;
+  padding: 34px 40px 60px;
+  background: var(--c-board-bg);
+  color: var(--c-board-ink);
+  font-family: var(--font);
+}
+
+.spec-head h2 { font-size: 24px; font-weight: 800; letter-spacing: -.3px; }
+.spec-head p { margin-top: 6px; font-size: 14px; color: var(--c-board-muted); max-width: 760px; }
+
+.spec-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin-top: 24px; align-items: start; }
+
+.spec-sec { margin-top: 24px; }
+.spec-cols .spec-sec { margin-top: 0; }
+.spec-sec h3 {
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--c-board-muted);
+  margin-bottom: 10px;
+}
+.spec-sec ul { display: grid; gap: 7px; padding-left: 18px; }
+.spec-sec li { font-size: 13px; line-height: 1.5; }
+
+.spec-cases { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 14px; }
+.spec-case {
+  border: 1px solid var(--c-board-line);
+  border-radius: var(--r-sm);
+  background: var(--c-board-panel);
+  overflow: hidden;
+}
+.spec-case-h { padding: 9px 12px; border-bottom: 1px solid var(--c-board-line); }
+.spec-case-h b { font-size: 12.5px; font-weight: 700; }
+.spec-case-h span { display: block; margin-top: 2px; font-size: 11px; color: var(--c-board-muted); }
+/* Пример — на тёмной подложке экрана: примитив работает там, а не на бумаге. */
+.spec-case-b {
+  padding: 16px;
+  background: var(--c-screen-deep);
+  color: var(--c-ink);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  align-items: flex-start;
+}
+
+.spec-props { display: grid; gap: 6px; }
+.spec-prop {
+  display: grid;
+  grid-template-columns: 150px 130px 1fr;
+  gap: 12px;
+  align-items: baseline;
+  padding: 8px 12px;
+  border: 1px solid var(--c-board-line);
+  border-radius: var(--r-xs);
+  background: var(--c-board-panel);
+  font-size: 12.5px;
+}
+.spec-prop code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; font-weight: 700; }
+.spec-prop .ty { font-size: 11.5px; color: var(--c-board-accent); }
+
+.spec-where { margin-top: 26px; font-size: 12px; color: var(--c-board-muted); }
