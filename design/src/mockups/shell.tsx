@@ -8,7 +8,7 @@
    Один экран флоу = одна колонка борда с кодом Э№.№ в подписи: по коду макет
    сходится со схемой роли (раздел «Флоу») и с текстом в корневом `flows/`. */
 
-import { Fragment, type ReactNode } from 'react';
+import { Fragment, useState, type ReactNode } from 'react';
 import { ArrowRight, Bell, X } from 'lucide-react';
 import { Desk, type DeskVariant } from '../deskShell';
 import { Tab, MiniTabBar } from '../respShell';
@@ -45,6 +45,7 @@ export function RoleScreen({
   nav,
   title,
   sub,
+  back,
   hint,
   variant,
   children,
@@ -53,7 +54,10 @@ export function RoleScreen({
   /** Активный пункт сайдбара. */
   nav: string;
   title: string;
-  sub: string;
+  /** Не задан — строки под заголовком нет вовсе. */
+  sub?: string;
+  /** Возврат над заголовком — у экранов, куда приходят из списка. */
+  back?: { label: string; to?: string };
   hint?: string;
   variant?: DeskVariant;
   children: ReactNode;
@@ -66,6 +70,7 @@ export function RoleScreen({
       badge={role.badge ?? false}
       title={title}
       sub={sub}
+      back={back}
       nav={role.nav}
       activeNav={nav}
       role={role.person}
@@ -227,6 +232,9 @@ export function Row({
   val,
   pill,
   action,
+  onAction,
+  on,
+  onSelect,
   to,
 }: {
   av?: string;
@@ -236,13 +244,19 @@ export function Row({
   /** Тон значка — из макетного слоя: `gen/frame.css` + `src/ui/ui.css`. */
   pill?: { t: string; cls: 'live' | 'wait' | 'bad' | 'reg' | 'done' };
   action?: string;
+  /** Что делает кнопка строки. Не передан — кнопка только нарисована. */
+  onAction?: () => void;
+  /** Выбор строки в паре «список — карточка»: строка выбрана / выбирается.
+      Кнопка действия при этом не выбирает — у неё своё дело. */
+  on?: boolean;
+  onSelect?: () => void;
   /** Куда ведёт строка (`Э1.12`): на карте флоу по ней можно кликнуть и уйти
       на этот экран. У кнопок переход находится по подписи, а у строки подпись —
       имя человека или турнира, поэтому её задаём явно. */
   to?: string;
 }) {
   return (
-    <div className="drow" data-to={to}>
+    <div className={'drow' + (on ? ' pick' : '')} data-to={to} onClick={onSelect}>
       {av && <img src={av} alt="" />}
       <div className="who">
         <div className="nm">{nm}</div>
@@ -250,7 +264,17 @@ export function Row({
       </div>
       {val && <div className="amt">{val}</div>}
       {pill && <span className={'pill ' + pill.cls} style={{ margin: 0 }}>{pill.t}</span>}
-      {action && <button className="dpickbtn">{action}</button>}
+      {action && (
+        /* Кнопка не выбирает строку: у неё своё дело, и клик по ней не должен
+           заодно переключать карточку справа. */
+        <button
+          type="button"
+          className="dpickbtn"
+          onClick={(e) => { e.stopPropagation(); onAction?.(); }}
+        >
+          {action}
+        </button>
+      )}
     </div>
   );
 }
@@ -286,9 +310,11 @@ export function Submit({ children }: { children: ReactNode }) {
 /** Тихая кнопка рядом с главной: «Закрыть», «Сохранить черновик», «Это разные
     люди». Отличается от `dpickbtn` тем, что не спорит с главным действием за
     внимание — акцент в полосе действий должен быть один. */
-export function Ghost({ children }: { children: ReactNode }) {
+export function Ghost({ children, onClick }: { children: ReactNode; onClick?: () => void }) {
   return (
     <button
+      type="button"
+      onClick={onClick}
       className="dpickbtn"
       style={{
         display: 'inline-flex',
@@ -304,12 +330,93 @@ export function Ghost({ children }: { children: ReactNode }) {
   );
 }
 
-/** Поле формы (только вид — макет, не форма). */
+/** Поле формы — только вид: значение уже задано и не правится.
+    Для полей, куда человек печатает, есть `Input`. */
 export function Field({ label, value, wide }: { label: string; value: string; wide?: boolean }) {
   return (
     <div className={'dfield' + (wide ? ' wide' : '')}>
       <div className="k">{label}</div>
       <div className="dval">{value}</div>
+    </div>
+  );
+}
+
+/** Поле ввода: в него можно печатать.
+
+    Отличать его от `Field` пришлось, когда форма заведения аккаунта стала
+    рабочей: одинаково нарисованное «значение» и «то, что вводят» — враньё,
+    по макету не видно, где вообще можно поставить курсор. */
+export function Input({
+  label,
+  value = '',
+  placeholder,
+  wide,
+  tone,
+}: {
+  label: string;
+  value?: string;
+  placeholder?: string;
+  wide?: boolean;
+  /** `bad` — поле не проходит проверку: подсветка и та же рамка. */
+  tone?: 'bad';
+}) {
+  const [v, setV] = useState(value);
+  return (
+    <div className={'dfield' + (wide ? ' wide' : '')}>
+      <label className="k">
+        {label}
+        <input
+          className={'dinput' + (tone ? ` ${tone}` : '')}
+          value={v}
+          placeholder={placeholder}
+          onChange={(e) => setV(e.target.value)}
+        />
+      </label>
+    </div>
+  );
+}
+
+/** Выведенное значение: подпись слева, значение справа, одной строкой.
+
+    Не поле и не выбор — то, что система посчитала сама (срок роли от последнего
+    дня турнира). Рамки нет намеренно: рядом стоят обведённые селекторы, и
+    отсутствие рамки само говорит, что здесь не выбирают. Раньше на это уходила
+    плашка с текстом «срок здесь не выбирают» — форма объясняла словами то, что
+    может показать формой. */
+export function Derived({ k, v }: { k: string; v: string }) {
+  return (
+    <div className="dderived">
+      <span>{k}</span>
+      <b>{v}</b>
+    </div>
+  );
+}
+
+/** Выбор из списка. Заводится там, где вариантов больше, чем влезает в ряд
+    кнопок: четырнадцать ролей занимали четыре строки и топили собой форму. */
+export function Select({
+  label,
+  items,
+  value,
+  onChange,
+  wide,
+}: {
+  label?: string;
+  items: string[];
+  value: string;
+  onChange: (v: string) => void;
+  wide?: boolean;
+}) {
+  return (
+    <div className={'dfield' + (wide ? ' wide' : '')}>
+      <label className="k">
+        {label}
+        <select className="dselect" value={value} onChange={(e) => onChange(e.target.value)}>
+          {items.map((i) => (
+            <option key={i} value={i}>{i}</option>
+          ))}
+        </select>
+      </label>
     </div>
   );
 }
@@ -451,12 +558,20 @@ export function Modal({
   title,
   sub,
   foot,
+  onClose,
+  to,
   children,
 }: {
   title: string;
   sub: string;
   /** Полоса решений внизу диалога: главное действие и отказ. */
   foot?: ReactNode;
+  /** Закрыть диалог. Передан — крестик работает. */
+  onClose?: () => void;
+  /** Экран, на котором человек оказывается, закрыв диалог: по нему переход
+      находит карта флоу. Диалог всегда открыт поверх чего-то, и «закрыть» — это
+      возврат туда, а не в пустоту. */
+  to?: string;
   children: ReactNode;
 }) {
   return (
@@ -467,7 +582,9 @@ export function Modal({
             <div className="t">{title}</div>
             <div className="s">{sub}</div>
           </div>
-          <span className="mkdialog-x"><X size={16} /></span>
+          <button type="button" className="mkdialog-x" onClick={onClose} data-to={to}>
+            <X size={16} />
+          </button>
         </div>
         <div className="mkdialog-b">{children}</div>
         {foot && <div className="mkdialog-f">{foot}</div>}

@@ -16,18 +16,10 @@ import type { DeskVariant } from '../deskShell';
 import type { ScreenMap } from './shell';
 import { R0304 } from './roles';
 import { Login0_1 } from './role00';
-import { Attention, Btn, KPI, TourRow, TodayRows } from './role01';
-
-/* Те же соревнования, что у администратора Федерации (Э1.2) — здесь на чтение. */
-type Tour = { nm: string; mt: string; apps: string; judge?: string; st: string; cls: string };
-
-const TOURS: Tour[] = [
-  { nm: 'Кубок Республики Казахстан 2026', mt: 'Главный старт · Астана · 18–20 мая', apps: '128 / 96', judge: 'Оспанов Т.', st: 'СУДЬЯ НАЗНАЧЕН', cls: 'reg' },
-  { nm: 'Первенство РК · 2010 г.р. и моложе', mt: 'Главный старт · Алматы · 3–5 июня', apps: '96 / 71', judge: 'Токаев М.', st: 'ЗАЯВКИ ИГРОКОВ', cls: 'live' },
-  { nm: 'Евразийская лига · 2-й тур', mt: 'Лига · Караганда · 14–16 апреля', apps: '12 команд', judge: 'Пак С.', st: 'ИДЁТ', cls: 'live' },
-  { nm: 'ОРТ «Кубок Иртыша»', mt: 'ОРТ · Павлодар · 25 апреля', apps: '34 / 34', st: 'ЗАЯВКИ СУДЕЙ', cls: 'wait' },
-  { nm: 'ОРТ «Шымкент Open»', mt: 'ОРТ · Шымкент · 9 мая', apps: '— / —', st: 'ЧЕРНОВИК', cls: 'done' },
-];
+/* Те же соревнования, что у администратора Федерации (Э1.2) — здесь на чтение.
+   Раньше список лежал здесь копией и разъехался с оригиналом: у ролей 3 и 4
+   «ближайшие старты» жили своей жизнью. Берём из Э1.2. */
+import { Attention, Btn, KPI, TourRow, TodayRows, UPCOMING } from './role01';
 
 /* ── Э3.1 · Обзорная панель ────────────────────────────────────── */
 
@@ -41,16 +33,18 @@ export function Dash3_1({ variant }: { variant?: DeskVariant }) {
       sub="Сезон 2026 · только чтение"
     >
       <Chips items={KPI} to="Э3.2" />
-      <div className="dactionbar">
-        <Attention act={false} />
-        <Btn>
-          <Download size={14} /> Выгрузить сводку
-        </Btn>
-      </div>
+      <Attention
+        act={false}
+        action={
+          <Btn>
+            <Download size={14} /> Выгрузить сводку
+          </Btn>
+        }
+      />
       <div className="mkcols">
         <Panel title="Ближайшие старты">
           <Rows>
-            {TOURS.slice(0, 3).map((t) => (
+            {UPCOMING.slice(0, 3).map((t) => (
               <TourRow key={t.nm} t={t} />
             ))}
           </Rows>
@@ -100,7 +94,7 @@ export function Read3_2() {
       <div className="mkcols">
         <Panel title="Календарь сезона · экран-источник Э1.2">
           <Rows>
-            {TOURS.slice(0, 4).map((t) => (
+            {UPCOMING.slice(0, 4).map((t) => (
               <TourRow key={t.nm} t={t} judge />
             ))}
           </Rows>

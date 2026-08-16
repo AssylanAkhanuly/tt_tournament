@@ -38,6 +38,7 @@
    `Field` рисует подпись как `.k` — без этого правила она шла дефолтными 16px
    и спорила со значением. */
 .dfield .k {
+  display: block;
   font-size: 11px;
   font-weight: 700;
   letter-spacing: .04em;
@@ -45,6 +46,63 @@
   color: var(--c-muted);
   margin-bottom: 4px;
 }
+
+/* ── Ввод и выбор ───────────────────────────────────────────────── */
+/* Поле, куда печатают, и выбор из списка. В макетном слое их не было — форма
+   рисовалась готовыми значениями, и по макету не было видно, где вообще можно
+   поставить курсор. Подпись у обоих та же `.k`, поэтому рамка — единственное,
+   чем ввод отличается от показа: этого достаточно и не разводит два языка. */
+.dinput,
+.dselect {
+  display: block;
+  width: 100%;
+  font: inherit;
+  font-size: 13.5px;
+  font-weight: 600;
+  letter-spacing: normal;
+  text-transform: none;
+  color: var(--c-ink);
+  background: var(--c-panel-2);
+  border: 1px solid var(--c-glass-line);
+  border-radius: var(--r-xs);
+  padding: 9px 11px;
+}
+.dinput::placeholder { color: var(--c-dim); font-weight: 500; }
+.dinput:focus,
+.dselect:focus {
+  outline: none;
+  border-color: var(--c-accent-line);
+  background: var(--c-panel-3);
+}
+/* Поле не прошло проверку: рамка та же, меняется только цвет — иначе ошибка
+   читается как другой тип поля. */
+.dinput.bad { border-color: var(--c-danger-line); color: var(--c-danger); }
+.dselect { cursor: pointer; }
+
+/* Поле в полосе действий тянется на всё свободное место: рядом с ним стоит
+   кнопка, и поле должно занимать остальное, а не свою минимальную ширину —
+   иначе ссылка приглашения обрезается на трети. */
+.dactionbar > .dfield { flex: 1; min-width: 0; }
+
+/* Выведенное значение: подпись слева, значение справа. Рамки нет — рядом стоят
+   обведённые селекторы, и её отсутствие само говорит, что здесь не выбирают. */
+.dderived {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 9px 11px;
+  border-radius: var(--r-xs);
+  background: var(--c-panel-3);
+}
+.dderived span {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  color: var(--c-dim);
+}
+.dderived b { font-size: 13.5px; font-weight: 700; font-variant-numeric: tabular-nums; }
 
 /* Кнопки-действия в строках: иконка рядом с подписью, а не строкой выше
    (у `svg` в макетном слое `display: block`). */
@@ -234,7 +292,17 @@
 }
 .mkdialog-h .t { font-size: 15px; font-weight: 800; letter-spacing: -.2px; }
 .mkdialog-h .s { font-size: 12px; color: var(--c-muted); margin-top: 3px; }
-.mkdialog-x { color: var(--c-dim); display: flex; }
+/* Крестик — кнопка: фон и рамку задаём сами, общего сброса у кнопок нет. */
+.mkdialog-x {
+  display: flex;
+  padding: 5px;
+  color: var(--c-dim);
+  background: none;
+  border: 0;
+  border-radius: var(--r-xs);
+  cursor: pointer;
+}
+.mkdialog-x:hover { color: var(--c-ink); background: var(--c-panel-2); }
 .mkdialog-b { padding: 15px 17px; display: flex; flex-direction: column; gap: var(--s-3); overflow: auto; }
 .mkdialog-f {
   display: flex;
@@ -250,6 +318,12 @@
 /* Счётчики «без судьи», «зависшие заявки» — это очередь дел, а не показатели
    сезона: крупные плитки они не заслуживают. Строка под плитками, каждый
    счётчик — ссылка в список с готовым фильтром. */
+/* Счётчики переносятся по ширине, главная кнопка экрана — нет: она стоит
+   отдельным столбцом справа, иначе на узком экране уезжает под очередь и
+   отрывается от неё. */
+.mkattn-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.mkattn-top > .mkattn { flex: 1 1 auto; min-width: 0; }
+.mkattn-top > :not(.mkattn) { flex: none; }
 .mkattn { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
 .mkattn-h {
   font-size: 10px;
@@ -269,3 +343,188 @@
 }
 .mkattn-i b { color: var(--c-warning); font-weight: 800; font-variant-numeric: tabular-nums; }
 .mkattn-i[data-to] { cursor: pointer; }
+
+/* Счётчик, в который можно провалиться: он же кнопка, раскрывающая список под
+   строкой. Раскрытый подсвечен и связан с панелью — иначе непонятно, чей это
+   список, когда счётчиков четыре. */
+button.mkattn-i {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+  text-align: left;
+}
+button.mkattn-i svg { color: var(--c-dim); transition: transform .15s; }
+button.mkattn-i.on {
+  color: var(--c-ink);
+  border-color: var(--c-accent-line);
+  background: var(--c-accent-soft);
+}
+button.mkattn-i.on svg { color: var(--c-accent); transform: rotate(180deg); }
+
+/* ── Что стоит за счётчиком ─────────────────────────────────────── */
+/* Счётчик без списка — только тревога: «5 регламентов» не говорит, каких и чего
+   в них не хватает. Список раскрывается на самой панели, а не уводит в
+   календарь: панель — место разбора, и терять её контекст на каждый счётчик
+   незачем. Строка списка уже ведёт туда, где дело снимается. */
+.mkattn-w { display: grid; gap: 10px; }
+.mkattn-d {
+  border: 1px solid var(--c-accent-line);
+  border-radius: var(--r-sm);
+  background: var(--c-panel);
+  overflow: hidden;
+}
+.mkattn-d-h {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding: 10px 13px;
+  border-bottom: 1px solid var(--c-glass-line);
+  background: var(--c-panel-3);
+}
+.mkattn-d-h b { font-size: 12px; color: var(--c-ink); }
+.mkattn-d-b { padding: 9px 11px; display: grid; gap: 7px; }
+.mkattn-r {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 6px 12px;
+  padding: 8px 11px;
+  border: 1px solid var(--c-glass-line);
+  border-radius: var(--r-xs);
+  background: var(--c-panel-2);
+}
+.mkattn-r[data-to] { cursor: pointer; }
+.mkattn-r .nm { font-size: 12px; font-weight: 700; color: var(--c-ink); }
+.mkattn-r .mt { font-size: 11px; color: var(--c-dim); margin-top: 2px; }
+/* Чего не хватает и сколько ждёт — то, ради чего в счётчик и проваливаются. */
+.mkattn-r .why { grid-column: 1 / -1; font-size: 11px; color: var(--c-warning); }
+.mkattn-r .why.bad { color: var(--c-danger); }
+/* Кто снимает: очередь показывает и то, что решает не эта роль. */
+.mkattn-r .who { font-size: 11px; color: var(--c-muted); white-space: nowrap; }
+.mkattn-d-f {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 9px 13px;
+  border-top: 1px solid var(--c-glass-line);
+  background: var(--c-panel-3);
+  font-size: 11px;
+  color: var(--c-dim);
+}
+
+/* Команды тура Лиги: две строки вместо одного числа — мужской и женский
+   розыгрыши идут отдельно, и «12 команд» скрывало, что их два. Пометка пола
+   тихая: она подпись к числу, а не само число. */
+.amt.tteams { display: grid; gap: 2px; justify-items: end; white-space: nowrap; }
+.amt.tteams span { font-size: 11.5px; font-weight: 600; color: var(--c-muted); }
+.amt.tteams i {
+  font-style: normal;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .04em;
+  color: var(--c-dim);
+  margin-right: 4px;
+}
+
+/* ── Сетка месяцев ──────────────────────────────────────────────── */
+/* Второй вид календаря: список отвечает на «что в сезоне», сетка — на «как он
+   разложен по времени». Двенадцать плиток в четыре колонки: год виден целиком
+   без прокрутки, и столкновения стартов читаются пятном, а не вычитыванием
+   дат. Дневной сетки нет намеренно — см. комментарий у `MonthGrid`. */
+/* Плитки одной высоты: сетка должна показывать год целиком в рамке десктопа
+   (1200×760), поэтому месяц не растягивается под своё содержимое — он показывает
+   четыре старта, остальные сворачивает в «ещё N». */
+.mkmg { display: grid; grid-template-columns: repeat(4, 1fr); grid-auto-rows: 148px; gap: 10px; }
+.mkmg-m {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--c-glass-line);
+  border-radius: var(--r-sm);
+  background: var(--c-panel);
+  overflow: hidden;
+}
+/* Текущий месяц — единственная подсветка в сетке: она отвечает на «где я». */
+.mkmg-m.now { border-color: var(--c-accent-line); background: var(--c-accent-soft); }
+.mkmg-h {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 6px;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--c-glass-line);
+}
+.mkmg-h b { font-size: 12px; color: var(--c-ink); }
+.mkmg-h span { font-size: 11px; color: var(--c-dim); font-variant-numeric: tabular-nums; }
+.mkmg-h .tag { font-size: 9.5px; font-weight: 800; letter-spacing: .04em; color: var(--c-accent); }
+.mkmg-b { display: grid; align-content: start; min-height: 0; }
+/* Строка старта: число — категория кантом — название — состояние. Строго в одну
+   строку: город и состояние словами есть в списке и в карточке, а здесь важно
+   уместить месяц целиком. Полная подпись — в `title`.
+
+   Строки идут сплошным списком, без отбивок и подложек: в плитке 148 пикселей,
+   и зазор между четырьмя строками съедал пятую. Разделяет их волосяная линия,
+   а канты категории у соседних строк одной категории сливаются в одну полосу —
+   по ней месяц читается ещё до того, как прочитаны названия. */
+.mkmg-t {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 7px;
+  padding: 3px 8px;
+  border-left: 2px solid var(--c-dim);
+}
+.mkmg-t + .mkmg-t { box-shadow: inset 0 1px 0 var(--c-glass-line); }
+/* Подложка появляется под курсором: в спокойном виде список тихий. */
+.mkmg-t[data-to] { cursor: pointer; }
+.mkmg-t[data-to]:hover { background: var(--c-panel-2); }
+/* Категория — одна синяя семья и нейтральный: главный старт заметнее всех,
+   ОРТ тише всех. Зелёный с янтарным заняты состояниями. */
+.mkmg-t.gs { border-left-color: var(--c-accent); }
+.mkmg-t.lg { border-left-color: var(--c-accent-3); }
+.mkmg-t.ort { border-left-color: var(--c-dim); }
+.mkmg-t .d {
+  font-size: 10.5px;
+  font-weight: 800;
+  color: var(--c-muted);
+  font-variant-numeric: tabular-nums;
+}
+.mkmg-t .n {
+  font-size: 10.5px;
+  color: var(--c-ink);
+  line-height: 1.5;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+/* «Ещё N» — не строка старта, а признак, что месяц плотнее, чем влезло. */
+.mkmg-more {
+  padding: 3px 10px;
+  font-size: 10px;
+  color: var(--c-accent);
+  cursor: pointer;
+  box-shadow: inset 0 1px 0 var(--c-glass-line);
+}
+/* Состояние точкой, а не значком: в плитке месяца на подпись места нет, а
+   цвета те же, что у значков в списке. */
+.mkmg-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--c-dim); }
+.mkmg-dot.live { background: var(--c-success); }
+.mkmg-dot.wait { background: var(--c-warning); }
+.mkmg-dot.bad { background: var(--c-danger); }
+.mkmg-dot.reg { background: var(--c-accent); }
+.mkmg-dot.done { background: var(--c-dim); }
+/* Пустой месяц: подпись, а не пустота — иначе плитка читается как незагруженная. */
+.mkmg-e {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px;
+  font-size: 10.5px;
+  color: var(--c-dim);
+}

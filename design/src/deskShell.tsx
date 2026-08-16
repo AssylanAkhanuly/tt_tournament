@@ -1,5 +1,5 @@
-import type { ReactNode } from 'react';
-import { Bell, Search } from 'lucide-react';
+import { useState, type ReactNode } from 'react';
+import { ArrowLeft, Bell, ChevronDown, LogOut, Search, User } from 'lucide-react';
 import { Brand } from './ui';
 
 /* Общая десктоп-оболочка (верхняя панель + сайдбар + main) для флоу веба.
@@ -19,7 +19,8 @@ export function DeskFrame({ variant = 'desktop', children }: { variant?: DeskVar
 }
 
 export function Desk({
-  variant = 'desktop', brandName, brandSub, badge = 'ИДЁТ', title, sub, nav, activeNav, onNavigate, role, hint, children,
+  variant = 'desktop', brandName, brandSub, badge = 'ИДЁТ', title, sub, back, nav, activeNav,
+  onNavigate, role, hint, children,
 }: {
   variant?: DeskVariant;
   brandName?: string;
@@ -27,7 +28,16 @@ export function Desk({
   /** Значок состояния рядом с названием. `false` — роль вне турнира, значка нет. */
   badge?: string | false;
   title: string;
-  sub: string;
+  /** Подзаголовок под названием экрана. Не задан — строки нет вовсе: пустая
+      подпись оставляла бы под заголовком дырку. */
+  sub?: string;
+  /** Возврат над заголовком: подпись и экран, куда ведёт. Не задан — кнопки нет.
+
+      Нужен экранам, на которые приходят из списка и куда сайдбар не ведёт:
+      форма, карточка, мастер. Пункт меню у них тот же, что у списка, и без этой
+      кнопки уйти обратно нечем — разве что снова жать пункт сайдбара, теряя
+      место в списке. */
+  back?: { label: string; to?: string };
   nav: [ReactNode, string][];
   activeNav: string;
   /** передан — сайдбар становится кликабельным (живой прототип роли) */
@@ -36,6 +46,11 @@ export function Desk({
   hint?: string;
   children: ReactNode;
 }) {
+  /* Меню профиля. Выход живёт здесь, а не отдельной кнопкой в шапке: система
+     именная, каждое действие пишется в журнал с автором (TZ §12), поэтому «кто
+     я» и «выйти» — одно место. Одним кликом по имени не выходим — случайный
+     выход посреди турнира стоит дороже лишнего клика. */
+  const [menu, setMenu] = useState(false);
   return (
     <DeskFrame variant={variant}>
       <div className="dtop">
@@ -49,7 +64,28 @@ export function Desk({
         <div className="sp" />
         <button className="iconbtn"><Search size={16} /></button>
         <button className="iconbtn dot"><Bell size={16} /></button>
-        <div className="me"><img src={role.av} alt="" /><div><div className="nm">{role.nm}</div><div className="rl">{role.rl}</div></div></div>
+        <div className="dme">
+          <button type="button" className="me" onClick={() => setMenu(!menu)} aria-expanded={menu}>
+            <img src={role.av} alt="" />
+            <div><div className="nm">{role.nm}</div><div className="rl">{role.rl}</div></div>
+            <ChevronDown size={14} />
+          </button>
+          {menu && (
+            <div className="dmenu">
+              {/* Под каким аккаунтом сидишь — прямо над выходом: у одного
+                  человека бывает несколько ролей, и выйти он может не из той. */}
+              <div className="dmenu-h">{role.nm}<span>{role.rl}</span></div>
+              {/* В свой профиль (Э0.2) попадают «по имени и фото в шапке» —
+                  так и записано во флоу сквозных экранов. */}
+              <button type="button" className="dmenu-i" data-to="Э0.2">
+                <User size={14} /> Мой профиль
+              </button>
+              <button type="button" className="dmenu-i out" data-to="Э0.1">
+                <LogOut size={14} /> Выйти
+              </button>
+            </div>
+          )}
+        </div>
       </div>
       <div className="dgrid">
         <aside className="dside">
@@ -67,7 +103,15 @@ export function Desk({
           {hint && <div className="hint">{hint}</div>}
         </aside>
         <main className="dmain">
-          <div className="dtitle"><h2>{title}</h2><p>{sub}</p></div>
+          <div className="dtitle">
+            {back && (
+              <button type="button" className="dback" data-to={back.to}>
+                <ArrowLeft size={14} /> {back.label}
+              </button>
+            )}
+            <h2>{title}</h2>
+            {sub && <p>{sub}</p>}
+          </div>
           {children}
         </main>
       </div>
