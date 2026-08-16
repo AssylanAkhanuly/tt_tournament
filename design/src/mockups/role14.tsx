@@ -9,7 +9,7 @@
    Роль — единственная, кто заявляется сам, и единственная, кто платит взнос
    картой. Счёт своего матча спортсмен не вводит: его ведёт судья стола. */
 
-import { BarChart3, CalendarDays, CreditCard, Lock, Send, TriangleAlert } from 'lucide-react';
+import { BarChart3, CreditCard, Send } from 'lucide-react';
 import {
   A, ActionBar, Alert, Arrow, Board, Chips, Empty, Field, Form, Ghost, Modal, Off, P, Panel, Queue,
   RoleScreen, Row, Rows, Screen, Shot, States,
@@ -83,59 +83,52 @@ const Home14_1States = () => (
 
 /* ── Э14.2 · Календарь ─────────────────────────────────────────── */
 
-/** Турнир в календаре: главное — кто заявляет, от этого зависит кнопка. */
-const TOURS = [
-  {
-    nm: 'Кубок Алматы 2026',
-    mt: 'ОРТ · Алматы · 12–14 сентября · приём до 05.09',
-    rule: 'Открытый республиканский: заявляетесь сами',
-    can: true,
-  },
-  {
-    nm: 'Чемпионат Республики Казахстан',
-    mt: 'Главный старт · Астана · 18–22 сентября · без возрастной границы',
-    rule: 'Состав подаёт старший тренер региона — заявиться самому нельзя',
-    can: false,
-  },
-  {
-    nm: 'Евразийская лига · 3-й тур',
-    mt: 'Лига · Шымкент · 16–18 мая · командное соревнование',
-    rule: 'Заявляет клуб. Вы заявлены за команду «СКА» — мужская 2 лига',
-    can: false,
-  },
+/** В календаре только то, куда спортсмен заявляется сам: открытые
+    республиканские. Старты, куда состав подаёт регион или клуб, сюда не
+    попадают — строка с неактивной кнопкой человеку ничего не даёт. */
+const OPEN = [
+  { nm: 'Кубок Алматы 2026', mt: 'Алматы · 12–14 сентября', till: 'приём до 05.09', fee: true },
+  { nm: 'ОРТ «Кубок Иртыша»', mt: 'Павлодар · 25 апреля', till: 'приём до 18.04', fee: true },
+  { nm: 'ОРТ «Шымкент Open»', mt: 'Шымкент · 9 мая', till: 'приём до 02.05', fee: false },
+];
+
+/** Вкладка «Мои турниры»: где я уже заявлен — в том числе не собой. */
+const MINE = [
+  { nm: 'Чемпионат Республики Казахстан', mt: 'Астана · 18–22 сентября', by: 'заявил старший тренер региона' },
+  { nm: 'Евразийская лига · 3-й тур', mt: 'Шымкент · 16–18 мая', by: 'заявил клуб · команда «СКА», мужская 2 лига' },
 ];
 
 export function Calendar14_2() {
   return (
-    <RoleScreen role={R14} nav="Календарь" title="Календарь" sub="Сезон 2026 · 32 соревнования">
+    <RoleScreen role={R14} nav="Календарь" title="Календарь" sub="Открытые республиканские · сезон 2026">
       <div className="dactionbar">
         <div className="dseg2">
-          <span className="on">Все</span>
-          <span>Куда могу заявиться</span>
-          <span>Мои турниры</span>
+          <span className="on">Куда могу заявиться · 3</span>
+          <span>Мои турниры · 3</span>
         </div>
-        <div className="dcount">Показаны старты, открытые для заявок</div>
+        <div className="dcount">Главные старты и Лигу заявляют регион и клуб — они во вкладке «Мои турниры»</div>
       </div>
 
       <Rows>
-        {TOURS.map((t) => (
+        {OPEN.map((t) => (
           <div className="drow" key={t.nm}>
             <div className="who">
               <div className="nm">{t.nm}</div>
-              <div className="rl">{t.mt}</div>
+              <div className="rl">ОРТ · {t.mt} · {t.till}</div>
             </div>
-            <div className="amt" style={{ color: 'var(--c-muted)', maxWidth: 320, whiteSpace: 'normal' }}>
-              {t.can ? null : <Lock size={12} style={{ verticalAlign: '-2px', marginRight: 4 }} />}
-              {t.rule}
-            </div>
-            {t.can ? (
-              <button className="dpickbtn">Заявиться</button>
-            ) : (
-              <P t="НЕ ВАМИ" cls="done" />
-            )}
+            {t.fee && <P t="НУЖЕН ГОДОВОЙ ВЗНОС" cls="reg" />}
+            <button className="dpickbtn" data-to="Э14.3">Заявиться</button>
           </div>
         ))}
       </Rows>
+
+      <Panel title="Мои турниры" extra={<span className="dcount">заявлен, но заявку подавал не я</span>}>
+        <Rows>
+          {MINE.map((t) => (
+            <Row key={t.nm} nm={t.nm} sub={`${t.mt} · ${t.by}`} pill={{ t: 'ЗАЯВЛЕН', cls: 'live' }} to="Э14.4" />
+          ))}
+        </Rows>
+      </Panel>
     </RoleScreen>
   );
 }
@@ -150,9 +143,21 @@ const Calendar14_2States = () => (
 
     <Shot tone="warning" title="Взнос не оплачен, а турнир его требует" text="Кнопка с предупреждением — ⚠ 6.1.">
       <Rows>
-        <Row nm="Кубок Республики Казахстан" sub="нужен годовой взнос федерации" pill={{ t: 'ВЗНОС НЕ ОПЛАЧЕН', cls: 'wait' }} />
+        <Row nm="Кубок Алматы 2026" sub="нужен годовой взнос федерации" pill={{ t: 'ВЗНОС НЕ ОПЛАЧЕН', cls: 'wait' }} />
       </Rows>
       <Alert>Заявку подать можно, но допуск может не пройти — решение федерации не получено.</Alert>
+    </Shot>
+
+    <Shot
+      tone="info"
+      title="Открытых приёмов нет ✳"
+      text="Пустой список с подсказкой, когда откроется ближайший."
+      wide
+    >
+      <Empty
+        title="Сейчас заявиться некуда"
+        text="Ближайший открытый приём — ОРТ «Шымкент Open», с 20 апреля. Турниры, куда вас заявляют регион или клуб, — во вкладке «Мои турниры»."
+      />
     </Shot>
   </States>
 );

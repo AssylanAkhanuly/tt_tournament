@@ -9,11 +9,10 @@
    а требование к экрану карточка узла берёт из данных сквозных экранов
    (`data/role00.ts`) — дублировать вход в четырнадцати файлах не нужно. */
 
-import { BarChart3, Bell, CheckCheck, Gavel, KeyRound, LogIn, Radio, Scroll, Trophy, User } from 'lucide-react';
+import { BarChart3, Bell, CheckCheck, Gavel, KeyRound, LogIn, Radio, Scroll, Trophy, User, UserPlus } from 'lucide-react';
 import type { ReactNode } from 'react';
 import {
-  A, ActionBar, Alert, Also, Arrow, AW, Board, Ghost, Hint, Off, P, Panel, RoleScreen, Row, Rows,
-  Screen, Shot, States, Tab,
+  A, AW, ActionBar, Alert, Also, Arrow, Board, Field, Form, Ghost, Hint, Off, P, Panel, RoleScreen, Row, Rows, Screen, Shot, States, Tab,
 } from './shell';
 import type { ScreenMap } from './shell';
 import { DeskFrame } from '../deskShell';
@@ -507,6 +506,98 @@ const Public0_4States = () => (
 
 /* ── Борд сквозных экранов ─────────────────────────────────────── */
 
+/* ── Э0.5 · Регистрация спортсмена ─────────────────────────────── */
+
+export function SignUp0_5() {
+  return (
+    <Auth wide>
+      <Brand size="lg" />
+      <div className="t">Регистрация спортсмена</div>
+      <div className="s">Судей и тренеров заводит федерация — сам себя заводит только спортсмен</div>
+
+      <Form>
+        <Field label="Фамилия" value="Оралбек" />
+        <Field label="Имя, отчество" value="Диас Ерланович" />
+        <Field label="Год рождения" value="2009" />
+        <Field label="Пол" value="мужской" />
+        <Field label="Регион" value="Алматы" />
+        <Field label="Клуб ✳" value="«Алатау» · можно «пока без клуба»" />
+        <Field label="Телефон" value="+7 707 902 15 33" />
+        <Field label="Почта" value="d.oralbek@mail.kz" />
+      </Form>
+
+      <Rows>
+        <Row nm="Код из SMS" sub="отправлен на +7 707 902 15 33" val="4 7 2 9" pill={{ t: 'ПОДТВЕРЖДЁН', cls: 'live' }} />
+        <Row
+          nm="Согласие на обработку персональных данных ✳"
+          sub="обязательно — отдельной строкой, а не мелким текстом"
+          pill={{ t: 'ОТМЕЧЕНО', cls: 'live' }}
+        />
+      </Rows>
+
+      <button className="dsubmit">
+        <UserPlus size={15} /> Зарегистрироваться
+      </button>
+      <div className="mkauth-row">
+        <span style={{ fontSize: 12.5, color: 'var(--c-muted)' }}>
+          Профиль откроется сразу; до оплаты взноса заявки не проходят (§9.2)
+        </span>
+        <span style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--c-accent)' }} data-to="Э0.1">
+          Уже есть аккаунт — войти
+        </span>
+      </div>
+    </Auth>
+  );
+}
+
+const SignUp0_5States = () => (
+  <States>
+    <Shot
+      tone="warning"
+      title="Найден похожий человек ✳"
+      text="Предложение связать с существующей записью, а не заводить второго."
+    >
+      <Rows>
+        <Row
+          nm="Оралбек Диас · 2009 · Алматы"
+          sub="завёл клуб «Алатау», 03.02.2026 · рейтинг 2042"
+          pill={{ t: 'СОВПАДЕНИЕ', cls: 'wait' }}
+        />
+      </Rows>
+      <div style={{ display: 'flex', gap: 8 }}>
+        <button className="dpickbtn">Связать с этой записью</button>
+        <Ghost>Это не я</Ghost>
+      </div>
+    </Shot>
+
+    <Shot tone="info" title="Код не пришёл ✳" text="«Отправить ещё раз» и счётчик до следующей попытки.">
+      <Rows>
+        <Row nm="+7 707 902 15 33" sub="код отправлен 2 минуты назад" val="ещё 48 с" pill={{ t: 'ЖДЁМ', cls: 'wait' }} />
+      </Rows>
+      <Ghost>Отправить ещё раз</Ghost>
+    </Shot>
+
+    <Shot tone="danger" title="Согласие не отмечено" text="Кнопка неактивна." >
+      <Rows>
+        <Row nm="Согласие на обработку персональных данных" sub="обязательно" pill={{ t: 'НЕ ОТМЕЧЕНО', cls: 'bad' }} />
+      </Rows>
+      <Off>Зарегистрироваться</Off>
+    </Shot>
+
+    <Shot
+      tone="warning"
+      title="⚠ 12.10 — чья запись, если человека уже завели"
+      text="Как самостоятельная регистрация сходится с записью клуба или федерации — не решено."
+      wide
+    >
+      <Alert>
+        Три пути в реестр: человек сам, клуб, федерация. Кто «владелец» записи и что происходит с
+        рейтингом и историей при связывании — вопрос к федерации. Дубль молча не создаём.
+      </Alert>
+    </Shot>
+  </States>
+);
+
 /** Экраны роли по кодам: из этой карты собираются и борд, и карта флоу. */
 export const SCREENS: ScreenMap = {
   'Э0.1': {
@@ -524,6 +615,16 @@ export const SCREENS: ScreenMap = {
       </>
     ),
     next: 'имя и фото в шапке',
+  },
+  'Э0.5': {
+    cap: 'Регистрация спортсмена',
+    view: () => (
+      <>
+        <SignUp0_5 />
+        <SignUp0_5States />
+      </>
+    ),
+    next: 'свой профиль',
   },
   'Э0.2': {
     cap: 'Свой профиль',
