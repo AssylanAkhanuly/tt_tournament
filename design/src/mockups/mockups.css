@@ -198,19 +198,25 @@
 /* Главный материал — шире и с картинкой слева: в ленте всегда есть главное. */
 .mknews-card.wide { grid-template-columns: 280px 1fr; }
 
+/* Обложка: рубрика лежит на самой картинке, как на новостных сайтах. */
 .mknews-cover {
+  position: relative;
   min-height: 104px;
+  padding: 10px;
   background:
     var(--fx-pattern) 0 0 / var(--fx-pattern-size) repeat,
     linear-gradient(140deg, var(--c-panel-2), var(--c-panel-3));
   border-bottom: 1px solid var(--c-glass-line);
 }
+.mknews-cover .pill { margin: 0; }
 .mknews-card.wide .mknews-cover { min-height: 148px; border-bottom: 0; border-right: 1px solid var(--c-glass-line); }
-.mknews-cover.tall { min-height: 190px; border-radius: var(--r-sm); border: 1px solid var(--c-glass-line); }
+.mknews-cover.tall { min-height: 210px; padding: 0; border-radius: var(--r-sm); border: 1px solid var(--c-glass-line); }
 
 .mknews-body { padding: 12px 14px; display: grid; align-content: start; gap: 6px; }
-.mknews-meta { display: flex; align-items: center; gap: 8px; font-size: 11px; color: var(--c-dim); }
+/* Метастрока: дата · автор · время чтения — то, что приходит из админки. */
+.mknews-meta { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; font-size: 11px; color: var(--c-dim); }
 .mknews-meta .pill { margin: 0; }
+.mknews-meta i { width: 3px; height: 3px; border-radius: var(--r-round); background: var(--c-dim); }
 .mknews-body h3 { font-size: 14px; font-weight: 700; line-height: 1.35; color: var(--c-ink); }
 .mknews-card.wide .mknews-body h3 { font-size: 18px; letter-spacing: -.2px; }
 .mknews-body p { font-size: 12.5px; line-height: 1.5; color: var(--c-muted); }
@@ -229,10 +235,26 @@
 }
 .mknews-more:hover { border-color: var(--c-accent-line); }
 
-/* Сам материал: колонка текста шириной в чтение, а не во весь экран. */
+/* Сам материал: колонка текста шириной в чтение, а не во весь экран. Порядок
+   как в любой новости: метастрока, обложка с подписью, лид, текст, теги. */
 .mknews-read { display: grid; gap: 12px; max-width: 720px; }
-.mknews-read .pill { justify-self: start; margin: 0; }
 .mknews-read p { font-size: 13.5px; line-height: 1.65; color: var(--c-muted); }
+.mknews-read p.lead { font-size: 15px; line-height: 1.6; color: var(--c-ink); }
+.mknews-read h3 { margin-top: 4px; font-size: 15px; font-weight: 700; color: var(--c-ink); }
+.mknews-read ul { display: grid; gap: 6px; padding-left: 18px; font-size: 13.5px; line-height: 1.6; color: var(--c-muted); }
+.mknews-read li::marker { color: var(--c-accent); }
+.mknews-cap { margin-top: -4px; font-size: 11px; color: var(--c-dim); }
+
+.mknews-tags { display: flex; flex-wrap: wrap; gap: 6px; padding-top: 4px; }
+.mknews-tags span {
+  padding: 4px 9px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--c-muted);
+  background: var(--c-panel-2);
+  border: 1px solid var(--c-glass-line);
+  border-radius: var(--r-xs);
+}
 
 /* ── Страница-результат: оплата прошла / не прошла ──────────────── */
 /* Ответ один и посреди экрана: из банка возвращаются с вопросом «прошло или
