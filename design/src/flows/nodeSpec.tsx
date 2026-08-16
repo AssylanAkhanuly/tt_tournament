@@ -62,6 +62,20 @@ export function NodeSpec({ screen }: { screen: Screen }) {
         </Section>
       )}
 
+      {screen.tabs && screen.tabs.length > 0 && (
+        <Section title="Вкладки экрана">
+          <div className="fnode-sec">
+            {screen.tabs.map((t) => (
+              <div className="fnode-zone" key={t.t}>
+                <b>{t.t}</b><MarkSign mark={t.mark} />
+                <span> — {t.what}</span>
+                {t.when && <em className="fnode-note">есть, когда: {t.when}</em>}
+              </div>
+            ))}
+          </div>
+        </Section>
+      )}
+
       {screen.zones.length > 0 && (
         <Section title="Зоны экрана">
           <div className="fnode-sec">

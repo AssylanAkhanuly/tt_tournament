@@ -22,7 +22,7 @@ import {
   type NodeProps,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
-import type { RoleFlow, Screen } from './types';
+import type { RoleFlow, Screen, ScreenTab } from './types';
 import type { ScreenMap } from '../mockups/shell';
 import { NodeSpec } from './nodeSpec';
 import { role00 } from './data/role00';
@@ -32,7 +32,8 @@ import './map.css';
    другом. Сверху вниз оно расползалось по ширине (у первого экрана роли до
    восьми веток сразу), и в половине экрана граф ужимался до нечитаемого. */
 const COL = 250;
-const ROW = 96;
+/** Просвет между соседними узлами по вертикали. */
+const GAP = 22;
 
 /** Подпись действия и подпись кнопки к общему виду: ««Выдать роль»» → «выдать роль». */
 const norm = (s: string) =>
@@ -59,13 +60,34 @@ function ScreenNode({ data }: NodeProps) {
       <div className="fmn-meta">
         {screen.zones.length} зон · {screen.actions.length} действий
         {screen.states.length > 0 && ` · ${screen.states.length} сост.`}
+        {screen.tabs && ` · ${screen.tabs.length} вкл.`}
       </div>
       <Handle type="source" position={Position.Right} />
     </div>
   );
 }
 
-const nodeTypes = { screen: ScreenNode };
+/** Узел вкладки: экран с вкладками — это несколько экранов под одной шапкой,
+    и на карте каждый из них стоит отдельно. Клик открывает макет на этой
+    вкладке (переключатель в макете рабочий — карта его и нажимает). */
+function TabNode({ data }: NodeProps) {
+  const { tab, selected } = data as unknown as { tab: ScreenTab; selected: boolean };
+  return (
+    <div className={'fmt' + (selected ? ' on' : '') + (tab.when ? ' opt' : '')}>
+      <Handle type="target" position={Position.Left} />
+      <div className="fmt-title">
+        {tab.t}
+        {tab.mark === 'ours' && <sup>✳</sup>}
+        {tab.mark === 'open' && <sup>⚠</sup>}
+      </div>
+      <div className="fmt-what">{tab.what}</div>
+      {tab.when && <div className="fmt-when">есть, когда: {tab.when}</div>}
+      <Handle type="source" position={Position.Right} />
+    </div>
+  );
+}
+
+const nodeTypes = { screen: ScreenNode, tab: TabNode };
 
 /* ── Раскладка ──────────────────────────────────────────────────── */
 
@@ -134,20 +156,75 @@ function build(flow: RoleFlow, screens: ScreenMap, selected: string) {
     if (p) kids.set(p, [...(kids.get(p) ?? []), c]);
   });
 
+  /* Вкладки — такие же узлы дерева, только листья: экран с вкладками это
+     несколько экранов под одной шапкой, и на карте их должно быть видно
+     по отдельности. Идентификатор — «Э14.5#Сетка». */
+  const tabOf = new Map<string, { code: string; tab: ScreenTab }>();
+  codes.forEach((code) => {
+    const tabs = byId.get(code)?.tabs;
+    if (!tabs?.length) return;
+    const ids = tabs.map((tab) => {
+      const id = `${code}#${tab.t}`;
+      tabOf.set(id, { code, tab });
+      return id;
+    });
+    kids.set(code, [...ids, ...(kids.get(code) ?? [])]);
+  });
+
   /* Раскладка «в строку на ветку»: глубина даёт колонку, а строку получает
-     каждый лист; родитель встаёт по центру своих детей. */
+     каждый лист; родитель встаёт по центру своих детей.
+
+     Высоту считаем по узлу, а не по общей сетке строк: узлы вкладок разной
+     высоты (у одних есть условие «есть, когда…»), и на фиксированном шаге они
+     наезжали друг на друга. */
+  const hOf = (id: string) => {
+    const t = tabOf.get(id);
+    /* Высота считается по содержимому: узел экрана — код, название (длинное
+       переносится) и строка-счётчик; узел вкладки — название и пояснение.
+       Ширина узлов задана в `map.css` (200 и 178 px), отсюда и число знаков
+       в строке. */
+    if (!t) return 62 + Math.ceil((byId.get(id)?.title.length ?? 10) / 24) * 18;
+    return 40 + Math.ceil(t.tab.t.length / 22) * 16 + Math.ceil(t.tab.what.length / 28) * 15 +
+      (t.tab.when ? Math.ceil(t.tab.when.length / 26) * 14 : 0);
+  };
   const depth = new Map<string, number>([[root, 0]]);
-  const line = new Map<string, number>();
-  let row = 0;
+  const top = new Map<string, number>();
+  let cursor = 0;
   const walk = (n: string) => {
     const ch = kids.get(n) ?? [];
     ch.forEach((c) => {
       depth.set(c, (depth.get(n) ?? 0) + 1);
       walk(c);
     });
-    line.set(n, ch.length === 0 ? row++ : ch.reduce((sum, c) => sum + (line.get(c) ?? 0), 0) / ch.length);
+    if (ch.length === 0) {
+      top.set(n, cursor);
+      cursor += hOf(n) + GAP;
+      return;
+    }
+    const mid =
+      ch.reduce((sum, c) => sum + (top.get(c) ?? 0) + hOf(c) / 2, 0) / ch.length;
+    top.set(n, mid - hOf(n) / 2);
   };
   walk(root);
+
+  /* Родитель встаёт по центру своих детей, и в одной колонке два таких центра
+     иногда сходились в одну точку — узлы наезжали друг на друга. Разводим их
+     по колонкам: соседа сверху не двигаем, нижний опускается на просвет. */
+  const byDepth = new Map<number, string[]>();
+  [...top.keys()].forEach((id) => {
+    const d = depth.get(id) ?? 0;
+    byDepth.set(d, [...(byDepth.get(d) ?? []), id]);
+  });
+  byDepth.forEach((ids) => {
+    ids
+      .sort((a, b) => (top.get(a) ?? 0) - (top.get(b) ?? 0))
+      .forEach((id, i) => {
+        if (i === 0) return;
+        const prev = ids[i - 1];
+        const min = (top.get(prev) ?? 0) + hOf(prev) + GAP;
+        if ((top.get(id) ?? 0) < min) top.set(id, min);
+      });
+  });
 
   const edgeBase = {
     labelStyle: { fill: 'var(--c-board-muted)', fontSize: 11, fontWeight: 600 },
@@ -166,6 +243,22 @@ function build(flow: RoleFlow, screens: ScreenMap, selected: string) {
       type: 'smoothstep',
       style: { stroke: 'var(--c-board-line)' },
     }));
+
+  /* Экран → его вкладка: связь без подписи, вкладка не переход, а часть того
+     же экрана. Необязательная вкладка (есть не у каждого турнира) — пунктиром. */
+  tabOf.forEach(({ code, tab }, id) => {
+    edges.push({
+      ...edgeBase,
+      id: `${code}->${id}`,
+      source: code,
+      target: id,
+      type: 'smoothstep',
+      style: {
+        stroke: 'var(--c-board-line)',
+        ...(tab.when ? { strokeDasharray: '4 4' } : null),
+      },
+    });
+  });
 
   /* Переходы выбранного экрана, которых нет в дереве: возвраты и связи веток.
      Номер действия в ключе обязателен: с одного экрана в другой ведут два
@@ -186,12 +279,22 @@ function build(flow: RoleFlow, screens: ScreenMap, selected: string) {
   const nodes: Node[] = codes.map((code) => ({
     id: code,
     type: 'screen',
-    position: { x: (depth.get(code) ?? 1) * COL, y: (line.get(code) ?? 0) * ROW },
+    position: { x: (depth.get(code) ?? 1) * COL, y: top.get(code) ?? 0 },
     data: { code, screen: byId.get(code)!, selected: code === selected, common: !known.has(code) },
     draggable: false,
   }));
 
-  return { nodes, edges, byId };
+  tabOf.forEach(({ code, tab }, id) => {
+    nodes.push({
+      id,
+      type: 'tab',
+      position: { x: (depth.get(id) ?? 1) * COL, y: top.get(id) ?? 0 },
+      data: { code, tab, selected: code === selected },
+      draggable: false,
+    });
+  });
+
+  return { nodes, edges, byId, tabOf };
 }
 
 /* ── Карта ──────────────────────────────────────────────────────── */
@@ -199,8 +302,14 @@ function build(flow: RoleFlow, screens: ScreenMap, selected: string) {
 export function FlowMap({ flow, screens }: { flow: RoleFlow; screens: ScreenMap }) {
   const codes = Object.keys(screens);
   const [selected, setSelected] = useState(codes[0]);
+  /* Какая вкладка выбранного экрана открыта: карта нажимает переключатель в
+     самом макете — он рабочий, и второго источника правды заводить не нужно. */
+  const [tab, setTab] = useState<string | null>(null);
   const [fit, setFit] = useState(true);
-  const { nodes, edges, byId } = useMemo(() => build(flow, screens, selected), [flow, screens, selected]);
+  const { nodes, edges, byId, tabOf } = useMemo(
+    () => build(flow, screens, selected),
+    [flow, screens, selected],
+  );
 
   /* Макет нарисован в натуральную величину (ноутбук — 1200 px), а панель у́же:
      ужимаем его целиком, иначе видно левую треть экрана. Масштаб считаем от
@@ -237,6 +346,19 @@ export function FlowMap({ flow, screens }: { flow: RoleFlow; screens: ScreenMap 
   const [links, setLinks] = useState<
     { el: string; to: string; when?: string; found: boolean; common: boolean }[]
   >([]);
+
+  /* Открыть нужную вкладку — значит нажать её в макете: переключатель рабочий,
+     и карта пользуется им так же, как человек. */
+  useEffect(() => {
+    const root = inner.current;
+    if (!root || !tab) return;
+    const want = norm(tab);
+    const hit = [...root.querySelectorAll<HTMLElement>('.dseg2 button, .seg button')].find((b) => {
+      const label = norm(b.textContent ?? '');
+      return label === want || label.startsWith(want);
+    });
+    if (hit && !hit.classList.contains('on')) hit.click();
+  }, [tab, selected, scale]);
 
   useEffect(() => {
     const root = inner.current;
@@ -321,7 +443,11 @@ export function FlowMap({ flow, screens }: { flow: RoleFlow; screens: ScreenMap 
           nodes={nodes}
           edges={edges}
           nodeTypes={nodeTypes}
-          onNodeClick={(_, n) => setSelected(n.id)}
+          onNodeClick={(_, n) => {
+            const t = tabOf.get(n.id);
+            setSelected(t ? t.code : n.id);
+            setTab(t ? t.tab.t : null);
+          }}
           fitView
           /* Не ужимаем до нечитаемого: ветка календаря уходит на пять шагов
              вправо, и «вписать целиком» в половину окна делает подписи узлов

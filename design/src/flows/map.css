@@ -70,6 +70,25 @@
 .fmn-title { font-size: 13px; font-weight: 700; line-height: 1.3; }
 .fmn-meta { margin-top: 4px; font-size: 10.5px; color: var(--c-board-muted); }
 
+/* Узел вкладки: тот же экран, но другой его вид. Мельче узла экрана — чтобы
+   ветка вкладок не спорила с маршрутом; необязательная вкладка (есть не у
+   каждого турнира) — пунктиром. */
+.fmt {
+  width: 178px;
+  padding: 8px 10px;
+  border: 1px solid var(--c-board-line);
+  border-radius: var(--r-sm);
+  background: var(--c-board-panel);
+  color: var(--c-board-ink);
+  cursor: pointer;
+}
+.fmt.opt { border-style: dashed; }
+.fmt.on { border-color: var(--c-board-accent); }
+.fmt-title { font-size: 12px; font-weight: 700; }
+.fmt-title sup { margin-left: 3px; color: var(--c-board-accent); }
+.fmt-what { margin-top: 3px; font-size: 10.5px; line-height: 1.35; color: var(--c-board-muted); }
+.fmt-when { margin-top: 3px; font-size: 10px; color: var(--c-board-accent); }
+
 /* Точки-порты у узла не нужны: связи и так читаются, а точки шумят. */
 .fmap-graph .react-flow__handle { opacity: 0; }
 
