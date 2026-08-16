@@ -358,13 +358,12 @@ export const ATTENTION: AttnItem[] = [
   },
 ];
 
-/** Список за счётчиком: чем дело снимается и кто его снимает. */
+/** Список за счётчиком: чем дело снимается и кто его снимает.
+
+    Заголовка у списка нет: он повторял бы подпись раскрытого счётчика прямо
+    над собой. Сколько строк показано из скольких — в подвале. */
 const AttnList = ({ item, act, max }: { item: AttnItem; act: boolean; max?: number }) => (
   <div className="mkattn-d">
-    <div className="mkattn-d-h">
-      <b>{item.n} {item.t}</b>
-      {max && max < item.rows.length && <span>показаны {max} из {item.n}</span>}
-    </div>
     <div className="mkattn-d-b">
       {item.rows.slice(0, max ?? item.rows.length).map((r) => (
         <div className="mkattn-r" key={r.nm} data-to={act ? r.to : undefined}>
@@ -379,11 +378,14 @@ const AttnList = ({ item, act, max }: { item: AttnItem; act: boolean; max?: numb
     </div>
     <div className="mkattn-d-f">
       {/* У наблюдателей (роли 3 и 4) переходов и кнопок нет — очередь им
-          показывает, кого ждёт дело, а не куда нажать. */}
-      <span>{act ? 'Строка ведёт туда, где дело снимается' : 'Только просмотр: переходов и действий у роли нет'}</span>
-      {/* Выход в полный список — тихой кнопкой: главное действие экрана одно,
-          и это «Завести соревнование». */}
-      {act && <Ghost>Показать все в списке с фильтром</Ghost>}
+          показывает, кого ждёт дело, а не куда нажать. Молча резать список
+          нельзя: сколько строк показано из скольких, написано здесь же. */}
+      <span>
+        {act ? 'Строка ведёт туда, где дело снимается' : 'Только просмотр: переходов и действий у роли нет'}
+        {max && max < item.rows.length && ` · показаны ${max} из ${item.n}`}
+      </span>
+      {/* Полный список — в календаре сезона: главное действие экрана одно, и
+          это «Завести соревнование». */}
     </div>
   </div>
 );
@@ -452,7 +454,6 @@ export const TodayRows = ({ act = true, one }: { act?: boolean; one?: boolean })
         </div>
         <div className="amt">{r.v}</div>
         <P t="ИДЁТ" cls="live" />
-        {act && <button className="dpickbtn">Ход турнира</button>}
       </div>
     ))}
   </Rows>
@@ -478,23 +479,32 @@ export function Dash1_1({ variant }: { variant?: DeskVariant }) {
       sub="Сезон 2026 · 15 апреля"
     >
       <Chips items={KPI} />
+      {/* В раскрытом счётчике две строки: панель обязана поместиться на экран
+          целиком вместе с календарём под ней, а весь список открывается в
+          календаре сезона. Сколько строк из скольких — подписано. */}
       <Attention
+        max={2}
         action={
           <button className="dsubmit" style={{ padding: '10px 14px' }}>
             <Plus size={15} /> Завести соревнование
           </button>
         }
       />
+      {/* «Сегодня идут» — в широкой колонке: в узкой её строки переносили
+          кнопку «Ход турнира» на вторую строку, и панель вырастала вдвое. */}
       <div className="mkcols">
-        <Panel title="Ближайшие старты">
+        <Panel title="Сегодня идут">
+          <TodayRows />
+        </Panel>
+        <Panel
+          title="Ближайшие старты"
+          extra={<span className="dcount">ещё {UPCOMING.length - 1} в календаре</span>}
+        >
           <Rows>
-            {UPCOMING.slice(0, 3).map((t) => (
+            {UPCOMING.slice(0, 1).map((t) => (
               <TourRow key={t.nm} t={t} />
             ))}
           </Rows>
-        </Panel>
-        <Panel title="Сегодня идут">
-          <TodayRows />
         </Panel>
       </div>
     </RoleScreen>

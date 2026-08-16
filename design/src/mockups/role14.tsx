@@ -10,7 +10,9 @@
    картой. Счёт своего матча спортсмен не вводит: его ведёт судья стола. */
 
 import { useState, type ReactNode } from 'react';
-import { ArrowUpDown, BarChart3, Check, CreditCard, Lock, Pencil, Send } from 'lucide-react';
+import {
+  ArrowUpDown, BarChart3, Check, CreditCard, Download, Lock, Pencil, Receipt, Send, Trophy, X,
+} from 'lucide-react';
 import {
   A, ActionBar, Alert, Also, Arrow, Board, Chips, Empty, Field, Form, Ghost, Input, Modal, Off, P,
   Pager, Panel, Queue, RoleScreen, Row, Rows, Screen, Search, Shot, States, Tabs,
@@ -612,7 +614,14 @@ export function Profile14_7() {
           </Form>
         </Panel>
 
-        <Panel title="Годовой взнос 2026" extra={<P t="НЕ ОПЛАЧЕН" cls="wait" />}>
+        <Panel
+          title="Годовой взнос 2026"
+          extra={
+            <button className="dpickbtn" data-to="Э14.12">
+              <Receipt size={14} /> История платежей
+            </button>
+          }
+        >
           <Form>
             <Field label="Сумма" value="₸ 10 000" />
             <Input label="Срок" value="до 31 марта" />
@@ -663,78 +672,64 @@ const Profile14_7States = () => (
 /* ── Э14.10 · Оплата прошла · Э14.11 · Оплата не прошла ────────── */
 
 /** Страница возврата: банк отправил человека обратно к нам, и первое, что он
-    должен увидеть, — прошёл платёж или нет. Одной плашки в профиле мало: из
-    банка возвращаются в тревоге, «где мои деньги» — вопрос этой секунды. */
-const Back14 = ({
+    должен увидеть, — прошёл платёж или нет. Ответ стоит один посреди экрана, а
+    не строкой в панели: из банка возвращаются с этим вопросом и ни с каким
+    другим. Под ним — то, ради чего платили, и одна кнопка «что дальше». */
+const Result14 = ({
   ok,
   title,
-  sub,
-  children,
+  lead,
+  facts,
+  action,
+  note,
 }: {
   ok: boolean;
   title: string;
-  sub: string;
-  children: ReactNode;
+  lead: string;
+  facts: [string, string][];
+  action: { t: string; to: string; icon: ReactNode };
+  note: string;
 }) => (
-  <RoleScreen role={R14} nav="Профиль" title={title} sub={sub}>
-    <div className="mkcols">
-      <Panel
-        title={ok ? 'Годовой взнос 2026' : 'Платёж не прошёл'}
-        extra={ok ? <P t="ОПЛАЧЕН" cls="live" /> : <P t="НЕ ПРОШЛА" cls="bad" />}
-      >
-        {children}
-      </Panel>
+  <RoleScreen role={R14} nav="Профиль" title="Оплата взноса" sub="Годовой взнос 2026 · Ким Георгий">
+    <div className={'mkresult' + (ok ? ' ok' : ' bad')}>
+      <span className="mkresult-ic">{ok ? <Check size={30} /> : <X size={30} />}</span>
+      <div className="mkresult-t">{title}</div>
+      <div className="mkresult-s">{lead}</div>
 
-      <Panel title="Что дальше">
-        {ok ? (
-          <>
-            <Rows>
-              <Row nm="Заявки на турниры со взносом" sub="проходят с этой минуты" pill={{ t: 'ОТКРЫТО', cls: 'live' }} />
-              <Row nm="Отметка у тренера и в реестре" sub="видна сразу, отмечать вручную не нужно" pill={{ t: 'СРАЗУ', cls: 'live' }} />
-              <Row nm="Квитанция" sub="приходит на почту от банка" pill={{ t: 'ОТ БАНКА', cls: 'reg' }} />
-            </Rows>
-            <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
-              <button className="dsubmit" style={{ padding: '11px 16px' }} data-to="Э14.7">
-                <Check size={15} /> В профиль
-              </button>
-              <Ghost>Заявиться на турнир</Ghost>
-            </div>
-          </>
-        ) : (
-          <>
-            <Rows>
-              <Row nm="Деньги не списаны" sub="банк отклонил операцию до списания" pill={{ t: 'ВАЖНО', cls: 'reg' }} />
-              <Row nm="Взнос остался неоплаченным" sub="заявки на турниры со взносом пока не пройдут" pill={{ t: 'НЕ ОПЛАЧЕН', cls: 'wait' }} />
-              <Row nm="Можно повторить" sub="или оплатить другой картой" pill={{ t: 'СЕЙЧАС', cls: 'live' }} />
-            </Rows>
-            <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
-              <button className="dsubmit" style={{ padding: '11px 16px' }} data-to="Э14.8">
-                <CreditCard size={15} /> Повторить оплату
-              </button>
-              <Ghost>В профиль</Ghost>
-            </div>
-          </>
-        )}
-      </Panel>
+      <div className="mkresult-facts">
+        {facts.map(([k, v]) => (
+          <div key={k}>
+            <span>{k}</span>
+            <b>{v}</b>
+          </div>
+        ))}
+      </div>
+
+      <button className="dsubmit mkresult-btn" data-to={action.to}>
+        {action.icon} {action.t}
+      </button>
+      <button type="button" className="mkresult-quiet" data-to="Э14.7">В профиль</button>
+      <div className="mkresult-note">{note}</div>
     </div>
   </RoleScreen>
 );
 
 export function Paid14_10() {
   return (
-    <Back14 ok title="Взнос оплачен" sub="Годовой взнос 2026 · Ким Георгий">
-      <Form>
-        <Field label="Сумма" value="₸ 10 000" />
-        <Field label="Номер заказа" value="100416" />
-        <Field label="Когда" value="14.01.2026, 10:42" />
-        <Field label="Карта" value="•••• 1234 · Halyk ePay" />
-        <Field label="Взнос действует" value="до 31.03.2027" wide />
-      </Form>
-      <Alert tone="success">
-        Состояние поставило серверное подтверждение банка, а не эта страница: даже если бы возврата
-        не было, взнос всё равно стал бы оплаченным.
-      </Alert>
-    </Back14>
+    <Result14
+      ok
+      title="Оплата прошла"
+      lead="Годовой взнос 2026 оплачен — заявки на турниры со взносом теперь проходят."
+      facts={[
+        ['Сумма', '₸ 10 000'],
+        ['Номер заказа', '100416'],
+        ['Когда', '14.01.2026, 10:42'],
+        ['Карта', '•••• 1234 · Halyk ePay'],
+        ['Взнос действует', 'до 31.03.2027'],
+      ]}
+      action={{ t: 'К турнирам', to: 'Э14.2', icon: <Trophy size={15} /> }}
+      note="Квитанцию присылает банк на почту. Отметка об оплате видна тренеру и в реестре — ставить её вручную никому не нужно."
+    />
   );
 }
 
@@ -757,19 +752,115 @@ const Paid14_10States = () => (
 
 export function Declined14_11() {
   return (
-    <Back14 ok={false} title="Оплата не прошла" sub="Годовой взнос 2026 · Ким Георгий">
-      <Form>
-        <Field label="Сумма" value="₸ 10 000" />
-        <Field label="Номер заказа" value="100416" />
-        <Field label="Когда" value="14.01.2026, 10:44" />
-        <Field label="Причина от банка" value="недостаточно средств на карте" wide />
-      </Form>
-      <Alert tone="danger">
-        Причину пишет банк — мы её только показываем. Ни номера карты, ни кода из SMS у нас нет.
-      </Alert>
-    </Back14>
+    <Result14
+      ok={false}
+      title="Оплата не прошла"
+      lead="Банк отклонил платёж: недостаточно средств на карте."
+      facts={[
+        ['Сумма', '₸ 10 000'],
+        ['Номер заказа', '100416'],
+        ['Когда', '14.01.2026, 10:44'],
+        ['Деньги', 'не списаны'],
+        ['Взнос', 'остался неоплаченным'],
+      ]}
+      action={{ t: 'Повторить оплату', to: 'Э14.8', icon: <CreditCard size={15} /> }}
+      note="Причину пишет банк — мы её только показываем. Ни номера карты, ни кода из SMS у нас нет; можно повторить или заплатить другой картой."
+    />
   );
 }
+
+/* ── Э14.12 · История платежей и квитанция ─────────────────────── */
+
+/** Платежи спортсмена: за что и когда платил, чем закончилось.
+
+    Взнос платят раз в год, но платёж бывает неудачным, повторным и возвращённым
+    — и на вопрос «я же платил» отвечает не память, а эта страница. Квитанция
+    лежит здесь же: банк присылает её на почту, а почту теряют. */
+const PAYMENTS = [
+  { nm: 'Годовой взнос 2026', at: '14.01.2026, 10:42', sum: '₸ 10 000', st: 'ОПЛАЧЕН', cls: 'live' as const, card: '•••• 1234', ok: true },
+  { nm: 'Годовой взнос 2026 · попытка', at: '14.01.2026, 10:44', sum: '₸ 10 000', st: 'НЕ ПРОШЛА', cls: 'bad' as const, card: '•••• 7788', ok: false },
+  { nm: 'Годовой взнос 2025', at: '09.02.2025, 18:05', sum: '₸ 8 000', st: 'ОПЛАЧЕН', cls: 'live' as const, card: '•••• 1234', ok: true },
+  /* Оплата мимо системы: квитанции у строки нет — документ выдавала не она. */
+  { nm: 'Годовой взнос 2024', at: '21.01.2024, 12:31', sum: '₸ 8 000', st: 'ОПЛАЧЕН', cls: 'live' as const, card: 'наличными · отметил экономист', ok: false },
+];
+
+export function History14_12() {
+  return (
+    <RoleScreen
+      role={R14}
+      nav="Профиль"
+      title="История платежей"
+      sub="Ким Георгий · взносы за все сезоны"
+      back={{ label: 'Профиль', to: 'Э14.7' }}
+    >
+      <div className="mkcols">
+        <Panel title="Платежи" extra={<span className="dcount">{PAYMENTS.length} записи</span>}>
+          <Rows>
+            {PAYMENTS.map((p) => (
+              <div className="drow" key={p.at}>
+                <div className="who">
+                  <div className="nm">{p.nm}</div>
+                  <div className="rl">{p.at} · {p.card}</div>
+                </div>
+                <div className="amt">{p.sum}</div>
+                <P t={p.st} cls={p.cls} />
+                {p.ok && (
+                  <button className="dpickbtn">
+                    <Receipt size={13} /> Квитанция
+                  </button>
+                )}
+              </div>
+            ))}
+          </Rows>
+          <div className="dcount" style={{ marginTop: 10 }}>
+            Неудачные попытки тоже видны: по ним понятно, что деньги не списаны.
+          </div>
+        </Panel>
+
+        {/* Квитанция — то, что человек несёт в бухгалтерию клуба или школы.
+            Собираем её мы: у банка это письмо, а не документ федерации. */}
+        <Panel title="Квитанция" extra={<P t="ГОДОВОЙ ВЗНОС 2026" cls="reg" />}>
+          <Form>
+            <Field label="Плательщик" value="Ким Георгий, 14.06.2003" />
+            <Field label="Назначение" value="Годовой взнос 2026" />
+            <Field label="Сумма" value="₸ 10 000" />
+            <Field label="Получатель" value="ОЮЛ «Федерация настольного тенниса РК»" wide />
+            <Field label="Номер заказа" value="100416" />
+            <Field label="Когда" value="14.01.2026, 10:42" />
+            <Field label="Способ" value="карта •••• 1234 · Halyk ePay" wide />
+          </Form>
+          <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
+            <button className="dsubmit" style={{ padding: '11px 16px' }}>
+              <Download size={15} /> Скачать PDF
+            </button>
+            <Ghost>Отправить на почту</Ghost>
+          </div>
+        </Panel>
+      </div>
+    </RoleScreen>
+  );
+}
+
+const History14_12States = () => (
+  <States>
+    <Shot tone="info" title="Платежей ещё не было" text="Первый сезон: взнос не выставлялся или не оплачивался.">
+      <Empty title="Платежей пока нет" text="Здесь появятся все взносы: когда, сколько и чем закончился платёж." />
+    </Shot>
+
+    <Shot tone="warning" title="Оплату отметил экономист" text="Платёж прошёл мимо системы — квитанции банка нет.">
+      <Rows>
+        <Row nm="Годовой взнос 2024" sub="наличными · отметил экономист, основание — квитанция № 4471" pill={{ t: 'ОПЛАЧЕН', cls: 'live' }} />
+      </Rows>
+      <Alert>Кнопки «квитанция» у такой строки нет: документ выдавала не система.</Alert>
+    </Shot>
+
+    <Shot tone="danger" title="Возврат платежа ✳" text="Экономист снял отметку — в истории это отдельная строка.">
+      <Rows>
+        <Row nm="Годовой взнос 2026 · возврат" sub="снял Сериков Н., причина: «оплатил дважды» · 16.01" pill={{ t: 'ВОЗВРАТ', cls: 'bad' }} />
+      </Rows>
+    </Shot>
+  </States>
+);
 
 const Declined14_11States = () => (
   <States>
@@ -1085,6 +1176,15 @@ export const SCREENS: ScreenMap = {
       <>
         <Declined14_11 />
         <Declined14_11States />
+      </>
+    ),
+  },
+  'Э14.12': {
+    cap: 'История платежей и квитанция',
+    view: () => (
+      <>
+        <History14_12 />
+        <History14_12States />
       </>
     ),
   },

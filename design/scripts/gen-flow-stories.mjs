@@ -12,7 +12,7 @@
 
    Запуск: `npm run gen:flows`. Проверка: `npm run lint:flows`. */
 
-import { readdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { readdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -98,7 +98,14 @@ export const Route = {
 };
 `;
 
-  writeFileSync(join(FLOWS, `${name}.stories.tsx`), out, 'utf8');
+  /* Пишем через временный файл и переименование: запущенный Storybook читает
+     истории по мере записи, ловил файл наполовину написанным («Unexpected end
+     of file») и запоминал ошибку — весь раздел после пересборки оставался
+     пустым, пока сервер не перезапустят. Переименование атомарно. */
+  const path = join(FLOWS, `${name}.stories.tsx`);
+  const tmp = `${path}.tmp`;
+  writeFileSync(tmp, out, 'utf8');
+  renameSync(tmp, path);
   written += 1;
 }
 
