@@ -84,7 +84,85 @@
 /* Поле не прошло проверку: та же заливка, меняется только цвет — иначе ошибка
    читается как другой тип поля. */
 .dinput.bad { color: var(--c-danger); box-shadow: inset 0 0 0 1px var(--c-danger-line); }
-.dselect { cursor: pointer; }
+/* Свой список вместо нативного: у нативного список рисует система, и кегль в
+   нём не подчиняется CSS — рядом с полем на 14 пикселей выпадал системный,
+   вдвое крупнее. Здесь список набран тем же кеглем, что поле. */
+.dselect {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  text-align: left;
+  cursor: pointer;
+}
+.dselect > svg { color: var(--c-dim); flex: none; transition: transform .15s; }
+.dselect.on { background: var(--c-panel-3); box-shadow: inset 0 0 0 1px var(--c-accent-line); }
+.dselect.on > svg { transform: rotate(180deg); color: var(--c-accent); }
+
+.dsel { position: relative; }
+.dsel-list {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  z-index: 6;
+  max-height: 232px;
+  overflow: auto;
+  padding: 4px;
+  display: grid;
+  gap: 1px;
+  background: var(--c-panel);
+  border: 1px solid var(--c-glass-line);
+  border-radius: var(--r-sm);
+  box-shadow: var(--sh-panel);
+}
+.dsel-i {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  width: 100%;
+  padding: 8px 10px;
+  font: inherit;
+  /* Тот же кегль, что у поля: список и поле — одно и то же значение. */
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--c-muted);
+  background: none;
+  border: 0;
+  border-radius: var(--r-xs);
+  text-align: left;
+  cursor: pointer;
+}
+.dsel-i:hover { color: var(--c-ink); background: var(--c-panel-2); }
+.dsel-i.on { color: var(--c-ink); }
+.dsel-i > svg { color: var(--c-accent); flex: none; }
+/* Многострочное поле: высота задана строками, тянуть можно только вниз —
+   растягивание вбок ломает сетку формы. */
+.darea { resize: vertical; min-height: 64px; line-height: 1.5; font-weight: 500; }
+/* Календарь браузера: иконку в тёмной теме подсвечиваем — по умолчанию она
+   чёрная и на тёмном фоне не видна. */
+.dinput[type="date"]::-webkit-calendar-picker-indicator { filter: invert(1); opacity: .5; cursor: pointer; }
+.dinput[type="date"]:hover::-webkit-calendar-picker-indicator { opacity: .9; }
+
+/* Загрузка файла: что кладут и в каком формате — сказано до выбора, а не в
+   ошибке после. Пунктир здесь на месте: это пустое место под содержимое. */
+.dfile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 20px 16px;
+  border: 1px dashed var(--c-glass-line);
+  border-radius: var(--r-md);
+  background: var(--c-panel-3);
+  cursor: pointer;
+  text-align: center;
+}
+.dfile:hover { border-color: var(--c-accent-line); }
+.dfile input { position: absolute; width: 0; height: 0; opacity: 0; }
+.dfile .t { font-size: 13.5px; font-weight: 700; color: var(--c-ink); }
+.dfile .s { font-size: 12px; color: var(--c-dim); }
+.dfile .dpickbtn { margin-top: 4px; }
 
 /* Поле в полосе действий тянется на всё свободное место: рядом с ним стоит
    кнопка, и поле должно занимать остальное, а не свою минимальную ширину —
@@ -329,6 +407,9 @@
 
 /* Две колонки в рабочей области, когда на экране список и панель рядом. */
 .mkcols { display: grid; grid-template-columns: 1.35fr 1fr; gap: var(--s-3); align-items: start; }
+/* В диалоге места вдвое меньше, и вторая колонка сжимается до нечитаемой —
+   подписи полей обрезаются. Внутри окна те же панели идут одна под другой. */
+.mkdialog .mkcols { grid-template-columns: 1fr; }
 
 /* Настоящая сетка (React Flow из `front/`) внутри панели макета. Холст сам по
    себе высоты не имеет — задаём её здесь; `position: relative` нужен, чтобы
@@ -660,6 +741,144 @@ button.mkattn-i.on svg { color: var(--c-accent); transform: rotate(180deg); }
   margin-right: 4px;
 }
 
+/* ── Расписание календарём ──────────────────────────────────────── */
+/* Дни колонками, время осью, круг — блоком. Таблицей это был список фактов, и
+   главный вопрос экрана («влезает ли турнир в три дня и шестнадцать столов»)
+   приходилось считать в голове. На оси он виден сразу: первый день забит, третий
+   почти пуст, а перерыв между кругами — зазор между блоками, а не строка.
+
+   Ширина блока = занятые столы: 16 столов во всю колонку, финал на одном — узкой
+   полосой. Одна картинка отвечает и про время, и про загрузку зала. */
+.cal { display: grid; grid-template-columns: 52px repeat(3, 1fr); gap: 10px; height: 380px; }
+
+/* Ось времени: подписи привязаны к своим часам, поэтому позиционируются, а не
+   раскладываются потоком — иначе они разъедутся с линиями сетки. */
+.cal-time { position: relative; padding-top: 38px; }
+.cal-time span {
+  position: absolute;
+  right: 0;
+  transform: translateY(-50%);
+  font-size: 10.5px;
+  color: var(--c-dim);
+  font-variant-numeric: tabular-nums;
+}
+
+.cal-day { display: flex; flex-direction: column; min-width: 0; }
+.cal-head { padding-bottom: 8px; }
+.cal-head b { font-size: 12.5px; font-weight: 700; }
+.cal-head span { font-size: 11px; color: var(--c-dim); margin-left: 6px; }
+
+.cal-grid {
+  position: relative;
+  flex: 1;
+  border-radius: var(--r-sm);
+  background: var(--c-panel-3);
+  overflow: hidden;
+}
+/* Часовые линии — тот же ритм, что у подписей слева. */
+.cal-grid i {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: var(--c-glass-line);
+}
+
+.cal-block {
+  position: absolute;
+  left: 0;
+  right: 0;
+  min-height: 38px;
+  padding: 5px 8px;
+  border-radius: var(--r-xs);
+  background: var(--c-accent-soft);
+  box-shadow: inset 0 0 0 1px var(--c-accent-line);
+  /* Полоса слева — акцентом: она показывает, что блок начинается здесь, а не
+     где-то выше, когда блоков в колонке несколько. */
+  border-left: 2px solid var(--c-accent);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  cursor: default;
+}
+.cal-block b { font-size: 12px; font-weight: 700; color: var(--c-ink); }
+.cal-block span {
+  font-size: 10.5px;
+  color: var(--c-accent-2);
+  font-variant-numeric: tabular-nums;
+}
+/* Загрузка зала: подпись и под ней полоса во всю занятую часть колонки. Шириной
+   самого блока это не показать — финал на одном столе выходил в 18 пикселей, и
+   подпись в него не влезала. */
+.cal-block em {
+  margin-top: auto;
+  font-style: normal;
+  font-size: 10px;
+  color: var(--c-muted);
+  position: relative;
+  padding-top: 5px;
+}
+.cal-block em s {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 3px;
+  border-radius: var(--r-round);
+  background: var(--c-accent);
+}
+
+/* ── Материалы таблицей ─────────────────────────────────────────── */
+/* Материал · состояние · действия. Рамок у строк нет — это один список, а не
+   шесть карточек. Колонка языков убрана: где перевода нет, теперь узнают только
+   в редакторе. */
+.ntab { display: grid; }
+.ntab-h,
+.nrow { display: grid; grid-template-columns: 1fr 128px 262px; align-items: center; gap: 16px; }
+.ntab-h { padding: 0 4px 6px; }
+.ntab-h span { font-size: 12px; font-weight: 600; color: var(--c-dim); }
+.nrow { padding: 10px 4px; border-radius: var(--r-sm); }
+.nrow + .nrow { box-shadow: inset 0 1px 0 var(--c-glass-line); }
+.nrow:hover { background: var(--c-panel-2); box-shadow: none; }
+.nrow .nm { font-size: 13.5px; font-weight: 700; }
+.nrow .rl { font-size: 11.5px; color: var(--c-muted); margin-top: 2px; }
+/* Значок состояния не тянется на всю колонку: он подпись, а не полоса. */
+.nrow > .pill { justify-self: start; }
+/* Две кнопки — две колонки одной ширины во всех строках. `minmax(0, 1fr)`
+   обязателен: у обычного `1fr` пол — содержимое, и «Опубликовать» раздвигал свою
+   колонку, отнимая ширину у «Править». Колонка действий шире самой длинной
+   подписи, поэтому кнопки везде одного размера. */
+.nact { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 6px; }
+.nact > * { width: 100%; justify-content: center; white-space: nowrap; }
+
+/* ── Журнал таблицей ────────────────────────────────────────────── */
+/* Кто · что сделал · детали · когда. Раньше это был список строк, и «было →
+   стало» в каждой стояло на своём месте — сравнить две записи глазами было
+   нельзя. У таблицы столбцы подписаны один раз, значения выстроены в колонку. */
+.jtab { display: grid; }
+.jtab-h,
+.jrow { display: grid; grid-template-columns: 200px 1fr 1.1fr 104px; align-items: center; gap: 16px; }
+.jtab-h { padding: 0 4px 6px; }
+.jtab-h span { font-size: 12px; font-weight: 600; color: var(--c-dim); }
+.jrow { padding: 10px 4px; border-radius: var(--r-sm); }
+.jrow + .jrow { box-shadow: inset 0 1px 0 var(--c-glass-line); }
+.jrow:hover { background: var(--c-panel-2); box-shadow: none; }
+.jrow .nm { font-size: 13px; font-weight: 700; }
+.jrow .rl { font-size: 11.5px; color: var(--c-muted); margin-top: 2px; }
+
+.jwho { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.jwho img { width: 32px; height: 32px; border-radius: 50%; object-fit: cover; flex: none; }
+.jact { min-width: 0; }
+
+/* Детали — «было → стало». Старое значение зачёркнуто и притушено, новое
+   выделено: так видно направление правки, а стрелка для этого не нужна. */
+.jwas { display: flex; flex-direction: column; gap: 2px; min-width: 0; font-size: 12.5px; }
+.jwas s { color: var(--c-dim); text-decoration-thickness: 1px; }
+.jwas b { color: var(--c-ink); font-weight: 700; }
+
+/* Дата и время — вправо, моноширинными цифрами: колонку дат читают сравнением. */
+.jtab-h .jwhen,
+.jrow .jwhen { text-align: right; font-variant-numeric: tabular-nums; }
+
 /* ── Список людей без рамок ─────────────────────────────────────── */
 /* Шесть обведённых карточек подряд читаются как шесть отдельных блоков, хотя
    это один список. Рамок нет, разделяет строки волосяная линия; подсветка
@@ -726,6 +945,12 @@ button.mkattn-i.on svg { color: var(--c-accent); transform: rotate(180deg); }
 .vbtn.yes.on { color: var(--c-success); background: var(--c-success-soft-2); border-color: var(--c-success-line); }
 .vbtn.no.on { color: var(--c-danger); background: var(--c-danger-soft-2); border-color: var(--c-danger-line); }
 
+/* Полоса вкладок обычного кегля: тот же язык, что у шкалы состояний (без рамок,
+   активная акцентом с подчёркиванием), но размером с обычную вкладку — она
+   заголовок раздела, а не мелкая подпись. */
+.dstages.big { gap: 4px 14px; }
+.dstages.big .dstage { font-size: 13px; padding: 6px 10px; }
+
 /* ── Флаги списком ──────────────────────────────────────────────── */
 /* Условия допуска: тумблер и название, без рамок и подложек. Обведённые строки
    читались как три отдельных блока, хотя это один список из трёх переключателей
@@ -766,7 +991,9 @@ button.mkattn-i.on svg { color: var(--c-accent); transform: rotate(180deg); }
    курсор, — так видно, что состояние можно посмотреть. */
 .dstage.now { color: var(--c-accent); font-weight: 800; box-shadow: inset 0 -2px 0 var(--c-accent); }
 .dstage:hover { color: var(--c-accent-ink); background: var(--c-accent); box-shadow: none; }
-.dstage + .dstage::before {
+/* Стрелка «›» — только там, где у пунктов есть порядок: состояния турнира идут
+   друг за другом. У категорий материалов порядка нет, и стрелка врала бы. */
+.dstages.seq .dstage + .dstage::before {
   content: "›";
   margin-right: 8px;
   color: var(--c-glass-line);

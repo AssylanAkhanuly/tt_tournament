@@ -9,7 +9,7 @@
    сходится со схемой роли (раздел «Флоу») и с текстом в корневом `flows/`. */
 
 import { Fragment, useRef, useState, type ReactNode } from 'react';
-import { ArrowRight, Bell, X } from 'lucide-react';
+import { ArrowRight, Bell, Check, ChevronDown, X } from 'lucide-react';
 import { Desk, type DeskVariant } from '../deskShell';
 import { Tab, MiniTabBar } from '../respShell';
 import { Frame } from '../PlayerApp';
@@ -594,8 +594,64 @@ export function Derived({ k, v }: { k: string; v: string }) {
   );
 }
 
-/** Выбор из списка. Заводится там, где вариантов больше, чем влезает в ряд
-    кнопок: четырнадцать ролей занимали четыре строки и топили собой форму. */
+/** Многострочное поле: лид и текст материала не влезают в строку, а растягивать
+    однострочный `Input` нельзя — по нему не видно, что текста может быть много.
+    `rows` держит высоту явной: поле не должно занимать пол-экрана. */
+export function Area({
+  label,
+  value = '',
+  rows = 3,
+  wide,
+}: {
+  label: string;
+  value?: string;
+  rows?: number;
+  wide?: boolean;
+}) {
+  const [v, setV] = useState(value);
+  return (
+    <div className={'dfield' + (wide ? ' wide' : '')}>
+      <label className="k">
+        {label}
+        <textarea className="dinput darea" rows={rows} value={v} onChange={(e) => setV(e.target.value)} />
+      </label>
+    </div>
+  );
+}
+
+/** Дата: календарь браузера, а не строка. Дату вписывают руками с опечатками и
+    в разных форматах; выбранная из календаря всегда одна и та же дата. */
+export function DateField({ label, value, wide }: { label: string; value: string; wide?: boolean }) {
+  const [v, setV] = useState(value);
+  return (
+    <div className={'dfield' + (wide ? ' wide' : '')}>
+      <label className="k">
+        {label}
+        <input type="date" className="dinput" value={v} onChange={(e) => setV(e.target.value)} />
+      </label>
+    </div>
+  );
+}
+
+/** Загрузка файла: что кладут, в каком формате и каким должен быть размер —
+    сказано до выбора, а не в ошибке после. */
+export function FilePick({ label, hint, accept }: { label: string; hint: string; accept: string }) {
+  return (
+    <label className="dfile">
+      <input type="file" accept={accept} />
+      <span className="t">{label}</span>
+      <span className="s">{hint}</span>
+      <span className="dpickbtn">Выбрать файл</span>
+    </label>
+  );
+}
+
+/** Выбор из списка — свой, а не нативный `<select>`.
+
+    Нативный список рисует система, и кегль в нём не подчиняется CSS: рядом с
+    полем на 14 пикселей выпадал список системным размером, вдвое крупнее. Свой
+    список набран тем же кеглем, что поле, и живёт в том же языке, что остальные
+    элементы формы. */
 export function Select({
   label,
   items,
@@ -605,20 +661,50 @@ export function Select({
 }: {
   label?: string;
   items: string[];
-  value: string;
-  onChange: (v: string) => void;
+  /** Выбранное значение. Не передано — селектор помнит выбор сам: в макете это
+      чаще и нужно, а снаружи значение держат те экраны, где от него что-то
+      зависит (область у выдачи роли, категория в календаре). */
+  value?: string;
+  onChange?: (v: string) => void;
   wide?: boolean;
 }) {
+  const [open, setOpen] = useState(false);
+  const [own, setOwn] = useState(value ?? items[0]);
+  const cur = value ?? own;
+  const pick = (i: string) => {
+    setOwn(i);
+    onChange?.(i);
+    setOpen(false);
+  };
   return (
     <div className={'dfield' + (wide ? ' wide' : '')}>
-      <label className="k">
-        {label}
-        <select className="dselect" value={value} onChange={(e) => onChange(e.target.value)}>
-          {items.map((i) => (
-            <option key={i} value={i}>{i}</option>
-          ))}
-        </select>
-      </label>
+      {label && <span className="k">{label}</span>}
+      <div className="dsel">
+        <button
+          type="button"
+          className={'dselect' + (open ? ' on' : '')}
+          aria-expanded={open}
+          onClick={() => setOpen(!open)}
+        >
+          {cur}
+          <ChevronDown size={15} />
+        </button>
+        {open && (
+          <div className="dsel-list">
+            {items.map((i) => (
+              <button
+                key={i}
+                type="button"
+                className={'dsel-i' + (i === cur ? ' on' : '')}
+                onClick={() => pick(i)}
+              >
+                {i === cur && <Check size={13} />}
+                {i}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
