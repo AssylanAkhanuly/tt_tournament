@@ -20,8 +20,8 @@ import {
 } from 'lucide-react';
 import {
   A, ActionBar, Alert, Also, Area, Arrow, AW, Board, Chips, DateField, Derived, Empty, Field,
-  FilePick, Form, Ghost, Hint, Input, Modal, Off, P, Panel, RoleScreen, Row, Rows, Screen, Select,
-  Shot, States,
+  FilePick, Filter, Form, Ghost, Hint, Input, Modal, Off, P, Panel, RoleScreen, Row, Rows, Screen,
+  Select, Shot, States,
 } from './shell';
 import type { ScreenMap } from './shell';
 import type { DeskVariant } from '../deskShell';
@@ -644,30 +644,8 @@ export function Cal1_2({ variant }: { variant?: DeskVariant }) {
       sub={`Сезон 2026 · ${CATS.find((c) => c.k === cat)!.sub}`}
     >
       <div className="dactionbar">
-        <div className="dseg2">
-          {CATS.map((c) => (
-            <button
-              key={c.k}
-              type="button"
-              className={c.k === cat ? 'on' : undefined}
-              onClick={() => setCat(c.k)}
-            >
-              {c.k}
-            </button>
-          ))}
-        </div>
-        <div className="dseg2">
-          {VIEWS.map((v) => (
-            <button
-              key={v}
-              type="button"
-              className={v === view ? 'on' : undefined}
-              onClick={() => setView(v)}
-            >
-              {v}
-            </button>
-          ))}
-        </div>
+        <Filter items={CATS.map((c) => c.k)} active={cat} onPick={(v) => setCat(v as typeof cat)} />
+        <Filter items={[...VIEWS]} active={view} onPick={(v) => setView(v as typeof view)} />
       </div>
       <div className="dactionbar" style={{ justifyContent: 'flex-end' }}>
         <div style={{ display: 'flex', gap: 8 }}>
@@ -2030,18 +2008,7 @@ export function GrantRole1_11() {
         <Block title="Область — состав зависит от роли">
           {/* Недоступные области не показываем серыми — их просто нет: у роли
               они не бывают, и выбор из одной кнопки сам это говорит. */}
-          <div className="dseg2">
-            {g.scopes.map((s) => (
-              <button
-                key={s}
-                type="button"
-                className={s === scope ? 'on' : undefined}
-                onClick={() => setScope(s)}
-              >
-                {s}
-              </button>
-            ))}
-          </div>
+          <Filter items={g.scopes} active={scope} onPick={(v) => setScope(v as Scope)} />
           <div style={{ marginTop: 12, display: 'grid', gap: 10 }}>
             {/* Ключ по области сбрасывает выбор при её смене: турнир, выбранный
                 для стола, не должен всплыть в клубе. */}
@@ -2830,25 +2797,12 @@ export function Log1_7() {
   return (
     <RoleScreen role={R01} nav="Журнал" title="Журнал действий">
       <div className="dactionbar">
-        <div className="dseg2">
-          {LOG_TYPES.map((t) => (
-            <button key={t} type="button" className={t === type ? 'on' : undefined} onClick={() => setType(t)}>
-              {t}
-            </button>
-          ))}
-        </div>
-        <div className="dseg2">
-          {LOG_PERIODS.map((x) => (
-            <button
-              key={x.k}
-              type="button"
-              className={x.k === period.k ? 'on' : undefined}
-              onClick={() => setPeriod(x)}
-            >
-              {x.k}
-            </button>
-          ))}
-        </div>
+        <Filter items={[...LOG_TYPES]} active={type} onPick={setType} />
+        <Filter
+          items={LOG_PERIODS.map((x) => x.k)}
+          active={period.k}
+          onPick={(k) => setPeriod(LOG_PERIODS.find((x) => x.k === k)!)}
+        />
       </div>
 
       {rows.length ? (
