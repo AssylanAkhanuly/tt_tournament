@@ -797,6 +797,105 @@ export function Queue({
   );
 }
 
+/* ── Рабочая очередь с разбором ──────────────────────────────────── */
+
+/** Строка внутри счётчика: одно дело очереди.
+
+    Счётчик сам по себе — только тревога. «5 регламентов» не говорит, каких и
+    чего в них не хватает, и с панели всё равно приходится идти в список и
+    искать глазами. Поэтому в строке сразу написано, чего не хватает (`why`) и
+    что с этим делать или кто это снимает (`who`). */
+export type AttnRow = {
+  nm: string;
+  mt: string;
+  /** Почему дело в очереди: чего не хватает и сколько ждёт. */
+  why: string;
+  /** Что решить или кто снимает — не всегда сама роль. */
+  who: string;
+  /** Экран, где дело снимается. */
+  to?: string;
+  /** `bad` — срок уже вышел, дело блокирует следующий шаг. */
+  cls?: 'bad';
+};
+
+export type AttnItem = {
+  n: string;
+  t: string;
+  rows: AttnRow[];
+};
+
+const AttnList = ({ item, act, max }: { item: AttnItem; act: boolean; max?: number }) => (
+  <div className="mkattn-d">
+    <div className="mkattn-d-b">
+      {item.rows.slice(0, max ?? item.rows.length).map((r) => (
+        <div className="mkattn-r" key={r.nm} data-to={act ? r.to : undefined}>
+          <div>
+            <div className="nm">{r.nm}</div>
+            <div className="mt">{r.mt}</div>
+          </div>
+          <div className="who">{r.who}</div>
+          <div className={'why' + (r.cls ? ` ${r.cls}` : '')}>{r.why}</div>
+        </div>
+      ))}
+    </div>
+    <div className="mkattn-d-f">
+      <span>
+        {act ? 'Строка ведёт туда, где дело снимается' : 'Только просмотр: переходов и действий у роли нет'}
+        {max && max < item.rows.length && ` · показаны ${max} из ${item.n}`}
+      </span>
+    </div>
+  </div>
+);
+
+/** Очередь дел: в каждый счётчик можно провалиться и увидеть, что в нём.
+
+    Одна на все роли: очередь у председателя ГСК и у администратора федерации
+    отвечает на один вопрос — «что от меня ждут», — и двумя реализациями она бы
+    разъехалась. Различаются только данные.
+
+    Раскрытым по умолчанию стоит первый счётчик: макет должен показывать сам
+    разбор, а не прятать его за клик. */
+export function Attention({
+  items,
+  act = true,
+  action,
+  max,
+}: {
+  items: AttnItem[];
+  /** У наблюдателей (роли 3 и 4) переходов и кнопок нет вовсе. */
+  act?: boolean;
+  /** Главная кнопка экрана — в одном ряду со счётчиками. */
+  action?: ReactNode;
+  /** Сколько строк показывать в раскрытом счётчике. */
+  max?: number;
+}) {
+  const [open, setOpen] = useState<string | null>(items[0].t);
+  const cur = items.find((a) => a.t === open);
+  return (
+    <div className="mkattn-w">
+      <div className="mkattn-top">
+        <div className="mkattn">
+          <span className="mkattn-h">Требует внимания</span>
+          {items.map((a) => (
+            <button
+              type="button"
+              className={'mkattn-i' + (a.t === open ? ' on' : '')}
+              key={a.t}
+              aria-expanded={a.t === open}
+              onClick={() => setOpen(a.t === open ? null : a.t)}
+            >
+              <b>{a.n}</b> {a.t}
+              <ChevronDown size={13} />
+            </button>
+          ))}
+        </div>
+        {action}
+      </div>
+      {cur && <AttnList item={cur} act={act} max={max} />}
+    </div>
+  );
+}
+
 /** Ещё один кадр того же экрана: следующий шаг или другое устройство.
     Не состояние — поэтому стоит отдельной полкой, а не в `States`. */
 export function Also({ cap, children }: { cap: string; children: ReactNode }) {

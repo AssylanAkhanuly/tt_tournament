@@ -91,7 +91,13 @@
 .dtitle p { color: var(--c-muted); font-size: 12.5px; margin-top: 2px; }
 
 .dchips { display: flex; gap: 10px; }
-.dchip { flex: 1; background: var(--c-panel); border: 1px solid var(--c-glass-line); border-radius: var(--r-sm); padding: 12px 14px; box-shadow: inset 0 1px 0 var(--c-glass-hi); }
+/* Плитка показателя — заливкой, без рамки. Рамка вместе с верхней подсветкой
+   `inset` задваивала верхний край, а нижний и правый на тёмном фоне почти
+   пропадали: получалась неровная рамка. Заливка отделяет плитку от фона одинаково
+   со всех четырёх сторон — то же правило, что у полей ввода и списков. */
+.dchip { flex: 1; background: var(--c-panel); border-radius: var(--r-sm); padding: 13px 15px; }
+.dchip[data-to] { cursor: pointer; }
+.dchip[data-to]:hover { background: var(--c-panel-2); }
 .dchip .v { font-size: 22px; font-weight: 800; font-variant-numeric: tabular-nums; letter-spacing: -.5px; }
 .dchip .k { font-size: 11.5px; color: var(--c-muted); margin-top: 2px; }
 .dchip.g .v { color: var(--c-success); } .dchip.b .v { color: var(--c-accent); } .dchip.a .v { color: var(--c-warning); }
@@ -204,4 +210,8 @@
 .dpickbtn { font-size: 12px; font-weight: 700; color: var(--c-accent-ink); background: var(--c-accent); border-radius: var(--r-xs); padding: 8px 14px; box-shadow: inset 0 1px 0 var(--c-glass-hi-3); white-space: nowrap; }
 .dactionbar { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
 .dcount { font-size: 12.5px; color: var(--c-muted); font-weight: 600; }
+/* Факт внутри пояснения: сама цифра читается, подпись вокруг — нет.
+   `.hot` — срочность: близкий старт должен цеплять глаз без плитки. */
+.dcount b { color: var(--c-ink); font-weight: 700; }
+.dcount b.hot { color: var(--c-warning); }
 .dsubmit { flex: none; }

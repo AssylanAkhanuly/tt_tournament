@@ -21,8 +21,9 @@ import {
 import {
   A, ActionBar, Alert, Also, Area, Arrow, AW, Board, Chips, DateField, Derived, Empty, Field,
   FilePick, Filter, Form, Ghost, Hint, Input, Modal, Off, P, Panel, RoleScreen, Row, Rows, Screen,
-  Select, Shot, States,
+  Select, Shot, States, Attention as AttnStrip,
 } from './shell';
+import type { AttnItem } from './shell';
 import type { ScreenMap } from './shell';
 import type { DeskVariant } from '../deskShell';
 import { Switch } from '../ui/forms';
@@ -198,45 +199,16 @@ export const KPI = [
   { v: '₸ 4,12 млн', k: 'Взносы собраны · 78%', tone: 'g' as const },
 ];
 
-/** Строка внутри счётчика: одно дело очереди.
-
-    Счётчик сам по себе — только тревога. «5 регламентов» не говорит, каких и
-    чего в них не хватает, и с панели всё равно приходится идти в календарь и
-    искать глазами. Поэтому в строке сразу написано, чего не хватает (`why`) и
-    кто это снимает (`who`): половина очереди администратора федерации — чужие
-    дела, по которым он не решает, а напоминает. */
-type AttnRow = {
-  nm: string;
-  mt: string;
-  /** Почему дело в очереди: чего не хватает и сколько ждёт. */
-  why: string;
-  /** Кто снимает: не всегда эта роль. */
-  who: string;
-  /** Экран, где дело снимается. */
-  to?: string;
-  /** `bad` — срок уже вышел, дело блокирует следующий шаг. */
-  cls?: 'bad';
-};
-
-type AttnItem = {
-  n: string;
-  t: string;
-  /** Полный список с готовым фильтром — «показать все» под списком. */
-  to?: string;
-  rows: AttnRow[];
-};
-
 /** Рабочая очередь: в каждый счётчик можно провалиться и увидеть, что в нём.
 
     Числа сходятся с календарём роли (`TOURS`) и с экраном экономиста: судей
     нет у «Иртыша», «Шымкента» и 3-го тура Лиги; «Шымкент» стоит в двух
     счётчиках сразу — пока регламент не заполнен, приём заявок судей на него не
     открыть, и это в очереди видно. */
-export const ATTENTION: AttnItem[] = [
+const ATTENTION: AttnItem[] = [
   {
     n: '3',
     t: 'без главного судьи',
-    to: 'Э1.2',
     rows: [
       {
         nm: 'ОРТ «Кубок Иртыша»',
@@ -265,7 +237,6 @@ export const ATTENTION: AttnItem[] = [
   {
     n: '5',
     t: 'регламент не заполнен',
-    to: 'Э1.2',
     rows: [
       {
         nm: 'ОРТ «Шымкент Open»',
@@ -308,7 +279,6 @@ export const ATTENTION: AttnItem[] = [
   {
     n: '12',
     t: 'заявки без решения > 3 дней',
-    to: 'Э1.3',
     rows: [
       {
         nm: 'Первенство РК · 2010 г.р. и моложе',
@@ -338,7 +308,6 @@ export const ATTENTION: AttnItem[] = [
   {
     n: '18',
     t: 'взносы просрочены',
-    to: 'Э1.12',
     rows: [
       {
         nm: 'Жумабеков Расул',
@@ -371,33 +340,6 @@ export const ATTENTION: AttnItem[] = [
 
     Заголовка у списка нет: он повторял бы подпись раскрытого счётчика прямо
     над собой. Сколько строк показано из скольких — в подвале. */
-const AttnList = ({ item, act, max }: { item: AttnItem; act: boolean; max?: number }) => (
-  <div className="mkattn-d">
-    <div className="mkattn-d-b">
-      {item.rows.slice(0, max ?? item.rows.length).map((r) => (
-        <div className="mkattn-r" key={r.nm} data-to={act ? r.to : undefined}>
-          <div>
-            <div className="nm">{r.nm}</div>
-            <div className="mt">{r.mt}</div>
-          </div>
-          <div className="who">{r.who}</div>
-          <div className={'why' + (r.cls ? ` ${r.cls}` : '')}>{r.why}</div>
-        </div>
-      ))}
-    </div>
-    <div className="mkattn-d-f">
-      {/* У наблюдателей (роли 3 и 4) переходов и кнопок нет — очередь им
-          показывает, кого ждёт дело, а не куда нажать. Молча резать список
-          нельзя: сколько строк показано из скольких, написано здесь же. */}
-      <span>
-        {act ? 'Строка ведёт туда, где дело снимается' : 'Только просмотр: переходов и действий у роли нет'}
-        {max && max < item.rows.length && ` · показаны ${max} из ${item.n}`}
-      </span>
-      {/* Полный список — в календаре сезона: главное действие экрана одно, и
-          это «Завести соревнование». */}
-    </div>
-  </div>
-);
 
 /** Строка очереди под плитками: счётчик раскрывает свой список на месте.
 
@@ -407,44 +349,11 @@ const AttnList = ({ item, act, max }: { item: AttnItem; act: boolean; max?: numb
     `action` — главная кнопка экрана, она стоит в одном ряду со счётчиками:
     раньше ряд собирался снаружи полосой `dactionbar`, но теперь под ним
     раскрывается список, и полоса разъезжалась. */
-export const Attention = ({
-  act = true,
-  action,
-  max,
-}: {
-  act?: boolean;
-  action?: ReactNode;
-  /** Сколько строк показывать в раскрытом счётчике. У наблюдателей (роли 3 и 4)
-      очередь показывает объём, а не разбор, и длинный список только вытесняет
-      календарь за нижний край экрана. */
-  max?: number;
-}) => {
-  const [open, setOpen] = useState<string | null>(ATTENTION[0].t);
-  const cur = ATTENTION.find((a) => a.t === open);
-  return (
-    <div className="mkattn-w">
-      <div className="mkattn-top">
-        <div className="mkattn">
-          <span className="mkattn-h">Требует внимания</span>
-          {ATTENTION.map((a) => (
-            <button
-              type="button"
-              className={'mkattn-i' + (a.t === open ? ' on' : '')}
-              key={a.t}
-              aria-expanded={a.t === open}
-              onClick={() => setOpen(a.t === open ? null : a.t)}
-            >
-              <b>{a.n}</b> {a.t}
-              <ChevronDown size={13} />
-            </button>
-          ))}
-        </div>
-        {action}
-      </div>
-      {cur && <AttnList item={cur} act={act} max={max} />}
-    </div>
-  );
-};
+/** Очередь администратора федерации: общий компонент со своими данными. */
+export const Attention = (props: { act?: boolean; action?: ReactNode; max?: number }) => (
+  <AttnStrip items={ATTENTION} {...props} />
+);
+
 
 /** «Сегодня идут»: тур Лиги идёт двумя дивизионами сразу, на разных столах.
 

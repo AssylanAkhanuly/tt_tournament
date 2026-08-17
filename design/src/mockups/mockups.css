@@ -168,6 +168,10 @@
    кнопка, и поле должно занимать остальное, а не свою минимальную ширину —
    иначе ссылка приглашения обрезается на трети. */
 .dactionbar > .dfield { flex: 1; min-width: 0; }
+/* Строка фактов рядом с поиском не сжимается: сжатие срезало ей хвост
+   («решений 0 из 3» уходило за край), а именно хвост и меняется по ходу
+   разбора. Ужимается поле поиска — ему есть куда. */
+.dactionbar > .dcount { flex: 0 0 auto; white-space: nowrap; }
 
 /* Выведенное значение: подпись слева, значение справа. Заливки нет — она стала
    признаком «сюда пишут», и здесь её быть не должно: это значение считает
@@ -238,6 +242,29 @@
 .mktable-r .nm { font-weight: 700; color: var(--c-ink); }
 /* Своя строка подсвечена: человек ищет в списке прежде всего себя. */
 .mktable-r.me { background: var(--c-accent-soft); }
+
+/* Таблица заявок судей (Э5.2): судья · категория · регион · рейтинг · турниров
+   · решение. Тот же приём, что у состава участников — поиск и сортировка по
+   столбцам; в первой колонке фото и последний турнир с ролью, чтобы по строке
+   было видно, кого назначаешь. */
+.mktable.mkcands .mktable-h,
+.mktable.mkcands .mktable-r { grid-template-columns: 1.7fr 116px 108px 92px 84px 168px; }
+.mktable.mkcands .mktable-r .nm { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.mktable.mkcands .mktable-r .nm img { width: 30px; height: 30px; border-radius: 50%; object-fit: cover; flex: none; }
+.mktable.mkcands .mktable-r .nm i { font-style: normal; min-width: 0; }
+.mktable.mkcands .mktable-r .nm em {
+  display: block;
+  font-style: normal;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--c-dim);
+  margin-top: 1px;
+}
+/* Решение видно на самой строке: назначенный подсвечен зелёным, отклонённый —
+   красным. Из списка они не исчезают, иначе не понять, что уже разобрано. */
+.mktable.mkcands .mktable-r.yes { background: var(--c-success-soft-2); }
+.mktable.mkcands .mktable-r.no { background: var(--c-danger-soft-2); }
+.mktable.mkcands .vset { justify-content: flex-end; }
 
 /* Таблица заявок клуба (Э13.5): что подаём, за кого, к какому сроку и что с
    заявкой. Колонок четыре, сортировки нет — заявки и так стоят по срочности,

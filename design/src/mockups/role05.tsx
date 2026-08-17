@@ -7,11 +7,13 @@
    2. рейтинг судей считается по Положению (TZ §7.2): R = S1 + S2 + S3 + S4,
       коэффициент 1,5 за роль и за выезд, окно апелляций — 10 дней. */
 
-import type { ReactNode } from 'react';
-import { BadgeCheck, Ban, Check, Megaphone, Paperclip, Undo2, UserPlus } from 'lucide-react';
+import { useState, type ReactNode } from 'react';
+import { ArrowUpDown, BadgeCheck, Ban, Check, Megaphone, Paperclip, Undo2, UserPlus, X } from 'lucide-react';
 import {
-  A, AW, ActionBar, Alert, Arrow, Board, Chips, Empty, Field, Form, Ghost, Hint, Input, Modal, Off, Panel, Queue, RoleScreen, Row, Rows, Screen, Shot, States,
+  A, AW, ActionBar, Alert, Arrow, Attention, Board, Chips, Empty, Field, Form, Ghost, Hint, Input,
+  Modal, Off, Panel, RoleScreen, Row, Rows, Screen, Search, Shot, States,
 } from './shell';
+import type { AttnItem } from './shell';
 import type { DeskVariant } from '../deskShell';
 import type { ScreenMap } from './shell';
 import { R05 } from './roles';
@@ -42,17 +44,74 @@ const P = ({ t, cls }: { t: string; cls: Cls }) => (
   <span className={'pill ' + cls} style={{ margin: 0 }}>{t}</span>
 );
 
-/* ── Э5.1 · Мои соревнования: две очереди решений ────────────────── */
+/* ── Э5.1 · Мои соревнования: очередь решений ──────────────────── */
 
+/** Очередь председателя ГСК. Тот же компонент, что у администратора федерации:
+    вопрос один — «что от меня ждут», — и двумя реализациями он бы разъехался.
+
+    Разница в колонке решения: у администратора федерации половина очереди
+    решается не им, и там написано, кого ждать. Здесь ждут **его самого**,
+    поэтому в колонке — что именно решить. */
+const ATTENTION5: AttnItem[] = [
+  {
+    n: '3',
+    t: 'ждут назначения судьи',
+    rows: [
+      {
+        nm: 'Открытый турнир «Тараз Опен»',
+        mt: 'Тараз · 16–17.08',
+        why: 'до старта 4 дня · подано 3 заявки судей',
+        who: 'назначить главного судью',
+        to: 'Э5.2',
+        cls: 'bad',
+      },
+      {
+        nm: 'Первенство РК до 19 лет',
+        mt: 'Шымкент · 24–27.08',
+        why: 'до старта 12 дней · подано 6 заявок судей',
+        who: 'назначить главного судью',
+        to: 'Э5.2',
+      },
+      {
+        nm: 'Кубок Республики Казахстан 2026',
+        mt: 'Караганда · 12–15.09',
+        why: 'до старта 31 день · подано 9 заявок судей',
+        who: 'назначить главного судью',
+        to: 'Э5.2',
+      },
+    ],
+  },
+  {
+    n: '2',
+    t: 'ждут утверждения протокола',
+    rows: [
+      {
+        nm: 'Первенство РК до 15 лет',
+        mt: 'сыгран 02.08 · главный судья Токаев М.',
+        why: 'ждёт 10 дней · до пересчёта рейтинга протокол должен быть закрыт',
+        who: 'утвердить или вернуть с причиной',
+        to: 'Э5.4',
+        cls: 'bad',
+      },
+      {
+        nm: '«Алатау Опен» 2026',
+        mt: 'сыгран 09.08 · главный судья Оспанов Т.',
+        why: 'ждёт 3 дня',
+        who: 'утвердить или вернуть с причиной',
+        to: 'Э5.4',
+      },
+    ],
+  },
+];
+
+/** Остальные старты сезона — не очередь, а обзор: здесь ничего не ждёт решения,
+    но отсюда открывают приём заявок судей и переносят турниры. */
 export function Queues5_1({ variant }: { variant?: DeskVariant }) {
+  /* «Открыть приём заявок судей» переводит турнир из черновика в приём: пока
+     приём не открыт, судьи не подадут заявки, а без заявок некого назначать. */
+  const [openIntake, setOpenIntake] = useState(false);
   return (
-    <RoleScreen
-      variant={variant}
-      role={R05}
-      nav="Мои соревнования"
-      title="Мои соревнования"
-      sub="Сезон 2026 · официальные старты"
-    >
+    <RoleScreen variant={variant} role={R05} nav="Мои соревнования" title="Мои соревнования">
       <Chips
         items={[
           { v: '8', k: 'Официальных стартов' },
@@ -61,131 +120,202 @@ export function Queues5_1({ variant }: { variant?: DeskVariant }) {
           { v: '86', k: 'Судей в рейтинге' },
         ]}
       />
-      <Queue
-        items={[
-          { n: '3', t: 'ждут назначения судьи', to: 'Э5.2' },
-          { n: '2', t: 'ждут утверждения протокола', to: 'Э5.4' },
-        ]}
-      />
+      {/* Очередь заменила две панели, которые показывали те же списки: счётчик и
+          панель под ним были одними и теми же делами дважды. */}
+      <Attention items={ATTENTION5} />
 
-      <div className="mkcols">
-        <Panel title="Ждут назначения судьи" extra={<P t="3 ТУРНИРА" cls="wait" />}>
-          <Rows>
-            <Row to="Э5.2"
-              nm="Кубок Республики Казахстан 2026"
-              sub="Караганда · 12–15.09 · подано 9 заявок судей"
-              pill={{ t: '31 ДЕНЬ ДО СТАРТА', cls: 'reg' }}
-            />
-            <Row to="Э5.2"
-              nm="Первенство РК до 19 лет"
-              sub="Шымкент · 24–27.08 · подано 6 заявок судей"
-              pill={{ t: '12 ДНЕЙ ДО СТАРТА', cls: 'wait' }}
-            />
-            <Row to="Э5.2"
-              nm="Открытый турнир «Тараз Опен»"
-              sub="Тараз · 16–17.08 · подано 3 заявки судей"
-              pill={{ t: '4 ДНЯ ДО СТАРТА', cls: 'bad' }}
-            />
-          </Rows>
-        </Panel>
-
-        <Panel title="Ждут утверждения протокола" extra={<P t="2 ПРОТОКОЛА" cls="wait" />}>
-          <Rows>
-            <Row to="Э5.4"
-              nm="«Алатау Опен» 2026"
-              sub="сыгран 09.08 · главный судья Оспанов Т."
-              pill={{ t: 'ЖДЁТ 3 ДНЯ', cls: 'wait' }}
-            />
-            <Row to="Э5.4"
-              nm="Первенство РК до 15 лет"
-              sub="сыгран 02.08 · главный судья Токаев М."
-              pill={{ t: 'ЖДЁТ 10 ДНЕЙ', cls: 'bad' }}
-            />
-          </Rows>
-        </Panel>
-      </div>
-
-      <ActionBar count="Остальные официальные старты сезона · для обзора, отмены и переноса" />
-      <Rows>
-        <Row
-          nm="Чемпионат Казахстана 2026"
-          sub="Астана · 18–20.05 · протокол утверждён 24.05"
-          pill={{ t: 'ЗАВЕРШЁН', cls: 'live' }}
-        />
-        <Row
-          nm="Кубок вызова, 1-й тур"
-          sub="Актобе · 03–05.10 · приём заявок судей ещё не открыт"
-          pill={{ t: 'ЧЕРНОВИК', cls: 'wait' }}
-          action="Открыть приём заявок судей"
-        />
-      </Rows>
+      <Panel title="Остальные старты сезона">
+        <Rows>
+          <Row
+            nm="Чемпионат Казахстана 2026"
+            sub="Астана · 18–20.05 · протокол утверждён 24.05"
+            pill={{ t: 'ЗАВЕРШЁН', cls: 'live' }}
+          />
+          <Row
+            nm="Кубок вызова, 1-й тур"
+            sub={openIntake ? 'Актобе · 03–05.10 · приём заявок судей открыт' : 'Актобе · 03–05.10 · приём заявок судей ещё не открыт'}
+            pill={openIntake ? { t: 'ЗАЯВКИ СУДЕЙ', cls: 'wait' } : { t: 'ЧЕРНОВИК', cls: 'done' }}
+            action={openIntake ? 'Закрыть приём' : 'Открыть приём заявок судей'}
+            onAction={() => setOpenIntake(!openIntake)}
+          />
+        </Rows>
+      </Panel>
     </RoleScreen>
   );
 }
 
-/* ── Э5.2 · Заявки судей: по каждому видно, кого назначаешь ──────── */
+/* ── Э5.2 · Заявки судей на турнир ───────────────────────────────── */
+
+/** Турниры, где приём заявок судей открыт. Их несколько одновременно — сезон
+    идёт параллельно, — поэтому экран начинается с выбора турнира, а не привязан
+    к одному: иначе к каждому пришлось бы возвращаться через очередь. */
+const OPEN_TOURS = [
+  { nm: 'Открытый турнир «Тараз Опен»', d: '16–17.08', till: '25.07', left: 'до старта 4 дня', n: 3, cls: 'bad' as Cls },
+  { nm: 'Первенство РК до 19 лет', d: '24–27.08', till: '10.08', left: 'до старта 12 дней', n: 6, cls: 'wait' as Cls },
+  { nm: 'Кубок Республики Казахстан 2026', d: '12–15.09', till: '25.08', left: 'до старта 31 день', n: 9, cls: 'reg' as Cls },
+];
 
 type Cand = {
   av: string;
   nm: string;
   cat: string;
   reg: string;
-  r: string;
-  place: string;
-  season: string;
+  /** Рейтинг судьи R (§7.2) — по нему и сортируют по умолчанию. */
+  r: number;
+  place: number;
+  season: number;
   last: string;
-  /** судья из другого региона — на республиканских идёт коэффициент 1,5 (§7.2) */
-  away?: boolean;
 };
 
 const CANDS: Cand[] = [
-  { av: A(76), nm: 'Оспанов Тимур', cat: 'Национальная категория', reg: 'Астана', r: '27,5', place: '№1', season: '6', last: 'Чемпионат РК, гл. судья', away: true },
-  { av: A(13), nm: 'Пак Сергей', cat: 'Первая категория', reg: 'Павлодар', r: '18', place: '№3', season: '5', last: '«Алатау Опен», судья', away: true },
-  { av: AW(65), nm: 'Абдрахманова Сауле', cat: 'Первая категория', reg: 'Караганда', r: '12,5', place: '№5', season: '4', last: 'Первенство до 15, секретарь' },
-  { av: A(19), nm: 'Цой Виктор', cat: 'Первая категория', reg: 'Караганда', r: '9,5', place: '№6', season: '3', last: 'Кубок Караганды, судья' },
-  { av: A(22), nm: 'Жумабеков Расул', cat: 'Судья по спорту', reg: 'Караганда', r: '7', place: '№19', season: '2', last: 'Кубок Караганды, судья' },
+  { av: A(76), nm: 'Оспанов Тимур', cat: 'Национальная', reg: 'Астана', r: 27.5, place: 1, season: 6, last: 'Чемпионат РК, гл. судья' },
+  { av: A(51), nm: 'Токаев Марат', cat: 'Национальная', reg: 'Шымкент', r: 22.5, place: 2, season: 5, last: 'Первенство до 19, гл. судья' },
+  { av: A(13), nm: 'Пак Сергей', cat: 'Первая', reg: 'Павлодар', r: 18, place: 3, season: 5, last: '«Алатау Опен», судья' },
+  { av: AW(31), nm: 'Ким Лариса', cat: 'Первая', reg: 'Караганда', r: 14, place: 4, season: 4, last: 'Кубок Караганды, секретарь' },
+  { av: AW(65), nm: 'Абдрахманова Сауле', cat: 'Первая', reg: 'Караганда', r: 12.5, place: 5, season: 4, last: 'Первенство до 15, секретарь' },
+  { av: A(19), nm: 'Цой Виктор', cat: 'Первая', reg: 'Караганда', r: 9.5, place: 6, season: 3, last: 'Кубок Караганды, судья' },
+  { av: A(22), nm: 'Жумабеков Расул', cat: 'Судья по спорту', reg: 'Караганда', r: 7, place: 19, season: 2, last: 'Кубок Караганды, судья' },
+  { av: AW(32), nm: 'Абдрахманова Айгерим', cat: 'Вторая', reg: 'Астана', r: 4, place: 61, season: 1, last: 'Кубок Алатау, судья' },
+  { av: A(45), nm: 'Досжан Марат', cat: 'Вторая', reg: 'Алматы', r: 3.5, place: 68, season: 1, last: 'Клубная лига, судья' },
 ];
 
-const CandRow = ({ c }: { c: Cand }) => (
-  <div className="drow">
-    <img src={c.av} alt="" />
-    <div className="who">
-      <div className="nm">{c.nm}</div>
-      <div className="rl">{c.cat} · {c.reg} · {c.last}</div>
-    </div>
-    <div className="rt">
-      <div><div className="v">{c.r}</div><div className="k">Рейтинг R</div></div>
-      <div><div className="v">{c.place}</div><div className="k">Место</div></div>
-      <div><div className="v">{c.season}</div><div className="k">Турниров</div></div>
-    </div>
-    {c.away ? <P t="ВЫЕЗД · К 1,5" cls="reg" /> : <P t="СВОЙ РЕГИОН" cls="wait" />}
-    <button className="dpickbtn">Назначить</button>
-    <GhostPick>Отклонить</GhostPick>
-  </div>
-);
+/** Колонки: по каким сортируют. Список судей ищут по фамилии и сравнивают по
+    рейтингу — как состав участников у спортсмена (Э14.5), тем же приёмом. */
+const COLS5: { k: 'nm' | 'cat' | 'reg' | 'r' | 'season'; t: string; num?: boolean }[] = [
+  { k: 'nm', t: 'Судья' },
+  { k: 'cat', t: 'Категория' },
+  { k: 'reg', t: 'Регион' },
+  { k: 'r', t: 'Рейтинг R', num: true },
+  { k: 'season', t: 'Турниров', num: true },
+];
+
+/** Решение по заявке: 1 — назначен, −1 — отклонён, 0 — решения нет. */
+type Verdict = Record<string, number>;
 
 export function Applications5_2() {
+  const [tour, setTour] = useState(OPEN_TOURS[0].nm);
+  const [q, setQ] = useState('');
+  const [sort, setSort] = useState<{ k: (typeof COLS5)[number]['k']; up: boolean }>({ k: 'r', up: false });
+  /* Решение хранится по судье: назначенный и отклонённый должны остаться в
+     списке с пометкой, а не исчезнуть — иначе не видно, что уже разобрано. */
+  const [v, setV] = useState<Verdict>({});
+  const cur = OPEN_TOURS.find((t) => t.nm === tour)!;
+  const set = (nm: string, n: number) => setV({ ...v, [nm]: v[nm] === n ? 0 : n });
+
+  const pool = CANDS.slice(0, cur.n);
+  const found = pool.filter((c) => {
+    const t = q.trim().toLowerCase();
+    return !t || c.nm.toLowerCase().includes(t) || c.reg.toLowerCase().includes(t) || c.cat.toLowerCase().includes(t);
+  });
+  const rows = [...found].sort((a, b) => {
+    const k = sort.k;
+    const x = k === 'r' || k === 'season' ? a[k] - b[k] : String(a[k]).localeCompare(String(b[k]), 'ru');
+    return sort.up ? x : -x;
+  });
+  const named = pool.filter((c) => v[c.nm] === 1).length;
+
   return (
     <RoleScreen
       role={R05}
       nav="Заявки судей"
       title="Заявки судей на турнир"
-      sub="Кубок Республики Казахстан 2026 · Караганда · 12–15.09.2026"
+      back={{ label: 'Мои соревнования', to: 'Э5.1' }}
     >
-      <Chips
-        items={[
-          { v: '9', k: 'Заявок судей', tone: 'b' },
-          { v: '25.08', k: 'Приём заявок до' },
-          { v: '4', k: 'Национальная категория' },
-          { v: '4', k: 'Из других регионов', tone: 'a' },
-        ]}
-      />
-      <ActionBar count="9 заявок по рейтингу R · в строке: категория, регион и последний турнир с ролью">
-        <GhostPick>Журнал начислений судьи</GhostPick>
-      </ActionBar>
-      <Rows>
-        {CANDS.map((c) => <CandRow key={c.nm} c={c} />)}
-      </Rows>
+      {/* Турниров с открытым приёмом несколько сразу: выбор здесь, а не возврат
+          в очередь за каждым. Срочный — первым, у него меньше всего времени. */}
+      <div className="dstages big">
+        {OPEN_TOURS.map((t) => (
+          <button
+            key={t.nm}
+            type="button"
+            className={'dstage' + (t.nm === tour ? ' now' : '')}
+            onClick={() => setTour(t.nm)}
+          >
+            {t.nm} · {t.n}
+          </button>
+        ))}
+      </div>
+
+      {/* Плиток над таблицей нет: заявок в них было столько же, сколько строк
+          ниже, а «решений принято» повторяло пометки в самих строках. Даты,
+          срок приёма и решения ужаты в одну строку рядом с поиском — факты те
+          же, блок в четверть экрана под них не нужен. Срочность турнира при
+          этом остаётся цветной: за четыре дня до старта это главное на экране.
+
+          «Журнала начислений судьи» здесь тоже нет: журнал относится к **одному
+          судье**, а кнопка над таблицей не знает, к какому. Он живёт в рейтинге
+          судей (Э5.5) — в карточке судьи, куда по флоу ведёт раскрытие строки
+          (⚠ карточка по строке пока не нарисована). */}
+      <div className="dactionbar">
+        <Search value={q} placeholder="Фамилия, регион или категория" onChange={setQ} wide />
+        <span className="dcount">
+          {cur.d} · приём до {cur.till} ·{' '}
+          <b className={cur.cls === 'bad' ? 'hot' : undefined}>{cur.left}</b>
+          {' · решений '}<b>{named} из {cur.n}</b>
+        </span>
+      </div>
+
+      <div className="mktable mkcands">
+        <div className="mktable-h">
+          {COLS5.map((c) => (
+            <button
+              key={c.k}
+              type="button"
+              className={(c.num ? 'num' : '') + (sort.k === c.k ? ' on' : '')}
+              onClick={() => setSort({ k: c.k, up: sort.k === c.k ? !sort.up : c.k === 'nm' })}
+            >
+              {c.t}
+              {sort.k === c.k && <ArrowUpDown size={11} />}
+            </button>
+          ))}
+          <span />
+        </div>
+        <div className="mktable-b">
+          {rows.map((c) => (
+            <div
+              className={'mktable-r' + (v[c.nm] === 1 ? ' yes' : v[c.nm] === -1 ? ' no' : '')}
+              key={c.nm}
+            >
+              <span className="nm">
+                <img src={c.av} alt="" />
+                <i>{c.nm}<em>{c.last}</em></i>
+              </span>
+              <span>{c.cat}</span>
+              <span>{c.reg}</span>
+              <span className="num">{String(c.r).replace('.', ',')}</span>
+              <span className="num">{c.season}</span>
+              {/* Решение остаётся видимым: назначенный и отклонённый не исчезают
+                  из списка, иначе не понять, что уже разобрано. */}
+              <span className="vset">
+                {v[c.nm] === 1 && <P t="НАЗНАЧЕН" cls="live" />}
+                {v[c.nm] === -1 && <P t="ОТКЛОНЁН" cls="bad" />}
+                <button
+                  type="button"
+                  className={'vbtn yes' + (v[c.nm] === 1 ? ' on' : '')}
+                  title="Назначить главным судьёй"
+                  onClick={() => set(c.nm, 1)}
+                >
+                  <Check size={15} />
+                </button>
+                <button
+                  type="button"
+                  className={'vbtn no' + (v[c.nm] === -1 ? ' on' : '')}
+                  title="Отклонить заявку с причиной"
+                  data-to="Э5.9"
+                  onClick={() => set(c.nm, -1)}
+                >
+                  <X size={15} />
+                </button>
+              </span>
+            </div>
+          ))}
+          {rows.length === 0 && (
+            <div className="dcount" style={{ padding: '14px 12px' }}>
+              По запросу «{q}» никого нет — проверьте написание фамилии.
+            </div>
+          )}
+        </div>
+      </div>
     </RoleScreen>
   );
 }
@@ -222,6 +352,7 @@ export function Brigade5_3() {
       nav="Наряд"
       title="Наряд судей на турнир"
       sub="Кубок Республики Казахстан 2026 · Караганда · бригада 14 человек"
+      back={{ label: 'Заявки судей', to: 'Э5.2' }}
     >
       <Chips
         items={[
@@ -284,6 +415,7 @@ export function Protocol5_4() {
       nav="Протоколы"
       title="Протокол на утверждении"
       sub="«Алатау Опен» 2026 · Алматы · сыгран 09.08.2026"
+      back={{ label: 'Мои соревнования', to: 'Э5.1' }}
     >
       <div className="mkcols">
         <Panel title="Итоговый протокол" extra={<P t="ЖДЁТ 3 ДНЯ" cls="wait" />}>
@@ -364,7 +496,6 @@ export function Rating5_5() {
       role={R05}
       nav="Рейтинг судей"
       title="Рейтинг судей · сезон 2026"
-      sub="Сезон 2026 · 86 судей"
     >
       <Chips
         items={[
@@ -424,7 +555,7 @@ export function Docs5_6() {
       role={R05}
       nav="Рейтинг судей"
       title="Документы на проверке · S3 и S4"
-      sub="7 документов на проверке"
+      back={{ label: 'Рейтинг судей', to: 'Э5.5' }}
     >
       <Chips
         items={[
