@@ -7,10 +7,10 @@
 
 import type { ReactNode } from 'react';
 import {
-  CalendarClock, Filter, Paperclip, TriangleAlert, Undo2, UserPlus, Eye,
+  CalendarClock, Filter, Paperclip, Search as SearchIcon, TriangleAlert, Undo2, UserPlus, Eye,
 } from 'lucide-react';
 import {
-  A, AW, ActionBar, Alert, Arrow, Board, Chips, Empty, Field, Form, Hint, Panel, Queue, RoleScreen, Row, Rows, Screen, Shot, States, Submit,
+  A, AW, ActionBar, Alert, Arrow, Board, Chips, Empty, Field, Form, Hint, Input, Panel, Queue, RoleScreen, Row, Rows, Screen, Shot, States, Submit,
 } from './shell';
 import type { DeskVariant } from '../deskShell';
 import type { ScreenMap } from './shell';
@@ -127,13 +127,20 @@ export function Region12_1({ variant }: { variant?: DeskVariant }) {
           { v: '9', k: 'Клубов региона', tone: 'b' },
         ]}
       />
-      <Queue items={[{ n: '42', t: 'без годового взноса', to: 'Э12.1' }]} />
+      <Queue
+        items={[
+          { n: '42', t: 'без годового взноса', to: 'Э12.1' },
+          { n: '2', t: 'приглашения ждут ответа', to: 'Э12.7' },
+        ]}
+      />
       <ActionBar count="Фильтры: год рождения · пол · клуб · взнос">
         <button className="dpickbtn">
           <Filter size={14} /> Фильтры
         </button>
-        <button className="dpickbtn">
-          <UserPlus size={14} /> Зарегистрировать спортсмена
+        {/* Тренер не заводит аккаунт за человека — он приглашает: пароль
+            спортсмен задаёт себе сам по ссылке (Э0.6). */}
+        <button className="dpickbtn" data-to="Э12.6">
+          <UserPlus size={14} /> Пригласить спортсмена
         </button>
       </ActionBar>
       <Rows>
@@ -435,6 +442,179 @@ const Apps12_4States = () => (
   </States>
 );
 
+/* ── Э12.6 · Приглашение спортсмена в регион ───────────────────── */
+
+/** Спортсмен не приписывает себя к региону сам (решение от 17.08.2026): в
+    регион зовёт старший тренер — ровно так же, как в клуб зовёт администратор
+    клуба (Э13.2). И так же, как там, тренер не перепечатывает карточку, а
+    **находит человека по номеру в реестре** ФНТ РК: спортсмен уже заведён, и
+    вторая карточка с теми же ФИО — дубль, который потом кому-то разбирать.
+
+    Аккаунт за человека не заводит никто: приглашение приходит ему в систему, и
+    принимает его он сам. Кого в реестре нет вовсе — тем ссылка (Э0.6). */
+export function Invite12_6() {
+  return (
+    <RoleScreen
+      role={R12}
+      nav="Мой регион"
+      title="Пригласить спортсмена в регион"
+      sub="Алматы · поиск по номеру в реестре ФНТ РК"
+      back={{ label: 'Мой регион', to: 'Э12.1' }}
+    >
+      <div className="mkcols">
+        <Panel title="Найти в реестре">
+          <div className="dactionbar">
+            <Input label="Номер в реестре ФНТ РК" value="14-2010-0512" placeholder="00-0000-0000" wide />
+            <button className="dpickbtn">
+              <SearchIcon size={14} /> Найти
+            </button>
+          </div>
+          <Hint>
+            Номер человек видит у себя в профиле и в квитанции о взносе. Ищем по номеру, а не по
+            фамилии: однофамильцев в реестре много, а номер один.
+          </Hint>
+        </Panel>
+
+        {/* Найденное — на чтение: карточка чужая, из реестра федерации. Тренер
+            решает одно: звать этого человека в регион или нет. */}
+        <Panel
+          title="Нашли в реестре"
+          extra={<span className="pill wait" style={{ margin: 0 }}>ВЗНОС НЕ ОПЛАЧЕН</span>}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 14 }}>
+            <img
+              src={AW(26)}
+              alt=""
+              style={{ width: 56, height: 56, borderRadius: '50%', objectFit: 'cover' }}
+            />
+            <div>
+              <div style={{ fontSize: 15, fontWeight: 700 }}>Сейтжан Аяулым</div>
+              <div style={{ fontSize: 12, color: 'var(--c-muted)', marginTop: 3 }}>
+                № 14-2010-0512 · 2010 г.р. · 1 разряд · рейтинг 1904
+              </div>
+            </div>
+          </div>
+          <Form>
+            <Field label="Регион сейчас" value="г. Шымкент" />
+            <Field label="Клуб" value="«Достык» · клуб отдельно от региона" />
+          </Form>
+          <div style={{ marginTop: 12 }}>
+            <Submit>Пригласить в регион Алматы</Submit>
+          </div>
+          <div className="dactionbar" style={{ marginTop: 12 }}>
+            <div className="dcount">Решение за спортсменом: приглашение придёт ему в профиль</div>
+            <button className="dpickbtn" data-to="Э12.7">Приглашения региона</button>
+          </div>
+        </Panel>
+      </div>
+    </RoleScreen>
+  );
+}
+
+const Invite12_6States = () => (
+  <States>
+    <Shot tone="success" title="Приглашение отправлено" text="Дальше решает спортсмен: оно лежит у него в профиле (Э14.9)." wide>
+      <Rows>
+        <Row av={AW(26)} nm="Сейтжан Аяулым" sub="№ 14-2010-0512 · приглашена 15.04, ждёт ответа" action="Отозвать" />
+      </Rows>
+    </Shot>
+
+    <Shot tone="warning" title="Номера в реестре нет" text="Человек не заведён: тогда приглашение ссылкой, пароль он задаёт себе сам (Э0.6).">
+      <Empty
+        title="По номеру 14-2010-9999 никого не нашли"
+        text="Проверьте номер в профиле спортсмена. Если его нет в реестре вовсе — отправьте приглашение ссылкой на телефон или почту."
+      />
+    </Shot>
+
+    <Shot tone="info" title="Он уже в регионе" text="Звать некого: спортсмен и так в реестре Алматы.">
+      <Rows>
+        <Row av={A(51)} nm="Байжанов Ерасыл" sub="№ 14-2011-0412 · регион Алматы с 12.01.2026" val="В реестре" />
+      </Rows>
+    </Shot>
+  </States>
+);
+
+/* ── Э12.7 · Приглашения региона ───────────────────────────────── */
+
+/* В строке одно: либо кнопка, либо отметка «Принято» — как в приглашениях
+   клуба (Э13.8). Что со ссылкой, написано подписью, а не вторым значком. */
+const INVITES12 = [
+  {
+    av: AW(26), nm: 'Сейтжан Аяулым',
+    sub: '№ 14-2010-0512 · приглашена 15.04 · ждёт ответа',
+    action: 'Отозвать',
+  },
+  {
+    av: A(18), nm: 'Оралбек Диас',
+    sub: '№ 14-2009-0331 · приглашён 14.04 · ждёт ответа',
+    action: 'Отозвать',
+  },
+  {
+    av: A(51), nm: 'Байжанов Ерасыл',
+    sub: '№ 14-2011-0412 · принял приглашение 12.04',
+    val: 'Принято',
+  },
+  {
+    av: AW(41), nm: 'Ахметова Дана',
+    sub: '№ 14-2008-0187 · отказалась 13.04',
+    val: 'Отклонено',
+  },
+];
+
+export function Invites12_7() {
+  return (
+    <RoleScreen
+      role={R12}
+      nav="Мой регион"
+      title="Приглашения региона"
+      sub="Кого позвали, кто открыл ссылку и кто уже в реестре региона"
+      back={{ label: 'Мой регион', to: 'Э12.1' }}
+    >
+      <ActionBar count="4 приглашения · 2 ждут ответа, 1 принято, 1 отклонено">
+        <button className="dpickbtn" data-to="Э12.6">
+          <UserPlus size={14} /> Пригласить спортсмена
+        </button>
+      </ActionBar>
+
+      <Panel title="Приглашения">
+        <Rows>
+          {INVITES12.map((i) => (
+            <Row key={i.nm} av={i.av} nm={i.nm} sub={i.sub} val={i.val} action={i.action} />
+          ))}
+        </Rows>
+        <Alert>
+          Приглашение — предложение, а не запись в реестр: пока спортсмен не принял, он остаётся в
+          прежнем регионе. Кого в реестре нет вовсе, тем уходит одноразовая ссылка на 7 дней —
+          пароль по ней человек задаёт себе сам.
+        </Alert>
+      </Panel>
+    </RoleScreen>
+  );
+}
+
+const Invites12_7States = () => (
+  <States>
+    <Shot tone="info" title="Приглашений нет" text="Никого не звали — список пустой, а не сломанный.">
+      <Empty
+        title="Приглашений пока нет"
+        text="Найдите спортсмена по номеру в реестре и позовите в регион."
+      />
+    </Shot>
+
+    <Shot tone="danger" title="Спортсмен отказался" text="Прежний регион у него остался; звать снова можно.">
+      <Rows>
+        <Row nm="Ахметова Дана" sub="№ 14-2008-0187 · отказалась 13.04" val="Отклонено" />
+      </Rows>
+    </Shot>
+
+    <Shot tone="warning" title="Приглашение отозвали" text="Позвали не того или передумали: у спортсмена оно пропадает.">
+      <Rows>
+        <Row nm="Оралбек Диас" sub="отозвал Байтасов Р., 16.04" val="Отозвано" />
+      </Rows>
+    </Shot>
+  </States>
+);
+
 /** Экраны роли по кодам: из этой карты собираются и борд, и карта флоу. */
 export const SCREENS: ScreenMap = {
   'Э0.1': {
@@ -448,6 +628,26 @@ export const SCREENS: ScreenMap = {
       <>
         <Region12_1 />
         <Region12_1States />
+      </>
+    ),
+    next: '«пригласить спортсмена»',
+  },
+  'Э12.6': {
+    cap: 'Приглашение спортсмена в регион',
+    view: () => (
+      <>
+        <Invite12_6 />
+        <Invite12_6States />
+      </>
+    ),
+    next: 'список приглашений',
+  },
+  'Э12.7': {
+    cap: 'Приглашения региона',
+    view: () => (
+      <>
+        <Invites12_7 />
+        <Invites12_7States />
       </>
     ),
     next: 'меню «Главные старты»',

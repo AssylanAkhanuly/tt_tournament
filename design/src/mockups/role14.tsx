@@ -15,10 +15,9 @@ import {
   Trophy, X,
 } from 'lucide-react';
 import {
-  A, ActionBar, Alert, Also, Arrow, Board, Chips, Empty, Field, Filter, Form, Ghost, Input, Modal,
+  A, ActionBar, Alert, Also, Arrow, Board, Chips, Empty, Field, Form, Ghost, Input, Modal,
   Off, P, Pager, Panel, Queue, RoleScreen, Row, Rows, Screen, Search, Shot, States, Tabs,
 } from './shell';
-import { Select } from '../ui';
 import { BracketFlow } from '@/widgets/bracket/BracketFlow';
 import { DeskFrame, type DeskVariant } from '../deskShell';
 import { MY_GROUP, OTHER_GROUPS, myBracket, playoffBracket } from './myBracket';
@@ -352,7 +351,7 @@ const TABS14_5 = ['Мой матч', 'Участники', 'Сетка'];
    главном старте), поэтому это таблица с поиском, сортировкой и страницами по
    30 — глазами в такой список не ищут. Себя и своего соперника человек должен
    находить сразу, поэтому их строки помечены. */
-type Ply14 = { s: number; nm: string; city: string; club: string; r: number; me?: boolean; foe?: boolean };
+export type Ply14 = { s: number; nm: string; city: string; club: string; r: number; me?: boolean; foe?: boolean };
 
 const SURNAMES = [
   'Смагулов', 'Ким', 'Токаев', 'Жумабеков', 'Пак', 'Гладун', 'Оспанов', 'Байжанов',
@@ -414,10 +413,15 @@ const MyMatch14_5 = () => (
     Списком строк это не работает: на главном старте 128 участников, и человек
     ищет в нём либо себя, либо конкретного соперника. Поэтому поиск по фамилии,
     сортировка по любому столбцу и страницы — как в реестрах федерации. */
-function Players14_5() {
+export function Players14_5({ mark }: { mark?: (p: Ply14) => { t: string; cls: string } | undefined } = {}) {
   const [q, setQ] = useState('');
   const [sort, setSort] = useState<{ k: (typeof COLS14)[number]['k']; up: boolean }>({ k: 's', up: true });
   const [page, setPage] = useState(0);
+
+  /* Кого подсвечивать строкой: спортсмену — себя и соперника, клубу — своих
+     (Э13.9). Таблица одна: список участников у всех один и тот же, разный
+     только срез «мои». */
+  const hit = (p: Ply14) => (mark ? Boolean(mark(p)) : Boolean(p.me));
 
   const found = PLAYERS.filter((p) => {
     const t = q.trim().toLowerCase();
@@ -465,14 +469,20 @@ function Players14_5() {
         </div>
         <div className="mktable-b">
           {shown.map((p) => (
-            <div className={'mktable-r' + (p.me ? ' me' : '')} key={p.s}>
+            <div className={'mktable-r' + (hit(p) ? ' me' : '')} key={p.s}>
               <span className="num">{p.s}</span>
               <span className="nm">{p.nm}</span>
               <span>{p.city} · {p.club}</span>
               <span className="num">{p.r}</span>
               <span>
-                {p.me && <P t="ВЫ" cls="reg" />}
-                {p.foe && <P t="ВАШ СОПЕРНИК" cls="live" />}
+                {mark ? (
+                  (() => { const m = mark(p); return m ? <P t={m.t} cls={m.cls} /> : null; })()
+                ) : (
+                  <>
+                    {p.me && <P t="ВЫ" cls="reg" />}
+                    {p.foe && <P t="ВАШ СОПЕРНИК" cls="live" />}
+                  </>
+                )}
               </span>
             </div>
           ))}
@@ -745,9 +755,9 @@ const Profile14_7States = () => (
       </Rows>
     </Shot>
 
-    <Shot tone="info" title="Смена клуба ждёт клуб" text="В профиле ещё прежний клуб.">
+    <Shot tone="info" title="Клуб зовёт к себе" text="Приглашение ждёт ответа: до принятия в профиле прежний клуб.">
       <Rows>
-        <Row nm="СКА · Астана" sub="заявка в «Алатау» · Алматы отправлена 14.02" pill={{ t: 'ЖДЁМ КЛУБ', cls: 'wait' }} />
+        <Row nm="СКА · Астана" sub="клуб «Алатау» · Алматы пригласил 14.02" pill={{ t: 'ЖДЁТ ВАС', cls: 'wait' }} />
       </Rows>
     </Shot>
   </States>
@@ -760,8 +770,10 @@ const Profile14_7States = () => (
     Материалы редактирует федерация в своей админке (Э1.8 и редактор Э1.14) —
     сюда они приходят готовыми, поэтому у спортсмена экран только на чтение.
     Читают из системы: человек уже вошёл, и выгонять его на публичный сайт ради
-    объявления о сроке взноса незачем. */
-const TOPICS = ['Все', 'Календарь', 'Взносы', 'Рейтинг', 'Результаты'];
+    объявления о сроке взноса незачем.
+
+    Фильтра по темам нет: спортсмен читает новости лентой сверху вниз, а не
+    ищет в них по рубрике — тема и так стоит на каждой карточке. */
 
 /** Карточка ленты: вся целиком — переход в материал (Э14.14). Поля те же, что
     приходят из админки: рубрика, дата, заголовок, лид, автор и время чтения. */
@@ -785,30 +797,19 @@ const NewsCard = ({ n, wide }: { n: (typeof NEWS)[number]; wide?: boolean }) => 
 );
 
 export function News14_13() {
-  const [topic, setTopic] = useState(TOPICS[0]);
-  const rows = NEWS.filter((n) => topic === TOPICS[0] || n.tag === topic.toUpperCase());
   return (
     <RoleScreen role={R14} nav="Новости" title="Новости" sub="Объявления федерации, положения и итоги турниров">
-      <div className="dactionbar">
-        <Filter items={TOPICS} active={topic} onPick={setTopic} />
-        <span className="dcount">{rows.length} материала</span>
-      </div>
-
-      {rows.length ? (
-        <div className="mknews">
-          {/* Первая новость — крупной карточкой: в ленте всегда есть главное
-              за неделю, и оно не должно теряться среди одинаковых плиток. */}
-          <NewsCard n={rows[0]} wide />
-          <div className="mknews-grid">
-            {rows.slice(1).map((n) => (
-              <NewsCard key={n.nm} n={n} />
-            ))}
-          </div>
-          <button type="button" className="mknews-more">Показать ещё</button>
+      <div className="mknews">
+        {/* Первая новость — крупной карточкой: в ленте всегда есть главное
+            за неделю, и оно не должно теряться среди одинаковых плиток. */}
+        <NewsCard n={NEWS[0]} wide />
+        <div className="mknews-grid">
+          {NEWS.slice(1).map((n) => (
+            <NewsCard key={n.nm} n={n} />
+          ))}
         </div>
-      ) : (
-        <Empty title="По этой теме материалов нет" text="Выберите другую тему или посмотрите все новости." />
-      )}
+        <button type="button" className="mknews-more">Показать ещё</button>
+      </div>
     </RoleScreen>
   );
 }
@@ -1134,16 +1135,20 @@ const Declined14_11States = () => (
 
 /* ── Э14.9 · Изменение данных ──────────────────────────────────── */
 
-/** Телефон и почта — свои: человек меняет их сам. Клуб — утверждение о
-    принадлежности к чужой организации, и подтверждает его администратор
-    этого клуба (Э13.5): иначе в состав любого клуба вписался бы кто угодно. */
+/** Телефон и почта — свои: человек меняет их сам.
+
+    Клуб и регион спортсмен не выбирает вообще (решение от 17.08.2026). Это не
+    его утверждение о себе, а принадлежность к чужой организации: в клуб зовёт
+    администратор клуба (Э13.2), в регион — старший тренер региона (Э12.6).
+    Самозаявки «хочу в этот клуб» больше нет — иначе к любому клубу и любому
+    региону приписался бы кто угодно, а разбирал бы это кто-то другой. */
 export function Edit14_9() {
   return (
     <RoleScreen
       role={R14}
       nav="Профиль"
       title="Изменение данных"
-      sub="Ким Георгий · телефон, почта и клуб"
+      sub="Ким Георгий · телефон и почта"
       back={{ label: 'Профиль', to: 'Э14.7' }}
     >
       <div className="mkcols">
@@ -1159,19 +1164,15 @@ export function Edit14_9() {
           </div>
         </Panel>
 
-        <Panel title="Клуб" extra={<P t="ЧЕРЕЗ ПОДТВЕРЖДЕНИЕ КЛУБА" cls="wait" />}>
+        <Panel title="Клуб и регион" extra={<P t="ТОЛЬКО ПО ПРИГЛАШЕНИЮ" cls="reg" />}>
           <Form>
-            <Field label="Сейчас" value="СКА · Астана" />
-            <Select label="Новый клуб" options={['«Алатау» · Алматы', 'СКА · Астана', 'без клуба']} />
+            <Field label="Клуб" value="СКА · Астана · с 12.01.2026" />
+            <Field label="Регион" value="г. Астана" />
           </Form>
-          <div style={{ marginTop: 12 }}>
-            <button className="dsubmit" style={{ width: '100%' }} data-to="Э14.7">
-              <Send size={15} /> Отправить в клуб
-            </button>
-          </div>
           <Alert>
-            До подтверждения в профиле остаётся прежний клуб. Заявка уходит администратору клуба
-            «Алатау» — принять в состав или отказать решает он.
+            Ни клуб, ни регион здесь не меняются: в клуб зовёт его администратор, в регион —
+            старший тренер. Придёт приглашение — оно появится уведомлением, и решение будет за
+            вами: принять или нет.
           </Alert>
         </Panel>
       </div>
@@ -1181,22 +1182,30 @@ export function Edit14_9() {
 
 const Edit14_9States = () => (
   <States>
-    <Shot tone="info" title="Заявка уже отправлена" text="Выбор клуба заблокирован, есть «отозвать».">
+    <Shot tone="info" title="Пришло приглашение в клуб" text="Решает спортсмен: приглашение можно принять или отклонить.">
       <Rows>
-        <Row nm="«Алатау» · Алматы" sub="заявка отправлена 14.02, ждёт администратора клуба" pill={{ t: 'ЖДЁМ', cls: 'wait' }} action="Отозвать" />
+        <Row
+          nm="Клуб «Алатау» · Алматы"
+          sub="пригласил Досжан М., 14.02 · сейчас вы в СКА · Астана"
+          pill={{ t: 'ЖДЁТ ВАС', cls: 'wait' }}
+          action="Принять"
+        />
       </Rows>
+      <Alert>
+        Пока не приняли, в профиле остаётся прежний клуб. Отказ ничего не меняет и клубу виден.
+      </Alert>
     </Shot>
 
-    <Shot tone="success" title="Клуб подтвердил" text="Новый клуб в профиле, прежний — в истории.">
+    <Shot tone="success" title="Приглашение принято" text="Новый клуб в профиле, прежний — в истории.">
       <Rows>
-        <Row nm="«Алатау» · Алматы" sub="принял Досжан М., 16.02" pill={{ t: 'МОЙ КЛУБ', cls: 'live' }} />
+        <Row nm="«Алатау» · Алматы" sub="перешли 16.02" pill={{ t: 'МОЙ КЛУБ', cls: 'live' }} />
         <Row nm="СКА · Астана" sub="до 16.02.2026" pill={{ t: 'В ИСТОРИИ', cls: 'done' }} />
       </Rows>
     </Shot>
 
-    <Shot tone="danger" title="Клуб отказал" text="Прежний клуб остался, выбрать можно снова.">
+    <Shot tone="info" title="Клуба нет" text="Так бывает: спортсмен тренируется сам. Заявиться на ОРТ это не мешает.">
       <Rows>
-        <Row nm="«Алатау» · Алматы" sub="отказ: «не тренируется у нас» · 16.02" pill={{ t: 'ОТКАЗ', cls: 'bad' }} />
+        <Row nm="Без клуба" sub="в регионе г. Астана · пригласить может любой клуб" pill={{ t: 'БЕЗ КЛУБА', cls: 'reg' }} />
       </Rows>
     </Shot>
 
@@ -1207,7 +1216,7 @@ const Edit14_9States = () => (
       wide
     >
       <Alert>
-        Рисуем только подтверждение принимающим клубом. Уходит ли спортсмен из уже поданных заявок
+        Рисуем только приглашение принимающим клубом. Уходит ли спортсмен из уже поданных заявок
         и составов команд прежнего клуба сразу или доигрывает сезон — вопрос к федерации.
       </Alert>
     </Shot>

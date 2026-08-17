@@ -253,6 +253,7 @@ export function Row({
   pill,
   action,
   onAction,
+  actionTo,
   on,
   onSelect,
   to,
@@ -266,6 +267,8 @@ export function Row({
   action?: string;
   /** Что делает кнопка строки. Не передан — кнопка только нарисована. */
   onAction?: () => void;
+  /** Куда ведёт кнопка строки, если это не туда же, куда сама строка. */
+  actionTo?: string;
   /** Выбор строки в паре «список — карточка»: строка выбрана / выбирается.
       Кнопка действия при этом не выбирает — у неё своё дело. */
   on?: boolean;
@@ -286,10 +289,13 @@ export function Row({
       {pill && <span className={'pill ' + pill.cls} style={{ margin: 0 }}>{pill.t}</span>}
       {action && (
         /* Кнопка не выбирает строку: у неё своё дело, и клик по ней не должен
-           заодно переключать карточку справа. */
+           заодно переключать карточку справа. Переход у неё тоже свой: строка
+           ведёт в одно место, кнопка — в другое, и без `actionTo` карта флоу
+           уводила бы обе в адрес строки. */
         <button
           type="button"
           className="dpickbtn"
+          data-to={actionTo}
           onClick={(e) => { e.stopPropagation(); onAction?.(); }}
         >
           {action}
