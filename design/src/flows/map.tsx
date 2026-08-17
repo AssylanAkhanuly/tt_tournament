@@ -342,6 +342,8 @@ export function FlowMap({ flow, screens: own }: { flow: RoleFlow; screens: Scree
     return { ...own, ...extra };
   }, [own]);
   const codes = Object.keys(screens);
+  const ownCount = Object.keys(own).length;
+  const headCount = codes.length - ownCount;
   const [selected, setSelected] = useState(codes[0]);
   /* Какая вкладка выбранного экрана открыта: карта нажимает переключатель в
      самом макете — он рабочий, и второго источника правды заводить не нужно. */
@@ -522,7 +524,14 @@ export function FlowMap({ flow, screens: own }: { flow: RoleFlow; screens: Scree
         </ReactFlow>
         <div className="fmap-legend">
           <b>{flow.num} · {flow.title}</b>
-          <span>{codes.length} экранов · клик по узлу открывает макет справа</span>
+          {/* Экраны роли и экраны из шапки считаем врозь. Одним числом легенда
+              расходилась с подписью истории в сайдбаре: там экраны роли (карта
+              SCREENS), а здесь были ещё и профиль с уведомлениями — «9 экранов»
+              в сайдбаре против «11 экранов» на той же карте. */}
+          <span>
+            {ownCount} экранов{headCount ? ` + ${headCount} из шапки` : ''} · клик по узлу
+            открывает макет справа
+          </span>
           <span>источник: <code>{flow.source}</code></span>
         </div>
       </div>

@@ -18,6 +18,17 @@
    6. Истории роли собраны по данным: борд и карта маршрута на месте, число
       экранов в подписях совпадает (файлы генерируются `npm run gen:flows`, но
       их могли поправить руками).
+   7. Активный пункт сайдбара (`nav="…"` в макете) есть в меню роли
+      (`mockups/roles.tsx`). Пункт переименовали или убрали, а экран остался на
+      старом — и в сайдбаре не подсвечивается ничего: экран выглядит так, будто
+      пришёл ниоткуда. Так было с «Реестрами» после переезда их во вкладки
+      «Пользователей». Исключение — «Профиль» и «Уведомления»: в них попадают из
+      шапки, пункта меню у них нет вовсе.
+   8. Обратная сторона того же: «как попадает» не ссылается на пункт меню,
+      которого в меню роли нет. Три пункта администратора клуба свели в один
+      раздел «Соревнования», а во флоу так и осталось «пункт меню „Лига“» —
+      сайдбар макета и сценарий рассказывали разное. Ловим и в `flows/*.md`, и в
+      данных: любое «меню «X»» обязано называть настоящий пункт.
 
    Запуск: `npm run lint:flows`. */
 
@@ -180,6 +191,79 @@ for (const file of dataFiles) {
       problems.push(
         `${roleName}.stories.tsx (макеты): в подписи не ${shown} экранов — столько в карте SCREENS`,
       );
+    }
+  }
+}
+
+
+/* 7. Пункт сайдбара экрана существует в меню роли.
+
+   `nav="…"` в макете — это подсветка пункта в сайдбаре. Пункт переименовали, а
+   экран остался на старом названии — и не подсвечивается ничего. Ловим статикой:
+   разбираем меню ролей из `roles.tsx` и сверяем с каждым `nav="…"` макета. */
+const ROLES_FILE = join(MOCKUPS_DIR, 'roles.tsx');
+/** Экраны, у которых пункта меню нет намеренно: вход в них — из шапки. */
+const HEAD_ENTRIES = new Set(['Профиль', 'Уведомления']);
+
+if (!existsSync(ROLES_FILE)) {
+  problems.push('mockups/roles.tsx не найден — меню ролей проверить нечем');
+} else {
+  const rolesSrc = readFileSync(ROLES_FILE, 'utf8');
+  /** `export const R13: RoleUI = { … nav: [ … ], };` → пункты меню роли. */
+  const menus = new Map();
+  for (const m of rolesSrc.matchAll(/export const (R\w+): RoleUI = \{([\s\S]*?)\n\};/g)) {
+    const nav = m[2].match(/nav:\s*\[([\s\S]*?)\n\s*\],/);
+    if (!nav) continue;
+    menus.set(m[1], new Set([...nav[1].matchAll(/,\s*'([^']+)'\]/g)].map((x) => x[1])));
+  }
+
+  for (const file of readdirSync(MOCKUPS_DIR).filter((f) => /^role.*\.tsx$/.test(f) && !f.includes('.stories.'))) {
+    const src = readFileSync(join(MOCKUPS_DIR, file), 'utf8');
+    /* Роль файла — по импорту из `roles`: если их несколько, экраны роли
+       перемешаны, и проверять нечего. */
+    const imported = [...(src.match(/import \{([^}]*)\} from '\.\/roles';/)?.[1] ?? '').matchAll(/\bR\w+\b/g)].map((x) => x[0]);
+    if (imported.length !== 1) continue;
+    const menu = menus.get(imported[0]);
+    if (!menu) continue;
+    for (const nav of new Set([...src.matchAll(/\bnav="([^"]+)"/g)].map((x) => x[1]))) {
+      if (menu.has(nav) || HEAD_ENTRIES.has(nav)) continue;
+      problems.push(
+        `${file}: nav="${nav}" — такого пункта нет в меню ${imported[0]} (${[...menu].join(' · ')})`,
+      );
+    }
+  }
+
+  /* 8. Ссылки на пункт меню в сценарии — только на существующие пункты.
+
+     Роль файла данных определяем по его же макетам: в `roleNN.tsx` ровно один
+     R-конст, и это меню роли. Ищем оборот «меню «Название»» — так пишется «как
+     попадает» и в markdown, и в данных. */
+  for (const file of dataFiles) {
+    const mockPath = join(MOCKUPS_DIR, file.replace(/\.ts$/, '.tsx'));
+    if (!existsSync(mockPath)) continue;
+    const mockSrc = readFileSync(mockPath, 'utf8');
+    const imported = [
+      ...(mockSrc.match(/import \{([^}]*)\} from '\.\/roles';/)?.[1] ?? '').matchAll(/\bR\w+\b/g),
+    ].map((x) => x[0]);
+    if (imported.length !== 1) continue;
+    const menu = menus.get(imported[0]);
+    if (!menu) continue;
+
+    const ts = readFileSync(join(DATA_DIR, file), 'utf8');
+    const source = ts.match(TS_SOURCE)?.[1];
+    const mdPath = source ? join(REPO, source) : null;
+    const pairs = [[file, ts]];
+    if (mdPath && existsSync(mdPath)) pairs.push([source, readFileSync(mdPath, 'utf8')]);
+
+    for (const [where, text] of pairs) {
+      /* Без `\b`: в JS граница слова считается по латинице, и перед кириллицей
+         её нет вовсе — с `\bменю` проверка молча не находила ничего. */
+      for (const item of new Set(all(/меню\s+«([^»]+)»/gi, text).map((m) => m[1]))) {
+        if (menu.has(item) || HEAD_ENTRIES.has(item)) continue;
+        problems.push(
+          `${where}: сценарий ведёт «меню «${item}»», а в меню ${imported[0]} такого пункта нет (${[...menu].join(' · ')})`,
+        );
+      }
     }
   }
 }

@@ -43,6 +43,7 @@ function plural(n, one, few, many) {
 const MOCKUPS = join(ROOT, 'src', 'mockups');
 const files = readdirSync(DATA).filter((f) => /^role.*\.ts$/.test(f));
 let written = 0;
+let skipped = 0;
 
 for (const file of files) {
   const name = file.replace(/\.ts$/, ''); // roleNN
@@ -98,15 +99,35 @@ export const Route = {
 };
 `;
 
-  /* Пишем через временный файл и переименование: запущенный Storybook читает
-     истории по мере записи, ловил файл наполовину написанным («Unexpected end
-     of file») и запоминал ошибку — весь раздел после пересборки оставался
-     пустым, пока сервер не перезапустят. Переименование атомарно. */
+  /* Файл, который не изменился, не трогаем вовсе.
+
+     Запущенный Storybook переиндексирует историю на каждую запись, и когда все
+     четырнадцать файлов переписывались разом, индексатор ловил их наполовину
+     написанными («Unexpected end of file»), запоминал ошибку и отдавал 500 на
+     весь `index.json` — раздел оставался пустым до перезапуска сервера. Правок
+     обычно одна-две, а перезаписывались все: 12 лишних поводов сломаться.
+
+     Саму запись всё равно делаем через временный файл и переименование —
+     переименование атомарно, и половины файла читатель не увидит. */
   const path = join(FLOWS, `${name}.stories.tsx`);
+  let same = false;
+  try {
+    same = readFileSync(path, 'utf8') === out;
+  } catch {
+    same = false; // файла ещё нет — пишем
+  }
+  if (same) {
+    skipped += 1;
+    continue;
+  }
   const tmp = `${path}.tmp`;
   writeFileSync(tmp, out, 'utf8');
   renameSync(tmp, path);
   written += 1;
 }
 
-console.log(`Истории собраны: ${written} ролей.`);
+console.log(
+  skipped
+    ? `Истории собраны: обновлено ${written}, без изменений ${skipped}.`
+    : `Истории собраны: ${written} ролей.`,
+);
