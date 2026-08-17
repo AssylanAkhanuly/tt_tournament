@@ -36,9 +36,9 @@ import './map.css';
    `own` — по какому слову в подписи видно, что у роли есть свой такой экран: у
    спортсмена профиль объединён со взносом (Э14.7), и сквозной подставлять не
    нужно — получилось бы два «моих профиля» в одном маршруте. */
-const FROM_HEADER: { code: string; via: string; own?: string }[] = [
-  { code: 'Э0.3', via: 'колокольчик в шапке' },
-  { code: 'Э0.2', via: 'имя и фото в шапке', own: 'профиль' },
+const FROM_HEADER: { code: string; own?: string }[] = [
+  { code: 'Э0.3' },
+  { code: 'Э0.2', own: 'профиль' },
 ];
 
 /** Какие экраны из шапки подставить этой роли: только те, которых у неё нет
@@ -154,7 +154,6 @@ function build(flow: RoleFlow, screens: ScreenMap, selected: string) {
   const short = (t: string) => t.replace(/^«|»$/g, '').slice(0, 28);
 
   const parent = new Map<string, string>();
-  const via = new Map<string, string>();
   /** Связь только для раскладки: экран стоит в ветке, но стрелки к нему нет. */
   const weak = new Set<string>();
   codes.forEach((code, i) => {
@@ -163,22 +162,16 @@ function build(flow: RoleFlow, screens: ScreenMap, selected: string) {
     if (!sc) return;
     if (code === first) {
       parent.set(code, root);
-      via.set(code, 'вход под своей ролью');
       return;
     }
     const header = FROM_HEADER.find((h) => h.code === code);
     if (header) {
       parent.set(code, root);
-      via.set(code, header.via);
       return;
     }
-    /* Подпись берём из той строки «как попадает», где про меню и сказано:
-       у экрана бывает два входа сразу (пункт меню и строка очереди на первом
-       экране), и entry[0] — не обязательно про меню. */
     const menu = sc.entry.find((e) => /меню/i.test(e));
     if (menu) {
       parent.set(code, root);
-      via.set(code, short(menu.replace(/^Пункт меню /, '')));
       return;
     }
     /* Ведёт сюда не один экран: в отказ с причиной приходят и из заявок, и из
@@ -190,7 +183,6 @@ function build(flow: RoleFlow, screens: ScreenMap, selected: string) {
       const act = byId.get(codes[j])?.actions.find((a) => a.to === code);
       if (act) {
         parent.set(code, codes[j]);
-        via.set(code, short(act.el));
         return;
       }
     }
@@ -278,11 +270,11 @@ function build(flow: RoleFlow, screens: ScreenMap, selected: string) {
       });
   });
 
-  const edgeBase = {
-    labelStyle: { fill: 'var(--c-board-muted)', fontSize: 11, fontWeight: 600 },
-    labelBgStyle: { fill: 'var(--c-board-bg)' },
-    labelBgPadding: [4, 2] as [number, number],
-  };
+  /* Подписей на линиях нет ✳. Они дублировали то, что и так написано в панели
+     под макетом («как попадает» — списком, полностью), а на карте лезли под
+     соседние ветки и превращали дерево в текст. Линия отвечает на «отсюда
+     сюда»; чем именно — читают у экрана. */
+  const edgeBase = {};
 
   const edges: Edge[] = codes
     .filter((c) => parent.has(c) && !weak.has(c))
@@ -291,7 +283,6 @@ function build(flow: RoleFlow, screens: ScreenMap, selected: string) {
       id: `${parent.get(c)}->${c}`,
       source: parent.get(c)!,
       target: c,
-      label: via.get(c),
       type: 'smoothstep',
       style: { stroke: 'var(--c-board-line)' },
     }));
