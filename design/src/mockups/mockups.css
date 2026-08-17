@@ -379,21 +379,51 @@
 .mkduty-i.free .v { color: var(--c-dim); font-weight: 600; }
 .mkduty > .dpickbtn { flex: none; align-self: center; }
 
-/* Таблица заявок клуба (Э13.5): что подаём, за кого, к какому сроку и что с
-   заявкой. Колонок четыре, сортировки нет — заявки и так стоят по срочности,
-   а подробности открываются картой справа по клику. */
-.mktable.mkclaims .mktable-h,
-.mktable.mkclaims .mktable-r { grid-template-columns: 1.05fr 1fr 96px 118px; }
-.mktable.mkclaims .mktable-h span {
+/* Список сезона у клуба (Э13.6): туры своих команд и республиканские турниры
+   одной таблицей — соревнование, когда и где, срок или итог, состояние.
+
+   Раньше рядом стояли две вещи: список календаря («что впереди») и таблица
+   заявок со сроками («что от нас ждут»), и один и тот же тур стоял в обеих.
+   Теперь строка одна, а разное показывает переход: строка целиком — ссылка,
+   поэтому у неё курсор, подсветка по наведению и стрелка справа. */
+.mktable.mkseason .mktable-h,
+.mktable.mkseason .mktable-r { grid-template-columns: 1.5fr 1fr 1.1fr 152px 16px; }
+.mktable.mkseason .mktable-h span {
   font-size: 10.5px;
   font-weight: 800;
   letter-spacing: .04em;
   text-transform: uppercase;
   color: var(--c-dim);
 }
-.mktable.mkclaims .mktable-r { cursor: pointer; }
-.mktable.mkclaims .mktable-r:hover { background: var(--c-panel-2); }
-.mktable.mkclaims .mktable-r.on { background: var(--c-accent-soft); }
+.mktable.mkseason .mktable-b { max-height: 520px; }
+.mktable.mkseason .mktable-r { cursor: pointer; }
+.mktable.mkseason .mktable-r:hover { background: var(--c-panel-2); }
+/* Второй строкой под названием — соревнование или категория календаря: без неё
+   «3-й тур» и «Опен Алматы» стоят рядом как равные, хотя это разные вещи. */
+.mktable.mkseason .mktable-r .nm em {
+  display: block;
+  font-style: normal;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--c-dim);
+  margin-top: 1px;
+}
+/* Срок, который горит: он и есть причина, по которой строка попадает в срез
+   «Ждут нас». */
+.mktable.mkseason .mktable-r .due { color: var(--c-warning); font-weight: 700; }
+.mktable.mkseason .mktable-r .go { display: flex; color: var(--c-dim); }
+.mktable.mkseason .mktable-r:hover .go { color: var(--c-ink); }
+
+/* Раскрытый клуб на турнире (Э13.9): его игроки — вложенным списком под
+   строкой клуба. Отступ и кант слева говорят, что это часть строки выше, а не
+   продолжение списка клубов. */
+.mknest {
+  display: grid;
+  gap: 6px;
+  margin: 2px 0 6px 14px;
+  padding-left: 12px;
+  border-left: 2px solid var(--c-glass-line);
+}
 
 .mkpager { display: flex; gap: 4px; }
 .mkpager button {

@@ -9,7 +9,7 @@
    Роль — единственная, кто заявляется сам, и единственная, кто платит взнос
    картой. Счёт своего матча спортсмен не вводит: его ведёт судья стола. */
 
-import { useState, type ReactNode } from 'react';
+import { Fragment, useState, type ReactNode } from 'react';
 import {
   ArrowUpDown, BarChart3, Check, CreditCard, Download, Lock, Newspaper, Pencil, Receipt, Send,
   Trophy, X,
@@ -366,8 +366,12 @@ const CITIES: [string, string][] = [
 
 /** 128 участников: посев по рейтингу, рейтинг убывает от первого номера.
     Фамилия и имя не повторяются парами — иначе в списке появляется второй
-    «Ким Георгий», и непонятно, кто из них ты. */
-const PLAYERS: Ply14[] = Array.from({ length: 128 }, (_, i) => {
+    «Ким Георгий», и непонятно, кто из них ты.
+
+    Экспортируется: состав участников у всех ролей один и тот же, и клуб (Э13.9)
+    строит из него свой срез — участников по клубам. Второй такой же список для
+    другой роли — это два состава одного турнира, которые разъедутся. */
+export const PLAYERS: Ply14[] = Array.from({ length: 128 }, (_, i) => {
   const [city, club] = CITIES[i % CITIES.length];
   const nm = `${SURNAMES[i % SURNAMES.length]} ${FIRSTS[Math.floor(i / SURNAMES.length) % FIRSTS.length]}`;
   return { s: i + 1, nm, city, club, r: 2612 - i * 7 - (i % 5) };
@@ -501,6 +505,92 @@ export function Players14_5({ mark }: { mark?: (p: Ply14) => { t: string; cls: s
         <Pager page={cur} pages={pages} onPick={setPage} />
       </div>
     </>
+  );
+}
+
+/** Вкладка «Кто приехал»: участники, собранные по клубам или по регионам.
+
+    Отвечает на вопрос, который возникает раньше сетки: кто вообще приехал. По
+    таблице участников это не читается — 128 фамилий подряд, клуб и регион в
+    третьей колонке, и «сколько привёз СКА» приходится считать глазами.
+
+    Один компонент на две роли, разный только срез: клуб смотрит по клубам
+    (Э13.9), старший тренер региона — по регионам (Э12.5). Свой стоит первым и
+    раскрыт, и внутри у него не просто фамилии, а `ours` — те же люди со своим
+    состоянием, что на соседней вкладке «Наши»: один срез, показанный в двух
+    местах, обязан совпадать. У чужих состояния нет: важно, кого они привезли, а
+    как идут их игры — видно в сетке. */
+export function Squads14_5({
+  by,
+  our,
+  ours,
+  title,
+}: {
+  /** По чему собираем: клуб или регион участника. */
+  by: 'club' | 'city';
+  /** Свой клуб или регион — он первым и раскрытым. */
+  our: string;
+  /** Чем раскрывается свой: готовые строки со состоянием. */
+  ours: { key: string; av?: string; nm: string; sub: string; pill?: { t: string; cls: 'live' | 'wait' | 'bad' | 'reg' | 'done' } }[];
+  title: string;
+}) {
+  const [open, setOpen] = useState<string | null>(our);
+
+  const groups = Object.values(
+    PLAYERS.reduce<Record<string, { nm: string; note: string; men: Ply14[] }>>((acc, p) => {
+      const k = p[by];
+      (acc[k] ??= { nm: k, note: by === 'club' ? p.city : p.club, men: [] }).men.push(p);
+      return acc;
+    }, {}),
+  ).sort((a, b) => (a.nm === our ? -1 : b.nm === our ? 1 : b.men.length - a.men.length));
+
+  return (
+    <Panel
+      title={`${title} · ${groups.length}`}
+      extra={<span className="dcount">строка раскрывает участников</span>}
+    >
+      <div className="drows">
+        {groups.map((g) => {
+          const mine = g.nm === our;
+          const on = g.nm === open;
+          const n = mine ? ours.length : g.men.length;
+          /* Лучший посев — единственное число, которое здесь честно: результаты
+             ведёт судья, и до конца турнира их нет вовсе. */
+          const best = Math.min(...g.men.map((m) => m.s));
+          const pick = () => setOpen(on ? null : g.nm);
+          return (
+            <Fragment key={g.nm}>
+              <Row
+                nm={g.nm === 'без клуба' ? 'Без клуба' : g.nm}
+                sub={mine ? 'наши на этом турнире' : `лучший посев ${best}`}
+                val={`${n} участников`}
+                pill={mine ? { t: by === 'club' ? 'НАШ КЛУБ' : 'НАШ РЕГИОН', cls: 'reg' } : undefined}
+                on={on}
+                onSelect={pick}
+                action={on ? 'Свернуть' : 'Показать'}
+                onAction={pick}
+              />
+              {on && (
+                <div className="mknest">
+                  {mine
+                    ? ours.map((o) => (
+                        <Row key={o.key} av={o.av} nm={o.nm} sub={o.sub} pill={o.pill} />
+                      ))
+                    : g.men.slice(0, 4).map((m) => (
+                        <Row key={m.s} nm={`${m.s} · ${m.nm}`} sub={`рейтинг ${m.r}`} />
+                      ))}
+                  {!mine && (
+                    <div className="dcount">
+                      Показаны 4 из {g.men.length} · весь состав — на вкладке «Участники»
+                    </div>
+                  )}
+                </div>
+              )}
+            </Fragment>
+          );
+        })}
+      </div>
+    </Panel>
   );
 }
 
