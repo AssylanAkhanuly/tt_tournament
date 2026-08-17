@@ -161,6 +161,22 @@
 /* Своя строка подсвечена: человек ищет в списке прежде всего себя. */
 .mktable-r.me { background: var(--c-accent-soft); }
 
+/* Таблица заявок клуба (Э13.5): что подаём, за кого, к какому сроку и что с
+   заявкой. Колонок четыре, сортировки нет — заявки и так стоят по срочности,
+   а подробности открываются картой справа по клику. */
+.mktable.mkclaims .mktable-h,
+.mktable.mkclaims .mktable-r { grid-template-columns: 1.05fr 1fr 96px 118px; }
+.mktable.mkclaims .mktable-h span {
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  color: var(--c-dim);
+}
+.mktable.mkclaims .mktable-r { cursor: pointer; }
+.mktable.mkclaims .mktable-r:hover { background: var(--c-panel-2); }
+.mktable.mkclaims .mktable-r.on { background: var(--c-accent-soft); }
+
 .mkpager { display: flex; gap: 4px; }
 .mkpager button {
   min-width: 26px;
