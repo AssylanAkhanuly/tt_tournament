@@ -89,7 +89,10 @@ export function Desk({
         <div className="dme">
           <button
             type="button"
-            className="iconbtn dot"
+            /* Уведомления открываются колокольчиком, а не пунктом меню: когда
+               человек на этом экране, подсвечивать надо шапку — иначе сайдбар
+               выглядит так, будто экран пришёл ниоткуда. */
+            className={'iconbtn dot' + (activeNav === 'Уведомления' ? ' on' : '')}
             onClick={() => setBell(!bell)}
             aria-expanded={bell}
           >
@@ -115,7 +118,13 @@ export function Desk({
           )}
         </div>
         <div className="dme">
-          <button type="button" className="me" onClick={() => setMenu(!menu)} aria-expanded={menu}>
+          {/* То же и с профилем: в него попадают по имени и фото в шапке. */}
+          <button
+            type="button"
+            className={'me' + (activeNav === 'Профиль' ? ' on' : '')}
+            onClick={() => setMenu(!menu)}
+            aria-expanded={menu}
+          >
             <img src={role.av} alt="" />
             <div><div className="nm">{role.nm}</div><div className="rl">{cur}</div></div>
             <ChevronDown size={14} />

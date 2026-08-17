@@ -23,6 +23,10 @@
 .dtop .dme { position: relative; }
 .dtop .me { display: flex; align-items: center; gap: 9px; font: inherit; color: inherit; background: none; border: 0; text-align: left; cursor: pointer; padding: 4px 8px 4px 4px; border-radius: var(--r-sm); }
 .dtop .me:hover { background: var(--c-panel-2); }
+/* Экран открыт из шапки (свой профиль, уведомления) — подсвечен вход в
+   шапке, а не пункт сайдбара: пункта у этих экранов нет вовсе. */
+.dtop .me.on { background: var(--c-accent-soft); box-shadow: inset 0 0 0 1px var(--c-accent-line); }
+.dtop .iconbtn.on { border-color: var(--c-accent-line); background: var(--c-accent-soft); color: var(--c-accent); }
 .dtop .me > svg { color: var(--c-dim); }
 .dtop .me img { width: 32px; height: 32px; border-radius: 50%; object-fit: cover; box-shadow: 0 0 0 1px var(--c-glass-ring); }
 .dtop .me .nm { font-size: 12.5px; font-weight: 600; } .dtop .me .rl { font-size: 10.5px; color: var(--c-muted); }
