@@ -8,9 +8,9 @@
       коэффициент 1,5 за роль и за выезд, окно апелляций — 10 дней. */
 
 import { useState, type ReactNode } from 'react';
-import { ArrowUpDown, BadgeCheck, Ban, Check, Megaphone, Paperclip, Undo2, UserPlus, X } from 'lucide-react';
+import { ArrowUpDown, BadgeCheck, Ban, Check, Megaphone, Paperclip, Undo2, X } from 'lucide-react';
 import {
-  A, AW, ActionBar, Alert, Arrow, Attention, Board, Chips, Empty, Field, Form, Ghost, Hint, Input,
+  A, AW, ActionBar, Alert, Arrow, Attention, Board, Chips, Empty, Field, Filter, Form, Ghost, Hint, Input,
   Modal, Off, Panel, RoleScreen, Row, Rows, Screen, Search, Shot, States,
 } from './shell';
 import type { AttnItem } from './shell';
@@ -144,15 +144,30 @@ export function Queues5_1({ variant }: { variant?: DeskVariant }) {
   );
 }
 
-/* ── Э5.2 · Заявки судей на турнир ───────────────────────────────── */
+/* ── Э5.2 · Судьи на турнир: заявки и наряд одним экраном ────────── */
+
+/** Заявки и наряд были двумя экранами, а вопрос у председателя один: **кто
+    судит этот турнир**. Заявки — вход, наряд — результат, и разводить их по
+    разным пунктам меню значило заставлять ходить туда-сюда: посмотреть, кого не
+    хватает, вернуться, назначить, снова посмотреть.
+
+    Хуже того, состав наряда лежал отдельным списком и мог разойтись с тем, кого
+    назначили в заявках, — та же беда, что мы уже ловили в календаре и реестрах.
+    Теперь наряд **считается из решений** на этом же экране: разойтись нечему.
+
+    Тем же приёмом собран наряд у администратора федерации (Э1.3): роль в строке
+    заявки, а не отдельный экран. */
 
 /** Турниры, где приём заявок судей открыт. Их несколько одновременно — сезон
     идёт параллельно, — поэтому экран начинается с выбора турнира, а не привязан
-    к одному: иначе к каждому пришлось бы возвращаться через очередь. */
+    к одному: иначе к каждому пришлось бы возвращаться через очередь.
+
+    `crew` — сколько судей нужно в бригаду по числу столов: по нему видно, что
+    заявок не хватает и придётся добирать из реестра. */
 const OPEN_TOURS = [
-  { nm: 'Открытый турнир «Тараз Опен»', d: '16–17.08', till: '25.07', left: 'до старта 4 дня', n: 3, cls: 'bad' as Cls },
-  { nm: 'Первенство РК до 19 лет', d: '24–27.08', till: '10.08', left: 'до старта 12 дней', n: 6, cls: 'wait' as Cls },
-  { nm: 'Кубок Республики Казахстан 2026', d: '12–15.09', till: '25.08', left: 'до старта 31 день', n: 9, cls: 'reg' as Cls },
+  { nm: 'Открытый турнир «Тараз Опен»', d: '16–17.08', till: '25.07', left: 'до старта 4 дня', n: 3, crew: 4, cls: 'bad' as Cls },
+  { nm: 'Первенство РК до 19 лет', d: '24–27.08', till: '10.08', left: 'до старта 12 дней', n: 6, crew: 6, cls: 'wait' as Cls },
+  { nm: 'Кубок Республики Казахстан 2026', d: '12–15.09', till: '25.08', left: 'до старта 31 день', n: 9, crew: 10, cls: 'reg' as Cls },
 ];
 
 type Cand = {
@@ -181,26 +196,72 @@ const CANDS: Cand[] = [
 
 /** Колонки: по каким сортируют. Список судей ищут по фамилии и сравнивают по
     рейтингу — как состав участников у спортсмена (Э14.5), тем же приёмом. */
-const COLS5: { k: 'nm' | 'cat' | 'reg' | 'r' | 'season'; t: string; num?: boolean }[] = [
+const COLS5: { k: 'nm' | 'cat' | 'reg' | 'r'; t: string; num?: boolean }[] = [
   { k: 'nm', t: 'Судья' },
   { k: 'cat', t: 'Категория' },
   { k: 'reg', t: 'Регион' },
   { k: 'r', t: 'Рейтинг R', num: true },
-  { k: 'season', t: 'Турниров', num: true },
 ];
 
-/** Решение по заявке: 1 — назначен, −1 — отклонён, 0 — решения нет. */
-type Verdict = Record<string, number>;
+/** Места в наряде. Главный судья, секретарь и заместитель — по одному на
+    турнир; судей столько, сколько столов. Распределение по столам делает
+    главный судья на этапе системы проведения (Э6.5) — здесь только состав. */
+const POSTS = [
+  { k: 'chief' as const, t: 'Главный', full: 'Главный судья' },
+  { k: 'sec' as const, t: 'Секретарь', full: 'Главный секретарь' },
+  { k: 'dep' as const, t: 'Зам', full: 'Заместитель' },
+  { k: 'judge' as const, t: 'Судья', full: 'Судьи' },
+];
+
+type Post = (typeof POSTS)[number]['k'];
+/** Наряд одного турнира: три места по одному человеку, судей — сколько нужно.
+    `out` — отклонённые заявки: они остаются на экране, но в наряд не входят. */
+type Crew = { chief: string; sec: string; dep: string; judges: string[]; out: string[] };
+const EMPTY: Crew = { chief: '', sec: '', dep: '', judges: [], out: [] };
 
 export function Applications5_2() {
   const [tour, setTour] = useState(OPEN_TOURS[0].nm);
   const [q, setQ] = useState('');
   const [sort, setSort] = useState<{ k: (typeof COLS5)[number]['k']; up: boolean }>({ k: 'r', up: false });
-  /* Решение хранится по судье: назначенный и отклонённый должны остаться в
-     списке с пометкой, а не исчезнуть — иначе не видно, что уже разобрано. */
-  const [v, setV] = useState<Verdict>({});
+  /* Наряд хранится по турниру: турниров на экране несколько, состав у каждого
+     свой, а люди в заявках повторяются — общим состоянием назначение на один
+     турнир проступало бы и в остальных. */
+  const [crews, setCrews] = useState<Record<string, Crew>>({});
   const cur = OPEN_TOURS.find((t) => t.nm === tour)!;
-  const set = (nm: string, n: number) => setV({ ...v, [nm]: v[nm] === n ? 0 : n });
+  const crew = crews[tour] ?? EMPTY;
+  const put = (c: Crew) => setCrews({ ...crews, [tour]: c });
+
+  /* Место в наряде у человека одно: главный судья не ведёт протокол за
+     секретаря и не стоит на столе. Поэтому назначение снимает предыдущее место
+     — и у того, кто его занимал, и у самого назначенного. Отклонённая заявка
+     при назначении перестаёт быть отклонённой: решение поменяли. */
+  const pick = (nm: string, post: Post) => {
+    const free = {
+      chief: crew.chief === nm ? '' : crew.chief,
+      sec: crew.sec === nm ? '' : crew.sec,
+      dep: crew.dep === nm ? '' : crew.dep,
+      judges: crew.judges.filter((x) => x !== nm),
+      out: crew.out.filter((x) => x !== nm),
+    };
+    if (post === 'judge') {
+      return put(crew.judges.includes(nm) ? { ...free, out: crew.out } : { ...free, judges: [...free.judges, nm] });
+    }
+    put(crew[post] === nm ? { ...free, out: crew.out } : { ...free, [post]: nm });
+  };
+  const reject = (nm: string) =>
+    put(
+      crew.out.includes(nm)
+        ? { ...crew, out: crew.out.filter((x) => x !== nm) }
+        : {
+          chief: crew.chief === nm ? '' : crew.chief,
+          sec: crew.sec === nm ? '' : crew.sec,
+          dep: crew.dep === nm ? '' : crew.dep,
+          judges: crew.judges.filter((x) => x !== nm),
+          out: [...crew.out, nm],
+        },
+    );
+  const postOf = (nm: string): Post | '' =>
+    crew.chief === nm ? 'chief' : crew.sec === nm ? 'sec' : crew.dep === nm ? 'dep' : crew.judges.includes(nm) ? 'judge' : '';
 
   const pool = CANDS.slice(0, cur.n);
   const found = pool.filter((c) => {
@@ -209,16 +270,15 @@ export function Applications5_2() {
   });
   const rows = [...found].sort((a, b) => {
     const k = sort.k;
-    const x = k === 'r' || k === 'season' ? a[k] - b[k] : String(a[k]).localeCompare(String(b[k]), 'ru');
+    const x = k === 'r' ? a[k] - b[k] : String(a[k]).localeCompare(String(b[k]), 'ru');
     return sort.up ? x : -x;
   });
-  const named = pool.filter((c) => v[c.nm] === 1).length;
 
   return (
     <RoleScreen
       role={R05}
-      nav="Заявки судей"
-      title="Заявки судей на турнир"
+      nav="Судьи"
+      title="Судьи на турнир"
       back={{ label: 'Мои соревнования', to: 'Э5.1' }}
     >
       {/* Турниров с открытым приёмом несколько сразу: выбор здесь, а не возврат
@@ -236,11 +296,32 @@ export function Applications5_2() {
         ))}
       </div>
 
+      {/* Наряд: не отдельный экран и не второй список, а итог решений внизу.
+          Главный вопрос председателя — какие места ещё пустые, — читается
+          отсюда, не открывая ничего. Пустое место так и написано «не назначен»:
+          прочерк пришлось бы расшифровывать. */}
+      <div className="mkduty">
+        {POSTS.map((p) => {
+          /* У судей место не одно, поэтому там не фамилия, а сколько набрано из
+             скольких нужно по числу столов: «не назначен» о четырёх местах
+             сразу ничего не говорит. */
+          const many = p.k === 'judge';
+          const who = many ? `${crew.judges.length} из ${cur.crew}` : crew[p.k];
+          const free = many ? crew.judges.length === 0 : !who;
+          return (
+            <div className={'mkduty-i' + (free ? ' free' : '')} key={p.k}>
+              <div className="k">{p.full}</div>
+              <div className="v">{who || 'не назначен'}</div>
+            </div>
+          );
+        })}
+      </div>
+
       {/* Плиток над таблицей нет: заявок в них было столько же, сколько строк
           ниже, а «решений принято» повторяло пометки в самих строках. Даты,
-          срок приёма и решения ужаты в одну строку рядом с поиском — факты те
-          же, блок в четверть экрана под них не нужен. Срочность турнира при
-          этом остаётся цветной: за четыре дня до старта это главное на экране.
+          срок приёма и наряд ужаты в одну строку рядом с поиском — факты те же,
+          блок в четверть экрана под них не нужен. Срочность турнира при этом
+          остаётся цветной: за четыре дня до старта это главное на экране.
 
           «Журнала начислений судьи» здесь тоже нет: журнал относится к **одному
           судье**, а кнопка над таблицей не знает, к какому. Он живёт в рейтинге
@@ -248,14 +329,14 @@ export function Applications5_2() {
           (⚠ карточка по строке пока не нарисована). */}
       <div className="dactionbar">
         <Search value={q} placeholder="Фамилия, регион или категория" onChange={setQ} wide />
+        {/* Только даты и срок приёма: сколько до старта видно из самих дат, а
+            наряд стоит полосой выше — считать его ещё и здесь незачем. */}
         <span className="dcount">
-          {cur.d} · приём до {cur.till} ·{' '}
-          <b className={cur.cls === 'bad' ? 'hot' : undefined}>{cur.left}</b>
-          {' · решений '}<b>{named} из {cur.n}</b>
+          {cur.d} · приём до <b>{cur.till}</b>
         </span>
       </div>
 
-      <div className="mktable mkcands">
+      <div className="mktable mkcands mkcrew">
         <div className="mktable-h">
           {COLS5.map((c) => (
             <button
@@ -268,47 +349,63 @@ export function Applications5_2() {
               {sort.k === c.k && <ArrowUpDown size={11} />}
             </button>
           ))}
-          <span />
+          <span>Место в наряде</span>
         </div>
         <div className="mktable-b">
-          {rows.map((c) => (
-            <div
-              className={'mktable-r' + (v[c.nm] === 1 ? ' yes' : v[c.nm] === -1 ? ' no' : '')}
-              key={c.nm}
-            >
-              <span className="nm">
-                <img src={c.av} alt="" />
-                <i>{c.nm}<em>{c.last}</em></i>
-              </span>
-              <span>{c.cat}</span>
-              <span>{c.reg}</span>
-              <span className="num">{String(c.r).replace('.', ',')}</span>
-              <span className="num">{c.season}</span>
-              {/* Решение остаётся видимым: назначенный и отклонённый не исчезают
-                  из списка, иначе не понять, что уже разобрано. */}
-              <span className="vset">
-                {v[c.nm] === 1 && <P t="НАЗНАЧЕН" cls="live" />}
-                {v[c.nm] === -1 && <P t="ОТКЛОНЁН" cls="bad" />}
-                <button
-                  type="button"
-                  className={'vbtn yes' + (v[c.nm] === 1 ? ' on' : '')}
-                  title="Назначить главным судьёй"
-                  onClick={() => set(c.nm, 1)}
-                >
-                  <Check size={15} />
-                </button>
-                <button
-                  type="button"
-                  className={'vbtn no' + (v[c.nm] === -1 ? ' on' : '')}
-                  title="Отклонить заявку с причиной"
-                  data-to="Э5.9"
-                  onClick={() => set(c.nm, -1)}
-                >
-                  <X size={15} />
-                </button>
-              </span>
-            </div>
-          ))}
+          {rows.map((c) => {
+            const post = postOf(c.nm);
+            const out = crew.out.includes(c.nm);
+            return (
+              <div className={'mktable-r' + (post ? ' yes' : out ? ' no' : '')} key={c.nm}>
+                <span className="nm">
+                  <img src={c.av} alt="" />
+                  {/* Пока решения нет, под фамилией стоит последний турнир с
+                      ролью — по нему и решают. Как только место дано, важнее
+                      само решение, и строка говорит о нём. */}
+                  <i>
+                    {c.nm}
+                    {post ? (
+                      <em className="on">{POSTS.find((p) => p.k === post)!.full}</em>
+                    ) : out ? (
+                      <em className="off">Заявка отклонена</em>
+                    ) : (
+                      <em>{c.last}</em>
+                    )}
+                  </i>
+                </span>
+                <span>{c.cat}</span>
+                <span>{c.reg}</span>
+                <span className="num">{String(c.r).replace('.', ',')}</span>
+                {/* Места кнопками в ряд, а не селектором: колонка читается
+                    сверху вниз, и видно, кто на что поставлен, без вчитывания.
+                    Селектор в каждой строке заставил бы открыть девять списков,
+                    чтобы собрать один наряд. */}
+                <span className="vset">
+                  <span className="rchips">
+                    {POSTS.map((p) => (
+                      <button
+                        key={p.k}
+                        type="button"
+                        className={'rchip' + (post === p.k ? ' on' : '')}
+                        onClick={() => pick(c.nm, p.k)}
+                      >
+                        {p.t}
+                      </button>
+                    ))}
+                  </span>
+                  <button
+                    type="button"
+                    className={'vbtn no' + (out ? ' on' : '')}
+                    title="Отклонить заявку с причиной"
+                    data-to="Э5.9"
+                    onClick={() => reject(c.nm)}
+                  >
+                    <X size={15} />
+                  </button>
+                </span>
+              </div>
+            );
+          })}
           {rows.length === 0 && (
             <div className="dcount" style={{ padding: '14px 12px' }}>
               По запросу «{q}» никого нет — проверьте написание фамилии.
@@ -316,60 +413,6 @@ export function Applications5_2() {
           )}
         </div>
       </div>
-    </RoleScreen>
-  );
-}
-
-/* ── Э5.3 · Наряд судей: состав бригады, без столов ──────────────── */
-
-type Duty = { av: string; role: string; who: string; pill: { t: string; cls: Cls } };
-
-const DUTY: Duty[] = [
-  { av: A(76), role: 'Главный судья', who: 'Оспанов Тимур · национальная категория · R 27,5 · Астана', pill: { t: 'НАЗНАЧЕН ПО ЗАЯВКЕ', cls: 'live' } },
-  { av: AW(31), role: 'Главный секретарь', who: 'Ким Лариса · первая категория · R 14 · Караганда', pill: { t: 'В НАРЯДЕ', cls: 'live' } },
-  { av: A(22), role: 'Заместитель главного судьи', who: 'Жумабеков Расул · судья по спорту · R 7 · Караганда', pill: { t: 'ПРАВА РОЛИ УТОЧНЯЮТСЯ', cls: 'wait' } },
-  { av: A(13), role: 'Судья', who: 'Пак Сергей · первая категория · R 18 · Павлодар', pill: { t: 'ВЫЕЗД · К 1,5', cls: 'reg' } },
-  { av: A(51), role: 'Судья', who: 'Токаев Марат · национальная категория · R 22,5 · Шымкент', pill: { t: 'ВЫЕЗД · К 1,5', cls: 'reg' } },
-  { av: A(19), role: 'Судья', who: 'Цой Виктор · первая категория · R 9,5 · Караганда', pill: { t: 'СВОЙ РЕГИОН', cls: 'wait' } },
-];
-
-const DutyRow = ({ d }: { d: Duty }) => (
-  <div className="drow">
-    <img src={d.av} alt="" />
-    <div className="who">
-      <div className="nm">{d.role}</div>
-      <div className="rl">{d.who}</div>
-    </div>
-    <P t={d.pill.t} cls={d.pill.cls} />
-    <GhostPick>Убрать</GhostPick>
-  </div>
-);
-
-export function Brigade5_3() {
-  return (
-    <RoleScreen
-      role={R05}
-      nav="Наряд"
-      title="Наряд судей на турнир"
-      sub="Кубок Республики Казахстан 2026 · Караганда · бригада 14 человек"
-      back={{ label: 'Заявки судей', to: 'Э5.2' }}
-    >
-      <Chips
-        items={[
-          { v: '14', k: 'В наряде', tone: 'b' },
-          { v: '4', k: 'Национальная категория' },
-          { v: '1', k: 'Ждёт подтверждения', tone: 'a' },
-          { v: '20', k: 'Столов в зале' },
-        ]}
-      />
-      <ActionBar count="Роли наряда · показаны 6 из 14 человек бригады">
-        <GhostPick>
-          <UserPlus size={13} /> Добавить из реестра судей
-        </GhostPick>
-      </ActionBar>
-      <Rows>
-        {DUTY.map((d) => <DutyRow key={d.who} d={d} />)}
-      </Rows>
     </RoleScreen>
   );
 }
@@ -386,16 +429,31 @@ const RESULTS: Res[] = [
   { pl: 5, av: A(56), nm: 'Гладун Игорь', club: 'Тараз', sc: '1/4 · снят', pill: { t: 'НЕЯВКА', cls: 'bad' } },
 ];
 
-const ResRow = ({ r }: { r: Res }) => (
-  <div className="drow">
-    <span className="rank">{r.pl}</span>
-    <img src={r.av} alt="" />
-    <div className="who">
-      <div className="nm">{r.nm}</div>
-      <div className="rl">{r.club}</div>
+/** Результаты — той же таблицей, что судьи на Э5.2: строки волосяной линией, а
+    не каждая в своей рамке. Рамка вокруг каждой строки давала между фамилиями
+    просвет в полтора интервала, и пять мест занимали пол-экрана — при том что
+    протокол читают сверху вниз одним взглядом. */
+const ResTable = ({ rows }: { rows: Res[] }) => (
+  <div className="mktable mkcands mkres">
+    <div className="mktable-h">
+      <span>Место</span>
+      <span>Спортсмен</span>
+      <span className="num">Результат</span>
+      <span />
     </div>
-    <div className="amt">{r.sc}</div>
-    {r.pill && <P t={r.pill.t} cls={r.pill.cls} />}
+    <div className="mktable-b">
+      {rows.map((r) => (
+        <div className="mktable-r" key={r.pl}>
+          <span className="rank">{r.pl}</span>
+          <span className="nm">
+            <img src={r.av} alt="" />
+            <i>{r.nm}<em>{r.club}</em></i>
+          </span>
+          <span className="num">{r.sc}</span>
+          <span className="mark">{r.pill && <P t={r.pill.t} cls={r.pill.cls} />}</span>
+        </div>
+      ))}
+    </div>
   </div>
 );
 
@@ -408,22 +466,36 @@ const Fix = ({ m, who }: { m: string; who: string }) => (
   </div>
 );
 
+/** Решение по протоколу: `''` — ещё ждёт, `ok` — утверждён, `back` — возвращён
+    на исправление. Решение видно в шапке протокола, а не только по кнопке: с
+    этого места экран отвечает на другой вопрос. */
+type PVerdict = '' | 'ok' | 'back';
+
 export function Protocol5_4() {
+  const [v, setV] = useState<PVerdict>('');
+  /* Возврат идёт через тот же диалог отказа с причиной, что и отклонение заявки
+     (Э5.9): причина обязательна, она уходит главному судье и в журнал. */
+  const [ask, setAsk] = useState(false);
+  const head: Record<PVerdict, { t: string; cls: Cls }> = {
+    '': { t: 'ЖДЁТ 3 ДНЯ', cls: 'wait' },
+    ok: { t: 'УТВЕРЖДЁН', cls: 'live' },
+    back: { t: 'ВОЗВРАЩЁН НА ИСПРАВЛЕНИЕ', cls: 'bad' },
+  };
   return (
     <RoleScreen
       role={R05}
       nav="Протоколы"
       title="Протокол на утверждении"
-      sub="«Алатау Опен» 2026 · Алматы · сыгран 09.08.2026"
       back={{ label: 'Мои соревнования', to: 'Э5.1' }}
     >
       <div className="mkcols">
-        <Panel title="Итоговый протокол" extra={<P t="ЖДЁТ 3 ДНЯ" cls="wait" />}>
-          <ActionBar count="Сформировал Оспанов Т. · 10.08.2026, 19:40" />
+        <Panel title="Итоговый протокол" extra={<P t={head[v].t} cls={head[v].cls} />}>
+          {/* Турнир, город и дата ушли из подписи под заголовком в шапку самого
+              протокола: там они стоят рядом с тем, кто его сформировал и когда,
+              — одной строкой вместо двух этажей над экраном. */}
+          <ActionBar count="«Алатау Опен» 2026 · Алматы · сыгран 09.08 · сформировал Оспанов Т. 10.08 в 19:40" />
           <div style={{ height: 10 }} />
-          <Rows>
-            {RESULTS.map((r) => <ResRow key={r.pl} r={r} />)}
-          </Rows>
+          <ResTable rows={RESULTS} />
         </Panel>
 
         <Panel title="Зона сверки" extra={<P t="3 ПРАВКИ СЧЁТА" cls="bad" />}>
@@ -439,46 +511,122 @@ export function Protocol5_4() {
           <Fix m="1/4 · Токаев М. — Гладун И. · 4:0 → техпобеда" who="внёс Оспанов Т. · 09.08, 17:40" />
           <Fix m="1/16 · Цой В. — Сериков Н. · 3:0 → 3:1" who="внесла Ким Л. · 09.08, 11:05" />
 
+          {/* Решение принято — кнопок больше нет, а не «серые»: утверждённый
+              протокол завершает турнир и запускает пересчёт рейтинга, возвращать
+              его уже некуда. Вместо кнопок — что именно произошло. */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 14 }}>
-            <button className="dsubmit ok"><Check size={15} />Утвердить протокол</button>
-            <Ghost><Undo2 size={15} />Вернуть с причиной</Ghost>
+            {v === '' && (
+              <>
+                <button type="button" className="dsubmit ok" onClick={() => setV('ok')}>
+                  <Check size={15} />Утвердить протокол
+                </button>
+                <Ghost onClick={() => setAsk(true)}>
+                  <Undo2 size={15} />Вернуть с причиной
+                </Ghost>
+              </>
+            )}
+            {v === 'ok' && (
+              <Alert tone="success">
+                Протокол утверждён: турнир → «Завершён», запущен пересчёт рейтинга, главному судье
+                ушло уведомление. Отменить можно, пока пересчитанный рейтинг не опубликован
+                (Э5.7): после публикации счёт правят апелляцией, а не отменой утверждения.
+              </Alert>
+            )}
+            {v === 'back' && (
+              <Alert tone="warning">
+                Протокол возвращён: ввод результатов открыт снова, главный судья исправляет и
+                отправляет повторно. В «Моих соревнованиях» строка помечена «на исправлении».
+                Отменить возврат можно, пока судья не отправил протокол заново.
+              </Alert>
+            )}
+            {/* Возврат решения ✳. Обе кнопки решают необратимо на вид — и это
+                неправда: председатель ошибается тем же способом, что и все, а
+                до публикации рейтинга откатить ещё можно. Кнопка тихая, не
+                вровень с «Утвердить»: отмена решения — редкий шаг, и она не
+                должна выглядеть как равный ему выбор. Каждая отмена идёт в
+                журнал с автором и временем (§12). */}
+            {v !== '' && (
+              <Ghost onClick={() => setV('')}>
+                <Undo2 size={15} />
+                {v === 'ok' ? 'Отменить утверждение' : 'Отменить возврат'}
+              </Ghost>
+            )}
           </div>
         </Panel>
       </div>
+
+      {ask && (
+        <Modal
+          title="Вернуть протокол с причиной"
+          sub="«Алатау Опен» 2026 · главному судье Оспанову Т."
+          onClose={() => setAsk(false)}
+          to="Э5.4"
+          foot={
+            <>
+              <div className="dcount">Причина уйдёт главному судье и останется в журнале</div>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <Ghost onClick={() => setAsk(false)}>Закрыть</Ghost>
+                <button
+                  type="button"
+                  className="dsubmit"
+                  style={{ padding: '11px 16px' }}
+                  onClick={() => { setV('back'); setAsk(false); }}
+                >
+                  Вернуть
+                </button>
+              </div>
+            </>
+          }
+        >
+          <Form>
+            <Field label="Что возвращается" value="Итоговый протокол · «Алатау Опен» 2026" wide />
+            <Input label="Причина" value="в 1/4 техпобеда без основания в журнале матча" wide />
+          </Form>
+          <Alert>Ввод результатов откроется снова — это сказано в уведомлении главному судье.</Alert>
+        </Modal>
+      )}
     </RoleScreen>
   );
 }
 
 /* ── Э5.5 · Рейтинг судей: S1–S4, итог R и признак зачёта ────────── */
 
-type JR = { pl: number; nm: string; cat: string; s1: string; s2: string; s3: string; s4: string; r: string; ok: boolean };
+/** Судья в рейтинге. S1–S4 — слагаемые по Положению (§7.2), R — их сумма;
+    `ok` — признак зачёта: баллы не меньше чем в трёх категориях из четырёх и
+    обязательно S1 и S2. */
+type JR = {
+  pl: number;
+  av: string;
+  nm: string;
+  cat: string;
+  s1: number; s2: number; s3: number; s4: number; r: number;
+  ok: boolean;
+};
 
 const RANK: JR[] = [
-  { pl: 1, nm: 'Оспанов Тимур', cat: 'Национальная категория', s1: '16,5', s2: '4', s3: '5', s4: '2', r: '27,5', ok: true },
-  { pl: 2, nm: 'Токаев Марат', cat: 'Национальная категория', s1: '13,5', s2: '4', s3: '3', s4: '2', r: '22,5', ok: true },
-  { pl: 3, nm: 'Пак Сергей', cat: 'Первая категория', s1: '12', s2: '2', s3: '3', s4: '1', r: '18', ok: true },
-  { pl: 4, nm: 'Ким Лариса', cat: 'Первая категория', s1: '9', s2: '2', s3: '3', s4: '0', r: '14', ok: true },
-  { pl: 5, nm: 'Абдрахманова Сауле', cat: 'Первая категория', s1: '7,5', s2: '2', s3: '3', s4: '0', r: '12,5', ok: true },
-  { pl: 6, nm: 'Цой Виктор', cat: 'Первая категория', s1: '7,5', s2: '2', s3: '0', s4: '0', r: '9,5', ok: false },
+  { pl: 1, av: A(76), nm: 'Оспанов Тимур', cat: 'Национальная категория', s1: 16.5, s2: 4, s3: 5, s4: 2, r: 27.5, ok: true },
+  { pl: 2, av: A(51), nm: 'Токаев Марат', cat: 'Национальная категория', s1: 13.5, s2: 4, s3: 3, s4: 2, r: 22.5, ok: true },
+  { pl: 3, av: A(13), nm: 'Пак Сергей', cat: 'Первая категория', s1: 12, s2: 2, s3: 3, s4: 1, r: 18, ok: true },
+  { pl: 4, av: AW(31), nm: 'Ким Лариса', cat: 'Первая категория', s1: 9, s2: 2, s3: 3, s4: 0, r: 14, ok: true },
+  { pl: 5, av: AW(65), nm: 'Абдрахманова Сауле', cat: 'Первая категория', s1: 7.5, s2: 2, s3: 3, s4: 0, r: 12.5, ok: true },
+  { pl: 6, av: A(19), nm: 'Цой Виктор', cat: 'Первая категория', s1: 7.5, s2: 2, s3: 0, s4: 0, r: 9.5, ok: false },
+  { pl: 7, av: A(22), nm: 'Жумабеков Расул', cat: 'Судья по спорту', s1: 5, s2: 2, s3: 0, s4: 0, r: 7, ok: false },
+  { pl: 8, av: AW(32), nm: 'Абдрахманова Айгерим', cat: 'Вторая категория', s1: 4, s2: 0, s3: 0, s4: 0, r: 4, ok: false },
 ];
 
-const RankRow = ({ j }: { j: JR }) => (
-  <div className="drow" style={{ padding: '9px 11px' }}>
-    <span className="rank">{j.pl}</span>
-    <div className="who">
-      <div className="nm" style={{ fontSize: 13 }}>{j.nm}</div>
-      <div className="rl">{j.cat}</div>
-    </div>
-    <div className="rt" style={{ gap: 12 }}>
-      <div><div className="v">{j.s1}</div><div className="k">S1</div></div>
-      <div><div className="v">{j.s2}</div><div className="k">S2</div></div>
-      <div><div className="v">{j.s3}</div><div className="k">S3</div></div>
-      <div><div className="v">{j.s4}</div><div className="k">S4</div></div>
-      <div><div className="v">{j.r}</div><div className="k">Итог R</div></div>
-    </div>
-    <P t={j.ok ? 'В ЗАЧЁТЕ' : 'БЕЗ ЗАЧЁТА'} cls={j.ok ? 'live' : 'bad'} />
-  </div>
-);
+/** Колонки рейтинга: фамилия и итог R. Слагаемых S1–S4 в таблице нет — сюда
+    приходят за местом в рейтинге, а из чего оно сложилось, разбирают в журнале
+    по судье. Таблица отвечает «сколько», журнал — «почему». */
+const COLS55: { k: 'nm' | 'r'; t: string; num?: boolean }[] = [
+  { k: 'nm', t: 'Судья' },
+  { k: 'r', t: 'Итог R', num: true },
+];
+
+/** Фильтр один — по зачёту. Он и есть рабочий вопрос председателя: кому рейтинг
+    зачтётся, а у кого дыра в слагаемых. Категорию и регион ищут поиском. */
+const F55 = ['Все судьи', 'В зачёте', 'Без зачёта'];
+
+const num = (n: number) => String(n).replace('.', ',');
 
 const LogRow = ({ what, when, pts }: { what: string; when: string; pts: string }) => (
   <div className="qitem">
@@ -490,37 +638,111 @@ const LogRow = ({ what, when, pts }: { what: string; when: string; pts: string }
   </div>
 );
 
-export function Rating5_5() {
-  return (
-    <RoleScreen
-      role={R05}
-      nav="Рейтинг судей"
-      title="Рейтинг судей · сезон 2026"
-    >
-      <Chips
-        items={[
-          { v: '86', k: 'Судей в рейтинге', tone: 'b' },
-          { v: '7', k: 'Документов на проверке', tone: 'a', to: 'Э5.6' },
-          { v: '05.08', k: 'Последняя публикация', tone: 'g', to: 'Э5.7' },
-          { v: '5', k: 'Без зачёта' },
-        ]}
-      />
-      <div className="mkcols" style={{ gridTemplateColumns: '1.7fr 1fr' }}>
-        <Panel title="Таблица рейтинга" extra={<GhostPick to="Э5.6">Документы на проверке · 7</GhostPick>}>
-          <Rows>
-            {RANK.map((j) => <RankRow key={j.pl} j={j} />)}
-          </Rows>
-        </Panel>
+/** Журнал начислений одного судьи. Раньше он стоял второй колонкой и всегда
+    показывал одного и того же человека — рядом с таблицей на восемьдесят шесть
+    строк это читалось как «журнал вообще», а не «журнал Оспанова». Теперь он
+    открывается по строке: чей журнал, видно из того, на кого нажали.
 
-        <Panel title="Журнал начислений · Оспанов Тимур" extra={<P t="R 27,5 · №1" cls="reg" />}>
-          <LogRow what="S1 · Чемпионат РК, главный судья" when="18.05.2026 · 3 × 1,5 · автоначисление" pts="+4,5" />
-          <LogRow what="S1 · Кубок Караганды, выезд" when="12.04.2026 · 3 × 1,5 · автоначисление" pts="+4,5" />
-          <LogRow what="S2 · национальная категория" when="01.01.2026 · опорный балл · автоначисление" pts="+4" />
-          <LogRow what="S3 · офлайн-семинар Федерации" when="22.03.2026 · Алматы · принял Мукашев Б." pts="+3" />
-          <LogRow what="S4 · работа в ГСК РК, 6 месяцев" when="01.07.2026 · принял Мукашев Б." pts="+2" />
-          <div style={{ height: 12 }} />
-        </Panel>
+    В первой строке — сам турнир или документ: читают журнал, чтобы вспомнить
+    «за что», а не «в какую графу». Слагаемое (S1…S4) стоит второй строкой, где
+    и остальные подробности: дата, коэффициент, кто внёс. */
+const JOURNAL = [
+  { what: 'Чемпионат РК, главный судья', when: 'S1 · 18.05.2026 · 3 × 1,5 · автоначисление', pts: '+4,5' },
+  { what: 'Кубок Караганды, выезд', when: 'S1 · 12.04.2026 · 3 × 1,5 · автоначисление', pts: '+4,5' },
+  { what: 'Национальная категория', when: 'S2 · 01.01.2026 · опорный балл · автоначисление', pts: '+4' },
+  { what: 'Офлайн-семинар Федерации', when: 'S3 · 22.03.2026 · Алматы · принял Мукашев Б.', pts: '+3' },
+  { what: 'Работа в ГСК РК, 6 месяцев', when: 'S4 · 01.07.2026 · принял Мукашев Б.', pts: '+2' },
+];
+
+export function Rating5_5() {
+  const [f, setF] = useState(F55[0]);
+  const [q, setQ] = useState('');
+  const [sort, setSort] = useState<{ k: (typeof COLS55)[number]['k']; up: boolean }>({ k: 'r', up: false });
+  /* Чей журнал открыт. `null` — диалога нет. */
+  const [open, setOpen] = useState<string | null>(null);
+  const cur = RANK.find((j) => j.nm === open);
+
+  const found = RANK.filter((j) => {
+    const t = q.trim().toLowerCase();
+    const byF = f === F55[0] || (f === F55[1]) === j.ok;
+    return byF && (!t || j.nm.toLowerCase().includes(t) || j.cat.toLowerCase().includes(t));
+  });
+  const rows = [...found].sort((a, b) => {
+    const k = sort.k;
+    const x = k === 'nm' ? a.nm.localeCompare(b.nm, 'ru') : a.r - b.r;
+    return sort.up ? x : -x;
+  });
+
+  return (
+    <RoleScreen role={R05} nav="Рейтинг судей" title="Рейтинг судей · сезон 2026">
+      {/* Фильтр сверху, поиск под ним: это два разных приёма — сначала сужают
+          круг, потом ищут внутри, — и в одной строке они мешали друг другу.
+          Счётчиков рядом нет: «сколько в рейтинге» и «сколько без зачёта»
+          пересчитываются глазами по той же таблице, что стоит ниже. */}
+      <Filter items={F55} active={f} onPick={setF} />
+      <Search value={q} placeholder="Фамилия или категория" onChange={setQ} wide />
+
+      <div className="mktable mkcands mkrank">
+        <div className="mktable-h">
+          {COLS55.map((c) => (
+            <button
+              key={c.k}
+              type="button"
+              className={(c.num ? 'num' : '') + (sort.k === c.k ? ' on' : '')}
+              onClick={() => setSort({ k: c.k, up: sort.k === c.k ? !sort.up : c.k === 'nm' })}
+            >
+              {c.t}
+              {sort.k === c.k && <ArrowUpDown size={11} />}
+            </button>
+          ))}
+          <span>Зачёт</span>
+        </div>
+        <div className="mktable-b">
+          {rows.map((j) => (
+            /* Строка открывает журнал начислений этого судьи: разбираться, из
+               чего сложился рейтинг, ходят именно от фамилии. */
+            <div
+              className={'mktable-r' + (open === j.nm ? ' on' : '')}
+              key={j.nm}
+              role="button"
+              tabIndex={0}
+              onClick={() => setOpen(j.nm)}
+            >
+              <span className="nm">
+                <img src={j.av} alt="" />
+                <i>{j.nm}<em>{j.cat} · №{j.pl}</em></i>
+              </span>
+              <span className="num tot">{num(j.r)}</span>
+              <span className="mark">
+                <P t={j.ok ? 'В ЗАЧЁТЕ' : 'БЕЗ ЗАЧЁТА'} cls={j.ok ? 'live' : 'bad'} />
+              </span>
+            </div>
+          ))}
+          {rows.length === 0 && (
+            <div className="dcount" style={{ padding: '14px 12px' }}>
+              По запросу «{q}» никого нет — проверьте написание фамилии.
+            </div>
+          )}
+        </div>
       </div>
+
+      {cur && (
+        <Modal
+          title={`Журнал начислений · ${cur.nm}`}
+          sub={`${cur.cat} · R ${num(cur.r)} · №${cur.pl} · сезон 2026`}
+          onClose={() => setOpen(null)}
+          to="Э5.5"
+          foot={<Ghost onClick={() => setOpen(null)}>Закрыть</Ghost>}
+        >
+          {JOURNAL.map((l) => <LogRow key={l.what} {...l} />)}
+          {!cur.ok && (
+            <Alert>
+              Без зачёта: баллы есть не менее чем в трёх категориях из четырёх — здесь пусто в S3 и
+              S4, а они обязательны наравне с S1 и S2 (§7.2).
+            </Alert>
+          )}
+        </Modal>
+      )}
     </RoleScreen>
   );
 }
@@ -753,11 +975,20 @@ const PICK = [
 
 export function PickJudge5_8() {
   return (
-    <RoleScreen role={R05} nav="Наряд" title="Наряд судей" sub="Кубок Республики Казахстан 2026 · 14 из 20">
-      <Rows>
-        <Row nm="Стол 1 · Мұқанов Талғат" sub="национальная категория" pill={{ t: 'В НАРЯДЕ', cls: 'live' }} />
-        <Row nm="Стол 2 · Ибраев Қанат" sub="первая категория" pill={{ t: 'В НАРЯДЕ', cls: 'live' }} />
-      </Rows>
+    <RoleScreen
+      role={R05}
+      nav="Судьи"
+      title="Судьи на турнир"
+      back={{ label: 'Мои соревнования', to: 'Э5.1' }}
+    >
+      {/* Позади диалога — тот же экран Э5.2: добор из реестра нужен ровно там,
+          где видно, что место в наряде пустое. */}
+      <div className="mkduty">
+        <div className="mkduty-i"><div className="k">Главный судья</div><div className="v">Оспанов Тимур</div></div>
+        <div className="mkduty-i"><div className="k">Главный секретарь</div><div className="v">Ким Лариса</div></div>
+        <div className="mkduty-i free"><div className="k">Заместитель</div><div className="v">не назначен</div></div>
+        <div className="mkduty-i"><div className="k">Судья</div><div className="v">7 из 10</div></div>
+      </div>
 
       <Modal
         title="Добавить судью в наряд"
@@ -812,33 +1043,75 @@ const PickJudge5_8States = () => (
 
 /* ── Э5.9 · Отказ с причиной ───────────────────────────────────── */
 
-export function Reject5_9() {
-  return (
-    <RoleScreen role={R05} nav="Заявки судей" title="Заявки судей на турнир" sub="Кубок Республики Казахстан 2026 · 9 заявок">
-      <Rows>
-        <Row av={A(76)} nm="Оспанов Тимур" sub="национальная категория · R 27,5" pill={{ t: 'ЗАЯВКА', cls: 'reg' }} />
-        <Row av={A(64)} nm="Сериков Нурлан" sub="вторая категория · R 14,2" pill={{ t: 'ЗАЯВКА', cls: 'reg' }} />
-      </Rows>
+/** Позади диалога — очередь заявок **без решения**. Разобранная заявка из неё
+    уходит: очередь отвечает на вопрос «что ещё не решено», и решённому делу в
+    ней места нет. На самом экране судей (Э5.2) отклонённый, наоборот, остаётся
+    со своей пометкой — там список другой, полный состав заявившихся. */
+const WAITING = [
+  { av: A(76), nm: 'Оспанов Тимур', sub: 'национальная категория · R 27,5' },
+  { av: A(64), nm: 'Сериков Нурлан', sub: 'вторая категория · R 14,2' },
+];
 
-      <Modal
-        title="Отклонить заявку с причиной"
-        sub="Сериков Нурлан · заявка на судейство Кубка РК"
-        foot={
-          <>
-            <div className="dcount">Причина уйдёт судье в уведомление и останется в журнале</div>
-            <div style={{ display: 'flex', gap: 8 }}>
-              <Ghost>Закрыть</Ghost>
-              <button className="dsubmit" style={{ padding: '11px 16px' }}>Отклонить</button>
-            </div>
-          </>
-        }
-      >
-        <Form>
-          <Field label="Что отклоняется" value="Заявка на судейство · Сериков Н." wide />
-          <Input label="Причина" value="на главный старт нужна первая или национальная категория" wide />
-        </Form>
-        <Alert>Приём заявок открыт до 18.04 — судья может подать снова, и это сказано в уведомлении.</Alert>
-      </Modal>
+export function Reject5_9() {
+  const [left, setLeft] = useState(WAITING);
+  /* Кого отклоняем. `null` — диалог закрыт: тем же состоянием работают и
+     крестик в шапке диалога, и «Закрыть» внизу. */
+  const [who, setWho] = useState<string | null>('Сериков Нурлан');
+  const cur = left.find((j) => j.nm === who);
+  return (
+    <RoleScreen
+      role={R05}
+      nav="Судьи"
+      title="Заявки без решения"
+      sub="Кубок Республики Казахстан 2026"
+    >
+      <Rows>
+        {left.map((j) => (
+          <Row
+            key={j.nm}
+            av={j.av}
+            nm={j.nm}
+            sub={j.sub}
+            pill={{ t: 'ЗАЯВКА', cls: 'reg' }}
+            action="Отклонить"
+            onAction={() => setWho(j.nm)}
+          />
+        ))}
+      </Rows>
+      {left.length === 0 && (
+        <Empty title="Решений не ждёт ничего" text="Все заявки на судейство этого турнира разобраны." />
+      )}
+
+      {cur && (
+        <Modal
+          title="Отклонить заявку с причиной"
+          sub={`${cur.nm} · заявка на судейство Кубка РК`}
+          onClose={() => setWho(null)}
+          to="Э5.2"
+          foot={
+            <>
+              <div className="dcount">Причина уйдёт судье в уведомление и останется в журнале</div>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <Ghost onClick={() => setWho(null)}>Закрыть</Ghost>
+                <button
+                  type="button"
+                  className="dsubmit"
+                  style={{ padding: '11px 16px' }}
+                  onClick={() => { setLeft(left.filter((j) => j.nm !== cur.nm)); setWho(null); }}
+                >
+                  Отклонить
+                </button>
+              </div>
+            </>
+          }
+        >
+          <Form>
+            <Field label="Что отклоняется" value={`Заявка на судейство · ${cur.nm}`} wide />
+            <Input label="Причина" value="на главный старт нужна первая или национальная категория" wide />
+          </Form>
+          <Alert>Приём заявок открыт до 18.04 — судья может подать снова, и это сказано в уведомлении.</Alert>
+        </Modal>
+      )}
     </RoleScreen>
   );
 }
@@ -884,19 +1157,14 @@ export const SCREENS: ScreenMap = {
     next: 'очередь «ждут назначения»',
   },
   'Э5.2': {
-    cap: 'Заявки судей',
+    cap: 'Судьи на турнир',
     view: () => (
       <>
         <Applications5_2 />
         <Applications5_2States />
       </>
     ),
-    next: 'назначен главный судья',
-  },
-  'Э5.3': {
-    cap: 'Наряд судей',
-    view: () => <Brigade5_3 />,
-    next: 'турнир сыгран · вторая очередь',
+    next: '«Добавить из реестра»',
   },
   'Э5.8': {
     cap: 'Выбор судьи в наряд',
@@ -906,7 +1174,7 @@ export const SCREENS: ScreenMap = {
         <PickJudge5_8States />
       </>
     ),
-    next: 'протокол на утверждении',
+    next: 'турнир сыгран · вторая очередь',
   },
   'Э5.4': {
     cap: 'Протокол на утверждении',

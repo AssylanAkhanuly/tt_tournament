@@ -168,10 +168,11 @@
    кнопка, и поле должно занимать остальное, а не свою минимальную ширину —
    иначе ссылка приглашения обрезается на трети. */
 .dactionbar > .dfield { flex: 1; min-width: 0; }
-/* Строка фактов рядом с поиском не сжимается: сжатие срезало ей хвост
-   («решений 0 из 3» уходило за край), а именно хвост и меняется по ходу
-   разбора. Ужимается поле поиска — ему есть куда. */
-.dactionbar > .dcount { flex: 0 0 auto; white-space: nowrap; }
+/* Строка фактов рядом с поиском не сжимается: сжатие срезало ей хвост, а
+   именно хвост и меняется по ходу разбора. Ужимается поле поиска — ему есть
+   куда. Только рядом с полем: в одиночку `.dcount` занимает всю полосу, и
+   nowrap срезал бы её о край панели. */
+.dactionbar > .dfield ~ .dcount { flex: 0 0 auto; white-space: nowrap; }
 
 /* Выведенное значение: подпись слева, значение справа. Заливки нет — она стала
    признаком «сюда пишут», и здесь её быть не должно: это значение считает
@@ -249,6 +250,24 @@
    было видно, кого назначаешь. */
 .mktable.mkcands .mktable-h,
 .mktable.mkcands .mktable-r { grid-template-columns: 1.7fr 116px 108px 92px 84px 168px; }
+/* Тот же список, но решение в строке — не «да/нет», а место в наряде: четыре
+   кнопки в ряд плюс отказ. Колонка решения самая широкая и задана в пикселях —
+   кнопки в ней не тянутся; остальное отдано фамилии. Столбца «турниров» нет:
+   по нему не решают, а места он занимал столько же, сколько рейтинг. */
+.mktable.mkcrew .mktable-h,
+.mktable.mkcrew .mktable-r { grid-template-columns: minmax(0, 1fr) 112px 104px 88px 366px; }
+/* Заголовок колонки решения — обычный span, а не кнопка сортировки: сортировать
+   по нему нечего. Приводим его к виду остальных заголовков. */
+.mktable.mkcrew .mktable-h > span:last-child {
+  justify-self: end;
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  color: var(--c-dim);
+}
+.mktable.mkcrew .vset { gap: 8px; }
+.mktable.mkcrew .rchip { white-space: nowrap; }
 .mktable.mkcands .mktable-r .nm { display: flex; align-items: center; gap: 10px; min-width: 0; }
 .mktable.mkcands .mktable-r .nm img { width: 30px; height: 30px; border-radius: 50%; object-fit: cover; flex: none; }
 .mktable.mkcands .mktable-r .nm i { font-style: normal; min-width: 0; }
@@ -265,6 +284,67 @@
 .mktable.mkcands .mktable-r.yes { background: var(--c-success-soft-2); }
 .mktable.mkcands .mktable-r.no { background: var(--c-danger-soft-2); }
 .mktable.mkcands .vset { justify-content: flex-end; }
+/* Пока решения нет, под фамилией стоит последний турнир с ролью — по нему и
+   решают. Как только место дано, важнее само решение, и строка говорит о нём. */
+.mktable.mkcands .mktable-r .nm em.on { color: var(--c-success); font-weight: 600; }
+.mktable.mkcands .mktable-r .nm em.off { color: var(--c-danger); font-weight: 600; }
+
+/* Рейтинг судей (Э5.5): слагаемые S1–S4 отдельными колонками — признак зачёта
+   считается по ним, и глазами это проверяется только по столбцам. Строка
+   кликабельна: открывает журнал начислений этого судьи. */
+.mktable.mkrank .mktable-h,
+.mktable.mkrank .mktable-r { grid-template-columns: minmax(0, 1fr) 96px 124px; }
+.mktable.mkrank .mktable-r { cursor: pointer; }
+.mktable.mkrank .mktable-r:hover { background: var(--c-panel-2); }
+.mktable.mkrank .mktable-r.on { background: var(--c-accent-soft); }
+.mktable.mkrank .num.tot { color: var(--c-ink); font-weight: 800; font-size: 13.5px; }
+.mktable.mkrank .mark { display: flex; justify-content: flex-end; }
+.mktable.mkrank .mark .pill { margin: 0; }
+.mktable.mkrank .mktable-h > span:last-child {
+  justify-self: end;
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  color: var(--c-dim);
+}
+
+/* Итоговый протокол (Э5.4) — та же таблица, что судьи: класс `mkcands` берётся
+   ради ячейки с фото и подписью, `mkres` переопределяет только колонки. Раньше
+   это были карточки-строки в рамках, и пять мест занимали пол-экрана. */
+.mktable.mkres .mktable-h,
+.mktable.mkres .mktable-r { grid-template-columns: 52px minmax(0, 1fr) 106px 134px; }
+/* Панель протокола — половина экрана, и фамилия в две строки растила строку
+   вдвое. Длинное имя обрезается многоточием, а не переносится. */
+.mktable.mkres .mktable-r .nm i,
+.mktable.mkres .mktable-r .nm em { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mktable.mkres .rank { font-size: 13px; font-weight: 700; color: var(--c-muted); }
+.mktable.mkres .mark { display: flex; justify-content: flex-end; }
+.mktable.mkres .mark .pill { margin: 0; }
+
+/* Наряд: итог решений, а не второй список. Места стоят полосой над таблицей,
+   пустое место так и написано «не назначен» — прочерк пришлось бы
+   расшифровывать. Раньше это был отдельный экран со своим списком людей, и он
+   мог разойтись с тем, кого назначили в заявках. */
+.mkduty { display: flex; align-items: stretch; gap: 8px; }
+.mkduty-i {
+  flex: 1;
+  min-width: 0;
+  padding: 9px 12px;
+  background: var(--c-panel);
+  border-radius: var(--r-sm);
+}
+.mkduty-i .k { font-size: 11px; font-weight: 600; color: var(--c-muted); }
+.mkduty-i .v {
+  margin-top: 3px;
+  font-size: 13px;
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.mkduty-i.free .v { color: var(--c-dim); font-weight: 600; }
+.mkduty > .dpickbtn { flex: none; align-self: center; }
 
 /* Таблица заявок клуба (Э13.5): что подаём, за кого, к какому сроку и что с
    заявкой. Колонок четыре, сортировки нет — заявки и так стоят по срочности,
