@@ -192,6 +192,10 @@
    (у `svg` в макетном слое `display: block`). */
 .dpickbtn,
 .dsubmit { display: inline-flex; align-items: center; gap: 6px; }
+/* Действие, которое уже случилось и назад не отыгрывается: горит тем же цветом,
+   но нажимать нечего — курсор обычный, а не «палец». Серым делать нельзя:
+   серое читается как «недоступно», а тут не запрет, а свершившийся факт. */
+.dsubmit.lit { padding: 10px 14px; cursor: default; }
 
 /* Строка реестра в узкой колонке (панель в две колонки, планшет): имя и
    подпись не сжимаем — иначе текст рассыпается по одному слову в строку.
@@ -299,6 +303,35 @@
 .mktable.mkrank .mktable-r.on { background: var(--c-accent-soft); }
 .mktable.mkrank .num.tot { color: var(--c-ink); font-weight: 800; font-size: 13.5px; }
 .mktable.mkrank .mark { display: flex; justify-content: flex-end; }
+
+/* Документы на балл (Э5.6) и апелляции (Э5.7) — те же таблицы, что судьи:
+   класс `mkcands` берётся ради ячейки с фото и подписью, свой класс задаёт
+   только колонки. Один приём на все списки роли: ищут и решают одинаково. */
+.mktable.mkdocs .mktable-h,
+.mktable.mkdocs .mktable-r { grid-template-columns: minmax(0, 1fr) 116px 152px 112px 84px; }
+/* Подан позже 10 дней: помечаем, но не отклоняем сами — последствие пропуска
+   срока в Положении не описано. */
+.mktable.mkdocs .late { color: var(--c-warning); }
+.mktable.mkdocs .late em { font-style: normal; display: block; font-size: 11px; }
+.mktable.mkdocs .num.tot { color: var(--c-ink); font-weight: 800; }
+
+.mktable.mkappeals .mktable-h,
+.mktable.mkappeals .mktable-r { grid-template-columns: minmax(0, 1fr) 132px 168px; }
+.mktable.mkappeals .mktable-r { cursor: pointer; }
+.mktable.mkappeals .mktable-r:hover { background: var(--c-panel-2); }
+.mktable.mkappeals .mktable-r.on { background: var(--c-accent-soft); }
+.mktable.mkappeals .mark { display: flex; justify-content: flex-end; }
+.mktable.mkappeals .mark .pill { margin: 0; }
+.mktable.mkdocs .mktable-h > span,
+.mktable.mkappeals .mktable-h > span:last-child {
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  color: var(--c-dim);
+}
+.mktable.mkdocs .mktable-h > span:last-child,
+.mktable.mkappeals .mktable-h > span:last-child { justify-self: end; }
 .mktable.mkrank .mark .pill { margin: 0; }
 .mktable.mkrank .mktable-h > span:last-child {
   justify-self: end;

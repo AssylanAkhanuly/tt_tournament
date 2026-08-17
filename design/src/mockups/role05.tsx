@@ -734,13 +734,9 @@ export function Rating5_5() {
           to="Э5.5"
           foot={<Ghost onClick={() => setOpen(null)}>Закрыть</Ghost>}
         >
+          {/* Пояснения про зачёт здесь нет: сам журнал и есть ответ — строк за
+              семинары и коллегию в нём просто не будет. */}
           {JOURNAL.map((l) => <LogRow key={l.what} {...l} />)}
-          {!cur.ok && (
-            <Alert>
-              Без зачёта: баллы есть не менее чем в трёх категориях из четырёх — здесь пусто в S3 и
-              S4, а они обязательны наравне с S1 и S2 (§7.2).
-            </Alert>
-          )}
         </Modal>
       )}
     </RoleScreen>
@@ -749,71 +745,148 @@ export function Rating5_5() {
 
 /* ── Э5.6 · Документы на проверке: баллы подсказаны Положением ───── */
 
-type Doc = { av: string; nm: string; what: string; pts: string; tag: string; cls: Cls; sel?: boolean };
+/** Документ на балл. `pts` — что система насчитала по таблицам Положения:
+    балл вида умножен на коэффициент. Председатель подтверждает или отклоняет —
+    считает система, решает человек. */
+type Doc = {
+  av: string;
+  nm: string;
+  what: string;
+  kind: string;
+  день: string;
+  pts: string;
+  file: string;
+  /** Подан позже 10 дней: ⚠ последствие в Положении не указано. */
+  late?: boolean;
+};
 
 const DOCS: Doc[] = [
-  { av: A(13), nm: 'Пак Сергей', what: 'Офлайн-семинар Федерации, Алматы · подан 08.08.2026', pts: '+4,5', tag: 'S3', cls: 'reg', sel: true },
-  { av: AW(31), nm: 'Ким Лариса', what: 'Онлайн-семинар ITTF · подан 07.08.2026', pts: '+1', tag: 'S3', cls: 'reg' },
-  { av: A(51), nm: 'Токаев Марат', what: 'Работа в ГСК РК, 6 месяцев · подан 05.08.2026', pts: '+2', tag: 'S4', cls: 'reg' },
-  { av: A(19), nm: 'Цой Виктор', what: 'Смена категории: первая → национальная · подан 02.08.2026', pts: 'S2 → 4', tag: 'КАТЕГОРИЯ', cls: 'live' },
-  { av: A(22), nm: 'Жумабеков Расул', what: 'Благодарственное письмо · подан 27.06.2026', pts: '+1', tag: 'ПОЗЖЕ 10 ДНЕЙ', cls: 'wait' },
+  { av: A(13), nm: 'Пак Сергей', what: 'Офлайн-семинар Федерации, Алматы', kind: 'Семинар', день: '08.08.2026', pts: '+4,5', file: 'сертификат-семинар-05-08.pdf' },
+  { av: AW(31), nm: 'Ким Лариса', what: 'Онлайн-семинар ITTF', kind: 'Семинар', день: '07.08.2026', pts: '+1', file: 'ittf-online-certificate.pdf' },
+  { av: A(51), nm: 'Токаев Марат', what: 'Работа в ГСК РК, 6 месяцев', kind: 'Коллегия', день: '05.08.2026', pts: '+2', file: 'vypiska-gsk.pdf' },
+  { av: A(22), nm: 'Жумабеков Расул', what: 'Благодарственное письмо', kind: 'Награда', день: '27.06.2026', pts: '+1', file: 'blagodarnost.pdf', late: true },
+  { av: AW(32), nm: 'Абдрахманова Айгерим', what: 'Судейский семинар области', kind: 'Семинар', день: '01.08.2026', pts: '+2', file: 'seminar-oblast.pdf' },
+  { av: A(45), nm: 'Досжан Марат', what: 'Работа в коллегии региона', kind: 'Коллегия', день: '29.07.2026', pts: '+1', file: 'kollegiya-region.pdf' },
 ];
 
-const DocRow = ({ d }: { d: Doc }) => (
-  <div className={'drow' + (d.sel ? ' pick' : '')} style={{ padding: '9px 11px' }}>
-    <img src={d.av} alt="" style={{ width: 30, height: 30 }} />
-    <div className="who">
-      <div className="nm" style={{ fontSize: 13 }}>{d.nm}</div>
-      <div className="rl">{d.what}</div>
-    </div>
-    <div className="amt">{d.pts}</div>
-    <P t={d.tag} cls={d.cls} />
-  </div>
-);
+const COLS56: { k: 'nm' | 'kind' | 'день'; t: string }[] = [
+  { k: 'nm', t: 'Судья и документ' },
+  { k: 'kind', t: 'Вид' },
+  { k: 'день', t: 'Подан' },
+];
+
+/** Виды документов по Положению: семинары идут в S3, награды и работа в
+    коллегии — в S4.
+
+    Смены категории здесь нет ✳: она не начисляет балл, а меняет опорный S2 и
+    саму категорию в профиле судьи — то есть правит справочные данные человека,
+    а не его активность за сезон. ⚠ Где её принимают, теперь не определено. */
+const F56 = ['Все документы', 'Семинары', 'Награды и коллегия'];
 
 export function Docs5_6() {
-  return (
-    <RoleScreen
-      role={R05}
-      nav="Рейтинг судей"
-      title="Документы на проверке · S3 и S4"
-      back={{ label: 'Рейтинг судей', to: 'Э5.5' }}
-    >
-      <Chips
-        items={[
-          { v: '7', k: 'В очереди', tone: 'a' },
-          { v: '3', k: 'Семинары и курсы (S3)' },
-          { v: '2', k: 'Награды и коллегия (S4)' },
-          { v: '2', k: 'Смена категории', tone: 'b' },
-        ]}
-      />
-      <div className="mkcols">
-        <Panel title="Очередь документов" extra={<P t="7 ЖДУТ РЕШЕНИЯ" cls="wait" />}>
-          <Rows>
-            {DOCS.map((d) => <DocRow key={d.nm} d={d} />)}
-          </Rows>
-        </Panel>
+  const [f, setF] = useState(F56[0]);
+  const [q, setQ] = useState('');
+  const [sort, setSort] = useState<{ k: (typeof COLS56)[number]['k']; up: boolean }>({ k: 'день', up: false });
+  /* Решение по документу: 1 — принят с баллами, −1 — отклонён. Как на экране
+     судей, разобранный документ остаётся в списке с пометкой. */
+  const [v, setV] = useState<Record<string, number>>({});
+  const set = (k: string, n: number) => setV({ ...v, [k]: v[k] === n ? 0 : n });
 
-        <Panel title="Документ · Пак Сергей" extra={<P t="S3 · СЕМИНАР" cls="reg" />}>
-          <Form>
-            <Field label="Тип" value="S3 · повышение квалификации" />
-            <Field label="Дата подачи" value="08.08.2026 · в срок 10 дней" />
-            <Field label="Мероприятие" value="Офлайн-семинар Федерации, Алматы" wide />
-            <Field label="Балл по таблице 3" value="3" />
-            <Field label="Коэффициент" value="1,5 — вне региона учёта" />
-          </Form>
-          <div className="dactionbar" style={{ marginTop: 12 }}>
-            <div className="dcount" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              <Paperclip size={13} /> сертификат-семинар-05-08.pdf
+  const byF = (d: Doc) =>
+    f === F56[0] ||
+    (f === F56[1] && d.kind === 'Семинар') ||
+    (f === F56[2] && (d.kind === 'Награда' || d.kind === 'Коллегия'));
+  const found = DOCS.filter((d) => {
+    const t = q.trim().toLowerCase();
+    return byF(d) && (!t || d.nm.toLowerCase().includes(t) || d.what.toLowerCase().includes(t));
+  });
+  const rows = [...found].sort((a, b) => {
+    const x = sort.k === 'день'
+      ? a.день.split('.').reverse().join('').localeCompare(b.день.split('.').reverse().join(''))
+      : String(a[sort.k]).localeCompare(String(b[sort.k]), 'ru');
+    return sort.up ? x : -x;
+  });
+
+  return (
+    <RoleScreen role={R05} nav="Документы" title="Документы на проверке">
+      {/* Тот же приём, что на экране судей: фильтр, поиск, таблица с решением в
+          строке. Плиток нет — «сколько в очереди» и «сколько какого вида»
+          считаются по той же таблице, что стоит ниже. */}
+      <Filter items={F56} active={f} onPick={setF} />
+      <Search value={q} placeholder="Фамилия или документ" onChange={setQ} wide />
+
+      <div className="mktable mkcands mkdocs">
+        <div className="mktable-h">
+          {COLS56.map((c) => (
+            <button
+              key={c.k}
+              type="button"
+              className={sort.k === c.k ? 'on' : undefined}
+              onClick={() => setSort({ k: c.k, up: sort.k === c.k ? !sort.up : true })}
+            >
+              {c.t}
+              {sort.k === c.k && <ArrowUpDown size={11} />}
+            </button>
+          ))}
+          <span className="num">К начислению</span>
+          <span>Решение</span>
+        </div>
+        <div className="mktable-b">
+          {rows.map((d) => (
+            <div
+              className={'mktable-r' + (v[d.nm] === 1 ? ' yes' : v[d.nm] === -1 ? ' no' : '')}
+              key={d.nm}
+            >
+              <span className="nm">
+                <img src={d.av} alt="" />
+                {/* Пока решения нет, под фамилией сам документ — по нему и
+                    решают; после решения строка говорит о решении. */}
+                <i>
+                  {d.nm}
+                  {v[d.nm] === 1 ? (
+                    <em className="on">Принят с баллами</em>
+                  ) : v[d.nm] === -1 ? (
+                    <em className="off">Отклонён с причиной</em>
+                  ) : (
+                    <em>{d.what}</em>
+                  )}
+                </i>
+              </span>
+              <span>{d.kind}</span>
+              {/* Срок подачи — 10 дней. ⚠ Последствие пропуска в Положении не
+                  указано, поэтому не отклоняем сами, а помечаем. */}
+              <span className={d.late ? 'late' : undefined}>
+                {d.день}
+                {d.late && <em> позже срока</em>}
+              </span>
+              <span className="num tot" title={d.file}>{d.pts}</span>
+              <span className="vset">
+                <button
+                  type="button"
+                  className={'vbtn yes' + (v[d.nm] === 1 ? ' on' : '')}
+                  title="Принять с баллами"
+                  onClick={() => set(d.nm, 1)}
+                >
+                  <BadgeCheck size={15} />
+                </button>
+                <button
+                  type="button"
+                  className={'vbtn no' + (v[d.nm] === -1 ? ' on' : '')}
+                  title="Отклонить с причиной"
+                  data-to="Э5.9"
+                  onClick={() => set(d.nm, -1)}
+                >
+                  <Ban size={15} />
+                </button>
+              </span>
             </div>
-            <div className="dval">К начислению: 4,5 балла</div>
-          </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 12 }}>
-            <button className="dsubmit ok"><BadgeCheck size={15} />Принять с баллами</button>
-            <Ghost><Ban size={15} />Отклонить с причиной</Ghost>
-          </div>
-          <div style={{ height: 12 }} />
-        </Panel>
+          ))}
+          {rows.length === 0 && (
+            <div className="dcount" style={{ padding: '14px 12px' }}>
+              По запросу «{q}» ничего нет — проверьте написание.
+            </div>
+          )}
+        </div>
       </div>
     </RoleScreen>
   );
@@ -821,64 +894,159 @@ export function Docs5_6() {
 
 /* ── Э5.7 · Публикация рейтинга и окно апелляций на 10 дней ──────── */
 
-type App = { av: string; nm: string; what: string; when: string; pill?: { t: string; cls: Cls }; act?: boolean };
+type App = { av: string; nm: string; what: string; when: string; done?: 1 | -1 };
 
 const APPEALS: App[] = [
-  { av: A(13), nm: 'Пак Сергей', what: 'Коэффициент 1,5 за выезд · S1, Кубок Караганды', when: 'подана 06.08 · срок до 20.08', act: true },
-  { av: A(22), nm: 'Жумабеков Расул', what: 'Отклонён документ S4 · благодарственное письмо', when: 'подана 07.08 · срок до 21.08', act: true },
-  { av: A(19), nm: 'Цой Виктор', what: 'Начисление S1 за «Алатау Опен»', when: 'решение 09.08 · пересчёт внесён в журнал', pill: { t: 'УДОВЛЕТВОРЕНА', cls: 'live' } },
-  { av: AW(31), nm: 'Ким Лариса', what: 'Место в рейтинге при равенстве баллов', when: 'решение 08.08 · решение окончательное', pill: { t: 'ОТКЛОНЕНА', cls: 'bad' } },
+  { av: A(13), nm: 'Пак Сергей', what: 'Коэффициент 1,5 за выезд · S1, Кубок Караганды', when: '06.08.2026' },
+  { av: A(22), nm: 'Жумабеков Расул', what: 'Отклонён документ S4 · благодарственное письмо', when: '07.08.2026' },
+  { av: A(19), nm: 'Цой Виктор', what: 'Начисление S1 за «Алатау Опен»', when: '04.08.2026', done: 1 },
+  { av: AW(31), nm: 'Ким Лариса', what: 'Место в рейтинге при равенстве баллов', when: '03.08.2026', done: -1 },
 ];
 
-const AppRow = ({ a }: { a: App }) => (
-  <div className="drow">
-    <img src={a.av} alt="" />
-    <div className="who">
-      <div className="nm">{a.nm}</div>
-      <div className="rl">{a.what} · {a.when}</div>
-    </div>
-    {a.pill && <P t={a.pill.t} cls={a.pill.cls} />}
-    {a.act && <button className="dpickbtn">Удовлетворить</button>}
-    {a.act && <GhostPick>Отклонить</GhostPick>}
-  </div>
-);
+const COLS57: { k: 'nm' | 'when'; t: string }[] = [
+  { k: 'nm', t: 'Судья и о чём апелляция' },
+  { k: 'when', t: 'Подана' },
+];
+
+const F57 = ['Все апелляции', 'Ждут решения', 'Решённые'];
 
 export function Publish5_7() {
-  return (
-    <RoleScreen
-      role={R05}
-      nav="Рейтинг судей"
-      title="Публикация рейтинга и апелляции"
-      sub="Опубликован 05.08.2026 · апелляции до 15.08"
-    >
-      <Chips
-        items={[
-          { v: '05.08', k: 'Рейтинг опубликован', tone: 'g' },
-          { v: '15.08', k: 'Окно апелляций до', tone: 'a' },
-          { v: '4', k: 'Апелляции' },
-          { v: '2', k: 'Ждут решения', tone: 'b' },
-        ]}
-      />
-      <div className="mkcols">
-        <Panel title="Апелляции" extra={<P t="2 ЖДУТ РЕШЕНИЯ" cls="wait" />}>
-          <Rows>
-            {APPEALS.map((a) => <AppRow key={a.nm} a={a} />)}
-          </Rows>
-        </Panel>
+  const [f, setF] = useState(F57[0]);
+  const [q, setQ] = useState('');
+  const [sort, setSort] = useState<{ k: (typeof COLS57)[number]['k']; up: boolean }>({ k: 'when', up: false });
+  const [v, setV] = useState<Record<string, number>>(
+    Object.fromEntries(APPEALS.filter((a) => a.done).map((a) => [a.nm, a.done as number])),
+  );
+  /* Чья апелляция открыта. Строка открывает разбор — тем же приёмом, что журнал
+     начислений в рейтинге судей: решают по одному человеку, а не по списку. */
+  const [open, setOpen] = useState<string | null>(null);
+  /* Опубликован ли рейтинг. В отличие от протокола (Э5.4), отменить это нельзя:
+     публикация открывает окно апелляций и показывает рейтинг всем, включая тех,
+     кто без входа. Забрать назад уже увиденное невозможно, поэтому обратной
+     кнопки нет — и кнопка публикации после нажатия перестаёт быть кнопкой. */
+  const [pub, setPub] = useState(false);
+  const cur = APPEALS.find((a) => a.nm === open);
 
-        <Panel title="Публикация рейтинга" extra={<P t="ОКНО ОТКРЫТО" cls="live" />}>
-          <Form>
-            <Field label="Последняя публикация" value="05.08.2026" />
-            <Field label="Окно апелляций" value="10 дней · до 15.08.2026" />
-            <Field label="Осталось" value="3 дня" />
-            <Field label="Срок рассмотрения" value="10 рабочих дней" />
-          </Form>
-          <div style={{ marginTop: 14 }}>
-            <button className="dsubmit" style={{ width: '100%' }}><Megaphone size={15} />Опубликовать рейтинг</button>
-          </div>
-          <div style={{ height: 12 }} />
-        </Panel>
+  const found = APPEALS.filter((a) => {
+    const t = q.trim().toLowerCase();
+    const byF = f === F57[0] || (f === F57[1]) === !v[a.nm];
+    return byF && (!t || a.nm.toLowerCase().includes(t) || a.what.toLowerCase().includes(t));
+  });
+  const rows = [...found].sort((a, b) => {
+    const x = sort.k === 'when'
+      ? a.when.split('.').reverse().join('').localeCompare(b.when.split('.').reverse().join(''))
+      : a.nm.localeCompare(b.nm, 'ru');
+    return sort.up ? x : -x;
+  });
+
+  return (
+    <RoleScreen role={R05} nav="Публикация" title="Публикация рейтинга и апелляции">
+      {/* Публикация — главное действие экрана, поэтому стоит в одной строке с
+          фильтром, а не панелью справа. Подписи под заголовком нет, и сроков
+          рядом тоже: до нажатия публиковать нечего было объяснять, а после —
+          состояние написано на самой кнопке. */}
+      <div className="dactionbar">
+        <Filter items={F57} active={f} onPick={setF} />
+        {pub ? (
+          /* Не кнопка, а состояние: нажимать больше нечего, а гореть должно —
+             это главное, что случилось с рейтингом за период. */
+          <span className="dsubmit ok lit">
+            <BadgeCheck size={15} />Рейтинг опубликован
+          </span>
+        ) : (
+          <button
+            type="button"
+            className="dsubmit"
+            style={{ padding: '10px 14px' }}
+            onClick={() => setPub(true)}
+          >
+            <Megaphone size={15} />Опубликовать рейтинг
+          </button>
+        )}
       </div>
+      <Search value={q} placeholder="Фамилия или предмет апелляции" onChange={setQ} wide />
+
+      <div className="mktable mkcands mkappeals">
+        <div className="mktable-h">
+          {COLS57.map((c) => (
+            <button
+              key={c.k}
+              type="button"
+              className={sort.k === c.k ? 'on' : undefined}
+              onClick={() => setSort({ k: c.k, up: sort.k === c.k ? !sort.up : true })}
+            >
+              {c.t}
+              {sort.k === c.k && <ArrowUpDown size={11} />}
+            </button>
+          ))}
+          <span>Решение</span>
+        </div>
+        <div className="mktable-b">
+          {rows.map((a) => (
+            <div
+              className={'mktable-r' + (open === a.nm ? ' on' : '')}
+              key={a.nm}
+              role="button"
+              tabIndex={0}
+              onClick={() => setOpen(a.nm)}
+            >
+              <span className="nm">
+                <img src={a.av} alt="" />
+                <i>{a.nm}<em>{a.what}</em></i>
+              </span>
+              <span>{a.when}</span>
+              <span className="mark">
+                <P
+                  t={v[a.nm] === 1 ? 'УДОВЛЕТВОРЕНА' : v[a.nm] === -1 ? 'ОТКЛОНЕНА' : 'ЖДЁТ РЕШЕНИЯ'}
+                  cls={v[a.nm] === 1 ? 'live' : v[a.nm] === -1 ? 'bad' : 'wait'}
+                />
+              </span>
+            </div>
+          ))}
+          {rows.length === 0 && (
+            <div className="dcount" style={{ padding: '14px 12px' }}>
+              По запросу «{q}» ничего нет — проверьте написание.
+            </div>
+          )}
+        </div>
+      </div>
+
+      {cur && (
+        <Modal
+          title={`Апелляция · ${cur.nm}`}
+          sub={`подана ${cur.when} · рассмотреть за 10 рабочих дней · решение окончательное`}
+          onClose={() => setOpen(null)}
+          to="Э5.7"
+          foot={
+            <>
+              <Ghost onClick={() => setOpen(null)}>Закрыть</Ghost>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <Ghost onClick={() => { setV({ ...v, [cur.nm]: -1 }); setOpen(null); }}>
+                  <Ban size={15} />Отклонить
+                </Ghost>
+                <button
+                  type="button"
+                  className="dsubmit ok"
+                  style={{ padding: '11px 16px' }}
+                  onClick={() => { setV({ ...v, [cur.nm]: 1 }); setOpen(null); }}
+                >
+                  <BadgeCheck size={15} />Удовлетворить
+                </button>
+              </div>
+            </>
+          }
+        >
+          <Form>
+            <Field label="Что оспаривается" value={cur.what} wide />
+            <Field label="Подана" value={`${cur.when} · в окне 10 дней`} />
+            <Field label="Рейтинг на момент публикации" value="R 18 · 3 место" />
+          </Form>
+          <Alert>
+            Удовлетворение — пересчёт: исправление попадает в журнал начислений, рейтинг
+            обновляется, судье уходит уведомление.
+          </Alert>
+        </Modal>
+      )}
     </RoleScreen>
   );
 }
@@ -1164,7 +1332,7 @@ export const SCREENS: ScreenMap = {
         <Applications5_2States />
       </>
     ),
-    next: '«Добавить из реестра»',
+    next: 'меню «Протоколы»',
   },
   'Э5.8': {
     cap: 'Выбор судьи в наряд',
@@ -1184,12 +1352,12 @@ export const SCREENS: ScreenMap = {
         <Protocol5_4States />
       </>
     ),
-    next: 'меню «Рейтинг судей»',
+    next: 'меню «Документы»',
   },
   'Э5.5': {
     cap: 'Рейтинг судей',
     view: () => <Rating5_5 />,
-    next: 'счётчик документов',
+    next: 'меню «Публикация»',
   },
   'Э5.6': {
     cap: 'Документы на проверке',

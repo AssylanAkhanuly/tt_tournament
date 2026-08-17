@@ -5,7 +5,7 @@
 
 import {
   BarChart3, Bell, CalendarDays, ClipboardCheck, ClipboardList, Eye, FileSpreadsheet,
-  FileText, Gavel, Grid3x3, History, LayoutDashboard, ListChecks, Newspaper, Scale,
+  FileText, Gavel, Grid3x3, History, LayoutDashboard, ListChecks, Megaphone, Newspaper, Scale,
   Scroll, Search, Shield, Table2, Timer, Trophy, User, UserCog, Users, Wallet,
 } from 'lucide-react';
 import { A, AW, type RoleUI } from './shell';
@@ -86,6 +86,12 @@ export const R05: RoleUI = {
     [<Gavel size={18} />, 'Судьи'],
     [<Scroll size={18} />, 'Протоколы'],
     [<Scale size={18} />, 'Рейтинг судей'],
+    /* Документы на S3/S4 и публикация рейтинга — свои пункты меню, а не
+       счётчики внутри рейтинга: обе обязанности из Положения (§7.2), и обе
+       живут своим ритмом — документы приходят весь сезон, публикация бывает
+       раз в период. Внутри рейтинга они прятались за числом в плитке. */
+    [<ClipboardCheck size={18} />, 'Документы'],
+    [<Megaphone size={18} />, 'Публикация'],
   ],
 };
 
