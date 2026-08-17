@@ -181,7 +181,12 @@ function build(flow: RoleFlow, screens: ScreenMap, selected: string) {
       via.set(code, short(menu.replace(/^Пункт меню /, '')));
       return;
     }
-    for (let j = i - 1; j >= 0; j -= 1) {
+    /* Ведёт сюда не один экран: в отказ с причиной приходят и из заявок, и из
+       протокола, и из документов. Родителем берём **первый по маршруту** — это
+       и есть главный путь, тот, ради которого экран нарисован. Раньше брали
+       ближайший сверху, и ветка цеплялась за случайного соседа: отказ по заявке
+       судьи висел на документах на проверке. */
+    for (let j = 0; j < i; j += 1) {
       const act = byId.get(codes[j])?.actions.find((a) => a.to === code);
       if (act) {
         parent.set(code, codes[j]);
