@@ -151,7 +151,12 @@ function build(flow: RoleFlow, screens: ScreenMap, selected: string) {
   );
 
   const first = flow.screens[0].id;
-  const entry = codes.find((c) => !known.has(c));
+  /* Корень маршрута — вход. Он общий у всех ролей: «флоу каждой роли начинается
+     отсюда — Э0.1 Вход → первый экран роли» (flows/00). Раньше корнем брался
+     первый чужой код в борде, и стоило поставить перед входом регистрацию, как
+     дерево начинало расти из неё: вход, уведомления и профиль оказывались её
+     ветками. Регистрация — путь до входа, а не после. */
+  const entry = codes.includes('Э0.1') ? 'Э0.1' : codes.find((c) => !known.has(c));
   const root = entry ?? first;
   const short = (t: string) => t.replace(/^«|»$/g, '').slice(0, 28);
 
