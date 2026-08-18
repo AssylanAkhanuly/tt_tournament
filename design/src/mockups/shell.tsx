@@ -835,6 +835,26 @@ export const ST = {
 
 export type St = keyof typeof ST;
 
+/** Состояния самого турнира (TZ §4.3) — другой словарь, чем `ST`.
+
+    `ST` отвечает на вопрос «что с нашей заявкой» и нужен региону и клубу: они
+    приходят в календарь узнать, что от них ждут. Председателю ГСК заявка не
+    подаётся — он смотрит на турнир целиком, и строка сезона у него показывает
+    состояние турнира. Складывать два словаря в один нельзя: «ждёт допуска» и
+    «судья назначен» — про разные вещи. */
+export const TST = {
+  draft: { t: 'ЧЕРНОВИК', cls: 'done' as const },
+  judges: { t: 'ЗАЯВКИ СУДЕЙ', cls: 'wait' as const },
+  judge: { t: 'СУДЬЯ НАЗНАЧЕН', cls: 'reg' as const },
+  players: { t: 'ЗАЯВКИ ИГРОКОВ', cls: 'reg' as const },
+  system: { t: 'СИСТЕМА ПРОВЕДЕНИЯ', cls: 'reg' as const },
+  live: { t: 'ИДЁТ', cls: 'live' as const },
+  protocol: { t: 'ИТОГОВЫЙ ПРОТОКОЛ', cls: 'wait' as const },
+  done: { t: 'ЗАВЕРШЁН', cls: 'done' as const },
+};
+
+export type TSt = keyof typeof TST;
+
 /** Строка сезона: событие, когда и где, срок или итог, состояние.
 
     Раньше у каждой роли это были два списка на двух экранах: календарь отвечал
@@ -851,6 +871,9 @@ export type SeasonRow = {
   /** Колонка «Срок или итог»: либо строку ещё ждут, либо она уже случилась. */
   val: string;
   st: St;
+  /** Состояние турнира вместо состояния нашей заявки: строка председателя ГСК
+      про сам турнир, а не про то, что от него ждут по заявке. */
+  tst?: TSt;
   to: string;
   /** Срок горит: действие за ролью и время на него ограничено. */
   wait?: boolean;
@@ -880,7 +903,7 @@ export const SeasonTable = ({ rows }: { rows: SeasonRow[] }) => (
           <span>{r.when}</span>
           <span className={r.wait ? 'due' : undefined}>{r.val}</span>
           <span>
-            <P t={ST[r.st].t} cls={ST[r.st].cls} />
+            {r.tst ? <P t={TST[r.tst].t} cls={TST[r.tst].cls} /> : <P t={ST[r.st].t} cls={ST[r.st].cls} />}
           </span>
           <span className="go">
             <ChevronRight size={14} />

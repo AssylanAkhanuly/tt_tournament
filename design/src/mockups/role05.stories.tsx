@@ -6,13 +6,13 @@ export default {
   parameters: { layout: 'fullscreen' },
 };
 
-export const Flow = { name: 'Макеты по флоу · 9 экранов', render: () => <Role05Board /> };
+export const Flow = { name: 'Макеты по флоу · 13 экранов', render: () => <Role05Board /> };
 
 export const Tablet = {
   name: 'Адаптив · планшет',
   render: () => (
     <RespBoard title="5 · ПРЕДСЕДАТЕЛЬ ГСК — ПЛАНШЕТ" tag="веб · планшет · тот же экран, раскладка плотнее">
-      <Col cap="Э5.1 · Мои соревнования">
+      <Col cap="Э5.1 · Панель ГСК">
         <Queues5_1 variant="land" />
       </Col>
     </RespBoard>
