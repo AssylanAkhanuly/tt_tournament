@@ -621,6 +621,113 @@
   border-left: 2px solid var(--c-glass-line);
 }
 
+/* Таблица реестра (Э1.5): кто · значение · состояние · «Выдать роль». Тот же
+   приём, что у состава участников, — поиск, сортировка по столбцам, страницы:
+   в реестре на пять тысяч строк человека ищут, а не листают. В первой колонке
+   фото и подпись, чтобы по строке было видно, кто это. */
+.mktable.mkreg .mktable-h,
+.mktable.mkreg .mktable-r { grid-template-columns: minmax(0, 1fr) 104px 88px 118px; }
+.mktable.mkreg.plain .mktable-h,
+.mktable.mkreg.plain .mktable-r { grid-template-columns: minmax(0, 1fr) 104px 88px; }
+.mktable.mkreg .mktable-b { max-height: 510px; }
+.mktable.mkreg .mktable-r { cursor: pointer; transition: background .12s ease; }
+.mktable.mkreg .mktable-r:hover { background: var(--c-panel-2); }
+.mktable.mkreg .mktable-r:hover .nm { color: var(--c-accent); }
+.mktable.mkreg .who { display: flex; align-items: center; gap: 11px; min-width: 0; }
+.mktable.mkreg .who img { width: 32px; height: 32px; border-radius: 50%; object-fit: cover; flex: none; }
+.mktable.mkreg .who i { font-style: normal; min-width: 0; }
+.mktable.mkreg .who .nm { display: block; font-size: 13px; font-weight: 700; color: var(--c-ink); }
+.mktable.mkreg .who em {
+  display: block;
+  font-style: normal;
+  font-size: 11px;
+  color: var(--c-muted);
+  margin-top: 2px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.mktable.mkreg .num { font-size: 13px; font-weight: 700; color: var(--c-ink); }
+.mktable.mkreg .mid { display: flex; justify-content: center; }
+.mktable.mkreg .act { display: flex; justify-content: flex-end; }
+.mktable.mkreg .mktable-h button.mid { justify-self: center; }
+
+/* Регламент турнира (Э1.3, «Черновик»). Форма занимает столько, сколько ей
+   нужно: по умолчанию `.dform` тянется на всю панель — поля разъезжались по
+   вертикали, а кнопка «Завершить» под формой уходила за край экрана.
+
+   Колонок три, а не две: панель действий рядом убрана, регламент занял всю
+   ширину, и в две колонки он оставлял полстроки пустой, а сам вытягивался
+   вниз. Условия допуска — единственное поле во всю ширину — так и остаются
+   через `.dfield.wide`. */
+.mkrules > .dform { flex: none; grid-template-columns: repeat(3, 1fr); }
+/* Селектор в одной строке с полем ввода встаёт вровень с ним. У поля ввода
+   подпись обёрнута вокруг него самого, у селектора стоит отдельной строкой — и
+   к отступу подписи добавляется щель `.dfield`. В форме, где в одной строке и
+   ввод, и выбор, эта разница видна. */
+.mkrules .dfield > .k + .dsel { margin-top: -13px; }
+
+/* ── Группы турнира ─────────────────────────────────────────────── */
+/* Групповой этап — карточками, а не одним списком на 96 строк: группа читается
+   целиком, вместе с местами и партиями, и в ней сразу видно, кто вышел.
+   Таблицей (а не деревом) групповой этап показывается и на фронте — ТЗ §5.1. */
+/* Двадцать четыре карточки не влезают в экран, и прокручиваются они на месте —
+   как тело таблицы: полоса поиска и подпись под сеткой должны остаться видны.
+   Прокрутку держит обёртка, а не сама сетка: рабочая область — колонка флекса,
+   и сетка в роли её элемента сжималась вместе со своими рядами, обрезая
+   карточки до одних заголовков. */
+.mkgroups-b { min-height: 0; overflow: auto; padding-right: 2px; }
+.mkgroups-b::-webkit-scrollbar { width: 9px; }
+.mkgroups-b::-webkit-scrollbar-thumb { background: var(--c-glass-line); border-radius: var(--r-xs); }
+.mkgroups-b::-webkit-scrollbar-thumb:hover { background: var(--c-glass-edge); }
+.mkgroups-b::-webkit-scrollbar-track { background: transparent; }
+.mkgroups { display: grid; grid-template-columns: repeat(auto-fill, minmax(272px, 1fr)); gap: var(--s-2); }
+.mkgroup { border: 1px solid var(--c-glass-line); border-radius: var(--r-sm); background: var(--c-panel); overflow: hidden; }
+.mkgroup-h {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 7px 10px;
+  background: var(--c-panel-3);
+  border-bottom: 1px solid var(--c-glass-line);
+}
+.mkgroup-h b { font-size: 12.5px; color: var(--c-ink); }
+.mkgroup-r {
+  display: grid;
+  grid-template-columns: 16px minmax(0, 1fr) 52px 52px;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  font-size: 12px;
+  color: var(--c-muted);
+  border-top: 1px solid var(--c-glass-line);
+}
+.mkgroup-r:first-of-type { border-top: 0; }
+.mkgroup-r .pl { font-weight: 800; color: var(--c-dim); }
+.mkgroup-r .nm { color: var(--c-ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mkgroup-r .num { justify-self: end; font-variant-numeric: tabular-nums; }
+/* Вышедшие в плей-офф — подложкой, а не значком в каждой строке: значок
+   повторялся бы девяносто шесть раз, а подложка отвечает на вопрос экрана
+   («кто дальше») одним взглядом на карточку. */
+.mkgroup-r.out { background: var(--c-success-soft-3); color: var(--c-ink); }
+.mkgroup-r.out .pl { color: var(--c-success); }
+/* Добор — восемь лучших вторых: вышли не местом, а разницей партий, и это
+   отдельный случай, иначе непонятно, почему из одной группы прошли двое, а из
+   соседней один. */
+.mkgroup-r.out em {
+  grid-column: 2 / -1;
+  justify-self: start;
+  font-style: normal;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  color: var(--c-accent);
+}
+/* Найденный поиском — акцентом: его и искали. */
+.mkgroup-r.hit { background: var(--c-accent-soft); color: var(--c-ink); }
+
 .mkpager { display: flex; gap: 4px; }
 .mkpager button {
   min-width: 26px;
@@ -637,6 +744,8 @@
 .mkpager button:hover:not(:disabled) { color: var(--c-ink); border-color: var(--c-accent-line); }
 .mkpager button.on { color: var(--c-ink); background: var(--c-accent-soft); border-color: var(--c-accent-line); }
 .mkpager button:disabled { opacity: .45; cursor: default; }
+/* Пропуск страниц: это не кнопка — на многоточие нечего нажимать. */
+.mkpager span { align-self: center; padding: 0 2px; font-size: 12px; color: var(--c-dim); }
 
 /* ── Лента новостей ─────────────────────────────────────────────── */
 /* Обычный новостной портал: карточка с обложкой, темой и датой. Материалы
@@ -1434,49 +1543,10 @@ button.mkattn-i.on svg { color: var(--c-accent); transform: rotate(180deg); }
 }
 .mkpick-i .s { font-size: 12.5px; color: var(--c-muted); line-height: 1.5; }
 
-/* ── Реестр таблицей ────────────────────────────────────────────── */
-/* Список с подписанными колонками, а не свободные строки: подпись у колонки
-   одна, а не повторяется в каждой строке словом «рейтинг». Ширины колонок
-   фиксированы — числа должны стоять в столбик, иначе их не сравнить. */
-.rtab { display: grid; gap: 6px; }
-.rtab-h,
-.rrow { display: grid; grid-template-columns: 1fr 110px 84px; align-items: center; gap: 12px; }
-/* На экране пользователей у строки есть ещё «Выдать роль». */
-.rtab.wide .rtab-h,
-.rtab.wide .rrow { grid-template-columns: 1fr 110px 84px 112px; }
-.rtab-h { padding: 0 13px 2px; }
-.rtab-h span {
-  font-size: 10.5px;
-  font-weight: 700;
-  letter-spacing: .04em;
-  text-transform: uppercase;
-  color: var(--c-dim);
-}
-.rrow {
-  padding: 10px 13px;
-  background: var(--c-panel);
-  border: 1px solid var(--c-glass-line);
-  border-radius: var(--r-sm);
-}
-/* Строка сама открывает карточку — отсюда курсор и подсветка имени: кнопки
-   «Открыть» больше нет, и клик должен быть заметен без неё. */
-.rrow.open { cursor: pointer; }
-.rrow:hover { border-color: var(--c-accent-line); }
-.rrow.open:hover .nm { color: var(--c-accent); }
-.rrow .who { display: flex; align-items: center; gap: 11px; min-width: 0; }
-.rrow .who img { width: 34px; height: 34px; border-radius: 50%; object-fit: cover; flex: none; }
-.rrow .nm { font-size: 13.5px; font-weight: 700; }
-.rrow .rl { font-size: 11.5px; color: var(--c-muted); margin-top: 2px; }
-/* Выравнивание общее у заголовка и строки — иначе подпись не встанет над своей
-   колонкой. А кегль у них разный: заголовок остаётся подписью (правило
-   `.rtab-h span` выше), число — числом. Раньше эти две вещи стояли в одном
-   правиле, и «Рейтинг» набирался кеглем числа, а «Взнос» — кеглем подписи. */
-.rtab-h .num,
-.rrow .num { text-align: right; }
-.rtab-h .mid,
-.rrow .mid { text-align: center; }
-/* Число — моноширинными цифрами: колонку чисел читают сравнением. */
-.rrow .num { font-size: 13.5px; font-weight: 700; font-variant-numeric: tabular-nums; }
+/* ── Состояние записи реестра ───────────────────────────────────── */
+/* Свободные строки реестра (`.rtab`/`.rrow`) убраны: реестр стал таблицей с
+   поиском и сортировкой — правила лежат выше, рядом с `.mktable.mkreg`.
+   Осталась галочка состояния: она в этой таблице и живёт. */
 /* Состояние галочкой: зелёная — да, жёлтая — нет. Слов нет, их заменяет
    заголовок колонки; что именно значит — в подсказке при наведении. */
 .rchk {
