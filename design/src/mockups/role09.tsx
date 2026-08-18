@@ -13,8 +13,15 @@ import {
   A, Alert, Arrow, Board, Empty, Hint, RoleTablet, Row, Rows, Screen, Shot, States, Tabs,
 } from './shell';
 import type { ScreenMap } from './shell';
+/* История судейства и её формат — общие со всеми судейскими ролями: рейтинг
+   ведётся по одному Положению (TZ §7.2). Планшет судьи рисует те же данные
+   списком, а не таблицей: пять колонок в 1024 пикселя не читаются. */
+import { tourPoints, type JudgeTour } from './judge';
 import { R09 } from './roles';
-import { Login0_1 } from './role00';
+/* Маршрут судейской роли начинается раньше входа: судья заводит себя сам
+   (Э0.7), а роль в наряде ему выдают уже потом. Без этой колонки борд и карта
+   начинались с «Вход», и откуда взялся человек, из них было не видно. */
+import { Login0_1, SignUpJudge0_7, SignUpJudge0_7States } from './role00';
 
 /* ── данные экранов ──────────────────────────────────────────────── */
 
@@ -28,14 +35,6 @@ const ASSIGN: Assign[] = [
   { t: 'Кубок акима Павлодарской области', sub: 'г. Павлодар · 24–25 апреля · судья стола 1', st: 'НАРЯД СОБРАН', cls: 'reg' },
   { t: 'Кубок Казахстана 2026', sub: 'г. Алматы · 18–22 февраля · заместитель главного судьи', st: 'ЗАВЕРШЁН', cls: 'done' },
   { t: 'Первенство РК до 19 лет', sub: 'г. Караганда · 27–30 января · судья стола 2', st: 'ЗАВЕРШЁН', cls: 'done' },
-];
-
-type Call = { t: string; sub: string; st: string; cls: Cls; btn?: string };
-
-const CALLS: Call[] = [
-  { t: 'Чемпионат РК среди ветеранов', sub: 'г. Тараз · 15–17 мая · приём до 28.04', st: 'НЕ ПОДАНА', cls: 'wait', btn: 'Подать заявку' },
-  { t: 'Первенство РК до 15 лет', sub: 'г. Актобе · 21–24 мая · приём до 05.05', st: 'ПОДАНА 02.04', cls: 'reg' },
-  { t: 'Кубок Президента ФНТ РК', sub: 'г. Астана · 4–7 июня · отказ: наряд уже собран', st: 'ОТКЛОНЕНА', cls: 'bad', btn: 'Подать снова' },
 ];
 
 const QUEUE: [string, string, string][] = [
@@ -74,6 +73,19 @@ const DOCS: { t: string; sub: string; st: string; cls: Cls }[] = [
   { t: 'Протокол теста аттестации', sub: 'S3 · подан 27.02.2026 · причина: скан не читается', st: 'ОТКЛОНЁН', cls: 'bad' },
 ];
 
+/** История судейства судьи стола. Тип общий с остальными судейскими ролями
+    (`judge.tsx`): рейтинг у них один, и разъезжаться формату строки нельзя.
+
+    Видно и главное отличие роли: коэффициент 1,5 судье стола даётся не за место
+    в бригаде, а только за выезд — командировку на республиканские соревнования
+    из своего региона (TZ §7.2). */
+const JUDGE_TOURS9: JudgeTour[] = [
+  { nm: 'Чемпионат Казахстана 2026', when: '12–16.03', city: 'Астана', kind: 'Республиканские', post: 'Судья стола', base: 3, k: 1.5 },
+  { nm: 'Кубок Казахстана 2026', when: '18–22.02', city: 'Павлодар', kind: 'Республиканские', post: 'Судья стола', base: 3, k: 1 },
+  { nm: 'Первенство Павлодара', when: '25.01', city: 'Павлодар', kind: 'Региональные', post: 'Судья стола', base: 1, k: 1 },
+  { nm: 'Кубок Иртыша', when: '02–03.06', city: 'Павлодар', kind: 'Региональные', post: 'Судья стола', base: 1, k: 1, miss: true },
+];
+
 /* ── Э9.1 · Мои турниры ──────────────────────────────────────────── */
 
 export function Tours9_1() {
@@ -91,18 +103,20 @@ export function Tours9_1() {
         </div>
       ))}
 
-      <div className="sect">Открыт приём заявок на судейство</div>
-      {CALLS.map((c) => (
-        <div className="item" key={c.t} style={{ marginTop: 0 }}>
-          <div className="ic"><Clock size={17} /></div>
-          <div className="tx">
-            <div className="tt">{c.t}</div>
-            <div className="ss">{c.sub}</div>
-          </div>
-          <span className={'pill ' + c.cls} style={{ margin: 0 }}>{c.st}</span>
-          {c.btn && <button className="dpickbtn">{c.btn}</button>}
+      {/* Открытых приёмов и подачи заявок здесь больше нет ✳ (18.08.2026): они
+          уехали в кабинет судьи (Э0.9, Э0.10). Подача жила у роли судьи стола —
+          то есть у человека, который уже назначен: попасть на турнир мог только
+          тот, кто на турнире уже есть. Экран роли — про работу на турнире, а не
+          про то, как на него попасть. */}
+      <div className="sect">Куда подавать заявки</div>
+      <div className="item" style={{ marginTop: 0 }} data-to="Э0.9">
+        <div className="ic"><Clock size={17} /></div>
+        <div className="tx">
+          <div className="tt">Турниры и заявки на судейство</div>
+          <div className="ss">Открытые приёмы, мои заявки и решения — в кабинете судьи</div>
         </div>
-      ))}
+        <span className="pill reg" style={{ margin: 0 }}>3 ПРИЁМА</span>
+      </div>
     </RoleTablet>
   );
 }
@@ -348,78 +362,6 @@ export function Log9_4() {
   );
 }
 
-/* ── Э9.5 · Мой рейтинг судьи ────────────────────────────────────── */
-
-export function Rating9_5() {
-  return (
-    <RoleTablet title="Мой рейтинг судьи" sub="Сезон 2026 · R = S1 + S2 + S3 + S4" badge="ОПУБЛИКОВАН">
-      <div className="card pcard">
-        <img className="avatar" src={A(39)} alt="" />
-        <div className="who">
-          <div className="nm">Оралбай Ержан</div>
-          <div className="mt">Павлодар · судья национальной категории · рейтинг опубликован 06.04.2026</div>
-        </div>
-        <div className="rt" style={{ marginRight: 20 }}>
-          <div className="k">Место</div>
-          <div className="v">12</div>
-        </div>
-        <div className="rt">
-          <div className="k">Рейтинг R</div>
-          <div className="v">18,0</div>
-        </div>
-      </div>
-
-      <div className="stats">
-        <div className="stat b"><div className="v">7,5</div><div className="k">S1 · судейство</div></div>
-        <div className="stat"><div className="v">4,0</div><div className="k">S2 · категория</div></div>
-        <div className="stat"><div className="v">4,5</div><div className="k">S3 · квалификация</div></div>
-        <div className="stat g"><div className="v">2,0</div><div className="k">S4 · иная работа</div></div>
-      </div>
-
-      <div className="sect">Журнал моих начислений</div>
-      <div className="card" style={{ padding: '4px 15px' }}>
-        <div className="list">
-          {LEDGER.map(([at, s, t, sub, v]) => (
-            <div className="match" key={at + s}>
-              <span className="badge win">{s}</span>
-              <div className="who">
-                <div className="nm">{t}</div>
-                <div className="mt">{sub}</div>
-              </div>
-              <div className="sc">{v}</div>
-              <div className="dt">{at}</div>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      <div className="sect">Мои документы</div>
-      {DOCS.map((d) => (
-        <div className="item" key={d.t} style={{ marginTop: 0, padding: '10px 13px' }}>
-          <div className="tx">
-            <div className="tt">{d.t}</div>
-            <div className="ss">{d.sub}</div>
-          </div>
-          <span className={'pill ' + d.cls} style={{ margin: 0 }}>{d.st}</span>
-        </div>
-      ))}
-
-      <div className="sect">Апелляция · окно открыто до 16.04.2026 (10 дней с публикации)</div>
-      <div className="card" style={{ padding: '12px 15px' }}>
-        <div className="dactionbar">
-          <div className="dcount">
-            Апелляция от 09.04.2026 на коэффициент 1,5 — на рассмотрении, до 10 рабочих дней.
-          </div>
-          <div style={{ display: 'flex', gap: 9 }}>
-            <button className="dpickbtn"><Upload size={14} /> Загрузить документ</button>
-            <button className="dpickbtn">Подать апелляцию</button>
-          </div>
-        </div>
-      </div>
-    </RoleTablet>
-  );
-}
-
 /* ── борд роли ───────────────────────────────────────────────────── */
 
 const Tours9_1States = () => (
@@ -491,18 +433,18 @@ const Score9_3States = () => (
   </States>
 );
 
-const Rating9_5States = () => (
-  <States>
-    <Shot tone="info" title="Окно апелляции закрыто" text="Формы нет, только история решений." wide>
-      <Rows>
-        <Row nm="Апелляции по сезону 2026" sub="окно было открыто до 15.08.2026" pill={{ t: 'ЗАКРЫТО', cls: 'done' }} />
-      </Rows>
-    </Shot>
-  </States>
-);
-
 /** Экраны роли по кодам: из этой карты собираются и борд, и карта флоу. */
 export const SCREENS: ScreenMap = {
+  'Э0.7': {
+    cap: 'Регистрация судьи',
+    view: () => (
+      <>
+        <SignUpJudge0_7 />
+        <SignUpJudge0_7States />
+      </>
+    ),
+    next: 'вход под своей ролью',
+  },
   'Э0.1': {
     cap: 'Вход',
     view: () => <Login0_1 />,
@@ -541,16 +483,7 @@ export const SCREENS: ScreenMap = {
   'Э9.4': {
     cap: 'История матча',
     view: () => <Log9_4 />,
-    next: 'пункт «Мой рейтинг»',
-  },
-  'Э9.5': {
-    cap: 'Мой рейтинг судьи',
-    view: () => (
-      <>
-        <Rating9_5 />
-        <Rating9_5States />
-      </>
-    ),
+    next: 'кабинет судьи — заявки и рейтинг',
   },
 };
 

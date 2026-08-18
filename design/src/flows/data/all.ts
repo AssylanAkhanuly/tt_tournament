@@ -6,6 +6,7 @@
 
 import type { RoleFlow } from '../types';
 import { role00 } from './role00';
+import { role00j } from './role00j';
 import { role01 } from './role01';
 import { role02 } from './role02';
 import { role0304 } from './role0304';
@@ -22,6 +23,7 @@ import { role14 } from './role14';
 
 export const ROLES: RoleFlow[] = [
   role00,
+  role00j,
   role01,
   role02,
   role0304,

@@ -18,7 +18,10 @@ import type { DeskVariant } from '../deskShell';
 import type { ScreenMap } from './shell';
 import { LiveCards, NeedRow, QueuePanel, Stages, TableMap, type Need } from './role06';
 import { R08 } from './roles';
-import { Login0_1 } from './role00';
+/* Маршрут судейской роли начинается раньше входа: судья заводит себя сам
+   (Э0.7), а роль в наряде ему выдают уже потом. Без этой колонки борд и карта
+   начинались с «Вход», и откуда взялся человек, из них было не видно. */
+import { Login0_1, SignUpJudge0_7, SignUpJudge0_7States } from './role00';
 
 const CHIEF = A(76);   // Оспанов Талғат — главный судья турнира (роль 6)
 const DEP = A(37);     // Сагинтаев Дархан — заместитель, пользователь этих экранов
@@ -161,92 +164,6 @@ export function Live8_2() {
   );
 }
 
-/* ── Э8.3 · Мой рейтинг судьи ───────────────────────────────────── */
-
-/* R = S1 + S2 + S3 + S4 (TZ §7.2). S1 и S2 система начисляет сама, S3 и S4 —
-   по документам, их подтверждает председатель ГСК. Коэффициент 1,5 за роль
-   заместителя — тот самый единственный твёрдый факт о роли. */
-const RATING = {
-  ...R08,
-  brandName: 'Мой профиль судьи',
-  brandSub: 'Рейтинг судей ФНТ РК · сезон 2026',
-  badge: false as const,
-};
-
-export function Rating8_3() {
-  return (
-    <RoleScreen
-      role={RATING}
-      nav="Мой рейтинг"
-      title="Мой рейтинг судьи"
-      sub="Сагинтаев Дархан · судья национальной категории · сезон 2026"
-    >
-      <Chips
-        items={[
-          { v: '25,0', k: 'R — подтверждено за 2026', tone: 'b' },
-          { v: '7 / 96', k: 'Место в реестре судей' },
-          { v: '× 1,5', k: 'Коэффициент заместителя', tone: 'g' },
-          { v: '4', k: 'Турнира отсужено' },
-          { v: '3 / 4', k: 'Категорий с баллами', tone: 'a' },
-        ]}
-      />
-
-      <div className="mkcols">
-        <Panel
-          title="Из чего сложился R = S1 + S2 + S3 + S4"
-          extra={<span className="pill live" style={{ margin: 0 }}>+ 2,0 НА ПРОВЕРКЕ</span>}
-        >
-          <Rows>
-            <Row
-              nm="S1 · Судейство соревнований"
-              sub="4 республиканских турнира × 3 балла × коэффициент 1,5 за роль заместителя"
-              val="18,0"
-              pill={{ t: 'НАЧИСЛЕНО СИСТЕМОЙ', cls: 'live' }}
-            />
-            <Row
-              nm="S2 · Квалификационная категория"
-              sub="национальная категория — базовый балл, пока категория действует"
-              val="4,0"
-              pill={{ t: 'НАЧИСЛЕНО СИСТЕМОЙ', cls: 'live' }}
-            />
-            <Row
-              nm="S3 · Повышение квалификации"
-              sub="семинар ФНТ РК, 02.2026 — документ подтверждён комиссией"
-              val="3,0"
-              pill={{ t: 'ПОДТВЕРЖДЁН', cls: 'live' }}
-            />
-            <Row
-              nm="S4 · Иная деятельность"
-              sub="работа в судейской коллегии региона — документ на проверке"
-              val="2,0"
-              pill={{ t: 'НА ПРОВЕРКЕ', cls: 'wait' }}
-            />
-          </Rows>
-        </Panel>
-
-        <Panel title="Документы и апелляция">
-          <div className="qsec">Поданные документы</div>
-          <Rows>
-            <Row nm="Свидетельство о категории" sub="национальная · 14.01.2026" pill={{ t: 'ПРИНЯТ', cls: 'live' }} />
-            <Row nm="Семинар ФНТ РК" sub="02.2026 · 16 часов" pill={{ t: 'ПРИНЯТ', cls: 'live' }} />
-            <Row nm="Благодарственное письмо" sub="подано 03.03.2026" pill={{ t: 'НА ПРОВЕРКЕ', cls: 'wait' }} />
-          </Rows>
-          <div className="dactionbar" style={{ marginTop: 12 }}>
-            <div className="dcount">Начисление проверяет председатель ГСК</div>
-            <button className="dpickbtn">
-              <Upload size={13} style={{ display: 'inline-block', verticalAlign: '-2px', marginRight: 5 }} />
-              Загрузить документ
-            </button>
-          </div>
-          <div style={{ marginTop: 12 }}>
-            <Submit>Подать апелляцию по начислению</Submit>
-          </div>
-        </Panel>
-      </div>
-    </RoleScreen>
-  );
-}
-
 /* ── Борд роли ──────────────────────────────────────────────────── */
 
 const Shift8_1States = () => (
@@ -288,6 +205,16 @@ const Live8_2States = () => (
 
 /** Экраны роли по кодам: из этой карты собираются и борд, и карта флоу. */
 export const SCREENS: ScreenMap = {
+  'Э0.7': {
+    cap: 'Регистрация судьи',
+    view: () => (
+      <>
+        <SignUpJudge0_7 />
+        <SignUpJudge0_7States />
+      </>
+    ),
+    next: 'вход под своей ролью',
+  },
   'Э0.1': {
     cap: 'Вход',
     view: () => <Login0_1 />,
@@ -312,10 +239,6 @@ export const SCREENS: ScreenMap = {
       </>
     ),
     next: 'ветка роли',
-  },
-  'Э8.3': {
-    cap: 'Мой рейтинг судьи',
-    view: () => <Rating8_3 />,
   },
 };
 

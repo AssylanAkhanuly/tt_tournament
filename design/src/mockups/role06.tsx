@@ -22,7 +22,10 @@ import type { DeskVariant } from '../deskShell';
 import type { ScreenMap } from './shell';
 import { FormSeg } from '../segs';
 import { R06 } from './roles';
-import { Login0_1 } from './role00';
+/* Маршрут судейской роли начинается раньше входа: судья заводит себя сам
+   (Э0.7), а роль в наряде ему выдают уже потом. Без этой колонки борд и карта
+   начинались с «Вход», и откуда взялся человек, из них было не видно. */
+import { Login0_1, SignUpJudge0_7, SignUpJudge0_7States } from './role00';
 
 /* ── Люди турнира ───────────────────────────────────────────────── */
 
@@ -1109,6 +1112,16 @@ const Finish6_9States = () => (
 
 /** Экраны роли по кодам: из этой карты собираются и борд, и карта флоу. */
 export const SCREENS: ScreenMap = {
+  'Э0.7': {
+    cap: 'Регистрация судьи',
+    view: () => (
+      <>
+        <SignUpJudge0_7 />
+        <SignUpJudge0_7States />
+      </>
+    ),
+    next: 'вход под своей ролью',
+  },
   'Э0.1': {
     cap: 'Вход',
     view: () => <Login0_1 />,
