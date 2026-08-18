@@ -40,6 +40,11 @@
   --seed-danger:        #fb7185;
   --seed-broadcast:     #ff5252;   /* «смотреть трансляцию» — красный эфира */
   --seed-broadcast-2:   #e11d1d;
+  /* Регистрация судьи (Э0.7). Рядом живёт регистрация спортсмена, формы у них
+     похожи — цвет отвечает на «какую из двух форм я открыл» раньше заголовка. Сине-фиолетовый взят соседом синего ФНТ: он не
+     спорит с семьёй флага, но и не путается ни с ней, ни с зелёным «принято»,
+     ни с янтарным предупреждением. */
+  --seed-judge:         #8b7cf6;
 
   /* тёмный экран приложения: остановки вертикального градиента */
   --seed-screen-1:      #0b1120;
@@ -121,6 +126,17 @@
   --c-danger-soft-2:     color-mix(in srgb, var(--c-danger) 16%, transparent);
   --c-danger-line:       color-mix(in srgb, var(--c-danger) 30%, transparent);
   --c-danger-fill:       color-mix(in srgb, var(--c-danger) 14%, var(--c-screen-1));
+  /* Судейский акцент: им перекрашивается карточка регистрации судьи целиком,
+     поэтому нужен весь набор оттенков обычного акцента. */
+  --c-judge:             var(--seed-judge);
+  --c-judge-soft:        color-mix(in srgb, var(--c-judge) 16%, transparent);
+  --c-judge-line:        color-mix(in srgb, var(--c-judge) 35%, transparent);
+  --c-judge-line-3:      color-mix(in srgb, var(--c-judge) 50%, transparent);
+  --c-judge-halo:        color-mix(in srgb, var(--c-judge) 30%, transparent);
+  --c-judge-glow:        color-mix(in srgb, var(--c-judge) 60%, transparent);
+  --c-judge-glow-2:      color-mix(in srgb, var(--c-judge) 70%, transparent);
+  --c-judge-glow-3:      color-mix(in srgb, var(--c-judge) 80%, transparent);
+  --c-judge-fill:        color-mix(in srgb, var(--c-judge) 15%, var(--c-screen-1));
   --c-broadcast:         var(--seed-broadcast);
   --c-broadcast-2:       var(--seed-broadcast-2);
   --c-broadcast-glow:    color-mix(in srgb, var(--c-broadcast-2) 80%, transparent);

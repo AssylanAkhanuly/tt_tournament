@@ -414,6 +414,29 @@
 .mktable.mkseason .mktable-r .go { display: flex; color: var(--c-dim); }
 .mktable.mkseason .mktable-r:hover .go { color: var(--c-ink); }
 
+/* История судейства (Э6.10, Э7.6, Э8.3, Э9.5): турнир, когда и где, роль в
+   наряде, коэффициент и балл. Коэффициент вынесен отдельной колонкой не для
+   красоты — по ней видно, за что дали полтора: за роль в бригаде или за выезд
+   в чужой регион (TZ §7.2). */
+.mktable.mkjudge .mktable-h,
+.mktable.mkjudge .mktable-r { grid-template-columns: 1.5fr 1.1fr 1fr 132px 84px; }
+.mktable.mkjudge .mktable-h span {
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  color: var(--c-dim);
+}
+.mktable.mkjudge .mktable-r .nm em {
+  display: block;
+  font-style: normal;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--c-dim);
+  margin-top: 1px;
+}
+.mktable.mkjudge .mktable-r .num { justify-self: end; font-weight: 800; }
+
 /* Раскрытый клуб на турнире (Э13.9): его игроки — вложенным списком под
    строкой клуба. Отступ и кант слева говорят, что это часть строки выше, а не
    продолжение списка клубов. */
@@ -719,6 +742,41 @@
 .mkauth-sep::before,
 .mkauth-sep::after { content: ""; flex: 1; height: 1px; background: var(--c-glass-line); }
 
+/* Регистрация судьи (Э0.7) — другого цвета, чем регистрация спортсмена.
+
+   Формы у них похожи как две капли: поля те же, кнопка на том же месте.
+   Отличить их заголовком мало — его читают после того, как уже начали
+   заполнять. Карточка целиком переключает акцент, и это видно раньше любого
+   текста: цвет отвечает на «какую из двух форм я открыл».
+
+   Вход не окрашивается: он один на всех и ведёт в систему, а не в судейскую её
+   половину — аккаунт у человека один (QUESTIONS 9.5).
+
+   Переключение — подменой самих переменных акцента внутри карточки: кнопка,
+   ссылки, фокус полей и значок берут `--c-accent` и перекрашиваются сами,
+   отдельных правил под каждый элемент не нужно. */
+.mkauth-card.judge {
+  --c-accent: var(--c-judge);
+  --c-accent-2: var(--c-judge);
+  --c-accent-soft: var(--c-judge-soft);
+  --c-accent-line: var(--c-judge-line);
+  --c-accent-line-3: var(--c-judge-line-3);
+  --c-accent-halo: var(--c-judge-halo);
+  --c-accent-glow: var(--c-judge-glow);
+  --c-accent-glow-2: var(--c-judge-glow-2);
+  --c-accent-glow-3: var(--c-judge-glow-3);
+  --c-accent-fill: var(--c-judge-fill);
+  border-color: var(--c-judge-line);
+}
+/* Полоса поверху — чтобы контур читался и боковым зрением, не только по
+   кнопке: карточка входа обычно смотрится издалека. */
+.mkauth-card.judge::before {
+  content: "";
+  display: block;
+  height: 3px;
+  margin: -26px -26px 0;
+  background: var(--c-judge);
+}
 /* Публичная часть: шапка сайта без сайдбара и без профиля. */
 .mkpub {
   display: flex;
