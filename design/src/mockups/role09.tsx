@@ -1,16 +1,23 @@
 /* Роль 9 · Судья — макеты по флоу.
    Экраны Э9.1–Э9.5 (см. `flows/09-sudya.md` и схему роли).
 
-   Устройство роли — не десктоп, а ПЛАНШЕТ за столом (TZ §6), поэтому оболочка
-   `RoleTablet`. Приёмы ведения счёта взяты из уже принятых экранов
-   `TableJudgeFlow` / `RefereeResponsive`: крупный счёт, две половины по игроку,
-   лента розыгрышей. Цвет — только токенами. */
+   Макеты — десктопом, как у всех остальных ролей ✳ (18.08.2026). Работает
+   судья за столом с планшета (TZ §6), и экран ввода счёта под палец и остаётся:
+   крупный счёт, две половины по игроку, кнопка очка размером в ладонь. Но
+   макеты по флоу мы держим в одной оболочке — иначе борд роли читается как из
+   другой системы, и сравнить его с соседними ролями нельзя. Так же поступили со
+   спортсменом: веб-десктоп сейчас, приложение отдельно (`role14app.tsx`).
+
+   Планшетная раскладка — не другой экран, а тот же в узкой ширине: она живёт
+   отдельной историей адаптива, а не отдельным набором макетов. Цвет — только
+   токенами. */
 
 import {
   Check, Clock, History, Pause, Radio, RefreshCw, Trophy, Undo2, Upload, UserX,
 } from 'lucide-react';
 import {
-  A, Alert, Arrow, Board, Empty, Hint, RoleTablet, Row, Rows, Screen, Shot, States, Tabs,
+  A, ActionBar, Alert, Arrow, Board, Chips, Empty, Hint, Panel, RoleScreen, Row, Rows, Screen,
+  Shot, States, Tabs,
 } from './shell';
 import type { ScreenMap } from './shell';
 /* История судейства и её формат — общие со всеми судейскими ролями: рейтинг
@@ -90,7 +97,12 @@ const JUDGE_TOURS9: JudgeTour[] = [
 
 export function Tours9_1() {
   return (
-    <RoleTablet title="Судья · Оралбай Ержан" sub="Мои назначения и открытые приёмы заявок" badge="СЕЗОН 2026">
+    <RoleScreen
+      role={R09}
+      nav="Мои турниры"
+      title="Мои турниры"
+      sub="Оралбай Ержан · судья · сезон 2026"
+    >
       <div className="sect">Мои назначения</div>
       {ASSIGN.map((a) => (
         <div className="item" key={a.t} style={{ marginTop: 0 }} data-to="Э9.2">
@@ -117,7 +129,7 @@ export function Tours9_1() {
         </div>
         <span className="pill reg" style={{ margin: 0 }}>3 ПРИЁМА</span>
       </div>
-    </RoleTablet>
+    </RoleScreen>
   );
 }
 
@@ -125,7 +137,12 @@ export function Tours9_1() {
 
 export function Table9_2() {
   return (
-    <RoleTablet title="Чемпионат Казахстана 2026" sub="Мой стол 4 · день 2 · 13 марта" badge="ИДЁТ">
+    <RoleScreen
+      role={R09}
+      nav="Мой стол"
+      title="Мой стол 4"
+      sub="Чемпионат Казахстана 2026 · день 2 · 13 марта"
+    >
       <div className="sect">Вызвана пара — главный судья ждёт готовности стола</div>
       <div className="card">
         <div className="jvs">
@@ -165,7 +182,7 @@ export function Table9_2() {
           ))}
         </div>
       </div>
-    </RoleTablet>
+    </RoleScreen>
   );
 }
 
@@ -304,12 +321,22 @@ const BySets9_3 = () => (
 
 export function Score9_3({ tab }: { tab?: string }) {
   return (
-    <RoleTablet title="Стол 4 · ввод счёта" sub="Смагулов Алан — Токаев Марат · 1/8 финала · партия 4" badge="ИДЁТ">
-      <div className="dactionbar">
+    <RoleScreen role={R09} nav="Мой стол" title="Ввод счёта" sub="Стол 4 · Смагулов А. — Токаев М. · 1/8 финала">
+      {/* Полоса состояния и решения по матчу — над вкладками: подтверждение
+          нужно ровно один раз, в конце матча, и внизу экрана оно уезжало за
+          край. Индикатор синхронизации рядом: судья работает без сети (TZ §6),
+          и «сколько событий в очереди» важнее любой кнопки. */}
+      <ActionBar count="">
         <span className="pill live" style={{ margin: 0 }}>
           <span className="d" />СВЯЗЬ ЕСТЬ · 0 СОБЫТИЙ В ОЧЕРЕДИ
         </span>
-      </div>
+        <button className="dpickbtn" data-to="Э9.4">
+          <History size={14} /> История матча
+        </button>
+        <button className="dsubmit" style={{ padding: '10px 14px' }}>
+          <Check size={15} /> Подтвердить результат
+        </button>
+      </ActionBar>
 
       {/* Два способа вести счёт — это два разных экрана под одной шапкой, а не
           украшение: по очкам режим включает главный судья соревнований. */}
@@ -321,11 +348,7 @@ export function Score9_3({ tab }: { tab?: string }) {
         ]}
       />
 
-      <div style={{ display: 'flex', gap: 9, flex: 'none' }}>
-        <div className="jbtn ghost" data-to="Э9.4" style={{ flex: 1, padding: 13 }}><History size={15} />История матча</div>
-        <div className="jbtn pri" style={{ flex: 2, padding: 13 }}><Check size={15} />Подтвердить результат</div>
-      </div>
-    </RoleTablet>
+    </RoleScreen>
   );
 }
 
@@ -333,7 +356,13 @@ export function Score9_3({ tab }: { tab?: string }) {
 
 export function Log9_4() {
   return (
-    <RoleTablet title="Стол 4 · история матча" sub="Смагулов Алан — Токаев Марат · 1/8 финала" badge="ИДЁТ">
+    <RoleScreen
+      role={R09}
+      nav="Мой стол"
+      title="История матча"
+      sub="Стол 4 · Смагулов А. — Токаев М. · каждое действие с автором и временем"
+      back={{ label: 'Ввод счёта', to: 'Э9.3' }}
+    >
       <div className="sect">Лента событий по времени</div>
       <div className="card" style={{ padding: '4px 15px' }}>
         <div className="list">
@@ -358,7 +387,7 @@ export function Log9_4() {
           ))}
         </div>
       </div>
-    </RoleTablet>
+    </RoleScreen>
   );
 }
 
