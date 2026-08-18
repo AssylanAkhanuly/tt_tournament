@@ -667,6 +667,49 @@
    ввод, и выбор, эта разница видна. */
 .mkrules .dfield > .k + .dsel { margin-top: -13px; }
 
+/* Блоки экрана столбиком, один под другим: там, где каждому блоку нужна вся
+   ширина (график по времени, таблица с колонками), две колонки ужимают оба и
+   ни один не читается. */
+.mkstack { display: grid; gap: var(--s-3); }
+
+/* ── График (Chart.js) ──────────────────────────────────────────── */
+/* Холст занимает всю ширину панели, высоту задаёт компонент: Chart.js без явной
+   высоты растягивает холст по соотношению сторон и в панели он прыгает. */
+.mkchart { position: relative; width: 100%; }
+.mkchart canvas { width: 100% !important; height: 100% !important; }
+
+/* ── История турниров спортсмена (Э14.6) ───────────────────────── */
+/* Турнир · дата · где закончил · победы-поражения · рейтинг. Дельта и итоговый
+   рейтинг стоят в одной колонке: «+34» без «2456» не отвечает на «сколько у
+   меня сейчас», а «2456» без «+34» — на «что дал этот турнир». */
+.mktable.mkplayed .mktable-h,
+.mktable.mkplayed .mktable-r { grid-template-columns: minmax(0, 1fr) 72px 132px 68px 104px 16px; }
+.mktable.mkplayed .mktable-h span {
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  color: var(--c-dim);
+}
+.mktable.mkplayed .mktable-b { max-height: 320px; }
+.mktable.mkplayed .mktable-r { cursor: pointer; transition: background .12s ease; }
+.mktable.mkplayed .mktable-r:hover { background: var(--c-panel-2); }
+.mktable.mkplayed .mktable-r .nm em {
+  display: block;
+  font-style: normal;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--c-dim);
+  margin-top: 2px;
+}
+.mktable.mkplayed .num { display: flex; align-items: baseline; justify-content: flex-end; gap: 7px; }
+.mktable.mkplayed .num b { font-size: 13px; font-weight: 800; }
+.mktable.mkplayed .num b.up { color: var(--c-success); }
+.mktable.mkplayed .num b.down { color: var(--c-danger); }
+.mktable.mkplayed .num i { font-style: normal; font-size: 11.5px; color: var(--c-muted); }
+.mktable.mkplayed .go { display: flex; color: var(--c-dim); }
+.mktable.mkplayed .mktable-r:hover .go { color: var(--c-ink); }
+
 /* ── Группы турнира ─────────────────────────────────────────────── */
 /* Групповой этап — карточками, а не одним списком на 96 строк: группа читается
    целиком, вместе с местами и партиями, и в ней сразу видно, кто вышел.

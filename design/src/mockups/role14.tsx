@@ -11,13 +11,14 @@
 
 import { Fragment, useState, type ReactNode } from 'react';
 import {
-  ArrowUpDown, BarChart3, Check, CreditCard, Download, Lock, Newspaper, Pencil, Receipt, Send,
-  Trophy, X,
+  ArrowUpDown, BarChart3, Check, ChevronRight, CreditCard, Download, Lock, Newspaper, Pencil,
+  Receipt, Send, Trophy, X,
 } from 'lucide-react';
 import {
-  A, ActionBar, Alert, Also, Arrow, Board, Chips, Empty, Field, Form, Ghost, Input, Modal,
+  A, ActionBar, Alert, Also, Arrow, Board, Chips, Empty, Field, Form, Ghost, Hint, Input, Modal,
   Off, P, Pager, Panel, Queue, RoleScreen, Row, Rows, Screen, Search, Shot, States, Tabs,
 } from './shell';
+import { ChartBox, soft, token } from './chart';
 import { BracketFlow } from '@/widgets/bracket/BracketFlow';
 import { DeskFrame, type DeskVariant } from '../deskShell';
 import { MY_GROUP, OTHER_GROUPS, myBracket, playoffBracket } from './myBracket';
@@ -297,7 +298,7 @@ const Apply14_3States = () => (
 
 export function MyApp14_4() {
   return (
-    <RoleScreen role={R14} nav="Моя заявка" title="Моя заявка" sub="Кубок Алматы 2026 · подана 02.09">
+    <RoleScreen role={R14} nav="Календарь" title="Моя заявка" sub="Кубок Алматы 2026 · подана 02.09">
       <div className="mkcols">
         <Panel title="Состояние" extra={<P t="НА РАССМОТРЕНИИ" cls="wait" />}>
           <Form>
@@ -665,7 +666,7 @@ export function Match14_5({ tab, groups }: { tab?: string; groups?: boolean }) {
   return (
     <RoleScreen
       role={R14}
-      nav="Мой матч"
+      nav="Мой турнир"
       title="Кубок Алматы 2026"
       sub={groups ? 'Группы и плей-офф · группа A · стол 5' : '1/8 финала · стол 5'}
     >
@@ -713,32 +714,300 @@ const Match14_5States = () => (
 
 /* ── Э14.6 · Аналитика ─────────────────────────────────────────── */
 
+/** Турнир, который спортсмен сыграл: где закончил, что получил в рейтинг и с
+    каким рейтингом ушёл. История — не украшение экрана, а его основа: вопрос
+    «как у меня идёт сезон» без неё отвечается одним числом «+24», из которого
+    ничего не следует.
+
+    `r` — рейтинг **после** турнира: из него и строится кривая. */
+type Played = {
+  nm: string;
+  cat: string;
+  d: string;
+  /** Где закончил: стадия или место. */
+  stage: string;
+  w: number;
+  l: number;
+  /** Дельта рейтинга за турнир. */
+  dr: number;
+  r: number;
+};
+
+const PLAYED: Played[] = [
+  { nm: 'Открытие сезона 2026', cat: 'ОРТ · Астана', d: '19.01', stage: '1/4 финала', w: 3, l: 1, dr: 22, r: 2410 },
+  { nm: 'Чемпионат Казахстана 2026', cat: 'Главный старт · Астана', d: '20.05', stage: '1/8 финала', w: 2, l: 1, dr: -6, r: 2404 },
+  { nm: 'Кубок Сарыарки 2026', cat: 'ОРТ · Караганда', d: '14.06', stage: 'полуфинал', w: 4, l: 1, dr: 18, r: 2422 },
+  { nm: 'Евразийская лига, 2-й тур', cat: 'Лига · Алматы', d: '11.07', stage: 'команда 3-я', w: 2, l: 2, dr: 4, r: 2426 },
+  { nm: 'Первенство РК до 23 лет', cat: 'Главный старт · Шымкент', d: '02.08', stage: '1/16 финала', w: 1, l: 1, dr: -12, r: 2414 },
+  { nm: 'Кубок Алматы 2026', cat: 'ОРТ · Алматы', d: '14.09', stage: '1/8 финала', w: 2, l: 1, dr: 8, r: 2422 },
+  { nm: 'ОРТ «Кубок Иртыша»', cat: 'ОРТ · Павлодар', d: '26.10', stage: 'финал', w: 5, l: 1, dr: 34, r: 2456 },
+];
+
+/** Личная встреча с одним соперником: сколько играли, кто сколько взял, что
+    было в последний раз. Спортсмен приходит сюда перед матчем — вопрос у него
+    один: «я с ним справляюсь?».
+
+    Данные сходятся с историей турниров: сумма встреч по соперникам равна числу
+    сыгранных матчей сезона. */
+type Foe = {
+  av: string;
+  nm: string;
+  club: string;
+  /** Рейтинг соперника — по нему видно, вровень играем или нет. */
+  r: number;
+  w: number;
+  l: number;
+  /** Партии: выиграно — проиграно. */
+  sets: [number, number];
+  last: string;
+  lastWin: boolean;
+};
+
+const FOES: Foe[] = [
+  { av: A(32), nm: 'Смагулов Алан', club: 'Алматы · «Алатау»', r: 2612, w: 1, l: 2, sets: [5, 9], last: 'Кубок Иртыша, финал · 1:4', lastWin: false },
+  { av: A(22), nm: 'Жумабеков Расул', club: 'Алматы · «Алатау»', r: 2312, w: 4, l: 1, sets: [17, 8], last: 'Кубок Алматы, 1/8 · 4:2', lastWin: true },
+  { av: A(51), nm: 'Токаев Марат', club: 'Шымкент · «Жетісу»', r: 2596, w: 3, l: 2, sets: [15, 12], last: 'Первенство до 23, 1/16 · 2:4', lastWin: false },
+  { av: A(13), nm: 'Пак Сергей', club: 'Павлодар · «Иртыш»', r: 2580, w: 3, l: 1, sets: [13, 8], last: 'Кубок Сарыарки, 1/2 · 4:1', lastWin: true },
+  { av: A(19), nm: 'Цой Виктор', club: 'Караганда · «Шахтёр»', r: 2542, w: 4, l: 0, sets: [16, 5], last: 'Открытие сезона, 1/4 · 4:0', lastWin: true },
+  { av: A(60), nm: 'Сериков Нурлан', club: 'Астана · СКА', r: 2545, w: 4, l: 2, sets: [18, 13], last: 'Лига, 2-й тур · 2:3', lastWin: false },
+];
+
+/* Сходимость: 19 побед и 8 поражений — это и сумма по соперникам, и сумма по
+   турнирам выше, и те самые 27 матчей сезона в подзаголовке экрана. Числа на
+   одном экране, которые не сходятся между собой, читаются как ошибка данных. */
+
+/** Кривая рейтинга по сыгранным турнирам. Линия, а не столбики: рейтинг —
+    непрерывная величина, и вопрос к ней «куда идёт», а не «сколько за раз».
+    Дельта каждого турнира читается рядом, в истории. */
+const RatingChart = () => (
+  <ChartBox
+    height={210}
+    label="Динамика рейтинга по турнирам сезона"
+    make={(el) => ({
+      type: 'line',
+      data: {
+        labels: PLAYED.map((t) => t.d),
+        datasets: [
+          {
+            label: 'Рейтинг',
+            data: PLAYED.map((t) => t.r),
+            borderColor: token('--c-accent', el),
+            backgroundColor: soft('--c-accent', 18, el),
+            pointBackgroundColor: PLAYED.map((t) =>
+              t.dr >= 0 ? token('--c-success', el) : token('--c-danger', el),
+            ),
+            pointBorderColor: token('--c-panel', el),
+            pointBorderWidth: 2,
+            pointRadius: 5,
+            pointHoverRadius: 7,
+            borderWidth: 2,
+            fill: true,
+            tension: 0.3,
+          },
+        ],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            callbacks: {
+              /* В подсказке — сам турнир и его дельта: по одной дате человек
+                 не вспомнит, что было 11 июля. */
+              title: (i) => PLAYED[i[0].dataIndex].nm,
+              label: (i) => {
+                const t = PLAYED[i.dataIndex];
+                return `${t.r} · ${t.dr >= 0 ? '+' : ''}${t.dr} · ${t.stage}`;
+              },
+            },
+          },
+        },
+        scales: {
+          x: {
+            grid: { color: soft('--c-glass-line', 60, el) },
+            ticks: { color: token('--c-dim', el), font: { size: 11 } },
+          },
+          y: {
+            grid: { color: soft('--c-glass-line', 60, el) },
+            ticks: { color: token('--c-dim', el), font: { size: 11 } },
+          },
+        },
+      },
+    })}
+  />
+);
+
+/** Личные встречи столбиками: победы и поражения по каждому сопернику в одной
+    полосе. Горизонтально — потому что подписи это фамилии, а не даты: вертикаль
+    их обрезала бы или ставила боком. */
+const FoesChart = () => (
+  <ChartBox
+    height={230}
+    label="Личные встречи: победы и поражения по каждому сопернику"
+    make={(el) => ({
+      type: 'bar',
+      data: {
+        labels: FOES.map((f) => f.nm.split(' ')[0]),
+        datasets: [
+          {
+            label: 'Победы',
+            data: FOES.map((f) => f.w),
+            backgroundColor: token('--c-success', el),
+            borderWidth: 0,
+          },
+          {
+            label: 'Поражения',
+            data: FOES.map((f) => f.l),
+            backgroundColor: soft('--c-danger', 70, el),
+            borderWidth: 0,
+          },
+        ],
+      },
+      options: {
+        indexAxis: 'y',
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            position: 'bottom',
+            labels: { color: token('--c-muted', el), boxWidth: 10, font: { size: 11 } },
+          },
+          tooltip: {
+            callbacks: {
+              afterBody: (i) => {
+                const f = FOES[i[0].dataIndex];
+                return `партии ${f.sets[0]}:${f.sets[1]} · последняя — ${f.last}`;
+              },
+            },
+          },
+        },
+        scales: {
+          x: {
+            stacked: true,
+            grid: { color: soft('--c-glass-line', 60, el) },
+            ticks: { color: token('--c-dim', el), stepSize: 1, font: { size: 11 } },
+          },
+          y: {
+            stacked: true,
+            grid: { display: false },
+            ticks: { color: token('--c-muted', el), font: { size: 11 } },
+          },
+        },
+      },
+    })}
+  />
+);
+
+/** История турниров: где играл, чем кончил и что это дало рейтингу.
+
+    Строка открывает тот же экран, что и по ходу игры (Э14.5), но завершённый:
+    сетка с моим путём, мои матчи и из чего сложилась дельта. Отдельного экрана
+    «прошлый турнир» не заводим. */
+const HISTORY_COLS = ['Турнир', 'Дата', 'Где закончил', 'В–П', 'Рейтинг'];
+
+const History14_6 = () => (
+  <div className="mktable mkplayed">
+    <div className="mktable-h">
+      {HISTORY_COLS.map((c) => (
+        <span key={c}>{c}</span>
+      ))}
+      <span />
+    </div>
+    <div className="mktable-b">
+      {[...PLAYED].reverse().map((t) => (
+        <div className="mktable-r" key={t.nm} data-to="Э14.5">
+          <span className="nm">
+            {t.nm}
+            <em>{t.cat}</em>
+          </span>
+          <span>{t.d}</span>
+          <span>{t.stage}</span>
+          <span className="num">{t.w}–{t.l}</span>
+          <span className="num">
+            <b className={t.dr >= 0 ? 'up' : 'down'}>{t.dr >= 0 ? '+' : ''}{t.dr}</b>
+            <i>{t.r}</i>
+          </span>
+          <span className="go">
+            <ChevronRight size={15} />
+          </span>
+        </div>
+      ))}
+    </div>
+  </div>
+);
+
+/** Личные встречи таблицей под графиком: график отвечает «с кем как», таблица —
+    «что именно было». Одно без другого не работает: по столбикам не узнать
+    счёта последней встречи, а по таблице из шести строк не увидеть баланса. */
+const Foes14_6 = () => (
+  <Rows>
+    {FOES.map((f) => (
+      <Row
+        key={f.nm}
+        av={f.av}
+        nm={f.nm}
+        sub={`${f.club} · рейтинг ${f.r} · партии ${f.sets[0]}:${f.sets[1]}`}
+        val={`${f.w}–${f.l}`}
+        pill={
+          f.w > f.l
+            ? { t: 'ПЕРЕВЕС У ВАС', cls: 'live' }
+            : f.w === f.l
+              ? { t: 'ПОРОВНУ', cls: 'reg' }
+              : { t: 'ПЕРЕВЕС У НЕГО', cls: 'bad' }
+        }
+      />
+    ))}
+  </Rows>
+);
+
 export function Stats14_6() {
   return (
-    <RoleScreen role={R14} nav="Аналитика" title="Аналитика" sub="Сезон 2026 · 128 матчей">
+    <RoleScreen role={R14} nav="Аналитика" title="Аналитика" sub="Сезон 2026 · 7 турниров · 27 матчей">
       <Chips
         items={[
           { v: '2456', k: 'Рейтинг', tone: 'b' },
-          { v: '+24', k: 'За сезон', tone: 'g' },
-          { v: '68%', k: 'Побед' },
+          { v: '+68', k: 'За сезон', tone: 'g' },
+          { v: '70%', k: 'Побед' },
           { v: '7', k: 'Турниров сыграно' },
         ]}
       />
-      <div className="mkcols">
-        {/* Строка турнира открывает тот же экран, что и по ходу игры (Э14.5),
-            но завершённый: сетка с моим путём, мои матчи и из чего сложилась
-            дельта рейтинга. Отдельного экрана «прошлый турнир» не заводим. */}
-        <Panel title="Рейтинг по турнирам">
-          <Rows>
-            <Row nm="Кубок Алматы 2026" sub="1/8 финала · 14.09" val="+8" pill={{ t: 'МОЯ СЕТКА И МАТЧИ', cls: 'reg' }} to="Э14.5" />
-            <Row nm="Открытие сезона 2026" sub="1/4 финала · 19.01" val="+22" pill={{ t: 'МОЯ СЕТКА И МАТЧИ', cls: 'reg' }} to="Э14.5" />
-            <Row nm="ОРТ «Кубок Иртыша» 2025" sub="финал · 26.10" val="+16" pill={{ t: 'МОЯ СЕТКА И МАТЧИ', cls: 'reg' }} to="Э14.5" />
-          </Rows>
+
+      {/* Блоки идут сверху вниз, а не в две колонки ✳: у каждого своя ширина
+          по смыслу — кривой рейтинга нужна длинная ось времени, полосам личных
+          встреч нужны читаемые фамилии, истории турниров — колонки. В двух
+          колонках всё это ужималось вдвое, и график становился картинкой, по
+          которой ничего не прочитать. Экран длинный, зато каждый блок отвечает
+          на свой вопрос целиком. */}
+      <div className="mkstack">
+        <Panel title="Динамика рейтинга" extra={<span className="dcount">по сыгранным турнирам сезона</span>}>
+          <RatingChart />
+          <div className="dactionbar" style={{ marginTop: 10 }}>
+            <span className="dcount">Зелёная точка — турнир в плюс, красная — в минус</span>
+            <span className="dcount">2388 → 2456</span>
+          </div>
         </Panel>
 
-        <Panel title="Расширенная аналитика ⚠" extra={<BarChart3 size={15} />}>
-          <Empty title="Пока не проектируем" text="⚠ Что в неё входит и платная ли она — решения федерации нет." />
+        <Panel
+          title="История турниров"
+          extra={<span className="dcount">строка открывает мою сетку и матчи того турнира</span>}
+        >
+          <History14_6 />
         </Panel>
+
+        <Panel title="Личные встречи" extra={<BarChart3 size={15} />}>
+          <FoesChart />
+          <div style={{ marginTop: 10 }}>
+            <Foes14_6 />
+          </div>
+        </Panel>
+      </div>
+
+      <div style={{ marginTop: 12 }}>
+        <Hint>
+          ⚠ Расширенная аналитика — платная (§10): что в неё входит и как оплачивается, решения
+          федерации нет. Всё, что выше, — базовая: она не платная.
+        </Hint>
       </div>
     </RoleScreen>
   );
@@ -747,10 +1016,21 @@ export function Stats14_6() {
 const Stats14_6States = () => (
   <States>
     <Shot
+      tone="info"
+      title="Сезон только начался"
+      text="Один турнир — кривой ещё нет, есть точка: график появляется со второго турнира."
+      wide
+    >
+      <Rows>
+        <Row nm="Открытие сезона 2026" sub="ОРТ · Астана · 19.01 · 1/4 финала" val="+22" pill={{ t: 'ЕДИНСТВЕННЫЙ', cls: 'reg' }} />
+      </Rows>
+      <Alert>Личных встреч тоже пока нет: соперник появляется в списке после первой сыгранной с ним встречи.</Alert>
+    </Shot>
+
+    <Shot
       tone="warning"
       title="Расширенная аналитика — заглушка"
       text="Состав расширенной аналитики и её оплата не зафиксированы; до решения не проектируем."
-      wide
     >
       <Empty title="Расширенная аналитика" text="⚠ Что в неё входит и платная ли она — решения федерации нет." />
     </Shot>
