@@ -415,7 +415,12 @@ export function Search({
 }
 
 /** Страницы длинного списка: назад, номера, вперёд. Без них в списке на сотню
-    строк человек ищет глазами, а это единственное, чего он делать не должен. */
+    строк человек ищет глазами, а это единственное, чего он делать не должен.
+
+    Номера показываются окном: в реестре спортсменов страниц под три сотни, и
+    ряд из трёхсот кнопок сам становится списком, в котором ищут глазами. Видны
+    первая, последняя и соседние с текущей, между ними — многоточие; пока
+    страниц немного, окно ничего не прячет. */
 export function Pager({
   page,
   pages,
@@ -425,21 +430,39 @@ export function Pager({
   pages: number;
   onPick: (p: number) => void;
 }) {
+  const nums: (number | '…')[] = [];
+  if (pages <= 9) {
+    for (let i = 0; i < pages; i++) nums.push(i);
+  } else {
+    /* Окно ходит вместе с текущей страницей, но у краёв не съезжает за них:
+       иначе на первой и последней странице соседей видно вдвое меньше. */
+    const from = Math.max(1, Math.min(page - 1, pages - 5));
+    const to = Math.min(pages - 2, Math.max(page + 1, 4));
+    nums.push(0);
+    if (from > 1) nums.push('…');
+    for (let i = from; i <= to; i++) nums.push(i);
+    if (to < pages - 2) nums.push('…');
+    nums.push(pages - 1);
+  }
   return (
     <div className="mkpager">
       <button type="button" disabled={page === 0} onClick={() => onPick(page - 1)}>
         Назад
       </button>
-      {Array.from({ length: pages }, (_, i) => (
-        <button
-          key={i}
-          type="button"
-          className={i === page ? 'on' : undefined}
-          onClick={() => onPick(i)}
-        >
-          {i + 1}
-        </button>
-      ))}
+      {nums.map((n, i) =>
+        n === '…' ? (
+          <span key={'gap' + i}>…</span>
+        ) : (
+          <button
+            key={n}
+            type="button"
+            className={n === page ? 'on' : undefined}
+            onClick={() => onPick(n)}
+          >
+            {n + 1}
+          </button>
+        ),
+      )}
       <button type="button" disabled={page >= pages - 1} onClick={() => onPick(page + 1)}>
         Вперёд
       </button>

@@ -373,7 +373,11 @@ const CITIES: [string, string][] = [
     другой роли — это два состава одного турнира, которые разъедутся. */
 export const PLAYERS: Ply14[] = Array.from({ length: 128 }, (_, i) => {
   const [city, club] = CITIES[i % CITIES.length];
-  const nm = `${SURNAMES[i % SURNAMES.length]} ${FIRSTS[Math.floor(i / SURNAMES.length) % FIRSTS.length]}`;
+  /* Имя не идёт следом за фамилией ровным шагом: иначе двадцать четыре строки
+     подряд оказывались «… Алан», а следующие двадцать четыре — «… Георгий», и
+     список читался как сгенерированный. Пара «фамилия + имя» при этом всё
+     равно не повторяется — шаг подобран так, что цикл длиннее списка. */
+  const nm = `${SURNAMES[i % SURNAMES.length]} ${FIRSTS[(i * 7 + Math.floor(i / SURNAMES.length)) % FIRSTS.length]}`;
   return { s: i + 1, nm, city, club, r: 2612 - i * 7 - (i % 5) };
 });
 PLAYERS[1] = { ...PLAYERS[1], nm: 'Ким Георгий', city: 'Астана', club: 'СКА', r: 2456, me: true };
@@ -417,7 +421,16 @@ const MyMatch14_5 = () => (
     Списком строк это не работает: на главном старте 128 участников, и человек
     ищет в нём либо себя, либо конкретного соперника. Поэтому поиск по фамилии,
     сортировка по любому столбцу и страницы — как в реестрах федерации. */
-export function Players14_5({ mark }: { mark?: (p: Ply14) => { t: string; cls: string } | undefined } = {}) {
+export function Players14_5({
+  mark,
+  list = PLAYERS,
+}: {
+  mark?: (p: Ply14) => { t: string; cls: string } | undefined;
+  /** Чей состав показываем. По умолчанию — общий список участников; у турнира
+      федерации (Э1.3) он свой: там принято 96 заявок из 128, и таблица должна
+      показывать принятых, а не всех подавшихся. */
+  list?: Ply14[];
+} = {}) {
   const [q, setQ] = useState('');
   const [sort, setSort] = useState<{ k: (typeof COLS14)[number]['k']; up: boolean }>({ k: 's', up: true });
   const [page, setPage] = useState(0);
@@ -427,7 +440,7 @@ export function Players14_5({ mark }: { mark?: (p: Ply14) => { t: string; cls: s
      только срез «мои». */
   const hit = (p: Ply14) => (mark ? Boolean(mark(p)) : Boolean(p.me));
 
-  const found = PLAYERS.filter((p) => {
+  const found = list.filter((p) => {
     const t = q.trim().toLowerCase();
     return !t || p.nm.toLowerCase().includes(t) || p.club.toLowerCase().includes(t) || p.city.toLowerCase().includes(t);
   });
@@ -452,7 +465,7 @@ export function Players14_5({ mark }: { mark?: (p: Ply14) => { t: string; cls: s
           wide
         />
         <span className="dcount">
-          {rows.length === PLAYERS.length ? `${PLAYERS.length} участников` : `найдено ${rows.length} из ${PLAYERS.length}`}
+          {rows.length === list.length ? `${list.length} участников` : `найдено ${rows.length} из ${list.length}`}
         </span>
       </div>
 
