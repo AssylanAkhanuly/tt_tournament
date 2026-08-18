@@ -108,9 +108,10 @@ export function JudgeRating({ me, tours }: { me: JudgeMe; tours: JudgeTour[] }) 
       <Chips
         items={[
           {
+            /* Цветом число не выделяем: в плитке оно и так самое крупное, а
+               синий тут не значил ничего — просто «первая плитка». */
             v: num(r),
             k: `R = S1 ${num(me.s1)} + S2 ${num(me.s2)} + S3 ${num(me.s3)} + S4 ${num(me.s4)}`,
-            tone: 'b',
           },
           { v: '№' + me.pl, k: 'Место в рейтинге сезона' },
           { v: me.cat, k: 'Категория · регион учёта ' + me.region },

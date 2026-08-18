@@ -12,11 +12,12 @@
    отдельной историей адаптива, а не отдельным набором макетов. Цвет — только
    токенами. */
 
+import { useState } from 'react';
 import {
   Check, Clock, History, Pause, Radio, RefreshCw, Trophy, Undo2, Upload, UserX,
 } from 'lucide-react';
 import {
-  A, ActionBar, Alert, Arrow, Board, Chips, Empty, Hint, Panel, RoleScreen, Row, Rows, Screen,
+  A, ActionBar, Alert, Arrow, Board, Chips, Empty, Hint, P, Panel, RoleScreen, Row, Rows, Screen,
   Shot, States, Tabs,
 } from './shell';
 import type { ScreenMap } from './shell';
@@ -95,17 +96,26 @@ export function Tours9_1() {
       title="Мои турниры"
       sub="Оралбай Ержан · судья · сезон 2026"
     >
+      {/* Назначения — таблицей, как списки у председателя: одна рамка на
+          список, строки волосяной линией, подсветка под курсором. Карточками
+          с просветом пять назначений занимали весь экран. */}
       <div className="sect">Мои назначения</div>
-      {ASSIGN.map((a) => (
-        <div className="item" key={a.t} style={{ marginTop: 0 }} data-to="Э9.2">
-          <div className="ic"><Trophy size={17} /></div>
-          <div className="tx">
-            <div className="tt">{a.t}</div>
-            <div className="ss">{a.sub}</div>
-          </div>
-          <span className={'pill ' + a.cls} style={{ margin: 0 }}>{a.st}</span>
+      <div className="mktable mkcands mkassign">
+        <div className="mktable-h">
+          <span>Турнир</span>
+          <span>Состояние</span>
         </div>
-      ))}
+        <div className="mktable-b">
+          {ASSIGN.map((a) => (
+            <div className="mktable-r" key={a.t} data-to="Э9.2" role="button" tabIndex={0}>
+              <span className="nm">
+                <i>{a.t}<em>{a.sub}</em></i>
+              </span>
+              <span className="mark"><P t={a.st} cls={a.cls} /></span>
+            </div>
+          ))}
+        </div>
+      </div>
 
       {/* Открытых приёмов и подачи заявок здесь больше нет ✳ (18.08.2026): они
           уехали в кабинет судьи (Э0.9, Э0.10). Подача жила у роли судьи стола —
@@ -139,7 +149,8 @@ export function Table9_2() {
           судья, и оно живёт в его руках — у судьи стола оно ничего не решало, а
           место занимало больше, чем сам матч. Судья за столом отвечает на один
           вопрос: эта пара пришла — начинаем? */}
-      <div className="sect">Вызвана пара — главный судья ждёт готовности стола</div>
+      {/* Подписи «вызвана пара» нет: на экране одна карточка и одна кнопка —
+          пересказывать это строкой сверху незачем. */}
       <div className="card">
         <div className="jvs">
           <div className="jvp">
@@ -171,54 +182,29 @@ export function Table9_2() {
 
 /* ── Э9.3 · Ввод счёта — главный экран роли ──────────────────────── */
 
-/** Половина экрана = кнопка одного игрока: имя, подача, огромный счёт, партии. */
-function Half({ av, nm, city, pts, sets, serve }: {
+/** Половина экрана — один игрок: имя, огромный счёт и кнопка очка.
+
+    Указателя подачи здесь нет: судья за столом и так знает, кто подаёт, а на
+    экране это была строка мелким шрифтом под именем — прочитать её с
+    расстояния всё равно нельзя. Половины равны и цветом ничего не выделяется:
+    единственное, что должно бросаться в глаза, — сами числа. */
+function Half({ av, nm, city, pts, onPoint, off }: {
   av: string;
   nm: string;
   city: string;
-  pts: string;
-  sets: string;
-  serve?: boolean;
+  pts: number;
+  onPoint: () => void;
+  /** Матч закрыт, пауза или партия ждёт подтверждения — очки не начисляются. */
+  off?: boolean;
 }) {
   return (
     <div
       className="card"
-      style={{
-        padding: 14,
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        gap: 7,
-        borderColor: serve ? 'var(--c-accent-line-3)' : undefined,
-        boxShadow: serve
-          ? 'inset 0 1px 0 var(--c-glass-hi), 0 0 0 1px var(--c-accent-halo)'
-          : undefined,
-      }}
+      style={{ padding: 14, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 7 }}
     >
       <img className="avatar sm" src={av} alt="" />
       <div style={{ fontSize: 16, fontWeight: 800, letterSpacing: '-.2px' }}>{nm}</div>
       <div style={{ fontSize: 11.5, color: 'var(--c-muted)' }}>{city}</div>
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: 6,
-          fontSize: 10.5,
-          fontWeight: 800,
-          letterSpacing: '.08em',
-          color: serve ? 'var(--c-success)' : 'var(--c-dim)',
-        }}
-      >
-        <span
-          style={{
-            width: 8,
-            height: 8,
-            borderRadius: '50%',
-            background: serve ? 'var(--c-success)' : 'var(--c-dim)',
-          }}
-        />
-        {serve ? 'ПОДАЧА' : 'ПРИЁМ'}
-      </div>
       <div
         style={{
           fontSize: 122,
@@ -226,99 +212,214 @@ function Half({ av, nm, city, pts, sets, serve }: {
           fontWeight: 800,
           letterSpacing: '-6px',
           fontVariantNumeric: 'tabular-nums',
-          color: serve ? 'var(--c-accent)' : 'var(--c-ink-bright)',
+          color: 'var(--c-ink-bright)',
         }}
       >
         {pts}
       </div>
-      <div style={{ fontSize: 11.5, fontWeight: 700, color: 'var(--c-muted)', letterSpacing: '.06em' }}>
-        ПАРТИИ {sets}
-      </div>
-      <div className="jstart" style={{ padding: 13, fontSize: 13.5 }}>+1 очко</div>
+      {off ? (
+        <div className="jbtn ghost" style={{ padding: 13, fontSize: 13.5, width: '100%' }}>+1 очко</div>
+      ) : (
+        <button
+          type="button"
+          className="jstart"
+          style={{ padding: 13, fontSize: 13.5, width: '100%' }}
+          onClick={onPoint}
+        >
+          +1 очко
+        </button>
+      )}
     </div>
   );
 }
 
+type Pl = { av: string; nm: string; city: string };
+const PL: [Pl, Pl] = [
+  { av: A(32), nm: 'Смагулов Алан', city: 'Алматы · «Алатау»' },
+  { av: A(51), nm: 'Токаев Марат', city: 'Астана · «Барыс»' },
+];
+
 /** Ввод по очкам (TZ §6.2): каждое очко отдельной кнопкой, счёт видно с
     расстояния, последнее действие отменяется. */
-const ByPoints9_3 = () => (
-  <>
-    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, flex: 'none' }}>
-      <Half av={A(32)} nm="Смагулов Алан" city="Алматы · «Алатау»" pts="8" sets="2" serve />
-      <Half av={A(51)} nm="Токаев Марат" city="Астана · «Барыс»" pts="6" sets="1" />
-    </div>
+function ByPoints9_3({ pts, sets, swap, paused, off, done, ready, onPoint, onUndo, onSwap, onPause, onKeep }: {
+  pts: [number, number];
+  sets: [number, number][];
+  swap: boolean;
+  paused: boolean;
+  off: boolean;
+  done: boolean;
+  /** Партия доиграна и ждёт подтверждения. */
+  ready: boolean;
+  onPoint: (i: 0 | 1) => void;
+  onUndo: () => void;
+  onSwap: () => void;
+  onPause: () => void;
+  onKeep: () => void;
+}) {
+  /* Смена сторон меняет местами половины экрана, а не игроков: после смены
+     сторон человек, сидевший слева, оказывается справа, и судья ищет его там,
+     где видит. Счёт при этом остаётся своим. */
+  const order: (0 | 1)[] = swap ? [1, 0] : [0, 1];
+  const won = (i: 0 | 1) => sets.filter(([a, b]) => (i === 0 ? a > b : b > a)).length;
+  return (
+    <>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, flex: 'none' }}>
+        {order.map((i) => (
+          <Half key={PL[i].nm} {...PL[i]} pts={pts[i]} off={off || ready} onPoint={() => onPoint(i)} />
+        ))}
+      </div>
 
-    <div className="lvs" style={{ flex: 'none' }}>
-      <span className="setscore">2</span>
-      <span className="vs">СЧЁТ ПО ПАРТИЯМ</span>
-      <span className="setscore">1</span>
-    </div>
+      {/* Счёт по партиям — один раз и по центру. Раньше он стоял ещё и под
+          каждым числом, и два места говорили одно и то же. */}
+      <div className="lvs" style={{ flex: 'none' }}>
+        <span className="setscore">{won(order[0])}</span>
+        <span className="vs">СЧЁТ ПО ПАРТИЯМ</span>
+        <span className="setscore">{won(order[1])}</span>
+      </div>
 
-    <div className="sets" style={{ flex: 'none' }}>
-      <span className="setchip"><b>11</b>–9</span>
-      <span className="setchip">9–<b>11</b></span>
-      <span className="setchip"><b>11</b>–7</span>
-      <span className="setchip">партия 4 · идёт</span>
-    </div>
-
-    <div style={{ display: 'flex', gap: 9, flex: 'none' }}>
-      <div className="jbtn ghost" style={{ padding: 12 }}><Undo2 size={15} />Отменить последнее</div>
-      <div className="jbtn ghost" style={{ padding: 12 }}><RefreshCw size={15} />Смена сторон</div>
-      <div className="jbtn ghost" style={{ padding: 12 }}><Pause size={15} />Пауза</div>
-    </div>
-  </>
-);
-
-/** Ввод по партиям (TZ §6.1): судья вводит итог партии, итог матча система
-    считает сама — руками его не задают. */
-const BySets9_3 = () => (
-  <>
-    <div className="sect">Итоги партий · матч до 3 побед из 5</div>
-    <div className="card" style={{ padding: 15, display: 'grid', gap: 10 }}>
-      {[
-        { n: 'Партия 1', a: '11', b: '9', done: true },
-        { n: 'Партия 2', a: '9', b: '11', done: true },
-        { n: 'Партия 3', a: '11', b: '7', done: true },
-        { n: 'Партия 4', a: '—', b: '—', done: false },
-      ].map((s) => (
-        <div
-          key={s.n}
-          style={{ display: 'flex', alignItems: 'center', gap: 12, fontSize: 15, fontWeight: 700 }}
-        >
-          <span style={{ flex: 1, color: 'var(--c-muted)', fontSize: 13 }}>{s.n}</span>
-          <span className="setchip" style={{ minWidth: 54, textAlign: 'center' }}>{s.a}</span>
-          <span style={{ color: 'var(--c-dim)' }}>:</span>
-          <span className="setchip" style={{ minWidth: 54, textAlign: 'center' }}>{s.b}</span>
-          <span style={{ fontSize: 11, fontWeight: 800, color: s.done ? 'var(--c-success)' : 'var(--c-dim)' }}>
-            {s.done ? 'ВВЕДЕНА' : 'ИДЁТ'}
+      {/* Сыгранные партии — счётом, без номера: номер читается по месту в ряду,
+          а идущая партия видна по крупным числам выше. */}
+      <div className="sets" style={{ flex: 'none' }}>
+        {sets.map(([a, b], n) => (
+          <span className="setchip" key={n}>
+            {a > b ? <b>{a}</b> : a}–{b > a ? <b>{b}</b> : b}
           </span>
+        ))}
+        {sets.length === 0 && <span className="setchip">партий ещё нет</span>}
+      </div>
+
+      {/* Полоса управления живёт внутри ввода по очкам: отмена очка, смена
+          сторон и пауза — про сам розыгрыш. На вкладке «Партии» их нет, а после
+          подтверждения матча нет вовсе: счёт стал итогом. */}
+      {!done && (
+        <div style={{ display: 'flex', gap: 9, flex: 'none' }}>
+          <button type="button" className="jbtn ghost" style={{ padding: 12 }} onClick={onUndo}>
+            <Undo2 size={15} />Отменить последнее
+          </button>
+          <button type="button" className="jbtn ghost" style={{ padding: 12 }} onClick={onSwap}>
+            <RefreshCw size={15} />Смена сторон
+          </button>
+          <button
+            type="button"
+            className={'jbtn ghost' + (paused ? ' on' : '')}
+            style={{ padding: 12 }}
+            onClick={onPause}
+          >
+            <Pause size={15} />{paused ? 'Продолжить' : 'Пауза'}
+          </button>
+        </div>
+      )}
+
+      {/* Партия доиграна: счёт держится на экране, пока судья его не
+          подтвердит. Кнопка появляется только в этот момент. */}
+      {ready && !done && (
+        <button type="button" className="jbtn pri" style={{ padding: 13, flex: 'none' }} onClick={onKeep}>
+          <Check size={15} />Подтвердить партию {sets.length + 1} · {pts[0]} : {pts[1]}
+        </button>
+      )}
+    </>
+  );
+}
+
+/** Партии берутся из того же состояния, что и ввод по очкам: закрытые — из
+    `sets`, идущая — из текущего счёта. Отдельного списка тут нет намеренно: он
+    разошёлся бы со счётом на соседней вкладке при первом же розыгрыше.
+
+    ⚠ По Положению (TZ §6.1) «по партиям» — второй режим ввода, а не вид: в нём
+    судья вводит итог партии и тоже подтверждает результат. Сейчас вкладка на
+    просмотр — уточнить у федерации, остаётся ли режим. */
+const BySets9_3 = ({ sets, pts }: { sets: [number, number][]; pts: [number, number] }) => (
+  <div className="mktable mkcands mksets">
+    <div className="mktable-h">
+      <span>Партия</span>
+      <span className="num">{PL[0].nm.split(' ')[0]}</span>
+      <span className="num">{PL[1].nm.split(' ')[0]}</span>
+      <span>Состояние</span>
+    </div>
+    <div className="mktable-b">
+      {sets.map(([a, bb], i) => (
+        <div className="mktable-r" key={i}>
+          <span className="nm"><i>Партия {i + 1}</i></span>
+          {/* Победитель партии выделен: по колонке сразу видно, кто как шёл. */}
+          <span className={'num' + (a > bb ? ' tot' : '')}>{a}</span>
+          <span className={'num' + (bb > a ? ' tot' : '')}>{bb}</span>
+          <span className="mark"><P t="СЫГРАНА" cls="live" /></span>
         </div>
       ))}
+      <div className="mktable-r">
+        <span className="nm"><i>Партия {sets.length + 1}</i></span>
+        <span className="num">{pts[0]}</span>
+        <span className="num">{pts[1]}</span>
+        <span className="mark"><P t="ИДЁТ" cls="wait" /></span>
+      </div>
     </div>
-    <div className="dhintbox">
-      Итог матча считается из партий: вручную его не задают. Правка партии пишется в журнал с
-      автором и временем.
-    </div>
-  </>
+  </div>
 );
 
 export function Score9_3({ tab }: { tab?: string }) {
+  /* Счёт в идущей партии и закрытые партии. */
+  const [pts, setPts] = useState<[number, number]>([8, 6]);
+  const [sets, setSets] = useState<[number, number][]>([[11, 9], [9, 11]]);
+  /* Что нажимали — для отмены последнего: отменяется именно последнее
+     действие, а не «минус очко», ошибиться можно и стороной. */
+  const [log, setLog] = useState<{ i: 0 | 1; closed?: [number, number] }[]>([]);
+  const [swap, setSwap] = useState(false);
+  const [paused, setPaused] = useState(false);
+  const [done, setDone] = useState(false);
+  const off = paused || done;
+
+  /* Партия сыграна на 11 очках с разрывом в два — но сама собой не
+     закрывается: счёт остаётся на экране, пока судья его не подтвердит.
+     Обнулять числа в момент одиннадцатого очка нельзя — за столом в этот
+     момент как раз смотрят на счёт, спорят и сверяются, а он уже пропал. */
+  const ready = (pts[0] >= 11 || pts[1] >= 11) && Math.abs(pts[0] - pts[1]) >= 2;
+
+  const point = (i: 0 | 1) => {
+    const next: [number, number] = [pts[0], pts[1]];
+    next[i] += 1;
+    setPts(next);
+    setLog([...log, { i }]);
+  };
+  const keep = () => {
+    setSets([...sets, pts]);
+    setLog([...log, { i: 0, closed: pts }]);
+    setPts([0, 0]);
+  };
+  const undo = () => {
+    const last = log[log.length - 1];
+    if (!last) return;
+    if (last.closed) {
+      setSets(sets.slice(0, -1));
+      setPts(last.closed);
+    } else {
+      const back: [number, number] = [pts[0], pts[1]];
+      back[last.i] -= 1;
+      setPts(back);
+    }
+    setLog(log.slice(0, -1));
+  };
+
   return (
     <RoleScreen role={R09} nav="Мой стол" title="Ввод счёта" sub="Стол 4 · Смагулов А. — Токаев М. · 1/8 финала">
-      {/* Полоса состояния и решения по матчу — над вкладками: подтверждение
-          нужно ровно один раз, в конце матча, и внизу экрана оно уезжало за
-          край. Индикатор синхронизации рядом: судья работает без сети (TZ §6),
-          и «сколько событий в очереди» важнее любой кнопки. */}
+      {/* Решения по матчу — над вкладками: подтверждение нужно ровно один раз,
+          в конце матча, и внизу экрана оно уезжало за край.
+
+          Состояния связи здесь нет: пока связь есть, сообщать нечего — работа
+          без сети (TZ §6) показана отдельным кадром в полке состояний.
+
+          Пока партия ждёт подтверждения, кнопки матча нет: зелёная в этот
+          момент одна, и это подтверждение партии. Два одинаково главных
+          «подтвердить» рядом судья за столом выбирает не глядя, а подтвердить
+          матч с незакрытой партией нельзя. */}
       <ActionBar count="">
-        <span className="pill live" style={{ margin: 0 }}>
-          <span className="d" />СВЯЗЬ ЕСТЬ · 0 СОБЫТИЙ В ОЧЕРЕДИ
-        </span>
-        <button className="dpickbtn" data-to="Э9.4">
+        <button type="button" className="dpickbtn" data-to="Э9.4">
           <History size={14} /> История матча
         </button>
-        <button className="dsubmit" style={{ padding: '10px 14px' }} data-to="Э9.5">
-          <Check size={15} /> Подтвердить результат
-        </button>
+        {!ready && (
+          <button type="button" className="dsubmit" style={{ padding: '10px 14px' }} data-to="Э9.5" onClick={() => setDone(true)}>
+            <Check size={15} /> Подтвердить результат
+          </button>
+        )}
       </ActionBar>
 
       {/* Два способа вести счёт — это два разных экрана под одной шапкой, а не
@@ -326,8 +427,26 @@ export function Score9_3({ tab }: { tab?: string }) {
       <Tabs
         active={tab}
         items={[
-          { t: 'По очкам', view: <ByPoints9_3 /> },
-          { t: 'По партиям', view: <BySets9_3 /> },
+          {
+            t: 'По очкам',
+            view: (
+              <ByPoints9_3
+                pts={pts}
+                sets={sets}
+                swap={swap}
+                paused={paused}
+                off={off}
+                done={done}
+                ready={ready}
+                onPoint={point}
+                onUndo={undo}
+                onSwap={() => setSwap(!swap)}
+                onPause={() => setPaused(!paused)}
+                onKeep={keep}
+              />
+            ),
+          },
+          { t: 'Партии', view: <BySets9_3 sets={sets} pts={pts} /> },
         ]}
       />
 
@@ -346,11 +465,14 @@ export function Log9_4() {
       sub="Стол 4 · Смагулов А. — Токаев М. · каждое действие с автором и временем"
       back={{ label: 'Ввод счёта', to: 'Э9.3' }}
     >
-      <div className="sect">Лента событий по времени</div>
+      {/* Подписи «Лента событий по времени» нет: экран так и называется
+          историей матча, а лента — единственное, что на нём есть. Строка
+          отзывается под курсором: её читают сверху вниз, и подсветка держит
+          место. */}
       <div className="card" style={{ padding: '4px 15px' }}>
         <div className="list">
           {EVENTS.map((e) => (
-            <div className="match" key={e.at + e.t}>
+            <div className="match hoverable" key={e.at + e.t}>
               <span
                 className={e.tone === 'flat' ? 'badge' : 'badge ' + (e.tone === 'win' ? 'win' : 'loss')}
                 style={
@@ -361,9 +483,11 @@ export function Log9_4() {
               >
                 {e.tone === 'win' ? '+1' : e.tone === 'loss' ? '−1' : '·'}
               </span>
+              {/* Второй строки под названием нет: событие названо целиком в
+                  первой, а счёт после каждого розыгрыша пересказывал то, что и
+                  так видно на экране ввода. */}
               <div className="who">
                 <div className="nm">{e.t}</div>
-                <div className="mt">{e.s}</div>
               </div>
               <div className="dt">{e.at}</div>
             </div>

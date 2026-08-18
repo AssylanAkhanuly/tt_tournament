@@ -104,7 +104,9 @@ function TabNode({ data }: NodeProps) {
         {tab.mark === 'open' && <sup>⚠</sup>}
       </div>
       <div className="fmt-what">{tab.what}</div>
-      {tab.when && <div className="fmt-when">есть, когда: {tab.when}</div>}
+      {/* Условие «есть, когда…» на узле не пишем: строкой под названием оно
+          растило узел и повторяло то, что и так стоит в спеке экрана. Что
+          вкладка необязательная, видно по пунктирной рамке. */}
       <Handle type="source" position={Position.Right} />
     </div>
   );
@@ -223,7 +225,7 @@ function build(flow: RoleFlow, screens: ScreenMap, selected: string) {
      каждый лист; родитель встаёт по центру своих детей.
 
      Высоту считаем по узлу, а не по общей сетке строк: узлы вкладок разной
-     высоты (у одних есть условие «есть, когда…»), и на фиксированном шаге они
+     высоты (у одних название длиннее), и на фиксированном шаге они
      наезжали друг на друга. */
   const hOf = (id: string) => {
     const t = tabOf.get(id);
@@ -232,8 +234,7 @@ function build(flow: RoleFlow, screens: ScreenMap, selected: string) {
        Ширина узлов задана в `map.css` (200 и 178 px), отсюда и число знаков
        в строке. */
     if (!t) return 62 + Math.ceil((byId.get(id)?.title.length ?? 10) / 24) * 18;
-    return 40 + Math.ceil(t.tab.t.length / 22) * 16 + Math.ceil(t.tab.what.length / 28) * 15 +
-      (t.tab.when ? Math.ceil(t.tab.when.length / 26) * 14 : 0);
+    return 40 + Math.ceil(t.tab.t.length / 22) * 16 + Math.ceil(t.tab.what.length / 28) * 15;
   };
   const depth = new Map<string, number>([[root, 0]]);
   const top = new Map<string, number>();
