@@ -372,6 +372,84 @@
 .mktable.mkmydocs .mktable-r { transition: background .12s ease; }
 .mktable.mkledger .mktable-r:hover,
 .mktable.mkmydocs .mktable-r:hover { background: var(--c-panel-2); }
+/* Жеребьёвка (Э7.2): слот и человек одной строкой. Раньше это были две
+   вкладки — «Слоты» по номерам и «Список участников» по алфавиту; сортировка по
+   столбцу даёт оба взгляда одной таблицей. */
+.mktable.mkdraw .mktable-h,
+.mktable.mkdraw .mktable-r { grid-template-columns: 76px minmax(0, 1fr) 96px 148px; }
+.mktable.mkdraw .mktable-r { transition: background .12s ease; }
+.mktable.mkdraw .mktable-r:hover { background: var(--c-panel-2); }
+.mktable.mkdraw .num.tot { color: var(--c-ink); font-weight: 800; }
+.mktable.mkdraw .mktable-r .nm { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.mktable.mkdraw .mktable-r .nm img { width: 30px; height: 30px; border-radius: 50%; object-fit: cover; flex: none; }
+.mktable.mkdraw .mktable-r .nm i { font-style: normal; min-width: 0; }
+.mktable.mkdraw .mktable-r .nm em {
+  display: block;
+  font-style: normal;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--c-dim);
+  margin-top: 1px;
+}
+.mktable.mkdraw .pill { margin: 0; }
+
+/* Расписание секретаря (Э7.4): время первым столбцом — расписание читают по
+   времени. Конфликтная строка подкрашена красным, как отклонённая заявка. */
+.mktable.mksched .mktable-h,
+.mktable.mksched .mktable-r { grid-template-columns: 96px 96px minmax(0, 1.6fr) minmax(0, 1fr) 148px; }
+.mktable.mksched .mktable-r { transition: background .12s ease; }
+.mktable.mksched .mktable-r:hover { background: var(--c-panel-2); }
+.mktable.mksched .mktable-r.no { background: var(--c-danger-soft-2); }
+.mktable.mksched .mktable-r .nm i { font-style: normal; font-variant-numeric: tabular-nums; }
+.mktable.mksched .mktable-r .nm em {
+  display: block;
+  font-style: normal;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--c-dim);
+  margin-top: 1px;
+}
+.mktable.mksched .mark { display: flex; align-items: center; justify-content: flex-end; }
+.mktable.mksched .mark .pill { margin: 0; }
+.mktable.mksched .mktable-h > span {
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  color: var(--c-dim);
+}
+.mktable.mksched .mktable-h > span:last-child { justify-self: end; }
+
+/* Группы турнира у секретаря (Э7.3): группа с составом, сколько сыграно, кто
+   выходит. Тем же приёмом, что состав участников у спортсмена. */
+.mktable.mkgrp .mktable-h,
+.mktable.mkgrp .mktable-r { grid-template-columns: minmax(0, 1.4fr) 104px minmax(0, 1fr) 128px; }
+.mktable.mkgrp .mark { display: flex; justify-content: flex-end; }
+.mktable.mkgrp .mark .pill { margin: 0; }
+.mktable.mkgrp .mktable-r { transition: background .12s ease; }
+.mktable.mkgrp .mktable-r:hover { background: var(--c-panel-2); }
+.mktable.mkgrp .mktable-r .nm { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.mktable.mkgrp .mktable-r .nm i { font-style: normal; min-width: 0; }
+.mktable.mkgrp .mktable-r .nm em {
+  display: block;
+  font-style: normal;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--c-dim);
+  margin-top: 1px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.mktable.mkgrp .mktable-h > span:last-child {
+  justify-self: end;
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  color: var(--c-dim);
+}
+
 /* Партии матча (Э9.3, вкладка «по партиям») — счёт каждой отдельно, на
    просмотр. Победитель партии выделен: по колонке видно, кто как шёл. */
 .mktable.mksets .mktable-h,
