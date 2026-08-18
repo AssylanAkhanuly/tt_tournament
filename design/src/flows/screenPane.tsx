@@ -8,6 +8,7 @@
    кода разъехались бы на первой же правке. */
 
 import { useEffect, useRef, useState } from 'react';
+import { ReactFlowProvider } from '@xyflow/react';
 import type { Screen } from './types';
 import type { ScreenMap } from '../mockups/shell';
 import { NodeSpec } from './nodeSpec';
@@ -183,7 +184,14 @@ export function ScreenPane({
   };
 
 
+  /* Своё хранилище React Flow на макет ✳. Половина макетов показывает
+     настоящую сетку (`widgets/bracket`) — это второй React Flow на странице, и
+     без своего провайдера он подключается к ближайшему внешнему: у карты хода
+     турнира им оказывалась сама карта. Узлы графа подменялись узлами сетки, и
+     после клика по такому шагу карта слева пропадала — «сломался флоу».
+     Вложенный провайдер закрывает store макета от карты. */
   return (
+    <ReactFlowProvider>
       <div className="fmap-view" ref={pane}>
         <div className="fmap-bar">
           <div>
@@ -249,5 +257,6 @@ export function ScreenPane({
           </div>
         )}
       </div>
+    </ReactFlowProvider>
   );
 }
