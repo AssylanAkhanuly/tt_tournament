@@ -85,15 +85,19 @@ export function RoleScreen({
 }
 
 /** Планшет: роль судьи работает за столом, а не с десктопа (TZ §6). */
-export function RoleTablet({ title, sub, badge, center, children }: {
+export function RoleTablet({ title, sub, badge, back, center, children }: {
   title: string;
-  sub: string;
+  /** Не задана — строки под заголовком нет. */
+  sub?: string;
   badge?: string;
+  /** Возврат над рабочей областью: у планшета нет сайдбара, и уйти с экрана,
+      на который пришли из списка, иначе нечем. */
+  back?: { label: string; to?: string; onClick?: () => void };
   center?: boolean;
   children: ReactNode;
 }) {
   return (
-    <Tab title={title} sub={sub} badge={badge} center={center}>
+    <Tab title={title} sub={sub} badge={badge} back={back} center={center}>
       {children}
     </Tab>
   );

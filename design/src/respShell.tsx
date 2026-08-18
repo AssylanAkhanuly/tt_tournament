@@ -1,3 +1,4 @@
+import { ArrowLeft } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { Brand } from './ui';
 import '../gen/frame.css';
@@ -30,19 +31,38 @@ export function Board({ title, tag, children }: { title: string; tag: string; ch
 
 // планшетный экран: устройство-рамка + стеклянная шапка; center — для итоговых шагов
 export function Tab({
-  title, sub, badge = 'ИДЁТ', center, children,
-}: { title: string; sub: string; badge?: string; center?: boolean; children: ReactNode }) {
+  title, sub, badge = 'ИДЁТ', back, center, children,
+}: {
+  title: string;
+  /** Подпись под названием. Не задана — строки нет вовсе: пустая подпись
+      оставляла бы под заголовком дырку. */
+  sub?: string;
+  badge?: string;
+  /** Возврат над рабочей областью: подпись и экран, куда ведёт. Не задан —
+      кнопки нет. Нужен экранам, на которые приходят из списка: планшет у судьи
+      за столом, и уйти обратно ему больше нечем — сайдбара тут нет. */
+  back?: { label: string; to?: string; onClick?: () => void };
+  center?: boolean;
+  children: ReactNode;
+}) {
   return (
     <div className="tabframe"><div className="tabscreen">
       <div className="ttop">
         <Brand />
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontSize: 15, fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{title}</div>
-          <div style={{ fontSize: 12, color: 'var(--c-muted)', marginTop: 2 }}>{sub}</div>
+          {sub && <div style={{ fontSize: 12, color: 'var(--c-muted)', marginTop: 2 }}>{sub}</div>}
         </div>
         <span className="livebadge"><span className="d" />{badge}</span>
       </div>
-      <div className={'tbody' + (center ? ' center' : '')}>{children}</div>
+      <div className={'tbody' + (center ? ' center' : '')}>
+        {back && (
+          <button type="button" className="dback" data-to={back.to} onClick={back.onClick}>
+            <ArrowLeft size={14} /> {back.label}
+          </button>
+        )}
+        {children}
+      </div>
     </div></div>
   );
 }

@@ -169,8 +169,12 @@ function build(flow: RoleFlow, screens: ScreenMap, selected: string) {
       parent.set(code, root);
       return;
     }
-    const menu = sc.entry.find((e) => /меню/i.test(e));
-    if (menu) {
+    /* Раздел роли растёт из входа. Это не только пункт сайдбара: у планшетных
+       ролей сайдбара нет вовсе, и разделы переключает полоса под шапкой — она
+       так же стоит на каждом верхнеуровневом экране и так же доступна сразу
+       после входа. Оба входа описаны в «как попадает», по ним и узнаём. */
+    const nav = sc.entry.find((e) => /меню|переключател[а-яё]* разделов/i.test(e));
+    if (nav) {
       parent.set(code, root);
       return;
     }

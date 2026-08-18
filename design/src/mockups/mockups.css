@@ -241,7 +241,13 @@
 .mktable-h button.on { color: var(--c-accent); }
 .mktable-h .num,
 .mktable-r .num { justify-self: end; text-align: right; font-variant-numeric: tabular-nums; }
+/* Тело таблицы прокручивается со своей видимой полосой: длинный список не
+   растягивает экран, а листается на месте. */
 .mktable-b { max-height: 396px; overflow: auto; }
+.mktable-b::-webkit-scrollbar { width: 9px; }
+.mktable-b::-webkit-scrollbar-thumb { background: var(--c-glass-line); border-radius: var(--r-xs); }
+.mktable-b::-webkit-scrollbar-thumb:hover { background: var(--c-glass-edge); }
+.mktable-b::-webkit-scrollbar-track { background: transparent; }
 .mktable-r { border-top: 1px solid var(--c-glass-line); font-size: 12.5px; color: var(--c-muted); }
 .mktable-r:first-child { border-top: 0; }
 .mktable-r .nm { font-weight: 700; color: var(--c-ink); }
@@ -354,6 +360,95 @@
 .mktable.mkres .rank { font-size: 13px; font-weight: 700; color: var(--c-muted); }
 .mktable.mkres .mark { display: flex; justify-content: flex-end; }
 .mktable.mkres .mark .pill { margin: 0; }
+
+/* Свой журнал начислений и свои документы у судьи (Э9.5) — те же таблицы, что
+   у председателя, только уже: у себя строк единицы, и колонок нужно меньше. */
+.mktable.mkledger .mktable-h,
+.mktable.mkledger .mktable-r { grid-template-columns: minmax(0, 1fr) 148px 76px; }
+.mktable.mkledger .num.tot { color: var(--c-success); font-weight: 800; }
+/* Строки своих таблиц отзываются под курсором — тем же приёмом, что списки у
+   председателя: читают их сверху вниз, и подсветка держит место. */
+.mktable.mkledger .mktable-r,
+.mktable.mkmydocs .mktable-r { transition: background .12s ease; }
+.mktable.mkledger .mktable-r:hover,
+.mktable.mkmydocs .mktable-r:hover { background: var(--c-panel-2); }
+/* Партии матча (Э9.3, вкладка «по партиям») — счёт каждой отдельно, на
+   просмотр. Победитель партии выделен: по колонке видно, кто как шёл. */
+.mktable.mksets .mktable-h,
+.mktable.mksets .mktable-r { grid-template-columns: minmax(0, 1fr) 96px 96px 116px; }
+.mktable.mksets .num.tot { color: var(--c-ink); font-weight: 800; }
+.mktable.mksets .mark { display: flex; justify-content: flex-end; }
+.mktable.mksets .mark .pill { margin: 0; }
+.mktable.mksets .mktable-h > span {
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  color: var(--c-dim);
+}
+.mktable.mksets .mktable-h > span:last-child { justify-self: end; }
+
+/* Списки судьи на планшете (Э9.1): назначения и открытые приёмы. Одна рамка на
+   список, строки волосяной линией — раньше каждая строка была отдельной
+   карточкой с просветом, и пять назначений занимали весь экран. */
+.mktable.mkassign .mktable-h,
+.mktable.mkassign .mktable-r { grid-template-columns: minmax(0, 1fr) 168px; }
+.mktable.mkcalls .mktable-h,
+.mktable.mkcalls .mktable-r { grid-template-columns: minmax(0, 1fr) 296px; }
+.mktable.mkassign .mktable-r { cursor: pointer; }
+.mktable.mkassign .mktable-r,
+.mktable.mkcalls .mktable-r { transition: background .12s ease; }
+.mktable.mkassign .mktable-r:hover,
+.mktable.mkcalls .mktable-r:hover { background: var(--c-panel-2); }
+.mktable.mkassign .mark,
+.mktable.mkcalls .mark { display: flex; align-items: center; justify-content: flex-end; gap: 8px; }
+.mktable.mkassign .mark .pill,
+.mktable.mkcalls .mark .pill { margin: 0; }
+.mktable.mkassign .mktable-h > span,
+.mktable.mkcalls .mktable-h > span {
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  color: var(--c-dim);
+}
+.mktable.mkassign .mktable-h > span:last-child,
+.mktable.mkcalls .mktable-h > span:last-child { justify-self: end; }
+
+.mktable.mkmydocs .mktable-h,
+.mktable.mkmydocs .mktable-r { grid-template-columns: minmax(0, 1fr) 246px; }
+.mktable.mkmydocs .mark { display: flex; align-items: center; justify-content: flex-end; gap: 8px; }
+.mktable.mkmydocs .mark .pill { margin: 0; }
+.mktable.mkledger .mktable-h > span,
+.mktable.mkmydocs .mktable-h > span {
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  color: var(--c-dim);
+}
+.mktable.mkmydocs .mktable-h > span:last-child { justify-self: end; }
+
+/* Строка очереди стола — кнопка: судья открывает любой матч из списка, а не
+   только вызванный. Выбранная подсвечена, под курсором строка отзывается.
+   Раньше очередь была на чтение, а карточка вверху жила своими данными. */
+.match.pickable {
+  width: 100%;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  background: none;
+  border: 0;
+  border-bottom: 1px solid var(--c-glass-line-soft);
+  cursor: pointer;
+}
+.match.pickable { transition: background .12s ease; }
+.match.pickable:hover { background: var(--c-panel-2); }
+/* Лента событий читается сверху вниз: строка отзывается под курсором, чтобы
+   глаз не терял место. Нажимать в ней нечего — только подсветка. */
+.match.hoverable { transition: background .12s ease; }
+.match.hoverable:hover { background: var(--c-panel-2); }
+.match.pickable.on .nm { color: var(--c-accent); }
 
 /* Наряд: итог решений, а не второй список. Места стоят полосой над таблицей,
    пустое место так и написано «не назначен» — прочерк пришлось бы

@@ -149,8 +149,30 @@
 .ttables { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
 
 /* планшет — тело экрана: скролл-колонка либо центрирование (пустые/итоговые шаги) */
-.tbody { flex: 1; min-height: 0; overflow: auto; display: flex; flex-direction: column; gap: 12px; scrollbar-width: none; }
-.tbody::-webkit-scrollbar { display: none; }
+/* Полоса прокрутки видна: содержимое планшетного экрана длиннее рамки — у
+   судьи это список документов, который растёт по ходу сезона, — и скрытая
+   полоса не давала понять, что ниже что-то есть. Тонкая, как в десктопной
+   оболочке. */
+.tbody {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+/* Полосу рисуем сами и не задаём `scrollbar-width`: он включает системную
+   накладную полосу, которая появляется только во время прокрутки, — а понять,
+   что список длиннее экрана, нужно до того, как его тронули. */
+.tbody::-webkit-scrollbar { width: 9px; }
+.tbody::-webkit-scrollbar-thumb { background: var(--c-glass-line); border-radius: var(--r-xs); }
+.tbody::-webkit-scrollbar-thumb:hover { background: var(--c-glass-edge); }
+.tbody::-webkit-scrollbar-track { background: transparent; }
+/* Таблицы в планшетном теле не сжимаются. Тело — колонка флексбокса, и по
+   умолчанию длинный список ужимался внутрь экрана вместо того, чтобы вытолкнуть
+   тело в прокрутку: рамка у таблицы своя, `overflow: hidden`, — и последние
+   строки просто срезались, а прокручивать было нечего. */
+.tbody > .mktable { flex: none; }
 .tbody.center { justify-content: center; align-items: center; text-align: center; }
 .tbody .sect:first-child { margin-top: 0; }
 /* две колонки формы на планшете (шире телефона) */
