@@ -12,8 +12,15 @@ from .models import Scoreboard
 from .serializers import ScoreboardListItemSerializer, ScoreboardSerializer
 
 SSE_TICK_SECONDS = 0.3  # с такой задержкой счёт появляется в эфире
-SSE_HEARTBEAT_SECONDS = 15  # чтобы прокси не закрыл тихое соединение
-SSE_MAX_SECONDS = 900  # рвём сами раз в 15 минут, см. комментарий в _stream
+# Пинг нужен не только против прокси. Под WSGI поток занят, пока соединение
+# живо, а закрытую вкладку сервер замечает лишь когда пробует в неё написать.
+# С редким пингом брошенные соединения держали потоки минутами и новые запросы
+# вставали в очередь — поэтому пингуем часто и дёшево.
+SSE_HEARTBEAT_SECONDS = 3
+# И сверху ограничение по времени: поток обрывается сам, поток gunicorn и
+# соединение с базой возвращаются в оборот. EventSource переподключится через
+# четверть секунды (retry ниже), в эфире это незаметно.
+SSE_MAX_SECONDS = 300
 
 
 def etag_for(board):
@@ -103,7 +110,7 @@ def _stream(key):
     last_sent = time.monotonic()
     started = time.monotonic()
 
-    yield "retry: 1000\n\n"  # после обрыва переподключаться через секунду
+    yield "retry: 250\n\n"  # после обрыва переподключаться почти сразу
 
     while time.monotonic() - started < SSE_MAX_SECONDS:
         # Сначала одна лишь ревизия: число по уникальному ключу. Полную строку и

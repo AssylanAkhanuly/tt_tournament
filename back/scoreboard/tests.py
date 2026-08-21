@@ -119,7 +119,7 @@ class ScoreboardStreamTests(TestCase):
 
         frames = list(islice(_stream("main"), 2))
 
-        self.assertEqual(frames[0], "retry: 1000\n\n")  # интервал переподключения
+        self.assertEqual(frames[0], "retry: 250\n\n")  # интервал переподключения
         self.assertTrue(frames[1].startswith("data: "))
         self.assertIn('"points": 7', frames[1])
 
