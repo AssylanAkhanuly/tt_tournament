@@ -104,105 +104,116 @@ export function ScoreboardControlView({ initial }: { initial: ScoreboardState })
       <section className={styles.side} key={side}>
         <h2 className={styles.sideTitle}>{title}</h2>
 
-        <label className={styles.field}>
-          <span className={styles.label}>Фамилия и имя</span>
-          <input
-            className={styles.input}
-            value={player.name}
-            aria-label={`Имя — ${title}`}
-            onChange={(event) =>
-              send({ type: 'patch', patch: { [side]: { name: event.target.value } } })
-            }
-          />
-        </label>
+        {/* Имя и страна — в одну строку: на планшете вертикаль дороже ширины. */}
+        <div className={styles.identity}>
+          <label className={styles.field}>
+            <span className={styles.label}>Фамилия и имя</span>
+            <input
+              className={styles.input}
+              value={player.name}
+              aria-label={`Имя — ${title}`}
+              onChange={(event) =>
+                send({
+                  type: 'patch',
+                  patch: { [side]: { name: event.target.value } },
+                })
+              }
+            />
+          </label>
 
-        <label className={styles.field}>
-          <span className={styles.label}>Страна (код)</span>
-          <input
-            className={`${styles.input} ${styles.inputShort}`}
-            value={player.country}
-            maxLength={3}
-            aria-label={`Страна — ${title}`}
-            onChange={(event) =>
-              send({ type: 'patch', patch: { [side]: { country: event.target.value } } })
-            }
-          />
-        </label>
-
-        <div className={styles.counter}>
-          <span className={styles.label}>Очки</span>
-          <div className={styles.stepper}>
-            <button
-              type="button"
-              className={styles.step}
-              aria-label={`Очко минус — ${title}`}
-              onClick={() => send({ type: 'point', side, delta: -1 })}
-            >
-              −
-            </button>
-            <output className={styles.value} data-testid={`ctl-points-${side}`}>
-              {player.points}
-            </output>
-            <button
-              type="button"
-              className={`${styles.step} ${styles.stepPrimary}`}
-              aria-label={`Очко плюс — ${title}`}
-              onClick={() => send({ type: 'point', side, delta: 1 })}
-            >
-              +
-            </button>
-          </div>
+          <label className={styles.field}>
+            <span className={styles.label}>Страна</span>
+            <input
+              className={`${styles.input} ${styles.inputShort}`}
+              value={player.country}
+              maxLength={3}
+              aria-label={`Страна — ${title}`}
+              onChange={(event) =>
+                send({
+                  type: 'patch',
+                  patch: { [side]: { country: event.target.value } },
+                })
+              }
+            />
+          </label>
         </div>
 
-        <div className={styles.counter}>
-          <span className={styles.label}>Партии</span>
-          <div className={styles.stepper}>
-            <button
-              type="button"
-              className={styles.step}
-              aria-label={`Партия минус — ${title}`}
-              onClick={() => send({ type: 'game', side, delta: -1 })}
-            >
-              −
-            </button>
-            <output className={styles.value} data-testid={`ctl-games-${side}`}>
-              {player.games}
-            </output>
-            <button
-              type="button"
-              className={styles.step}
-              aria-label={`Партия плюс — ${title}`}
-              onClick={() => send({ type: 'game', side, delta: 1 })}
-            >
-              +
-            </button>
-          </div>
-        </div>
-
-        {state.team.enabled ? (
+        <div className={styles.counters}>
           <div className={styles.counter}>
-            <span className={styles.label}>Командный счёт</span>
+            <span className={styles.label}>Очки</span>
             <div className={styles.stepper}>
               <button
                 type="button"
                 className={styles.step}
-                aria-label={`Командный счёт минус — ${title}`}
-                onClick={() => send({ type: 'teamScore', side, delta: -1 })}
+                aria-label={`Очко минус — ${title}`}
+                onClick={() => send({ type: 'point', side, delta: -1 })}
               >
                 −
               </button>
-              <output className={styles.value}>{state.team[side]}</output>
+              <output className={styles.value} data-testid={`ctl-points-${side}`}>
+                {player.points}
+              </output>
               <button
                 type="button"
-                className={styles.step}
-                aria-label={`Командный счёт плюс — ${title}`}
-                onClick={() => send({ type: 'teamScore', side, delta: 1 })}
+                className={`${styles.step} ${styles.stepPrimary}`}
+                aria-label={`Очко плюс — ${title}`}
+                onClick={() => send({ type: 'point', side, delta: 1 })}
               >
                 +
               </button>
             </div>
           </div>
-        ) : null}
+
+          <div className={styles.counter}>
+            <span className={styles.label}>Партии</span>
+            <div className={styles.stepper}>
+              <button
+                type="button"
+                className={styles.step}
+                aria-label={`Партия минус — ${title}`}
+                onClick={() => send({ type: 'game', side, delta: -1 })}
+              >
+                −
+              </button>
+              <output className={styles.value} data-testid={`ctl-games-${side}`}>
+                {player.games}
+              </output>
+              <button
+                type="button"
+                className={styles.step}
+                aria-label={`Партия плюс — ${title}`}
+                onClick={() => send({ type: 'game', side, delta: 1 })}
+              >
+                +
+              </button>
+            </div>
+          </div>
+
+          {state.team.enabled ? (
+            <div className={styles.counter}>
+              <span className={styles.label}>Команда</span>
+              <div className={styles.stepper}>
+                <button
+                  type="button"
+                  className={styles.step}
+                  aria-label={`Командный счёт минус — ${title}`}
+                  onClick={() => send({ type: 'teamScore', side, delta: -1 })}
+                >
+                  −
+                </button>
+                <output className={styles.value}>{state.team[side]}</output>
+                <button
+                  type="button"
+                  className={styles.step}
+                  aria-label={`Командный счёт плюс — ${title}`}
+                  onClick={() => send({ type: 'teamScore', side, delta: 1 })}
+                >
+                  +
+                </button>
+              </div>
+            </div>
+          ) : null}
+        </div>
       </section>
     );
   };
@@ -287,7 +298,12 @@ export function ScoreboardControlView({ initial }: { initial: ScoreboardState })
             className={`${styles.input} ${styles.inputShort}`}
             value={state.match_label}
             aria-label="Тип матча"
-            onChange={(event) => send({ type: 'patch', patch: { match_label: event.target.value } })}
+            onChange={(event) =>
+              send({
+                type: 'patch',
+                patch: { match_label: event.target.value },
+              })
+            }
           />
         </label>
 
@@ -297,7 +313,12 @@ export function ScoreboardControlView({ initial }: { initial: ScoreboardState })
             className={`${styles.input} ${styles.inputShort}`}
             value={state.round_label}
             aria-label="Круг"
-            onChange={(event) => send({ type: 'patch', patch: { round_label: event.target.value } })}
+            onChange={(event) =>
+              send({
+                type: 'patch',
+                patch: { round_label: event.target.value },
+              })
+            }
           />
         </label>
 
@@ -308,7 +329,10 @@ export function ScoreboardControlView({ initial }: { initial: ScoreboardState })
             value={state.best_of}
             aria-label="Матч до"
             onChange={(event) =>
-              send({ type: 'patch', patch: { best_of: Number(event.target.value) } })
+              send({
+                type: 'patch',
+                patch: { best_of: Number(event.target.value) },
+              })
             }
           >
             <option value={5}>3 побед (из 5)</option>
@@ -325,7 +349,9 @@ export function ScoreboardControlView({ initial }: { initial: ScoreboardState })
             onChange={(event) =>
               send({
                 type: 'patch',
-                patch: { status_lang: event.target.value === 'ru' ? 'ru' : 'en' },
+                patch: {
+                  status_lang: event.target.value === 'ru' ? 'ru' : 'en',
+                },
               })
             }
           >
@@ -344,7 +370,10 @@ export function ScoreboardControlView({ initial }: { initial: ScoreboardState })
             placeholder="считается по счёту"
             aria-label="Подпись"
             onChange={(event) =>
-              send({ type: 'patch', patch: { status_override: event.target.value } })
+              send({
+                type: 'patch',
+                patch: { status_override: event.target.value },
+              })
             }
           />
         </label>
@@ -363,7 +392,10 @@ export function ScoreboardControlView({ initial }: { initial: ScoreboardState })
             checked={state.team.enabled}
             aria-label="Командный матч"
             onChange={(event) =>
-              send({ type: 'patch', patch: { team: { enabled: event.target.checked } } })
+              send({
+                type: 'patch',
+                patch: { team: { enabled: event.target.checked } },
+              })
             }
           />
           <span>Командный матч (нижняя строка со счётом команд)</span>

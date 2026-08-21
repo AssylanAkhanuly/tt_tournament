@@ -20,6 +20,9 @@ function Flag({ country }: { country: string }) {
   const [failed, setFailed] = useState(false);
   const url = flagUrl(country);
 
+  // Страну ещё не ввели — не занимаем место пустым прямоугольником.
+  if (!country.trim()) return null;
+
   // Нет картинки (нераспознанный код или CDN недоступна) — показываем код:
   // в эфире лучше буквы, чем дыра на месте флага.
   if (!url || failed) {

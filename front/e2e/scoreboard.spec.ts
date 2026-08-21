@@ -152,6 +152,63 @@ test.describe('Табло трансляции /scoreboard', () => {
     await expect(mainOverlay.getByTestId('points-left')).toHaveText('0'); // соседний стол не тронут
   });
 
+  // Пульт метит в планшет у стола: всё должно быть видно сразу, без прокрутки,
+  // и кнопки — под палец. Книжная и альбомная — разные худшие случаи по высоте.
+  const TABLETS = [
+    { name: 'альбомная', width: 1024, height: 768 },
+    { name: 'книжная', width: 768, height: 1024 },
+  ] as const;
+
+  for (const tablet of TABLETS) {
+    test(`пульт умещается в экран планшета: ${tablet.name}`, async ({ page }) => {
+      await page.setViewportSize({ width: tablet.width, height: tablet.height });
+      await page.goto('/scoreboard');
+      // nextjs-portal — значок dev-инструментов Next в нижнем углу. В сборке его
+      // нет, а в dev он перехватывает клики по нижней полосе настроек.
+      await page.addStyleTag({ content: 'nextjs-portal{display:none}' });
+      await expect(page.getByText('в эфире')).toBeVisible();
+
+      // Худший случай по высоте — командный матч: у каждой стороны третий счётчик.
+      await page.getByLabel('Командный матч').check();
+      await expect(page.getByRole('button', { name: 'Командный счёт плюс — Слева' })).toBeVisible();
+
+      const overflow = await page.evaluate(() => ({
+        y: document.documentElement.scrollHeight - document.documentElement.clientHeight,
+        x: document.documentElement.scrollWidth - document.documentElement.clientWidth,
+      }));
+      expect(overflow.y).toBeLessThanOrEqual(0);
+      expect(overflow.x).toBeLessThanOrEqual(0);
+
+      // Всё, чем ведут счёт, доступно без прокрутки.
+      for (const name of [
+        'Очко плюс — Слева',
+        'Очко плюс — Справа',
+        'Партия плюс — Слева',
+        'Командный счёт плюс — Справа',
+        'Завершить партию',
+        'Скрыть плашку',
+      ]) {
+        await expect(page.getByRole('button', { name })).toBeInViewport();
+      }
+      await expect(page.getByTestId('board')).toBeInViewport(); // предпросмотр тоже
+
+      // Прокрутки нет из-за overflow: hidden, поэтому лишнее не вылезает, а
+      // молча обрезается. Проверяем последний по порядку орган управления
+      // целиком: если полоса настроек не поместилась, это видно только так.
+      await expect(page.getByLabel('Командный матч')).toBeInViewport({ ratio: 1 });
+      await expect(page.getByRole('button', { name: 'Вернуть авто-подпись' })).toBeInViewport({
+        ratio: 1,
+      });
+
+      // Кнопка счёта — не меньше 44 px, иначе по ней не попасть пальцем.
+      const box = await page.getByRole('button', { name: 'Очко плюс — Слева' }).boundingBox();
+      expect(box?.width ?? 0).toBeGreaterThanOrEqual(44);
+      expect(box?.height ?? 0).toBeGreaterThanOrEqual(44);
+
+      await page.screenshot({ path: `${SHOTS}/control-${tablet.width}x${tablet.height}.png` });
+    });
+  }
+
   test('снимок обеих сторон: пульт и эфир', async ({ page }) => {
     const overlay = await openBoth(page);
 

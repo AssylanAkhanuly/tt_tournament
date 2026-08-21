@@ -1,25 +1,48 @@
-/* Пульт табло: рабочий экран оператора трансляции. Крупные кнопки — по ним
-   попадают не глядя, в темноте аппаратной. */
+/* Пульт табло: рабочий экран оператора трансляции.
+   Метит в планшет — им ведут счёт стоя у стола, поэтому:
+   — экран не прокручивается, а раскладывается по высоте окна (всё видно сразу,
+     не надо искать кнопку скроллом посреди розыгрыша);
+   — размеры считаются от vh/vw, чтобы одна раскладка жила и на 1024×768,
+     и на 1280×800, и на большом мониторе;
+   — кнопки крупные: по ним попадают пальцем не глядя. */
 
 .page {
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-  max-width: 1080px;
+  --gap: clamp(8px, 1.4vh, 16px);
+  --pad-x: clamp(12px, 2vw, 24px);
+  --pad-y: clamp(10px, 1.6vh, 20px);
+  --step: clamp(44px, 8.5vh, 72px); /* 44 — нижняя граница попадания пальцем */
+
+  display: grid;
+  grid-template-rows: auto auto minmax(0, 1fr) auto auto auto;
+  gap: var(--gap);
+  height: 100vh;
+  height: 100dvh; /* на планшете панели браузера съедают часть 100vh */
+  max-width: 1400px;
   margin: 0 auto;
-  padding: 24px 20px 40px;
+  padding: var(--pad-y) var(--pad-x);
+  overflow: hidden;
+  overscroll-behavior: none;
 }
 
+/* Тап не должен ждать «а вдруг это двойной» и подсвечиваться серым. */
+.page button,
+.page input,
+.page select {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* ── шапка ── */
 .top {
   display: flex;
   flex-wrap: wrap;
-  gap: 16px;
-  align-items: flex-start;
+  gap: 8px 12px;
+  align-items: center;
   justify-content: space-between;
 }
 
 .title {
-  font-size: 24px;
+  font-size: clamp(16px, 2.4vh, 22px);
   font-weight: 700;
 }
 
@@ -30,7 +53,7 @@
 
 .hint {
   color: var(--muted);
-  font-size: 14px;
+  font-size: clamp(11px, 1.5vh, 13px);
 }
 
 .topRight {
@@ -40,14 +63,14 @@
   align-items: center;
 }
 
-/* Индикатор связи с оверлеем: пока «нет связи» — в эфире висит старый счёт. */
+/* Индикатор связи: пока «нет связи» — в эфире висит старый счёт. */
 .status {
-  padding: 6px 12px;
+  padding: 8px 12px;
   border: 1px solid var(--line);
   border-radius: var(--r-sm);
   background: var(--surface);
   color: var(--muted);
-  font-size: 13px;
+  font-size: clamp(11px, 1.5vh, 13px);
 }
 
 .status[data-connected] {
@@ -64,11 +87,12 @@
 }
 
 .ghost {
+  min-height: 40px;
   padding: 8px 14px;
   border: 1px solid var(--line);
   border-radius: var(--r-sm);
   background: var(--surface);
-  font-size: 13px;
+  font-size: clamp(12px, 1.6vh, 13px);
 }
 
 .ghost:hover {
@@ -78,11 +102,11 @@
 /* ── предпросмотр ── */
 .previewWrap {
   display: grid;
-  place-items: start center;
-  padding: 24px;
+  place-items: center;
+  padding: clamp(6px, 1vh, 14px);
   border: 1px solid var(--line);
   border-radius: var(--r-md);
-  /* «Шахматка» — как в графических редакторах: показывает, что фон прозрачный. */
+  /* «Шахматка» — как в графических редакторах: показывает прозрачный фон. */
   background:
     repeating-conic-gradient(
         color-mix(in srgb, var(--elevated) 100%, transparent) 0% 25%,
@@ -92,6 +116,10 @@
 }
 
 .preview {
+  /* Плашка нарисована в «единицах» (860 × 160). Ужимаем её под то, что реально
+     осталось по ширине и по высоте, но крупнее натуральной не растягиваем. */
+  --sb-scale: min(1px, calc((100vw - 2 * var(--pad-x) - 2rem) / 860), calc(14vh / 160));
+
   overflow: hidden;
   max-width: 100%;
 }
@@ -99,15 +127,17 @@
 /* ── стороны ── */
 .sides {
   display: grid;
-  gap: 16px;
-  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: var(--gap);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  min-height: 0;
 }
 
 .side {
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  padding: 16px;
+  gap: clamp(6px, 1vh, 12px);
+  min-height: 0;
+  padding: clamp(10px, 1.4vh, 16px);
   border: 1px solid var(--line);
   border-radius: var(--r-md);
   background: var(--card);
@@ -115,29 +145,41 @@
 
 .sideTitle {
   color: var(--muted);
-  font-size: 13px;
+  font-size: clamp(11px, 1.5vh, 13px);
   font-weight: 600;
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
 
+.identity {
+  display: flex;
+  gap: 8px;
+}
+
+/* Фамилия забирает всю ширину, коду страны хватает трёх букв. */
+.identity .field:first-child {
+  flex: 1;
+  min-width: 0;
+}
+
 .field {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 4px;
 }
 
 .label {
   color: var(--muted);
-  font-size: 13px;
+  font-size: clamp(11px, 1.5vh, 13px);
 }
 
 .input {
-  padding: 10px 12px;
+  min-height: 44px;
+  padding: 8px 12px;
   border: 1px solid var(--line);
   border-radius: var(--r-sm);
   background: var(--surface);
-  font-size: 15px;
+  font-size: clamp(14px, 2vh, 16px);
 }
 
 .input:focus-visible {
@@ -146,31 +188,41 @@
 }
 
 .inputShort {
-  max-width: 140px;
+  width: clamp(64px, 9vw, 110px);
 }
 
 /* ── счётчики ── */
+.counters {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: clamp(4px, 0.8vh, 10px);
+  justify-content: space-around;
+  min-height: 0;
+}
+
 .counter {
   display: flex;
-  gap: 12px;
+  gap: 8px;
   align-items: center;
   justify-content: space-between;
 }
 
 .stepper {
   display: flex;
-  gap: 8px;
+  gap: clamp(4px, 0.8vw, 8px);
   align-items: center;
 }
 
 .step {
-  width: 56px;
-  height: 56px;
+  width: var(--step);
+  height: var(--step);
   border: 1px solid var(--line);
   border-radius: var(--r-sm);
   background: var(--surface);
-  font-size: 24px;
+  font-size: calc(var(--step) * 0.42);
   line-height: 1;
+  user-select: none; /* быстрая серия тапов не должна выделять «+» */
 }
 
 .step:hover {
@@ -188,26 +240,30 @@
 }
 
 .value {
-  min-width: 56px;
-  font-size: 32px;
+  min-width: clamp(40px, 6vw, 64px);
+  font-size: clamp(22px, 4.4vh, 36px);
   font-variant-numeric: tabular-nums;
   font-weight: 700;
   text-align: center;
 }
 
-/* ── действия и настройки ── */
+/* ── действия ── */
 .actions {
   display: flex;
   flex-wrap: wrap;
-  gap: 10px;
+  gap: clamp(6px, 1vw, 10px);
 }
 
+/* Тянутся на всю ширину: на планшете это увеличивает площадь попадания. */
 .action {
-  padding: 12px 18px;
+  flex: 1 1 auto;
+  min-height: 44px;
+  padding: 8px 14px;
   border: 1px solid var(--line);
   border-radius: var(--r-sm);
   background: var(--card);
-  font-size: 15px;
+  font-size: clamp(13px, 1.8vh, 15px);
+  white-space: nowrap;
 }
 
 .action:hover {
@@ -221,22 +277,48 @@
   color: var(--sb-ink);
 }
 
+/* ── настройки матча ── */
 .meta {
   display: flex;
   flex-wrap: wrap;
-  gap: 16px;
-  align-items: flex-end;
-  padding: 16px;
+  gap: clamp(8px, 1.2vw, 16px);
+  align-items: center;
+  padding: clamp(8px, 1.2vh, 14px);
   border: 1px solid var(--line);
   border-radius: var(--r-md);
   background: var(--card);
+}
+
+/* Здесь подпись слева от поля, а не над ним: полоса настроек должна остаться
+   в одну-две строки, иначе она съедает высоту у счётчиков. */
+.meta .field {
+  flex-direction: row;
+  gap: 6px;
+  align-items: center;
+}
+
+.meta .label {
+  white-space: nowrap;
+}
+
+.meta .input {
+  min-height: 40px;
+}
+
+.meta .action {
+  flex: 0 0 auto;
 }
 
 .checkbox {
   display: flex;
   gap: 8px;
   align-items: center;
-  font-size: 14px;
+  font-size: clamp(12px, 1.7vh, 14px);
+}
+
+.checkbox input {
+  width: 20px;
+  height: 20px;
 }
 
 /* ── подсказка по горячим клавишам ── */
@@ -264,4 +346,41 @@
   font-family: ui-monospace, monospace;
   font-size: 12px;
   text-align: center;
+}
+
+/* На планшете клавиатуры нет, а высота дорога — подсказка ни к чему.
+   Ширина в условии тоже нужна: книжный планшет высокий, но клавиатуры у него
+   всё равно нет, а Chrome в тестах не притворяется пальцем. */
+@media (pointer: coarse), (max-height: 800px), (max-width: 900px) {
+  .hotkeys {
+    display: none;
+  }
+}
+
+/* Длинный адрес оверлея в шапке — только когда для него правда есть место;
+   кнопка «Копировать ссылку» остаётся всегда. */
+@media (max-width: 1100px) {
+  .url {
+    display: none;
+  }
+}
+
+@media (max-height: 700px) {
+  .hint {
+    display: none;
+  }
+}
+
+/* Телефон и совсем низкие окна: вместить всё честно нельзя, поэтому лучше
+   вернуть прокрутку, чем обрезать содержимое. */
+@media (max-width: 640px), (max-height: 520px) {
+  .page {
+    height: auto;
+    min-height: 100dvh;
+    overflow: visible;
+  }
+
+  .sides {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
