@@ -134,3 +134,13 @@ class ScoreboardStreamTests(TestCase):
 
         frame = next(stream)
         self.assertIn('"points": 3', frame)
+
+    def test_stream_accepts_event_stream_header(self):
+        """EventSource шлёт `Accept: text/event-stream`. Под DRF это давало 406:
+        согласование типов отвергало запрос, не доходя до тела."""
+        client = APIClient()
+        response = client.get("/api/scoreboard/main/stream/", HTTP_ACCEPT="text/event-stream")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response["Content-Type"], "text/event-stream; charset=utf-8")
+        response.close()  # не вычитываем поток: он крутится до таймаута

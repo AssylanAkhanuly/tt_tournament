@@ -129,17 +129,17 @@ def _stream(key):
     # переподключится сам, без участия страницы.
 
 
-class ScoreboardStreamView(APIView):
+def scoreboard_stream(request, key):
     """GET /api/scoreboard/<key>/stream/ — поток изменений счёта (SSE).
 
+    Обычная джанговская вьюха, а не APIView: DRF согласует типы ответа и на
+    `Accept: text/event-stream` — а именно его шлёт EventSource — отвечает 406,
+    не доходя до тела. Ни один рендерер DRF поток событий не отдаёт.
+
     Открыт так же, как чтение: браузер OBS не умеет логиниться."""
-
-    permission_classes = [AllowAny]
-
-    def get(self, request, key):
-        response = StreamingHttpResponse(
-            _stream(key), content_type="text/event-stream; charset=utf-8"
-        )
-        response["Cache-Control"] = "no-cache, no-transform"
-        response["X-Accel-Buffering"] = "no"  # не буферизовать поток на прокси
-        return response
+    response = StreamingHttpResponse(
+        _stream(key), content_type="text/event-stream; charset=utf-8"
+    )
+    response["Cache-Control"] = "no-cache, no-transform"
+    response["X-Accel-Buffering"] = "no"  # не буферизовать поток на прокси
+    return response

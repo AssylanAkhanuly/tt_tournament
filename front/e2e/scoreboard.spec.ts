@@ -223,7 +223,9 @@ test.describe('Табло трансляции /scoreboard', () => {
 
     await page.goto('/scoreboard/overlay');
     await expect(page.getByTestId('board')).toBeVisible();
-    await page.waitForTimeout(4000);
+    // Ждать надо дольше сторожа (5 c), иначе запасной путь прикроет поломанный
+    // поток и проверка это пропустит — так и случилось, когда DRF отвечал 406.
+    await page.waitForTimeout(9000);
 
     expect(streams).toBe(1);
     expect(polls).toEqual([]); // ни одного опроса: счёт приходит сам
