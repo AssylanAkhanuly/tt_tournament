@@ -28,6 +28,7 @@ INSTALLED_APPS = [
     "tournaments",
     "clubs",
     "notifications",
+    "scoreboard",
 ]
 
 MIDDLEWARE = [

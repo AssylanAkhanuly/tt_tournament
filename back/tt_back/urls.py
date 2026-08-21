@@ -9,4 +9,5 @@ urlpatterns = [
     path("api/tournaments/", include("tournaments.urls")),
     path("api/clubs/", include("clubs.urls")),
     path("api/notifications/", include("notifications.urls")),
+    path("api/scoreboard/", include("scoreboard.urls")),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
