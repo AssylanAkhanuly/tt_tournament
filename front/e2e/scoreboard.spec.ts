@@ -1,4 +1,4 @@
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test, type Page, type Route } from '@playwright/test';
 
 // E2E табло трансляции. Главное здесь — не отрисовка, а связка: пульт и оверлей
 // это две разные вкладки, между ними только Django (строка в базе). Поэтому
@@ -223,9 +223,10 @@ test.describe('Табло трансляции /scoreboard', () => {
 
     await page.goto('/scoreboard/overlay');
     await expect(page.getByTestId('board')).toBeVisible();
-    // Ждать надо дольше сторожа (5 c), иначе запасной путь прикроет поломанный
-    // поток и проверка это пропустит — так и случилось, когда DRF отвечал 406.
-    await page.waitForTimeout(9000);
+    // Ждать надо дольше сторожа тишины (9 c), иначе поломанный поток прикроет
+    // запасной путь и проверка это пропустит — так и случилось, когда DRF
+    // отвечал 406. Заодно `streams === 1` ловит шторм переподключений.
+    await page.waitForTimeout(12000);
 
     expect(streams).toBe(1);
     expect(polls).toEqual([]); // ни одного опроса: счёт приходит сам
@@ -236,6 +237,58 @@ test.describe('Табло трансляции /scoreboard', () => {
       data: { ...CLEAN_BOARD, rev: current.rev, left: { ...CLEAN_BOARD.left, points: 5 } },
     });
     await expect(page.getByTestId('points-left')).toHaveText('5');
+  });
+
+  // ── долгая трансляция ──────────────────────────────────────────────────
+  // Турнирный день — это часы в эфире. Проверяем не «открылось», а «пережило».
+
+  async function setPoints(page: Page, points: number) {
+    const current = await (await page.request.get(BOARD_URL)).json();
+    await page.request.put(BOARD_URL, {
+      data: { ...CLEAN_BOARD, rev: current.rev, left: { ...CLEAN_BOARD.left, points } },
+    });
+  }
+
+  test('эфир восстанавливается после ошибки бэкенда', async ({ page }) => {
+    // Так выглядит выкладка бэкенда посреди трансляции: один запрос ловит 502.
+    // EventSource на ответ с ошибкой закрывается насовсем, поэтому без нашего
+    // пересоздания эфир замер бы до конца дня.
+    let refused = 0;
+    await page.route('**/api/scoreboard/*/stream/', async (route: Route) => {
+      if (refused === 0) {
+        refused = 1;
+        await route.fulfill({ status: 502, body: 'bad gateway' });
+        return;
+      }
+      // Дальше не вмешиваемся: проксировать поток через перехватчик нельзя,
+      // он его буферизует.
+      await route.fallback();
+    });
+
+    await page.goto('/scoreboard/overlay');
+    await expect(page.getByTestId('board')).toBeVisible();
+    await setPoints(page, 6);
+
+    await expect(page.getByTestId('points-left')).toHaveText('6', { timeout: 20_000 });
+    expect(refused).toBe(1); // ошибка действительно случилась, а не проскочила
+  });
+
+  test('если поток не поднимается вовсе, счёт всё равно идёт в эфир', async ({ page }) => {
+    test.setTimeout(90_000);
+
+    // Буферизующий прокси или фильтр в сети зала: соединение не встаёт никогда.
+    await page.route('**/api/scoreboard/*/stream/', (route) =>
+      route.fulfill({ status: 502, body: 'bad gateway' }),
+    );
+
+    await page.goto('/scoreboard/overlay');
+    await expect(page.getByTestId('board')).toBeVisible();
+
+    // Сторож сдаётся через 18 секунд тишины и переходит на опрос.
+    await page.waitForTimeout(20_000);
+    await setPoints(page, 4);
+
+    await expect(page.getByTestId('points-left')).toHaveText('4', { timeout: 20_000 });
   });
 
   test('снимок обеих сторон: пульт и эфир', async ({ page }) => {

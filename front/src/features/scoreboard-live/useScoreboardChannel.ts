@@ -11,18 +11,33 @@
 // которого отталкивались. Если другой пульт успел записать первым, приходит 409
 // — тогда переносим свой счёт на его версию и повторяем.
 //
-// Запасной путь: если первый кадр потока не пришёл за несколько секунд, значит
-// соединение где-то буферизуется (прокси, фильтр в сети зала). Тогда молча
-// переходим на опрос — в эфире счёт важнее красоты транспорта.
+// Соединение обязано пережить турнирный день, а не десять минут, поэтому здесь
+// три страховки:
+//   1. Пересоздание потока. `EventSource` сам повторяет только сетевой обрыв; на
+//      ответ с ошибкой (502 при выкладке бэкенда) он закрывается насовсем — и
+//      без этого эфир замер бы до конца трансляции.
+//   2. Сторож тишины. Сервер шлёт `ping` раз в три секунды; если несколько
+//      подряд не дошло, соединение мертво, даже когда браузер считает иначе
+//      (так бывает после сна планшета или обрыва в NAT).
+//   3. Запасной опрос, если поток не поднимается вовсе (буферизующий прокси,
+//      фильтр в сети зала). Из него раз в минуту пробуем вернуться на поток.
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { boardStreamUrl, boardUrl } from '@/entities/scoreboard/api';
 import { reduce, type ScoreboardAction, type ScoreboardState } from '@/entities/scoreboard/model';
 
-const STREAM_WATCHDOG_MS = 5000; // столько ждём первый кадр, прежде чем сдаться
+// Сервер шлёт ping раз в три секунды, поэтому тишина — единственный надёжный
+// признак: три пропущенных подряд означают, что соединения нет, что бы там ни
+// думал браузер. Сначала пробуем поднять поток заново, и лишь если тишина
+// держится вдвое дольше — уходим на опрос.
+const SILENCE_MS = 9000;
+const GIVE_UP_MS = SILENCE_MS * 2;
+const RECONNECT_MS = 1000; // пауза перед пересозданием потока
+const GUARD_TICK_MS = 3000; // как часто сторож смотрит на признаки жизни
 const FALLBACK_POLL_MS = 1000; // опрос запасного пути
-const RETRY_MS = 1000; // как часто досылаем несохранённое
+const STREAM_RETRY_MS = 60000; // из опроса раз в минуту пробуем снова поток
+const RETRY_MS = 1000; // как часто пульт досылает несохранённое
 
 async function loadBoard(key: string): Promise<ScoreboardState | null> {
   try {
@@ -48,47 +63,115 @@ function useSubscription(key: string, apply: (next: ScoreboardState) => void): b
     let stopped = false;
     let source: EventSource | null = null;
     let poll: ReturnType<typeof setInterval> | null = null;
-    let watchdog: ReturnType<typeof setTimeout> | null = null;
+    let reconnect: ReturnType<typeof setTimeout> | null = null;
+    let lastFrameAt = Date.now(); // когда последний раз слышали сервер
+    let lastConnectAt = 0;
+    let pollingSince = 0;
 
-    const fallBackToPolling = () => {
+    const stopPolling = () => {
+      if (poll) clearInterval(poll);
+      poll = null;
+    };
+
+    const pollOnce = async () => {
+      const next = await loadBoard(key);
+      if (stopped || !poll) return;
+      setConnected(next !== null);
+      if (next) applyRef.current(next);
+    };
+
+    const startPolling = () => {
       if (stopped || poll) return;
       source?.close();
       source = null;
+      pollingSince = Date.now();
+      poll = setInterval(pollOnce, FALLBACK_POLL_MS);
+      void pollOnce();
+    };
 
-      const tick = async () => {
-        const next = await loadBoard(key);
-        if (stopped) return;
-        setConnected(next !== null);
-        if (next) applyRef.current(next);
+    const connect = () => {
+      if (stopped) return;
+      source?.close();
+      lastConnectAt = Date.now();
+
+      const opened = new EventSource(boardStreamUrl(key));
+      source = opened;
+
+      const alive = () => {
+        lastFrameAt = Date.now();
+        stopPolling(); // поток ожил — опрос больше не нужен
+        setConnected(true);
       };
-      poll = setInterval(tick, FALLBACK_POLL_MS);
-      void tick();
+
+      opened.onmessage = (event) => {
+        alive();
+        try {
+          applyRef.current(JSON.parse(event.data) as ScoreboardState);
+        } catch {
+          // битый кадр пропускаем, следующий придёт целым
+        }
+      };
+      opened.addEventListener('ping', alive);
+
+      opened.onerror = () => {
+        setConnected(false);
+        // Штатный обрыв браузер повторяет сам (readyState = CONNECTING).
+        // CLOSED значит, что он сдался — дальше наша забота.
+        if (opened.readyState === EventSource.CLOSED) scheduleReconnect();
+      };
     };
 
-    source = new EventSource(boardStreamUrl(key));
-    watchdog = setTimeout(fallBackToPolling, STREAM_WATCHDOG_MS);
+    const scheduleReconnect = () => {
+      if (stopped || reconnect) return;
+      reconnect = setTimeout(() => {
+        reconnect = null;
+        connect();
+      }, RECONNECT_MS);
+    };
 
-    source.onmessage = (event) => {
-      if (watchdog) {
-        clearTimeout(watchdog);
-        watchdog = null;
+    const guard = () => {
+      if (stopped) return;
+
+      const silence = Date.now() - lastFrameAt;
+
+      if (poll) {
+        // Сидим на запасном пути — периодически проверяем, не починился ли поток.
+        if (Date.now() - pollingSince > STREAM_RETRY_MS) {
+          pollingSince = Date.now();
+          connect(); // опрос не гасим, пока поток не докажет, что работает
+        }
+        return;
       }
-      setConnected(true);
-      try {
-        applyRef.current(JSON.parse(event.data) as ScoreboardState);
-      } catch {
-        // битый кадр пропускаем, следующий придёт целым
+
+      if (silence > GIVE_UP_MS) {
+        setConnected(false);
+        startPolling(); // поток так и не заговорил — эфир важнее транспорта
+        return;
+      }
+
+      // Тишина, но ещё есть надежда: поднимаем поток заново, не чаще раза в
+      // тот же срок, чтобы не устроить шторм переподключений.
+      if (silence > SILENCE_MS && Date.now() - lastConnectAt > SILENCE_MS) {
+        setConnected(false);
+        connect();
       }
     };
 
-    // EventSource переподключается сам; наше дело — показать оператору, что
-    // связи сейчас нет и в эфире висит старый счёт.
-    source.onerror = () => setConnected(false);
+    const guardTimer = setInterval(guard, GUARD_TICK_MS);
+    // Планшет спал — проверяем соединение сразу, не дожидаясь такта.
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') guard();
+    };
+    document.addEventListener('visibilitychange', onVisible);
+
+    connect();
 
     return () => {
       stopped = true;
-      if (watchdog) clearTimeout(watchdog);
-      if (poll) clearInterval(poll);
+      clearInterval(guardTimer);
+      document.removeEventListener('visibilitychange', onVisible);
+      if (reconnect) clearTimeout(reconnect);
+      stopPolling();
       source?.close();
     };
   }, [key]);
