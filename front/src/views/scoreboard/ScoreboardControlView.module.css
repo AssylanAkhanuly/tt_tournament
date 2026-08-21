@@ -7,13 +7,13 @@
    — кнопки крупные: по ним попадают пальцем не глядя. */
 
 .page {
-  --gap: clamp(8px, 1.4vh, 16px);
+  --gap: clamp(10px, 1.6vh, 18px);
   --pad-x: clamp(12px, 2vw, 24px);
   --pad-y: clamp(10px, 1.6vh, 20px);
-  --step: clamp(44px, 8.5vh, 72px); /* 44 — нижняя граница попадания пальцем */
+  --step: clamp(48px, 11vh, 96px); /* 44 — нижняя граница попадания пальцем */
 
   display: grid;
-  grid-template-rows: auto auto minmax(0, 1fr) auto auto auto;
+  grid-template-rows: auto minmax(0, 1fr) auto;
   gap: var(--gap);
   height: 100vh;
   height: 100dvh; /* на планшете панели браузера съедают часть 100vh */
@@ -26,80 +26,12 @@
 
 /* Тап не должен ждать «а вдруг это двойной» и подсвечиваться серым. */
 .page button,
-.page input,
-.page select {
+.page input {
   touch-action: manipulation;
   -webkit-tap-highlight-color: transparent;
 }
 
-/* ── шапка ── */
-.top {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px 12px;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.title {
-  font-size: clamp(16px, 2.4vh, 22px);
-  font-weight: 700;
-}
-
-.board {
-  color: var(--muted);
-  font-weight: 500;
-}
-
-.hint {
-  color: var(--muted);
-  font-size: clamp(11px, 1.5vh, 13px);
-}
-
-.topRight {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  align-items: center;
-}
-
-/* Индикатор связи: пока «нет связи» — в эфире висит старый счёт. */
-.status {
-  padding: 8px 12px;
-  border: 1px solid var(--line);
-  border-radius: var(--r-sm);
-  background: var(--surface);
-  color: var(--muted);
-  font-size: clamp(11px, 1.5vh, 13px);
-}
-
-.status[data-connected] {
-  border-color: color-mix(in srgb, var(--primary) 60%, transparent);
-  color: var(--text);
-}
-
-.url {
-  padding: 6px 10px;
-  border-radius: var(--r-sm);
-  background: var(--surface);
-  color: var(--muted);
-  font-size: 12px;
-}
-
-.ghost {
-  min-height: 40px;
-  padding: 8px 14px;
-  border: 1px solid var(--line);
-  border-radius: var(--r-sm);
-  background: var(--surface);
-  font-size: clamp(12px, 1.6vh, 13px);
-}
-
-.ghost:hover {
-  border-color: var(--primary);
-}
-
-/* ── предпросмотр ── */
+/* ── предпросмотр эфира ── */
 .previewWrap {
   display: grid;
   place-items: center;
@@ -118,7 +50,7 @@
 .preview {
   /* Плашка нарисована в «единицах» (860 × 160). Ужимаем её под то, что реально
      осталось по ширине и по высоте, но крупнее натуральной не растягиваем. */
-  --sb-scale: min(1px, calc((100vw - 2 * var(--pad-x) - 2rem) / 860), calc(14vh / 160));
+  --sb-scale: min(1px, calc((100vw - 2 * var(--pad-x) - 2rem) / 860), calc(20vh / 160));
 
   overflow: hidden;
   max-width: 100%;
@@ -135,31 +67,12 @@
 .side {
   display: flex;
   flex-direction: column;
-  gap: clamp(6px, 1vh, 12px);
+  gap: clamp(8px, 1.4vh, 16px);
   min-height: 0;
-  padding: clamp(10px, 1.4vh, 16px);
+  padding: clamp(12px, 1.8vh, 20px);
   border: 1px solid var(--line);
   border-radius: var(--r-md);
   background: var(--card);
-}
-
-.sideTitle {
-  color: var(--muted);
-  font-size: clamp(11px, 1.5vh, 13px);
-  font-weight: 600;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-
-.identity {
-  display: flex;
-  gap: 8px;
-}
-
-/* Фамилия забирает всю ширину, коду страны хватает трёх букв. */
-.identity .field:first-child {
-  flex: 1;
-  min-width: 0;
 }
 
 .field {
@@ -174,12 +87,12 @@
 }
 
 .input {
-  min-height: 44px;
+  min-height: 48px;
   padding: 8px 12px;
   border: 1px solid var(--line);
   border-radius: var(--r-sm);
   background: var(--surface);
-  font-size: clamp(14px, 2vh, 16px);
+  font-size: clamp(15px, 2.2vh, 18px);
 }
 
 .input:focus-visible {
@@ -187,16 +100,12 @@
   outline: none;
 }
 
-.inputShort {
-  width: clamp(64px, 9vw, 110px);
-}
-
 /* ── счётчики ── */
 .counters {
   display: flex;
   flex: 1;
   flex-direction: column;
-  gap: clamp(4px, 0.8vh, 10px);
+  gap: clamp(6px, 1vh, 12px);
   justify-content: space-around;
   min-height: 0;
 }
@@ -210,7 +119,7 @@
 
 .stepper {
   display: flex;
-  gap: clamp(4px, 0.8vw, 8px);
+  gap: clamp(6px, 1vw, 12px);
   align-items: center;
 }
 
@@ -240,8 +149,8 @@
 }
 
 .value {
-  min-width: clamp(40px, 6vw, 64px);
-  font-size: clamp(22px, 4.4vh, 36px);
+  min-width: clamp(48px, 7vw, 80px);
+  font-size: clamp(26px, 5.4vh, 44px);
   font-variant-numeric: tabular-nums;
   font-weight: 700;
   text-align: center;
@@ -251,18 +160,18 @@
 .actions {
   display: flex;
   flex-wrap: wrap;
-  gap: clamp(6px, 1vw, 10px);
+  gap: clamp(8px, 1vw, 12px);
 }
 
 /* Тянутся на всю ширину: на планшете это увеличивает площадь попадания. */
 .action {
   flex: 1 1 auto;
-  min-height: 44px;
-  padding: 8px 14px;
+  min-height: 52px;
+  padding: 10px 16px;
   border: 1px solid var(--line);
   border-radius: var(--r-sm);
   background: var(--card);
-  font-size: clamp(13px, 1.8vh, 15px);
+  font-size: clamp(14px, 2vh, 17px);
   white-space: nowrap;
 }
 
@@ -275,100 +184,6 @@
   border-color: transparent;
   background: var(--primary);
   color: var(--sb-ink);
-}
-
-/* ── настройки матча ── */
-.meta {
-  display: flex;
-  flex-wrap: wrap;
-  gap: clamp(8px, 1.2vw, 16px);
-  align-items: center;
-  padding: clamp(8px, 1.2vh, 14px);
-  border: 1px solid var(--line);
-  border-radius: var(--r-md);
-  background: var(--card);
-}
-
-/* Здесь подпись слева от поля, а не над ним: полоса настроек должна остаться
-   в одну-две строки, иначе она съедает высоту у счётчиков. */
-.meta .field {
-  flex-direction: row;
-  gap: 6px;
-  align-items: center;
-}
-
-.meta .label {
-  white-space: nowrap;
-}
-
-.meta .input {
-  min-height: 40px;
-}
-
-.meta .action {
-  flex: 0 0 auto;
-}
-
-.checkbox {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-  font-size: clamp(12px, 1.7vh, 14px);
-}
-
-.checkbox input {
-  width: 20px;
-  height: 20px;
-}
-
-/* ── подсказка по горячим клавишам ── */
-.hotkeys {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 16px;
-  color: var(--muted);
-  font-size: 13px;
-}
-
-.hotkey {
-  display: flex;
-  gap: 6px;
-  align-items: center;
-}
-
-.kbd {
-  min-width: 24px;
-  padding: 3px 6px;
-  border: 1px solid var(--line);
-  border-radius: var(--r-sm);
-  background: var(--surface);
-  color: var(--text);
-  font-family: ui-monospace, monospace;
-  font-size: 12px;
-  text-align: center;
-}
-
-/* На планшете клавиатуры нет, а высота дорога — подсказка ни к чему.
-   Ширина в условии тоже нужна: книжный планшет высокий, но клавиатуры у него
-   всё равно нет, а Chrome в тестах не притворяется пальцем. */
-@media (pointer: coarse), (max-height: 800px), (max-width: 900px) {
-  .hotkeys {
-    display: none;
-  }
-}
-
-/* Длинный адрес оверлея в шапке — только когда для него правда есть место;
-   кнопка «Копировать ссылку» остаётся всегда. */
-@media (max-width: 1100px) {
-  .url {
-    display: none;
-  }
-}
-
-@media (max-height: 700px) {
-  .hint {
-    display: none;
-  }
 }
 
 /* Телефон и совсем низкие окна: вместить всё честно нельзя, поэтому лучше

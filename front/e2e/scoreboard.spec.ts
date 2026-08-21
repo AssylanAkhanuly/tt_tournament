@@ -1,4 +1,4 @@
-import { expect, test, type Page, type Route } from '@playwright/test';
+import { expect, test, type APIRequestContext, type Page, type Route } from '@playwright/test';
 
 // E2E табло трансляции. Главное здесь — не отрисовка, а связка: пульт и оверлей
 // это две разные вкладки, между ними только Django (строка в базе). Поэтому
@@ -24,20 +24,31 @@ const CLEAN_BOARD = {
   team: { enabled: false, left: 0, right: 0 },
 };
 
+/** Запись требует ту версию, от которой отталкиваемся, — как и в пульте. */
+async function writeBoard(
+  request: APIRequestContext,
+  patch: Record<string, unknown> = {},
+  url = BOARD_URL,
+) {
+  const current = await (await request.get(url)).json();
+  const response = await request.put(url, {
+    data: { ...CLEAN_BOARD, ...patch, rev: current.rev },
+  });
+  expect(response.ok()).toBeTruthy();
+}
+
 async function openBoth(page: Page) {
   const overlay = await page.context().newPage();
   await page.goto('/scoreboard');
   await overlay.goto('/scoreboard/overlay');
-  await expect(page.getByText('в эфире')).toBeVisible(); // бэкенд отвечает
+  // На пульте предпросмотр той же плашки — по нему видно, что страница ожила.
+  await expect(page.getByTestId('board')).toBeVisible();
   await expect(overlay.getByTestId('board')).toBeVisible();
   return overlay;
 }
 
-// Запись требует ту версию, от которой отталкиваемся, — как и в пульте.
 test.beforeEach(async ({ request }) => {
-  const current = await (await request.get(BOARD_URL)).json();
-  const response = await request.put(BOARD_URL, { data: { ...CLEAN_BOARD, rev: current.rev } });
-  expect(response.ok()).toBeTruthy();
+  await writeBoard(request);
 });
 
 test.describe('Табло трансляции /scoreboard', () => {
@@ -45,9 +56,7 @@ test.describe('Табло трансляции /scoreboard', () => {
     const overlay = await openBoth(page);
 
     await page.getByLabel('Имя — Слева').fill('КИРИЛЛ ГЕРАСИМЕНКО');
-    await page.getByLabel('Страна — Слева').fill('KAZ');
     await page.getByLabel('Имя — Справа').fill('ТОМОКАДЗУ ХАРИМОТО');
-    await page.getByLabel('Страна — Справа').fill('JPN');
 
     await expect(overlay.getByText('КИРИЛЛ ГЕРАСИМЕНКО')).toBeVisible();
     await expect(overlay.getByText('ТОМОКАДЗУ ХАРИМОТО')).toBeVisible();
@@ -114,12 +123,15 @@ test.describe('Табло трансляции /scoreboard', () => {
     await expect(second.getByTestId('points-left')).toHaveText('1');
   });
 
-  test('командный матч добавляет нижнюю строку', async ({ page }) => {
-    const overlay = await openBoth(page);
+  test('командный матч добавляет нижнюю строку', async ({ page, request }) => {
+    // Командная строка и коды стран задаются через API: на пульте их не правят.
+    await writeBoard(request, {
+      team: { enabled: true, left: 0, right: 0 },
+      left: { ...CLEAN_BOARD.left, country: 'KAZ' },
+      right: { ...CLEAN_BOARD.right, country: 'JPN' },
+    });
 
-    await page.getByLabel('Страна — Слева').fill('KAZ');
-    await page.getByLabel('Страна — Справа').fill('JPN');
-    await page.getByLabel('Командный матч').check();
+    const overlay = await openBoth(page);
     await page.getByRole('button', { name: 'Командный счёт плюс — Слева' }).click();
     await page.getByRole('button', { name: 'Командный счёт плюс — Справа' }).click();
     await page.getByRole('button', { name: 'Командный счёт плюс — Справа' }).click();
@@ -130,16 +142,10 @@ test.describe('Табло трансляции /scoreboard', () => {
   test('два стола ведутся независимо', async ({ page, request }) => {
     // Турнир транслирует несколько столов сразу: у каждого своя доска, свой
     // пульт и свой адрес для источника в OBS.
-    const secondBoard = '/api/scoreboard/table-2/';
-    const current = await (await request.get(secondBoard)).json();
-    await request.put(secondBoard, { data: { ...CLEAN_BOARD, rev: current.rev } });
+    await writeBoard(request, {}, '/api/scoreboard/table-2/');
 
     await page.goto('/scoreboard?board=table-2');
-    await expect(page.getByRole('heading', { name: /table-2/ })).toBeVisible();
-    await expect(page.getByRole('link', { name: 'Открыть оверлей' })).toHaveAttribute(
-      'href',
-      '/scoreboard/overlay?board=table-2',
-    );
+    await expect(page.getByTestId('board')).toBeVisible();
 
     const secondOverlay = await page.context().newPage();
     await secondOverlay.goto('/scoreboard/overlay?board=table-2');
@@ -160,16 +166,15 @@ test.describe('Табло трансляции /scoreboard', () => {
   ] as const;
 
   for (const tablet of TABLETS) {
-    test(`пульт умещается в экран планшета: ${tablet.name}`, async ({ page }) => {
+    test(`пульт умещается в экран планшета: ${tablet.name}`, async ({ page, request }) => {
+      // Худший случай по высоте — командный матч: у каждой стороны третий счётчик.
+      await writeBoard(request, { team: { enabled: true, left: 0, right: 0 } });
+
       await page.setViewportSize({ width: tablet.width, height: tablet.height });
       await page.goto('/scoreboard');
       // nextjs-portal — значок dev-инструментов Next в нижнем углу. В сборке его
-      // нет, а в dev он перехватывает клики по нижней полосе настроек.
+      // нет, а в dev он перехватывает клики по нижнему ряду кнопок.
       await page.addStyleTag({ content: 'nextjs-portal{display:none}' });
-      await expect(page.getByText('в эфире')).toBeVisible();
-
-      // Худший случай по высоте — командный матч: у каждой стороны третий счётчик.
-      await page.getByLabel('Командный матч').check();
       await expect(page.getByRole('button', { name: 'Командный счёт плюс — Слева' })).toBeVisible();
 
       const overflow = await page.evaluate(() => ({
@@ -186,7 +191,6 @@ test.describe('Табло трансляции /scoreboard', () => {
         'Партия плюс — Слева',
         'Командный счёт плюс — Справа',
         'Завершить партию',
-        'Скрыть плашку',
       ]) {
         await expect(page.getByRole('button', { name })).toBeInViewport();
       }
@@ -194,9 +198,8 @@ test.describe('Табло трансляции /scoreboard', () => {
 
       // Прокрутки нет из-за overflow: hidden, поэтому лишнее не вылезает, а
       // молча обрезается. Проверяем последний по порядку орган управления
-      // целиком: если полоса настроек не поместилась, это видно только так.
-      await expect(page.getByLabel('Командный матч')).toBeInViewport({ ratio: 1 });
-      await expect(page.getByRole('button', { name: 'Вернуть авто-подпись' })).toBeInViewport({
+      // целиком: если нижний ряд не поместился, это видно только так.
+      await expect(page.getByRole('button', { name: 'Скрыть плашку' })).toBeInViewport({
         ratio: 1,
       });
 
@@ -232,22 +235,12 @@ test.describe('Табло трансляции /scoreboard', () => {
     expect(polls).toEqual([]); // ни одного опроса: счёт приходит сам
 
     // И соединение действительно живое — счёт доезжает.
-    const current = await (await page.request.get(BOARD_URL)).json();
-    await page.request.put(BOARD_URL, {
-      data: { ...CLEAN_BOARD, rev: current.rev, left: { ...CLEAN_BOARD.left, points: 5 } },
-    });
+    await writeBoard(page.request, { left: { ...CLEAN_BOARD.left, points: 5 } });
     await expect(page.getByTestId('points-left')).toHaveText('5');
   });
 
   // ── долгая трансляция ──────────────────────────────────────────────────
   // Турнирный день — это часы в эфире. Проверяем не «открылось», а «пережило».
-
-  async function setPoints(page: Page, points: number) {
-    const current = await (await page.request.get(BOARD_URL)).json();
-    await page.request.put(BOARD_URL, {
-      data: { ...CLEAN_BOARD, rev: current.rev, left: { ...CLEAN_BOARD.left, points } },
-    });
-  }
 
   test('эфир восстанавливается после ошибки бэкенда', async ({ page }) => {
     // Так выглядит выкладка бэкенда посреди трансляции: один запрос ловит 502.
@@ -267,7 +260,7 @@ test.describe('Табло трансляции /scoreboard', () => {
 
     await page.goto('/scoreboard/overlay');
     await expect(page.getByTestId('board')).toBeVisible();
-    await setPoints(page, 6);
+    await writeBoard(page.request, { left: { ...CLEAN_BOARD.left, points: 6 } });
 
     await expect(page.getByTestId('points-left')).toHaveText('6', { timeout: 20_000 });
     expect(refused).toBe(1); // ошибка действительно случилась, а не проскочила
@@ -286,25 +279,21 @@ test.describe('Табло трансляции /scoreboard', () => {
 
     // Сторож сдаётся через 18 секунд тишины и переходит на опрос.
     await page.waitForTimeout(20_000);
-    await setPoints(page, 4);
+    await writeBoard(page.request, { left: { ...CLEAN_BOARD.left, points: 4 } });
 
     await expect(page.getByTestId('points-left')).toHaveText('4', { timeout: 20_000 });
   });
 
-  test('снимок обеих сторон: пульт и эфир', async ({ page }) => {
-    const overlay = await openBoth(page);
+  test('снимок обеих сторон: пульт и эфир', async ({ page, request }) => {
+    // Собираем ровно ту картинку, что на референсе. Подписи матча и командная
+    // строка задаются через API — на пульте их больше нет.
+    await writeBoard(request, {
+      team: { enabled: true, left: 1, right: 2 },
+      left: { name: 'KIRILL GERASSIMENKO', country: 'KAZ', games: 0, points: 0 },
+      right: { name: 'TOMOKAZU HARIMOTO', country: 'JPN', games: 0, points: 0 },
+    });
 
-    // Собираем ровно ту картинку, что на референсе.
-    await page.getByLabel('Имя — Слева').fill('KIRILL GERASSIMENKO');
-    await page.getByLabel('Страна — Слева').fill('KAZ');
-    await page.getByLabel('Имя — Справа').fill('TOMOKAZU HARIMOTO');
-    await page.getByLabel('Страна — Справа').fill('JPN');
-    await page.getByLabel('Тип матча').fill('MT');
-    await page.getByLabel('Круг').fill('R 16');
-    await page.getByLabel('Командный матч').check();
-    await page.getByRole('button', { name: 'Командный счёт плюс — Слева' }).click();
-    await page.getByRole('button', { name: 'Командный счёт плюс — Справа' }).click();
-    await page.getByRole('button', { name: 'Командный счёт плюс — Справа' }).click();
+    const overlay = await openBoth(page);
 
     const plusLeft = page.getByRole('button', { name: 'Очко плюс — Слева' });
     for (let i = 0; i < 9; i += 1) await plusLeft.click();
@@ -326,7 +315,8 @@ test.describe('Табло трансляции /scoreboard', () => {
     await overlay.setViewportSize({ width: 940, height: 240 });
     await overlay.screenshot({ path: `${SHOTS}/overlay.png` });
 
-    await page.setViewportSize({ width: 1200, height: 1400 });
-    await page.screenshot({ path: `${SHOTS}/control.png`, fullPage: true });
+    await page.setViewportSize({ width: 1200, height: 900 });
+    await page.addStyleTag({ content: 'nextjs-portal{display:none}' });
+    await page.screenshot({ path: `${SHOTS}/control.png` });
   });
 });
