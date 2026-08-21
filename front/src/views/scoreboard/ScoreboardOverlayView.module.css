@@ -1,0 +1,12 @@
+/* Прозрачный фон — OBS подкладывает под источник видео сцены.
+   Глобально, потому что фон страницы задан в globals.css на body;
+   эти стили грузятся только на маршруте оверлея. */
+:global(html),
+:global(body) {
+  background: transparent;
+}
+
+.stage {
+  display: inline-block;
+  overflow: hidden;
+}

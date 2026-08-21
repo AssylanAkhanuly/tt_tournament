@@ -1,0 +1,133 @@
+/* Плашка счёта для эфира. Все размеры — от --sb-unit, поэтому плашку целиком
+   можно масштабировать одной переменной (в OBS источник тоже тянется мышью). */
+
+.board {
+  --sb-unit: 1px;
+  --sb-cell: calc(72 * var(--sb-unit));
+  --sb-row: calc(46 * var(--sb-unit));
+  --sb-hair: calc(2 * var(--sb-unit)); /* просвет между блоками = «волосяная» линия */
+
+  display: block;
+  width: calc(860 * var(--sb-unit));
+  background: var(--sb-azure);
+  color: var(--sb-ink);
+  font-family: "Arial Narrow", "Segoe UI", var(--font);
+  font-weight: 800;
+  letter-spacing: 0.01em;
+  line-height: 1;
+  transition: opacity 200ms ease;
+}
+
+/* «Скрыть плашку» на пульте: в эфире уезжает мягко, а не пропадает рывком. */
+.board[data-hidden] {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sb-hair);
+  padding: calc(6 * var(--sb-unit)) calc(8 * var(--sb-unit));
+}
+
+/* ── верхняя полоса: тип матча | круг | статус ── */
+.header {
+  display: flex;
+  align-items: center;
+  gap: calc(10 * var(--sb-unit));
+  min-height: calc(26 * var(--sb-unit));
+  font-size: calc(17 * var(--sb-unit));
+  text-transform: uppercase;
+}
+
+.chip,
+.chipStatus {
+  padding: calc(4 * var(--sb-unit)) calc(10 * var(--sb-unit));
+  white-space: nowrap;
+}
+
+/* Разделители между сегментами — тонкие линии, как в вещательных плашках. */
+.chip + .chip,
+.chip + .chipStatus {
+  border-left: var(--sb-hair) solid color-mix(in srgb, var(--sb-ink) 45%, transparent);
+}
+
+.chipStatus {
+  color: var(--sb-ink);
+  text-shadow: 0 0 calc(12 * var(--sb-unit)) color-mix(in srgb, var(--sb-ink) 60%, transparent);
+}
+
+/* ── строки игроков ── */
+.rows {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) var(--sb-cell) var(--sb-cell);
+  gap: var(--sb-hair);
+}
+
+/* Строка раскрывается в общую сетку — колонки счёта у обоих игроков совпадают. */
+.row {
+  display: contents;
+}
+
+.nameCell {
+  display: flex;
+  align-items: center;
+  gap: calc(14 * var(--sb-unit));
+  min-width: 0;
+  height: var(--sb-row);
+  padding: 0 calc(16 * var(--sb-unit));
+  background: var(--sb-navy);
+}
+
+.flag {
+  flex: none;
+  width: calc(34 * var(--sb-unit));
+  height: calc(23 * var(--sb-unit));
+  object-fit: cover;
+}
+
+.flagFallback {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: calc(34 * var(--sb-unit));
+  height: calc(23 * var(--sb-unit));
+  background: color-mix(in srgb, var(--sb-ink) 18%, transparent);
+  font-size: calc(13 * var(--sb-unit));
+  letter-spacing: 0.02em;
+}
+
+.name {
+  overflow: hidden;
+  font-size: calc(30 * var(--sb-unit));
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.gamesCell,
+.pointsCell {
+  display: grid;
+  place-items: center;
+  height: var(--sb-row);
+  font-size: calc(32 * var(--sb-unit));
+  font-variant-numeric: tabular-nums;
+}
+
+.gamesCell {
+  background: var(--sb-games);
+}
+
+.pointsCell {
+  background: var(--sb-points);
+}
+
+/* ── нижняя полоса: счёт командного матча ── */
+.footer {
+  min-height: calc(24 * var(--sb-unit));
+  padding: calc(4 * var(--sb-unit)) calc(10 * var(--sb-unit));
+  font-size: calc(16 * var(--sb-unit));
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
