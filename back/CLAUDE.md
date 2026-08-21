@@ -33,6 +33,8 @@
 | `users` | Custom phone-based User, JWT cookie auth, user search |
 | `tournaments` | Tournaments, participants, bracket/group matches, table management |
 | `clubs` | Clubs, club admins (ClubAdmin), club tables (ClubTable) |
+| `notifications` | In-app notifications feed |
+| `scoreboard` | Live score of a streamed table: one row per board, read by the OBS overlay, written by the operator's panel (`front/` → `/scoreboard`). Optimistic concurrency on `rev`, ETag/304 on GET. Has tests — `manage.py test scoreboard` |
 
 ## Auth
 - JWT stored in `HttpOnly` cookies (`access_token`, `refresh_token`)

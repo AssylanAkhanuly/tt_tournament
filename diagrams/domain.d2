@@ -530,5 +530,21 @@ user.id -> score_log.author_id: автор правки
 user.id -> rating_point.user_id
 tournament.id -> rating_point.tournament_id
 
+scoreboard: SCOREBOARD {
+  shape: sql_table
+  class: new
+  id: uuid {constraint: primary_key}
+  key: string {constraint: unique}
+  title: string
+  tournament_id: uuid {constraint: foreign_key}
+  table_number: int
+  rev: "версия; растёт на каждую запись — по ней ловим двух секретарей сразу"
+  players: "фамилии и страны сторон"
+  score: "партии и очки текущей партии, счёт командной встречи"
+  visible: bool
+  updated_at: datetime
+}
+
 user.id -> notification.user_id: лента событий
 user.id -> push_token.user_id: устройства
+tournament.id -> scoreboard.tournament_id: плашки столов в трансляции

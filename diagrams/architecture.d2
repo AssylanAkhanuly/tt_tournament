@@ -808,6 +808,21 @@ storage: "7 · ДАННЫЕ · два разных хранилища" {
       decided_by: "uuid — рейтинговая комиссия" {constraint: foreign_key}
       decided_at: "datetime — решение окончательное"
     }
+
+    scoreboard: SCOREBOARD {
+      shape: sql_table
+      class: new
+      id: uuid {constraint: primary_key}
+      key: string {constraint: unique}
+      title: string
+      tournament_id: uuid {constraint: foreign_key}
+      table_number: int
+      rev: "версия; растёт на каждую запись — по ней ловим двух секретарей сразу"
+      players: "фамилии и страны сторон"
+      score: "партии и очки текущей партии, счёт командной встречи"
+      visible: bool
+      updated_at: datetime
+    }
   }
 }
 

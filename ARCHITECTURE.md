@@ -945,6 +945,7 @@ erDiagram
     USER |o--o{ TOURNAMENT_TEMPLATE : "владелец кастомного шаблона"
     USER ||--o{ MEMBERSHIP_FEE : "годовой взнос федерации"
     USER ||--o{ MEMBERSHIP_FEE : "экономист отмечает оплату"
+    TOURNAMENT ||--o{ SCOREBOARD : "плашки столов в трансляции"
     USER ||--o{ NOTIFICATION : "уведомления по семи событиям"
     USER ||--o{ PUSH_TOKEN : "устройства приложения"
     USER ||--o{ NEWS_POST : "автор публикации"
@@ -1176,6 +1177,19 @@ erDiagram
         string providerRef "reference платежа ePay, уникален"
         uuid markedBy FK "только для отметки вручную"
         string markedReason "основание ручной отметки"
+    }
+    SCOREBOARD {
+        uuid id PK
+        string key "адрес плашки в OBS: ?board=<key>"
+        string title "«Стол 3»"
+        uuid tournamentId FK "пусто у товарищеских встреч"
+        int tableNumber
+        int rev "версия; растёт на каждую запись"
+        string players "фамилии и коды стран сторон"
+        int games "выигранные партии"
+        int points "очки текущей партии"
+        boolean visible "плашка в эфире или убрана"
+        datetime updatedAt
     }
     NOTIFICATION {
         uuid id PK
