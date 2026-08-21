@@ -8,6 +8,11 @@ export function boardUrl(key: string): string {
   return `/api/scoreboard/${encodeURIComponent(key)}/`;
 }
 
+/** Поток изменений доски: одно соединение вместо череды запросов. */
+export function boardStreamUrl(key: string): string {
+  return `${boardUrl(key)}stream/`;
+}
+
 /** Ключ доски из адреса страницы: столов в турнире может быть несколько. */
 export function boardKeyFrom(value: string | string[] | undefined): string {
   const key = Array.isArray(value) ? value[0] : value;

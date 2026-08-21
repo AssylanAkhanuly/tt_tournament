@@ -209,6 +209,33 @@ test.describe('Табло трансляции /scoreboard', () => {
     });
   }
 
+  test('эфир держит одно соединение и не опрашивает сервер', async ({ page }) => {
+    // Ради этого всё и затевалось: у клиента должно быть одно постоянное
+    // соединение, а не череда запросов каждые полсекунды.
+    let streams = 0;
+    const polls: string[] = [];
+    page.on('request', (request) => {
+      const url = request.url();
+      if (!url.includes('/api/scoreboard/')) return;
+      if (url.endsWith('/stream/')) streams += 1;
+      else if (request.method() === 'GET') polls.push(url);
+    });
+
+    await page.goto('/scoreboard/overlay');
+    await expect(page.getByTestId('board')).toBeVisible();
+    await page.waitForTimeout(4000);
+
+    expect(streams).toBe(1);
+    expect(polls).toEqual([]); // ни одного опроса: счёт приходит сам
+
+    // И соединение действительно живое — счёт доезжает.
+    const current = await (await page.request.get(BOARD_URL)).json();
+    await page.request.put(BOARD_URL, {
+      data: { ...CLEAN_BOARD, rev: current.rev, left: { ...CLEAN_BOARD.left, points: 5 } },
+    });
+    await expect(page.getByTestId('points-left')).toHaveText('5');
+  });
+
   test('снимок обеих сторон: пульт и эфир', async ({ page }) => {
     const overlay = await openBoth(page);
 

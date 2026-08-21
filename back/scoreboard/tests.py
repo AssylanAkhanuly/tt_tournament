@@ -1,7 +1,10 @@
+from itertools import islice
+
 from django.test import TestCase
 from rest_framework.test import APIClient
 
 from .models import Scoreboard
+from .views import _stream
 
 CLEAN = {
     "match_label": "MT",
@@ -105,3 +108,29 @@ class ScoreboardApiTests(TestCase):
         response = self.client.get("/api/scoreboard/")
         keys = [board["key"] for board in response.data["boards"]]
         self.assertEqual(keys, ["table-1", "table-2"])
+
+
+class ScoreboardStreamTests(TestCase):
+    """Поток проверяем на самом генераторе, а не через клиент: у клиента он
+    крутился бы до таймаута, а нам нужны первые кадры."""
+
+    def test_stream_opens_with_current_score(self):
+        Scoreboard.objects.create(key="main", left_points=7)
+
+        frames = list(islice(_stream("main"), 2))
+
+        self.assertEqual(frames[0], "retry: 1000\n\n")  # интервал переподключения
+        self.assertTrue(frames[1].startswith("data: "))
+        self.assertIn('"points": 7', frames[1])
+
+    def test_stream_sends_frame_only_after_score_changes(self):
+        board = Scoreboard.objects.create(key="main")
+        stream = _stream("main")
+        list(islice(stream, 2))  # retry + снимок
+
+        board.left_points = 3
+        board.rev += 1
+        board.save()
+
+        frame = next(stream)
+        self.assertIn('"points": 3', frame)

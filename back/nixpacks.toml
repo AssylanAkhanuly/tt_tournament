@@ -26,8 +26,14 @@ cmds = [
 ]
 
 [start]
-# 2 workers x 4 threads = 8 concurrent requests. The app is I/O-bound (DB round
+# 2 workers x 12 threads = 24 concurrent requests. The app is I/O-bound (DB round
 # trips), so threads let other requests run while one waits on Postgres — without
 # this (gunicorn's 1-worker/1-thread default) every request is served serially and
 # the polling load saturates the single thread.
-cmd = ". /opt/venv/bin/activate && python manage.py migrate --noinput && python manage.py collectstatic --noinput && gunicorn tt_back.wsgi:application --bind 0.0.0.0:$PORT --workers 2 --threads 4 --timeout 60"
+#
+# Threads went 4 -> 12 when the scoreboard got its SSE stream
+# (`/api/scoreboard/<key>/stream/`): under WSGI an open stream holds its thread
+# for the whole connection, so every live overlay and control panel permanently
+# occupies one slot. A streamed table costs two. With 4 threads a couple of
+# tables would have starved the rest of the platform.
+cmd = ". /opt/venv/bin/activate && python manage.py migrate --noinput && python manage.py collectstatic --noinput && gunicorn tt_back.wsgi:application --bind 0.0.0.0:$PORT --workers 2 --threads 12 --timeout 60"

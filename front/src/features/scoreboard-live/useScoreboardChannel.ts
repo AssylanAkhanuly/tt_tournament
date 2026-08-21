@@ -1,29 +1,28 @@
 'use client';
 
-// Канал табло: состояние живёт в Django (одна строка на стол), обе стороны
-// работают с ним по HTTP.
+// Канал табло: состояние живёт в Django (одна строка на стол).
 //
-// Оверлей опрашивает счёт несколько раз в секунду. Это дёшево: пока `rev` не
-// сдвинулся, сервер отвечает 304 без тела — браузер сам шлёт `If-None-Match`,
-// потому что мы просим `cache: 'no-cache'` (не «не кэшируй», а «перепроверь»).
+// Читают обе стороны — пульт и плашка в эфире — через одно постоянное
+// соединение (SSE). Никаких повторяющихся запросов: сервер сам следит за
+// ревизией строки и присылает только то, что изменилось.
 //
-// Пульт пишет: локально применяет то же действие сразу (кнопки не ждут сети),
-// а на сервер отправляет получившееся состояние вместе с `rev`, от которого
-// отталкивался. Если другой пульт успел записать первым, сервер отвечает 409 —
-// тогда переносим свой счёт на его версию и повторяем.
+// Пишет только пульт, обычным PUT. Локально действие применяется сразу (кнопки
+// не ждут сети), на сервер уходит получившееся состояние вместе с `rev`, от
+// которого отталкивались. Если другой пульт успел записать первым, приходит 409
+// — тогда переносим свой счёт на его версию и повторяем.
 //
-// Когда бэкенд переедет на ASGI ради уведомлений, опрос в `subscribe` меняется
-// на SSE; всё остальное — ручки, состояние, пульт, плашка — остаётся как есть.
+// Запасной путь: если первый кадр потока не пришёл за несколько секунд, значит
+// соединение где-то буферизуется (прокси, фильтр в сети зала). Тогда молча
+// переходим на опрос — в эфире счёт важнее красоты транспорта.
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 
-import { boardUrl } from '@/entities/scoreboard/api';
+import { boardStreamUrl, boardUrl } from '@/entities/scoreboard/api';
 import { reduce, type ScoreboardAction, type ScoreboardState } from '@/entities/scoreboard/model';
 
-const OVERLAY_POLL_MS = 400; // задержка в эфире; за кодировщиком её не видно
-const CONTROL_TICK_MS = 300; // как часто пульт досылает несохранённое
-const CONTROL_POLL_MS = 2000; // пульт сам себе источник правды, опрашивает редко
-const CONFLICT_RETRY_MS = 150;
+const STREAM_WATCHDOG_MS = 5000; // столько ждём первый кадр, прежде чем сдаться
+const FALLBACK_POLL_MS = 1000; // опрос запасного пути
+const RETRY_MS = 1000; // как часто досылаем несохранённое
 
 async function loadBoard(key: string): Promise<ScoreboardState | null> {
   try {
@@ -35,9 +34,71 @@ async function loadBoard(key: string): Promise<ScoreboardState | null> {
   }
 }
 
+/** Подписка на изменения доски. Возвращает признак живого соединения. */
+function useSubscription(key: string, apply: (next: ScoreboardState) => void): boolean {
+  const [connected, setConnected] = useState(false);
+  const applyRef = useRef(apply);
+
+  // Держим свежий обработчик, не пересоздавая соединение на каждый рендер.
+  useEffect(() => {
+    applyRef.current = apply;
+  });
+
+  useEffect(() => {
+    let stopped = false;
+    let source: EventSource | null = null;
+    let poll: ReturnType<typeof setInterval> | null = null;
+    let watchdog: ReturnType<typeof setTimeout> | null = null;
+
+    const fallBackToPolling = () => {
+      if (stopped || poll) return;
+      source?.close();
+      source = null;
+
+      const tick = async () => {
+        const next = await loadBoard(key);
+        if (stopped) return;
+        setConnected(next !== null);
+        if (next) applyRef.current(next);
+      };
+      poll = setInterval(tick, FALLBACK_POLL_MS);
+      void tick();
+    };
+
+    source = new EventSource(boardStreamUrl(key));
+    watchdog = setTimeout(fallBackToPolling, STREAM_WATCHDOG_MS);
+
+    source.onmessage = (event) => {
+      if (watchdog) {
+        clearTimeout(watchdog);
+        watchdog = null;
+      }
+      setConnected(true);
+      try {
+        applyRef.current(JSON.parse(event.data) as ScoreboardState);
+      } catch {
+        // битый кадр пропускаем, следующий придёт целым
+      }
+    };
+
+    // EventSource переподключается сам; наше дело — показать оператору, что
+    // связи сейчас нет и в эфире висит старый счёт.
+    source.onerror = () => setConnected(false);
+
+    return () => {
+      stopped = true;
+      if (watchdog) clearTimeout(watchdog);
+      if (poll) clearInterval(poll);
+      source?.close();
+    };
+  }, [key]);
+
+  return connected;
+}
+
 type Channel = {
   state: ScoreboardState;
-  /** Последний обмен с сервером удался (иначе в эфире висит старый счёт). */
+  /** Связь с сервером жива (иначе в эфире висит старый счёт). */
   connected: boolean;
 };
 
@@ -48,29 +109,13 @@ export type ScoreboardControl = Channel & {
 /** Только чтение — для плашки в эфире. */
 export function useScoreboardMirror(initial: ScoreboardState): Channel {
   const [state, setState] = useState(initial);
-  const [connected, setConnected] = useState(true);
   const revRef = useRef(initial.rev);
 
-  useEffect(() => {
-    let stopped = false;
-
-    const tick = async () => {
-      const next = await loadBoard(initial.key);
-      if (stopped) return;
-      setConnected(next !== null);
-      if (next && next.rev >= revRef.current) {
-        revRef.current = next.rev;
-        setState(next);
-      }
-    };
-
-    const timer = setInterval(tick, OVERLAY_POLL_MS);
-    void tick();
-    return () => {
-      stopped = true;
-      clearInterval(timer);
-    };
-  }, [initial.key]);
+  const connected = useSubscription(initial.key, (next) => {
+    if (next.rev < revRef.current) return; // устаревший кадр
+    revRef.current = next.rev;
+    setState(next);
+  });
 
   return { state, connected };
 }
@@ -78,14 +123,13 @@ export function useScoreboardMirror(initial: ScoreboardState): Channel {
 /** Чтение и запись — для пульта. */
 export function useScoreboardControl(initial: ScoreboardState): ScoreboardControl {
   const [state, setStateRaw] = useState(initial);
-  const [connected, setConnected] = useState(true);
+  const [writeOk, setWriteOk] = useState(true);
 
   // Состояние держим и в ref: обработчики и таймер должны видеть свежее
   // значение, не дожидаясь следующего рендера.
   const stateRef = useRef(initial);
   const dirty = useRef(false); // есть несохранённые изменения
   const inFlight = useRef(false); // запрос уже в пути
-  const lastPoll = useRef(0);
 
   const setState = useCallback((next: ScoreboardState) => {
     stateRef.current = next;
@@ -110,7 +154,7 @@ export function useScoreboardControl(initial: ScoreboardState): ScoreboardContro
         const current = (await response.json()) as ScoreboardState;
         setState({ ...stateRef.current, rev: current.rev });
         dirty.current = true;
-        setConnected(true);
+        setWriteOk(true);
         return;
       }
 
@@ -120,41 +164,32 @@ export function useScoreboardControl(initial: ScoreboardState): ScoreboardContro
         // уже в stateRef, и ответ сервера их не содержит — берём из него только
         // версию, иначе очки теряются на быстрой серии.
         setState(dirty.current ? { ...stateRef.current, rev: saved.rev } : saved);
-        setConnected(true);
+        setWriteOk(true);
       } else {
-        setConnected(false);
+        setWriteOk(false);
       }
     } catch {
       dirty.current = true; // сеть отвалилась — повторим на следующем такте
-      setConnected(false);
+      setWriteOk(false);
     } finally {
       inFlight.current = false;
     }
   }, [setState]);
 
-  // Один таймер на всё: досылает несохранённое, а в простое изредка
-  // перечитывает — вдруг счёт ведут с двух пультов.
+  const streamOk = useSubscription(initial.key, (next) => {
+    // Свои несохранённые правки важнее того, что пришло с сервера.
+    if (dirty.current || inFlight.current) return;
+    if (next.rev < stateRef.current.rev) return;
+    setState(next);
+  });
+
+  // Досылаем то, что не ушло с первого раза (обрыв сети, конфликт версий).
   useEffect(() => {
-    const timer = setInterval(async () => {
-      if (inFlight.current) return;
-
-      if (dirty.current) {
-        setTimeout(() => void push(), CONFLICT_RETRY_MS);
-        return;
-      }
-
-      if (Date.now() - lastPoll.current < CONTROL_POLL_MS) return;
-      lastPoll.current = Date.now();
-
-      const next = await loadBoard(stateRef.current.key);
-      setConnected(next !== null);
-      if (next && !dirty.current && !inFlight.current && next.rev > stateRef.current.rev) {
-        setState(next);
-      }
-    }, CONTROL_TICK_MS);
-
+    const timer = setInterval(() => {
+      if (dirty.current && !inFlight.current) void push();
+    }, RETRY_MS);
     return () => clearInterval(timer);
-  }, [push, setState]);
+  }, [push]);
 
   const send = useCallback(
     (action: ScoreboardAction) => {
@@ -165,5 +200,5 @@ export function useScoreboardControl(initial: ScoreboardState): ScoreboardContro
     [push, setState],
   );
 
-  return { state, connected, send };
+  return { state, connected: streamOk && writeOk, send };
 }
