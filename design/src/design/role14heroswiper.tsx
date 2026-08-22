@@ -22,12 +22,18 @@
    пальцем и точки вместо стрелок. */
 
 import { useRef } from 'react';
+import type { ReactNode } from 'react';
 import { Swiper, SwiperSlide } from 'swiper/react';
 import { Navigation, Pagination } from 'swiper/modules';
 import type { Swiper as SwiperClass } from 'swiper';
-import { Check, ChevronLeft, ChevronRight, Play } from 'lucide-react';
+import {
+  Bell, CalendarDays, Check, ChevronLeft, ChevronRight, LayoutDashboard, Lock, Play,
+  RotateCw, Timer, User,
+} from 'lucide-react';
 import { Frame, TabBar } from '../PlayerApp';
-import { RESULTS } from './role14home';
+import { MiniTabBar } from '../respShell';
+import { Brand } from '../ui';
+import { ME, RESULTS } from './role14home';
 import 'swiper/css';
 import 'swiper/css/navigation';
 import 'swiper/css/pagination';
@@ -207,6 +213,113 @@ const TOURS = [
   { nm: 'Кубок Алматы 2026', sub: 'ОРТ · Алматы · 12–14 сентября', tag: 'ЗАЯВКА ПОДАНА', on: true },
   { nm: 'Чемпионат Республики', sub: 'Главный старт · Астана · 18–22 сентября', tag: 'ЗАЯВЛЯЕТ РЕГИОН', on: false },
 ];
+
+/* Хром мобильного браузера: адресная строка сразу под системным статус-баром —
+   так, как её показывает Chrome на Android. Нужна не для красоты: без неё по
+   макету не видно, сколько высоты у экрана съедает сам браузер, а на телефоне
+   это 44 px из 652 плюс шапка сайта. Нижней панели браузера здесь нет
+   намеренно — у Chrome её нет, и она спорила бы с навигацией сайта. */
+const BrowserBar = () => (
+  <div className="ocb">
+    <span className="ocb-url">
+      <Lock size={11} />
+      fnt.kz/me
+    </span>
+    <button type="button" className="ocb-btn" aria-label="Обновить">
+      <RotateCw size={15} />
+    </button>
+    <span className="ocb-tabs">3</span>
+  </div>
+);
+
+/* Шапка самого сайта: знак ФНТ, уведомления, я. Без неё фамилия на странице
+   висела сама по себе — непонятно, чей это сайт и куда с него уходить. На
+   телефоне она короче десктопной: знак, колокол, фото. */
+const SiteHeader = () => (
+  <div className="ocs">
+    <Brand size="sm" sub="Спортсмен" />
+    <div className="ocs-r">
+      <button type="button" className="iconbtn dot" aria-label="Уведомления">
+        <Bell size={16} />
+      </button>
+      <img src={ME.av} alt="" />
+    </div>
+  </div>
+);
+
+/* Веб-версия на телефоне: хром браузера, шапка сайта, страница, навигация
+   роли внизу. Пункты — те же, что в сайдбаре десктопа (R14), только четыре
+   главных: на телефоне шесть в строку не встают. */
+const WEB_TABS: [ReactNode, string][] = [
+  [<LayoutDashboard size={19} />, 'Главная'],
+  [<CalendarDays size={19} />, 'Календарь'],
+  [<Timer size={19} />, 'Мой турнир'],
+  [<User size={19} />, 'Профиль'],
+];
+
+export function HeroSwiperBrowser() {
+  return (
+    <div className="ocp-wrap ocp-wrap--web">
+      <Frame>
+        <BrowserBar />
+        <SiteHeader />
+        <div className="ocp-body">
+          <div className="ocp-top">
+            <div className="nm">Ким Георгий</div>
+            <div className="rt o14-disp">2456</div>
+          </div>
+
+          <div className="ocp-eyebrow">Сегодня · 3 матча</div>
+
+          <div className="ocp-bleed">
+            <Swiper
+              modules={[Pagination]}
+              slidesPerView={1}
+              speed={420}
+              pagination={{ el: '.ocp-dots-web', clickable: true, bulletClass: 'ohs-dot', bulletActiveClass: 'on' }}
+            >
+              {DAY.map((m) => (
+                <SwiperSlide key={m.round}>
+                  <CardPhone m={m} />
+                </SwiperSlide>
+              ))}
+            </Swiper>
+          </div>
+          <div className="ocp-dots ocp-dots-web" />
+
+          <div className="ocp-rail">
+            <div>
+              <b className="o14-disp">7</b>
+              <span>место в РК</span>
+            </div>
+            <div>
+              <b className="o14-disp up">+24</b>
+              <span>за турнир</span>
+            </div>
+            <div>
+              <b className="o14-disp">64 %</b>
+              <span>побед</span>
+            </div>
+          </div>
+
+          <div className="ocp-sec">
+            <div className="ocp-eyebrow">Ближайшие турниры</div>
+            {TOURS.map((t) => (
+              <div className="ocp-item" key={t.nm} data-to="Э14.2">
+                <div className="tx">
+                  <div className="nm">{t.nm}</div>
+                  <div className="ss">{t.sub}</div>
+                </div>
+                <span className={'ocp-tag' + (t.on ? ' on' : '')}>{t.tag}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+        <MiniTabBar items={WEB_TABS} active="Главная" />
+      </Frame>
+    </div>
+  );
+}
 
 export function HeroSwiperPhone() {
   return (

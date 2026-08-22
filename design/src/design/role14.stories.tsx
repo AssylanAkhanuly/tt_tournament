@@ -18,7 +18,7 @@ import { HomeC, HomeI, HomeK, HomeZ } from './role14home3';
 import { HomeL, HomeM, HomeN, HomeO, HomeP } from './role14home4';
 import { HeroBg, HeroNoCover } from './role14hero';
 import { HeroRef1, HeroRef2, HeroRef3, HeroWtt } from './role14heroref';
-import { HeroSwiper, HeroSwiperPhone } from './role14heroswiper';
+import { HeroSwiper, HeroSwiperBrowser, HeroSwiperPhone } from './role14heroswiper';
 import wttTicker from '../assets/refs/wtt-ticker.jpg';
 
 export default {
@@ -811,7 +811,11 @@ export const AHeroSwiper = {
 };
 
 export const HeroSwiperFull = { name: 'Карусель · на экране', render: () => <HomeA hero={<HeroSwiper />} /> };
-export const HeroSwiperMobile = { name: 'Карусель · телефон', render: () => <HeroSwiperPhone /> };
+export const HeroSwiperMobile = { name: 'Карусель · телефон (приложение)', render: () => <HeroSwiperPhone /> };
+/* Веб на телефоне — не то же, что приложение: сверху адресная строка браузера,
+   под ней шапка сайта. Вместе они съедают ~90 px из 652, и по макету без них
+   не видно, сколько на самом деле остаётся содержимому. */
+export const HeroSwiperWeb = { name: 'Карусель · телефон (браузер)', render: () => <HeroSwiperBrowser /> };
 
 export const HeroWttA = { name: 'Как у WTT · вас вызвали', render: () => <HomeA hero={<HeroWtt />} /> };
 export const HeroWttB = { name: 'Как у WTT · матч идёт', render: () => <HomeA hero={<HeroWtt live />} /> };
