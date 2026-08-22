@@ -17,7 +17,7 @@
   display: flex;
   flex-direction: column;
   gap: 12px;
-  padding: 10px 0 74px;
+  padding: 10px 0 132px;
   overflow: hidden;
 }
 .mb-body > * { flex: none; }
@@ -46,40 +46,94 @@
 }
 .mb-dot.on { background: var(--c-success); }
 
-/* ── Хром браузера и шапка сайта (одинаковые у всех трёх) ──────────*/
-.mb-url {
+/* ── Хром браузера: с натуры, по снимку мобильного браузера ────────
+   Тёмная панель сверху (адрес по центру пилюлей, слева круглая кнопка, справа
+   «поделиться») и тёмная панель браузера снизу (назад, вперёд, новая вкладка,
+   счётчик вкладок, меню). Панели тёмные при любой теме, поэтому цвета —
+   `--c-screen-deep` и `--c-on-media`: это те же два токена, которыми в системе
+   кроется всё, что тёмное всегда.
+
+   Системный статус-бар при таком хроме тоже тёмный, с белым временем — иначе
+   он выглядел бы вырезанным из другого телефона. */
+.mb-wrap .sys { background: var(--c-screen-deep); color: var(--c-on-media); padding-bottom: 8px; }
+.mb-wrap .island { background: var(--c-screen-deep); }
+
+.mbb-top {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 6px 12px 8px;
-  color: var(--c-muted);
-  background: var(--c-panel-2);
-  border-bottom: 1px solid var(--c-glass-line);
+  padding: 2px 12px 10px;
+  color: var(--c-on-media);
+  background: var(--c-screen-deep);
 }
-.mb-url-pill {
-  flex: 1;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  min-width: 0;
-  padding: 6px 12px;
-  font-size: 12px;
-  background: var(--c-panel-3);
-  border: 1px solid var(--c-glass-line);
-  /* Пилюля адресной строки — форма чужого браузера, не нашего интерфейса. */
-  border-radius: var(--r-round);
-}
-.mb-url-tabs {
+/* Круглая кнопка слева — как на снимке: круг со значком и меткой. */
+.mbb-round {
+  position: relative;
   display: grid;
   place-items: center;
-  width: 20px;
-  height: 20px;
-  font-size: 11px;
+  width: 30px;
+  height: 30px;
+  flex: none;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--c-on-media) 14%, transparent);
+}
+.mbb-round i {
+  position: absolute;
+  top: -2px;
+  right: -3px;
+  width: 13px;
+  height: 13px;
+  border-radius: 50%;
+  background: var(--c-accent);
+  border: 2px solid var(--c-screen-deep);
+}
+/* Адрес — по центру пилюли, как в браузере; домен без пути: браузер показывает
+   ровно его. */
+.mbb-pill {
+  flex: 1;
+  min-width: 0;
+  padding: 7px 12px;
+  font-size: 13px;
+  text-align: center;
+  color: var(--c-on-media);
+  background: color-mix(in srgb, var(--c-on-media) 12%, transparent);
+  border-radius: var(--r-round);
+}
+
+.mbb-bottom {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 6;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 12px 24px 18px;
+  color: var(--c-on-media);
+  background: var(--c-screen-deep);
+}
+/* «Вперёд» неактивно, пока некуда идти — на снимке так же. */
+.mbb-bottom .off { opacity: 0.35; }
+.mbb-plus {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--c-on-media) 16%, transparent);
+}
+.mbb-tabs {
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  font-size: 12px;
   font-weight: 700;
   border: 2px solid currentColor;
   border-radius: var(--r-xs);
 }
-.mb-wrap .sys { background: var(--c-panel-2); padding-bottom: 6px; }
 
 .mb-site {
   display: flex;
@@ -95,10 +149,12 @@
 .mb-site-r img { width: 30px; height: 30px; border-radius: 50%; object-fit: cover; }
 
 /* Навигация прибита к низу — не плавает островом. */
+/* Навигация сайта стоит НАД панелью браузера: она часть страницы, а панель —
+   часть браузера, и страница уезжает под неё. */
 .mb-wrap .tabbar {
   left: 0;
   right: 0;
-  bottom: 0;
+  bottom: 58px;
   border-radius: 0;
   border-left: 0;
   border-right: 0;
@@ -116,7 +172,7 @@
   position: relative;
   display: grid;
   gap: 2px;
-  padding: 16px;
+  padding: 14px 16px;
   background:
     radial-gradient(120% 90% at 0% 0%, color-mix(in srgb, var(--c-success) 16%, transparent), transparent 62%),
     var(--c-screen-1);
@@ -148,7 +204,7 @@
 /* Число — единственный источник света на экране. */
 .mbd-num {
   margin-top: 6px;
-  font-size: 96px;
+  font-size: 84px;
   line-height: 0.8;
   color: var(--c-success);
   text-shadow: 0 0 44px var(--c-success-glow);
@@ -165,7 +221,7 @@
 .mbd-foe { font-size: 20px; color: var(--c-ink); }
 .mbd-round { font-size: 12px; color: var(--c-muted); }
 .mbd-go {
-  margin-top: 12px;
+  margin-top: 10px;
   display: inline-flex;
   align-items: center;
   justify-content: center;

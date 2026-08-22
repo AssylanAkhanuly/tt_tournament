@@ -26,7 +26,8 @@ import type { ReactNode } from 'react';
 import { Swiper, SwiperSlide } from 'swiper/react';
 import { Pagination } from 'swiper/modules';
 import {
-  Bell, CalendarDays, LayoutDashboard, Lock, Play, RotateCw, Timer, User,
+  ArrowLeft, ArrowRight, Bell, CalendarDays, LayoutDashboard, MoreHorizontal, Play, Plus,
+  Share, Sparkles, Timer, User,
 } from 'lucide-react';
 import { Frame } from '../PlayerApp';
 import { MiniTabBar } from '../respShell';
@@ -61,18 +62,29 @@ const NAV: [ReactNode, string][] = [
   [<User size={19} />, 'Профиль'],
 ];
 
-/* Оболочка одна на все три: адресная строка браузера и шапка сайта. */
+/* Оболочка одна на все три.
+
+   Хром браузера нарисован с натуры (снимок мобильного браузера от федерации):
+   тёмная панель сверху, адрес по центру пилюлей, слева круглая кнопка со
+   значком, справа «поделиться»; снизу — тёмная панель браузера: назад, вперёд,
+   новая вкладка, счётчик вкладок, меню. Системный статус-бар при таком хроме
+   тоже тёмный, с белым временем.
+
+   Считать по макету теперь можно честно: сверху уходит статус-бар и панель
+   адреса, снизу — панель браузера, и только между ними живёт страница со своей
+   шапкой и своей навигацией. */
 function Chrome({ children }: { children: ReactNode }) {
   return (
     <>
-      <div className="mb-url">
-        <span className="mb-url-pill">
-          <Lock size={11} />
-          fnt.kz/me
+      <div className="mbb-top">
+        <span className="mbb-round">
+          <Sparkles size={15} />
+          <i />
         </span>
-        <RotateCw size={15} />
-        <span className="mb-url-tabs">3</span>
+        <span className="mbb-pill">fnt.kz</span>
+        <Share size={17} />
       </div>
+
       <div className="mb-site">
         <Brand size="sm" sub="Спортсмен" />
         <div className="mb-site-r">
@@ -82,7 +94,20 @@ function Chrome({ children }: { children: ReactNode }) {
           <img src={ME.av} alt="" />
         </div>
       </div>
+
       {children}
+
+      {/* Нижняя панель браузера — поверх навигации сайта: она принадлежит
+          браузеру, а не странице, и страница уезжает под неё. */}
+      <div className="mbb-bottom">
+        <ArrowLeft size={20} />
+        <ArrowRight size={20} className="off" />
+        <span className="mbb-plus">
+          <Plus size={18} />
+        </span>
+        <span className="mbb-tabs">6</span>
+        <MoreHorizontal size={20} />
+      </div>
     </>
   );
 }
