@@ -1,0 +1,466 @@
+/* Э14.1 · Главная спортсмена — три варианта дизайна.
+   Содержание у всех одно (flows/14-sportsmen.md): рейтинг, ближайший турнир,
+   «сейчас играю», лента новостей. Отличается решение — что на экране главное.
+
+   Цвет и радиусы — только токены (`npm run lint:colors`). */
+
+/* ═══ Общее для вариантов ═══ */
+
+.o14 { display: flex; flex-direction: column; gap: var(--s-5); }
+
+/* Экран без штатного заголовка dmain: вариант рисует шапку сам. */
+.dmain:has(> .o14-nohead) > .dtitle { display: none; }
+
+.o14-eyebrow {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--c-dim);
+}
+
+/* ═══ Вариант А · «Вызов на стол» ═══
+   Верх экрана занят одним — играешь ли ты сейчас и куда идти. */
+
+.oa-call {
+  display: grid;
+  grid-template-columns: 132px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--s-5);
+  padding: var(--s-5);
+  background: var(--c-success-fill);
+  border: 1px solid var(--c-success-line-2);
+  border-left: 4px solid var(--c-success);
+  border-radius: var(--r-md);
+}
+
+.oa-table { text-align: center; line-height: 1; }
+.oa-table b {
+  display: block;
+  font-size: 60px;
+  font-weight: 800;
+  letter-spacing: -0.04em;
+  color: var(--c-success);
+  font-variant-numeric: tabular-nums;
+}
+.oa-table span {
+  display: block;
+  margin-top: 6px;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  color: var(--c-success);
+}
+
+.oa-vs { display: flex; align-items: center; gap: var(--s-4); min-width: 0; }
+.oa-face {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid var(--c-glass-hi);
+  flex: none;
+}
+.oa-side { min-width: 0; }
+.oa-side .nm {
+  font-size: 20px;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  color: var(--c-ink-bright);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.oa-side .sub { font-size: 12px; color: var(--c-muted); margin-top: 2px; }
+.oa-x {
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  color: var(--c-dim);
+  flex: none;
+}
+
+.oa-when { text-align: right; display: grid; gap: var(--s-2); justify-items: end; }
+.oa-when .t {
+  font-size: 28px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--c-ink-bright);
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+.oa-when .r { font-size: 12px; color: var(--c-muted); }
+.oa-go {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 9px 16px;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--c-success-ink);
+  background: var(--c-success);
+  border: 0;
+  border-radius: var(--r-sm);
+  cursor: pointer;
+}
+
+/* Рейтинг — строкой, а не плитками: во время турнира он справочный. */
+.oa-rating {
+  display: flex;
+  align-items: center;
+  gap: var(--s-5);
+  padding: var(--s-3) var(--s-4);
+  background: var(--c-panel-3);
+  border: 1px solid var(--c-glass-line-soft);
+  border-radius: var(--r-sm);
+  flex-wrap: wrap;
+}
+.oa-rating .big {
+  font-size: 26px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--c-ink-bright);
+  font-variant-numeric: tabular-nums;
+}
+.oa-rating .lbl { font-size: 12px; color: var(--c-dim); }
+.oa-rating .up { font-size: 13px; font-weight: 700; color: var(--c-success); }
+.oa-sep { width: 1px; height: 22px; background: var(--c-glass-line); }
+.oa-rating .grow { flex: 1; }
+.oa-link {
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--c-accent-3);
+  background: none;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.oa-cols { display: grid; grid-template-columns: 1fr 0.85fr 1.15fr; gap: var(--s-4); }
+
+/* Последние результаты — та же лента, что требует флоу: сыгранное с дельтой. */
+.oa-res { display: grid; gap: var(--s-3); }
+.oa-res-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: var(--s-3);
+  align-items: center;
+  padding-bottom: var(--s-3);
+  border-bottom: 1px solid var(--c-glass-line-soft);
+}
+.oa-res-row:last-child { border-bottom: 0; padding-bottom: 0; }
+.oa-res-row .nm { font-size: 14px; font-weight: 700; color: var(--c-ink); }
+.oa-res-row .sub { font-size: 12px; color: var(--c-muted); margin-top: 2px; }
+.oa-score {
+  font-size: 15px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+}
+.oa-score.win { color: var(--c-success); }
+.oa-score.lose { color: var(--c-danger); }
+
+.o14-card {
+  background: var(--c-panel);
+  border: 1px solid var(--c-glass-line);
+  border-radius: var(--r-sm);
+  padding: var(--s-4);
+}
+.o14-card > .o14-eyebrow { margin-bottom: var(--s-3); }
+
+.oa-tour { display: grid; gap: var(--s-3); }
+/* Плашка стоит над названием, а не справа от него: названия турниров длинные
+   («Чемпионат Республики Казахстан»), и в две колонки они рвались на три
+   строки, оставляя плашку висеть в пустоте. */
+.oa-tour-row {
+  display: grid;
+  gap: 5px;
+  justify-items: start;
+  padding-bottom: var(--s-3);
+  border-bottom: 1px solid var(--c-glass-line-soft);
+  cursor: pointer;
+}
+.oa-tour-row:last-child { border-bottom: 0; padding-bottom: 0; }
+.oa-tour-row .nm { font-size: 15px; font-weight: 700; color: var(--c-ink); }
+.oa-tour-row .sub { font-size: 12px; color: var(--c-muted); margin-top: 2px; }
+
+.o14-pill {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  padding: 4px 8px;
+  border-radius: var(--r-xs);
+  white-space: nowrap;
+}
+.o14-pill.on { color: var(--c-accent-3); background: var(--c-accent-soft); }
+.o14-pill.wait { color: var(--c-dim); background: var(--c-panel-quiet); }
+.o14-pill.ok { color: var(--c-success); background: var(--c-success-soft); }
+
+.oa-news { display: grid; gap: var(--s-3); }
+.oa-news-row { cursor: pointer; }
+.oa-news-row .nm { font-size: 14px; font-weight: 700; color: var(--c-ink); }
+.oa-news-row .sub {
+  font-size: 12px;
+  color: var(--c-muted);
+  margin-top: 2px;
+  line-height: 1.45;
+}
+.oa-news-row .at { font-size: 11px; color: var(--c-dim); margin-top: 4px; }
+
+/* ═══ Вариант Б · «Карточка спортсмена» ═══
+   Слева — кто я (постоянно), справа — что дальше (хроника). */
+
+.ob { display: grid; grid-template-columns: 300px minmax(0, 1fr); gap: var(--s-5); }
+
+.ob-card {
+  background: var(--c-panel);
+  border: 1px solid var(--c-glass-line);
+  border-radius: var(--r-sm);
+  overflow: hidden;
+}
+.ob-face {
+  display: flex;
+  gap: var(--s-3);
+  align-items: center;
+  padding: var(--s-4);
+  border-bottom: 1px solid var(--c-glass-line-soft);
+}
+.ob-face img {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid var(--c-accent-line);
+}
+.ob-face .nm {
+  font-size: 17px;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  color: var(--c-ink-bright);
+}
+.ob-face .sub { font-size: 12px; color: var(--c-muted); margin-top: 3px; }
+
+.ob-rating { padding: var(--s-4); text-align: center; }
+.ob-rating .v {
+  font-size: 54px;
+  line-height: 1;
+  font-weight: 800;
+  letter-spacing: -0.04em;
+  color: var(--c-ink-bright);
+  font-variant-numeric: tabular-nums;
+}
+.ob-rating .k {
+  margin-top: 6px;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--c-dim);
+}
+.ob-delta {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: var(--s-3);
+  padding: 4px 10px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--c-success);
+  background: var(--c-success-soft);
+  border-radius: var(--r-xs);
+}
+
+.ob-spark { padding: 0 var(--s-4) var(--s-4); }
+.ob-spark svg { display: block; width: 100%; height: 44px; }
+.ob-spark .cap {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  color: var(--c-dim);
+  margin-top: 6px;
+}
+
+.ob-kv {
+  border-top: 1px solid var(--c-glass-line-soft);
+  padding: var(--s-3) var(--s-4);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 13px;
+}
+.ob-kv .k { color: var(--c-muted); }
+.ob-kv .v { color: var(--c-ink); font-weight: 700; }
+
+.ob-fee {
+  border-top: 1px solid var(--c-glass-line-soft);
+  padding: var(--s-4);
+  display: grid;
+  gap: var(--s-3);
+}
+.ob-fee-head { display: flex; justify-content: space-between; align-items: center; }
+.ob-fee-head .k { font-size: 13px; color: var(--c-muted); }
+.ob-pay {
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  padding: 9px;
+  width: 100%;
+  color: var(--c-accent-ink);
+  background: var(--c-accent);
+  border: 0;
+  border-radius: var(--r-sm);
+  cursor: pointer;
+}
+
+/* Хроника: что случилось и что будет — сверху вниз по времени */
+.ob-rail { display: grid; gap: 0; }
+.ob-ev {
+  display: grid;
+  grid-template-columns: 86px 16px minmax(0, 1fr) auto;
+  gap: var(--s-3);
+  align-items: start;
+  padding: var(--s-4) 0;
+  border-bottom: 1px solid var(--c-glass-line-soft);
+  cursor: pointer;
+}
+.ob-ev:last-child { border-bottom: 0; }
+.ob-when { font-size: 12px; color: var(--c-dim); padding-top: 2px; text-align: right; }
+.ob-dot-wrap { display: grid; justify-items: center; height: 100%; padding-top: 5px; }
+.ob-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--c-dim);
+  flex: none;
+}
+.ob-dot.live { background: var(--c-success); box-shadow: 0 0 0 4px var(--c-success-ring); }
+.ob-dot.wait { background: var(--c-warning); }
+.ob-dot.accent { background: var(--c-accent); }
+.ob-ev .nm { font-size: 15px; font-weight: 700; color: var(--c-ink-bright); }
+.ob-ev .sub { font-size: 12.5px; color: var(--c-muted); margin-top: 3px; line-height: 1.45; }
+
+.ob-news {
+  margin-top: var(--s-4);
+  border-top: 1px solid var(--c-glass-line);
+  padding-top: var(--s-4);
+  display: grid;
+  gap: var(--s-3);
+}
+.ob-news-head { display: flex; justify-content: space-between; align-items: center; }
+
+/* ═══ Вариант В · «Лента» ═══
+   Одна колонка ширины чтения: тот же экран один в один ложится в приложение. */
+
+.ov { max-width: 620px; margin: 0 auto; display: grid; gap: var(--s-5); }
+
+.ov-head { display: flex; align-items: center; gap: var(--s-3); }
+.ov-head img {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid var(--c-glass-hi);
+}
+.ov-head .nm { font-size: 18px; font-weight: 800; color: var(--c-ink-bright); }
+.ov-head .sub { font-size: 12px; color: var(--c-muted); margin-top: 2px; }
+.ov-head .grow { flex: 1; }
+.ov-head .rt { text-align: right; }
+.ov-head .rt b {
+  display: block;
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--c-ink-bright);
+  font-variant-numeric: tabular-nums;
+}
+.ov-head .rt span { font-size: 11px; color: var(--c-dim); }
+
+.ov-block { display: grid; gap: var(--s-3); }
+.ov-rule {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+}
+.ov-rule .ln { flex: 1; height: 1px; background: var(--c-glass-line); }
+
+.ov-now {
+  padding: var(--s-4);
+  background: var(--c-success-fill);
+  border: 1px solid var(--c-success-line-2);
+  border-radius: var(--r-md);
+  display: grid;
+  gap: var(--s-3);
+  cursor: pointer;
+}
+.ov-now-top { display: flex; align-items: center; gap: var(--s-3); }
+.ov-now-top .t {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  color: var(--c-success);
+}
+.ov-now-top .grow { flex: 1; }
+.ov-now-top .at { font-size: 12px; color: var(--c-muted); font-variant-numeric: tabular-nums; }
+.ov-now-main { display: flex; align-items: center; gap: var(--s-3); }
+.ov-now-main img {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex: none;
+}
+.ov-now-main .nm { font-size: 18px; font-weight: 800; color: var(--c-ink-bright); }
+.ov-now-main .sub { font-size: 12px; color: var(--c-muted); margin-top: 2px; }
+.ov-now-main .grow { flex: 1; }
+.ov-now-table { text-align: right; line-height: 1.1; }
+.ov-now-table b {
+  display: block;
+  font-size: 30px;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  color: var(--c-success);
+  font-variant-numeric: tabular-nums;
+}
+.ov-now-table span { font-size: 10px; font-weight: 800; letter-spacing: 0.14em; color: var(--c-success); }
+
+.ov-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: var(--s-3);
+  align-items: center;
+  padding: var(--s-3) 0;
+  border-bottom: 1px solid var(--c-glass-line-soft);
+  cursor: pointer;
+}
+.ov-row:last-child { border-bottom: 0; }
+.ov-row .nm { font-size: 15px; font-weight: 700; color: var(--c-ink); }
+.ov-row .sub { font-size: 12px; color: var(--c-muted); margin-top: 2px; }
+
+.ov-news-card {
+  display: grid;
+  grid-template-columns: 84px minmax(0, 1fr);
+  gap: var(--s-3);
+  padding: var(--s-3) 0;
+  border-bottom: 1px solid var(--c-glass-line-soft);
+  cursor: pointer;
+}
+.ov-news-card:last-child { border-bottom: 0; }
+.ov-cover {
+  height: 60px;
+  border-radius: var(--r-xs);
+  background: var(--c-cover-1);
+}
+.ov-cover.alt { background: var(--c-cover-2); }
+.ov-news-card .tag {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  color: var(--c-accent-3);
+}
+.ov-news-card .nm { font-size: 14px; font-weight: 700; color: var(--c-ink); margin-top: 3px; }
+.ov-news-card .at { font-size: 11px; color: var(--c-dim); margin-top: 3px; }
