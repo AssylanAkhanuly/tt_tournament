@@ -466,7 +466,7 @@
 .mbr-card {
   position: relative;
   overflow: hidden;
-  padding: 24px 18px 56px;
+  padding: 22px 18px 48px;
   color: var(--c-on-media);
   background: linear-gradient(155deg, var(--c-accent), color-mix(in srgb, var(--c-accent-2) 70%, var(--c-screen-deep)));
 }
@@ -637,3 +637,30 @@
 }
 .mbr-row .ss { font-size: 11px; color: var(--c-muted); }
 .mbr-row .tm { flex: none; font-size: 15px; color: var(--c-muted); }
+
+/* ── Поле: текущий турнир вместо состояний вызова ──────────────────
+   Вызова как события в системе нет (решение от 22.08.2026): судья не зовёт
+   конкретного человека кнопкой. В поле стоит турнир, в котором я сейчас играю,
+   а расписание — строкой под ним. Крупным набран турнир, а не число: число
+   стола было главным, пока экран притворялся вызовом. */
+.mbr-tour { font-size: 34px; line-height: 0.95; letter-spacing: -0.02em; margin-top: 6px; }
+.mbr-tour-sub { font-size: 12px; color: var(--c-on-media-2); margin-top: 4px; }
+
+/* Расписание одной строкой: круг · стол · время. Время здесь приблизительное —
+   поэтому оно стоит наравне со столом, а не кричит числом во весь экран. */
+.mbr-when {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 18px;
+  padding-top: 12px;
+  border-top: 1px solid color-mix(in srgb, var(--c-on-media) 22%, transparent);
+}
+.mbr-when .r { font-size: 17px; color: var(--c-on-media); }
+.mbr-when .t { font-size: 17px; color: var(--c-on-media); }
+.mbr-when .d {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--c-on-media) 45%, transparent);
+}
