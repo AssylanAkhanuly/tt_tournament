@@ -3,17 +3,12 @@
    же облик, а не новый — меняется только содержание поля. */
 
 /* ── Главная без вызова: межсезонье ────────────────────────────────
-   Поле графитовое, а не синее: синее поле в этой системе означает «сейчас
-   играем», и в межсезонье оно врало бы. */
-.m3o .mbr-card.quiet {
-  background: linear-gradient(
-    155deg,
-    color-mix(in srgb, var(--c-ink) 82%, transparent),
-    color-mix(in srgb, var(--c-ink) 96%, transparent)
-  );
-}
-/* Кнопка синяя: зелёное значит «идите к столу», а идти некуда. */
-.m3o-go { color: var(--c-accent-ink); background: var(--c-accent); box-shadow: var(--sh-accent); }
+   По правилу цвета (role14mobile.css) поле остаётся синим — оно про
+   принадлежность, а не про состояние, — и приглушается классом `quiet`.
+   Своего цвета у межсезонья нет: раньше поле было графитовым, а кнопка синей,
+   и получалось, что на трёх экранах роли главная кнопка трёх разных цветов.
+   Кнопка здесь такая же зелёная, как везде: зелёный значит «сделать», а не
+   «идите к столу». */
 .m3o-sc { flex: none; font-size: 16px; }
 .m3o-sc.w { color: var(--c-success-light); }
 .m3o-sc.l { color: var(--c-danger); }
@@ -34,12 +29,12 @@
 .m3m-score { display: grid; gap: 4px; margin: 10px 0 12px; }
 .m3m-side {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 38px 124px;
+  grid-template-columns: minmax(0, 1fr) 36px 104px;
   align-items: baseline;
   gap: 10px;
 }
 .m3m-side .nm {
-  font-size: 19px;
+  font-size: 18px;
   color: var(--c-on-media);
   min-width: 0;
   white-space: nowrap;
@@ -48,11 +43,11 @@
 }
 .m3m-side .s { font-size: 34px; text-align: right; color: var(--c-on-media-2); }
 .m3m-side .s.lead { color: var(--c-on-media); }
-.m3m-side .g { display: flex; justify-content: flex-end; gap: 10px; }
+.m3m-side .g { display: flex; justify-content: flex-end; gap: 7px; }
 .m3m-side .g i {
   font-size: 15px;
   font-style: normal;
-  min-width: 18px;
+  min-width: 16px;
   text-align: right;
   color: var(--c-on-media-2);
 }
@@ -89,6 +84,8 @@
 .m3m-path.now .nm { font-weight: 800; }
 .m3m-path.now .sc { color: var(--c-broadcast); }
 
+/* Второе действие — тот же контурный стиль, что и везде (`.mbr-go.ghost`),
+   отличается только размером: оно живёт в листе, а не на границе планов. */
 .m3m-full {
   display: flex;
   align-items: center;
