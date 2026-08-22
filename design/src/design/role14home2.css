@@ -1,0 +1,305 @@
+/* Э14.1 · Главная спортсмена — варианты Г, Д, Е.
+
+   Первые три (А, Б, В) — в `role14home.css`. Эти три отвечают на тот же
+   вопрос другими средствами: Г — языком документов федерации, Д — языком
+   табло в зале, Е — временем как осью экрана.
+
+   Все шесть смотрятся на светлой теме (`daylight-fnt`), поэтому здесь больше
+   работают линейки и бумага, чем заливки: на светлом заливка — дорогое
+   средство, а волосяная линия читается прекрасно. */
+
+/* ═══ Вариант Г · «Протокол» ═══
+   Ни одной карточки: белый лист, линейки, выключка чисел вправо. Федерация
+   уже пишет протоколы и положения так — это её язык, а не язык дашборда. */
+
+.og {
+  background: var(--c-panel);
+  border: 1px solid var(--c-glass-line);
+  border-radius: var(--r-sm);
+  padding: var(--s-6);
+  display: grid;
+  gap: var(--s-5);
+}
+
+.og-head {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  gap: var(--s-4);
+  padding-bottom: var(--s-4);
+  border-bottom: 2px solid var(--c-ink);
+}
+.og-head .nm { font-size: 38px; color: var(--c-ink); text-transform: uppercase; }
+.og-head .sub { font-size: 12px; color: var(--c-muted); margin-top: 7px; letter-spacing: 0.04em; }
+.og-head .rt { text-align: right; display: flex; align-items: baseline; gap: var(--s-4); }
+.og-head .rt .v { font-size: 40px; color: var(--c-ink); }
+.og-head .rt .k {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--c-dim);
+  display: block;
+  margin-top: 5px;
+}
+.og-head .rt .up { color: var(--c-success); }
+
+.og-sec { display: grid; gap: var(--s-3); }
+.og-sec-h {
+  display: flex;
+  align-items: baseline;
+  gap: var(--s-3);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--c-ink);
+}
+.og-sec-h .ln { flex: 1; height: 1px; background: var(--c-glass-line); }
+.og-sec-h .note { font-size: 11px; font-weight: 600; letter-spacing: 0.04em; color: var(--c-dim); text-transform: none; }
+
+/* Строка «сейчас» — как строка протокола матча, а не карточка */
+.og-now {
+  display: grid;
+  grid-template-columns: auto auto minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: var(--s-4);
+  padding: var(--s-4) var(--s-4) var(--s-4) var(--s-3);
+  border-left: 3px solid var(--c-success);
+  background: var(--c-success-fill);
+  cursor: pointer;
+}
+.og-now .tbl { text-align: center; }
+.og-now .tbl b { display: block; font-size: 38px; color: var(--c-success); }
+.og-now .tbl span { font-size: 9px; font-weight: 800; letter-spacing: 0.18em; color: var(--c-success); }
+.og-now .vs { font-size: 19px; color: var(--c-ink); }
+.og-now .rnd { font-size: 12px; color: var(--c-muted); margin-top: 4px; }
+.og-now .at { font-size: 13px; color: var(--c-muted); font-variant-numeric: tabular-nums; }
+
+/* Таблица — тонкие линейки, шапка прописными, числа вправо */
+.og-tab { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+.og-tab th {
+  text-align: left;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+  color: var(--c-dim);
+  padding: 0 var(--s-3) 7px 0;
+  border-bottom: 1px solid var(--c-glass-line);
+}
+.og-tab td {
+  padding: 11px var(--s-3) 11px 0;
+  border-bottom: 1px solid var(--c-glass-line-soft);
+  color: var(--c-ink);
+  vertical-align: baseline;
+}
+.og-tab tr:last-child td { border-bottom: 0; }
+.og-tab .nm { font-weight: 700; }
+.og-tab .dim { color: var(--c-muted); }
+.og-tab .num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.og-tab .sc { font-size: 17px; }
+.og-tab .sc.win { color: var(--c-success); }
+.og-tab .sc.lose { color: var(--c-danger); }
+.og-tab .up { color: var(--c-success); font-weight: 700; }
+.og-tab .down { color: var(--c-danger); font-weight: 700; }
+.og-tab tbody tr { cursor: pointer; }
+
+.og-notes { display: grid; gap: 0; }
+.og-note {
+  display: grid;
+  grid-template-columns: 96px minmax(0, 1fr);
+  gap: var(--s-4);
+  padding: 10px 0;
+  border-bottom: 1px solid var(--c-glass-line-soft);
+  font-size: 13.5px;
+  cursor: pointer;
+}
+.og-note:last-child { border-bottom: 0; }
+.og-note .at { color: var(--c-dim); font-variant-numeric: tabular-nums; }
+.og-note .nm { color: var(--c-ink); font-weight: 700; }
+.og-note .sub { color: var(--c-muted); margin-top: 3px; }
+
+/* ═══ Вариант Д · «Табло» ═══
+   Плитки разного веса, числа во весь рост, прозы почти нет. Так устроено
+   табло в зале и расписание в аэропорту: с десяти метров читается только
+   число. */
+
+.od { display: grid; grid-template-columns: repeat(6, 1fr); gap: var(--s-3); }
+
+.od-t {
+  position: relative;
+  padding: var(--s-4);
+  background: var(--c-panel);
+  border: 1px solid var(--c-glass-line);
+  border-radius: var(--r-sm);
+  display: grid;
+  align-content: space-between;
+  gap: var(--s-3);
+  min-height: 116px;
+  cursor: pointer;
+}
+.od-t .k {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--c-dim);
+}
+.od-t .v { font-size: 46px; color: var(--c-ink); }
+.od-t .s { font-size: 12px; color: var(--c-muted); }
+
+/* Вызов — плитка во всю ширину и в акценте состояния */
+.od-call {
+  grid-column: span 6;
+  min-height: 156px;
+  grid-template-columns: auto auto minmax(0, 1fr) auto;
+  align-items: center;
+  align-content: center;
+  gap: var(--s-6);
+  background: var(--c-success-fill);
+  border-color: var(--c-success-line-2);
+  border-left: 4px solid var(--c-success);
+  display: grid;
+}
+.od-call .tbl { text-align: center; }
+.od-call .tbl b { display: block; font-size: 92px; color: var(--c-success); }
+.od-call .tbl span { font-size: 12px; font-weight: 800; letter-spacing: 0.24em; color: var(--c-success); }
+.od-call .who { display: grid; gap: 6px; }
+.od-call .who .nm { font-size: 30px; color: var(--c-ink); }
+.od-call .who .sub { font-size: 13px; color: var(--c-muted); }
+.od-call .at { text-align: right; }
+.od-call .at b { display: block; font-size: 40px; color: var(--c-ink); }
+.od-call .at span { font-size: 11px; font-weight: 800; letter-spacing: 0.14em; color: var(--c-dim); }
+
+.od-wide { grid-column: span 3; }
+.od-half { grid-column: span 2; }
+.od-t.big .v { font-size: 64px; }
+.od-t .v.up { color: var(--c-success); }
+
+/* Плитка турнира: даты крупно, название мелко — на табло ищут дату */
+.od-tour { grid-column: span 3; }
+.od-tour .d { font-size: 34px; color: var(--c-ink); }
+.od-tour .nm { font-size: 15px; font-weight: 700; color: var(--c-ink); }
+.od-tour .row { display: flex; align-items: center; justify-content: space-between; gap: var(--s-3); }
+
+/* ═══ Вариант Е · «Моя неделя» ═══
+   Экран отвечает не «что у меня есть», а «что и когда». Ось времени сверху
+   вниз: матч, закрытие приёма, старты, дедлайн взноса — на одной шкале. */
+
+.oe { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: var(--s-5); }
+
+.oe-strip {
+  display: flex;
+  align-items: center;
+  gap: var(--s-5);
+  padding: var(--s-3) var(--s-4);
+  background: var(--c-panel);
+  border: 1px solid var(--c-glass-line);
+  border-radius: var(--r-sm);
+  margin-bottom: var(--s-4);
+  flex-wrap: nowrap;
+  white-space: nowrap;
+}
+.oe-strip .v { font-size: 28px; color: var(--c-ink); }
+.oe-strip .k { font-size: 11px; color: var(--c-dim); letter-spacing: 0.08em; text-transform: uppercase; }
+.oe-strip .up { color: var(--c-success); }
+.oe-strip .grow { flex: 1; }
+
+.oe-axis { display: grid; }
+.oe-day {
+  display: grid;
+  grid-template-columns: 108px 1px minmax(0, 1fr);
+  gap: var(--s-4);
+  align-items: stretch;
+}
+.oe-when { text-align: right; padding: var(--s-4) 0; }
+.oe-when .d { font-size: 26px; color: var(--c-ink); }
+.oe-when .m {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--c-dim);
+  margin-top: 5px;
+}
+.oe-when.now .d { color: var(--c-success); }
+.oe-when.now .m { color: var(--c-success); }
+
+/* Сама ось: линия с точкой у каждого дня */
+.oe-line { position: relative; background: var(--c-glass-line); }
+.oe-line::before {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 28px;
+  width: 11px;
+  height: 11px;
+  margin-left: -5.5px;
+  border-radius: 50%;
+  background: var(--c-panel);
+  border: 2px solid var(--c-dim);
+}
+.oe-day.now .oe-line::before {
+  border-color: var(--c-success);
+  background: var(--c-success);
+  box-shadow: 0 0 0 4px var(--c-success-ring);
+}
+.oe-day.accent .oe-line::before { border-color: var(--c-accent); }
+.oe-day.warn .oe-line::before { border-color: var(--c-warning); }
+.oe-day:first-child .oe-line { margin-top: 18px; }
+.oe-day:last-child .oe-line { margin-bottom: 18px; }
+
+.oe-ev {
+  margin: var(--s-3) 0;
+  padding: var(--s-4);
+  background: var(--c-panel);
+  border: 1px solid var(--c-glass-line);
+  border-radius: var(--r-sm);
+  display: grid;
+  gap: var(--s-3);
+  cursor: pointer;
+}
+.oe-ev.now { background: var(--c-success-fill); border-color: var(--c-success-line-2); }
+.oe-ev.warn { background: var(--c-warning-fill); border-color: var(--c-warning); }
+.oe-ev-top { display: flex; align-items: center; gap: var(--s-3); }
+.oe-ev-top .grow { flex: 1; }
+.oe-ev .nm { font-size: 19px; color: var(--c-ink); }
+.oe-ev .sub { font-size: 12.5px; color: var(--c-muted); margin-top: 4px; }
+.oe-ev-main { display: flex; align-items: center; gap: var(--s-3); }
+.oe-ev-main img { width: 44px; height: 44px; border-radius: 50%; object-fit: cover; flex: none; }
+.oe-ev-main .grow { flex: 1; }
+.oe-ev .tbl { text-align: center; }
+.oe-ev .tbl b { display: block; font-size: 34px; color: var(--c-success); }
+.oe-ev .tbl span { font-size: 9px; font-weight: 800; letter-spacing: 0.18em; color: var(--c-success); }
+
+.oe-side { display: grid; gap: var(--s-4); align-content: start; }
+.oe-side .o14-cover { height: 84px; }
+.oe-res { display: grid; }
+.oe-res-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: var(--s-3);
+  align-items: center;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--c-glass-line-soft);
+}
+.oe-res-row:last-child { border-bottom: 0; }
+.oe-res-row .nm { font-size: 14px; font-weight: 700; color: var(--c-ink); }
+.oe-res-row .sub { font-size: 12px; color: var(--c-muted); margin-top: 2px; }
+.oe-news { display: grid; gap: var(--s-3); }
+.oe-news-card { cursor: pointer; }
+.oe-news-card .tag {
+  position: absolute;
+  left: var(--s-3);
+  bottom: var(--s-3);
+  z-index: 1;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  color: var(--c-on-media);
+  background: color-mix(in srgb, var(--c-accent) 82%, transparent);
+  padding: 3px 7px;
+}
+.oe-news-card .nm { font-size: 14px; font-weight: 700; color: var(--c-ink); margin-top: var(--s-3); }
+.oe-news-card .at { font-size: 11px; color: var(--c-dim); margin-top: 4px; }
