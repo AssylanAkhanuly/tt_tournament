@@ -417,3 +417,153 @@
 .mbt-row .sc { font-size: 18px; }
 .mbt-row .sc.w { color: var(--c-success); }
 .mbt-row .sc.l { color: var(--c-danger); }
+
+/* ═══ Г · «Знак» ═══════════════════════════════════════════════════
+   Не карточка на плоскости, а два плана: цветное поле знака ФНТ и белый лист,
+   который на него наезжает. Плюс лента орнамента со щита — единственная
+   графика, которая у федерации своя. */
+.mbr .mb-body { gap: 0; padding-top: 0; }
+
+.mbr-card {
+  position: relative;
+  overflow: hidden;
+  padding: 16px 18px 56px;
+  color: var(--c-on-media);
+  background: linear-gradient(155deg, var(--c-accent), color-mix(in srgb, var(--c-accent-2) 70%, var(--c-screen-deep)));
+}
+.mbr-card.quiet {
+  background: linear-gradient(155deg, color-mix(in srgb, var(--c-ink) 80%, transparent), color-mix(in srgb, var(--c-ink) 94%, transparent));
+}
+/* Лента орнамента со щита знака ФНТ — на правом краю поля, тихо. */
+/* Лента тихая: крупный шаг, низкая плотность и мягкий уход влево. Первый
+   заход был плотным ковром на полэкрана — узор спорил с числом. */
+.mbr-band {
+  position: absolute;
+  top: -20%;
+  bottom: -20%;
+  right: -12%;
+  width: 48%;
+  background: color-mix(in srgb, var(--c-on-media) 9%, transparent);
+  -webkit-mask:
+    var(--fx-ornament) right center / auto 190% repeat-x,
+    linear-gradient(90deg, transparent, var(--c-on-media) 55%);
+  -webkit-mask-composite: source-in;
+  mask:
+    var(--fx-ornament) right center / auto 190% repeat-x,
+    linear-gradient(90deg, transparent, var(--c-on-media) 55%);
+  mask-composite: intersect;
+  pointer-events: none;
+}
+.mbr-in { position: relative; }
+
+.mbr-top { display: flex; align-items: baseline; justify-content: space-between; }
+.mbr-state {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.24em;
+  color: var(--c-on-media-2);
+  text-transform: uppercase;
+}
+.mbr-time { font-size: 22px; color: var(--c-on-media); }
+
+/* Ритм: 108 — число, 22 — фамилия, 11 — служебное. Между ними пусто. */
+.mbr-num { font-size: 96px; line-height: 0.78; letter-spacing: -0.04em; margin-top: 4px; }
+.mbr-k {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.34em;
+  color: var(--c-on-media-2);
+  text-transform: uppercase;
+}
+.mbr-vs {
+  margin-top: 14px;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.24em;
+  color: var(--c-on-media-2);
+  text-transform: uppercase;
+}
+.mbr-foe { font-size: 22px; margin-top: 2px; }
+.mbr-round { font-size: 12px; color: var(--c-on-media-2); margin-top: 2px; }
+
+/* Точки — вертикальным столбиком у правого края поля: внизу их накрывала бы
+   кнопка, а сверху они спорили бы со временем. */
+.mbr .mb-body { position: relative; }
+.mbr .mb-dots {
+  position: absolute;
+  top: 58px;
+  right: 18px;
+  z-index: 3;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+}
+.mbr .mb-dot { background: color-mix(in srgb, var(--c-on-media) 40%, transparent); }
+.mbr .mb-dot.on { background: var(--c-on-media); }
+
+/* Белый лист наезжает на поле — глубина без единой тени. */
+/* z-index: у контейнера Swiper в его собственных стилях стоит z-index: 1,
+   поэтому лист с кнопкой уходил под карусель и от кнопки оставалась зелёная
+   полоска. */
+.mbr-sheet {
+  position: relative;
+  z-index: 2;
+  margin-top: -14px;
+  padding: 0 0 6px;
+  background: var(--c-panel);
+}
+/* Действие лежит ровно на границе двух планов. */
+.mbr-go {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: calc(100% - 32px);
+  margin: -22px 16px 14px;
+  padding: 15px;
+  font: inherit;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--c-on-media);
+  background: var(--c-success);
+  border: 0;
+  border-radius: var(--r-sm);
+  box-shadow: var(--sh-success);
+  cursor: pointer;
+}
+
+.mbr-rail { display: flex; gap: 26px; padding: 2px 18px 10px; }
+.mbr-rail > div { display: grid; gap: 0; }
+.mbr-rail b { font-size: 22px; color: var(--c-ink); }
+.mbr-rail b.up { color: var(--c-success-light); }
+.mbr-rail span { font-size: 10px; letter-spacing: 0.1em; color: var(--c-muted); text-transform: uppercase; }
+
+.mbr-sec {
+  padding: 0 18px 4px;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.22em;
+  color: var(--c-muted);
+  text-transform: uppercase;
+}
+/* Остальные матчи дня — строки с номером стола вместо иконки. */
+.mbr-row { display: flex; align-items: center; gap: 14px; padding: 9px 18px; }
+.mbr-row + .mbr-row { border-top: 1px solid var(--c-glass-line); }
+.mbr-row .t {
+  flex: none;
+  width: 34px;
+  font-size: 26px;
+  text-align: center;
+  color: var(--c-accent);
+}
+.mbr-row .tx { flex: 1; min-width: 0; display: grid; }
+.mbr-row .nm {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--c-ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.mbr-row .ss { font-size: 11px; color: var(--c-muted); }
+.mbr-row .tm { flex: none; font-size: 15px; color: var(--c-muted); }

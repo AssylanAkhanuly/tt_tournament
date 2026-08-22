@@ -332,3 +332,92 @@ export function MobileType() {
     </div>
   );
 }
+
+/* ═══ Г · «Знак» ════════════════════════════════════════════════════
+   Собрано заново, а не докручено: три предыдущих облика — это карточка на
+   плоскости, и меняли мы у них цвет карточки. Здесь меняется устройство
+   экрана.
+
+   Три вещи, которых не было ни в одном из трёх:
+
+   1. У экрана появилась ПРИНАДЛЕЖНОСТЬ. Верх — поле фирменного градиента от
+      синего знака к голубому флага, а поверх него лента орнамента со щита ФНТ
+      (`--fx-ornament`, тот же файл, что в фоне десктопа). Это единственная
+      графика, которая у федерации своя, и до сих пор она нигде не работала.
+   2. Появилась ГЛУБИНА без теней и фотографий: белый лист наезжает на цветное
+      поле и режет его — два плана вместо одного.
+   3. Появился РИТМ: число — 108, фамилия — 22, служебное — 11. Между ними
+      пусто, и пустота работает вместо линеек.
+
+   Фотографий по-прежнему нет — решение «фона-картинки нет» держится. */
+function CardBrand(m: Match) {
+  const quiet = m.state === 'later';
+  return (
+    <div className={'mbr-card' + (quiet ? ' quiet' : '')} data-to="Э14.5">
+      <div className="mbr-band" />
+      <div className="mbr-in">
+        <div className="mbr-top">
+          <span className="mbr-state">{m.pill}</span>
+          <span className="mbr-time o14-disp">{m.time}</span>
+        </div>
+
+        <div className="mbr-num o14-disp">{m.table}</div>
+        <div className="mbr-k">стол</div>
+
+        <div className="mbr-vs">против</div>
+        <div className="mbr-foe o14-disp">{m.foe ?? 'соперник после жеребьёвки'}</div>
+        <div className="mbr-round">{m.round}</div>
+      </div>
+    </div>
+  );
+}
+
+export function MobileBrand() {
+  return (
+    <div className="mb-wrap mbr">
+      <Frame>
+        <Chrome>
+          <div className="mb-body">
+            <Deck id="mbr-dots" card={CardBrand} />
+
+            {/* Лист наезжает на цветное поле: два плана вместо одного, и
+                действие лежит ровно на границе — там, где на него смотрят. */}
+            <div className="mbr-sheet">
+              <button type="button" className="mbr-go" data-to="Э14.5">
+                Открыть матч <ArrowRight size={17} />
+              </button>
+
+              <div className="mbr-rail">
+                <div>
+                  <b className="o14-disp">2456</b>
+                  <span>рейтинг</span>
+                </div>
+                <div>
+                  <b className="o14-disp">7</b>
+                  <span>место в РК</span>
+                </div>
+                <div>
+                  <b className="o14-disp up">+24</b>
+                  <span>за турнир</span>
+                </div>
+              </div>
+
+              <div className="mbr-sec">Дальше сегодня</div>
+              {DAY.slice(1).map((m) => (
+                <div className="mbr-row" key={m.round} data-to="Э14.5">
+                  <span className="t o14-disp">{m.table}</span>
+                  <span className="tx">
+                    <span className="nm">{m.foe ?? 'соперник после жеребьёвки'}</span>
+                    <span className="ss">{m.round}</span>
+                  </span>
+                  <span className="tm o14-disp">{m.time}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </Chrome>
+        <MiniTabBar items={NAV} active="Главная" />
+      </Frame>
+    </div>
+  );
+}

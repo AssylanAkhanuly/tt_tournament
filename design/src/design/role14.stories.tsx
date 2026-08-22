@@ -19,7 +19,7 @@ import { HomeL, HomeM, HomeN, HomeO, HomeP } from './role14home4';
 import { HeroBg, HeroNoCover } from './role14hero';
 import { HeroRef1, HeroRef2, HeroRef3, HeroWtt } from './role14heroref';
 import { HeroSwiper, HeroSwiperBrowser, HeroSwiperPhone } from './role14heroswiper';
-import { MobileColor, MobileDark, MobileType } from './role14mobile';
+import { MobileBrand, MobileColor, MobileDark, MobileType } from './role14mobile';
 import wttTicker from '../assets/refs/wtt-ticker.jpg';
 
 export default {
@@ -953,3 +953,7 @@ export const AMobile = {
 export const MobileA = { name: 'Мобильный А · Тёмное табло', render: () => <MobileDark /> };
 export const MobileB = { name: 'Мобильный Б · Цветной блок', render: () => <MobileColor /> };
 export const MobileV = { name: 'Мобильный В · Крупная типографика', render: () => <MobileType /> };
+
+/* Собран заново, а не докручен: у трёх предыдущих обликов менялся цвет
+   карточки, здесь меняется устройство экрана — два плана и своя графика. */
+export const MobileG = { name: 'Мобильный Г · Знак', render: () => <MobileBrand /> };
