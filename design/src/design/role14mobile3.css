@@ -1,0 +1,106 @@
+/* Э14.1 → Э14.5 · два состояния в облике Г. Разбор — в role14mobile3.tsx.
+   Поле, лист, строки и полосы берутся из `role14mobile.css` (`mbr-*`): это тот
+   же облик, а не новый — меняется только содержание поля. */
+
+/* ── Главная без вызова: межсезонье ────────────────────────────────
+   Поле графитовое, а не синее: синее поле в этой системе означает «сейчас
+   играем», и в межсезонье оно врало бы. */
+.m3o .mbr-card.quiet {
+  background: linear-gradient(
+    155deg,
+    color-mix(in srgb, var(--c-ink) 82%, transparent),
+    color-mix(in srgb, var(--c-ink) 96%, transparent)
+  );
+}
+/* Кнопка синяя: зелёное значит «идите к столу», а идти некуда. */
+.m3o-go { color: var(--c-accent-ink); background: var(--c-accent); box-shadow: var(--sh-accent); }
+.m3o-sc { flex: none; font-size: 16px; }
+.m3o-sc.w { color: var(--c-success-light); }
+.m3o-sc.l { color: var(--c-danger); }
+
+/* ── Э14.5 · мой матч ──────────────────────────────────────────────
+   Поле красное: тот же цвет эфира, которым помечен идущий матч у судьи. */
+.m3m .mbr-card {
+  background: linear-gradient(
+    155deg,
+    color-mix(in srgb, var(--c-broadcast) 88%, var(--c-screen-deep)),
+    color-mix(in srgb, var(--c-broadcast-2) 70%, var(--c-screen-deep))
+  );
+}
+.m3m-live { color: var(--c-on-media); }
+
+/* Счёт: фамилия, партии крупно, геймы строкой. Колонки общие у обеих строк —
+   числа сравниваются столбцом, а не на глаз. */
+.m3m-score { display: grid; gap: 4px; margin: 10px 0 12px; }
+.m3m-side {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 38px 124px;
+  align-items: baseline;
+  gap: 10px;
+}
+.m3m-side .nm {
+  font-size: 19px;
+  color: var(--c-on-media);
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.m3m-side .s { font-size: 34px; text-align: right; color: var(--c-on-media-2); }
+.m3m-side .s.lead { color: var(--c-on-media); }
+.m3m-side .g { display: flex; justify-content: flex-end; gap: 10px; }
+.m3m-side .g i {
+  font-size: 15px;
+  font-style: normal;
+  min-width: 18px;
+  text-align: right;
+  color: var(--c-on-media-2);
+}
+
+/* Вкладки экрана: те же четыре, что на десктопе. */
+.m3m-tabs { display: flex; gap: 16px; padding: 12px 18px 0; overflow: hidden; }
+.m3m-tabs span {
+  padding-bottom: 8px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--c-muted);
+  white-space: nowrap;
+  cursor: pointer;
+}
+.m3m-tabs span.on { color: var(--c-ink); box-shadow: inset 0 -2px 0 var(--c-broadcast); }
+
+/* Подпись про судью: спортсмен здесь только смотрит. */
+.m3m-note {
+  margin: 8px 18px 2px;
+  padding: 8px 10px;
+  font-size: 11px;
+  line-height: 1.35;
+  color: var(--c-muted);
+  background: color-mix(in srgb, var(--c-ink) 5%, transparent);
+}
+
+.m3m-h2h { flex: none; font-size: 18px; color: var(--c-ink); }
+
+.m3m-path { display: flex; align-items: center; gap: 12px; padding: 7px 18px; }
+.m3m-path + .m3m-path { border-top: 1px solid var(--c-glass-line); }
+.m3m-path .r { flex: none; width: 38px; font-size: 15px; color: var(--c-muted); }
+.m3m-path .nm { flex: 1; min-width: 0; font-size: 14px; color: var(--c-ink); }
+.m3m-path .sc { flex: none; font-size: 15px; color: var(--c-muted); }
+.m3m-path.now .nm { font-weight: 800; }
+.m3m-path.now .sc { color: var(--c-broadcast); }
+
+.m3m-full {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin: 10px 18px 0;
+  padding: 11px;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--c-ink);
+  background: transparent;
+  border: 1px solid var(--c-glass-line);
+  cursor: pointer;
+}

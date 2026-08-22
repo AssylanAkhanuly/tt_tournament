@@ -24,6 +24,7 @@ import {
   MobileBracket, MobileClock, MobileSheet, MobileStory, MobileTable, MobileTalk, MobileTicket,
   MobileTiles,
 } from './role14mobile2';
+import { MobileMatch, MobileOff } from './role14mobile3';
 import wttTicker from '../assets/refs/wtt-ticker.jpg';
 
 export default {
@@ -1134,3 +1135,7 @@ export const AMobileMore = {
     </OptionBoard>
   ),
 };
+
+/* ── Что дальше: куда ведёт кнопка и что без вызова ──────────────────*/
+export const MobileMatchScreen = { name: 'Мобильный · Э14.5 — по кнопке «Открыть матч»', render: () => <MobileMatch /> };
+export const MobileOffScreen = { name: 'Мобильный · главная, когда не вызывали', render: () => <MobileOff /> };
