@@ -1,66 +1,184 @@
-/* Э14.1 · герой-карусель. Разбор — в role14heroswiper.tsx.
+/* Э14.1 · герой-карусель, минималистичный. Разбор — в role14heroswiper.tsx.
 
-   Карточка слайда берётся целиком из переноса WTT (`.ohw-*` в
-   role14heroref.css) — карусель меняет не вид карточки, а то, сколько их
-   помещается в блок. Здесь только оболочка: заголовок с счётчиком, свои
-   стрелки и точки. */
+   В карточке осталось только то, без чего человек не дойдёт до стола:
+   состояние, стол, круг, соперник, время, одно действие. Ни названия турнира,
+   ни зала, ни клубов, ни рейтингов, ни формы — это разбор перед матчем, он
+   живёт на Э14.6.
 
-.ohs { display: grid; gap: 10px; }
+   Классы с префиксами `ohs-` (оболочка), `ocw-` (карточка веба) и `ocp-`
+   (карточка телефона): короткие имена ловят чужие правила из общих стилей. */
 
+.ohs { display: grid; gap: 8px; }
 .ohs-head { display: flex; align-items: center; justify-content: space-between; gap: var(--s-4); }
-.ohs-nav { display: flex; gap: 6px; }
+.ohs-nav { display: flex; align-items: center; gap: 6px; }
 
 /* Стрелки свои, а не штатные Swiper: у тех своя форма, свой цвет и скруглённый
    угол — мимо токенов и правила «углы интерфейса прямые». */
 .ohs-arrow {
   display: grid;
   place-items: center;
-  width: 30px;
-  height: 30px;
+  width: 26px;
+  height: 26px;
   padding: 0;
   color: var(--c-muted);
-  background: var(--c-panel);
+  background: transparent;
   border: 1px solid var(--c-glass-line);
   border-radius: var(--r-xs);
   cursor: pointer;
 }
 .ohs-arrow:hover { color: var(--c-ink); border-color: var(--c-accent-line-3); }
-/* Крайний слайд: Swiper сам вешает этот класс — кнопка гаснет, а не исчезает,
-   иначе соседняя прыгает на её место. */
-.ohs-arrow.swiper-button-disabled { opacity: 0.4; cursor: default; }
+/* Крайний слайд: кнопка гаснет, а не исчезает, иначе соседняя прыгает. */
+.ohs-arrow.swiper-button-disabled { opacity: 0.35; cursor: default; }
 
-/* Слайд занимает всю ширину блока: карусель здесь не витрина карточек, а
-   переключатель между матчами одного дня — за краем не должно висеть
-   «половинки» следующего, иначе она читается как часть текущего матча. */
-.ohw--slide { height: 100%; min-height: 132px; }
-/* Матч, до которого ещё далеко: грань слева тоже тише — зелёная означает
-   «идите к столу», а идти пока некуда. */
-.ohw--quiet { border-left-color: var(--c-glass-line); }
-.ohs .swiper { width: 100%; }
-.ohs .swiper-slide { height: auto; }
-
-/* Точки: сколько матчей и где я сейчас. Круглые — точка круглая по сути, под
-   правило «углы прямые» не попадает. */
-.ohs-dots { display: flex; justify-content: center; gap: 7px; }
+/* Точки — рядом со стрелками, а не отдельной строкой: одна строка вместо двух. */
+.ohs-dots { display: flex; align-items: center; gap: 6px; margin-left: 6px; }
 .ohs-dot {
-  width: 7px;
-  height: 7px;
+  width: 6px;
+  height: 6px;
   border-radius: 50%;
-  background: color-mix(in srgb, var(--c-ink) 20%, transparent);
+  background: color-mix(in srgb, var(--c-ink) 22%, transparent);
   cursor: pointer;
 }
 .ohs-dot.on { background: var(--c-success); }
 
-/* Матч, который сегодня, но ещё не скоро: то же место, тише голос. */
-.ohw-pill.quiet {
-  color: var(--c-muted);
-  background: color-mix(in srgb, var(--c-ink) 7%, transparent);
-}
-.ohw-go.quiet {
-  color: var(--c-ink);
-  background: transparent;
+.ohs .swiper { width: 100%; }
+.ohs .swiper-slide { height: auto; }
+
+/* ── Карточка веба ─────────────────────────────────────────────────*/
+.ocw {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--s-5);
+  height: 100%;
+  min-height: 104px;
+  padding: 14px 18px;
+  background: var(--c-panel);
   border: 1px solid var(--c-glass-line);
+  border-left: 4px solid var(--c-success);
+  border-radius: var(--r-md);
+  box-shadow: var(--sh-panel);
 }
-/* Соперника ещё нет — строка остаётся на месте, чтобы карточки в карусели не
-   прыгали по высоте. */
-.ohw-tbd { font-size: 13px; font-style: italic; color: var(--c-muted); white-space: nowrap; }
+/* Матч, до которого ещё далеко: грань тише — зелёная значит «идите к столу». */
+.ocw.quiet { border-left-color: var(--c-glass-line); }
+.ocw-l { display: grid; gap: 8px; min-width: 0; }
+
+.ocw-head { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.ocw-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 3px 9px;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  color: var(--c-success);
+  background: var(--c-success-soft);
+  border-radius: var(--r-xs);
+  white-space: nowrap;
+}
+.ocw-pill.quiet { color: var(--c-muted); background: color-mix(in srgb, var(--c-ink) 7%, transparent); }
+.ocw-dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+
+/* Стол и круг — одной строкой, номер стола дисплейной гарнитурой: это
+   единственное число, которое здесь важно. */
+.ocw-meta { display: inline-flex; align-items: baseline; gap: 7px; font-size: 13px; color: var(--c-muted); }
+.ocw-meta b { font-size: 22px; color: var(--c-ink); }
+.ocw-sep { color: var(--c-glass-line); }
+
+.ocw-rows { display: grid; gap: 1px; }
+.ocw-row { display: grid; grid-template-columns: 20px minmax(0, 1fr); align-items: center; gap: 8px; }
+/* Галочка у того, кого вызвали: цветом одним это не показать на печати. */
+.ocw-tick { display: grid; place-items: center; color: var(--c-success); }
+.ocw-nm { font-size: 19px; color: var(--c-ink); }
+.ocw-row + .ocw-row .ocw-nm { color: var(--c-muted); }
+.ocw-nm.tbd { font-size: 14px; font-style: italic; }
+
+.ocw-act { display: grid; justify-items: end; gap: 8px; }
+.ocw-time { font-size: 26px; color: var(--c-ink); }
+.ocw-go {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 9px 16px;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--c-success-ink);
+  background: var(--c-success);
+  border: 0;
+  border-radius: var(--r-sm);
+  cursor: pointer;
+  white-space: nowrap;
+}
+.ocw-go.quiet { color: var(--c-ink); background: transparent; border: 1px solid var(--c-glass-line); }
+
+/* ── Телефон ───────────────────────────────────────────────────────
+   Другая раскладка, а не та же карточка в узкой колонке: первым читается
+   номер стола, действие — во всю ширину под палец. */
+.ocp-wrap { display: grid; justify-items: center; padding: var(--s-5) 0; }
+/* `minmax(0, 1fr)` и `min-width: 0` обязательны: у элемента грид-сетки
+   минимальная ширина по умолчанию равна ширине содержимого, и карусель внутри
+   телефона вылезала за экран вместе с кнопкой. */
+.ocp-body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-content: start;
+  gap: var(--s-3);
+  padding: var(--s-4) var(--s-4) 96px;
+}
+.ocp-body .swiper { width: 100%; min-width: 0; }
+.ocp-body .swiper-slide { min-width: 0; }
+
+.ocp-top { display: flex; align-items: baseline; justify-content: space-between; gap: var(--s-3); }
+.ocp-top .nm { font-size: 17px; font-weight: 800; color: var(--c-ink); }
+.ocp-top .rt { font-size: 20px; color: var(--c-ink); }
+
+.ocp {
+  display: grid;
+  gap: 6px;
+  padding: 14px;
+  background: var(--c-panel);
+  border: 1px solid var(--c-glass-line);
+  border-left: 4px solid var(--c-success);
+  border-radius: var(--r-md);
+}
+.ocp.quiet { border-left-color: var(--c-glass-line); }
+.ocp-head { display: flex; align-items: center; justify-content: space-between; gap: var(--s-3); }
+.ocp-time { font-size: 22px; color: var(--c-ink); }
+
+/* Номер стола — самое крупное на экране: человек стоит в зале и ищет стол. */
+.ocp-table { display: flex; align-items: baseline; gap: 8px; }
+.ocp-table b { font-size: 62px; line-height: 0.85; color: var(--c-success); }
+.ocp-table span {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.22em;
+  color: var(--c-success);
+  text-transform: uppercase;
+}
+.ocp.quiet .ocp-table b,
+.ocp.quiet .ocp-table span { color: var(--c-muted); }
+
+.ocp-foe { font-size: 19px; color: var(--c-ink); }
+.ocp-round { font-size: 12px; color: var(--c-muted); }
+
+.ocp-go {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 6px;
+  padding: 13px 16px;
+  font: inherit;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--c-success-ink);
+  background: var(--c-success);
+  border: 0;
+  border-radius: var(--r-sm);
+  cursor: pointer;
+}
+.ocp-go.quiet { color: var(--c-ink); background: transparent; border: 1px solid var(--c-glass-line); }
+
+.ocp-dots { display: flex; justify-content: center; gap: 7px; }

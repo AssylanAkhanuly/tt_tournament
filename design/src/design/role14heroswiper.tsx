@@ -1,161 +1,122 @@
-/* Э14.1 · герой А как карусель — «через Swiper».
+/* Э14.1 · герой А как карусель — «через Swiper», минималистичный.
 
-   У референса (бегущая строка матчей worldtabletennis.com) карточки не стоят
-   по одной: это карусель со стрелками по краям, и матчи в ней листаются. Мы
-   перенесли карточку, но не сам приём — а он у WTT и есть главный: одна
-   карточка не вмещает турнир, поэтому её листают.
+   Приём взят у референса (бегущая строка матчей worldtabletennis.com): у них
+   карточки не стоят по одной, их листают, потому что турнир в одну карточку не
+   помещается. У спортсмена то же в меньшем масштабе — в турнирный день бывает
+   одиночный разряд, парный и микст: разные столы, разное время.
 
-   Что листать у нас. У спортсмена в один день бывает не один матч: одиночный
-   разряд, парный, микст — все три идут в один день на разных столах и в разное
-   время (TZ §5, разряды турнира). Прежний герой показывал ровно один матч и
-   молчал об остальных: человек узнавал о паре, когда его звали к столу.
+   Первый заход был перегружен: в карточке стояли название турнира, зал, город
+   и клуб обоих игроков, оба рейтинга, форма, личные встречи и подпись под
+   временем. Здесь оставлено только то, без чего человек не дойдёт до стола:
 
-   Карточка слайда — та же `.ohw-*`, что в переносе WTT: карусель меняет не
-   вид карточки, а то, сколько их помещается в блок.
+     состояние · стол · круг · кто соперник · когда · одно действие.
 
-   Swiper 14, модули Navigation и Pagination. Стрелки нарисованы своими
-   кнопками (у Swiper свои — с их собственной формой и цветом, а у нас углы
-   прямые и цвет только токенами). */
+   Что убрано и почему: название турнира — человек на турнире один, он знает,
+   на каком; зал — тоже (⚠ находка из референса «место и стол одной строкой»
+   минимализмом съедена, и если зал нужен, он вернётся строкой под столом);
+   регион и клуб, рейтинги, форма и личные встречи — это разбор перед матчем,
+   он живёт на Э14.6, а не в строке вызова.
+
+   Мобильная версия — не та же карточка в узкой колонке, а своя раскладка:
+   номер стола крупно, соперник под ним, действие во всю ширину, листание
+   пальцем и точки вместо стрелок. */
 
 import { useRef } from 'react';
 import { Swiper, SwiperSlide } from 'swiper/react';
 import { Navigation, Pagination } from 'swiper/modules';
 import type { Swiper as SwiperClass } from 'swiper';
 import { Check, ChevronLeft, ChevronRight, Play } from 'lucide-react';
+import { Frame, TabBar } from '../PlayerApp';
 import 'swiper/css';
 import 'swiper/css/navigation';
 import 'swiper/css/pagination';
-import './role14heroref.css';
 import './role14heroswiper.css';
 
 type Match = {
-  /** Разряд и круг — первая строка карточки, как у референса. */
+  /** Круг и разряд — одной короткой строкой. */
   round: string;
-  hall: string;
   table: string;
-  state: 'called' | 'live' | 'soon' | 'later';
-  /** Подпись состояния в пилюле. */
+  state: 'called' | 'soon' | 'later';
   pill: string;
   time: string;
-  timeKey: string;
   action: string;
-  me: { org: string; last: string; first: string };
-  foe: { org: string; last: string; first: string } | null;
-  /** Счёт по геймам — только у идущего матча. */
-  games?: [number, number][];
-  sets?: [number, number];
-  /** Что в правой колонке, когда счёта ещё нет. */
-  meRight?: string;
-  foeRight?: string;
+  me: string;
+  /** Соперника может ещё не быть: в группе микста пары сводят после жеребьёвки. */
+  foe: string | null;
 };
 
-/* Один турнирный день спортсмена: три разряда, три стола, три времени.
-   Данные выдуманные, но правдоподобные — как и везде в макетах роли. */
+/* Турнирный день спортсмена: три разряда, три стола, три времени. Данные
+   выдуманные, но правдоподобные — как и везде в макетах роли. */
 const DAY: Match[] = [
   {
-    round: '1/8 финала · одиночный разряд',
-    hall: 'Дворец спорта «Балуан Шолак»',
-    table: 'Стол 5',
+    round: '1/8 финала · одиночный',
+    table: '5',
     state: 'called',
     pill: 'ВАС ВЫЗВАЛИ',
     time: '14:20',
-    timeKey: 'начало',
     action: 'Открыть матч',
-    me: { org: 'Астана · СКА', last: 'КИМ', first: 'Георгий' },
-    foe: { org: 'Шымкент · посев 13', last: 'ЖУМАБЕКОВ', first: 'Расул' },
-    meRight: '2456',
-    foeRight: '2312',
+    me: 'Ким Георгий',
+    foe: 'Жумабеков Расул',
   },
   {
-    round: '1/4 финала · парный разряд',
-    hall: 'Дворец спорта «Балуан Шолак»',
-    table: 'Стол 3',
+    round: '1/4 финала · парный',
+    table: '3',
     state: 'soon',
     pill: 'ВЫ СЛЕДУЮЩИЕ',
     time: '16:40',
-    timeKey: 'ориентировочно',
     action: 'Открыть матч',
-    me: { org: 'Астана · СКА', last: 'КИМ', first: 'Г. / Оралбек Д.' },
-    foe: { org: 'Караганда · посев 4', last: 'СМАГУЛОВ', first: 'Е. / Тлеуберди А.' },
-    meRight: '2456',
-    foeRight: '2390',
+    me: 'Ким / Оралбек',
+    foe: 'Смагулов / Тлеуберди',
   },
   {
     round: 'Группа B · микст',
-    hall: 'Дворец спорта «Балуан Шолак»',
-    table: 'Стол 7',
+    table: '7',
     state: 'later',
     pill: 'СЕГОДНЯ ПОЗЖЕ',
     time: '18:10',
-    timeKey: 'по расписанию',
     action: 'Мой турнир',
-    me: { org: 'Астана · СКА', last: 'КИМ', first: 'Г. / Абаева Д.' },
+    me: 'Ким / Абаева',
     foe: null,
-    meRight: '2456',
   },
 ];
 
-function MatchCard({ m }: { m: Match }) {
-  const live = m.state === 'live';
+/* ── Карточка для веба ──────────────────────────────────────────────
+   Три строки: состояние и стол, я, соперник. Справа время и действие. */
+function CardWeb({ m }: { m: Match }) {
+  const quiet = m.state === 'later';
   return (
-    <div className={'ohw ohw--slide' + (live ? ' ohw--live' : '') + (m.state === 'later' ? ' ohw--quiet' : '')} data-to="Э14.5">
-      <div className="ohw-card">
-        <div className="ohw-head">
-          <div className="ohw-round">{m.round}</div>
-          <span className={'ohw-pill' + (live ? ' live' : '') + (m.state === 'later' ? ' quiet' : '')}>
-            <span className="ohw-dot" />
+    <div className={'ocw' + (quiet ? ' quiet' : '')} data-to="Э14.5">
+      <div className="ocw-l">
+        <div className="ocw-head">
+          <span className={'ocw-pill' + (quiet ? ' quiet' : '')}>
+            <span className="ocw-dot" />
             {m.pill}
+          </span>
+          <span className="ocw-meta">
+            Стол <b className="o14-disp">{m.table}</b>
+            <span className="ocw-sep">·</span>
+            {m.round}
           </span>
         </div>
 
-        <div className="ohw-place">
-          Кубок Алматы 2026 <span className="ohw-bar" /> {m.hall} <span className="ohw-bar" /> {m.table}
-        </div>
-
-        <div className="ohw-rows">
-          <div className={'ohw-row' + (m.state !== 'later' ? ' lead' : '')}>
-            <span className="ohw-tick">
-              {m.state === 'called' || live ? <Check size={15} strokeWidth={3} /> : null}
-            </span>
-            <span className="ohw-org">{m.me.org}</span>
-            <span className="ohw-nm">
-              <b>{m.me.last}</b> {m.me.first}
-            </span>
-            <span className="ohw-sets o14-disp quiet">{m.meRight}</span>
-            <span className="ohw-games" />
+        <div className="ocw-rows">
+          <div className="ocw-row">
+            <span className="ocw-tick">{m.state === 'called' && <Check size={14} strokeWidth={3} />}</span>
+            <span className="ocw-nm o14-disp">{m.me}</span>
           </div>
-
-          {/* Соперник известен не всегда: в группе микста пары сводят после
-              жеребьёвки разряда. Строка остаётся — уезжает только содержимое,
-              иначе карточки в карусели прыгали бы по высоте. */}
-          <div className="ohw-row">
-            <span className="ohw-tick" />
-            {m.foe ? (
-              <>
-                <span className="ohw-org">{m.foe.org}</span>
-                <span className="ohw-nm">
-                  <b>{m.foe.last}</b> {m.foe.first}
-                </span>
-                <span className="ohw-sets o14-disp quiet">{m.foeRight}</span>
-                <span className="ohw-games" />
-              </>
-            ) : (
-              <>
-                <span className="ohw-org" />
-                <span className="ohw-nm ohw-tbd">соперник определится после жеребьёвки</span>
-                <span className="ohw-sets o14-disp quiet" />
-                <span className="ohw-games" />
-              </>
-            )}
+          <div className="ocw-row">
+            <span className="ocw-tick" />
+            <span className={'ocw-nm o14-disp' + (m.foe ? '' : ' tbd')}>
+              {m.foe ?? 'соперник после жеребьёвки'}
+            </span>
           </div>
         </div>
       </div>
 
-      <div className="ohw-tail">
-        <div className="ohw-time o14-disp">{m.time}</div>
-        <div className="ohw-time-k">{m.timeKey}</div>
-        <button type="button" className={'ohw-go' + (m.state === 'later' ? ' quiet' : '')} data-to="Э14.5">
-          <Play size={15} /> {m.action}
+      <div className="ocw-act">
+        <div className="ocw-time o14-disp">{m.time}</div>
+        <button type="button" className={'ocw-go' + (quiet ? ' quiet' : '')} data-to="Э14.5">
+          <Play size={14} /> {m.action}
         </button>
       </div>
     </div>
@@ -169,14 +130,15 @@ export function HeroSwiper() {
   return (
     <div className="ohs">
       <div className="ohs-head">
-        <span className="o14-eyebrow">Мои матчи сегодня · 3</span>
+        <span className="o14-eyebrow">Сегодня · 3 матча</span>
         <div className="ohs-nav">
           <button type="button" className="ohs-arrow" ref={prev} aria-label="Предыдущий матч">
-            <ChevronLeft size={17} />
+            <ChevronLeft size={16} />
           </button>
           <button type="button" className="ohs-arrow" ref={next} aria-label="Следующий матч">
-            <ChevronRight size={17} />
+            <ChevronRight size={16} />
           </button>
+          <div className="ohs-dots" />
         </div>
       </div>
 
@@ -197,12 +159,76 @@ export function HeroSwiper() {
       >
         {DAY.map((m) => (
           <SwiperSlide key={m.round}>
-            <MatchCard m={m} />
+            <CardWeb m={m} />
           </SwiperSlide>
         ))}
       </Swiper>
+    </div>
+  );
+}
 
-      <div className="ohs-dots" />
+/* ── Мобильная карточка ─────────────────────────────────────────────
+   Не веб-карточка в узкой колонке: на телефоне человек стоит в зале, и первым
+   должен читаться номер стола. Дальше соперник, время и одно действие во всю
+   ширину — под палец, а не под курсор. */
+function CardPhone({ m }: { m: Match }) {
+  const quiet = m.state === 'later';
+  return (
+    <div className={'ocp' + (quiet ? ' quiet' : '')} data-to="Э14.5">
+      <div className="ocp-head">
+        <span className={'ocw-pill' + (quiet ? ' quiet' : '')}>
+          <span className="ocw-dot" />
+          {m.pill}
+        </span>
+        <span className="ocp-time o14-disp">{m.time}</span>
+      </div>
+
+      <div className="ocp-table">
+        <b className="o14-disp">{m.table}</b>
+        <span>стол</span>
+      </div>
+
+      <div className="ocp-foe o14-disp">{m.foe ?? 'соперник после жеребьёвки'}</div>
+      <div className="ocp-round">{m.round}</div>
+
+      <button type="button" className={'ocp-go' + (quiet ? ' quiet' : '')} data-to="Э14.5">
+        <Play size={15} /> {m.action}
+      </button>
+    </div>
+  );
+}
+
+export function HeroSwiperPhone() {
+  return (
+    <div className="ocp-wrap">
+      <Frame>
+        <div className="ocp-body">
+          <div className="ocp-top">
+            <div className="nm">Ким Георгий</div>
+            <div className="rt o14-disp">2456</div>
+          </div>
+
+          <div className="o14-eyebrow">Сегодня · 3 матча</div>
+
+          {/* На телефоне стрелок нет: карточку листают пальцем, а точки под
+              карточкой отвечают на «сколько их всего и где я». */}
+          <Swiper
+            modules={[Pagination]}
+            slidesPerView={1}
+            spaceBetween={12}
+            speed={420}
+            pagination={{ el: '.ocp-dots', clickable: true, bulletClass: 'ohs-dot', bulletActiveClass: 'on' }}
+          >
+            {DAY.map((m) => (
+              <SwiperSlide key={m.round}>
+                <CardPhone m={m} />
+              </SwiperSlide>
+            ))}
+          </Swiper>
+          <div className="ocp-dots" />
+        </div>
+        <TabBar active="home" />
+      </Frame>
     </div>
   );
 }
