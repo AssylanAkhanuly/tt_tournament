@@ -711,3 +711,71 @@
   color: var(--c-muted);
   background: color-mix(in srgb, var(--c-ink) 5%, transparent);
 }
+
+/* ═══ Типографика рабочего экрана ══════════════════════════════════
+   Правило от 22.08.2026, по замечанию «шрифты странно выглядят». Разнобой был
+   в трёх местах сразу: узкая дисплейная гарнитура стояла и на мелком тексте
+   (там она читается сжатой и чужой), кеглей было десять подряд без шага, а
+   трекинг у мелких прописных гулял от 0.1 до 0.28em.
+
+     ГАРНИТУРЫ — две, и граница между ними по кеглю:
+       `--font-brand` (узкая дисплейная) — только от 24 px: название турнира,
+       рейтинг, номер стола в списке, счёт по партиям. Крупное и только числа
+       или короткие имена.
+       обычный гротеск — всё остальное, включая строку расписания и время в
+       списках. Числа в строках — с табличными цифрами, чтобы столбцы сходились.
+
+     ШКАЛА — шесть ступеней вместо десяти: 34 / 24 / 20 / 16 / 13 / 11.
+
+     НАЧЕРТАНИЯ — три: 400 обычный текст, 600 акцентированная строка,
+       800 мелкие прописные и дисплейное.
+
+     ТРЕКИНГ — два значения: 0.18em у мелких прописных, 0 у остального
+       (и −0.02em у дисплейного крупного, иначе узкие буквы слипаются). */
+
+/* Мелкие прописные: подписи полей и заголовки секций — один кегль и один трекинг. */
+.mbr-state,
+.mbr-k,
+.mbr-sec,
+.mbr-rate .k,
+.mbr-tag {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.18em;
+}
+.mbr-tag { letter-spacing: 0.1em; }
+
+/* Крупное — дисплейной, с отрицательным трекингом. */
+.mbr-tour { font-size: 34px; letter-spacing: -0.02em; }
+.mbr-rate .v { font-size: 56px; letter-spacing: -0.03em; }
+.mbr-time { font-size: 20px; letter-spacing: -0.02em; }
+.mbr-row .t { font-size: 24px; letter-spacing: -0.02em; }
+
+/* Средний слой — обычный гротеск. Строка расписания и время в списке идут
+   табличными цифрами: они сравниваются столбцом. */
+.mbr-tour-sub { font-size: 13px; font-weight: 400; }
+.mbr-when .r,
+.mbr-when .t {
+  font-family: var(--font);
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: 0;
+  font-variant-numeric: tabular-nums;
+}
+.mbr-row .nm { font-size: 15px; font-weight: 600; }
+.mbr-row .ss { font-size: 12px; font-weight: 400; }
+.mbr-row .tm {
+  font-family: var(--font);
+  font-size: 15px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--c-muted);
+}
+.mbr-sc {
+  font-family: var(--font);
+  font-size: 15px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.mbr-go { font-size: 16px; font-weight: 700; letter-spacing: 0; }
+.mbr-empty { font-size: 13px; line-height: 1.45; }

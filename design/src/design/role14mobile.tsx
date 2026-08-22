@@ -387,7 +387,7 @@ export function MobileBrand({ state = 'current' }: { state?: 'current' | 'open' 
                     <span className="v o14-disp">2456</span>
                     <span className="k">рейтинг</span>
                   </div>
-                  <div className="mbr-tour-sub">7 место в РК · +144 за сезон · 64 % побед</div>
+                  <div className="mbr-tour-sub">7 место в РК · +144 · 64 % побед</div>
 
                   {/* Форма сезона: восемь последних матчей штрихами. На поле
                       это единственная графика, и она из данных, а не украшение. */}
@@ -398,7 +398,7 @@ export function MobileBrand({ state = 'current' }: { state?: 'current' | 'open' 
                       ))}
                     </span>
                     <span className="d" />
-                    <span className="t o14-disp">последние 8</span>
+                    <span className="t">последние 8</span>
                   </div>
                 </div>
               </div>
@@ -423,16 +423,19 @@ export function MobileBrand({ state = 'current' }: { state?: 'current' | 'open' 
                       {/* У текущего — расписание: круг, стол, время. У открытого —
                           срок приёма заявок: это единственное, что от него нужно. */}
                       <div className="mbr-when">
+                        {/* Строка расписания набрана обычным гротеском, а не
+                            дисплейной узкой: на 16 px она читалась сжатой и
+                            чужой. Дисплейная осталась только на крупном. */}
                         {t.kind === 'current' ? (
                           <>
-                            <span className="r o14-disp">{t.round}</span>
+                            <span className="r">{t.round}</span>
                             <span className="d" />
-                            <span className="t o14-disp">{t.table}</span>
+                            <span className="t">{t.table}</span>
                             <span className="d" />
-                            <span className="t o14-disp">{t.time}</span>
+                            <span className="t">{t.time}</span>
                           </>
                         ) : (
-                          <span className="r o14-disp">{t.till}</span>
+                          <span className="r">{t.till}</span>
                         )}
                       </div>
                     </div>
@@ -468,7 +471,7 @@ export function MobileBrand({ state = 'current' }: { state?: 'current' | 'open' 
                         <span className="nm">{m.foe ?? 'соперник после жеребьёвки'}</span>
                         <span className="ss">{m.round}</span>
                       </span>
-                      <span className="tm o14-disp">{m.time}</span>
+                      <span className="tm">{m.time}</span>
                     </div>
                   ))}
                 </>
@@ -490,7 +493,7 @@ export function MobileBrand({ state = 'current' }: { state?: 'current' | 'open' 
                         <span className="nm">{r.nm}</span>
                         <span className="ss">{r.sub}</span>
                       </span>
-                      <span className={'mbr-sc o14-disp' + (r.win ? ' w' : ' l')}>{r.sc}</span>
+                      <span className={'mbr-sc' + (r.win ? ' w' : ' l')}>{r.sc}</span>
                     </div>
                   ))}
                 </>

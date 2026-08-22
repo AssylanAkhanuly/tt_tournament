@@ -101,3 +101,28 @@
   border: 1px solid var(--c-glass-line);
   cursor: pointer;
 }
+
+/* ── Типографика по общему правилу (role14mobile.css) ──────────────
+   Дисплейная гарнитура только от 24 px. В строке счёта ей остаётся число
+   партий; фамилии и погеймовый ряд набраны обычным гротеском с табличными
+   цифрами — на 15–18 px узкая дисплейная читалась сжатой. */
+.m3m-side .nm { font-size: 17px; font-weight: 600; letter-spacing: 0; }
+.m3m-side .s { font-size: 34px; letter-spacing: -0.03em; }
+.m3m-side .g i {
+  font-family: var(--font);
+  font-size: 14px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.m3m-h2h { font-family: var(--font); font-size: 16px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.m3m-path .r,
+.m3m-path .sc {
+  font-family: var(--font);
+  font-size: 14px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.m3m-path .nm { font-size: 15px; }
+.m3m-tabs span { font-size: 14px; }
+.m3m-note { font-size: 12px; line-height: 1.45; }
+.m3o-sc { font-family: var(--font); font-size: 15px; font-weight: 700; font-variant-numeric: tabular-nums; }

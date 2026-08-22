@@ -88,7 +88,7 @@ export function MobileOff() {
               <span className="nm">{r.nm}</span>
               <span className="ss">{r.sub}</span>
             </span>
-            <span className={'m3o-sc o14-disp ' + (r.win ? 'w' : 'l')}>{r.sc}</span>
+            <span className={'m3o-sc ' + (r.win ? 'w' : 'l')}>{r.sc}</span>
           </div>
         ))}
       </div>
@@ -121,18 +121,18 @@ export function MobileMatch() {
               различают, а место занимают. */}
           <div className="m3m-score">
             <div className="m3m-side">
-              <span className="nm o14-disp">Ким</span>
+              <span className="nm">Ким</span>
               <span className="s o14-disp lead">2</span>
-              <span className="g o14-disp">
+              <span className="g">
                 {GAMES.map((g, i) => (
                   <i key={i}>{g[0]}</i>
                 ))}
               </span>
             </div>
             <div className="m3m-side">
-              <span className="nm o14-disp">Жумабеков</span>
+              <span className="nm">Жумабеков</span>
               <span className="s o14-disp">1</span>
-              <span className="g o14-disp">
+              <span className="g">
                 {GAMES.map((g, i) => (
                   <i key={i}>{g[1]}</i>
                 ))}
@@ -162,7 +162,7 @@ export function MobileMatch() {
             <span className="nm">Жумабеков Расул</span>
             <span className="ss">рейтинг 2312 · Шымкент · посев 13</span>
           </span>
-          <span className="m3m-h2h o14-disp">3 : 2</span>
+          <span className="m3m-h2h">3 : 2</span>
         </div>
 
         <div className="mbr-sec">Мой путь</div>
@@ -172,9 +172,9 @@ export function MobileMatch() {
           { r: '1/8', foe: 'Жумабеков Р.', sc: 'идёт', now: true },
         ].map((p) => (
           <div className={'m3m-path' + (p.now ? ' now' : '')} key={p.r}>
-            <span className="r o14-disp">{p.r}</span>
+            <span className="r">{p.r}</span>
             <span className="nm">{p.foe}</span>
-            <span className="sc o14-disp">{p.sc}</span>
+            <span className="sc">{p.sc}</span>
           </div>
         ))}
 
