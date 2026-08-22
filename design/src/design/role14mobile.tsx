@@ -484,6 +484,23 @@ export function MobileBrand({ state = 'current' }: { state?: 'current' | 'open' 
                 </div>
               )}
 
+              {/* На экране 393×852 после турниров остаётся место — отдаём его
+                  последним результатам, чтобы низ не пустовал обоями. */}
+              {state === 'current' && (
+                <>
+                  <div className="mbr-sec">Последние результаты</div>
+                  {RESULTS.slice(0, 2).map((r) => (
+                    <div className="mbr-row" key={r.nm} data-to="Э14.6">
+                      <span className="tx">
+                        <span className="nm">{r.nm}</span>
+                        <span className="ss">{r.sub}</span>
+                      </span>
+                      <span className={'mbr-sc' + (r.win ? ' w' : ' l')}>{r.sc}</span>
+                    </div>
+                  ))}
+                </>
+              )}
+
               {state !== 'current' && (
                 <>
                   <div className="mbr-sec">Последние результаты</div>
