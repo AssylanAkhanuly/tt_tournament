@@ -46,15 +46,31 @@ const IosBattery = () => (
   </svg>
 );
 
+/* Корпус телефона. Нарисован, а не подложен картинкой макета устройства: так
+   он следует теме и не тянет за собой чужой файл с правами.
+
+   Что есть у настоящего аппарата и появилось здесь: боковые кнопки — слева
+   кнопка действия и качелька громкости, справа боковая, — камера и датчик
+   внутри «острова», блик по грани корпуса и индикатор домой внизу. Всё это
+   физические детали, у них свои токены формы (`--r-device-*`) и цвета
+   (`--c-device-btn`): под правило «углы интерфейса прямые» корпус не попадает,
+   как и раньше не попадали скруглённые углы самого корпуса. */
 export function Frame({ children }: { children: ReactNode }) {
-  return <div className="frame"><div className="screen">
-    <div className="island" />
-    <div className="sys">
-      <span className="time">9:41</span>
-      <span className="r"><IosCellular /><IosWifi /><IosBattery /></span>
+  return <div className="frame">
+    <i className="dbtn action" />
+    <i className="dbtn volup" />
+    <i className="dbtn voldn" />
+    <i className="dbtn side" />
+    <div className="screen">
+      <div className="island"><i className="cam" /></div>
+      <div className="sys">
+        <span className="time">9:41</span>
+        <span className="r"><IosCellular /><IosWifi /><IosBattery /></span>
+      </div>
+      {children}
+      <i className="homebar" />
     </div>
-    {children}
-  </div></div>;
+  </div>;
 }
 
 const Brand = () => <FntBrand size="sm" />;

@@ -230,6 +230,10 @@
   /* корпус устройства */
   --c-bezel:             linear-gradient(160deg, var(--seed-bezel-1), var(--seed-bezel-2));
   --c-bezel-ring:        color-mix(in srgb, var(--seed-white) 5%, transparent);
+  /* Боковые кнопки и блик по грани корпуса. Рисуем их, а не кладём картинкой
+     рамки, чтобы корпус следовал теме вместе со всем остальным. */
+  --c-device-btn:        color-mix(in srgb, var(--seed-bezel-1) 62%, var(--seed-black));
+  --c-device-btn-hi:     color-mix(in srgb, var(--seed-white) 26%, transparent);
 
   /* светлые экраны документации (регистрация, новости) */
   --c-primary:           var(--seed-light-accent);
@@ -271,6 +275,8 @@
   /* Корпуса устройств в макетах — предмет, а не интерфейс: у телефона и
      планшета углы скруглены физически. */
   --r-device-phone: 48px;  --r-device-phone-screen: 40px;
+  /* Боковые кнопки корпуса: физическая деталь, а не элемент интерфейса. */
+  --r-device-btn: 2px;
   --r-device-tablet: 44px; --r-device-tablet-screen: 32px;
   --r-device-laptop: 20px; --r-device-land: 32px;
   --s-1: 4px; --s-2: 8px; --s-3: 12px; --s-4: 16px; --s-5: 20px; --s-6: 28px;
