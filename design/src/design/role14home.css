@@ -149,6 +149,15 @@
     color-mix(in srgb, var(--c-screen-deep) 82%, transparent)
   );
 }
+/* Слот без снимка: заливка с орнаментом — так же, как обложки материалов в
+   макетах ленты. Настоящую картинку кладёт организатор, дежурной здесь нет. */
+.o14-cover.plain {
+  background:
+    var(--fx-pattern) 0 0 / var(--fx-pattern-size) repeat,
+    linear-gradient(140deg, var(--c-panel-2), var(--c-panel-3));
+  border: 1px solid var(--c-glass-line);
+}
+.o14-cover.plain::after { background: none; }
 
 /* ═══ Вариант А · «Вызов на стол» ═══ */
 
@@ -164,21 +173,12 @@
   border-left: 4px solid var(--c-success);
   border-radius: var(--r-md);
   overflow: hidden;
-  background: var(--c-screen-2) right center / cover;
+  /* Фон героя — плоскость, без изображения (решение от 22.08.2026, разбор
+     шести заполнений — role14hero.tsx). Плашка тёмная при любой теме: белый
+     `--c-on-media` держится только на ней, а `--c-screen-1` на светлой теме
+     становится бумагой. Шторки больше нет — гасить нечего. */
+  background: var(--c-screen-deep);
   box-shadow: var(--sh-panel);
-}
-/* Шторка: слева почти глухая, чтобы дисплейный текст лежал на плотном, справа
-   прозрачная — там фотография и работает. */
-.oa-hero::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(
-    100deg,
-    color-mix(in srgb, var(--c-screen-deep) 95%, transparent) 22%,
-    color-mix(in srgb, var(--c-screen-deep) 72%, transparent) 52%,
-    color-mix(in srgb, var(--c-screen-deep) 30%, transparent)
-  );
 }
 .oa-hero > * { position: relative; }
 

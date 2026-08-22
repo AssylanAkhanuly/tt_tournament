@@ -99,9 +99,26 @@ export const H2H = () => (
 );
 
 /* Обложка турнира или новости. В системе она есть: материалы федерации
-   публикуются с обложкой (Э1.14), карточка турнира — с изображением. */
-export const Cover = ({ className = '', children }: { className?: string; children?: React.ReactNode }) => (
-  <div className={'o14-cover ' + className} style={{ backgroundImage: `url(${hero})` }}>
+   публикуются с обложкой (Э1.14), карточка турнира — с изображением.
+
+   `plain` — слот без снимка: заливка с орнаментом, настоящую картинку кладёт
+   организатор. Так нарисован вариант А после решения «фона-картинки нет»
+   (22.08.2026): одна и та же дежурная фотография в двух карточках подряд была
+   тем же самым стоком, только мельче. Остальные варианты пока со снимком —
+   по ним решения нет. */
+export const Cover = ({
+  className = '',
+  plain,
+  children,
+}: {
+  className?: string;
+  plain?: boolean;
+  children?: React.ReactNode;
+}) => (
+  <div
+    className={'o14-cover ' + (plain ? 'plain ' : '') + className}
+    style={plain ? undefined : { backgroundImage: `url(${hero})` }}
+  >
     {children}
   </div>
 );
@@ -113,18 +130,22 @@ export const Cover = ({ className = '', children }: { className?: string; childr
    заходит каждый день. Поэтому герой нарисован во всех четырёх положениях, а
    не описан словами (правило «состояния рисуем, а не описываем»).
 
+   Фона-картинки под героем нет: решение от 22.08.2026 — из шести нарисованных
+   заполнений (`role14hero.tsx`) выбрана плоскость. Весь вес держат типографика
+   и структура; шторки, которая раньше гасила фотографию, тоже нет.
+
    `off` — межсезонье, и по нему решение ещё не принято: два героя на выбор,
    `offHero='next'` (обратный отсчёт до старта) и `'season'` (итог сезона). */
 export type HeroState = 'called' | 'playing' | 'soon' | 'off';
 export type OffHero = 'next' | 'season';
 
 export function HeroA({ state = 'called', offHero = 'next' }: { state?: HeroState; offHero?: OffHero }) {
-  /* Межсезонье: турнира нет, и фотография с зелёной рамкой «вас вызвали» здесь
+  /* Межсезонье: турнира нет, и зелёная рамка «вас вызвали» здесь
      врала бы. Рамка нейтральная, вместо номера стола — то, ради чего человек
      зашёл: когда ближайший старт либо чем кончился сезон. */
   if (state === 'off') {
     return (
-      <div className={'oa-hero quiet'} style={{ backgroundImage: `url(${hero})` }}>
+      <div className="oa-hero quiet">
         <div className="oa-hero-l">
           {offHero === 'next' ? (
             <>
@@ -197,11 +218,7 @@ export function HeroA({ state = 'called', offHero = 'next' }: { state?: HeroStat
 
   const live = state === 'playing';
   return (
-    <div
-      className={'oa-hero' + (live ? ' live' : '')}
-      data-to="Э14.5"
-      style={{ backgroundImage: `url(${hero})` }}
-    >
+    <div className={'oa-hero' + (live ? ' live' : '')} data-to="Э14.5">
       <div className="oa-hero-l">
         <span className={'oa-live' + (live ? ' now' : '')}>
           <span className="d" />
@@ -302,7 +319,7 @@ export function HomeA({
             <div className="o14-eyebrow">Ближайшие турниры</div>
             <div className="oa-tour">
               <div className="oa-tour-row" data-to="Э14.4">
-                <Cover />
+                <Cover plain />
                 <div>
                   <div className="nm">Кубок Алматы 2026</div>
                   <div className="sub">ОРТ · Алматы · 12–14 сентября</div>
@@ -310,7 +327,7 @@ export function HomeA({
                 </div>
               </div>
               <div className="oa-tour-row">
-                <Cover />
+                <Cover plain />
                 <div>
                   <div className="nm">Чемпионат Республики Казахстан</div>
                   <div className="sub">Главный старт · Астана · 18–22 сентября</div>
