@@ -1,0 +1,367 @@
+/* Э14.1 · Главная спортсмена — варианты Л, М, Н, О, П.
+
+   У первых десяти общее не только содержание, но и оболочка: сайдбар слева,
+   шапка сверху, обои под содержимым. С двух шагов все десять — «одна и та же
+   страница с разной начинкой». Здесь оболочка тоже становится предметом
+   выбора: телефон вместо десктопа, верхнее меню вместо сайдбара.
+
+   Правило «оболочка у вариантов одна» из design/README.md отменено для этой
+   пачки намеренно, и написано это здесь, чтобы не выглядело недосмотром. */
+
+/* ═══ Оболочка с верхним меню (варианты М и П) ═══
+   Сайдбар съедает 260 px и задаёт силуэт страницы. Без него содержимое идёт
+   во всю ширину, а разделы уходят в горизонтальное меню — как на публичных
+   спортивных сайтах, а не в админке. */
+
+.ow {
+  min-height: 100%;
+  background: var(--c-screen-1);
+  display: grid;
+  grid-template-rows: auto auto 1fr;
+}
+
+.ow-top {
+  display: flex;
+  align-items: center;
+  gap: var(--s-4);
+  padding: var(--s-3) var(--s-6);
+  background: var(--c-panel);
+  border-bottom: 1px solid var(--c-glass-line);
+}
+.ow-top .grow { flex: 1; }
+.ow-me { display: flex; align-items: center; gap: var(--s-3); }
+.ow-me img { width: 34px; height: 34px; border-radius: 50%; object-fit: cover; }
+.ow-me .nm { font-size: 13px; font-weight: 700; color: var(--c-ink); }
+.ow-me .sub { font-size: 11px; color: var(--c-dim); }
+
+.ow-nav {
+  display: flex;
+  align-items: center;
+  gap: var(--s-5);
+  padding: 0 var(--s-6);
+  background: var(--c-panel);
+  border-bottom: 1px solid var(--c-glass-line);
+}
+.ow-nav button {
+  font: inherit;
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--c-muted);
+  background: none;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  padding: 13px 0;
+  cursor: pointer;
+}
+.ow-nav button.on { color: var(--c-ink); border-bottom-color: var(--c-accent); }
+
+.ow-body { padding: var(--s-5) var(--s-6) var(--s-6); }
+.ow-wrap { max-width: 1080px; margin: 0 auto; display: grid; gap: var(--s-5); }
+
+/* ═══ Вариант М · «Полоса матча» ═══
+   Без сайдбара верх страницы становится широкой полосой: слева я, справа
+   соперник, посередине — стол и время. Так подают матч на спортивных сайтах,
+   и читается это одним движением глаз слева направо. */
+
+.om-duel {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: var(--s-5);
+  padding: var(--s-6);
+  background: var(--c-panel);
+  border: 1px solid var(--c-glass-line);
+  border-top: 3px solid var(--c-success);
+  border-radius: var(--r-sm);
+  box-shadow: var(--sh-panel);
+}
+.om-side { display: flex; align-items: center; gap: var(--s-4); min-width: 0; }
+.om-side.right { flex-direction: row-reverse; text-align: right; }
+.om-side img {
+  width: 76px;
+  height: 76px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 3px solid var(--c-glass-line);
+  flex: none;
+}
+.om-side.me img { border-color: var(--c-success); }
+.om-side .nm { font-size: 26px; color: var(--c-ink); }
+.om-side .sub { font-size: 12.5px; color: var(--c-muted); margin-top: 6px; }
+.om-mid { text-align: center; display: grid; gap: var(--s-3); justify-items: center; }
+.om-mid .tbl b { display: block; font-size: 64px; color: var(--c-success); line-height: 0.9; }
+.om-mid .tbl span { font-size: 10px; font-weight: 800; letter-spacing: 0.24em; color: var(--c-success); }
+.om-mid .at { font-size: 13px; color: var(--c-muted); }
+.om-mid .rnd {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--c-dim);
+}
+
+.om-cols { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--s-4); }
+
+/* ═══ Вариант Н · «Месяц» ═══
+   Настоящая календарная сетка. Спортсмен планирует месяцами: сборы, школа,
+   работа — и вопрос «что у меня в сентябре» задаётся чаще, чем «какой у меня
+   рейтинг». */
+
+.on-head { display: flex; align-items: baseline; gap: var(--s-4); margin-bottom: var(--s-3); }
+.on-head .m { font-size: 30px; color: var(--c-ink); }
+.on-head .y { font-size: 14px; color: var(--c-dim); }
+.on-head .grow { flex: 1; }
+
+.on-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  background: var(--c-glass-line);
+  gap: 1px;
+  border: 1px solid var(--c-glass-line);
+  border-radius: var(--r-sm);
+  overflow: hidden;
+}
+.on-dow {
+  background: var(--c-panel-3);
+  padding: 8px 10px;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+  color: var(--c-dim);
+}
+.on-cell {
+  background: var(--c-panel);
+  min-height: 92px;
+  padding: 8px 9px;
+  display: grid;
+  align-content: start;
+  gap: 5px;
+}
+.on-cell.out { background: var(--c-panel-3); }
+.on-cell .d { font-size: 15px; color: var(--c-muted); font-variant-numeric: tabular-nums; }
+.on-cell.today { background: var(--c-success-fill); }
+.on-cell.today .d { color: var(--c-success); font-weight: 800; }
+.on-ev {
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.3;
+  padding: 4px 6px;
+  border-radius: var(--r-xs);
+  cursor: pointer;
+}
+.on-ev.match { color: var(--c-success-ink); background: var(--c-success); }
+.on-ev.tour { color: var(--c-accent-3); background: var(--c-accent-soft); }
+.on-ev.warn { color: var(--c-warning); background: var(--c-warning-soft); }
+.on-ev.done { color: var(--c-dim); background: var(--c-panel-quiet); }
+
+.on-foot { display: grid; grid-template-columns: 1.4fr 1fr; gap: var(--s-4); }
+
+/* ═══ Вариант О · «Дневник» ═══
+   Главная отвечает не «что у тебя есть», а «куда ты идёшь»: цель сезона,
+   сколько до неё осталось и что для этого сделать. */
+
+.oo { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: var(--s-5); }
+
+.oo-goal { display: grid; gap: var(--s-4); }
+.oo-goal-head { display: flex; align-items: baseline; gap: var(--s-3); }
+.oo-goal-head .v { font-size: 54px; color: var(--c-ink); }
+.oo-goal-head .s { font-size: 13.5px; color: var(--c-muted); }
+.oo-track { display: grid; gap: 7px; }
+.oo-bar {
+  position: relative;
+  height: 12px;
+  background: var(--c-panel-quiet);
+  border-radius: var(--r-xs);
+  overflow: hidden;
+}
+.oo-bar i { display: block; height: 100%; background: var(--c-success); }
+.oo-scale {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  color: var(--c-dim);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Шаги: что сделать, чтобы дойти. Не «уведомления», а список дел с ценой. */
+.oo-steps { display: grid; }
+.oo-step {
+  display: grid;
+  grid-template-columns: 26px minmax(0, 1fr) auto;
+  gap: var(--s-3);
+  align-items: center;
+  padding: var(--s-3) 0;
+  border-bottom: 1px solid var(--c-glass-line-soft);
+  cursor: pointer;
+}
+.oo-step:last-child { border-bottom: 0; }
+.oo-mark {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: 2px solid var(--c-dim);
+  display: grid;
+  place-items: center;
+  color: var(--c-panel);
+}
+.oo-mark.done { background: var(--c-success); border-color: var(--c-success); color: var(--c-success-ink); }
+.oo-mark.now { border-color: var(--c-warning); }
+.oo-step .nm { font-size: 15px; font-weight: 700; color: var(--c-ink); }
+.oo-step .nm.done { color: var(--c-muted); text-decoration: line-through; }
+.oo-step .sub { font-size: 12px; color: var(--c-muted); margin-top: 3px; }
+
+/* ═══ Вариант П · «Витрина» ═══
+   Как спортивное медиа: крупный промо-блок сверху и горизонтальные полосы
+   карточек под ним. Роль тут не «пользователь системы», а читатель. */
+
+.op-hero {
+  position: relative;
+  min-height: 300px;
+  display: grid;
+  align-items: end;
+  padding: var(--s-6);
+  border-radius: var(--r-sm);
+  overflow: hidden;
+  background: var(--c-screen-2) center / cover;
+}
+.op-hero::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--c-screen-deep) 92%, transparent) 30%,
+    color-mix(in srgb, var(--c-screen-deep) 40%, transparent)
+  );
+}
+.op-in { position: relative; display: grid; gap: var(--s-3); justify-items: start; max-width: 620px; }
+.op-in .tag {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.2em;
+  color: var(--c-on-media);
+  background: color-mix(in srgb, var(--c-success) 88%, transparent);
+  padding: 5px 10px;
+}
+.op-in .nm { font-size: 40px; color: var(--c-on-media); }
+.op-in .sub { font-size: 14px; color: var(--c-on-media-2); }
+
+.op-row { display: grid; gap: var(--s-3); }
+.op-row-h { display: flex; align-items: baseline; gap: var(--s-3); }
+.op-row-h .t { font-size: 18px; color: var(--c-ink); }
+.op-row-h .grow { flex: 1; }
+.op-strip { display: grid; grid-auto-flow: column; grid-auto-columns: 260px; gap: var(--s-3); overflow: hidden; }
+.op-card {
+  background: var(--c-panel);
+  border: 1px solid var(--c-glass-line);
+  border-radius: var(--r-sm);
+  overflow: hidden;
+  cursor: pointer;
+}
+.op-card .o14-cover { height: 110px; }
+.op-card .in { padding: var(--s-3) var(--s-4) var(--s-4); display: grid; gap: 6px; }
+.op-card .nm { font-size: 15px; font-weight: 700; color: var(--c-ink); }
+.op-card .sub { font-size: 12px; color: var(--c-muted); }
+.op-card .sc { font-size: 24px; }
+.op-card .sc.win { color: var(--c-success); }
+.op-card .sc.lose { color: var(--c-danger); }
+.op-card.stat { display: grid; align-content: center; justify-items: center; gap: 6px; padding: var(--s-5); text-align: center; }
+.op-card.stat .v { font-size: 44px; color: var(--c-ink); }
+.op-card.stat .k {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--c-dim);
+}
+
+/* ═══ Вариант Л · «Приложение» ═══
+   Роль единственная, у кого есть приложение (TZ §10). Экран телефона — не
+   уменьшенный десктоп, а своя вёрстка: большой палец, одна колонка, таб-бар. */
+
+.ol-wrap { display: grid; justify-items: center; padding: var(--s-5) 0; }
+.ol { display: grid; gap: var(--s-4); padding: var(--s-4) var(--s-4) 96px; }
+
+.ol-top { display: flex; align-items: center; gap: var(--s-3); }
+.ol-top img { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; }
+.ol-top .nm { font-size: 15px; font-weight: 800; color: var(--c-ink); }
+.ol-top .sub { font-size: 11px; color: var(--c-muted); }
+.ol-top .grow { flex: 1; }
+.ol-top .rt { text-align: right; }
+.ol-top .rt b { display: block; font-size: 22px; color: var(--c-ink); }
+.ol-top .rt span { font-size: 10px; color: var(--c-dim); }
+
+.ol-call {
+  display: grid;
+  gap: var(--s-3);
+  padding: var(--s-4);
+  background: var(--c-success-fill);
+  border: 1px solid var(--c-success-line-2);
+  border-radius: var(--r-sm);
+}
+.ol-call .t { font-size: 10px; font-weight: 800; letter-spacing: 0.16em; color: var(--c-success); }
+.ol-call-main { display: flex; align-items: center; gap: var(--s-3); }
+.ol-call-main img { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; }
+.ol-call-main .nm { font-size: 16px; font-weight: 800; color: var(--c-ink); }
+.ol-call-main .sub { font-size: 11px; color: var(--c-muted); margin-top: 2px; }
+.ol-call-main .grow { flex: 1; }
+.ol-call-main .tbl { text-align: right; }
+.ol-call-main .tbl b { display: block; font-size: 34px; color: var(--c-success); line-height: 0.9; }
+.ol-call-main .tbl span { font-size: 9px; font-weight: 800; letter-spacing: 0.16em; color: var(--c-success); }
+.ol-go {
+  font: inherit;
+  font-size: 15px;
+  font-weight: 700;
+  padding: 13px;
+  width: 100%;
+  color: var(--c-success-ink);
+  background: var(--c-success);
+  border: 0;
+  border-radius: var(--r-sm);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.ol-sec { display: flex; align-items: center; gap: var(--s-3); }
+.ol-sec .t {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--c-dim);
+}
+.ol-sec .ln { flex: 1; height: 1px; background: var(--c-glass-line); }
+
+.ol-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: var(--s-3);
+  align-items: center;
+  padding: 11px 0;
+  border-bottom: 1px solid var(--c-glass-line-soft);
+}
+.ol-row:last-child { border-bottom: 0; }
+.ol-row .nm { font-size: 14px; font-weight: 700; color: var(--c-ink); }
+.ol-row .sub { font-size: 11.5px; color: var(--c-muted); margin-top: 2px; }
+.ol-news { display: grid; gap: var(--s-3); }
+.ol-news .o14-cover { height: 120px; }
+.ol-news .nm { font-size: 14px; font-weight: 700; color: var(--c-ink); margin-top: 8px; }
+.ol-news .at { font-size: 11px; color: var(--c-dim); margin-top: 3px; }
+
+/* Новости в «Дневнике». Классы `.oa-news*` были у варианта А в первой
+   отрисовке и пропали, когда А переписали: блок новостей у него заменили на
+   «последние результаты». Разметка в О на них ещё ссылалась — и строки шли
+   сплошняком без единого разделителя. Заводим стили здесь, где они и нужны. */
+.oa-news { display: grid; gap: var(--s-3); margin-top: var(--s-3); }
+.oa-news-row {
+  cursor: pointer;
+  padding-bottom: var(--s-3);
+  border-bottom: 1px solid var(--c-glass-line-soft);
+}
+.oa-news-row:last-child { border-bottom: 0; padding-bottom: 0; }
+.oa-news-row .nm { font-size: 14px; font-weight: 700; color: var(--c-ink); }
+.oa-news-row .at { font-size: 11.5px; color: var(--c-dim); margin-top: 4px; }
