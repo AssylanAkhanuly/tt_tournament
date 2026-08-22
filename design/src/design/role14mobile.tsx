@@ -387,21 +387,10 @@ export function MobileBrand() {
                 Открыть матч <ArrowRight size={17} />
               </button>
 
-              <div className="mbr-rail">
-                <div>
-                  <b className="o14-disp">2456</b>
-                  <span>рейтинг</span>
-                </div>
-                <div>
-                  <b className="o14-disp">7</b>
-                  <span>место в РК</span>
-                </div>
-                <div>
-                  <b className="o14-disp up">+24</b>
-                  <span>за турнир</span>
-                </div>
-              </div>
-
+              {/* Ленты показателей здесь нет намеренно: место в РК, дельта за
+                  турнир и доля побед на экране вызова не нужны — человек стоит
+                  в зале и идёт к столу. Разбор своих чисел живёт в аналитике
+                  (Э14.6). Освободившееся место отдано матчам и турнирам. */}
               <div className="mbr-sec">Дальше сегодня</div>
               {DAY.slice(1).map((m) => (
                 <div className="mbr-row" key={m.round} data-to="Э14.5">
@@ -411,6 +400,17 @@ export function MobileBrand() {
                     <span className="ss">{m.round}</span>
                   </span>
                   <span className="tm o14-disp">{m.time}</span>
+                </div>
+              ))}
+
+              <div className="mbr-sec">Ближайшие турниры</div>
+              {TOURS.map((t) => (
+                <div className="mbr-row" key={t.nm} data-to="Э14.2">
+                  <span className="tx">
+                    <span className="nm">{t.nm}</span>
+                    <span className="ss">{t.sub}</span>
+                  </span>
+                  <span className={'mbr-tag' + (t.on ? ' on' : '')}>{t.on ? 'ПОДАНА' : 'РЕГИОН'}</span>
                 </div>
               ))}
             </div>

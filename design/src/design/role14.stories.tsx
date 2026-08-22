@@ -820,7 +820,7 @@ export const HeroSwiperMobile = { name: 'Карусель · телефон (п�
 /* Рабочая версия мобильного экрана: изначальная, с двумя правками по итогам
    разбора двенадцати обликов — полоски вместо точек и без ленты показателей.
    Двенадцать обликов остаются полками ниже как запись поиска. */
-export const HeroSwiperWeb = { name: 'Мобильный · рабочая версия', render: () => <HeroSwiperBrowser /> };
+export const HeroSwiperWeb = { name: 'Мобильный · прежняя версия (запись)', render: () => <HeroSwiperBrowser /> };
 
 export const HeroWttA = { name: 'Как у WTT · вас вызвали', render: () => <HomeA hero={<HeroWtt />} /> };
 export const HeroWttB = { name: 'Как у WTT · матч идёт', render: () => <HomeA hero={<HeroWtt live />} /> };
@@ -960,7 +960,7 @@ export const MobileV = { name: 'Мобильный В · Крупная типо
 
 /* Собран заново, а не докручен: у трёх предыдущих обликов менялся цвет
    карточки, здесь меняется устройство экрана — два плана и своя графика. */
-export const MobileG = { name: 'Мобильный Г · Знак', render: () => <MobileBrand /> };
+export const MobileG = { name: 'Мобильный · рабочая версия (Г «Знак»)', render: () => <MobileBrand /> };
 
 /* ── Вторая пачка мобильных обликов (Д–М) ────────────────────────────
    Выбирать нужно из многого, поэтому к четырём первым добавлено восемь.

@@ -427,7 +427,7 @@
 .mbr-card {
   position: relative;
   overflow: hidden;
-  padding: 16px 18px 56px;
+  padding: 24px 18px 56px;
   color: var(--c-on-media);
   background: linear-gradient(155deg, var(--c-accent), color-mix(in srgb, var(--c-accent-2) 70%, var(--c-screen-deep)));
 }
@@ -486,18 +486,27 @@
 .mbr-foe { font-size: 22px; margin-top: 2px; }
 .mbr-round { font-size: 12px; color: var(--c-on-media-2); margin-top: 2px; }
 
-/* Точки — вертикальным столбиком у правого края поля: внизу их накрывала бы
-   кнопка, а сверху они спорили бы со временем. */
+/* Полоски прогресса вместо точек — как в историях: полоска на каждый матч
+   дня, текущая закрашена. Лежат по верхнему краю цветного поля, поверх него. */
 .mbr .mb-body { position: relative; }
 .mbr .mb-dots {
   position: absolute;
-  top: 58px;
+  top: 10px;
+  left: 18px;
   right: 18px;
   z-index: 3;
-  gap: 6px;
+  gap: 4px;
   margin: 0;
   padding: 0;
 }
+.mbr .mb-dot {
+  flex: 1;
+  width: auto;
+  height: 3px;
+  border-radius: 0;
+  background: color-mix(in srgb, var(--c-on-media) 28%, transparent);
+}
+.mbr .mb-dot.on { background: var(--c-on-media); }
 .mbr .mb-dot { background: color-mix(in srgb, var(--c-on-media) 40%, transparent); }
 .mbr .mb-dot.on { background: var(--c-on-media); }
 
@@ -546,6 +555,16 @@
   color: var(--c-muted);
   text-transform: uppercase;
 }
+.mbr-tag {
+  flex: none;
+  padding: 4px 8px;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  color: var(--c-muted);
+  background: color-mix(in srgb, var(--c-ink) 7%, transparent);
+}
+.mbr-tag.on { color: var(--c-primary); background: var(--c-primary-soft); }
 /* Остальные матчи дня — строки с номером стола вместо иконки. */
 .mbr-row { display: flex; align-items: center; gap: 14px; padding: 9px 18px; }
 .mbr-row + .mbr-row { border-top: 1px solid var(--c-glass-line); }
