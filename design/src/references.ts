@@ -17,6 +17,8 @@ import fedWorldAthletics from './assets/refs/fed-worldathletics.jpg';
 import fedUefa from './assets/refs/fed-uefa.jpg';
 import fedWorldAquatics from './assets/refs/fed-worldaquatics.jpg';
 import fedFie from './assets/refs/fed-fie.jpg';
+import wttTicker from './assets/refs/wtt-ticker.jpg';
+import myTischtennis from './assets/refs/mytischtennis.jpg';
 
 const S = (id: string) => `https://mobbin.com/screens/${id}`;
 const SEC = (id: string) => `https://mobbin.com/sites/sections/${id}`;
@@ -107,6 +109,45 @@ export const BLOCKED_SITES = [
   { name: 'ITTF', url: 'https://www.ittf.com/', why: 'проверка Cloudflare вместо страницы' },
   { name: 'BWF', url: 'https://bwfbadminton.com/', why: '«Sorry, you have been blocked»' },
   { name: 'FIBA', url: 'https://www.fiba.basketball/', why: 'пустая страница' },
+];
+
+/* ── Второй заход, 22.08.2026: как показывают МАТЧ ──────────────────
+   Вопрос другой, чем в августовском заходе по шапкам: не «как подают знак», а
+   «как устроен блок про мой ближайший матч» — тот самый герой Э14.1 у варианта
+   А. Смотрели там, где этот блок есть по-настоящему: мировой тур настольного
+   тенниса, порталы вида спорта, системы проведения турниров. */
+export const MATCH_REFS: SiteRef[] = [
+  {
+    name: 'WTT — бегущая строка матчей',
+    url: 'https://www.worldtabletennis.com/',
+    img: wttTicker,
+    note:
+      'Главная находка и единственный референс ровно про наш блок из мира настольного тенниса. ' +
+      'Карточка матча ~410×130 px держит больше, чем наш герой на всю ширину: строка круга ' +
+      '(«Women\'s Singles - Group 8»), под ней МЕСТО И СТОЛ ОДНОЙ СТРОКОЙ через вертикаль ' +
+      '(«TT DOME HEYSE25 | Table 2»), дальше две строки игроков в общей колонке — флаг, фамилия, ' +
+      'крупный счёт по партиям и рядом мелкий ряд по геймам (11 11 9 12 11). Победитель помечен ' +
+      'ГАЛОЧКОЙ, а не только цветом. Снято живьём 22.08.2026.',
+  },
+  {
+    name: 'myTischtennis.de — портал вида спорта',
+    url: 'https://www.mytischtennis.de/',
+    img: myTischtennis,
+    note:
+      'Ближайший аналог по задаче: личный кабинет игрока с рейтингом TTR, статистикой и личными ' +
+      'встречами. Про матч-блок взять нечего — главная у них новостная, а не «что у меня сейчас»; ' +
+      'это само по себе ответ: даже крупный портал вида спорта не решает нашу задачу.',
+  },
+];
+
+/* Снимать пробовали шире; половина не отдалась. Записываем честно — иначе через
+   месяц будет казаться, что смотрели только два сайта по невнимательности. */
+export const MATCH_BLOCKED = [
+  { name: 'ATP Tour (порядок игры)', url: 'https://www.atptour.com/en/scores/current', why: 'проверка Cloudflare' },
+  { name: 'Sofascore', url: 'https://www.sofascore.com/table-tennis', why: 'капча Cloudflare, и матчей в этот день нет' },
+  { name: 'Tournamentsoftware', url: 'https://www.tournamentsoftware.com/', why: 'модальное окно согласия поверх страницы' },
+  { name: 'Flashscore', url: 'https://www.flashscore.com/table-tennis/', why: 'в этот день матчей нет — показывать нечего' },
+  { name: 'Rankedin', url: 'https://www.rankedin.com/', why: 'на главной только промо, матчи за логином' },
 ];
 
 export type Ref = { app: string; url: string };

@@ -13,7 +13,9 @@
 
 import type { CSSProperties, ReactNode } from 'react';
 import { Brand } from './ui';
-import { BLOCKED_SITES, FINDINGS, GROUPS, SITE_REFS, TOTAL_QUERIES, TOTAL_REFS } from './references';
+import {
+  BLOCKED_SITES, FINDINGS, GROUPS, MATCH_BLOCKED, MATCH_REFS, SITE_REFS, TOTAL_QUERIES, TOTAL_REFS,
+} from './references';
 import type { Ref } from './references';
 import oldEmblem from './assets/fnt-emblem.png';
 import shield from '../../brand/fnt/fnt-logo.svg';
@@ -218,6 +220,35 @@ export function ReferenceBoard() {
           <div key={s.url} style={S.card}>
             <a href={s.url} target="_blank" rel="noreferrer">
               <img src={s.img} alt={`Шапка сайта ${s.name}`} style={S.shot} />
+            </a>
+            <div style={S.shotName}>{s.name}</div>
+            <p style={S.fText}>{s.note}</p>
+            <Links refs={[{ app: 'Открыть сайт', url: s.url }]} />
+          </div>
+        ))}
+      </div>
+
+      <h2 style={S.h2}>Как показывают матч — снято живьём, {MATCH_REFS.length}</h2>
+      <p style={S.lead}>
+        Второй заход, 22.08.2026, вопрос другой: не «как подают знак», а как устроен блок про мой
+        ближайший матч — герой Э14.1 у варианта А. Смотрели там, где такой блок есть по-настоящему:
+        мировой тур настольного тенниса, портал вида спорта, системы проведения турниров.
+      </p>
+      <p style={S.lead}>
+        Отдались не все:{' '}
+        {MATCH_BLOCKED.map((b, i) => (
+          <span key={b.url}>
+            {i > 0 && ', '}
+            <b>{b.name}</b> ({b.why})
+          </span>
+        ))}
+        .
+      </p>
+      <div style={S.grid}>
+        {MATCH_REFS.map((s) => (
+          <div key={s.url} style={S.card}>
+            <a href={s.url} target="_blank" rel="noreferrer">
+              <img src={s.img} alt={s.name} style={S.shot} />
             </a>
             <div style={S.shotName}>{s.name}</div>
             <p style={S.fText}>{s.note}</p>

@@ -1,0 +1,196 @@
+/* Э14.1 · герой А по референсу WTT. Разбор — в role14heroref.tsx.
+
+   Плашка тёмная при любой теме (`--c-screen-deep`): текст поверх — только
+   `--c-on-media` / `--c-on-media-2`. Фона-картинки нет — решение от
+   22.08.2026. Классы с префиксом `ohr-`: короткие имена ловят чужие правила
+   из общих стилей Storybook. */
+
+.ohr {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--s-6);
+  padding: var(--s-4) var(--s-5);
+  background: var(--c-screen-deep);
+  border: 1px solid var(--c-success-line-2);
+  border-left: 4px solid var(--c-success);
+  border-radius: var(--r-md);
+  box-shadow: var(--sh-panel);
+}
+.ohr-l { display: grid; gap: 10px; min-width: 0; }
+
+/* ── Шапка: состояние и круг одной строкой ─────────────────────────
+   У референса первой строкой стоит круг («Women's Singles - Group 8»), а не
+   название турнира: в зале человек знает, на каком он турнире, и ищет глазами
+   свой круг. Наше состояние («вас вызвали») важнее — оно идёт первым, круг
+   сразу за ним в той же строке. */
+.ohr-eyebrow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  color: var(--c-success);
+  text-transform: uppercase;
+}
+.ohr-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--c-success);
+  box-shadow: 0 0 0 4px var(--c-success-ring);
+}
+.ohr-sep { color: var(--c-on-media-2); }
+.ohr-round {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  color: var(--c-on-media-2);
+  text-transform: none;
+}
+.ohr-round.strong {
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0;
+  color: var(--c-on-media);
+}
+
+/* ── Зал и стол одной строкой — то, за чем шли к референсу ─────────
+   «TT DOME HEYSE25 | Table 2» у WTT. Вертикальная черта разделяет место и
+   стол; стол набран дисплейной гарнитурой, чтобы номер оставался главным. */
+.ohr-place {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--c-on-media-2);
+}
+.ohr-place svg { color: var(--c-on-media-2); flex: none; }
+.ohr-bar {
+  width: 1px;
+  height: 15px;
+  background: color-mix(in srgb, var(--c-on-media) 30%, transparent);
+}
+.ohr-table {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 7px;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.18em;
+  color: var(--c-success);
+}
+.ohr-table b { font-size: 30px; line-height: 0.9; color: var(--c-success); }
+
+/* ── Две строки игроков в одной колонке ────────────────────────────
+   Главное заимствование: матч — это двое, и обе фамилии стоят одна под
+   другой в общей сетке колонок. Раньше соперник был карточкой справа, а
+   спортсмена в герое не было вовсе. */
+.ohr-rows {
+  display: grid;
+  gap: 2px;
+  border-top: 1px solid var(--c-glass-line-soft);
+  padding-top: 8px;
+}
+.ohr-row {
+  display: grid;
+  grid-template-columns: 20px minmax(120px, auto) minmax(0, 1fr) 54px auto;
+  align-items: center;
+  gap: 12px;
+  padding: 5px 0;
+  color: var(--c-on-media-2);
+}
+/* Лидер помечен галочкой, а не только цветом: работает на печати и в ч/б. */
+.ohr-tick { display: grid; place-items: center; color: var(--c-success); }
+.ohr-nm { font-size: 19px; color: var(--c-on-media-2); }
+.ohr-row.lead .ohr-nm { color: var(--c-on-media); }
+.ohr-sub { font-size: 12px; color: var(--c-on-media-2); }
+.ohr-rt { font-size: 17px; color: var(--c-on-media-2); text-align: right; }
+.ohr-row.lead .ohr-rt { color: var(--c-on-media); }
+/* Правая колонка строк выровнена по ширине: форма и «личные 3 : 2» разной
+   длины, и без общей колонки строки игроков расходятся по правому краю —
+   ровно та рябь, которой нет у референса. */
+.ohr-right { justify-self: end; min-width: 108px; text-align: right; }
+.ohr-h2h { font-size: 12px; color: var(--c-on-media-2); }
+
+/* Форма — восемь матчей штрихами, без букв: в строке игрока буквы «В/П»
+   спорят с фамилией, а полоска читается тем же взглядом. */
+.ohr-form { display: inline-flex; gap: 3px; }
+.ohr-form i { width: 9px; height: 14px; border-radius: var(--r-xs); }
+.ohr-form i.w { background: var(--c-success); }
+.ohr-form i.l { background: color-mix(in srgb, var(--c-danger) 70%, transparent); }
+
+/* ── Счёт: партии крупно, геймы строкой рядом ──────────────────────
+   «3 · 11 11 9 12 11» у WTT. Плотнее наших плиток и читается одним движением. */
+.ohr-sets { font-size: 26px; color: var(--c-on-media-2); text-align: right; }
+.ohr-row.lead .ohr-sets { color: var(--c-broadcast); }
+.ohr-games { display: inline-flex; gap: 10px; justify-self: end; }
+.ohr-games i {
+  font-size: 15px;
+  font-style: normal;
+  color: var(--c-on-media-2);
+  min-width: 18px;
+  text-align: right;
+}
+.ohr-games i.now { color: var(--c-broadcast); }
+
+/* ── Правая колонка: время и действие ──────────────────────────────*/
+.ohr-act { display: grid; justify-items: end; gap: 2px; align-content: center; }
+.ohr-time { font-size: 30px; color: var(--c-on-media); }
+.ohr-time-k {
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  color: var(--c-on-media-2);
+  text-transform: uppercase;
+  margin-bottom: 8px;
+}
+.ohr-go {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 10px 18px;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--c-success-ink);
+  background: var(--c-success);
+  border: 0;
+  border-radius: var(--r-sm);
+  cursor: pointer;
+}
+.ohr-go.live { color: var(--c-on-media); background: var(--c-broadcast); }
+
+/* ── Доводка 2: крупный номер стола слева ──────────────────────────*/
+.ohr--board { grid-template-columns: auto minmax(0, 1fr) auto; }
+.ohr-big {
+  display: grid;
+  justify-items: center;
+  align-content: center;
+  gap: 2px;
+  padding-right: var(--s-5);
+  border-right: 1px solid var(--c-glass-line-soft);
+}
+.ohr-big-n { font-size: 96px; line-height: 0.82; color: var(--c-success); }
+.ohr-big-k {
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.24em;
+  color: var(--c-success);
+  text-transform: uppercase;
+}
+.ohr--board .ohr-mid { display: grid; gap: 9px; min-width: 0; }
+.ohr--board .ohr-table { display: none; }
+
+/* ── Доводка 3: матч идёт ──────────────────────────────────────────*/
+.ohr--live { border-color: var(--c-broadcast); border-left-color: var(--c-broadcast); }
+.ohr-eyebrow.live { color: var(--c-broadcast); }
+.ohr-eyebrow.live .ohr-dot {
+  background: var(--c-broadcast);
+  box-shadow: 0 0 0 4px var(--c-danger-soft);
+}
+.ohr--live .ohr-tick { color: var(--c-broadcast); }
+.ohr--live .ohr-table,
+.ohr--live .ohr-table b { color: var(--c-broadcast); }
+.ohr--live .ohr-row { grid-template-columns: 20px minmax(120px, auto) minmax(0, 1fr) 46px auto; }
