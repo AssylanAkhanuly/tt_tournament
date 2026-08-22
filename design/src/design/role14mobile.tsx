@@ -43,7 +43,7 @@ import './role14mobile.css';
    светлыми, а тулбар Storybook красит всё превью разом. `applyTheme` умеет
    красить любой элемент, `ui-theme` заставляет семантические токены
    пересчитаться от подменённых семян. */
-function ThemeBox({ theme, children }: { theme: string; children: ReactNode }) {
+export function ThemeBox({ theme, children }: { theme: string; children: ReactNode }) {
   const ref = useRef<HTMLDivElement>(null);
   useLayoutEffect(() => {
     if (ref.current) applyTheme(theme, ref.current);
@@ -55,7 +55,7 @@ function ThemeBox({ theme, children }: { theme: string; children: ReactNode }) {
   );
 }
 
-const NAV: [ReactNode, string][] = [
+export const NAV: [ReactNode, string][] = [
   [<LayoutDashboard size={19} />, 'Главная'],
   [<CalendarDays size={19} />, 'Календарь'],
   [<Timer size={19} />, 'Мой турнир'],
@@ -73,7 +73,7 @@ const NAV: [ReactNode, string][] = [
    Считать по макету теперь можно честно: сверху уходит статус-бар и панель
    адреса, снизу — панель браузера, и только между ними живёт страница со своей
    шапкой и своей навигацией. */
-function Chrome({ children }: { children: ReactNode }) {
+export function Chrome({ children }: { children: ReactNode }) {
   return (
     <>
       <div className="mbb-top">
@@ -113,7 +113,7 @@ function Chrome({ children }: { children: ReactNode }) {
 }
 
 /* Карусель матчей дня — общая для всех вариантов, вид карточки задаёт вариант. */
-function Deck({ id, card }: { id: string; card: (m: Match) => ReactNode }) {
+export function Deck({ id, card }: { id: string; card: (m: Match) => ReactNode }) {
   return (
     <>
       <Swiper
