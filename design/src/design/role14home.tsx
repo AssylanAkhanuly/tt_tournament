@@ -2,26 +2,42 @@
 
    Содержание задано флоу (flows/14-sportsmen.md, Э14.1) и у всех трёх одно:
    мой рейтинг (значение, место, дельта), ближайший турнир с состоянием заявки,
-   «сейчас играю» во время турнира и лента новостей федерации. Варианты
-   отличаются одним — что на экране главное.
+   «сейчас играю» во время турнира, лента последних результатов и новостей
+   федерации. Варианты отличаются одним — что на экране главное.
 
    Оболочка роли (шапка, сайдбар, пункт «Главная») у всех одна и та же:
    сравнивать надо решение, а не хром вокруг него. */
 
-import { ArrowRight, CalendarDays, ChevronRight, CreditCard, Newspaper, Play } from 'lucide-react';
+import { useCallback } from 'react';
+import type { ChartConfiguration } from 'chart.js/auto';
+import {
+  ArrowRight, CalendarDays, ChevronRight, CreditCard, Newspaper, Play,
+} from 'lucide-react';
 import { RoleScreen } from '../mockups/shell';
+import { ChartBox, soft, token } from '../mockups/chart';
 import { A } from '../fedCommon';
 import { R14 } from '../mockups/roles';
+import hero from '../assets/tt-hero.jpg';
 import './role14home.css';
 
 /* Данные макета — те же, что в существующих макетах роли 14: спортсмен
    Ким Георгий, соперник Жумабеков Расул, Кубок Алматы 2026. Правдоподобные,
    но выдуманные. */
 const ME = { nm: 'Ким Георгий', sub: 'Астана · СКА · КМС', av: A(44) };
-const FOE = { nm: 'Жумабеков Расул', sub: 'рейтинг 2312 · Шымкент', av: A(22) };
+const FOE = { nm: 'Жумабеков Расул', sub: 'рейтинг 2312 · Шымкент · посев 13', av: A(22) };
 
-/* Последние результаты — их требует флоу в ленте главной. Счёт по партиям
-   ведёт судья, спортсмен его не вводит: здесь он только показан. */
+/* Форма: последние восемь матчей. Победа — В, поражение — П. */
+const FORM = [1, 1, 0, 1, 1, 1, 0, 1];
+
+/* Счёт идущего матча по партиям. Ведёт его судья стола: спортсмен счёт не
+   вводит и не подтверждает (flows/14-sportsmen.md, Э14.5). */
+const SETS = [
+  { me: 11, foe: 8 },
+  { me: 9, foe: 11 },
+  { me: 11, foe: 6 },
+  { me: 7, foe: 5, now: true },
+];
+
 const RESULTS = [
   { nm: 'Оралбек Диас', sub: '1/4 финала · Кубок Алматы', sc: '3:1', win: true },
   { nm: 'Смагулов Ерлан', sub: 'финал · Открытый турнир Астаны', sc: '2:4', win: false },
@@ -33,15 +49,61 @@ const NEWS = [
     tag: 'КАЛЕНДАРЬ',
     nm: 'Календарь сезона 2026 опубликован',
     sub: 'Восемь главных стартов, четыре тура Евразийской лиги и двадцать открытых республиканских турниров.',
-    at: '15 апреля',
+    at: '15 апреля · Пресс-служба ФНТ РК',
   },
   {
     tag: 'ВЗНОСЫ',
     nm: 'Годовой взнос: срок до 31 марта',
     sub: 'Без оплаты заявки на турниры, где взнос обязателен, не проходят.',
-    at: '2 марта',
+    at: '2 марта · Исполком',
   },
 ];
+
+/* ── Мелочи, общие для вариантов ────────────────────────────────── */
+
+const Form = () => (
+  <div className="o14-form" title="Последние восемь матчей">
+    {FORM.map((w, i) => (
+      <i className={w ? 'w' : 'l'} key={i}>
+        {w ? 'В' : 'П'}
+      </i>
+    ))}
+  </div>
+);
+
+const Sets = () => (
+  <div className="o14-sets o14-disp">
+    {SETS.map((s, i) => (
+      <div className={'st ' + (s.now ? 'now' : s.me > s.foe ? 'w' : 'l')} key={i}>
+        <b>{s.me}</b>
+        <b>{s.foe}</b>
+      </div>
+    ))}
+  </div>
+);
+
+/* Личные встречи с соперником: полоса отвечает «кто в перевесе» одним взглядом,
+   а список этих встреч живёт на своём экране (Э14.6). */
+const H2H = () => (
+  <div className="o14-h2h">
+    <div className="o14-h2h-bar">
+      <i className="me" style={{ width: '60%' }} />
+      <i className="foe" style={{ width: '40%' }} />
+    </div>
+    <div className="o14-h2h-cap">
+      <span>личные встречи 3 : 2</span>
+      <span>последняя — 4:2 в мою</span>
+    </div>
+  </div>
+);
+
+/* Обложка турнира или новости. В системе она есть: материалы федерации
+   публикуются с обложкой (Э1.14), карточка турнира — с изображением. */
+const Cover = ({ className = '', children }: { className?: string; children?: React.ReactNode }) => (
+  <div className={'o14-cover ' + className} style={{ backgroundImage: `url(${hero})` }}>
+    {children}
+  </div>
+);
 
 /* ═══════════ Вариант А · «Вызов на стол» ═══════════ */
 
@@ -50,78 +112,94 @@ export function HomeA() {
     <RoleScreen role={R14} nav="Главная" title="Ким Георгий" sub="Астана · СКА · КМС">
       <div className="o14">
         {/* Во время турнира экран отвечает на один вопрос: куда идти и с кем
-            играть. Поэтому вызов занимает верх целиком, а не панель в ряду. */}
-        <div className="oa-call" data-to="Э14.5">
-          <div className="oa-table">
-            <b>5</b>
-            <span>СТОЛ</span>
+            играть. Поэтому вызов занимает верх целиком и набран так, чтобы
+            читаться с двух метров. */}
+        <div className="oa-hero" data-to="Э14.5" style={{ backgroundImage: `url(${hero})` }}>
+          <div className="oa-hero-l">
+            <span className="oa-live">
+              <span className="d" /> ВАС ВЫЗВАЛИ
+            </span>
+            <div className="oa-table o14-disp">
+              <span className="t">5</span>
+              <span className="k">стол</span>
+            </div>
+            <div className="oa-meta">
+              <b>Кубок Алматы 2026</b> · 1/8 финала · одиночный разряд
+            </div>
+            <div className="oa-act">
+              <button type="button" className="oa-go" data-to="Э14.5">
+                <Play size={15} /> Открыть матч
+              </button>
+              <div className="oa-at">
+                <b>14:20</b>
+                начало
+              </div>
+            </div>
           </div>
 
-          <div className="oa-vs">
-            <img className="oa-face" src={ME.av} alt="" />
-            <div className="oa-side">
-              <div className="nm">Ким Г.</div>
-              <div className="sub">рейтинг 2456 · посев 4</div>
+          <div className="oa-foe">
+            <div className="oa-foe-top">
+              <img src={FOE.av} alt="" />
+              <div>
+                <div className="nm o14-disp">Жумабеков Р.</div>
+                <div className="sub">{FOE.sub}</div>
+              </div>
             </div>
-            <span className="oa-x">—</span>
-            <img className="oa-face" src={FOE.av} alt="" />
-            <div className="oa-side">
-              <div className="nm">Жумабеков Р.</div>
-              <div className="sub">рейтинг 2312 · посев 13</div>
-            </div>
-          </div>
-
-          <div className="oa-when">
-            <div className="t">14:20</div>
-            <div className="r">1/8 финала · Кубок Алматы</div>
-            <button type="button" className="oa-go" data-to="Э14.5">
-              <Play size={14} /> Открыть матч
-            </button>
+            <H2H />
           </div>
         </div>
 
-        {/* Рейтинг во время турнира — справка, а не заголовок экрана: строка
-            вместо четырёх плиток. */}
-        <div className="oa-rating">
-          <div>
-            <span className="big">2456</span> <span className="lbl">рейтинг</span>
+        {/* Рейтинг во время турнира — справка, а не заголовок экрана: одна
+            лента вместо четырёх плиток. */}
+        <div className="o14-plate oa-rail">
+          <div className="cell">
+            <span className="v o14-disp">2456</span>
+            <span className="k">рейтинг</span>
           </div>
-          <div className="oa-sep" />
-          <div>
-            <span className="big">7</span> <span className="lbl">место в РК</span>
+          <div className="oa-vrule" />
+          <div className="cell">
+            <span className="v o14-disp">7</span>
+            <span className="k">место в РК</span>
           </div>
-          <div className="oa-sep" />
-          <div>
-            <span className="up">+24</span> <span className="lbl">за последний турнир</span>
+          <div className="oa-vrule" />
+          <div className="cell">
+            <span className="v o14-disp up">+24</span>
+            <span className="k">за последний турнир</span>
           </div>
-          <div className="oa-sep" />
-          <div>
-            <span className="big">128</span> <span className="lbl">матчей</span>
+          <div className="cell">
+            <Form />
+            <span className="k">форма</span>
           </div>
-          <div className="grow" />
-          <button type="button" className="oa-link" data-to="Э14.6">
+          <div />
+          <button type="button" className="o14-link" data-to="Э14.6">
             Аналитика <ArrowRight size={13} />
           </button>
         </div>
 
         <div className="oa-cols">
-          <div className="o14-card">
+          <div className="o14-plate">
             <div className="o14-eyebrow">Ближайшие турниры</div>
             <div className="oa-tour">
               <div className="oa-tour-row" data-to="Э14.4">
-                <span className="o14-pill on">ЗАЯВКА ПОДАНА</span>
-                <div className="nm">Кубок Алматы 2026</div>
-                <div className="sub">ОРТ · Алматы · 12–14 сентября</div>
+                <Cover />
+                <div>
+                  <div className="nm">Кубок Алматы 2026</div>
+                  <div className="sub">ОРТ · Алматы · 12–14 сентября</div>
+                  <span className="o14-pill on">ЗАЯВКА ПОДАНА</span>
+                </div>
               </div>
               <div className="oa-tour-row">
-                <span className="o14-pill wait">ЗАЯВЛЯЕТ РЕГИОН</span>
-                <div className="nm">Чемпионат Республики Казахстан</div>
-                <div className="sub">Главный старт · Астана · 18–22 сентября</div>
+                <Cover />
+                <div>
+                  <div className="nm">Чемпионат Республики Казахстан</div>
+                  <div className="sub">Главный старт · Астана · 18–22 сентября</div>
+                  <span className="o14-pill wait">ЗАЯВЛЯЕТ РЕГИОН</span>
+                </div>
               </div>
             </div>
           </div>
 
-          <div className="o14-card">
+          <div className="o14-plate">
             <div className="o14-eyebrow">Последние результаты</div>
             <div className="oa-res">
               {RESULTS.map((r) => (
@@ -130,20 +208,7 @@ export function HomeA() {
                     <div className="nm">{r.nm}</div>
                     <div className="sub">{r.sub}</div>
                   </div>
-                  <span className={'oa-score ' + (r.win ? 'win' : 'lose')}>{r.sc}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <div className="o14-card">
-            <div className="o14-eyebrow">Новости федерации</div>
-            <div className="oa-news">
-              {NEWS.map((n) => (
-                <div className="oa-news-row" key={n.nm} data-to="Э14.13">
-                  <div className="nm">{n.nm}</div>
-                  <div className="sub">{n.sub}</div>
-                  <div className="at">{n.at}</div>
+                  <span className={'o14-score o14-disp ' + (r.win ? 'win' : 'lose')}>{r.sc}</span>
                 </div>
               ))}
             </div>
@@ -156,30 +221,45 @@ export function HomeA() {
 
 /* ═══════════ Вариант Б · «Карточка спортсмена» ═══════════ */
 
-/* Кривая рейтинга по последним турнирам — те же данные, что в аналитике
-   (Э14.6). На главной она без осей и подписей: показывает направление, а
-   читают её на своём экране. */
-const SPARK = [2312, 2298, 2340, 2361, 2355, 2402, 2432, 2456];
+/* Кривая рейтинга по сыгранным турнирам — те же данные, что в аналитике
+   (Э14.6), и тем же Chart.js. Своими прямоугольниками график не рисуем: по
+   нарисованному не видно ни пика, ни провала. На главной он без осей —
+   показывает направление, читают его на своём экране. */
+const CURVE = [2312, 2298, 2340, 2361, 2355, 2402, 2432, 2456];
 
-function Spark() {
-  const min = Math.min(...SPARK);
-  const max = Math.max(...SPARK);
-  const pts = SPARK.map((v, i) => {
-    const x = (i / (SPARK.length - 1)) * 100;
-    const y = 38 - ((v - min) / (max - min)) * 34;
-    return `${x},${y}`;
-  });
+function RatingCurve() {
+  const make = useCallback((el: HTMLCanvasElement): ChartConfiguration => {
+    const line = token('--c-success', el);
+    return {
+      type: 'line',
+      data: {
+        labels: CURVE.map((_, i) => `турнир ${i + 1}`),
+        datasets: [
+          {
+            data: CURVE,
+            borderColor: line,
+            borderWidth: 2,
+            fill: true,
+            backgroundColor: soft('--c-success', 14, el),
+            tension: 0.35,
+            pointRadius: 0,
+            pointHoverRadius: 4,
+            pointHoverBackgroundColor: line,
+          },
+        ],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        layout: { padding: { top: 6, bottom: 0 } },
+        plugins: { legend: { display: false }, tooltip: { displayColors: false } },
+        scales: { x: { display: false }, y: { display: false } },
+      },
+    };
+  }, []);
   return (
-    <div className="ob-spark">
-      <svg viewBox="0 0 100 44" preserveAspectRatio="none" aria-hidden>
-        <polyline
-          points={pts.join(' ')}
-          fill="none"
-          stroke="var(--c-success)"
-          strokeWidth="1.6"
-          vectorEffect="non-scaling-stroke"
-        />
-      </svg>
+    <div className="ob-chart">
+      <ChartBox make={make} height={92} label="Динамика рейтинга по турнирам сезона" />
       <div className="cap">
         <span>8 турниров сезона</span>
         <span>+144 за сезон</span>
@@ -190,28 +270,30 @@ function Spark() {
 
 export function HomeB() {
   return (
-    <RoleScreen role={R14} nav="Главная" title="Главная" sub="">
+    <RoleScreen role={R14} nav="Главная" title="Главная">
       <div className="o14 o14-nohead">
         <div className="ob">
-          {/* Кто я — постоянный столбец. Экран осмыслен и вне турнира: рейтинг,
-              динамика, взнос никуда не деваются. */}
-          <div className="ob-card">
+          {/* Кто я — постоянный столбец. Экран осмыслен и вне турнира:
+              рейтинг, динамика, форма и взнос никуда не деваются. */}
+          <div className="o14-plate ob-card">
             <div className="ob-face">
               <img src={ME.av} alt="" />
-              <div>
-                <div className="nm">{ME.nm}</div>
-                <div className="sub">{ME.sub}</div>
-              </div>
+              <div className="nm o14-disp">Ким Георгий</div>
+              <div className="sub">{ME.sub}</div>
             </div>
 
             <div className="ob-rating">
-              <div className="v">2456</div>
-              <div className="k">Рейтинг · 7 место в РК</div>
+              <div className="v o14-disp">2456</div>
+              <div className="k">рейтинг · 7 место в РК</div>
               <div className="ob-delta">+24 за последний турнир</div>
             </div>
 
-            <Spark />
+            <RatingCurve />
 
+            <div className="ob-kv">
+              <span className="k">Форма</span>
+              <Form />
+            </div>
             <div className="ob-kv">
               <span className="k">Матчей сыграно</span>
               <span className="v">128</span>
@@ -232,70 +314,88 @@ export function HomeB() {
             </div>
           </div>
 
-          {/* Что дальше — одной хроникой: вызов, заявка, турнир, пересчёт
-              рейтинга. Каждое событие ведёт на свой экран. */}
-          <div>
-            <div className="o14-eyebrow">Что дальше</div>
-            <div className="ob-rail">
-              <div className="ob-ev" data-to="Э14.5">
-                <div className="ob-when">сейчас</div>
-                <div className="ob-dot-wrap"><span className="ob-dot live" /></div>
-                <div>
-                  <div className="nm">Вас вызвали — подойдите к столу 5</div>
-                  <div className="sub">
-                    1/8 финала · Жумабеков Расул (2312) · Кубок Алматы 2026
+          <div className="ob-right">
+            {/* Матч идёт — счёт по партиям в реальном времени. Ведёт его судья
+                стола, спортсмен только смотрит. */}
+            <div className="o14-plate ob-now" data-to="Э14.5">
+              <div className="ob-now-head">
+                <span className="oa-live">
+                  <span className="d" /> ВАС ВЫЗВАЛИ · СТОЛ 5
+                </span>
+                <div className="grow" />
+                <span className="oa-at">14:20 · 1/8 финала · Кубок Алматы 2026</span>
+              </div>
+              <div className="ob-now-main">
+                <div className="ob-now-foe">
+                  <img src={FOE.av} alt="" />
+                  <div>
+                    <div className="nm o14-disp">Жумабеков Р.</div>
+                    <div className="sub">{FOE.sub}</div>
                   </div>
                 </div>
-                <span className="o14-pill ok">СТОЛ 5</span>
-              </div>
-
-              <div className="ob-ev" data-to="Э14.4">
-                <div className="ob-when">вчера</div>
-                <div className="ob-dot-wrap"><span className="ob-dot wait" /></div>
-                <div>
-                  <div className="nm">Заявка ждёт решения судьи</div>
-                  <div className="sub">Кубок Алматы 2026 · подана 3 сентября</div>
+                <Sets />
+                <div className="ob-now-table o14-disp">
+                  <div className="t">5</div>
+                  <div className="k">СТОЛ</div>
                 </div>
-                <span className="o14-pill wait">ПОДАНА</span>
-              </div>
-
-              <div className="ob-ev">
-                <div className="ob-when">18 сентября</div>
-                <div className="ob-dot-wrap"><span className="ob-dot accent" /></div>
-                <div>
-                  <div className="nm">Чемпионат Республики Казахстан</div>
-                  <div className="sub">Главный старт · Астана · состав подаёт регион</div>
-                </div>
-                <span className="o14-pill wait">ЗАЯВЛЯЕТ РЕГИОН</span>
-              </div>
-
-              <div className="ob-ev" data-to="Э14.6">
-                <div className="ob-when">28 августа</div>
-                <div className="ob-dot-wrap"><span className="ob-dot" /></div>
-                <div>
-                  <div className="nm">Рейтинг пересчитан: +24</div>
-                  <div className="sub">Открытый турнир Астаны · 1/4 финала · 3 победы, 1 поражение</div>
-                </div>
-                <span className="o14-pill ok">2456</span>
               </div>
             </div>
 
-            <div className="ob-news">
-              <div className="ob-news-head">
+            {/* Что дальше — одной хроникой: заявка, старт, пересчёт рейтинга.
+                Каждое событие ведёт на свой экран. */}
+            <div className="o14-plate">
+              <div className="o14-eyebrow">Что дальше</div>
+              <div className="ob-rail">
+                <div className="ob-ev" data-to="Э14.4">
+                  <div className="ob-when">вчера</div>
+                  <div className="ob-dot-wrap"><span className="ob-dot wait" /></div>
+                  <div>
+                    <div className="nm">Заявка ждёт решения судьи</div>
+                    <div className="sub">Кубок Алматы 2026 · подана 3 сентября</div>
+                  </div>
+                  <span className="o14-pill wait">ПОДАНА</span>
+                </div>
+
+                <div className="ob-ev">
+                  <div className="ob-when">18 сентября</div>
+                  <div className="ob-dot-wrap"><span className="ob-dot accent" /></div>
+                  <div>
+                    <div className="nm">Чемпионат Республики Казахстан</div>
+                    <div className="sub">Главный старт · Астана · состав подаёт регион</div>
+                  </div>
+                  <span className="o14-pill wait">ЗАЯВЛЯЕТ РЕГИОН</span>
+                </div>
+
+                <div className="ob-ev" data-to="Э14.6">
+                  <div className="ob-when">28 августа</div>
+                  <div className="ob-dot-wrap"><span className="ob-dot" /></div>
+                  <div>
+                    <div className="nm">Рейтинг пересчитан: +24</div>
+                    <div className="sub">Открытый турнир Астаны · 1/4 финала · 3 победы, 1 поражение</div>
+                  </div>
+                  <span className="o14-pill ok">2456</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="o14-plate">
+              <div className="ob-fee-head">
                 <div className="o14-eyebrow">Новости федерации</div>
-                <button type="button" className="oa-link" data-to="Э14.13">
+                <button type="button" className="o14-link" data-to="Э14.13">
                   <Newspaper size={13} /> Все новости
                 </button>
               </div>
-              {NEWS.map((n) => (
-                <div className="ov-row" key={n.nm} data-to="Э14.13">
-                  <div>
+              <div className="ob-news">
+                {NEWS.map((n) => (
+                  <div className="ob-news-card" key={n.nm} data-to="Э14.13">
+                    <Cover>
+                      <span className="tag">{n.tag}</span>
+                    </Cover>
                     <div className="nm">{n.nm}</div>
-                    <div className="sub">{n.sub}</div>
+                    <div className="at">{n.at}</div>
                   </div>
-                  <ChevronRight size={16} />
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
           </div>
         </div>
@@ -308,66 +408,71 @@ export function HomeB() {
 
 export function HomeV() {
   return (
-    <RoleScreen role={R14} nav="Главная" title="Главная" sub="">
+    <RoleScreen role={R14} nav="Главная" title="Главная">
       <div className="o14 o14-nohead">
         <div className="ov">
           <div className="ov-head">
             <img src={ME.av} alt="" />
             <div>
-              <div className="nm">{ME.nm}</div>
+              <div className="nm o14-disp">Ким Георгий</div>
               <div className="sub">{ME.sub}</div>
             </div>
             <div className="grow" />
             <div className="rt">
-              <b>2456</b>
-              <span>рейтинг · 7 место · +24</span>
+              <b className="o14-disp">2456</b>
+              <span>7 место в РК · +24</span>
             </div>
           </div>
 
-          {/* Сейчас — единственный блок с заливкой: всё остальное на ленте
-              одинаково тихое, и глаз находит его без поиска. */}
-          <div className="ov-now" data-to="Э14.5">
+          {/* Единственная заливка на ленте — «сейчас»: остальное одинаково
+              тихое, и глаз находит её без поиска. */}
+          <div className="ov-now" data-to="Э14.5" style={{ backgroundImage: `url(${hero})` }}>
             <div className="ov-now-top">
-              <span className="t">ВАС ВЫЗВАЛИ</span>
+              <span className="oa-live">
+                <span className="d" /> ВАС ВЫЗВАЛИ
+              </span>
               <div className="grow" />
-              <span className="at">14:20 · 1/8 финала</span>
+              <span className="at">14:20 · 1/8 финала · Кубок Алматы 2026</span>
             </div>
             <div className="ov-now-main">
               <img src={FOE.av} alt="" />
               <div>
-                <div className="nm">{FOE.nm}</div>
+                <div className="nm o14-disp">Жумабеков Расул</div>
                 <div className="sub">{FOE.sub}</div>
               </div>
               <div className="grow" />
-              <div className="ov-now-table">
-                <b>5</b>
-                <span>СТОЛ</span>
+              <div className="ov-now-table o14-disp">
+                <div className="t">5</div>
+                <div className="k">СТОЛ</div>
               </div>
             </div>
+            <Sets />
           </div>
 
           <div className="ov-block">
             <div className="ov-rule">
               <span className="o14-eyebrow">Мои турниры</span>
               <span className="ln" />
-              <button type="button" className="oa-link" data-to="Э14.2">
+              <button type="button" className="o14-link" data-to="Э14.2">
                 <CalendarDays size={13} /> Календарь
               </button>
             </div>
             <div>
-              <div className="ov-row" data-to="Э14.4">
+              <div className="ov-tour" data-to="Э14.4">
+                <Cover />
                 <div>
-                  <div className="nm">Кубок Алматы 2026</div>
+                  <div className="nm o14-disp">Кубок Алматы 2026</div>
                   <div className="sub">ОРТ · Алматы · 12–14 сентября</div>
+                  <span className="o14-pill on">ЗАЯВКА ПОДАНА</span>
                 </div>
-                <span className="o14-pill on">ЗАЯВКА ПОДАНА</span>
               </div>
-              <div className="ov-row">
+              <div className="ov-tour">
+                <Cover />
                 <div>
-                  <div className="nm">Чемпионат Республики Казахстан</div>
+                  <div className="nm o14-disp">Чемпионат Республики Казахстан</div>
                   <div className="sub">Главный старт · Астана · 18–22 сентября</div>
+                  <span className="o14-pill wait">ЗАЯВЛЯЕТ РЕГИОН</span>
                 </div>
-                <span className="o14-pill wait">ЗАЯВЛЯЕТ РЕГИОН</span>
               </div>
             </div>
           </div>
@@ -376,8 +481,8 @@ export function HomeV() {
             <div className="ov-rule">
               <span className="o14-eyebrow">Последние результаты</span>
               <span className="ln" />
-              <button type="button" className="oa-link" data-to="Э14.6">
-                <ArrowRight size={13} /> Аналитика
+              <button type="button" className="o14-link" data-to="Э14.6">
+                Аналитика <ArrowRight size={13} />
               </button>
             </div>
             <div>
@@ -387,7 +492,7 @@ export function HomeV() {
                     <div className="nm">{r.nm}</div>
                     <div className="sub">{r.sub}</div>
                   </div>
-                  <span className={'oa-score ' + (r.win ? 'win' : 'lose')}>{r.sc}</span>
+                  <span className={'o14-score o14-disp ' + (r.win ? 'win' : 'lose')}>{r.sc}</span>
                 </div>
               ))}
             </div>
@@ -397,21 +502,25 @@ export function HomeV() {
             <div className="ov-rule">
               <span className="o14-eyebrow">Новости федерации</span>
               <span className="ln" />
-              <button type="button" className="oa-link" data-to="Э14.13">
+              <button type="button" className="o14-link" data-to="Э14.13">
                 <Newspaper size={13} /> Все новости
               </button>
             </div>
-            <div>
-              {NEWS.map((n, i) => (
-                <div className="ov-news-card" key={n.nm} data-to="Э14.13">
-                  <div className={'ov-cover' + (i ? ' alt' : '')} />
-                  <div>
-                    <div className="tag">{n.tag}</div>
-                    <div className="nm">{n.nm}</div>
-                    <div className="at">{n.at}</div>
-                  </div>
+            <div className="ov-lead" data-to="Э14.13">
+              <Cover>
+                <div className="in">
+                  <span className="tag">{NEWS[0].tag}</span>
+                  <div className="nm o14-disp">{NEWS[0].nm}</div>
+                  <div className="at">{NEWS[0].at}</div>
                 </div>
-              ))}
+              </Cover>
+            </div>
+            <div className="ov-row" data-to="Э14.13">
+              <div>
+                <div className="nm">{NEWS[1].nm}</div>
+                <div className="sub">{NEWS[1].sub}</div>
+              </div>
+              <ChevronRight size={16} />
             </div>
           </div>
         </div>

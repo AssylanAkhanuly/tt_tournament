@@ -1,133 +1,74 @@
-/* Э14.1 · Главная спортсмена — три варианта дизайна.
-   Содержание у всех одно (flows/14-sportsmen.md): рейтинг, ближайший турнир,
-   «сейчас играю», лента новостей. Отличается решение — что на экране главное.
+/* Э14.1 · Главная спортсмена — три варианта дизайна, отрисовка вторая.
 
-   Цвет и радиусы — только токены (`npm run lint:colors`). */
+   Первая была раскладкой: одинаковые плоские прямоугольники с бордером,
+   типографика в один вес и один размер, ни одного изображения, счёт — строкой
+   с плашкой. Такое читается вайрфреймом, потому что вайрфреймом и было.
 
-/* ═══ Общее для вариантов ═══ */
+   Что изменилось:
+   · дисплейная типографика на `--font-brand` (узкий тяжёлый гротеск, родня
+     надписи TTFRK на знаке ФНТ) — числа, номер стола, фамилии, счёт;
+   · шкала с настоящим контрастом: 92 / 64 / 34 / 22 / 15 / 13 / 11, а не
+     четыре размера подряд;
+   · слои: фотография с затемняющей шторкой, градиентные подложки от акцента,
+     световая грань сверху у панели, тень — вместо однотонной заливки;
+   · счёт по партиям как на табло, а не «строка + пилюля»;
+   · настоящий график Chart.js, форма игрока, личные встречи полосой.
+
+   Цвет и радиусы — только токены (`npm run lint:colors`); углы прямые. */
+
+/* ═══ Общее ═══ */
 
 .o14 { display: flex; flex-direction: column; gap: var(--s-5); }
-
-/* Экран без штатного заголовка dmain: вариант рисует шапку сам. */
 .dmain:has(> .o14-nohead) > .dtitle { display: none; }
+
+/* Дисплейная строка: узкий тяжёлый гротеск, табличные цифры, плотный трекинг.
+   Всё, что должно читаться издалека, набрано ею. */
+.o14-disp {
+  font-family: var(--font-brand);
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+  line-height: 0.92;
+}
 
 .o14-eyebrow {
   font-size: 11px;
   font-weight: 800;
-  letter-spacing: 0.12em;
+  letter-spacing: 0.14em;
   text-transform: uppercase;
   color: var(--c-dim);
 }
 
-/* ═══ Вариант А · «Вызов на стол» ═══
-   Верх экрана занят одним — играешь ли ты сейчас и куда идти. */
-
-.oa-call {
-  display: grid;
-  grid-template-columns: 132px minmax(0, 1fr) auto;
-  align-items: center;
-  gap: var(--s-5);
-  padding: var(--s-5);
-  background: var(--c-success-fill);
-  border: 1px solid var(--c-success-line-2);
-  border-left: 4px solid var(--c-success);
-  border-radius: var(--r-md);
+/* Панель со световой гранью сверху и тенью — поверхность, а не прямоугольник */
+.o14-plate {
+  position: relative;
+  background: var(--c-panel);
+  border: 1px solid var(--c-glass-line);
+  border-radius: var(--r-sm);
+  box-shadow: var(--sh-panel);
+  padding: var(--s-4);
+}
+.o14-plate::before {
+  content: '';
+  position: absolute;
+  inset: 0 0 auto;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--c-glass-hi-2), transparent);
 }
 
-.oa-table { text-align: center; line-height: 1; }
-.oa-table b {
-  display: block;
-  font-size: 60px;
-  font-weight: 800;
-  letter-spacing: -0.04em;
-  color: var(--c-success);
-  font-variant-numeric: tabular-nums;
-}
-.oa-table span {
-  display: block;
-  margin-top: 6px;
-  font-size: 11px;
-  font-weight: 800;
-  letter-spacing: 0.16em;
-  color: var(--c-success);
-}
-
-.oa-vs { display: flex; align-items: center; gap: var(--s-4); min-width: 0; }
-.oa-face {
-  width: 52px;
-  height: 52px;
-  border-radius: 50%;
-  object-fit: cover;
-  border: 2px solid var(--c-glass-hi);
-  flex: none;
-}
-.oa-side { min-width: 0; }
-.oa-side .nm {
-  font-size: 20px;
-  font-weight: 800;
-  letter-spacing: -0.01em;
-  color: var(--c-ink-bright);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.oa-side .sub { font-size: 12px; color: var(--c-muted); margin-top: 2px; }
-.oa-x {
-  font-size: 13px;
+.o14-pill {
+  font-size: 10px;
   font-weight: 800;
   letter-spacing: 0.1em;
-  color: var(--c-dim);
-  flex: none;
+  padding: 4px 8px;
+  border-radius: var(--r-xs);
+  white-space: nowrap;
 }
+.o14-pill.on { color: var(--c-accent-3); background: var(--c-accent-soft); }
+.o14-pill.wait { color: var(--c-dim); background: var(--c-panel-quiet); }
+.o14-pill.ok { color: var(--c-success); background: var(--c-success-soft); }
 
-.oa-when { text-align: right; display: grid; gap: var(--s-2); justify-items: end; }
-.oa-when .t {
-  font-size: 28px;
-  font-weight: 800;
-  letter-spacing: -0.02em;
-  color: var(--c-ink-bright);
-  font-variant-numeric: tabular-nums;
-  line-height: 1;
-}
-.oa-when .r { font-size: 12px; color: var(--c-muted); }
-.oa-go {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 9px 16px;
-  font: inherit;
-  font-size: 13px;
-  font-weight: 700;
-  color: var(--c-success-ink);
-  background: var(--c-success);
-  border: 0;
-  border-radius: var(--r-sm);
-  cursor: pointer;
-}
-
-/* Рейтинг — строкой, а не плитками: во время турнира он справочный. */
-.oa-rating {
-  display: flex;
-  align-items: center;
-  gap: var(--s-5);
-  padding: var(--s-3) var(--s-4);
-  background: var(--c-panel-3);
-  border: 1px solid var(--c-glass-line-soft);
-  border-radius: var(--r-sm);
-  flex-wrap: wrap;
-}
-.oa-rating .big {
-  font-size: 26px;
-  font-weight: 800;
-  letter-spacing: -0.02em;
-  color: var(--c-ink-bright);
-  font-variant-numeric: tabular-nums;
-}
-.oa-rating .lbl { font-size: 12px; color: var(--c-dim); }
-.oa-rating .up { font-size: 13px; font-weight: 700; color: var(--c-success); }
-.oa-sep { width: 1px; height: 22px; background: var(--c-glass-line); }
-.oa-rating .grow { flex: 1; }
-.oa-link {
+.o14-link {
   font: inherit;
   font-size: 12px;
   font-weight: 700;
@@ -138,156 +79,296 @@
   cursor: pointer;
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: 5px;
 }
 
-.oa-cols { display: grid; grid-template-columns: 1fr 0.85fr 1.15fr; gap: var(--s-4); }
+/* Форма игрока: последние результаты квадратиками. Число «доля побед 64 %»
+   говорит про сезон, форма — про сейчас, и это разные вопросы. */
+.o14-form { display: flex; gap: 3px; align-items: center; }
+.o14-form i {
+  width: 16px;
+  height: 16px;
+  display: grid;
+  place-items: center;
+  font-style: normal;
+  font-size: 10px;
+  font-weight: 800;
+  border-radius: var(--r-xs);
+}
+.o14-form i.w { color: var(--c-success); background: var(--c-success-soft-2); }
+.o14-form i.l { color: var(--c-danger); background: var(--c-danger-soft); }
 
-/* Последние результаты — та же лента, что требует флоу: сыгранное с дельтой. */
-.oa-res { display: grid; gap: var(--s-3); }
+/* Счёт по партиям — как на табло: клетка на партию, текущая подсвечена.
+   Спортсмен счёт не вводит (его ведёт судья), поэтому это только показ. */
+.o14-sets { display: flex; gap: 4px; }
+.o14-sets .st {
+  min-width: 34px;
+  padding: 5px 4px 4px;
+  text-align: center;
+  background: var(--c-panel-3);
+  border: 1px solid var(--c-glass-line-soft);
+  border-radius: var(--r-xs);
+}
+.o14-sets .st b { display: block; font-size: 17px; }
+.o14-sets .st.w { color: var(--c-success); border-color: var(--c-success-line); }
+.o14-sets .st.l { color: var(--c-dim); }
+.o14-sets .st.now {
+  color: var(--c-broadcast);
+  border-color: var(--c-broadcast);
+  background: var(--c-panel-2);
+}
+
+/* Личные встречи полосой: одна строка отвечает «кто в перевесе» */
+.o14-h2h { display: grid; gap: 5px; }
+.o14-h2h-bar { display: flex; height: 5px; border-radius: var(--r-xs); overflow: hidden; }
+.o14-h2h-bar i { display: block; height: 100%; }
+.o14-h2h-bar i.me { background: var(--c-success); }
+.o14-h2h-bar i.foe { background: var(--c-danger); }
+.o14-h2h-cap {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  color: var(--c-muted);
+}
+
+/* Обложка турнира или новости: фотография с затемняющей шторкой, чтобы текст
+   на ней читался при любой картинке. */
+.o14-cover {
+  position: relative;
+  overflow: hidden;
+  border-radius: var(--r-xs);
+  background: var(--c-screen-2) center / cover;
+}
+.o14-cover::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--c-screen-deep) 10%, transparent),
+    color-mix(in srgb, var(--c-screen-deep) 82%, transparent)
+  );
+}
+
+/* ═══ Вариант А · «Вызов на стол» ═══ */
+
+.oa-hero {
+  position: relative;
+  min-height: 216px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 300px;
+  align-items: center;
+  gap: var(--s-5);
+  padding: var(--s-5) var(--s-6);
+  border: 1px solid var(--c-success-line-2);
+  border-left: 4px solid var(--c-success);
+  border-radius: var(--r-md);
+  overflow: hidden;
+  background: var(--c-screen-2) right center / cover;
+  box-shadow: var(--sh-panel);
+}
+/* Шторка: слева почти глухая, чтобы дисплейный текст лежал на плотном, справа
+   прозрачная — там фотография и работает. */
+.oa-hero::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    100deg,
+    color-mix(in srgb, var(--c-screen-deep) 95%, transparent) 22%,
+    color-mix(in srgb, var(--c-screen-deep) 72%, transparent) 52%,
+    color-mix(in srgb, var(--c-screen-deep) 30%, transparent)
+  );
+}
+.oa-hero > * { position: relative; }
+
+.oa-hero-l { display: grid; gap: var(--s-3); justify-items: start; }
+.oa-live {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  color: var(--c-success);
+}
+.oa-live .d {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--c-success);
+  box-shadow: 0 0 0 4px var(--c-success-ring);
+}
+.oa-table { display: flex; align-items: baseline; gap: var(--s-3); }
+.oa-table .t { font-size: 84px; color: var(--c-success); }
+.oa-table .k {
+  font-size: 15px;
+  font-weight: 800;
+  letter-spacing: 0.22em;
+  color: var(--c-success);
+  text-transform: uppercase;
+}
+.oa-meta { font-size: 13px; color: var(--c-muted); }
+.oa-meta b { color: var(--c-ink); font-weight: 700; }
+
+.oa-act { display: flex; align-items: center; gap: var(--s-4); margin-top: 2px; }
+.oa-go {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 11px 20px;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--c-success-ink);
+  background: var(--c-success);
+  border: 0;
+  border-radius: var(--r-sm);
+  cursor: pointer;
+  box-shadow: var(--sh-success);
+}
+.oa-at { font-size: 12px; color: var(--c-muted); }
+.oa-at b { display: block; font-size: 20px; color: var(--c-ink-bright); font-variant-numeric: tabular-nums; }
+
+/* Соперник поверх фотографии */
+.oa-foe {
+  display: grid;
+  gap: var(--s-3);
+  padding: var(--s-4);
+  background: color-mix(in srgb, var(--c-screen-deep) 72%, transparent);
+  border: 1px solid var(--c-glass-line);
+  border-radius: var(--r-sm);
+}
+.oa-foe-top { display: flex; align-items: center; gap: var(--s-3); }
+.oa-foe img {
+  width: 54px;
+  height: 54px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid var(--c-glass-hi-2);
+  flex: none;
+}
+.oa-foe .nm { font-size: 24px; color: var(--c-ink-bright); }
+.oa-foe .sub { font-size: 12px; color: var(--c-muted); margin-top: 5px; }
+
+/* Полоса показателей: рейтинг крупно, но одной лентой — во время турнира это
+   справка. */
+.oa-rail {
+  display: grid;
+  grid-template-columns: auto 1px auto 1px auto auto 1fr auto;
+  align-items: center;
+  gap: var(--s-5);
+  padding: var(--s-4) var(--s-5);
+}
+.oa-rail .cell { display: grid; gap: 5px; }
+.oa-rail .v { font-size: 34px; color: var(--c-ink-bright); }
+.oa-rail .v.up { color: var(--c-success); }
+.oa-rail .k {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+  color: var(--c-dim);
+}
+.oa-vrule { width: 1px; height: 34px; background: var(--c-glass-line); }
+
+.oa-cols { display: grid; grid-template-columns: 1.25fr 1fr; gap: var(--s-4); }
+
+/* Карточка турнира с обложкой */
+.oa-tour { display: grid; gap: var(--s-3); margin-top: var(--s-3); }
+.oa-tour-row {
+  display: grid;
+  grid-template-columns: 96px minmax(0, 1fr);
+  gap: var(--s-3);
+  align-items: center;
+  cursor: pointer;
+}
+.oa-tour-row .o14-cover { height: 62px; }
+.oa-tour-row .nm { font-size: 16px; font-weight: 700; color: var(--c-ink-bright); }
+.oa-tour-row .sub { font-size: 12px; color: var(--c-muted); margin: 3px 0 6px; }
+
+.oa-res { display: grid; margin-top: var(--s-3); }
 .oa-res-row {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   gap: var(--s-3);
   align-items: center;
-  padding-bottom: var(--s-3);
+  padding: var(--s-3) 0;
   border-bottom: 1px solid var(--c-glass-line-soft);
 }
 .oa-res-row:last-child { border-bottom: 0; padding-bottom: 0; }
 .oa-res-row .nm { font-size: 14px; font-weight: 700; color: var(--c-ink); }
 .oa-res-row .sub { font-size: 12px; color: var(--c-muted); margin-top: 2px; }
-.oa-score {
-  font-size: 15px;
-  font-weight: 800;
-  font-variant-numeric: tabular-nums;
-  letter-spacing: -0.01em;
-}
-.oa-score.win { color: var(--c-success); }
-.oa-score.lose { color: var(--c-danger); }
+.o14-score { font-size: 20px; }
+.o14-score.win { color: var(--c-success); }
+.o14-score.lose { color: var(--c-danger); }
 
-.o14-card {
-  background: var(--c-panel);
-  border: 1px solid var(--c-glass-line);
-  border-radius: var(--r-sm);
-  padding: var(--s-4);
-}
-.o14-card > .o14-eyebrow { margin-bottom: var(--s-3); }
+/* ═══ Вариант Б · «Карточка спортсмена» ═══ */
 
-.oa-tour { display: grid; gap: var(--s-3); }
-/* Плашка стоит над названием, а не справа от него: названия турниров длинные
-   («Чемпионат Республики Казахстан»), и в две колонки они рвались на три
-   строки, оставляя плашку висеть в пустоте. */
-.oa-tour-row {
-  display: grid;
-  gap: 5px;
-  justify-items: start;
-  padding-bottom: var(--s-3);
-  border-bottom: 1px solid var(--c-glass-line-soft);
-  cursor: pointer;
-}
-.oa-tour-row:last-child { border-bottom: 0; padding-bottom: 0; }
-.oa-tour-row .nm { font-size: 15px; font-weight: 700; color: var(--c-ink); }
-.oa-tour-row .sub { font-size: 12px; color: var(--c-muted); margin-top: 2px; }
+.ob { display: grid; grid-template-columns: 316px minmax(0, 1fr); gap: var(--s-5); }
 
-.o14-pill {
-  font-size: 10px;
-  font-weight: 800;
-  letter-spacing: 0.08em;
-  padding: 4px 8px;
-  border-radius: var(--r-xs);
-  white-space: nowrap;
-}
-.o14-pill.on { color: var(--c-accent-3); background: var(--c-accent-soft); }
-.o14-pill.wait { color: var(--c-dim); background: var(--c-panel-quiet); }
-.o14-pill.ok { color: var(--c-success); background: var(--c-success-soft); }
+.ob-card { padding: 0; overflow: hidden; }
 
-.oa-news { display: grid; gap: var(--s-3); }
-.oa-news-row { cursor: pointer; }
-.oa-news-row .nm { font-size: 14px; font-weight: 700; color: var(--c-ink); }
-.oa-news-row .sub {
-  font-size: 12px;
-  color: var(--c-muted);
-  margin-top: 2px;
-  line-height: 1.45;
-}
-.oa-news-row .at { font-size: 11px; color: var(--c-dim); margin-top: 4px; }
-
-/* ═══ Вариант Б · «Карточка спортсмена» ═══
-   Слева — кто я (постоянно), справа — что дальше (хроника). */
-
-.ob { display: grid; grid-template-columns: 300px minmax(0, 1fr); gap: var(--s-5); }
-
-.ob-card {
-  background: var(--c-panel);
-  border: 1px solid var(--c-glass-line);
-  border-radius: var(--r-sm);
-  overflow: hidden;
-}
+/* Шапка карточки: портрет на подложке с орнаментом федерации — фактура своя,
+   а не стоковая. */
 .ob-face {
-  display: flex;
+  position: relative;
+  display: grid;
+  justify-items: center;
   gap: var(--s-3);
-  align-items: center;
   padding: var(--s-4);
-  border-bottom: 1px solid var(--c-glass-line-soft);
+  background:
+    var(--fx-pattern) 0 0 / var(--fx-pattern-size),
+    linear-gradient(170deg, var(--c-accent-fill), var(--c-panel));
+  border-bottom: 1px solid var(--c-glass-line);
 }
 .ob-face img {
-  width: 56px;
-  height: 56px;
+  width: 74px;
+  height: 74px;
   border-radius: 50%;
   object-fit: cover;
-  border: 2px solid var(--c-accent-line);
+  border: 3px solid var(--c-glass-hi-2);
+  box-shadow: var(--sh-avatar);
 }
-.ob-face .nm {
-  font-size: 17px;
-  font-weight: 800;
-  letter-spacing: -0.01em;
-  color: var(--c-ink-bright);
-}
-.ob-face .sub { font-size: 12px; color: var(--c-muted); margin-top: 3px; }
+.ob-face .nm { font-size: 23px; color: var(--c-ink-bright); text-align: center; }
+.ob-face .sub { font-size: 12px; color: var(--c-muted); }
 
-.ob-rating { padding: var(--s-4); text-align: center; }
-.ob-rating .v {
-  font-size: 54px;
-  line-height: 1;
-  font-weight: 800;
-  letter-spacing: -0.04em;
-  color: var(--c-ink-bright);
-  font-variant-numeric: tabular-nums;
-}
+.ob-rating { padding: var(--s-4) var(--s-4) var(--s-3); text-align: center; }
+.ob-rating .v { font-size: 72px; color: var(--c-ink-bright); }
 .ob-rating .k {
-  margin-top: 6px;
+  margin-top: var(--s-3);
   font-size: 11px;
   font-weight: 800;
-  letter-spacing: 0.14em;
+  letter-spacing: 0.16em;
   text-transform: uppercase;
   color: var(--c-dim);
 }
 .ob-delta {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: 5px;
   margin-top: var(--s-3);
-  padding: 4px 10px;
+  padding: 5px 11px;
   font-size: 12px;
   font-weight: 700;
   color: var(--c-success);
   background: var(--c-success-soft);
+  border: 1px solid var(--c-success-line);
   border-radius: var(--r-xs);
 }
 
-.ob-spark { padding: 0 var(--s-4) var(--s-4); }
-.ob-spark svg { display: block; width: 100%; height: 44px; }
-.ob-spark .cap {
+.ob-chart { padding: 0 var(--s-3) var(--s-3); }
+.ob-chart .cap {
   display: flex;
   justify-content: space-between;
+  padding: 0 var(--s-2);
   font-size: 11px;
   color: var(--c-dim);
-  margin-top: 6px;
 }
 
 .ob-kv {
   border-top: 1px solid var(--c-glass-line-soft);
-  padding: var(--s-3) var(--s-4);
+  padding: 9px var(--s-4);
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -296,20 +377,19 @@
 .ob-kv .k { color: var(--c-muted); }
 .ob-kv .v { color: var(--c-ink); font-weight: 700; }
 
-.ob-fee {
-  border-top: 1px solid var(--c-glass-line-soft);
-  padding: var(--s-4);
-  display: grid;
-  gap: var(--s-3);
-}
+.ob-fee { border-top: 1px solid var(--c-glass-line); padding: var(--s-3) var(--s-4) var(--s-4); display: grid; gap: var(--s-3); }
 .ob-fee-head { display: flex; justify-content: space-between; align-items: center; }
 .ob-fee-head .k { font-size: 13px; color: var(--c-muted); }
 .ob-pay {
   font: inherit;
   font-size: 13px;
   font-weight: 700;
-  padding: 9px;
+  padding: 10px;
   width: 100%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
   color: var(--c-accent-ink);
   background: var(--c-accent);
   border: 0;
@@ -317,116 +397,136 @@
   cursor: pointer;
 }
 
-/* Хроника: что случилось и что будет — сверху вниз по времени */
-.ob-rail { display: grid; gap: 0; }
+.ob-right { display: grid; gap: var(--s-4); align-content: start; }
+
+/* Матч сейчас — компактное табло */
+.ob-now {
+  display: grid;
+  gap: var(--s-4);
+  border-color: var(--c-success-line-2);
+  background: linear-gradient(160deg, var(--c-success-fill), var(--c-panel));
+  cursor: pointer;
+}
+.ob-now-head { display: flex; align-items: center; gap: var(--s-3); }
+.ob-now-head .grow { flex: 1; }
+.ob-now-main { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: var(--s-4); align-items: center; }
+.ob-now-foe { display: flex; align-items: center; gap: var(--s-3); min-width: 0; }
+.ob-now-foe img { width: 46px; height: 46px; border-radius: 50%; object-fit: cover; flex: none; }
+.ob-now-foe .nm { font-size: 20px; color: var(--c-ink-bright); }
+.ob-now-foe .sub { font-size: 12px; color: var(--c-muted); margin-top: 4px; }
+.ob-now-table { text-align: center; }
+.ob-now-table .t { font-size: 44px; color: var(--c-success); }
+.ob-now-table .k { font-size: 10px; font-weight: 800; letter-spacing: 0.18em; color: var(--c-success); }
+
+.ob-rail { display: grid; }
 .ob-ev {
   display: grid;
-  grid-template-columns: 86px 16px minmax(0, 1fr) auto;
+  grid-template-columns: 92px 14px minmax(0, 1fr) auto;
   gap: var(--s-3);
   align-items: start;
-  padding: var(--s-4) 0;
+  padding: var(--s-3) 0;
   border-bottom: 1px solid var(--c-glass-line-soft);
   cursor: pointer;
 }
 .ob-ev:last-child { border-bottom: 0; }
 .ob-when { font-size: 12px; color: var(--c-dim); padding-top: 2px; text-align: right; }
-.ob-dot-wrap { display: grid; justify-items: center; height: 100%; padding-top: 5px; }
-.ob-dot {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  background: var(--c-dim);
-  flex: none;
-}
-.ob-dot.live { background: var(--c-success); box-shadow: 0 0 0 4px var(--c-success-ring); }
+.ob-dot-wrap { display: grid; justify-items: center; padding-top: 5px; }
+.ob-dot { width: 9px; height: 9px; border-radius: 50%; background: var(--c-dim); }
 .ob-dot.wait { background: var(--c-warning); }
 .ob-dot.accent { background: var(--c-accent); }
 .ob-ev .nm { font-size: 15px; font-weight: 700; color: var(--c-ink-bright); }
 .ob-ev .sub { font-size: 12.5px; color: var(--c-muted); margin-top: 3px; line-height: 1.45; }
 
-.ob-news {
-  margin-top: var(--s-4);
-  border-top: 1px solid var(--c-glass-line);
-  padding-top: var(--s-4);
-  display: grid;
-  gap: var(--s-3);
+.ob-news { display: grid; grid-template-columns: 1fr 1fr; gap: var(--s-4); margin-top: var(--s-3); }
+.ob-news-card { cursor: pointer; }
+.ob-news-card .o14-cover { height: 96px; }
+.ob-news-card .tag {
+  position: absolute;
+  left: var(--s-3);
+  bottom: var(--s-3);
+  z-index: 1;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  color: var(--c-ink-bright);
+  background: color-mix(in srgb, var(--c-accent) 82%, transparent);
+  padding: 3px 7px;
 }
-.ob-news-head { display: flex; justify-content: space-between; align-items: center; }
+.ob-news-card .nm { font-size: 15px; font-weight: 700; color: var(--c-ink-bright); margin-top: var(--s-3); }
+.ob-news-card .at { font-size: 11px; color: var(--c-dim); margin-top: 5px; }
 
-/* ═══ Вариант В · «Лента» ═══
-   Одна колонка ширины чтения: тот же экран один в один ложится в приложение. */
+/* ═══ Вариант В · «Лента» ═══ */
 
-.ov { max-width: 620px; margin: 0 auto; display: grid; gap: var(--s-5); }
+.ov { max-width: 640px; margin: 0 auto; display: grid; gap: var(--s-5); }
 
-.ov-head { display: flex; align-items: center; gap: var(--s-3); }
+.ov-head { display: flex; align-items: center; gap: var(--s-4); }
 .ov-head img {
-  width: 44px;
-  height: 44px;
+  width: 60px;
+  height: 60px;
   border-radius: 50%;
   object-fit: cover;
-  border: 2px solid var(--c-glass-hi);
+  border: 2px solid var(--c-glass-hi-2);
 }
-.ov-head .nm { font-size: 18px; font-weight: 800; color: var(--c-ink-bright); }
-.ov-head .sub { font-size: 12px; color: var(--c-muted); margin-top: 2px; }
+.ov-head .nm { font-size: 30px; color: var(--c-ink-bright); }
+.ov-head .sub { font-size: 12px; color: var(--c-muted); margin-top: 6px; }
 .ov-head .grow { flex: 1; }
 .ov-head .rt { text-align: right; }
-.ov-head .rt b {
-  display: block;
-  font-size: 22px;
-  font-weight: 800;
-  letter-spacing: -0.02em;
-  color: var(--c-ink-bright);
-  font-variant-numeric: tabular-nums;
-}
-.ov-head .rt span { font-size: 11px; color: var(--c-dim); }
+.ov-head .rt b { display: block; font-size: 46px; color: var(--c-ink-bright); }
+.ov-head .rt span { font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--c-dim); }
 
-.ov-block { display: grid; gap: var(--s-3); }
-.ov-rule {
-  display: flex;
-  align-items: center;
-  gap: var(--s-3);
-}
-.ov-rule .ln { flex: 1; height: 1px; background: var(--c-glass-line); }
-
+/* Единственная заливка на ленте — «сейчас». Остальное одинаково тихое. */
 .ov-now {
-  padding: var(--s-4);
-  background: var(--c-success-fill);
+  position: relative;
+  overflow: hidden;
+  padding: var(--s-5);
+  display: grid;
+  gap: var(--s-4);
+  background: var(--c-screen-2) right center / cover;
   border: 1px solid var(--c-success-line-2);
   border-radius: var(--r-md);
-  display: grid;
-  gap: var(--s-3);
+  box-shadow: var(--sh-panel);
   cursor: pointer;
 }
-.ov-now-top { display: flex; align-items: center; gap: var(--s-3); }
-.ov-now-top .t {
-  font-size: 11px;
-  font-weight: 800;
-  letter-spacing: 0.14em;
-  color: var(--c-success);
+.ov-now::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    100deg,
+    color-mix(in srgb, var(--c-screen-deep) 94%, transparent) 30%,
+    color-mix(in srgb, var(--c-screen-deep) 55%, transparent)
+  );
 }
+.ov-now > * { position: relative; }
+.ov-now-top { display: flex; align-items: center; gap: var(--s-3); }
 .ov-now-top .grow { flex: 1; }
 .ov-now-top .at { font-size: 12px; color: var(--c-muted); font-variant-numeric: tabular-nums; }
 .ov-now-main { display: flex; align-items: center; gap: var(--s-3); }
-.ov-now-main img {
-  width: 44px;
-  height: 44px;
-  border-radius: 50%;
-  object-fit: cover;
-  flex: none;
-}
-.ov-now-main .nm { font-size: 18px; font-weight: 800; color: var(--c-ink-bright); }
-.ov-now-main .sub { font-size: 12px; color: var(--c-muted); margin-top: 2px; }
+.ov-now-main img { width: 52px; height: 52px; border-radius: 50%; object-fit: cover; flex: none; }
+.ov-now-main .nm { font-size: 26px; color: var(--c-ink-bright); }
+.ov-now-main .sub { font-size: 12px; color: var(--c-muted); margin-top: 5px; }
 .ov-now-main .grow { flex: 1; }
-.ov-now-table { text-align: right; line-height: 1.1; }
-.ov-now-table b {
-  display: block;
-  font-size: 30px;
-  font-weight: 800;
-  letter-spacing: -0.03em;
-  color: var(--c-success);
-  font-variant-numeric: tabular-nums;
+.ov-now-table { text-align: right; }
+.ov-now-table .t { font-size: 52px; color: var(--c-success); }
+.ov-now-table .k { font-size: 10px; font-weight: 800; letter-spacing: 0.18em; color: var(--c-success); }
+
+.ov-block { display: grid; gap: var(--s-3); }
+.ov-rule { display: flex; align-items: center; gap: var(--s-3); }
+.ov-rule .ln { flex: 1; height: 1px; background: var(--c-glass-line); }
+
+.ov-tour {
+  display: grid;
+  grid-template-columns: 116px minmax(0, 1fr);
+  gap: var(--s-4);
+  align-items: center;
+  padding: var(--s-3) 0;
+  border-bottom: 1px solid var(--c-glass-line-soft);
+  cursor: pointer;
 }
-.ov-now-table span { font-size: 10px; font-weight: 800; letter-spacing: 0.14em; color: var(--c-success); }
+.ov-tour:last-child { border-bottom: 0; }
+.ov-tour .o14-cover { height: 72px; }
+.ov-tour .nm { font-size: 19px; color: var(--c-ink-bright); }
+.ov-tour .sub { font-size: 12px; color: var(--c-muted); margin: 5px 0 7px; }
 
 .ov-row {
   display: grid;
@@ -439,28 +539,21 @@
 }
 .ov-row:last-child { border-bottom: 0; }
 .ov-row .nm { font-size: 15px; font-weight: 700; color: var(--c-ink); }
-.ov-row .sub { font-size: 12px; color: var(--c-muted); margin-top: 2px; }
+.ov-row .sub { font-size: 12px; color: var(--c-muted); margin-top: 3px; }
 
-.ov-news-card {
-  display: grid;
-  grid-template-columns: 84px minmax(0, 1fr);
-  gap: var(--s-3);
-  padding: var(--s-3) 0;
-  border-bottom: 1px solid var(--c-glass-line-soft);
-  cursor: pointer;
-}
-.ov-news-card:last-child { border-bottom: 0; }
-.ov-cover {
-  height: 60px;
-  border-radius: var(--r-xs);
-  background: var(--c-cover-1);
-}
-.ov-cover.alt { background: var(--c-cover-2); }
-.ov-news-card .tag {
+/* Первый материал — крупной карточкой: главное за неделю не должно теряться
+   среди одинаковых плиток (то же правило, что на экране новостей Э14.13). */
+.ov-lead { cursor: pointer; }
+.ov-lead .o14-cover { height: 200px; display: grid; align-items: end; }
+.ov-lead .in { position: relative; z-index: 1; padding: var(--s-4); display: grid; gap: var(--s-2); }
+.ov-lead .tag {
+  justify-self: start;
   font-size: 10px;
   font-weight: 800;
-  letter-spacing: 0.1em;
-  color: var(--c-accent-3);
+  letter-spacing: 0.12em;
+  color: var(--c-ink-bright);
+  background: color-mix(in srgb, var(--c-accent) 82%, transparent);
+  padding: 3px 7px;
 }
-.ov-news-card .nm { font-size: 14px; font-weight: 700; color: var(--c-ink); margin-top: 3px; }
-.ov-news-card .at { font-size: 11px; color: var(--c-dim); margin-top: 3px; }
+.ov-lead .nm { font-size: 24px; color: var(--c-ink-bright); }
+.ov-lead .at { font-size: 11px; color: var(--c-muted); }
