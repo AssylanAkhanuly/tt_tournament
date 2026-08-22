@@ -1,0 +1,363 @@
+/* Э14.1 · мобильный экран, три облика. Разбор — в role14mobile.tsx.
+
+   Общее у всех трёх: хром браузера (`mb-url`), шапка сайта (`mb-site`) и тело
+   (`mb-body`). Дальше каждый вариант живёт в своём префиксе: `mbd-` тёмное
+   табло, `mbc-` цветной блок, `mbt-` крупная типографика. */
+
+.mb-wrap { display: grid; justify-items: center; padding: var(--s-5) 0; }
+
+/* Тело: горизонтальных полей нет — их держат блоки, чтобы карусель и цветная
+   заливка доходили до краёв экрана. Снизу место под навигацию. */
+/* Колонка на flex, а не на grid, и каждому блоку `flex: none`. Иначе экран
+   сжимает карусель: у контейнера Swiper стоит `overflow: hidden`, из-за этого
+   его минимальная высота считается нулевой, и в сетке с заданной высотой он
+   съезжал до 136 px вместо 260 — карточке отрезало соперника и кнопку. */
+.mb-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 10px 0 74px;
+  overflow: hidden;
+}
+.mb-body > * { flex: none; }
+.mb-body .swiper { width: 100%; min-width: 0; }
+.mb-body .swiper-slide { min-width: 0; }
+
+.mb-eyebrow {
+  padding: 0 16px;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.18em;
+  color: var(--c-muted);
+  text-transform: uppercase;
+}
+.mb-title { padding: 0 16px; }
+.mb-title .nm { font-size: 22px; color: var(--c-ink); }
+.mb-title .sub { font-size: 12px; color: var(--c-muted); margin-top: 1px; }
+
+.mb-dots { display: flex; justify-content: center; gap: 6px; }
+.mb-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--c-muted) 45%, transparent);
+  cursor: pointer;
+}
+.mb-dot.on { background: var(--c-success); }
+
+/* ── Хром браузера и шапка сайта (одинаковые у всех трёх) ──────────*/
+.mb-url {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 12px 8px;
+  color: var(--c-muted);
+  background: var(--c-panel-2);
+  border-bottom: 1px solid var(--c-glass-line);
+}
+.mb-url-pill {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  padding: 6px 12px;
+  font-size: 12px;
+  background: var(--c-panel-3);
+  border: 1px solid var(--c-glass-line);
+  /* Пилюля адресной строки — форма чужого браузера, не нашего интерфейса. */
+  border-radius: var(--r-round);
+}
+.mb-url-tabs {
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  font-size: 11px;
+  font-weight: 700;
+  border: 2px solid currentColor;
+  border-radius: var(--r-xs);
+}
+.mb-wrap .sys { background: var(--c-panel-2); padding-bottom: 6px; }
+
+.mb-site {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-3);
+  padding: 8px 14px;
+  background: var(--c-panel);
+  border-bottom: 1px solid var(--c-glass-line);
+}
+.mb-site-r { display: flex; align-items: center; gap: 8px; }
+.mb-site-r .iconbtn { width: 30px; height: 30px; }
+.mb-site-r img { width: 30px; height: 30px; border-radius: 50%; object-fit: cover; }
+
+/* Навигация прибита к низу — не плавает островом. */
+.mb-wrap .tabbar {
+  left: 0;
+  right: 0;
+  bottom: 0;
+  border-radius: 0;
+  border-left: 0;
+  border-right: 0;
+  border-bottom: 0;
+  padding: 10px 4px 14px;
+}
+
+/* ═══ А · Тёмное табло ═════════════════════════════════════════════
+   Свет только там, где число. Плоскость глухая, карточка отличается от неё не
+   рамкой, а тем, что на ней светится. */
+.mbd .screen { background: var(--c-screen-deep); }
+.mbd .mb-body { background: var(--c-screen-deep); }
+
+.mbd-card {
+  position: relative;
+  display: grid;
+  gap: 2px;
+  padding: 16px;
+  background:
+    radial-gradient(120% 90% at 0% 0%, color-mix(in srgb, var(--c-success) 16%, transparent), transparent 62%),
+    var(--c-screen-1);
+  border-top: 1px solid var(--c-glass-line);
+  border-bottom: 1px solid var(--c-glass-line);
+}
+.mbd-card.quiet { background: var(--c-screen-1); }
+
+.mbd-top { display: flex; align-items: center; justify-content: space-between; }
+.mbd-state {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.18em;
+  color: var(--c-success);
+}
+.mbd-card.quiet .mbd-state { color: var(--c-dim); }
+.mbd-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  box-shadow: 0 0 0 4px color-mix(in srgb, currentColor 22%, transparent);
+}
+.mbd-time { font-size: 20px; color: var(--c-ink); }
+
+/* Число — единственный источник света на экране. */
+.mbd-num {
+  margin-top: 6px;
+  font-size: 96px;
+  line-height: 0.8;
+  color: var(--c-success);
+  text-shadow: 0 0 44px var(--c-success-glow);
+}
+.mbd-card.quiet .mbd-num { color: var(--c-dim); text-shadow: none; }
+.mbd-k {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.3em;
+  color: var(--c-muted);
+  text-transform: uppercase;
+  margin-bottom: 8px;
+}
+.mbd-foe { font-size: 20px; color: var(--c-ink); }
+.mbd-round { font-size: 12px; color: var(--c-muted); }
+.mbd-go {
+  margin-top: 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 13px;
+  font: inherit;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--c-success-ink);
+  background: var(--c-success);
+  border: 0;
+  border-radius: var(--r-sm);
+  cursor: pointer;
+}
+.mbd-card.quiet .mbd-go {
+  color: var(--c-ink);
+  background: transparent;
+  border: 1px solid var(--c-glass-line);
+}
+
+/* Показатели — три числа без плашек: на тёмном рамки не нужны, хватает
+   расстояния. */
+.mbd-rail { display: grid; grid-template-columns: repeat(3, 1fr); padding: 4px 16px; }
+.mbd-rail > div { display: grid; gap: 1px; }
+.mbd-rail b { font-size: 24px; color: var(--c-ink); }
+.mbd-rail b.up { color: var(--c-success); }
+.mbd-rail span { font-size: 10px; letter-spacing: 0.1em; color: var(--c-muted); text-transform: uppercase; }
+
+.mbd-list { display: grid; }
+.mbd-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 9px 16px;
+  border-top: 1px solid var(--c-glass-line-soft);
+}
+.mbd-row .nm { font-size: 13px; color: var(--c-muted); }
+.mbd-row .sc { font-size: 17px; }
+.mbd-row .sc.w { color: var(--c-success); }
+.mbd-row .sc.l { color: var(--c-danger); }
+
+/* ═══ Б · Цветной блок ═════════════════════════════════════════════
+   Вызов — сплошная заливка знака ФНТ во всю ширину, ниже белый список без
+   рамок. Текст на заливке — `--c-on-media`: он белый при любой теме. */
+.mbc-card {
+  display: grid;
+  gap: 2px;
+  padding: 18px 16px 16px;
+  background: linear-gradient(150deg, var(--c-accent), color-mix(in srgb, var(--c-accent) 55%, var(--c-screen-deep)));
+  color: var(--c-on-media);
+}
+.mbc-card.quiet {
+  background: linear-gradient(150deg, color-mix(in srgb, var(--c-ink) 78%, transparent), color-mix(in srgb, var(--c-ink) 92%, transparent));
+}
+.mbc-top { display: flex; align-items: center; justify-content: space-between; }
+.mbc-state {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.2em;
+  color: var(--c-on-media-2);
+}
+.mbc-time { font-size: 22px; color: var(--c-on-media); }
+.mbc-num { display: flex; align-items: baseline; gap: 10px; margin: 2px 0 4px; }
+.mbc-num b { font-size: 92px; line-height: 0.82; color: var(--c-on-media); }
+.mbc-num span {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.28em;
+  color: var(--c-on-media-2);
+  text-transform: uppercase;
+}
+.mbc-foe { font-size: 21px; color: var(--c-on-media); }
+.mbc-round { font-size: 12px; color: var(--c-on-media-2); }
+.mbc-go {
+  margin-top: 14px;
+  padding: 13px;
+  font: inherit;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--c-ink);
+  background: var(--c-on-media);
+  border: 0;
+  border-radius: var(--r-sm);
+  cursor: pointer;
+}
+.mbc-card.quiet .mbc-go { color: var(--c-on-media); background: transparent; border: 1px solid var(--c-on-media-2); }
+
+.mbc-rail {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 2px;
+  padding: 2px 16px 6px;
+}
+.mbc-rail > div { display: grid; gap: 1px; }
+.mbc-rail b { font-size: 23px; color: var(--c-ink); }
+.mbc-rail b.up { color: var(--c-success-light); }
+.mbc-rail span { font-size: 10px; color: var(--c-muted); }
+
+.mbc-list { display: grid; }
+.mbc-row { display: flex; align-items: center; gap: 10px; min-width: 0; padding: 10px 16px; }
+.mbc-row + .mbc-row { border-top: 1px solid var(--c-glass-line); }
+.mbc-row .tx { flex: 1; min-width: 0; }
+.mbc-row .nm {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--c-ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.mbc-row .ss {
+  font-size: 11px;
+  color: var(--c-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.mbc-tag {
+  flex: none;
+  padding: 4px 8px;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  color: var(--c-muted);
+  background: color-mix(in srgb, var(--c-ink) 7%, transparent);
+}
+.mbc-tag.on { color: var(--c-primary); background: var(--c-primary-soft); }
+
+/* ═══ В · Крупная типографика ══════════════════════════════════════
+   Ни карточек, ни линеек. Шкала: 120 — число, 24 — фамилия, 11 — служебное. */
+.mbt-card { display: grid; gap: 0; padding: 8px 18px 4px; }
+.mbt-state {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.22em;
+  color: var(--c-success);
+  text-transform: uppercase;
+}
+.mbt-card.quiet .mbt-state { color: var(--c-muted); }
+.mbt-num {
+  font-size: 120px;
+  line-height: 0.78;
+  letter-spacing: -0.04em;
+  color: var(--c-ink);
+  margin: 4px 0 2px;
+}
+.mbt-meta {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  color: var(--c-muted);
+  text-transform: uppercase;
+}
+.mbt-foe { font-size: 24px; color: var(--c-ink); margin-top: 12px; }
+.mbt-go {
+  justify-self: start;
+  margin-top: 14px;
+  padding: 0;
+  font: inherit;
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--c-success);
+  background: none;
+  border: 0;
+  border-bottom: 2px solid var(--c-success);
+  cursor: pointer;
+}
+.mbt-card.quiet .mbt-go { color: var(--c-muted); border-bottom-color: var(--c-muted); }
+
+.mbt-rail { display: flex; gap: 22px; padding: 6px 18px 0; }
+.mbt-rail > div { display: grid; gap: 0; }
+.mbt-rail b { font-size: 22px; color: var(--c-ink); }
+.mbt-rail b.up { color: var(--c-success); }
+.mbt-rail span { font-size: 10px; letter-spacing: 0.12em; color: var(--c-muted); text-transform: uppercase; }
+
+.mbt-sec {
+  padding: 10px 18px 0;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.22em;
+  color: var(--c-muted);
+  text-transform: uppercase;
+}
+.mbt-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 7px 18px;
+}
+.mbt-row .nm { font-size: 16px; color: var(--c-ink); }
+.mbt-row .sc { font-size: 18px; }
+.mbt-row .sc.w { color: var(--c-success); }
+.mbt-row .sc.l { color: var(--c-danger); }

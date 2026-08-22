@@ -39,7 +39,7 @@ import 'swiper/css/navigation';
 import 'swiper/css/pagination';
 import './role14heroswiper.css';
 
-type Match = {
+export type Match = {
   /** Круг и разряд — одной короткой строкой. */
   round: string;
   table: string;
@@ -54,7 +54,7 @@ type Match = {
 
 /* Турнирный день спортсмена: три разряда, три стола, три времени. Данные
    выдуманные, но правдоподобные — как и везде в макетах роли. */
-const DAY: Match[] = [
+export const DAY: Match[] = [
   {
     round: '1/8 финала · одиночный',
     table: '5',
@@ -209,7 +209,7 @@ function CardPhone({ m }: { m: Match }) {
    (flows/14-sportsmen.md, Э14.1) — рейтинг, ближайшие турниры, последние
    результаты. Без него карусель висела в пустоте, и по картинке нельзя было
    судить ни о плотности экрана, ни о том, что уходит под сгиб. */
-const TOURS = [
+export const TOURS = [
   { nm: 'Кубок Алматы 2026', sub: 'ОРТ · Алматы · 12–14 сентября', tag: 'ЗАЯВКА ПОДАНА', on: true },
   { nm: 'Чемпионат Республики', sub: 'Главный старт · Астана · 18–22 сентября', tag: 'ЗАЯВЛЯЕТ РЕГИОН', on: false },
 ];
