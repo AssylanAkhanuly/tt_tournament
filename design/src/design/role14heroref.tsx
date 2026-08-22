@@ -163,6 +163,108 @@ export function HeroRef2() {
   );
 }
 
+/* ── Доводка 4 · «Как у WTT» ────────────────────────────────────────
+   Не мотив, а перенос карточки один в один: то же, что в бегущей строке
+   worldtabletennis.com, с заменой только того, что у нас другое.
+
+   Что перенесено буквально:
+   · карточка СВЕТЛАЯ — белая с тёмным текстом, а не тёмная плашка. У WTT
+     ткань чёрная, а карточки на ней белые; у нас тема и так светлая, поэтому
+     герой перестаёт быть чёрной плитой посреди страницы;
+   · порядок строк: круг → «место | стол» → два игрока;
+   · плотность: строка игрока в 32 px, весь блок держится в высоте карточки
+     референса, а не в 216 px прежнего героя;
+   · фамилия ПРОПИСНЫМИ, имя обычным — так игрока и находят глазами в списке;
+   · счёт по партиям крупно, по геймам — мелким рядом справа;
+   · галочка у ведущего.
+
+   Что заменено, потому что у нас другое: флаг страны → регион и клуб (турнир
+   внутренний), оранжевый WTT → зелёный «идёт» и синий ФНТ, и добавлены две
+   вещи, которых у зрительской карточки нет и быть не может, — состояние
+   («вас вызвали») и действие («открыть матч»): их карточка показывает чужие
+   матчи, наша — мой. */
+export function HeroWtt({ live }: { live?: boolean }) {
+  return (
+    <div className={'ohw' + (live ? ' ohw--live' : '')} data-to="Э14.5">
+      <div className="ohw-card">
+        <div className="ohw-head">
+          <div className="ohw-round">1/8 финала · одиночный разряд</div>
+          <span className={'ohw-pill' + (live ? ' live' : '')}>
+            <span className="ohw-dot" />
+            {live ? 'ИДЁТ МАТЧ · ПАРТИЯ 4' : 'ВАС ВЫЗВАЛИ'}
+          </span>
+        </div>
+
+        {/* «TT DOME HEYSE25 | Table 2» — место и стол одной строкой, через
+            вертикаль, тем же мелким кеглем. */}
+        <div className="ohw-place">
+          Кубок Алматы 2026 <span className="ohw-bar" /> {HALL} <span className="ohw-bar" /> Стол 5
+        </div>
+
+        <div className="ohw-rows">
+          <div className="ohw-row lead">
+            <span className="ohw-tick">
+              <Check size={15} strokeWidth={3} />
+            </span>
+            <span className="ohw-org">Астана · СКА</span>
+            <span className="ohw-nm">
+              <b>КИМ</b> Георгий
+            </span>
+            {live ? (
+              <>
+                <span className="ohw-sets o14-disp">2</span>
+                <span className="ohw-games o14-disp">
+                  {GAMES.map((g, i) => (
+                    <i className={i === GAMES.length - 1 ? 'now' : ''} key={i}>{g[0]}</i>
+                  ))}
+                </span>
+              </>
+            ) : (
+              <>
+                <span className="ohw-sets o14-disp quiet">2456</span>
+                <span className="ohw-games"><FormRow /></span>
+              </>
+            )}
+          </div>
+
+          <div className="ohw-row">
+            <span className="ohw-tick" />
+            <span className="ohw-org">Шымкент · посев 13</span>
+            <span className="ohw-nm">
+              <b>ЖУМАБЕКОВ</b> Расул
+            </span>
+            {live ? (
+              <>
+                <span className="ohw-sets o14-disp">1</span>
+                <span className="ohw-games o14-disp">
+                  {GAMES.map((g, i) => (
+                    <i className={i === GAMES.length - 1 ? 'now' : ''} key={i}>{g[1]}</i>
+                  ))}
+                </span>
+              </>
+            ) : (
+              <>
+                <span className="ohw-sets o14-disp quiet">2312</span>
+                <span className="ohw-games"><span className="ohw-h2h">личные 3 : 2</span></span>
+              </>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Хвост, которого у референса нет: их карточка показывает чужой матч и
+          ничего не предлагает сделать, наша — мой, и с него идут к столу. */}
+      <div className="ohw-tail">
+        <div className="ohw-time o14-disp">{live ? '32′' : '14:20'}</div>
+        <div className="ohw-time-k">{live ? 'идёт' : 'начало'}</div>
+        <button type="button" className={'ohw-go' + (live ? ' live' : '')} data-to="Э14.5">
+          <Play size={15} /> {live ? 'Смотреть счёт' : 'Открыть матч'}
+        </button>
+      </div>
+    </div>
+  );
+}
+
 /* ── Доводка 3 · «Матч идёт» ────────────────────────────────────────
    Та же строка в состоянии, ради которого счёт и заводят: счёт по партиям
    крупно, по геймам — рядом строкой чисел, как у референса, вместо наших
