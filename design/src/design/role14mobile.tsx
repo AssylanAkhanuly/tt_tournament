@@ -34,7 +34,7 @@ import { MiniTabBar } from '../respShell';
 import { Brand } from '../ui';
 import { applyTheme } from '../theme/themes';
 import { ME, RESULTS } from './role14home';
-import { DAY, TOURS, type Match } from './role14day';
+import { DAY, TOURS, TOURS_FIELD, type Match, type Tour } from './role14day';
 import 'swiper/css';
 import 'swiper/css/pagination';
 import './role14mobile.css';
@@ -115,7 +115,7 @@ export function Chrome({ children }: { children: ReactNode }) {
 }
 
 /* Карусель матчей дня — общая для всех вариантов, вид карточки задаёт вариант. */
-export function Deck({ id, card }: { id: string; card: (m: Match) => ReactNode }) {
+export function Deck<T>({ id, card, items }: { id: string; card: (m: T) => ReactNode; items?: T[] }) {
   return (
     <>
       <Swiper
@@ -124,8 +124,8 @@ export function Deck({ id, card }: { id: string; card: (m: Match) => ReactNode }
         speed={420}
         pagination={{ el: `.${id}`, clickable: true, bulletClass: 'mb-dot', bulletActiveClass: 'on' }}
       >
-        {DAY.map((m) => (
-          <SwiperSlide key={m.round}>{card(m)}</SwiperSlide>
+        {((items ?? (DAY as unknown as T[]))).map((m, i) => (
+          <SwiperSlide key={i}>{card(m)}</SwiperSlide>
         ))}
       </Swiper>
       <div className={'mb-dots ' + id} />
@@ -336,76 +336,149 @@ export function MobileType() {
 }
 
 /* ═══ Г · «Знак» — рабочая версия ═══════════════════════════════════
-   Устройство экрана: поле фирменного градиента знака ФНТ с лентой орнамента со
-   щита, на него наезжает белый лист, действие лежит на границе планов.
+   Поле фирменного градиента знака ФНТ с лентой орнамента со щита, на него
+   наезжает белый лист, действие лежит на границе планов.
 
-   ВЫЗОВА КАК СОБЫТИЯ ЗДЕСЬ БОЛЬШЕ НЕТ (решение от 22.08.2026). Раньше экран
-   строился вокруг состояний «вас вызвали / вы следующие / сегодня позже», а
-   вызывать конкретного человека в системе никто не будет: судья не жмёт кнопку
-   «позвать пару», и придумывать под это состояние экрана — значит рисовать
-   процесс, которого нет. Вместо состояний в поле стоит ТЕКУЩИЙ ТУРНИР: где я
-   сейчас играю, на каком круге и когда моя ближайшая игра по расписанию.
+   ВЫЗОВА КАК СОБЫТИЯ НЕТ (решение от 22.08.2026): судья не зовёт конкретного
+   человека кнопкой, и рисовать под это состояния — значит рисовать процесс,
+   которого нет. В поле стоит ТУРНИР.
 
-   Расписание — не обещание: время начала известно приблизительно, поэтому оно
-   стоит рядом со столом обычной строкой, а не кричит числом во весь экран.
-   Матчи дня ушли из карусели в список под полем: листать нечего, когда листают
-   не состояния, а строки расписания. */
-export function MobileBrand() {
+   ПОЛЕ ЛИСТАЕТСЯ, полоски прогресса сверху — те самые «сторисы». Листаются не
+   состояния, а турниры: первым мой текущий, дальше открытые приёмы, куда можно
+   заявиться самому (ОРТ, §8.2). Так свайп получил смысл, которого у него не
+   было, когда листались выдуманные состояния.
+
+   ТРИ СОСТОЯНИЯ ЭКРАНА:
+     current — турнир идёт: поле про него, под полем мои матчи сегодня;
+     open    — текущего нет, но есть куда заявиться: поле про ближайший
+               открытый приём, действие «Заявиться» → Э14.3;
+     none    — ни текущего, ни открытых: так и написано словами, и экран ведёт
+               в календарь, а не притворяется, что что-то есть. */
+export function MobileBrand({ state = 'current' }: { state?: 'current' | 'open' | 'none' } = {}) {
+  const field = state === 'current' ? TOURS_FIELD : TOURS_FIELD.filter((t) => t.kind === 'open');
+
   return (
     <div className="mb-wrap mbr">
       <Frame>
         <Chrome>
           <div className="mb-body">
-            <div className="mbr-card">
-              <div className="mbr-band" />
-              <div className="mbr-in">
-                <div className="mbr-top">
-                  <span className="mbr-state">Текущий турнир</span>
-                  <span className="mbr-time o14-disp">12–14.09</span>
-                </div>
-
-                <div className="mbr-tour o14-disp">Кубок Алматы 2026</div>
-                <div className="mbr-tour-sub">ОРТ · Алматы · одиночный, парный, микст</div>
-
-                {/* Где я в турнире и когда ближайшая игра — одной строкой:
-                    это расписание, а не вызов. */}
-                <div className="mbr-when">
-                  <span className="r o14-disp">1/8 финала</span>
-                  <span className="d" />
-                  <span className="t o14-disp">стол 5</span>
-                  <span className="d" />
-                  <span className="t o14-disp">14:20</span>
+            {state === 'none' ? (
+              /* Турниров нет вовсе. Ничего не выдумываем и не показываем пустую
+                 карточку: пишем словами и ведём в календарь. */
+              <div className="mbr-card quiet">
+                <div className="mbr-band" />
+                <div className="mbr-in">
+                  <div className="mbr-top">
+                    <span className="mbr-state">Турниров нет</span>
+                  </div>
+                  <div className="mbr-tour o14-disp">Сейчас заявиться некуда</div>
+                  <div className="mbr-tour-sub">
+                    Открытых приёмов на ближайшие недели нет. Новые появятся в календаре — там же
+                    видно даты и сроки заявок.
+                  </div>
                 </div>
               </div>
-            </div>
+            ) : (
+              <Deck
+                id="mbr-dots"
+                items={field}
+                card={(t: Tour) => (
+                  <div className={'mbr-card' + (t.kind === 'open' ? ' quiet' : '')} data-to={t.kind === 'current' ? 'Э14.5' : 'Э14.2'}>
+                    <div className="mbr-band" />
+                    <div className="mbr-in">
+                      <div className="mbr-top">
+                        <span className="mbr-state">
+                          {t.kind === 'current' ? 'Текущий турнир' : 'Можно заявиться'}
+                        </span>
+                        <span className="mbr-time o14-disp">{t.dates}</span>
+                      </div>
+
+                      <div className="mbr-tour o14-disp">{t.nm}</div>
+                      <div className="mbr-tour-sub">{t.sub}</div>
+
+                      {/* У текущего — расписание: круг, стол, время. У открытого —
+                          срок приёма заявок: это единственное, что от него нужно. */}
+                      <div className="mbr-when">
+                        {t.kind === 'current' ? (
+                          <>
+                            <span className="r o14-disp">{t.round}</span>
+                            <span className="d" />
+                            <span className="t o14-disp">{t.table}</span>
+                            <span className="d" />
+                            <span className="t o14-disp">{t.time}</span>
+                          </>
+                        ) : (
+                          <span className="r o14-disp">{t.till}</span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
+              />
+            )}
 
             <div className="mbr-sheet">
-              <button type="button" className="mbr-go" data-to="Э14.5">
-                Мой турнир <ArrowRight size={17} />
-              </button>
+              {state === 'current' && (
+                <button type="button" className="mbr-go" data-to="Э14.5">
+                  Мой турнир <ArrowRight size={17} />
+                </button>
+              )}
+              {state === 'open' && (
+                <button type="button" className="mbr-go" data-to="Э14.3">
+                  Заявиться <ArrowRight size={17} />
+                </button>
+              )}
+              {state === 'none' && (
+                <button type="button" className="mbr-go" data-to="Э14.2">
+                  Открыть календарь <ArrowRight size={17} />
+                </button>
+              )}
 
-              <div className="mbr-sec">Мои матчи сегодня</div>
-              {DAY.map((m) => (
-                <div className="mbr-row" key={m.round} data-to="Э14.5">
-                  <span className="t o14-disp">{m.table}</span>
-                  <span className="tx">
-                    <span className="nm">{m.foe ?? 'соперник после жеребьёвки'}</span>
-                    <span className="ss">{m.round}</span>
-                  </span>
-                  <span className="tm o14-disp">{m.time}</span>
-                </div>
-              ))}
+              {state === 'current' && (
+                <>
+                  <div className="mbr-sec">Мои матчи сегодня</div>
+                  {DAY.map((m) => (
+                    <div className="mbr-row" key={m.round} data-to="Э14.5">
+                      <span className="t o14-disp">{m.table}</span>
+                      <span className="tx">
+                        <span className="nm">{m.foe ?? 'соперник после жеребьёвки'}</span>
+                        <span className="ss">{m.round}</span>
+                      </span>
+                      <span className="tm o14-disp">{m.time}</span>
+                    </div>
+                  ))}
+                </>
+              )}
 
-              <div className="mbr-sec">Ближайшие турниры</div>
-              {TOURS.map((t) => (
-                <div className="mbr-row" key={t.nm} data-to="Э14.2">
-                  <span className="tx">
-                    <span className="nm">{t.nm}</span>
-                    <span className="ss">{t.sub}</span>
-                  </span>
-                  <span className={'mbr-tag' + (t.on ? ' on' : '')}>{t.on ? 'ПОДАНА' : 'РЕГИОН'}</span>
-                </div>
-              ))}
+              {state !== 'current' && (
+                <>
+                  <div className="mbr-sec">Последние результаты</div>
+                  {RESULTS.map((r) => (
+                    <div className="mbr-row" key={r.nm} data-to="Э14.6">
+                      <span className="tx">
+                        <span className="nm">{r.nm}</span>
+                        <span className="ss">{r.sub}</span>
+                      </span>
+                      <span className={'mbr-sc o14-disp' + (r.win ? ' w' : ' l')}>{r.sc}</span>
+                    </div>
+                  ))}
+                </>
+              )}
+
+              {state === 'current' && (
+                <>
+                  <div className="mbr-sec">Ближайшие турниры</div>
+                  {TOURS.map((t) => (
+                    <div className="mbr-row" key={t.nm} data-to="Э14.2">
+                      <span className="tx">
+                        <span className="nm">{t.nm}</span>
+                        <span className="ss">{t.sub}</span>
+                      </span>
+                      <span className={'mbr-tag' + (t.on ? ' on' : '')}>{t.on ? 'ПОДАНА' : 'РЕГИОН'}</span>
+                    </div>
+                  ))}
+                </>
+              )}
             </div>
           </div>
         </Chrome>

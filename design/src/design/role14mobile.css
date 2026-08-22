@@ -664,3 +664,10 @@
   border-radius: 50%;
   background: color-mix(in srgb, var(--c-on-media) 45%, transparent);
 }
+
+/* Счёт в списке результатов — тот же зелёный/красный, что везде. */
+.mbr-sc { flex: none; font-size: 16px; }
+.mbr-sc.w { color: var(--c-success-light); }
+.mbr-sc.l { color: var(--c-danger); }
+/* «Турниров нет»: текст в поле длиннее одной строки — даём ему дышать. */
+.mbr-card.quiet .mbr-tour-sub { max-width: 250px; line-height: 1.4; }
