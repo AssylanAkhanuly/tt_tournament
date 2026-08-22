@@ -85,7 +85,7 @@ export const Sets = () => (
 
 /* Личные встречи с соперником: полоса отвечает «кто в перевесе» одним взглядом,
    а список этих встреч живёт на своём экране (Э14.6). */
-const H2H = () => (
+export const H2H = () => (
   <div className="o14-h2h">
     <div className="o14-h2h-bar">
       <i className="me" style={{ width: '60%' }} />
@@ -250,7 +250,17 @@ export function HeroA({ state = 'called', offHero = 'next' }: { state?: HeroStat
   );
 }
 
-export function HomeA({ state = 'called', offHero = 'next' }: { state?: HeroState; offHero?: OffHero } = {}) {
+export function HomeA({
+  state = 'called',
+  offHero = 'next',
+  hero: heroSlot,
+}: {
+  state?: HeroState;
+  offHero?: OffHero;
+  /** Подмена героя целиком: варианты фона (role14hero.tsx) отличаются только
+      им, и остальной экран им незачем переписывать. */
+  hero?: React.ReactNode;
+} = {}) {
   return (
     <RoleScreen role={R14} nav="Главная" title="Ким Георгий" sub="Астана · СКА · КМС">
       <div className="o14">
@@ -258,7 +268,7 @@ export function HomeA({ state = 'called', offHero = 'next' }: { state?: HeroStat
             играть. Поэтому вызов занимает верх целиком и набран так, чтобы
             читаться с двух метров. Вне турнира тот же верх занимает то, ради
             чего человек зашёл, — см. HeroA. */}
-        <HeroA state={state} offHero={offHero} />
+        {heroSlot ?? <HeroA state={state} offHero={offHero} />}
 
         {/* Рейтинг во время турнира — справка, а не заголовок экрана: одна
             лента вместо четырёх плиток. */}
