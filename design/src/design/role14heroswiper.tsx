@@ -27,6 +27,7 @@ import { Navigation, Pagination } from 'swiper/modules';
 import type { Swiper as SwiperClass } from 'swiper';
 import { Check, ChevronLeft, ChevronRight, Play } from 'lucide-react';
 import { Frame, TabBar } from '../PlayerApp';
+import { RESULTS } from './role14home';
 import 'swiper/css';
 import 'swiper/css/navigation';
 import 'swiper/css/pagination';
@@ -198,6 +199,15 @@ function CardPhone({ m }: { m: Match }) {
   );
 }
 
+/* Остальной экран приложения: то же содержание, что у главной в вебе
+   (flows/14-sportsmen.md, Э14.1) — рейтинг, ближайшие турниры, последние
+   результаты. Без него карусель висела в пустоте, и по картинке нельзя было
+   судить ни о плотности экрана, ни о том, что уходит под сгиб. */
+const TOURS = [
+  { nm: 'Кубок Алматы 2026', sub: 'ОРТ · Алматы · 12–14 сентября', tag: 'ЗАЯВКА ПОДАНА', on: true },
+  { nm: 'Чемпионат Республики', sub: 'Главный старт · Астана · 18–22 сентября', tag: 'ЗАЯВЛЯЕТ РЕГИОН', on: false },
+];
+
 export function HeroSwiperPhone() {
   return (
     <div className="ocp-wrap">
@@ -208,24 +218,68 @@ export function HeroSwiperPhone() {
             <div className="rt o14-disp">2456</div>
           </div>
 
-          <div className="o14-eyebrow">Сегодня · 3 матча</div>
+          <div className="ocp-eyebrow">Сегодня · 3 матча</div>
 
-          {/* На телефоне стрелок нет: карточку листают пальцем, а точки под
-              карточкой отвечают на «сколько их всего и где я». */}
-          <Swiper
-            modules={[Pagination]}
-            slidesPerView={1}
-            spaceBetween={12}
-            speed={420}
-            pagination={{ el: '.ocp-dots', clickable: true, bulletClass: 'ohs-dot', bulletActiveClass: 'on' }}
-          >
-            {DAY.map((m) => (
-              <SwiperSlide key={m.round}>
-                <CardPhone m={m} />
-              </SwiperSlide>
-            ))}
-          </Swiper>
+          {/* Карусель во всю ширину экрана: на телефоне карточка с полями по
+              бокам выглядит вставкой, а не главным на экране. Поля возвращаются
+              внутрь карточки. На телефоне стрелок нет — листают пальцем, точки
+              отвечают на «сколько их всего и где я». */}
+          <div className="ocp-bleed">
+            <Swiper
+              modules={[Pagination]}
+              slidesPerView={1}
+              speed={420}
+              pagination={{ el: '.ocp-dots', clickable: true, bulletClass: 'ohs-dot', bulletActiveClass: 'on' }}
+            >
+              {DAY.map((m) => (
+                <SwiperSlide key={m.round}>
+                  <CardPhone m={m} />
+                </SwiperSlide>
+              ))}
+            </Swiper>
+          </div>
           <div className="ocp-dots" />
+
+          <div className="ocp-rail">
+            <div>
+              <b className="o14-disp">7</b>
+              <span>место в РК</span>
+            </div>
+            <div>
+              <b className="o14-disp up">+24</b>
+              <span>за турнир</span>
+            </div>
+            <div>
+              <b className="o14-disp">64 %</b>
+              <span>побед</span>
+            </div>
+          </div>
+
+          <div className="ocp-sec">
+            <div className="ocp-eyebrow">Ближайшие турниры</div>
+            {TOURS.map((t) => (
+              <div className="ocp-item" key={t.nm} data-to="Э14.2">
+                <div className="tx">
+                  <div className="nm">{t.nm}</div>
+                  <div className="ss">{t.sub}</div>
+                </div>
+                <span className={'ocp-tag' + (t.on ? ' on' : '')}>{t.tag}</span>
+              </div>
+            ))}
+          </div>
+
+          <div className="ocp-sec">
+            <div className="ocp-eyebrow">Последние результаты</div>
+            {RESULTS.map((r) => (
+              <div className="ocp-item" key={r.nm} data-to="Э14.6">
+                <div className="tx">
+                  <div className="nm">{r.nm}</div>
+                  <div className="ss">{r.sub}</div>
+                </div>
+                <span className={'ocp-sc o14-disp' + (r.win ? ' w' : ' l')}>{r.sc}</span>
+              </div>
+            ))}
+          </div>
         </div>
         <TabBar active="home" />
       </Frame>
