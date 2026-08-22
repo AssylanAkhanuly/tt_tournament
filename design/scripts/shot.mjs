@@ -2,9 +2,10 @@
    Запуск: node scripts/shot.mjs <story-id> <out.png> [ширина] [высота] [селектор] */
 import { chromium } from 'playwright-core';
 
-const [id, out, w = '1600', h = '1100', sel] = process.argv.slice(2);
+const [id, out, w = '1600', h = '1100', sel, globals] = process.argv.slice(2);
 if (!id || !out) {
-  console.error('usage: node scripts/shot.mjs <story-id> <out.png> [w] [h] [selector]');
+  console.error('usage: node scripts/shot.mjs <story-id> <out.png> [w] [h] [selector] [globals]');
+  console.error('  globals — как в URL Storybook: "theme:daylight" или "theme:daylight,font:onest"');
   process.exit(1);
 }
 
@@ -13,7 +14,10 @@ const page = await browser.newPage({
   viewport: { width: Number(w), height: Number(h) },
   deviceScaleFactor: 2,
 });
-await page.goto(`http://localhost:6006/iframe.html?id=${encodeURIComponent(id)}&viewMode=story`, {
+const url =
+  `http://localhost:6006/iframe.html?id=${encodeURIComponent(id)}&viewMode=story` +
+  (globals ? `&globals=${encodeURIComponent(globals)}` : '');
+await page.goto(url, {
   waitUntil: 'networkidle',
   timeout: 60_000,
 });

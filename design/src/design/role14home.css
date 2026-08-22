@@ -128,7 +128,7 @@
   display: flex;
   justify-content: space-between;
   font-size: 11px;
-  color: var(--c-muted);
+  color: var(--c-on-media-2);
 }
 
 /* Обложка турнира или новости: фотография с затемняющей шторкой, чтобы текст
@@ -208,8 +208,8 @@
   color: var(--c-success);
   text-transform: uppercase;
 }
-.oa-meta { font-size: 13px; color: var(--c-muted); }
-.oa-meta b { color: var(--c-ink); font-weight: 700; }
+.oa-meta { font-size: 13px; color: var(--c-on-media-2); }
+.oa-meta b { color: var(--c-on-media); font-weight: 700; }
 
 .oa-act { display: flex; align-items: center; gap: var(--s-4); margin-top: 2px; }
 .oa-go {
@@ -227,8 +227,8 @@
   cursor: pointer;
   box-shadow: var(--sh-success);
 }
-.oa-at { font-size: 12px; color: var(--c-muted); }
-.oa-at b { display: block; font-size: 20px; color: var(--c-ink-bright); font-variant-numeric: tabular-nums; }
+.oa-at { font-size: 12px; color: var(--c-on-media-2); }
+.oa-at b { display: block; font-size: 20px; color: var(--c-on-media); font-variant-numeric: tabular-nums; }
 
 /* Соперник поверх фотографии */
 .oa-foe {
@@ -248,8 +248,8 @@
   border: 2px solid var(--c-glass-hi-2);
   flex: none;
 }
-.oa-foe .nm { font-size: 24px; color: var(--c-ink-bright); }
-.oa-foe .sub { font-size: 12px; color: var(--c-muted); margin-top: 5px; }
+.oa-foe .nm { font-size: 24px; color: var(--c-on-media); }
+.oa-foe .sub { font-size: 12px; color: var(--c-on-media-2); margin-top: 5px; }
 
 /* Полоса показателей: рейтинг крупно, но одной лентой — во время турнира это
    справка. */
@@ -448,7 +448,7 @@
   font-size: 10px;
   font-weight: 800;
   letter-spacing: 0.12em;
-  color: var(--c-ink-bright);
+  color: var(--c-on-media);
   background: color-mix(in srgb, var(--c-accent) 82%, transparent);
   padding: 3px 7px;
 }
@@ -500,11 +500,11 @@
 .ov-now > * { position: relative; }
 .ov-now-top { display: flex; align-items: center; gap: var(--s-3); }
 .ov-now-top .grow { flex: 1; }
-.ov-now-top .at { font-size: 12px; color: var(--c-muted); font-variant-numeric: tabular-nums; }
+.ov-now-top .at { font-size: 12px; color: var(--c-on-media-2); font-variant-numeric: tabular-nums; }
 .ov-now-main { display: flex; align-items: center; gap: var(--s-3); }
 .ov-now-main img { width: 52px; height: 52px; border-radius: 50%; object-fit: cover; flex: none; }
-.ov-now-main .nm { font-size: 26px; color: var(--c-ink-bright); }
-.ov-now-main .sub { font-size: 12px; color: var(--c-muted); margin-top: 5px; }
+.ov-now-main .nm { font-size: 26px; color: var(--c-on-media); }
+.ov-now-main .sub { font-size: 12px; color: var(--c-on-media-2); margin-top: 5px; }
 .ov-now-main .grow { flex: 1; }
 .ov-now-table { text-align: right; }
 .ov-now-table .t { font-size: 52px; color: var(--c-success); }
@@ -551,9 +551,9 @@
   font-size: 10px;
   font-weight: 800;
   letter-spacing: 0.12em;
-  color: var(--c-ink-bright);
+  color: var(--c-on-media);
   background: color-mix(in srgb, var(--c-accent) 82%, transparent);
   padding: 3px 7px;
 }
-.ov-lead .nm { font-size: 24px; color: var(--c-ink-bright); }
-.ov-lead .at { font-size: 11px; color: var(--c-muted); }
+.ov-lead .nm { font-size: 24px; color: var(--c-on-media); }
+.ov-lead .at { font-size: 11px; color: var(--c-on-media-2); }

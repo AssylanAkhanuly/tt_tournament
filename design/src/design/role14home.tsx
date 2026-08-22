@@ -18,16 +18,17 @@ import { ChartBox, soft, token } from '../mockups/chart';
 import { A } from '../fedCommon';
 import { R14 } from '../mockups/roles';
 import hero from '../assets/tt-hero.jpg';
+export { hero };
 import './role14home.css';
 
 /* Данные макета — те же, что в существующих макетах роли 14: спортсмен
    Ким Георгий, соперник Жумабеков Расул, Кубок Алматы 2026. Правдоподобные,
    но выдуманные. */
-const ME = { nm: 'Ким Георгий', sub: 'Астана · СКА · КМС', av: A(44) };
-const FOE = { nm: 'Жумабеков Расул', sub: 'рейтинг 2312 · Шымкент · посев 13', av: A(22) };
+export const ME = { nm: 'Ким Георгий', sub: 'Астана · СКА · КМС', av: A(44) };
+export const FOE = { nm: 'Жумабеков Расул', sub: 'рейтинг 2312 · Шымкент · посев 13', av: A(22) };
 
 /* Форма: последние восемь матчей. Победа — В, поражение — П. */
-const FORM = [1, 1, 0, 1, 1, 1, 0, 1];
+export const FORM = [1, 1, 0, 1, 1, 1, 0, 1];
 
 /* Счёт идущего матча по партиям. Ведёт его судья стола: спортсмен счёт не
    вводит и не подтверждает (flows/14-sportsmen.md, Э14.5). */
@@ -38,13 +39,13 @@ const SETS = [
   { me: 7, foe: 5, now: true },
 ];
 
-const RESULTS = [
+export const RESULTS = [
   { nm: 'Оралбек Диас', sub: '1/4 финала · Кубок Алматы', sc: '3:1', win: true },
   { nm: 'Смагулов Ерлан', sub: 'финал · Открытый турнир Астаны', sc: '2:4', win: false },
   { nm: 'Тлеуберди Асан', sub: '1/2 финала · Открытый турнир Астаны', sc: '4:2', win: true },
 ];
 
-const NEWS = [
+export const NEWS = [
   {
     tag: 'КАЛЕНДАРЬ',
     nm: 'Календарь сезона 2026 опубликован',
@@ -61,7 +62,7 @@ const NEWS = [
 
 /* ── Мелочи, общие для вариантов ────────────────────────────────── */
 
-const Form = () => (
+export const Form = () => (
   <div className="o14-form" title="Последние восемь матчей">
     {FORM.map((w, i) => (
       <i className={w ? 'w' : 'l'} key={i}>
@@ -71,7 +72,7 @@ const Form = () => (
   </div>
 );
 
-const Sets = () => (
+export const Sets = () => (
   <div className="o14-sets o14-disp">
     {SETS.map((s, i) => (
       <div className={'st ' + (s.now ? 'now' : s.me > s.foe ? 'w' : 'l')} key={i}>
@@ -99,7 +100,7 @@ const H2H = () => (
 
 /* Обложка турнира или новости. В системе она есть: материалы федерации
    публикуются с обложкой (Э1.14), карточка турнира — с изображением. */
-const Cover = ({ className = '', children }: { className?: string; children?: React.ReactNode }) => (
+export const Cover = ({ className = '', children }: { className?: string; children?: React.ReactNode }) => (
   <div className={'o14-cover ' + className} style={{ backgroundImage: `url(${hero})` }}>
     {children}
   </div>
