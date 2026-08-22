@@ -1,0 +1,66 @@
+/* Э14.1 · герой-карусель. Разбор — в role14heroswiper.tsx.
+
+   Карточка слайда берётся целиком из переноса WTT (`.ohw-*` в
+   role14heroref.css) — карусель меняет не вид карточки, а то, сколько их
+   помещается в блок. Здесь только оболочка: заголовок с счётчиком, свои
+   стрелки и точки. */
+
+.ohs { display: grid; gap: 10px; }
+
+.ohs-head { display: flex; align-items: center; justify-content: space-between; gap: var(--s-4); }
+.ohs-nav { display: flex; gap: 6px; }
+
+/* Стрелки свои, а не штатные Swiper: у тех своя форма, свой цвет и скруглённый
+   угол — мимо токенов и правила «углы интерфейса прямые». */
+.ohs-arrow {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  color: var(--c-muted);
+  background: var(--c-panel);
+  border: 1px solid var(--c-glass-line);
+  border-radius: var(--r-xs);
+  cursor: pointer;
+}
+.ohs-arrow:hover { color: var(--c-ink); border-color: var(--c-accent-line-3); }
+/* Крайний слайд: Swiper сам вешает этот класс — кнопка гаснет, а не исчезает,
+   иначе соседняя прыгает на её место. */
+.ohs-arrow.swiper-button-disabled { opacity: 0.4; cursor: default; }
+
+/* Слайд занимает всю ширину блока: карусель здесь не витрина карточек, а
+   переключатель между матчами одного дня — за краем не должно висеть
+   «половинки» следующего, иначе она читается как часть текущего матча. */
+.ohw--slide { height: 100%; min-height: 132px; }
+/* Матч, до которого ещё далеко: грань слева тоже тише — зелёная означает
+   «идите к столу», а идти пока некуда. */
+.ohw--quiet { border-left-color: var(--c-glass-line); }
+.ohs .swiper { width: 100%; }
+.ohs .swiper-slide { height: auto; }
+
+/* Точки: сколько матчей и где я сейчас. Круглые — точка круглая по сути, под
+   правило «углы прямые» не попадает. */
+.ohs-dots { display: flex; justify-content: center; gap: 7px; }
+.ohs-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--c-ink) 20%, transparent);
+  cursor: pointer;
+}
+.ohs-dot.on { background: var(--c-success); }
+
+/* Матч, который сегодня, но ещё не скоро: то же место, тише голос. */
+.ohw-pill.quiet {
+  color: var(--c-muted);
+  background: color-mix(in srgb, var(--c-ink) 7%, transparent);
+}
+.ohw-go.quiet {
+  color: var(--c-ink);
+  background: transparent;
+  border: 1px solid var(--c-glass-line);
+}
+/* Соперника ещё нет — строка остаётся на месте, чтобы карточки в карусели не
+   прыгали по высоте. */
+.ohw-tbd { font-size: 13px; font-style: italic; color: var(--c-muted); white-space: nowrap; }
