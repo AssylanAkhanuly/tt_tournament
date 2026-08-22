@@ -230,6 +230,29 @@
 .oa-at { font-size: 12px; color: var(--c-on-media-2); }
 .oa-at b { display: block; font-size: 20px; color: var(--c-on-media); font-variant-numeric: tabular-nums; }
 
+/* Герой в других состояниях.
+   live — матч идёт: рамка и точка уходят в broadcast-цвет, тот же, которым
+   помечен эфир на табло судьи. quiet — турнира нет: зелёная рамка «вас
+   вызвали» на межсезонье врала бы, поэтому рамка нейтральная. */
+.oa-hero.live { border-color: var(--c-broadcast); border-left-color: var(--c-broadcast); }
+.oa-live.now { color: var(--c-broadcast); }
+.oa-live.now .d { background: var(--c-broadcast); box-shadow: 0 0 0 4px var(--c-danger-soft); }
+.oa-go.now { color: var(--c-on-media); background: var(--c-broadcast); box-shadow: none; }
+
+.oa-hero.live .oa-table .t,
+.oa-hero.live .oa-table .k { color: var(--c-broadcast); }
+
+.oa-hero.quiet { border-color: var(--c-glass-line); border-left-color: var(--c-accent); }
+
+/* Сезон в межсезонном герое — вместо личных встреч: соперника ещё нет */
+.oa-season { display: flex; gap: var(--s-4); }
+.oa-season b { display: block; font-size: 20px; color: var(--c-on-media); }
+.oa-season span { font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--c-on-media-2); }
+.oa-live.quiet { color: var(--c-on-media-2); gap: 8px; }
+.oa-table.quiet .t,
+.oa-table.quiet .k { color: var(--c-on-media); }
+.oa-go.accent { color: var(--c-accent-ink); background: var(--c-accent); box-shadow: var(--sh-accent); }
+
 /* Соперник поверх фотографии */
 .oa-foe {
   display: grid;

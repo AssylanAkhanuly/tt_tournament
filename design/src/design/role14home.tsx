@@ -108,47 +108,157 @@ export const Cover = ({ className = '', children }: { className?: string; childr
 
 /* ═══════════ Вариант А · «Вызов на стол» ═══════════ */
 
-export function HomeA() {
+/* Состояния героя. Верх экрана у А — весь экран, и держать его в одном
+   состоянии нельзя: спортсмен живёт в турнире три дня в месяц, а на главную
+   заходит каждый день. Поэтому герой нарисован во всех четырёх положениях, а
+   не описан словами (правило «состояния рисуем, а не описываем»).
+
+   `off` — межсезонье, и по нему решение ещё не принято: два героя на выбор,
+   `offHero='next'` (обратный отсчёт до старта) и `'season'` (итог сезона). */
+export type HeroState = 'called' | 'playing' | 'soon' | 'off';
+export type OffHero = 'next' | 'season';
+
+export function HeroA({ state = 'called', offHero = 'next' }: { state?: HeroState; offHero?: OffHero }) {
+  /* Межсезонье: турнира нет, и фотография с зелёной рамкой «вас вызвали» здесь
+     врала бы. Рамка нейтральная, вместо номера стола — то, ради чего человек
+     зашёл: когда ближайший старт либо чем кончился сезон. */
+  if (state === 'off') {
+    return (
+      <div className={'oa-hero quiet'} style={{ backgroundImage: `url(${hero})` }}>
+        <div className="oa-hero-l">
+          {offHero === 'next' ? (
+            <>
+              <span className="oa-live quiet">
+                <CalendarDays size={13} /> БЛИЖАЙШИЙ СТАРТ
+              </span>
+              <div className="oa-table o14-disp quiet">
+                <span className="t">8</span>
+                <span className="k">дней</span>
+              </div>
+              <div className="oa-meta">
+                <b>Кубок Алматы 2026</b> · ОРТ · Алматы · 12–14 сентября
+              </div>
+              <div className="oa-act">
+                <button type="button" className="oa-go accent" data-to="Э14.4">
+                  <ChevronRight size={15} /> Моя заявка
+                </button>
+                <div className="oa-at">
+                  <b>03.09</b>
+                  заявка подана
+                </div>
+              </div>
+            </>
+          ) : (
+            <>
+              <span className="oa-live quiet">СЕЗОН 2026</span>
+              <div className="oa-table o14-disp quiet">
+                <span className="t">2456</span>
+                <span className="k">рейтинг</span>
+              </div>
+              <div className="oa-meta">
+                <b>7 место в РК</b> · +144 за сезон · 8 турниров · 64 % побед
+              </div>
+              <div className="oa-act">
+                <button type="button" className="oa-go accent" data-to="Э14.2">
+                  <CalendarDays size={15} /> Куда могу заявиться
+                </button>
+                <div className="oa-at">
+                  <b>6</b>
+                  открытых приёмов
+                </div>
+              </div>
+            </>
+          )}
+        </div>
+
+        {/* Личных встреч здесь нет намеренно: соперник не назначен, и полоса
+            «3 : 2» была бы про неизвестно кого. Вместо неё — сезон. */}
+        <div className="oa-foe">
+          <div className="o14-eyebrow">Форма сезона</div>
+          <Form />
+          <div className="oa-season">
+            <div>
+              <b className="o14-disp">8</b>
+              <span>турниров</span>
+            </div>
+            <div>
+              <b className="o14-disp">64 %</b>
+              <span>побед</span>
+            </div>
+            <div>
+              <b className="o14-disp">128</b>
+              <span>матчей</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  const live = state === 'playing';
+  return (
+    <div
+      className={'oa-hero' + (live ? ' live' : '')}
+      data-to="Э14.5"
+      style={{ backgroundImage: `url(${hero})` }}
+    >
+      <div className="oa-hero-l">
+        <span className={'oa-live' + (live ? ' now' : '')}>
+          <span className="d" />
+          {live ? 'ИДЁТ МАТЧ · ПАРТИЯ 4' : state === 'soon' ? 'ВЫ СЛЕДУЮЩИЕ' : 'ВАС ВЫЗВАЛИ'}
+        </span>
+        <div className="oa-table o14-disp">
+          <span className="t">5</span>
+          <span className="k">стол</span>
+        </div>
+        <div className="oa-meta">
+          <b>Кубок Алматы 2026</b> · 1/8 финала · одиночный разряд
+        </div>
+        <div className="oa-act">
+          <button type="button" className={'oa-go' + (live ? ' now' : '')} data-to="Э14.5">
+            <Play size={15} /> {live ? 'Смотреть счёт' : 'Открыть матч'}
+          </button>
+          <div className="oa-at">
+            {state === 'soon' ? (
+              <>
+                <b>≈ 20 мин</b>
+                после матча Оралбек — Смагулов
+              </>
+            ) : (
+              <>
+                <b>14:20</b>
+                {live ? 'идёт 32 минуты' : 'начало'}
+              </>
+            )}
+          </div>
+        </div>
+      </div>
+
+      <div className="oa-foe">
+        <div className="oa-foe-top">
+          <img src={FOE.av} alt="" />
+          <div>
+            <div className="nm o14-disp">Жумабеков Р.</div>
+            <div className="sub">{FOE.sub}</div>
+          </div>
+        </div>
+        {/* Идёт матч — вместо личных встреч счёт по партиям: он важнее истории,
+            пока история пишется прямо сейчас. Ведёт его судья стола. */}
+        {live ? <Sets /> : <H2H />}
+      </div>
+    </div>
+  );
+}
+
+export function HomeA({ state = 'called', offHero = 'next' }: { state?: HeroState; offHero?: OffHero } = {}) {
   return (
     <RoleScreen role={R14} nav="Главная" title="Ким Георгий" sub="Астана · СКА · КМС">
       <div className="o14">
         {/* Во время турнира экран отвечает на один вопрос: куда идти и с кем
             играть. Поэтому вызов занимает верх целиком и набран так, чтобы
-            читаться с двух метров. */}
-        <div className="oa-hero" data-to="Э14.5" style={{ backgroundImage: `url(${hero})` }}>
-          <div className="oa-hero-l">
-            <span className="oa-live">
-              <span className="d" /> ВАС ВЫЗВАЛИ
-            </span>
-            <div className="oa-table o14-disp">
-              <span className="t">5</span>
-              <span className="k">стол</span>
-            </div>
-            <div className="oa-meta">
-              <b>Кубок Алматы 2026</b> · 1/8 финала · одиночный разряд
-            </div>
-            <div className="oa-act">
-              <button type="button" className="oa-go" data-to="Э14.5">
-                <Play size={15} /> Открыть матч
-              </button>
-              <div className="oa-at">
-                <b>14:20</b>
-                начало
-              </div>
-            </div>
-          </div>
-
-          <div className="oa-foe">
-            <div className="oa-foe-top">
-              <img src={FOE.av} alt="" />
-              <div>
-                <div className="nm o14-disp">Жумабеков Р.</div>
-                <div className="sub">{FOE.sub}</div>
-              </div>
-            </div>
-            <H2H />
-          </div>
-        </div>
+            читаться с двух метров. Вне турнира тот же верх занимает то, ради
+            чего человек зашёл, — см. HeroA. */}
+        <HeroA state={state} offHero={offHero} />
 
         {/* Рейтинг во время турнира — справка, а не заголовок экрана: одна
             лента вместо четырёх плиток. */}
