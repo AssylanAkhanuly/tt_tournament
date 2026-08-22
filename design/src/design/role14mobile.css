@@ -681,3 +681,33 @@
 .mbr-sc.l { color: var(--c-danger); }
 /* «Турниров нет»: текст в поле длиннее одной строки — даём ему дышать. */
 .mbr-card.quiet .mbr-tour-sub { max-width: 250px; line-height: 1.4; }
+
+/* ── Межсезонье: поле занято итогом сезона ─────────────────────────
+   Пустое состояние не сообщает об отсутствии — оно показывает то, ради чего
+   между турнирами и заходят: рейтинг, место, набранное за сезон и форму. */
+.mbr-rate { display: flex; align-items: baseline; gap: 10px; margin-top: 6px; }
+.mbr-rate .v { font-size: 58px; line-height: 0.9; }
+.mbr-rate .k {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.28em;
+  color: var(--c-on-media-2);
+  text-transform: uppercase;
+}
+/* Форма — восемь последних матчей штрихами. Единственная графика на поле, и
+   она из данных, а не украшение. */
+.mbr-form { display: inline-flex; gap: 4px; }
+.mbr-form i { width: 10px; height: 16px; border-radius: var(--r-xs); }
+.mbr-form i.w { background: var(--c-on-media); }
+.mbr-form i.l { background: color-mix(in srgb, var(--c-on-media) 28%, transparent); }
+
+/* Строка «заявиться пока некуда» стоит там, где в турнир стоит расписание:
+   факт сказан словами и не занимает целое поле. */
+.mbr-empty {
+  margin: 0 18px 4px;
+  padding: 10px 12px;
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--c-muted);
+  background: color-mix(in srgb, var(--c-ink) 5%, transparent);
+}

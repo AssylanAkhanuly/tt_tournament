@@ -33,7 +33,7 @@ import { Frame } from '../PlayerApp';
 import { MiniTabBar } from '../respShell';
 import { Brand } from '../ui';
 import { applyTheme } from '../theme/themes';
-import { ME, RESULTS } from './role14home';
+import { FORM, ME, RESULTS } from './role14home';
 import { DAY, TOURS, TOURS_FIELD, type Match, type Tour } from './role14day';
 import 'swiper/css';
 import 'swiper/css/pagination';
@@ -363,18 +363,42 @@ export function MobileBrand({ state = 'current' }: { state?: 'current' | 'open' 
         <Chrome>
           <div className="mb-body">
             {state === 'none' ? (
-              /* Турниров нет вовсе. Ничего не выдумываем и не показываем пустую
-                 карточку: пишем словами и ведём в календарь. */
+              /* Турниров нет вовсе. Первый заход показывал в поле надпись
+                 «Сейчас заявиться некуда» — экран читался как ошибка: цветное
+                 поле во весь верх, а в нём сообщение об отсутствии.
+
+                 Теперь поле занято не отсутствием, а ИТОГОМ СЕЗОНА: рейтинг,
+                 место, набранное за сезон и форма последних восьми матчей.
+                 Между турнирами это ровно то, ради чего человек и заходит; а
+                 то, что заявиться пока некуда, сказано строкой в листе, где
+                 обычно стоит расписание. Заодно закрывается старый открытый
+                 вопрос по межсезонному герою: из двух решений («до старта» и
+                 «итог сезона») здесь работает второе, потому что отсчитывать
+                 нечего. */
               <div className="mbr-card quiet">
                 <div className="mbr-band" />
                 <div className="mbr-in">
                   <div className="mbr-top">
-                    <span className="mbr-state">Турниров нет</span>
+                    <span className="mbr-state">Сезон 2026</span>
+                    <span className="mbr-time o14-disp">8 турниров</span>
                   </div>
-                  <div className="mbr-tour o14-disp">Сейчас заявиться некуда</div>
-                  <div className="mbr-tour-sub">
-                    Открытых приёмов на ближайшие недели нет. Новые появятся в календаре — там же
-                    видно даты и сроки заявок.
+
+                  <div className="mbr-rate">
+                    <span className="v o14-disp">2456</span>
+                    <span className="k">рейтинг</span>
+                  </div>
+                  <div className="mbr-tour-sub">7 место в РК · +144 за сезон · 64 % побед</div>
+
+                  {/* Форма сезона: восемь последних матчей штрихами. На поле
+                      это единственная графика, и она из данных, а не украшение. */}
+                  <div className="mbr-when">
+                    <span className="mbr-form">
+                      {FORM.map((w, i) => (
+                        <i className={w ? 'w' : 'l'} key={i} />
+                      ))}
+                    </span>
+                    <span className="d" />
+                    <span className="t o14-disp">последние 8</span>
                   </div>
                 </div>
               </div>
@@ -448,6 +472,13 @@ export function MobileBrand({ state = 'current' }: { state?: 'current' | 'open' 
                     </div>
                   ))}
                 </>
+              )}
+
+              {state === 'none' && (
+                <div className="mbr-empty">
+                  Открытых приёмов сейчас нет. Новые появятся в календаре — там же будут даты и
+                  сроки подачи заявок.
+                </div>
               )}
 
               {state !== 'current' && (
