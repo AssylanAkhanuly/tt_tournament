@@ -32,60 +32,13 @@ import {
 } from 'lucide-react';
 import { Frame, TabBar } from '../PlayerApp';
 import { MiniTabBar } from '../respShell';
-import { Brand } from '../ui';
+import { Chrome, NAV } from './role14mobile';
 import { ME, RESULTS } from './role14home';
+import { DAY, TOURS, type Match } from './role14day';
 import 'swiper/css';
 import 'swiper/css/navigation';
 import 'swiper/css/pagination';
 import './role14heroswiper.css';
-
-export type Match = {
-  /** Круг и разряд — одной короткой строкой. */
-  round: string;
-  table: string;
-  state: 'called' | 'soon' | 'later';
-  pill: string;
-  time: string;
-  action: string;
-  me: string;
-  /** Соперника может ещё не быть: в группе микста пары сводят после жеребьёвки. */
-  foe: string | null;
-};
-
-/* Турнирный день спортсмена: три разряда, три стола, три времени. Данные
-   выдуманные, но правдоподобные — как и везде в макетах роли. */
-export const DAY: Match[] = [
-  {
-    round: '1/8 финала · одиночный',
-    table: '5',
-    state: 'called',
-    pill: 'ВАС ВЫЗВАЛИ',
-    time: '14:20',
-    action: 'Открыть матч',
-    me: 'Ким Георгий',
-    foe: 'Жумабеков Расул',
-  },
-  {
-    round: '1/4 финала · парный',
-    table: '3',
-    state: 'soon',
-    pill: 'ВЫ СЛЕДУЮЩИЕ',
-    time: '16:40',
-    action: 'Открыть матч',
-    me: 'Ким / Оралбек',
-    foe: 'Смагулов / Тлеуберди',
-  },
-  {
-    round: 'Группа B · микст',
-    table: '7',
-    state: 'later',
-    pill: 'СЕГОДНЯ ПОЗЖЕ',
-    time: '18:10',
-    action: 'Мой турнир',
-    me: 'Ким / Абаева',
-    foe: null,
-  },
-];
 
 /* ── Карточка для веба ──────────────────────────────────────────────
    Три строки: состояние и стол, я, соперник. Справа время и действие. */
@@ -205,117 +158,77 @@ function CardPhone({ m }: { m: Match }) {
   );
 }
 
-/* Остальной экран приложения: то же содержание, что у главной в вебе
-   (flows/14-sportsmen.md, Э14.1) — рейтинг, ближайшие турниры, последние
-   результаты. Без него карусель висела в пустоте, и по картинке нельзя было
-   судить ни о плотности экрана, ни о том, что уходит под сгиб. */
-export const TOURS = [
-  { nm: 'Кубок Алматы 2026', sub: 'ОРТ · Алматы · 12–14 сентября', tag: 'ЗАЯВКА ПОДАНА', on: true },
-  { nm: 'Чемпионат Республики', sub: 'Главный старт · Астана · 18–22 сентября', tag: 'ЗАЯВЛЯЕТ РЕГИОН', on: false },
-];
 
-/* Хром мобильного браузера: адресная строка сразу под системным статус-баром —
-   так, как её показывает Chrome на Android. Нужна не для красоты: без неё по
-   макету не видно, сколько высоты у экрана съедает сам браузер, а на телефоне
-   это 44 px из 652 плюс шапка сайта. Нижней панели браузера здесь нет
-   намеренно — у Chrome её нет, и она спорила бы с навигацией сайта. */
-const BrowserBar = () => (
-  <div className="ocb">
-    <span className="ocb-url">
-      <Lock size={11} />
-      fnt.kz/me
-    </span>
-    <button type="button" className="ocb-btn" aria-label="Обновить">
-      <RotateCw size={15} />
-    </button>
-    <span className="ocb-tabs">3</span>
-  </div>
-);
+/* Изначальная версия мобильного экрана — она и остаётся рабочей (решение от
+   22.08.2026 после двенадцати нарисованных обликов). Две правки по итогам
+   разбора:
 
-/* Шапка самого сайта: знак ФНТ, уведомления, я. Без неё фамилия на странице
-   висела сама по себе — непонятно, чей это сайт и куда с него уходить. На
-   телефоне она короче десктопной: знак, колокол, фото. */
-const SiteHeader = () => (
-  <div className="ocs">
-    <Brand size="sm" sub="Спортсмен" />
-    <div className="ocs-r">
-      <button type="button" className="iconbtn dot" aria-label="Уведомления">
-        <Bell size={16} />
-      </button>
-      <img src={ME.av} alt="" />
-    </div>
-  </div>
-);
+   1. Точки карусели заменены полосками, как в историях: полоски показывают не
+      только «сколько всего и где я», но и сколько ещё впереди, и стоят они
+      сверху, где их и ищут глазами.
+   2. Убрана лента показателей — место в РК, дельта за турнир, доля побед. На
+      экране вызова эти числа не нужны: человек стоит в зале и идёт к столу, а
+      разбор своих чисел живёт в аналитике (Э14.6).
 
-/* Веб-версия на телефоне: хром браузера, шапка сайта, страница, навигация
-   роли внизу. Пункты — те же, что в сайдбаре десктопа (R14), только четыре
-   главных: на телефоне шесть в строку не встают. */
-const WEB_TABS: [ReactNode, string][] = [
-  [<LayoutDashboard size={19} />, 'Главная'],
-  [<CalendarDays size={19} />, 'Календарь'],
-  [<Timer size={19} />, 'Мой турнир'],
-  [<User size={19} />, 'Профиль'],
-];
-
+   Оболочка — хром браузера, нарисованный с натуры, и шапка сайта; и то и
+   другое общее с остальными макетами роли (`role14mobile.tsx`). */
 export function HeroSwiperBrowser() {
   return (
-    <div className="ocp-wrap ocp-wrap--web">
+    <div className="ocp-wrap ocp-wrap--web mb-wrap">
       <Frame>
-        <BrowserBar />
-        <SiteHeader />
-        <div className="ocp-body">
-          <div className="ocp-top">
-            <div className="nm">Ким Георгий</div>
-            <div className="rt o14-disp">2456</div>
-          </div>
-
-          <div className="ocp-eyebrow">Сегодня · 3 матча</div>
-
-          <div className="ocp-bleed">
-            <Swiper
-              modules={[Pagination]}
-              slidesPerView={1}
-              speed={420}
-              pagination={{ el: '.ocp-dots-web', clickable: true, bulletClass: 'ohs-dot', bulletActiveClass: 'on' }}
-            >
-              {DAY.map((m) => (
-                <SwiperSlide key={m.round}>
-                  <CardPhone m={m} />
-                </SwiperSlide>
-              ))}
-            </Swiper>
-          </div>
-          <div className="ocp-dots ocp-dots-web" />
-
-          <div className="ocp-rail">
-            <div>
-              <b className="o14-disp">7</b>
-              <span>место в РК</span>
+        <Chrome>
+          <div className="ocp-body">
+            <div className="ocp-top">
+              <div className="nm">Ким Георгий</div>
+              <div className="rt o14-disp">2456</div>
             </div>
-            <div>
-              <b className="o14-disp up">+24</b>
-              <span>за турнир</span>
-            </div>
-            <div>
-              <b className="o14-disp">64 %</b>
-              <span>побед</span>
-            </div>
-          </div>
 
-          <div className="ocp-sec">
-            <div className="ocp-eyebrow">Ближайшие турниры</div>
-            {TOURS.map((t) => (
-              <div className="ocp-item" key={t.nm} data-to="Э14.2">
-                <div className="tx">
-                  <div className="nm">{t.nm}</div>
-                  <div className="ss">{t.sub}</div>
+            {/* Полоски прогресса — над карточкой, как в историях. */}
+            <div className="ocp-bars ocp-dots-web" />
+
+            <div className="ocp-bleed">
+              <Swiper
+                modules={[Pagination]}
+                slidesPerView={1}
+                speed={420}
+                pagination={{ el: '.ocp-dots-web', clickable: true, bulletClass: 'ocp-bar', bulletActiveClass: 'on' }}
+              >
+                {DAY.map((m) => (
+                  <SwiperSlide key={m.round}>
+                    <CardPhone m={m} />
+                  </SwiperSlide>
+                ))}
+              </Swiper>
+            </div>
+
+            <div className="ocp-sec">
+              <div className="ocp-eyebrow">Ближайшие турниры</div>
+              {TOURS.map((t) => (
+                <div className="ocp-item" key={t.nm} data-to="Э14.2">
+                  <div className="tx">
+                    <div className="nm">{t.nm}</div>
+                    <div className="ss">{t.sub}</div>
+                  </div>
+                  <span className={'ocp-tag' + (t.on ? ' on' : '')}>{t.tag}</span>
                 </div>
-                <span className={'ocp-tag' + (t.on ? ' on' : '')}>{t.tag}</span>
-              </div>
-            ))}
+              ))}
+            </div>
+
+            <div className="ocp-sec">
+              <div className="ocp-eyebrow">Последние результаты</div>
+              {RESULTS.map((r) => (
+                <div className="ocp-item" key={r.nm} data-to="Э14.6">
+                  <div className="tx">
+                    <div className="nm">{r.nm}</div>
+                    <div className="ss">{r.sub}</div>
+                  </div>
+                  <span className={'ocp-sc o14-disp' + (r.win ? ' w' : ' l')}>{r.sc}</span>
+                </div>
+              ))}
+            </div>
           </div>
-        </div>
-        <MiniTabBar items={WEB_TABS} active="Главная" />
+        </Chrome>
+        <MiniTabBar items={NAV} active="Главная" />
       </Frame>
     </div>
   );

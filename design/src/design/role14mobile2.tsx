@@ -23,7 +23,7 @@ import { ArrowRight, ChevronRight, Play } from 'lucide-react';
 import { Frame } from '../PlayerApp';
 import { MiniTabBar } from '../respShell';
 import { RESULTS } from './role14home';
-import { DAY, type Match } from './role14heroswiper';
+import { DAY, type Match } from './role14day';
 import { Chrome, Deck, NAV, ThemeBox } from './role14mobile';
 import './role14mobile2.css';
 

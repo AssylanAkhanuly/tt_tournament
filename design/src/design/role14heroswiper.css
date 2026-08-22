@@ -233,7 +233,7 @@
    по 14 px и снизу 16), и на этом экране он читался как ещё одна карточка
    поверх содержимого. Правило скоупнуто на этот макет — остальные роли
    продолжают жить с плавающим. */
-.ocp-wrap .tabbar {
+.ocp-wrap:not(.mb-wrap) .tabbar {
   left: 0;
   right: 0;
   bottom: 0;
@@ -282,81 +282,32 @@
 
 .ocp-dots { display: flex; justify-content: center; gap: 7px; margin-top: -4px; }
 
-/* ── Хром мобильного браузера и шапка сайта ────────────────────────
-   Веб-версия на телефоне: без адресной строки по макету не видно, сколько
-   высоты съедает сам браузер, а это 44 px из 652 плюс шапка сайта. */
-.ocb {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 6px 12px 8px;
-  background: var(--c-panel-2);
-  border-bottom: 1px solid var(--c-glass-line);
-}
-/* Адресная строка у браузеров скруглённая — это не наш интерфейс, а чужой
-   корпус, и правило «углы прямые» на него не распространяется (как и на
-   корпус телефона). */
-.ocb-url {
-  flex: 1;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  min-width: 0;
-  padding: 6px 12px;
-  font-size: 12px;
-  color: var(--c-muted);
-  background: var(--c-panel-3);
-  border: 1px solid var(--c-glass-line);
-  /* Пилюля адресной строки — форма чужого браузера, а не нашего интерфейса:
-     берём готовый токен --r-round, а не сырое значение. */
-  border-radius: var(--r-round);
-}
-.ocb-btn {
-  display: grid;
-  place-items: center;
-  width: 26px;
-  height: 26px;
-  padding: 0;
-  color: var(--c-muted);
-  background: none;
-  border: 0;
-  cursor: pointer;
-}
-/* Счётчик вкладок — квадрат с числом, как в Chrome. */
-.ocb-tabs {
-  display: grid;
-  place-items: center;
-  width: 20px;
-  height: 20px;
-  font-size: 11px;
-  font-weight: 700;
-  color: var(--c-muted);
-  border: 2px solid var(--c-muted);
-  border-radius: var(--r-xs);
-}
-
-/* Шапка сайта: знак, уведомления, я. */
-.ocs {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--s-3);
-  padding: 8px 14px;
-  background: var(--c-panel);
-  border-bottom: 1px solid var(--c-glass-line);
-}
-.ocs-r { display: flex; align-items: center; gap: 8px; }
-.ocs-r .iconbtn { width: 30px; height: 30px; }
-.ocs-r img { width: 30px; height: 30px; border-radius: 50%; object-fit: cover; }
-
 /* В браузере высоты меньше на адресную строку и шапку — карточка ужимается,
    иначе всё содержимое уезжает под сгиб. */
 .ocp-wrap--web .ocp-body { padding-top: 10px; gap: 10px; }
 .ocp-wrap--web .ocp-table b { font-size: 38px; }
 .ocp-wrap--web .ocp-go { padding: 10px 16px; font-size: 14px; }
 
-/* В браузере системный статус-бар подкрашивается под хром браузера — на
-   телефоне они читаются одной полосой, и без этого хром висел белой плашкой
-   на градиенте страницы. */
-.ocp-wrap--web .sys { background: var(--c-panel-2); padding-bottom: 6px; }
-.ocp-wrap--web .island { background: var(--c-screen-deep); }
+/* Статус-бар и навигация в браузерной версии живут по общим правилам
+   оболочки (`.mb-wrap` в role14mobile.css): хром тёмный, навигация сайта
+   стоит над нижней панелью браузера. Своих правил здесь больше нет — две
+   копии расходились. */
+
+/* ── Полоски прогресса вместо точек ────────────────────────────────
+   Как в историях: полоска на каждый матч дня, текущая закрашена. Точки
+   отвечали только на «где я», полоски — ещё и на «сколько впереди», и стоят
+   они сверху, где их ищут глазами. */
+.ocp-bars { display: flex; gap: 4px; padding: 2px 14px 2px; }
+.ocp-bar {
+  flex: 1;
+  height: 3px;
+  background: color-mix(in srgb, var(--c-ink) 16%, transparent);
+  cursor: pointer;
+}
+.ocp-bar.on { background: var(--c-success); }
+
+/* Экран без ленты показателей: место в РК, дельта и доля побед сняты —
+   на экране вызова эти числа не нужны, они живут в аналитике (Э14.6).
+   Освободившееся место отдано спискам. */
+.ocp-wrap--web .ocp-body { padding-bottom: 132px; }
+.ocp-wrap--web .ocp-sec + .ocp-sec { margin-top: 2px; }

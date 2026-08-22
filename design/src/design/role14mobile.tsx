@@ -34,7 +34,7 @@ import { MiniTabBar } from '../respShell';
 import { Brand } from '../ui';
 import { applyTheme } from '../theme/themes';
 import { ME, RESULTS } from './role14home';
-import { DAY, TOURS, type Match } from './role14heroswiper';
+import { DAY, TOURS, type Match } from './role14day';
 import 'swiper/css';
 import 'swiper/css/pagination';
 import './role14mobile.css';

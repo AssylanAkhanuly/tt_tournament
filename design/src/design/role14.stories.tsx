@@ -817,10 +817,10 @@ export const AHeroSwiper = {
 
 export const HeroSwiperFull = { name: 'Карусель · на экране', render: () => <HomeA hero={<HeroSwiper />} /> };
 export const HeroSwiperMobile = { name: 'Карусель · телефон (приложение)', render: () => <HeroSwiperPhone /> };
-/* Веб на телефоне — не то же, что приложение: сверху адресная строка браузера,
-   под ней шапка сайта. Вместе они съедают ~90 px из 652, и по макету без них
-   не видно, сколько на самом деле остаётся содержимому. */
-export const HeroSwiperWeb = { name: 'Карусель · телефон (браузер)', render: () => <HeroSwiperBrowser /> };
+/* Рабочая версия мобильного экрана: изначальная, с двумя правками по итогам
+   разбора двенадцати обликов — полоски вместо точек и без ленты показателей.
+   Двенадцать обликов остаются полками ниже как запись поиска. */
+export const HeroSwiperWeb = { name: 'Мобильный · рабочая версия', render: () => <HeroSwiperBrowser /> };
 
 export const HeroWttA = { name: 'Как у WTT · вас вызвали', render: () => <HomeA hero={<HeroWtt />} /> };
 export const HeroWttB = { name: 'Как у WTT · матч идёт', render: () => <HomeA hero={<HeroWtt live />} /> };
