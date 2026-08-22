@@ -26,7 +26,7 @@ import type { ReactNode } from 'react';
 import { Swiper, SwiperSlide } from 'swiper/react';
 import { Pagination } from 'swiper/modules';
 import {
-  ArrowLeft, ArrowRight, Bell, CalendarDays, LayoutDashboard, MoreHorizontal, Play, Plus,
+  ArrowLeft, ArrowRight, CalendarDays, LayoutDashboard, MoreHorizontal, Play, Plus,
   Share, Sparkles, Timer, User,
 } from 'lucide-react';
 import { Frame } from '../PlayerApp';
@@ -85,14 +85,16 @@ export function Chrome({ children }: { children: ReactNode }) {
         <Share size={17} />
       </div>
 
+      {/* Профиль один: отдельной кнопки-колокола нет, уведомления открываются
+          из профиля, а метка непрочитанного стоит на самом фото. Так в шапке
+          одна цель вместо двух, и красная точка не спорит с фотографией за
+          соседнее место. */}
       <div className="mb-site">
         <Brand size="sm" sub="Спортсмен" />
-        <div className="mb-site-r">
-          <button type="button" className="iconbtn dot" aria-label="Уведомления">
-            <Bell size={16} />
-          </button>
+        <button type="button" className="mb-me" aria-label="Профиль и уведомления" data-to="Э14.7">
           <img src={ME.av} alt="" />
-        </div>
+          <i className="mb-me-dot" />
+        </button>
       </div>
 
       {children}

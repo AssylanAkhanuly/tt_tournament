@@ -144,9 +144,29 @@
   background: var(--c-panel);
   border-bottom: 1px solid var(--c-glass-line);
 }
-.mb-site-r { display: flex; align-items: center; gap: 8px; }
-.mb-site-r .iconbtn { width: 30px; height: 30px; }
-.mb-site-r img { width: 30px; height: 30px; border-radius: 50%; object-fit: cover; }
+/* Профиль в шапке — одна цель: фото со значком непрочитанного. Отдельной
+   кнопки-колокола нет, уведомления открываются из профиля. */
+.mb-me {
+  position: relative;
+  flex: none;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  background: none;
+  border: 0;
+  cursor: pointer;
+}
+.mb-me img { width: 32px; height: 32px; border-radius: 50%; object-fit: cover; }
+.mb-me-dot {
+  position: absolute;
+  top: -1px;
+  right: -1px;
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  background: var(--c-danger);
+  border: 2px solid var(--c-panel);
+}
 
 /* Навигация прибита к низу — не плавает островом. */
 /* Навигация сайта стоит НАД панелью браузера: она часть страницы, а панель —
@@ -489,11 +509,16 @@
 /* Полоски прогресса вместо точек — как в историях: полоска на каждый матч
    дня, текущая закрашена. Лежат по верхнему краю цветного поля, поверх него. */
 .mbr .mb-body { position: relative; }
+/* `width: auto` обязателен: Swiper вешает на блок пагинации свои классы
+   (`swiper-pagination-horizontal`), а у них в его собственных стилях стоит
+   width: 100%. Вместе с нашими left/right это давало 300 px при экране в
+   300 px — третья полоска уезжала за правый край ровно на отступ. */
 .mbr .mb-dots {
   position: absolute;
   top: 10px;
   left: 18px;
   right: 18px;
+  width: auto;
   z-index: 3;
   gap: 4px;
   margin: 0;
