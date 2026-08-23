@@ -1165,7 +1165,7 @@ const PALETTES: [string, string][] = [
   ['graphite', 'Тёмная · графит'],
 ];
 
-function Shelf({ accentBtn = false }: { accentBtn?: boolean }) {
+function Shelf({ accentBtn = false, ds = false }: { accentBtn?: boolean; ds?: boolean }) {
   return (
     <div style={{ padding: 'var(--s-6)', background: 'var(--c-board-bg)' }}>
       <div
@@ -1189,7 +1189,7 @@ function Shelf({ accentBtn = false }: { accentBtn?: boolean }) {
               {label}
             </div>
             <ThemeBox theme={id}>
-              <div className={accentBtn ? 'mbr-btn-accent' : undefined}>
+              <div className={(accentBtn ? 'mbr-btn-accent ' : '') + (ds ? 'mbr-ds' : '')}>
                 <MobileBrand />
               </div>
             </ThemeBox>
@@ -1214,4 +1214,50 @@ export const AMobilePalettes = {
 export const AMobilePalettesAccent = {
   name: 'А · то же, но кнопка в цвет гаммы',
   render: () => <Shelf accentBtn />,
+};
+
+/* Третий вариант — и единственный, где роли цвета разведены так, как это
+   принято в системах: акцент уходит из заливки поля и достаётся главной
+   кнопке, зелёный возвращается статусам (победа, рост, «открыт», «идёт»).
+   Прежний облик красил кнопку зелёным именно потому, что акцент был занят
+   полем, — то есть один цвет отвечал и за статус, и за действие. Разбор — в
+   role14mobile.css, раздел «Г-2». */
+export const AMobilePalettesDs = {
+  name: 'А · Г-2 — поле спокойное, кнопка на бренде',
+  render: () => <Shelf ds />,
+};
+
+/* Три облика рядом в одной гамме — сравнивать роль цвета, а не тему. */
+export const AMobileButtonRule = {
+  name: 'А · три решения цвета рядом',
+  render: () => (
+    <div style={{ padding: 'var(--s-6)', background: 'var(--c-board-bg)' }}>
+      <div style={{ display: 'flex', gap: 'var(--s-6)', justifyContent: 'center', flexWrap: 'wrap' }}>
+        {[
+          ['', 'Г · поле в акценте, кнопка зелёная — зелёный значит и «сделать», и «победа»'],
+          ['mbr-btn-accent', 'Г + кнопка в акценте — сливается с полем того же цвета'],
+          ['mbr-ds', 'Г-2 · поле нейтральное, акцент отдан кнопке, зелёный — только статус'],
+        ].map(([cls, label]) => (
+          <div key={label} style={{ display: 'grid', justifyItems: 'center', gap: 'var(--s-3)', maxWidth: 420 }}>
+            <div
+              style={{
+                fontSize: 12,
+                fontWeight: 700,
+                textAlign: 'center',
+                color: 'var(--c-board-ink)',
+                fontFamily: 'var(--font)',
+              }}
+            >
+              {label}
+            </div>
+            <ThemeBox theme="daylight-fnt">
+              <div className={cls || undefined}>
+                <MobileBrand />
+              </div>
+            </ThemeBox>
+          </div>
+        ))}
+      </div>
+    </div>
+  ),
 };
