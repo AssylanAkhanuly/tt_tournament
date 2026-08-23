@@ -1165,9 +1165,8 @@ const PALETTES: [string, string][] = [
   ['graphite', 'Тёмная · графит'],
 ];
 
-export const AMobilePalettes = {
-  name: 'А · цветовые гаммы рабочего экрана',
-  render: () => (
+function Shelf({ accentBtn = false }: { accentBtn?: boolean }) {
+  return (
     <div style={{ padding: 'var(--s-6)', background: 'var(--c-board-bg)' }}>
       <div
         style={{
@@ -1190,11 +1189,29 @@ export const AMobilePalettes = {
               {label}
             </div>
             <ThemeBox theme={id}>
-              <MobileBrand />
+              <div className={accentBtn ? 'mbr-btn-accent' : undefined}>
+                <MobileBrand />
+              </div>
             </ThemeBox>
           </div>
         ))}
       </div>
     </div>
-  ),
+  );
+}
+
+export const AMobilePalettes = {
+  name: 'А · цветовые гаммы рабочего экрана',
+  render: () => <Shelf />,
+};
+
+/* Второй вопрос по гаммам: кнопка от темы к теме не менялась — она стоит на
+   `--c-success`, а зелёный в правиле цвета роли значит «сделать», и «сделать»
+   не должно зависеть от гаммы (правило — в role14mobile.css). Здесь та же
+   полка, но кнопка взята от акцента: видно, чем за это платим — главное
+   действие сливается с полем, потому что поле того же акцента, и на изумруде
+   с вишней граница планов перестаёт читаться. */
+export const AMobilePalettesAccent = {
+  name: 'А · то же, но кнопка в цвет гаммы',
+  render: () => <Shelf accentBtn />,
 };

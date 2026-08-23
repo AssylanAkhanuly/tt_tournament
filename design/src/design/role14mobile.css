@@ -793,3 +793,17 @@
 .mbr-group { background: var(--c-panel); padding-bottom: 4px; }
 .mbr-group + .mbr-group { margin-top: 10px; }
 .mbr-group .mbr-sec { padding-top: 12px; }
+
+/* ── Кнопка в цвет гаммы (только для сравнения в истории) ───────────
+   Штатно главная кнопка зелёная во всех темах: `--c-success` — это «сделать»,
+   и оно не должно зависеть от выбранной гаммы. Класс ниже переводит кнопку на
+   акцент, чтобы федерация увидела оба варианта рядом и выбрала осознанно.
+   В макете роли не используется — только в истории «кнопка в цвет гаммы». */
+.mbr-btn-accent .mbr-go {
+  color: var(--c-accent-ink);
+  background: var(--c-accent);
+}
+.mbr-btn-accent .mbr-go.ghost {
+  color: var(--c-ink);
+  background: transparent;
+}
