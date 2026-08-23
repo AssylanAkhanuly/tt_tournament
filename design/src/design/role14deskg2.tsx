@@ -49,6 +49,10 @@ export function HomeG2Desk({ variant }: { variant?: DeskVariant } = {}) {
             items={TOURS_FIELD}
             onIndex={setSlide}
             card={(t: Tour) => (
+              /* На слайде только сам турнир: подпись, название, разряды и
+                 даты. Расписание и сроки приёма с поля убраны — они уже стоят
+                 в колонках листа («Мои матчи сегодня», «Куда можно
+                 заявиться»), и на широком поле повторялись вторым столбцом. */
               <div className="g2d-field-in">
                 <div className="g2d-l">
                   <div className="g2d-eyebrow">
@@ -58,29 +62,6 @@ export function HomeG2Desk({ variant }: { variant?: DeskVariant } = {}) {
                   <div className="g2d-sub">
                     {t.sub} · {t.dates}
                   </div>
-                </div>
-
-                <div className="g2d-r">
-                  <div className="g2d-eyebrow">
-                    {t.kind === 'current' ? 'Ближайший матч' : 'Приём заявок'}
-                  </div>
-                  {t.kind === 'current' ? (
-                    <div className="g2d-next">
-                      <span className="t o14-disp">5</span>
-                      <span className="tx">
-                        <span className="nm">Жумабеков Расул</span>
-                        <span className="ss">{t.round} · одиночный</span>
-                      </span>
-                      <span className="tm o14-disp">{t.time}</span>
-                    </div>
-                  ) : (
-                    <div className="g2d-next">
-                      <span className="tx">
-                        <span className="nm">{t.till}</span>
-                        <span className="ss">заявку подаёт сам спортсмен</span>
-                      </span>
-                    </div>
-                  )}
                 </div>
               </div>
             )}

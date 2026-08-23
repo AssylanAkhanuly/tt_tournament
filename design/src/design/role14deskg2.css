@@ -68,13 +68,10 @@
   mask-composite: intersect;
   pointer-events: none;
 }
-.g2d-field-in {
-  position: relative;
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 380px);
-  align-items: start;
-  gap: var(--s-6);
-}
+/* Слайд — одна колонка: на поле остался только сам турнир. Второй столбец
+   («ближайший матч» у текущего, «приём заявок» у открытого) снят 23.08.2026 —
+   те же данные стоят ниже в колонках листа, и на поле выглядели повтором. */
+.g2d-field-in { position: relative; }
 .g2d-l { display: grid; gap: 2px; min-width: 0; }
 .g2d-eyebrow {
   font-size: 11px;
@@ -86,22 +83,6 @@
 /* Дисплейная гарнитура — только на крупном (правило типографики роли). */
 .g2d-title { font-size: 44px; line-height: 1.02; color: var(--c-on-media); }
 .g2d-sub { margin-top: 4px; font-size: 14px; color: var(--c-on-media-2); }
-
-.g2d-r { display: grid; gap: 8px; min-width: 0; }
-/* Строка ближайшего матча набрана как строки листа — на поле она читается
-   тем же способом, что и всё расписание ниже. */
-.g2d-next {
-  display: flex;
-  align-items: center;
-  gap: var(--s-4);
-  padding-top: 8px;
-  border-top: 1px solid color-mix(in srgb, var(--c-on-media) 22%, transparent);
-}
-.g2d-next .t { flex: none; width: 40px; font-size: 32px; color: var(--c-on-media); }
-.g2d-next .tx { flex: 1; min-width: 0; display: grid; }
-.g2d-next .nm { font-size: 16px; font-weight: 700; color: var(--c-on-media); }
-.g2d-next .ss { font-size: 12px; color: var(--c-on-media-2); }
-.g2d-next .tm { flex: none; font-size: 22px; color: var(--c-on-media); }
 
 /* Действие — цвета орнамента, только светлее; сидит верхом на границе планов,
    ровно половиной над линией. Подпись на нём 6.2 : 1, грань сверху отделяет
