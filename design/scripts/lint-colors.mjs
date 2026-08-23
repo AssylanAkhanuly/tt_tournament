@@ -86,7 +86,44 @@ for (const file of files) {
     });
 }
 
+/* ── Контраст подписи на заливке ───────────────────────────────────
+   Цвет подписи на акценте и на зелёном темы считают сами (`inkOn` в
+   themes.ts), и один раз этот расчёт уже врал: порог по яркости оставлял
+   белую подпись там, где она не читалась — в 16 темах из 32. Проверяем не
+   намерение, а число: норма AA для подписи 16 px полужирным — 4.5 : 1. */
+const AA = 4.5;
+const hexOf = (h) => {
+  const v = h.replace('#', '');
+  return [0, 2, 4].map((i) => parseInt(v.slice(i, i + 2), 16));
+};
+const lumaOf = (c) =>
+  hexOf(c)
+    .map((v) => {
+      const x = v / 255;
+      return x <= 0.04045 ? x / 12.92 : ((x + 0.055) / 1.055) ** 2.4;
+    })
+    .reduce((s, x, i) => s + [0.2126, 0.7152, 0.0722][i] * x, 0);
+const contrastOf = (a, b) => {
+  const [hi, lo] = [lumaOf(a), lumaOf(b)].sort((x, y) => y - x);
+  return (hi + 0.05) / (lo + 0.05);
+};
+
+const themesSrc = readFileSync(join(ROOT, 'src/theme/themes.ts'), 'utf8');
+const inkHits = [];
+for (const m of themesSrc.matchAll(
+  /id: '([a-z-]+)'[\s\S]{0,400}?seeds: (?:light|dark)\(\{ accent: '(#[0-9a-f]{6})'/g,
+)) {
+  const [, id, accent] = m;
+  const best = Math.max(contrastOf(accent, '#ffffff'), contrastOf(accent, '#101725'));
+  if (best < AA) inkHits.push(`тема ${id}: акцент ${accent} — лучший контраст подписи ${best.toFixed(2)} : 1`);
+}
+
 let bad = false;
+if (inkHits.length) {
+  bad = true;
+  console.error(`Подпись на акценте не читается (${inkHits.length}):\n` + inkHits.join('\n'));
+  console.error(`\nПочини: сдвинь акцент темы по светлоте — при любом тексте нужно ${AA} : 1.\n`);
+}
 if (rawHits.length) {
   bad = true;
   console.error(`Сырые цвета вне токенов (${rawHits.length}):\n` + rawHits.join('\n'));

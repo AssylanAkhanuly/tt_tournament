@@ -237,7 +237,7 @@
 .oa-hero.live { border-color: var(--c-broadcast); border-left-color: var(--c-broadcast); }
 .oa-live.now { color: var(--c-broadcast); }
 .oa-live.now .d { background: var(--c-broadcast); box-shadow: 0 0 0 4px var(--c-danger-soft); }
-.oa-go.now { color: var(--c-on-media); background: var(--c-broadcast); box-shadow: none; }
+.oa-go.now { color: var(--c-broadcast-ink); background: var(--c-broadcast); box-shadow: none; }
 
 .oa-hero.live .oa-table .t,
 .oa-hero.live .oa-table .k { color: var(--c-broadcast); }

@@ -36,6 +36,13 @@
   --seed-accent-3:      #4cc6ee;   /* третье пятно фона — светлое небо */
   --seed-success:       #34d399;
   --seed-success-ink:   #04240f;   /* текст на зелёной кнопке */
+  /* Текст на акценте. Был белым — и не проходил по контрасту: на #0a86cd белая
+     подпись даёт 3.96 : 1 при норме AA 4.5 для подписи 16 px полужирным, а
+     тёмная — 4.53. Комментарий выше это подозревал («на флаговом не читается
+     белый»), но проверено число не было. Темы считают этот цвет сами — берут
+     тот из двух, что контрастнее (`inkOn` в themes.ts); проверку держит
+     `npm run lint:colors`. */
+  --seed-on-accent:     #101725;   /* текст на акцентной заливке */
   --seed-warning:       #f0b24b;
   --seed-danger:        #fb7185;
   --seed-broadcast:     #ff5252;   /* «смотреть трансляцию» — красный эфира */
@@ -95,7 +102,7 @@
   --c-accent:            var(--seed-accent);
   --c-accent-2:          var(--seed-accent-2);
   --c-accent-3:          var(--seed-accent-3);
-  --c-accent-ink:        var(--seed-white);                                      /* текст на акценте */
+  --c-accent-ink:        var(--seed-on-accent);                                  /* текст на акценте */
   --c-accent-soft:       color-mix(in srgb, var(--c-accent) 16%, transparent);    /* подложка чипа/иконки */
   --c-accent-line:       color-mix(in srgb, var(--c-accent) 35%, transparent);    /* граница «идёт сейчас» */
   --c-accent-line-2:     color-mix(in srgb, var(--c-accent) 40%, transparent);
@@ -138,6 +145,8 @@
   --c-judge-glow-3:      color-mix(in srgb, var(--c-judge) 80%, transparent);
   --c-judge-fill:        color-mix(in srgb, var(--c-judge) 15%, var(--c-screen-1));
   --c-broadcast:         var(--seed-broadcast);
+  /* Подпись на красной заливке эфира: белая давала 3.19 : 1, тёмная даёт 5.62. */
+  --c-broadcast-ink:     var(--seed-on-accent);
   --c-broadcast-2:       var(--seed-broadcast-2);
   --c-broadcast-glow:    color-mix(in srgb, var(--c-broadcast-2) 80%, transparent);
 
