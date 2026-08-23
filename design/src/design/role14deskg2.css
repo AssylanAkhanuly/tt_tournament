@@ -23,7 +23,7 @@
   position: relative;
   /* Поля по горизонтали — 20 px, как отступ текста в строках листа: заголовок
      турнира, кнопка и подписи колонок стоят на одной вертикали. */
-  padding: var(--s-5);
+  padding: var(--s-5) var(--s-5) calc(var(--s-5) + var(--s-5));
   background: linear-gradient(
     155deg,
     color-mix(in srgb, var(--c-accent) 20%, var(--c-screen-deep)),
@@ -98,13 +98,14 @@
 .g2d-next .ss { font-size: 12px; color: var(--c-on-media-2); }
 .g2d-next .tm { flex: none; font-size: 22px; color: var(--c-on-media); }
 
-/* Действие — цвета орнамента, только светлее. Стоит на листе целиком.
-   Наложение на поле пробовали: кнопка тёмно-синяя, поле тёмно-синее, разница
-   2.7 : 1 — нижний край поля резал кнопку пополам, и она выглядела обрезанной.
-   На белом листе та же заливка даёт 6.2 : 1 и читается кнопкой сама по себе. */
+/* Действие — цвета орнамента, только светлее; сидит верхом на границе планов,
+   ровно половиной над линией. Подпись на нём 6.2 : 1, грань сверху отделяет
+   кнопку от поля (сама заливка от поля отличается всего в 2.7 : 1). */
 .g2d-go {
-  justify-self: start;
-  margin: 0 var(--s-5);
+  position: absolute;
+  left: var(--s-5);
+  bottom: calc(var(--s-5) * -1);
+  z-index: 2;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -129,7 +130,7 @@
   display: grid;
   gap: var(--s-4);
   align-content: start;
-  padding: var(--s-4) 0;
+  padding: calc(var(--s-5) + var(--s-4)) 0 var(--s-4);
   background: color-mix(in srgb, var(--c-ink) 5%, var(--c-panel));
 }
 /* Группы разделены подложкой, а не линейками — как на телефоне. */
