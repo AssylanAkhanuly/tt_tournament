@@ -25,12 +25,16 @@ const OPEN = TOURS_FIELD.filter((t) => t.kind === 'open');
 export function HomeG2Desk({ variant }: { variant?: DeskVariant } = {}) {
   return (
     <RoleScreen variant={variant} role={R14} nav="Главная" title="Ким Георгий" sub="Астана · СКА · КМС">
-      <div className="g2d">
+      <div className="g2d o14-nohead">
         {/* ── Поле: текущий турнир ─────────────────────────────────
             Слева турнир, справа ближайший матч. На телефоне это два этажа,
             здесь — две колонки: ширина есть, а прокрутка дорога. */}
         <div className="g2d-field">
-          <div className="g2d-band" />
+          {/* Орнамент режется своим слоем, а не полем: обрезка на самом поле
+              срезала и кнопку, которая по замыслу свисает за его нижний край. */}
+          <div className="g2d-clip">
+            <div className="g2d-band" />
+          </div>
           <div className="g2d-field-in">
             <div className="g2d-l">
               <div className="g2d-eyebrow">Текущий турнир</div>
