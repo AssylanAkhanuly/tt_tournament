@@ -19,7 +19,7 @@ import { HomeL, HomeM, HomeN, HomeO, HomeP } from './role14home4';
 import { HeroBg, HeroNoCover } from './role14hero';
 import { HeroRef1, HeroRef2, HeroRef3, HeroWtt } from './role14heroref';
 import { HeroSwiper, HeroSwiperBrowser, HeroSwiperPhone } from './role14heroswiper';
-import { MobileBrand, MobileColor, MobileDark, MobileType } from './role14mobile';
+import { MobileBrand, MobileColor, MobileDark, MobileType, ThemeBox } from './role14mobile';
 import {
   MobileBracket, MobileClock, MobileSheet, MobileStory, MobileTable, MobileTalk, MobileTicket,
   MobileTiles,
@@ -1143,3 +1143,58 @@ export const AMobileMore = {
 /* ── Что дальше: куда ведёт кнопка и что без вызова ──────────────────*/
 export const MobileMatchScreen = { name: 'Мобильный · Э14.5 — по кнопке «Открыть матч»', render: () => <MobileMatch /> };
 export const MobileOffScreen = { name: 'Мобильный · главная, когда не вызывали', render: () => <MobileOff /> };
+
+/* ── Цветовые гаммы рабочего экрана ──────────────────────────────────
+   Гамма — не отдельный макет, а тема: цвет в системе живёт только в токенах
+   (`src/theme/tokens.css`), и весь экран перекрашивается подменой семян. Здесь
+   один и тот же экран показан во всех гаммах сразу — так видно, что меняется
+   именно цвет, а не вёрстка.
+
+   Тёмные показаны тремя, а не всеми двадцатью пятью: роль рисуется на светлой
+   (решение от 22.08.2026), тёмные — на случай, если решение пересмотрят. */
+const PALETTES: [string, string][] = [
+  ['daylight-fnt', 'Светлая · ФНТ — синий знака'],
+  ['daylight-tengri', 'Светлая · тенгри — голубой флага'],
+  ['daylight-indigo', 'Светлая · индиго'],
+  ['daylight-emerald', 'Светлая · изумруд'],
+  ['daylight-cherry', 'Светлая · вишня'],
+  ['daylight-sand', 'Светлая · песок — тёплая бумага'],
+  ['daylight-slate', 'Светлая · графит — для печати'],
+  ['fnt', 'Тёмная · ФНТ'],
+  ['tengri', 'Тёмная · тенгри'],
+  ['graphite', 'Тёмная · графит'],
+];
+
+export const AMobilePalettes = {
+  name: 'А · цветовые гаммы рабочего экрана',
+  render: () => (
+    <div style={{ padding: 'var(--s-6)', background: 'var(--c-board-bg)' }}>
+      <div
+        style={{
+          display: 'flex',
+          flexWrap: 'wrap',
+          gap: 'var(--s-6)',
+          justifyContent: 'center',
+        }}
+      >
+        {PALETTES.map(([id, label]) => (
+          <div key={id} style={{ display: 'grid', justifyItems: 'center', gap: 'var(--s-3)' }}>
+            <div
+              style={{
+                fontSize: 12,
+                fontWeight: 700,
+                color: 'var(--c-board-ink)',
+                fontFamily: 'var(--font)',
+              }}
+            >
+              {label}
+            </div>
+            <ThemeBox theme={id}>
+              <MobileBrand />
+            </ThemeBox>
+          </div>
+        ))}
+      </div>
+    </div>
+  ),
+};
