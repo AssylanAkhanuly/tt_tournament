@@ -70,6 +70,7 @@ export function MobileOff() {
           Моя заявка <ArrowRight size={17} />
         </button>
 
+        <div className="mbr-group">
         <div className="mbr-sec">Куда можно заявиться</div>
         {TOURS.map((t) => (
           <div className="mbr-row" key={t.nm} data-to="Э14.2">
@@ -80,7 +81,9 @@ export function MobileOff() {
             <span className={'mbr-tag' + (t.on ? ' on' : '')}>{t.on ? 'ПОДАНА' : 'РЕГИОН'}</span>
           </div>
         ))}
+        </div>
 
+        <div className="mbr-group">
         <div className="mbr-sec">Последние результаты</div>
         {RESULTS.slice(0, 2).map((r) => (
           <div className="mbr-row" key={r.nm} data-to="Э14.6">
@@ -91,6 +94,7 @@ export function MobileOff() {
             <span className={'m3o-sc ' + (r.win ? 'w' : 'l')}>{r.sc}</span>
           </div>
         ))}
+        </div>
       </div>
     </Screen>
   );
@@ -156,6 +160,7 @@ export function MobileMatch() {
         {/* Спортсмен здесь только смотрит: счёт ведёт судья стола. */}
         <div className="m3m-note">Счёт ведёт судья стола — вводить и подтверждать ничего не нужно.</div>
 
+        <div className="mbr-group">
         <div className="mbr-sec">Соперник</div>
         <div className="mbr-row" data-to="Э14.6">
           <span className="tx">
@@ -164,7 +169,9 @@ export function MobileMatch() {
           </span>
           <span className="m3m-h2h">3 : 2</span>
         </div>
+        </div>
 
+        <div className="mbr-group">
         <div className="mbr-sec">Мой путь</div>
         {[
           { r: '1/32', foe: 'Ахметов Т.', sc: '3:0', done: true },
@@ -181,6 +188,7 @@ export function MobileMatch() {
         <button type="button" className="m3m-full" data-to="Э14.5">
           Сетка турнира целиком <ChevronRight size={15} />
         </button>
+        </div>
       </div>
     </Screen>
   );

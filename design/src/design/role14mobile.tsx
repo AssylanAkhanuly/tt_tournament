@@ -505,8 +505,26 @@ export function MobileBrand({ state = 'current' }: { state?: 'current' | 'open' 
                 </>
               )}
 
+              {/* В состоянии «есть куда заявиться» под полем идёт список
+                  остальных открытых приёмов: одна карусель их все не покажет, а
+                  снизу иначе остаётся пустая полоса обоев. */}
+              {state === 'open' && (
+                <div className="mbr-group">
+                  <div className="mbr-sec">Куда ещё можно заявиться</div>
+                  {TOURS_FIELD.filter((t) => t.kind === 'open').map((t) => (
+                    <div className="mbr-row" key={t.nm} data-to="Э14.2">
+                      <span className="tx">
+                        <span className="nm">{t.nm}</span>
+                        <span className="ss">{t.sub} · {t.till}</span>
+                      </span>
+                      <span className="mbr-tag on">ОТКРЫТ</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+
               {state !== 'current' && (
-                <>
+                <div className="mbr-group">
                   <div className="mbr-sec">Последние результаты</div>
                   {RESULTS.map((r) => (
                     <div className="mbr-row" key={r.nm} data-to="Э14.6">
@@ -517,7 +535,7 @@ export function MobileBrand({ state = 'current' }: { state?: 'current' | 'open' 
                       <span className={'mbr-sc' + (r.win ? ' w' : ' l')}>{r.sc}</span>
                     </div>
                   ))}
-                </>
+                </div>
               )}
 
               {state === 'current' && (
