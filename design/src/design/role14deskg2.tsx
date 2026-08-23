@@ -12,53 +12,90 @@
 
    Содержание — то же и оттуда же: flows/14-sportsmen.md, Э14.1. */
 
+import { useState } from 'react';
 import { ArrowRight, ChevronRight } from 'lucide-react';
 import { RoleScreen } from '../mockups/shell';
 import { R14 } from '../mockups/roles';
 import type { DeskVariant } from '../deskShell';
-import { DAY, TOURS_FIELD } from './role14day';
+import { DAY, TOURS_FIELD, type Tour } from './role14day';
+import { Deck } from './role14mobile';
 import { NEWS, RESULTS } from './role14home';
 import './role14deskg2.css';
 
 const OPEN = TOURS_FIELD.filter((t) => t.kind === 'open');
 
 export function HomeG2Desk({ variant }: { variant?: DeskVariant } = {}) {
+  /* Поле листается так же, как на телефоне: первый турнир — текущий, дальше
+     открытые приёмы. Действие под полем при этом НЕ ЕЗДИТ со слайдом: кнопка
+     стоит на своём месте у границы планов, меняются только её подпись и
+     переход — к тому турниру, который человек видит. */
+  const [slide, setSlide] = useState(0);
+  const shown = TOURS_FIELD[Math.min(slide, TOURS_FIELD.length - 1)];
+
   return (
     <RoleScreen variant={variant} role={R14} nav="Главная" title="Ким Георгий" sub="Астана · СКА · КМС">
       <div className="g2d o14-nohead">
-        {/* ── Поле: текущий турнир ─────────────────────────────────
-            Слева турнир, справа ближайший матч. На телефоне это два этажа,
-            здесь — две колонки: ширина есть, а прокрутка дорога. */}
+        {/* ── Поле: карусель турниров ──────────────────────────────
+            Фон, лента орнамента и грань принадлежат самому полю, а не слайду:
+            плоскость под текстом остаётся неподвижной, едет только содержание.
+            Так у кнопки не уезжает из-под ног подложка. */}
         <div className="g2d-field">
-          {/* Орнамент режется своим слоем, а не полем: обрезка на самом поле
-              срезала и кнопку, которая по замыслу свисает за его нижний край. */}
           <div className="g2d-clip">
             <div className="g2d-band" />
           </div>
-          <div className="g2d-field-in">
-            <div className="g2d-l">
-              <div className="g2d-eyebrow">Текущий турнир</div>
-              <div className="g2d-title o14-disp">Кубок Алматы 2026</div>
-              <div className="g2d-sub">ОРТ · Алматы · одиночный, парный, микст · 12–14.09</div>
-            </div>
 
-            <div className="g2d-r">
-              <div className="g2d-eyebrow">Ближайший матч</div>
-              <div className="g2d-next">
-                <span className="t o14-disp">5</span>
-                <span className="tx">
-                  <span className="nm">Жумабеков Расул</span>
-                  <span className="ss">1/8 финала · одиночный</span>
-                </span>
-                <span className="tm o14-disp">14:20</span>
+          <Deck
+            id="g2d-dots"
+            items={TOURS_FIELD}
+            onIndex={setSlide}
+            card={(t: Tour) => (
+              <div className="g2d-field-in">
+                <div className="g2d-l">
+                  <div className="g2d-eyebrow">
+                    {t.kind === 'current' ? 'Текущий турнир' : 'Можно заявиться'}
+                  </div>
+                  <div className="g2d-title o14-disp">{t.nm}</div>
+                  <div className="g2d-sub">
+                    {t.sub} · {t.dates}
+                  </div>
+                </div>
+
+                <div className="g2d-r">
+                  <div className="g2d-eyebrow">
+                    {t.kind === 'current' ? 'Ближайший матч' : 'Приём заявок'}
+                  </div>
+                  {t.kind === 'current' ? (
+                    <div className="g2d-next">
+                      <span className="t o14-disp">5</span>
+                      <span className="tx">
+                        <span className="nm">Жумабеков Расул</span>
+                        <span className="ss">{t.round} · одиночный</span>
+                      </span>
+                      <span className="tm o14-disp">{t.time}</span>
+                    </div>
+                  ) : (
+                    <div className="g2d-next">
+                      <span className="tx">
+                        <span className="nm">{t.till}</span>
+                        <span className="ss">заявку подаёт сам спортсмен</span>
+                      </span>
+                    </div>
+                  )}
+                </div>
               </div>
-            </div>
-          </div>
+            )}
+          />
 
-          {/* Действие сидит верхом на границе планов — как на телефоне. */}
-          <button type="button" className="g2d-go" data-to="Э14.5">
-            Мой турнир <ArrowRight size={17} />
-          </button>
+          {/* Кнопка живёт у поля, а не у слайда: место постоянное. */}
+          {shown.kind === 'current' ? (
+            <button type="button" className="g2d-go" data-to="Э14.5">
+              Мой турнир <ArrowRight size={17} />
+            </button>
+          ) : (
+            <button type="button" className="g2d-go" data-to="Э14.3">
+              Заявиться <ArrowRight size={17} />
+            </button>
+          )}
         </div>
 
         {/* ── Лист: три колонки ────────────────────────────────────── */}

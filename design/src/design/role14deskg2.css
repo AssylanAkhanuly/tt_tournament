@@ -11,7 +11,12 @@
 /* Поле и лист идут ВО ВСЮ ШИРИНУ рабочей области: у `.dmain` отступы
    20/22 px, и мы их гасим отрицательными полями. Иначе тёмная лента висит
    карточкой с воздухом по краям, а на телефоне она с краю до краю. */
+/* minmax(0, 1fr) обязателен: колонка grid по умолчанию auto, то есть по
+   содержанию, а Swiper в такой колонке считает ширину слайда от самого себя —
+   получилась колонка в 33 млн px и схлопнутое поле. Та же ловушка уже была на
+   телефоне (role14mobile.css). */
 .g2d {
+  grid-template-columns: minmax(0, 1fr);
   grid-template-rows: auto 1fr;
   flex: 1;
   margin: -20px -22px;
@@ -215,3 +220,36 @@
 /* Новости идут во всю ширину: у них длинный подзаголовок, в треть экрана он
    обрезается многоточием и перестаёт быть новостью. */
 .g2d-news .g2d-row .ss { white-space: normal; }
+
+/* ── Полоски карусели на десктопе ──────────────────────────────────
+   Те же полоски-«сторисы», что на телефоне: по одной на турнир, текущая
+   закрашена. Лежат по верхнему краю поля, над содержанием слайда.
+   `width: auto` обязателен: Swiper вешает на блок пагинации свой класс с
+   width: 100%, и вместе с нашими left/right полоски уезжали за край. */
+.g2d .mb-dots {
+  position: absolute;
+  top: var(--s-3);
+  left: var(--s-5);
+  right: var(--s-5);
+  width: auto;
+  z-index: 3;
+  display: flex;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+}
+.g2d .mb-dot {
+  flex: 1;
+  width: auto;
+  height: 3px;
+  border-radius: 0;
+  background: color-mix(in srgb, var(--c-on-media) 34%, transparent);
+  cursor: pointer;
+}
+.g2d .mb-dot.on { background: var(--c-on-media); }
+
+/* Содержание слайда отступает от полосок; сама плоскость поля не едет —
+   у Swiper прозрачный фон, а заливка лежит на `.g2d-field`. */
+.g2d .swiper { position: relative; z-index: 2; }
+.g2d .swiper-slide { height: auto; }
+.g2d-field-in { padding-top: var(--s-3); }
