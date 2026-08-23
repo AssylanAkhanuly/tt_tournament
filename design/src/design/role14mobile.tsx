@@ -354,11 +354,18 @@ export function MobileType() {
                открытый приём, действие «Заявиться» → Э14.3;
      none    — ни текущего, ни открытых: так и написано словами, и экран ведёт
                в календарь, а не притворяется, что что-то есть. */
-export function MobileBrand({ state = 'current' }: { state?: 'current' | 'open' | 'none' } = {}) {
+export function MobileBrand({
+  state = 'current',
+  look = 'г2',
+}: { state?: 'current' | 'open' | 'none'; look?: 'г' | 'г2' } = {}) {
   const field = state === 'current' ? TOURS_FIELD : TOURS_FIELD.filter((t) => t.kind === 'open');
 
+  /* `mbr-ds` — выбранное решение цвета (Г-2, 23.08.2026): поле спокойное,
+     акцент отдан кнопке, зелёный остаётся статусам. Прежний облик Г (поле в
+     акценте, кнопка зелёная) остаётся доступным через `look="г"` — по нему
+     сравнивают решения на полке, но в макете роли он больше не стоит. */
   return (
-    <div className="mb-wrap mbr">
+    <div className={'mb-wrap mbr' + (look === 'г2' ? ' mbr-ds' : '')}>
       <Frame>
         <Chrome>
           <div className="mb-body">

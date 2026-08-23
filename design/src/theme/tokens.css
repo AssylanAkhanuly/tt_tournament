@@ -112,6 +112,13 @@
   --c-accent-glow-2:     color-mix(in srgb, var(--c-accent) 70%, transparent);
   --c-accent-glow-3:     color-mix(in srgb, var(--c-accent) 80%, transparent);
   --c-accent-fill:       color-mix(in srgb, var(--c-accent) 15%, var(--c-screen-1));   /* непрозрачная подложка плашки */
+  /* Глубокая заливка действия: акцент, уведённый в тон тёмного поля — кнопка
+     цвета орнамента, только светлее (вариант Г-2 на Э14.1). Темы считают её и
+     подпись к ней сами (themes.ts): у светлых акцентов белый текст на этой
+     заливке не читается. */
+  --c-action:            color-mix(in srgb, var(--c-accent) 75%, var(--c-screen-deep));
+  --c-action-ink:        var(--seed-white);
+  --c-action-edge:       color-mix(in srgb, var(--c-accent) 55%, transparent);   /* грань кнопки на тёмном поле */
 
   /* статусы */
   --c-success:           var(--seed-success);

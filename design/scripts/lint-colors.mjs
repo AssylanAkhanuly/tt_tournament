@@ -116,6 +116,20 @@ for (const m of themesSrc.matchAll(
   const [, id, accent] = m;
   const best = Math.max(contrastOf(accent, '#ffffff'), contrastOf(accent, '#101725'));
   if (best < AA) inkHits.push(`тема ${id}: акцент ${accent} — лучший контраст подписи ${best.toFixed(2)} : 1`);
+
+  /* Та же проверка для глубокой заливки действия (`--c-action`): акцент,
+     уведённый в тон тёмного поля. Считаем ровно как themes.ts. */
+  const hexA = hexOf(accent);
+  const hexD = hexOf('#04060c');
+  const mixAt = (t) =>
+    '#' + hexA.map((x, i) => Math.round(hexD[i] + (x - hexD[i]) * t).toString(16).padStart(2, '0')).join('');
+  const steps = [0.75, 0.66, 0.58, 0.5, 0.42];
+  const action = steps.map(mixAt).find((c) => Math.max(contrastOf(c, '#ffffff'), contrastOf(c, '#101725')) >= AA);
+  if (!action) {
+    const last = mixAt(steps.at(-1));
+    const best = Math.max(contrastOf(last, '#ffffff'), contrastOf(last, '#101725'));
+    inkHits.push(`тема ${id}: заливка действия ${last} — лучший контраст подписи ${best.toFixed(2)} : 1`);
+  }
 }
 
 let bad = false;

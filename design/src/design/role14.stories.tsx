@@ -1189,8 +1189,8 @@ function Shelf({ accentBtn = false, ds = false }: { accentBtn?: boolean; ds?: bo
               {label}
             </div>
             <ThemeBox theme={id}>
-              <div className={(accentBtn ? 'mbr-btn-accent ' : '') + (ds ? 'mbr-ds' : '')}>
-                <MobileBrand />
+              <div className={accentBtn ? 'mbr-btn-accent' : undefined}>
+                <MobileBrand look={ds ? 'г2' : 'г'} />
               </div>
             </ThemeBox>
           </div>
@@ -1234,10 +1234,10 @@ export const AMobileButtonRule = {
     <div style={{ padding: 'var(--s-6)', background: 'var(--c-board-bg)' }}>
       <div style={{ display: 'flex', gap: 'var(--s-6)', justifyContent: 'center', flexWrap: 'wrap' }}>
         {[
-          ['', 'Г · поле в акценте, кнопка зелёная — зелёный значит и «сделать», и «победа»'],
-          ['mbr-btn-accent', 'Г + кнопка в акценте — сливается с полем того же цвета'],
-          ['mbr-ds', 'Г-2 · поле нейтральное, акцент отдан кнопке, зелёный — только статус'],
-        ].map(([cls, label]) => (
+          ['г', '', 'Г · поле в акценте, кнопка зелёная — зелёный значит и «сделать», и «победа»'],
+          ['г', 'mbr-btn-accent', 'Г + кнопка в акценте — сливается с полем того же цвета'],
+          ['г2', '', 'Г-2 · поле спокойное, кнопка цвета орнамента — выбранное решение'],
+        ].map(([look, cls, label]) => (
           <div key={label} style={{ display: 'grid', justifyItems: 'center', gap: 'var(--s-3)', maxWidth: 420 }}>
             <div
               style={{
@@ -1252,7 +1252,7 @@ export const AMobileButtonRule = {
             </div>
             <ThemeBox theme="daylight-fnt">
               <div className={cls || undefined}>
-                <MobileBrand />
+                <MobileBrand look={look as 'г' | 'г2'} />
               </div>
             </ThemeBox>
           </div>

@@ -58,6 +58,20 @@ const contrast = (a: string, b: string) => {
    2.34, базовая ФНТ 2.63, «Светлая · тенгри» 2.98. Выбор по максимуму снимает
    это разом: минимум по всем темам стал 4.5. Проверку держит `lint:colors`. */
 const inkOn = (c: string) => (contrast(c, '#101725') > contrast(c, '#ffffff') ? '#101725' : '#ffffff');
+/** лучший из двух текстов на заливке — сколько даёт контраста */
+const bestInk = (c: string) => Math.max(contrast(c, '#101725'), contrast(c, '#ffffff'));
+
+/* Глубокая заливка действия: акцент, уведённый в тон тёмного поля. Доля не
+   фиксированная: у светло-серых акцентов («Сталь», «Графит») ровные 75 %
+   попадают в середину шкалы, где ни белый, ни тёмный текст не дают 4.5 : 1 —
+   для них заливка уводится темнее, пока подпись не станет читаемой. */
+const deepAction = (accent: string) => {
+  for (const t of [0.75, 0.66, 0.58, 0.5, 0.42]) {
+    const c = mix('#04060c', accent, t);
+    if (bestInk(c) >= 4.5) return c;
+  }
+  return mix('#04060c', accent, 0.42);
+};
 
 type DarkInput = {
   accent: string;
@@ -75,6 +89,13 @@ function dark({ accent, accent2, accent3, tint, success = '#34d399', warning = '
   return {
     '--seed-accent': accent,
     '--c-accent-ink': inkOn(accent),
+    /* Глубокая заливка действия: акцент, уведённый в тон поля (вариант Г-2 —
+       кнопка цвета орнамента, только светлее). Считается здесь, а не в CSS,
+       потому что подпись к ней тоже нужно выбрать по контрасту: у светлых
+       акцентов («Карбон», «Сталь», «Степь») эта заливка выходит светлой, и
+       белый текст на ней не читается. */
+    '--c-action': deepAction(accent),
+    '--c-action-ink': inkOn(deepAction(accent)),
     '--seed-accent-2': accent2,
     '--seed-accent-3': accent3 ?? mix(accent, accent2, 0.4),
     '--seed-success': success,
