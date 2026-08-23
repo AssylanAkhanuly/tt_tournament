@@ -1,0 +1,198 @@
+/* Э14.1 · облик Г-2 на десктопе. Разбор — в role14deskg2.tsx.
+   Цвета берутся ровно те же, что на телефоне (role14mobile.css, раздел «Г-2»):
+   поле — нейтральный план с оттенком акцента, действие — `--c-action`
+   (акцент в тон поля, чуть светлее орнамента), зелёный — только статус. */
+
+.g2d { display: grid; gap: 0; }
+
+/* ── Поле ─────────────────────────────────────────────────────────── */
+.g2d-field {
+  position: relative;
+  padding: var(--s-5) var(--s-6) calc(var(--s-5) + var(--s-5));
+  background: linear-gradient(
+    155deg,
+    color-mix(in srgb, var(--c-accent) 20%, var(--c-screen-deep)),
+    var(--c-screen-deep)
+  );
+  overflow: hidden;
+}
+/* Грань слева — единственная сплошная полоса акцента на поле. */
+.g2d-field::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 4px;
+  background: var(--c-accent);
+  z-index: 1;
+}
+/* Лента орнамента со щита знака — та же, что на телефоне, только шире. */
+.g2d-band {
+  position: absolute;
+  top: -20%;
+  bottom: -20%;
+  right: -3%;
+  width: 26%;
+  background: color-mix(in srgb, var(--c-accent) 42%, transparent);
+  -webkit-mask:
+    var(--fx-ornament) right center / auto 190% repeat-x,
+    linear-gradient(90deg, transparent, var(--c-on-media) 55%);
+  -webkit-mask-composite: source-in;
+  mask:
+    var(--fx-ornament) right center / auto 190% repeat-x,
+    linear-gradient(90deg, transparent, var(--c-on-media) 55%);
+  mask-composite: intersect;
+  pointer-events: none;
+}
+.g2d-field-in {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 380px);
+  align-items: start;
+  gap: var(--s-6);
+}
+.g2d-l { display: grid; gap: 2px; min-width: 0; }
+.g2d-eyebrow {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.24em;
+  color: var(--c-on-media-2);
+  text-transform: uppercase;
+}
+/* Дисплейная гарнитура — только на крупном (правило типографики роли). */
+.g2d-title { font-size: 44px; line-height: 1.02; color: var(--c-on-media); }
+.g2d-sub { margin-top: 4px; font-size: 14px; color: var(--c-on-media-2); }
+
+.g2d-r { display: grid; gap: 8px; min-width: 0; }
+/* Строка ближайшего матча набрана как строки листа — на поле она читается
+   тем же способом, что и всё расписание ниже. */
+.g2d-next {
+  display: flex;
+  align-items: center;
+  gap: var(--s-4);
+  padding-top: 8px;
+  border-top: 1px solid color-mix(in srgb, var(--c-on-media) 22%, transparent);
+}
+.g2d-next .t { flex: none; width: 40px; font-size: 32px; color: var(--c-on-media); }
+.g2d-next .tx { flex: 1; min-width: 0; display: grid; }
+.g2d-next .nm { font-size: 16px; font-weight: 700; color: var(--c-on-media); }
+.g2d-next .ss { font-size: 12px; color: var(--c-on-media-2); }
+.g2d-next .tm { flex: none; font-size: 22px; color: var(--c-on-media); }
+
+/* Действие — цвета орнамента, только светлее; сидит верхом на границе планов,
+   ровно половиной над линией. Подпись на нём 6.2 : 1, грань сверху отделяет
+   кнопку от поля (сама заливка от поля отличается всего в 2.7 : 1). */
+.g2d-go {
+  position: absolute;
+  left: var(--s-6);
+  bottom: calc(var(--s-5) * -1);
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  height: 52px;
+  padding: 0 var(--s-6);
+  font: inherit;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--c-action-ink);
+  background: var(--c-action);
+  border: 0;
+  border-radius: var(--r-sm);
+  box-shadow: inset 0 1px 0 var(--c-action-edge);
+  cursor: pointer;
+}
+
+/* ── Лист ─────────────────────────────────────────────────────────── */
+.g2d-sheet {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  gap: var(--s-4);
+  padding: calc(var(--s-5) + var(--s-4)) 0 0;
+  background: color-mix(in srgb, var(--c-ink) 5%, var(--c-panel));
+}
+/* Группы разделены подложкой, а не линейками — как на телефоне. */
+.g2d-cols {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--s-4);
+}
+.g2d-group { padding: var(--s-3) 0 var(--s-2); background: var(--c-panel); }
+.g2d-sec {
+  padding: 0 var(--s-5) var(--s-3);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.22em;
+  color: var(--c-muted);
+  text-transform: uppercase;
+}
+.g2d-row {
+  display: flex;
+  align-items: center;
+  gap: var(--s-4);
+  padding: 10px var(--s-5);
+  cursor: pointer;
+}
+.g2d-row + .g2d-row { border-top: 1px solid var(--c-glass-line); }
+.g2d-row:hover { background: color-mix(in srgb, var(--c-accent) 6%, transparent); }
+.g2d-row .t { flex: none; width: 30px; font-size: 26px; text-align: center; color: var(--c-accent); }
+.g2d-row .tx { flex: 1; min-width: 0; display: grid; }
+.g2d-row .nm { font-size: 15px; font-weight: 700; color: var(--c-ink); }
+.g2d-row .ss {
+  font-size: 12px;
+  color: var(--c-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.g2d-row .tm {
+  flex: none;
+  font-size: 16px;
+  color: var(--c-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.g2d-sc {
+  flex: none;
+  font-size: 16px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.g2d-sc.w { color: var(--c-success-light); }
+.g2d-sc.l { color: var(--c-danger); }
+
+.g2d-tag {
+  flex: none;
+  padding: 4px 8px;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  color: var(--c-muted);
+  background: color-mix(in srgb, var(--c-ink) 6%, transparent);
+}
+.g2d-tag.on { color: var(--c-primary); background: var(--c-primary-soft); }
+
+.g2d-at { flex: none; font-size: 12px; color: var(--c-muted); }
+
+.g2d-more {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: var(--s-3) var(--s-5) 0;
+  padding: 9px var(--s-4);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--c-ink);
+  background: transparent;
+  border: 1px solid var(--c-glass-line);
+  border-radius: var(--r-sm);
+  cursor: pointer;
+}
+
+/* Новости идут во всю ширину: у них длинный подзаголовок, в треть экрана он
+   обрезается многоточием и перестаёт быть новостью. */
+.g2d-news .g2d-row .ss { white-space: normal; }

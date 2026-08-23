@@ -25,6 +25,7 @@ import {
   MobileTiles,
 } from './role14mobile2';
 import { MobileMatch, MobileOff } from './role14mobile3';
+import { HomeG2Desk } from './role14deskg2';
 import wttTicker from '../assets/refs/wtt-ticker.jpg';
 
 export default {
@@ -1260,4 +1261,14 @@ export const AMobileButtonRule = {
       </div>
     </div>
   ),
+};
+
+/* ── Выбранный облик на десктопе ─────────────────────────────────────
+   Г-2 — не «мобильный вариант»: тот же облик разложен на ширину. Поле
+   становится лентой (турнир слева, ближайший матч справа), лист — тремя
+   колонками. Этот же компонент теперь стоит макетом роли (Э14.1 в разделе
+   «Макеты»), а не прежние панели «Сейчас играю» / «Ближайший турнир». */
+export const AG2Desk = {
+  name: 'А · Г-2 на десктопе — закреплённый макет',
+  render: () => <HomeG2Desk />,
 };

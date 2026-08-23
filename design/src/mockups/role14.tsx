@@ -24,6 +24,7 @@ import { DeskFrame, type DeskVariant } from '../deskShell';
 import { MY_GROUP, OTHER_GROUPS, myBracket, playoffBracket } from './myBracket';
 import type { ScreenMap } from './shell';
 import { R14 } from './roles';
+import { HomeG2Desk } from '../design/role14deskg2';
 import { Login0_1, SignUp0_5, SignUp0_5States } from './role00';
 
 /* Спортсмен макета — Ким Георгий (тот же, что в реестрах ролей 2 и 12). */
@@ -72,64 +73,17 @@ const NEWS = [
 
 /* ── Э14.1 · Главная ───────────────────────────────────────────── */
 
+/* Экран нарисован вариантами и выбран федерацией: `дизайн: вариант Г-2,
+   23.08.2026` (flows/14-sportsmen.md). Прежний макет — панели «Сейчас играю» и
+   «Ближайший турнир» на общей оболочке — заменён облике Г-2: тёмно-синее поле
+   с лентой орнамента, белый лист в три колонки, действие на границе планов.
+   Разбор и сам компонент — в `src/design/role14deskg2.tsx`, варианты и полка
+   сравнения остались в разделе «Дизайн».
+
+   Заодно ушла «вызвали к столу»: вызова как события в системе нет (решение от
+   22.08.2026) — в поле стоит текущий турнир. */
 export function Home14_1({ variant }: { variant?: DeskVariant }) {
-  return (
-    <RoleScreen variant={variant} role={R14} nav="Главная" title="Ким Георгий" sub="Астана · СКА · КМС">
-      <Chips
-        items={[
-          { v: '2456', k: 'Рейтинг', tone: 'b' },
-          { v: '7', k: 'Место в РК' },
-          { v: '+24', k: 'За турнир', tone: 'g' },
-          { v: '128', k: 'Матчей сыграно' },
-        ]}
-      />
-      <Queue items={[{ n: '1', t: 'заявка ждёт решения судьи', to: 'Э14.4' }]} />
-
-      <div className="mkcols">
-        <Panel title="Сейчас играю" extra={<P t="ВАС ВЫЗВАЛИ · СТОЛ 5" cls="live" />}>
-          <Rows>
-            <Row
-              av={A(22)}
-              nm="Жумабеков Расул"
-              sub="1/8 финала · рейтинг 2312"
-              val="14:20"
-              pill={{ t: 'ПОДОЙДИТЕ К СТОЛУ', cls: 'live' }}
-              to="Э14.5"
-            />
-          </Rows>
-        </Panel>
-
-        <Panel title="Ближайший турнир">
-          <Rows>
-            <Row
-              nm="Кубок Алматы 2026"
-              sub="ОРТ · Алматы · 12–14 сентября"
-              pill={{ t: 'ЗАЯВКА ПОДАНА', cls: 'reg' }}
-              to="Э14.4"
-            />
-            <Row nm="Чемпионат Республики Казахстан" sub="Главный старт · Астана · 18–22 сентября" pill={{ t: 'ЗАЯВЛЯЕТ РЕГИОН', cls: 'done' }} />
-          </Rows>
-        </Panel>
-      </div>
-
-      {/* Лента федерации: новости те же, что на публичном сайте, но читать их
-          из системы человек должен, не выходя из неё. Строка ведёт в новости. */}
-      <Panel
-        title="Новости федерации"
-        extra={
-          <button className="dpickbtn" data-to="Э14.13">
-            <Newspaper size={14} /> Все новости
-          </button>
-        }
-      >
-        <Rows>
-          {NEWS.slice(0, 2).map((n) => (
-            <Row key={n.nm} nm={n.nm} sub={n.sub} val={n.at} to="Э14.13" />
-          ))}
-        </Rows>
-      </Panel>
-    </RoleScreen>
-  );
+  return <HomeG2Desk variant={variant} />;
 }
 
 const Home14_1States = () => (
