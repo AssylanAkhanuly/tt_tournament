@@ -463,6 +463,7 @@ export function MobileBrand({ state = 'current' }: { state?: 'current' | 'open' 
 
               {state === 'current' && (
                 <>
+                  <div className="mbr-group">
                   <div className="mbr-sec">Мои матчи сегодня</div>
                   {DAY.map((m) => (
                     <div className="mbr-row" key={m.round} data-to="Э14.5">
@@ -474,6 +475,7 @@ export function MobileBrand({ state = 'current' }: { state?: 'current' | 'open' 
                       <span className="tm">{m.time}</span>
                     </div>
                   ))}
+                  </div>
                 </>
               )}
 
@@ -488,6 +490,7 @@ export function MobileBrand({ state = 'current' }: { state?: 'current' | 'open' 
                   последним результатам, чтобы низ не пустовал обоями. */}
               {state === 'current' && (
                 <>
+                  <div className="mbr-group">
                   <div className="mbr-sec">Последние результаты</div>
                   {RESULTS.slice(0, 2).map((r) => (
                     <div className="mbr-row" key={r.nm} data-to="Э14.6">
@@ -498,6 +501,7 @@ export function MobileBrand({ state = 'current' }: { state?: 'current' | 'open' 
                       <span className={'mbr-sc' + (r.win ? ' w' : ' l')}>{r.sc}</span>
                     </div>
                   ))}
+                  </div>
                 </>
               )}
 
@@ -518,6 +522,7 @@ export function MobileBrand({ state = 'current' }: { state?: 'current' | 'open' 
 
               {state === 'current' && (
                 <>
+                  <div className="mbr-group">
                   <div className="mbr-sec">Ближайшие турниры</div>
                   {TOURS.map((t) => (
                     <div className="mbr-row" key={t.nm} data-to="Э14.2">
@@ -528,6 +533,7 @@ export function MobileBrand({ state = 'current' }: { state?: 'current' | 'open' 
                       <span className={'mbr-tag' + (t.on ? ' on' : '')}>{t.on ? 'ПОДАНА' : 'РЕГИОН'}</span>
                     </div>
                   ))}
+                  </div>
                 </>
               )}
             </div>
