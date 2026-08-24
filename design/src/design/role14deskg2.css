@@ -113,9 +113,13 @@
 .g2d-sheet {
   position: relative;
   z-index: 1;
-  display: grid;
+  /* Колонка flex, а не grid: экраны роли кладут внутрь блоки, которые сами
+     тянутся на всю оставшуюся высоту (сетка турнира на Э14.5 — холст React
+     Flow с `flex: 1 1 auto`). В grid это не работает, и холст схлопывался
+     в 0 px — вкладка «Сетка» выглядела пустой. */
+  display: flex;
+  flex-direction: column;
   gap: var(--s-4);
-  align-content: start;
   padding: calc(var(--s-5) + var(--s-4)) 0 var(--s-4);
   background: color-mix(in srgb, var(--c-ink) 5%, var(--c-panel));
 }
@@ -234,3 +238,35 @@
 .g2d .swiper { position: relative; z-index: 2; }
 .g2d .swiper-slide { height: auto; }
 .g2d-field-in { padding-top: var(--s-3); }
+
+/* Содержание остальных экранов роли лежит на листе с теми же полями, что и
+   строки списков на главной: 20 px от края. Панели и вкладки внутри — общие
+   компоненты оболочки, их не переписываем: меняется план, а не детали. */
+.g2d-body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-4);
+  padding: 0 var(--s-5);
+}
+
+/* Возврат на поле: тихая контурная кнопка на тёмном. Шапка оболочки у роли
+   снята, и без этой кнопки с экрана, на который пришли из списка, уйти нечем. */
+.g2d-back {
+  justify-self: start;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 8px;
+  padding: 4px 10px 4px 7px;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--c-on-media-2);
+  background: transparent;
+  border: 1px solid color-mix(in srgb, var(--c-on-media) 28%, transparent);
+  border-radius: var(--r-xs);
+  cursor: pointer;
+}
+.g2d-back:hover { color: var(--c-on-media); border-color: var(--c-on-media); }
