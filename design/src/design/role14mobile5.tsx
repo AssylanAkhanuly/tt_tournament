@@ -26,6 +26,7 @@ import { Frame } from '../PlayerApp';
 import { MiniTabBar } from '../respShell';
 import { A } from '../fedCommon';
 import { Chrome, NAV } from './role14mobile';
+import { ChartBox, soft, token } from '../mockups/chart';
 import { RESULTS } from './role14home';
 import './role14mobile5.css';
 
@@ -222,25 +223,93 @@ export function MobMyApp() {
    цветное на экране, и цвет тот же, что у счёта: зелёный выигрыш, красный
    проигрыш. */
 const SEASON = [
-  { nm: 'Кубок Алматы 2026', ss: '1/4 финала · 19.01', d: '+22', up: true },
-  { nm: 'Открытый турнир Астаны', ss: 'финал · 20.05', d: '-6', up: false },
-  { nm: 'Кубок Иртыша', ss: '1/2 финала · 14.06', d: '+18', up: true },
-  { nm: 'Шымкент Open', ss: 'группа · 11.07', d: '+11', up: true },
+  { nm: 'Открытие сезона 2026', ss: '1/4 финала · 19.01', d: '19.01', r: 2388, dr: +22 },
+  { nm: 'Кубок Иртыша', ss: '1/2 финала · 20.05', d: '20.05', r: 2404, dr: +16 },
+  { nm: 'Шымкент Open', ss: 'группа · 14.06', d: '14.06', r: 2412, dr: +8 },
+  { nm: 'Открытый турнир Астаны', ss: 'финал · 11.07', d: '11.07', r: 2426, dr: +14 },
+  { nm: 'Кубок Караганды', ss: '1/8 финала · 02.08', d: '02.08', r: 2418, dr: -8 },
+  { nm: 'Осенний Шымкент', ss: '1/4 финала · 14.09', d: '14.09', r: 2441, dr: +23 },
+  { nm: 'Кубок Алматы 2026', ss: '1/4 финала · 26.10', d: '26.10', r: 2456, dr: +15 },
 ];
 
-/* Кривая: восемь точек сезона, нормированные в 100×34. Рисуем polyline,
-   потому что это график, а не украшение: значения настоящие. */
-const CURVE = [2388, 2404, 2412, 2426, 2418, 2432, 2441, 2456];
+/* График — на Chart.js, как и на десктопе: график должен отвечать на вопросы
+   («где просел», «что было в августе»), а нарисованная ломаная не отвечает.
+   Холст низкий и без сетки: на 393 px ширины подписи по обеим осям не влезают,
+   поэтому оставлены только даты первого и последнего турнира, а значения
+   читаются касанием — Chart.js даёт подсказку с названием турнира и дельтой. */
+function RatingCurve() {
+  return (
+    <ChartBox
+      height={132}
+      label="Динамика рейтинга по турнирам сезона"
+      make={(el) => ({
+        type: 'line',
+        data: {
+          labels: SEASON.map((t) => t.d),
+          datasets: [
+            {
+              label: 'Рейтинг',
+              data: SEASON.map((t) => t.r),
+              borderColor: token('--c-accent', el),
+              backgroundColor: soft('--c-accent', 14, el),
+              pointBackgroundColor: SEASON.map((t) =>
+                t.dr >= 0 ? token('--c-success', el) : token('--c-danger', el),
+              ),
+              pointBorderColor: token('--c-panel', el),
+              pointBorderWidth: 2,
+              pointRadius: 4,
+              pointHoverRadius: 6,
+              borderWidth: 2,
+              fill: true,
+              tension: 0.3,
+            },
+          ],
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              callbacks: {
+                title: (i) => SEASON[i[0].dataIndex].nm,
+                label: (i) => {
+                  const t = SEASON[i.dataIndex];
+                  return `${t.r} · ${t.dr >= 0 ? '+' : ''}${t.dr}`;
+                },
+              },
+            },
+          },
+          scales: {
+            x: {
+              grid: { display: false },
+              border: { display: false },
+              ticks: {
+                color: token('--c-dim', el),
+                font: { size: 10 },
+                autoSkip: false,
+                /* Только края: середина оси на телефоне превращается в кашу. */
+                callback: (_v, i) => (i === 0 || i === SEASON.length - 1 ? SEASON[i].d : ''),
+              },
+            },
+            y: {
+              /* Шкала по данным, а не от нуля: размах сезона 68 пунктов при
+                 значениях под 2400 — на автоматической шкале кривая прижималась
+                 к верхнему краю и перепад переставал читаться. */
+              min: Math.min(...SEASON.map((t) => t.r)) - 14,
+              max: Math.max(...SEASON.map((t) => t.r)) + 14,
+              grid: { color: soft('--c-ink', 7, el) },
+              border: { display: false },
+              ticks: { color: token('--c-dim', el), font: { size: 10 }, maxTicksLimit: 3 },
+            },
+          },
+        },
+      })}
+    />
+  );
+}
 
 export function MobStats() {
-  const min = Math.min(...CURVE);
-  const max = Math.max(...CURVE);
-  const pts = CURVE.map((v, i) => {
-    const x = (i / (CURVE.length - 1)) * 100;
-    const y = 32 - ((v - min) / (max - min)) * 28;
-    return `${x.toFixed(1)},${y.toFixed(1)}`;
-  }).join(' ');
-
   return (
     <Screen cls="m5s" active="Профиль">
       <div className="m5s-top">
@@ -253,13 +322,7 @@ export function MobStats() {
       <div className="m5s-meta">рейтинг · 7 место в РК · 27 матчей, 70 % побед</div>
 
       <div className="m5s-chart">
-        <svg className="m5s-curve" viewBox="0 0 100 34" preserveAspectRatio="none" aria-hidden>
-          <polyline points={pts} fill="none" strokeWidth="1.4" vectorEffect="non-scaling-stroke" />
-        </svg>
-      </div>
-      <div className="m5s-axis">
-        <span>19.01</span>
-        <span>26.10</span>
+        <RatingCurve />
       </div>
 
       <div className="m5-sec">Сезон по турнирам</div>
@@ -270,7 +333,10 @@ export function MobStats() {
               <span className="nm">{t.nm}</span>
               <span className="ss">{t.ss}</span>
             </span>
-            <span className={'d ' + (t.up ? 'up' : 'dn')}>{t.d}</span>
+            <span className={'d ' + (t.dr >= 0 ? 'up' : 'dn')}>
+              {t.dr >= 0 ? '+' : ''}
+              {t.dr}
+            </span>
           </div>
         ))}
       </div>

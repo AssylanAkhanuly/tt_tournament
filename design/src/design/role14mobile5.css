@@ -209,23 +209,10 @@
 .m5s-side .k { font-size: 10px; letter-spacing: 0.14em; color: var(--c-muted); text-transform: uppercase; }
 .m5s-meta { padding: 6px 18px 10px; font-size: 12px; color: var(--c-muted); background: var(--c-panel); }
 
-/* Кривая сезона: настоящие значения, а не украшение. */
-.m5s-chart { padding: 0 18px; background: var(--c-panel); }
-.m5s-curve {
-  display: block;
-  width: 100%;
-  height: 76px;
-  color: var(--c-accent);
-}
-.m5s-curve polyline { stroke: currentColor; }
-.m5s-axis {
-  display: flex;
-  justify-content: space-between;
-  padding: 4px 18px 10px;
-  font-size: 11px;
-  color: var(--c-dim);
-  background: var(--c-panel);
-}
+/* Кривая сезона — холст Chart.js (см. role14mobile5.tsx): график должен
+   отвечать на вопросы, а не изображать линию. Подложку и поля держит обёртка,
+   высоту задаёт сам холст. */
+.m5s-chart { padding: 0 14px 10px; background: var(--c-panel); }
 
 .m5s-list { background: var(--c-panel); }
 .m5s-row { display: flex; align-items: center; gap: 12px; padding: 9px 18px; cursor: pointer; }
