@@ -12,8 +12,8 @@
 
    Содержание — то же и оттуда же: flows/14-sportsmen.md, Э14.1. */
 
-import { useState, type ReactNode } from 'react';
-import { ArrowLeft, ArrowRight, ChevronRight } from 'lucide-react';
+import { useState } from 'react';
+import { ArrowRight, ChevronRight } from 'lucide-react';
 import { RoleScreen } from '../mockups/shell';
 import { R14 } from '../mockups/roles';
 import type { DeskVariant } from '../deskShell';
@@ -145,73 +145,6 @@ export function HomeG2Desk({ variant }: { variant?: DeskVariant } = {}) {
               </div>
             ))}
           </section>
-        </div>
-      </div>
-    </RoleScreen>
-  );
-}
-
-/* ── Облик Г-2 для остальных экранов роли ────────────────────────────
-   Главная (выше) задала язык: тёмное поле во всю ширину с лентой орнамента,
-   на него наезжает лист, действие — на границе планов. Остальным экранам
-   роли не нужна карусель, но нужен тот же язык, иначе маршрут разваливается
-   на «главную по-новому» и «всё остальное по-старому».
-
-   Поэтому поле выносится в обёртку: подпись, название экрана и строка под
-   ним — на тёмном; всё содержание — на листе. Шапка оболочки с именем при
-   этом снята (`o14-nohead`), как и на главной: название экрана теперь стоит
-   в поле, и дублировать его сверху незачем. */
-export function G2Page({
-  nav,
-  eyebrow,
-  title,
-  sub,
-  action,
-  back,
-  variant,
-  children,
-}: {
-  nav: string;
-  eyebrow: string;
-  title: string;
-  sub?: string;
-  /** Возврат для экранов, куда приходят из списка: стоит на поле над подписью,
-      потому что шапка оболочки у роли снята. */
-  back?: { label: string; to: string };
-  /** Главное действие экрана — на границе планов, как на главной. */
-  action?: { label: string; to: string };
-  variant?: DeskVariant;
-  children: ReactNode;
-}) {
-  return (
-    <RoleScreen variant={variant} role={R14} nav={nav} title={title} sub={sub}>
-      <div className="g2d o14-nohead">
-        <div className="g2d-field">
-          <div className="g2d-clip">
-            <div className="g2d-band" />
-          </div>
-          <div className="g2d-field-in">
-            <div className="g2d-l">
-              {back && (
-                <button type="button" className="g2d-back" data-to={back.to}>
-                  <ArrowLeft size={14} /> {back.label}
-                </button>
-              )}
-              <div className="g2d-eyebrow">{eyebrow}</div>
-              <div className="g2d-title o14-disp">{title}</div>
-              {sub && <div className="g2d-sub">{sub}</div>}
-            </div>
-          </div>
-
-          {action && (
-            <button type="button" className="g2d-go" data-to={action.to}>
-              {action.label} <ArrowRight size={17} />
-            </button>
-          )}
-        </div>
-
-        <div className="g2d-sheet">
-          <div className="g2d-body">{children}</div>
         </div>
       </div>
     </RoleScreen>

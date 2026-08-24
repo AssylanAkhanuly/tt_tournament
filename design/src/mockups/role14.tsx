@@ -16,7 +16,7 @@ import {
 } from 'lucide-react';
 import {
   A, ActionBar, Alert, Also, Arrow, Board, Chips, Empty, Field, Form, Ghost, Hint, Input, Modal,
-  Off, P, Pager, Panel, Queue, Row, Rows, Screen, Search, Shot, States, Tabs,
+  Off, P, Pager, Panel, Queue, RoleScreen, Row, Rows, Screen, Search, Shot, States, Tabs,
 } from './shell';
 import { ChartBox, soft, token } from './chart';
 import { BracketFlow } from '@/widgets/bracket/BracketFlow';
@@ -24,7 +24,7 @@ import { DeskFrame, type DeskVariant } from '../deskShell';
 import { MY_GROUP, OTHER_GROUPS, myBracket, playoffBracket } from './myBracket';
 import type { ScreenMap } from './shell';
 import { R14 } from './roles';
-import { G2Page, HomeG2Desk } from '../design/role14deskg2';
+import { HomeG2Desk } from '../design/role14deskg2';
 import { Login0_1, SignUp0_5, SignUp0_5States } from './role00';
 
 /* Спортсмен макета — Ким Георгий (тот же, что в реестрах ролей 2 и 12). */
@@ -159,7 +159,7 @@ const Mine14_2 = () => (
 
 export function Calendar14_2({ tab }: { tab?: string }) {
   return (
-    <G2Page nav="Календарь" eyebrow="Календарь" title="Турниры сезона 2026" sub="Открытые республиканские — те, куда спортсмен заявляется сам">
+    <RoleScreen role={R14} nav="Календарь" title="Календарь" sub="Открытые республиканские · сезон 2026">
       <Tabs
         active={tab}
         items={[
@@ -167,7 +167,7 @@ export function Calendar14_2({ tab }: { tab?: string }) {
           { t: 'Мои турниры · 3', view: <Mine14_2 /> },
         ]}
       />
-    </G2Page>
+    </RoleScreen>
   );
 }
 
@@ -204,7 +204,7 @@ const Calendar14_2States = () => (
 
 export function Apply14_3() {
   return (
-    <G2Page nav="Календарь" eyebrow="Заявка на турнир" title="Кубок Алматы 2026" sub="ОРТ · Алматы · 12–14.09 · приём заявок до 05.09">
+    <RoleScreen role={R14} nav="Календарь" title="Заявка на турнир" sub="Кубок Алматы 2026 · ОРТ">
       <div className="mkcols">
         <Panel title="Заявка">
           <Form>
@@ -229,7 +229,7 @@ export function Apply14_3() {
           </Rows>
         </Panel>
       </div>
-    </G2Page>
+    </RoleScreen>
   );
 }
 
@@ -252,7 +252,7 @@ const Apply14_3States = () => (
 
 export function MyApp14_4() {
   return (
-    <G2Page nav="Календарь" eyebrow="Моя заявка" title="Кубок Алматы 2026" sub="подана 02.09 · решение принимает главный судья">
+    <RoleScreen role={R14} nav="Календарь" title="Моя заявка" sub="Кубок Алматы 2026 · подана 02.09">
       <div className="mkcols">
         <Panel title="Состояние" extra={<P t="НА РАССМОТРЕНИИ" cls="wait" />}>
           <Form>
@@ -274,7 +274,7 @@ export function MyApp14_4() {
           </Rows>
         </Panel>
       </div>
-    </G2Page>
+    </RoleScreen>
   );
 }
 
@@ -618,11 +618,11 @@ const Playoff14_5 = () => (
     «Сетка» показывает плей-офф из вышедших. */
 export function Match14_5({ tab, groups }: { tab?: string; groups?: boolean }) {
   return (
-    <G2Page
+    <RoleScreen
+      role={R14}
       nav="Мой турнир"
-      eyebrow="Мой турнир"
       title="Кубок Алматы 2026"
-      sub={groups ? 'Группы и плей-офф · группа A · стол 5' : '1/8 финала · стол 5 · 14:20'}
+      sub={groups ? 'Группы и плей-офф · группа A · стол 5' : '1/8 финала · стол 5'}
     >
       <Tabs
         active={tab}
@@ -633,7 +633,7 @@ export function Match14_5({ tab, groups }: { tab?: string; groups?: boolean }) {
           { t: TABS14_5[2], view: groups ? <Playoff14_5 /> : <Bracket14_5 /> },
         ]}
       />
-    </G2Page>
+    </RoleScreen>
   );
 }
 
@@ -917,7 +917,7 @@ const Foes14_6 = () => (
 
 export function Stats14_6() {
   return (
-    <G2Page nav="Аналитика" eyebrow="Аналитика" title="Сезон 2026" sub="7 турниров · 27 матчей · рейтинг 2456">
+    <RoleScreen role={R14} nav="Аналитика" title="Аналитика" sub="Сезон 2026 · 7 турниров · 27 матчей">
       <Chips
         items={[
           { v: '2456', k: 'Рейтинг', tone: 'b' },
@@ -963,7 +963,7 @@ export function Stats14_6() {
           федерации нет. Всё, что выше, — базовая: она не платная.
         </Hint>
       </div>
-    </G2Page>
+    </RoleScreen>
   );
 }
 
@@ -998,7 +998,7 @@ const Stats14_6States = () => (
     зря. У спортсмена сюда же попадают по имени и фото в шапке. */
 export function Profile14_7() {
   return (
-    <G2Page nav="Профиль" eyebrow="Мой профиль" title="Ким Георгий" sub="2003 · Астана · клуб СКА · КМС · рейтинг 2456">
+    <RoleScreen role={R14} nav="Профиль" title="Мой профиль" sub="Ким Георгий · 2003 · Астана · СКА">
       <div className="mkcols">
         {/* Данные — на чтение. Правка вынесена отдельным экраном (Э14.9):
             телефон и почта меняются сразу, клуб — только после подтверждения
@@ -1068,7 +1068,7 @@ export function Profile14_7() {
           </Alert>
         </Panel>
       </div>
-    </G2Page>
+    </RoleScreen>
   );
 }
 
@@ -1135,7 +1135,7 @@ const NewsCard = ({ n, wide }: { n: (typeof NEWS)[number]; wide?: boolean }) => 
 
 export function News14_13() {
   return (
-    <G2Page nav="Новости" eyebrow="Новости" title="Новости федерации" sub="Объявления, положения и итоги турниров">
+    <RoleScreen role={R14} nav="Новости" title="Новости" sub="Объявления федерации, положения и итоги турниров">
       <div className="mknews">
         {/* Первая новость — крупной карточкой: в ленте всегда есть главное
             за неделю, и оно не должно теряться среди одинаковых плиток. */}
@@ -1147,7 +1147,7 @@ export function News14_13() {
         </div>
         <button type="button" className="mknews-more">Показать ещё</button>
       </div>
-    </G2Page>
+    </RoleScreen>
   );
 }
 
@@ -1158,11 +1158,11 @@ export function News14_13() {
     Внизу — соседние материалы: прочитал одно, читают следующее. */
 export function Article14_14() {
   return (
-    <G2Page
+    <RoleScreen
+      role={R14}
       nav="Новости"
-      eyebrow="Новость · календарь"
       title="Календарь сезона 2026 опубликован"
-      sub="Опубликовано 15 апреля 2026 · пресс-служба ФНТ РК"
+      sub="Рубрика «Календарь» · опубликовано 15 апреля 2026"
       back={{ label: 'Все новости', to: 'Э14.13' }}
     >
       <article className="mknews-read">
@@ -1220,7 +1220,7 @@ export function Article14_14() {
           <NewsCard key={n.nm} n={n} />
         ))}
       </div>
-    </G2Page>
+    </RoleScreen>
   );
 }
 
@@ -1279,7 +1279,7 @@ const Result14 = ({
   action: { t: string; to: string; icon: ReactNode };
   note: string;
 }) => (
-  <G2Page nav="Профиль" eyebrow="Оплата взноса" title="Годовой взнос 2026" sub="Ким Георгий · 10 000 ₸ · срок до 31 марта">
+  <RoleScreen role={R14} nav="Профиль" title="Оплата взноса" sub="Годовой взнос 2026 · Ким Георгий">
     <div className={'mkresult' + (ok ? ' ok' : ' bad')}>
       <span className="mkresult-ic">{ok ? <Check size={30} /> : <X size={30} />}</span>
       <div className="mkresult-t">{title}</div>
@@ -1300,7 +1300,7 @@ const Result14 = ({
       <button type="button" className="mkresult-quiet" data-to="Э14.7">В профиль</button>
       <div className="mkresult-note">{note}</div>
     </div>
-  </G2Page>
+  </RoleScreen>
 );
 
 export function Paid14_10() {
@@ -1375,11 +1375,11 @@ const PAYMENTS = [
 
 export function History14_12() {
   return (
-    <G2Page
+    <RoleScreen
+      role={R14}
       nav="Профиль"
-      eyebrow="История платежей"
-      title="Взносы за все сезоны"
-      sub="Ким Георгий · квитанция по каждому платежу"
+      title="История платежей"
+      sub="Ким Георгий · взносы за все сезоны"
       back={{ label: 'Профиль', to: 'Э14.7' }}
     >
       <div className="mkcols">
@@ -1426,7 +1426,7 @@ export function History14_12() {
           </div>
         </Panel>
       </div>
-    </G2Page>
+    </RoleScreen>
   );
 }
 
@@ -1481,11 +1481,11 @@ const Declined14_11States = () => (
     региону приписался бы кто угодно, а разбирал бы это кто-то другой. */
 export function Edit14_9() {
   return (
-    <G2Page
+    <RoleScreen
+      role={R14}
       nav="Профиль"
-      eyebrow="Изменение данных"
-      title="Телефон и почта"
-      sub="Ким Георгий · клуб меняется только с подтверждением клуба"
+      title="Изменение данных"
+      sub="Ким Георгий · телефон и почта"
       back={{ label: 'Профиль', to: 'Э14.7' }}
     >
       <div className="mkcols">
@@ -1513,7 +1513,7 @@ export function Edit14_9() {
           </Alert>
         </Panel>
       </div>
-    </G2Page>
+    </RoleScreen>
   );
 }
 
