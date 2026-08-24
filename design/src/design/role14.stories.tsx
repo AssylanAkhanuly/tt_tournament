@@ -25,6 +25,7 @@ import {
   MobileTiles,
 } from './role14mobile2';
 import { MobileMatch, MobileOff } from './role14mobile3';
+import { MobApply, MobCalendar, MobMyApp, MobProfile, MobStats } from './role14mobile5';
 import { HomeG2Desk } from './role14deskg2';
 import wttTicker from '../assets/refs/wtt-ticker.jpg';
 
@@ -1272,3 +1273,15 @@ export const AG2Desk = {
   name: 'А · Г-2 на десктопе — закреплённый макет',
   render: () => <HomeG2Desk />,
 };
+
+/* ── Остальные экраны роли на телефоне ───────────────────────────────
+   Заход второй. Первый раздал всем экранам одно и то же тёмное поле с
+   орнаментом — то, что придумано для главной, — и маршрут стал одной
+   страницей с разной начинкой. Здесь у каждого экрана своя шапка, которая
+   работает на его задачу; общими остаются система и правила, а не картинка.
+   Разбор — в role14mobile5.tsx. */
+export const MobileCalendar = { name: 'Мобильный · Э14.2 Календарь', render: () => <MobCalendar /> };
+export const MobileApply = { name: 'Мобильный · Э14.3 Заявка', render: () => <MobApply /> };
+export const MobileMyApp = { name: 'Мобильный · Э14.4 Моя заявка', render: () => <MobMyApp /> };
+export const MobileStats = { name: 'Мобильный · Э14.6 Аналитика', render: () => <MobStats /> };
+export const MobileProfile = { name: 'Мобильный · Э14.7 Профиль', render: () => <MobProfile /> };
