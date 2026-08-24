@@ -26,6 +26,9 @@ import {
 } from './role14mobile2';
 import { MobileMatch, MobileOff } from './role14mobile3';
 import { MobApply, MobCalendar, MobMyApp, MobProfile, MobStats } from './role14mobile5';
+import {
+  MobArticle, MobDeclined, MobEdit, MobNews, MobPaid, MobPay, MobPayments,
+} from './role14mobile6';
 import { HomeG2Desk } from './role14deskg2';
 import wttTicker from '../assets/refs/wtt-ticker.jpg';
 
@@ -1285,3 +1288,12 @@ export const MobileApply = { name: 'Мобильный · Э14.3 Заявка', 
 export const MobileMyApp = { name: 'Мобильный · Э14.4 Моя заявка', render: () => <MobMyApp /> };
 export const MobileStats = { name: 'Мобильный · Э14.6 Аналитика', render: () => <MobStats /> };
 export const MobileProfile = { name: 'Мобильный · Э14.7 Профиль', render: () => <MobProfile /> };
+
+/* Экраны денег и новостей — тот же подход: у каждого свой ход. */
+export const MobilePay = { name: 'Мобильный · Э14.8 Оплата взноса', render: () => <MobPay /> };
+export const MobilePaid = { name: 'Мобильный · Э14.10 Взнос оплачен', render: () => <MobPaid /> };
+export const MobileDeclined = { name: 'Мобильный · Э14.11 Оплата не прошла', render: () => <MobDeclined /> };
+export const MobilePayments = { name: 'Мобильный · Э14.12 История платежей', render: () => <MobPayments /> };
+export const MobileEdit = { name: 'Мобильный · Э14.9 Изменение данных', render: () => <MobEdit /> };
+export const MobileNews = { name: 'Мобильный · Э14.13 Новости', render: () => <MobNews /> };
+export const MobileArticle = { name: 'Мобильный · Э14.14 Новость', render: () => <MobArticle /> };

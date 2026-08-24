@@ -1,0 +1,170 @@
+/* Роль 14 · экраны денег и новостей на телефоне. Разбор — role14mobile6.tsx.
+   Общие детали (подпись раздела, липкий низ, кнопка) берутся из
+   role14mobile5.css: это те же элементы, а не их копии. */
+
+/* Возврат: тихая строка над содержанием — у этих экранов есть откуда прийти. */
+.m6-back { padding: 10px 18px 0; background: var(--c-panel); }
+.m6-back button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px 5px 7px;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--c-muted);
+  background: transparent;
+  border: 1px solid var(--c-glass-line);
+  border-radius: var(--r-xs);
+  cursor: pointer;
+}
+
+/* Общий список «ключ — значение»: платёж, реквизиты, факты. */
+.m6-list { background: var(--c-panel); }
+.m6-row { display: flex; align-items: baseline; gap: 12px; padding: 11px 18px; }
+.m6-row + .m6-row { border-top: 1px solid var(--c-glass-line); }
+.m6-row .k { flex: none; width: 130px; font-size: 13px; color: var(--c-muted); }
+.m6-row .v { flex: 1; min-width: 0; font-size: 15px; color: var(--c-ink); }
+
+.m6-note { padding: 10px 18px 14px; font-size: 12px; line-height: 1.4; color: var(--c-muted); background: var(--c-panel); }
+
+/* ═══ Э14.8 · Оплата — сумма экраном ═══════════════════════════════ */
+.m6-sum {
+  display: grid;
+  gap: 2px;
+  padding: 20px 18px;
+  background: var(--c-accent-fill);
+  box-shadow: inset 3px 0 0 var(--c-accent);
+}
+.m6-sum .k {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.22em;
+  color: var(--c-muted);
+  text-transform: uppercase;
+}
+.m6-sum .v { font-size: 44px; line-height: 1; color: var(--c-ink); }
+.m6-sum .s { margin-top: 4px; font-size: 13px; color: var(--c-muted); }
+
+/* ═══ Э14.10 / Э14.11 · Результат — полоса статуса ═════════════════
+   Цвет тот же, что у статусов в остальной роли: зелёный — прошло, красный —
+   отказ. Полоса занимает верх экрана: это единственное, за чем сюда пришли. */
+.m6-res {
+  display: grid;
+  justify-items: start;
+  gap: 4px;
+  padding: 22px 18px 20px;
+}
+.m6-res .ic {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  margin-bottom: 6px;
+  border-radius: 50%;
+}
+.m6-res .t { font-size: 30px; line-height: 1.05; }
+.m6-res .s { font-size: 13px; line-height: 1.4; }
+
+.m6res.ok .m6-res { background: var(--c-success-fill); box-shadow: inset 3px 0 0 var(--c-success); }
+.m6res.ok .m6-res .ic { color: var(--c-success-ink); background: var(--c-success); }
+.m6res.no .m6-res { background: var(--c-danger-fill); box-shadow: inset 3px 0 0 var(--c-danger); }
+.m6res.no .m6-res .ic { color: var(--c-on-media); background: var(--c-danger); }
+.m6-res .t { color: var(--c-ink); }
+.m6-res .s { color: var(--c-muted); }
+
+/* Тихий выход под главной кнопкой: уводит с экрана, поэтому без заливки. */
+.m6-quiet {
+  display: block;
+  width: 100%;
+  margin-top: 8px;
+  padding: 10px;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--c-muted);
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+}
+
+/* ═══ Э14.12 · История платежей ════════════════════════════════════ */
+.m6-pay { display: flex; align-items: center; gap: 14px; padding: 12px 18px; cursor: pointer; }
+.m6-pay + .m6-pay { border-top: 1px solid var(--c-glass-line); }
+.m6-pay .y { flex: none; width: 54px; font-size: 22px; color: var(--c-muted); }
+.m6-pay .tx { flex: 1; min-width: 0; display: grid; }
+.m6-pay .nm { font-size: 16px; font-weight: 700; color: var(--c-ink); }
+.m6-pay .ss { font-size: 12px; color: var(--c-muted); }
+.m6-pay .tag {
+  flex: none;
+  padding: 4px 8px;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--c-success-light);
+  background: var(--c-success-soft);
+}
+
+/* ═══ Э14.9 · Изменение данных ═════════════════════════════════════ */
+.m6-fields { background: var(--c-panel); }
+.m6-f { display: grid; gap: 3px; padding: 11px 18px; }
+.m6-f + .m6-f { border-top: 1px solid var(--c-glass-line); }
+.m6-f .k { font-size: 12px; color: var(--c-muted); }
+/* Поле-строка: подчёркнутое значение читается как «это можно поменять». */
+.m6-f .v {
+  padding-bottom: 6px;
+  font-size: 16px;
+  color: var(--c-ink);
+  box-shadow: inset 0 -1px 0 var(--c-glass-line);
+}
+.m6-warn {
+  margin-top: 8px;
+  padding: 12px 18px;
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--c-ink);
+  background: var(--c-warning-fill);
+  box-shadow: inset 3px 0 0 var(--c-warning);
+}
+
+/* ═══ Э14.13 · Новости ═════════════════════════════════════════════ */
+.m6-lead { display: grid; gap: 6px; padding: 16px 18px 18px; background: var(--c-panel); cursor: pointer; }
+.m6-lead .tag {
+  justify-self: start;
+  padding: 4px 8px;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  color: var(--c-primary);
+  background: var(--c-primary-soft);
+}
+.m6-lead .nm { font-size: 26px; line-height: 1.08; color: var(--c-ink); }
+.m6-lead .ss { font-size: 14px; line-height: 1.45; color: var(--c-muted); }
+.m6-lead .at { font-size: 12px; color: var(--c-dim); }
+
+.m6-nrow { display: flex; align-items: center; gap: 12px; padding: 11px 18px; cursor: pointer; }
+.m6-nrow + .m6-nrow { border-top: 1px solid var(--c-glass-line); }
+.m6-nrow .tx { display: grid; gap: 2px; min-width: 0; }
+.m6-nrow .nm { font-size: 15px; font-weight: 700; line-height: 1.3; color: var(--c-ink); }
+.m6-nrow .ss { font-size: 11px; letter-spacing: 0.06em; color: var(--c-muted); text-transform: uppercase; }
+
+/* ═══ Э14.14 · Новость — чтение ════════════════════════════════════
+   Другая мера, чем у остальных экранов роли: длинный текст, поэтому крупнее
+   интерлиньяж и свободнее поля. */
+.m6-read { padding: 14px 18px 20px; background: var(--c-panel); }
+.m6-read .tag {
+  display: inline-block;
+  padding: 4px 8px;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  color: var(--c-primary);
+  background: var(--c-primary-soft);
+}
+.m6-read h2 { margin: 10px 0 6px; font-size: 27px; line-height: 1.08; color: var(--c-ink); }
+.m6-read .meta { font-size: 12px; color: var(--c-dim); }
+.m6-read p { margin-top: 12px; font-size: 15px; line-height: 1.55; color: var(--c-ink); }
+.m6-read h3 { margin-top: 16px; font-size: 16px; font-weight: 800; color: var(--c-ink); }
+.m6-read ul { margin: 8px 0 0; padding-left: 18px; }
+.m6-read li { margin-top: 6px; font-size: 15px; line-height: 1.5; color: var(--c-ink); }
