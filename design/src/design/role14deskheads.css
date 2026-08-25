@@ -1,0 +1,252 @@
+/* Роль 14 · шапки десктопных экранов — по одной на экран (25.08.2026).
+
+   ПОЧЕМУ. На телефоне мы уже отказались от одной общей шапки на всю роль:
+   тёмное поле с орнаментом придумано для главной, а на календаре, бланке
+   заявки и в аналитике оно занимало четверть экрана и ничего не сообщало
+   (разбор — role14mobile5.tsx). На десктопе оставалась ровно та же болезнь в
+   другом виде: `RoleScreen` печатал «Аналитика / Сезон 2026 · 7 турниров», и
+   так на каждом экране — заголовок повторял пункт меню слева, под которым уже
+   стояла подсветка активного раздела.
+
+   ЧТО ВМЕСТО. Штатный заголовок гасится (`o14-nohead`), и каждый экран
+   приносит свою шапку, которая отвечает на его вопрос:
+
+     Э14.3 Заявка     — какой турнир и до какого числа принимают.
+     Э14.4 Моя заявка — в каком она состоянии, крупно.
+     Э14.6 Аналитика  — рейтинг: число сам себе заголовок.
+     Э14.7 Профиль    — карточка игрока и взнос сроком.
+     Э14.9 Правка     — что именно правится.
+     Э14.12 Платежи   — сколько заплачено всего.
+     Э14.13/14 Новости — обложка материала и есть шапка.
+
+   Общими остаются система, а не картинка: токены, прямые углы, дисплейная
+   гарнитура на числах и фамилиях, правило цвета (зелёный — статус, акцент —
+   действие, красный — эфир). Классы `o14-disp` и `o14-eyebrow` берутся из
+   role14home.css, чтобы шкала была одна на роль. */
+
+/* ═══ Общий каркас шапки ═══════════════════════════════════════════
+   Строка на всю ширину рабочей области: слева то, ради чего пришли, справа —
+   действие или второй факт. Снизу волосяная линия вместо заливки: шапка
+   отделяет, а не занимает. */
+.dh {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--s-6);
+  padding-bottom: var(--s-4);
+  margin-bottom: var(--s-5);
+  border-bottom: 1px solid var(--c-glass-line);
+}
+.dh-l { flex: 1; min-width: 0; }
+.dh-r { flex: none; display: flex; align-items: center; gap: var(--s-3); }
+
+/* Возврат — над шапкой, а не сбоку: экран, куда пришли из списка, должен
+   отдавать дорогу назад первой строкой. */
+/* Блочная, а не `inline-flex`: рядом с ней стоит крупная строка шапки, и на
+   Э14.4 она `inline-flex` — строчный возврат вставал с ней в одну строку
+   («‹ Календарь сезона ● На рассмотрении»). */
+.dh-back {
+  display: flex;
+  width: fit-content;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: var(--s-2);
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--c-muted);
+  cursor: pointer;
+}
+.dh-back:hover { color: var(--c-accent); }
+
+/* Крупная строка шапки: название турнира, фамилия, состояние. */
+.dh-t {
+  font-size: 34px;
+  line-height: 1.02;
+  color: var(--c-ink);
+}
+.dh-sub {
+  margin-top: 7px;
+  font-size: 13px;
+  color: var(--c-muted);
+}
+.dh-sub b { color: var(--c-ink); font-weight: 700; }
+
+/* ═══ Э14.3 · Заявка — бланк ═══════════════════════════════════════
+   Справа стоит срок приёма: это единственное, что на этом экране может
+   закончиться, и решение «подавать сейчас или потом» принимают по нему. */
+.dh-till {
+  text-align: right;
+  padding-left: var(--s-5);
+  border-left: 1px solid var(--c-glass-line);
+}
+.dh-till .v {
+  font-size: 26px;
+  color: var(--c-success-light);
+}
+.dh-till .k {
+  margin-top: 5px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--c-dim);
+}
+
+/* ═══ Э14.4 · Моя заявка — состояние крупно ════════════════════════
+   Состояние набрано цветом своего смысла: ждём — предупреждающий, приняли —
+   зелёный. Точка слева — та же метка состояния, что на плашках роли. */
+.dh-state {
+  display: inline-flex;
+  align-items: center;
+  gap: 11px;
+  font-size: 34px;
+  line-height: 1.02;
+  color: var(--c-ink);
+}
+.dh-state i {
+  flex: none;
+  width: 13px;
+  height: 13px;
+  border-radius: var(--r-round);
+  background: var(--c-warning);
+}
+.dh-state.ok i { background: var(--c-success); }
+.dh-state.bad i { background: var(--c-danger); }
+
+/* ═══ Э14.6 · Аналитика — рейтинг сам себе заголовок ═══════════════
+   Число набрано дисплейной гарнитурой в 68 px: за аналитикой приходят с
+   вопросом «сколько у меня сейчас», и ответ не должен быть подписью к
+   заголовку «Аналитика». Рядом — прирост за сезон и место в стране. */
+.dh-rating {
+  display: flex;
+  align-items: baseline;
+  gap: 14px;
+}
+.dh-rating .v {
+  font-size: 68px;
+  line-height: 0.9;
+  color: var(--c-ink);
+}
+.dh-rating .d {
+  font-size: 22px;
+  color: var(--c-success-light);
+}
+.dh-rating .p {
+  font-size: 13px;
+  color: var(--c-muted);
+}
+
+/* Второй факт справа — тройка чисел столбиками. Не плитки: плитки уже стоят
+   ниже блоком, а два одинаковых ряда чисел подряд читаются как повтор. */
+.dh-nums { display: flex; gap: var(--s-6); }
+.dh-nums div { text-align: right; }
+.dh-nums .v { font-size: 22px; color: var(--c-ink); }
+.dh-nums .k {
+  margin-top: 4px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--c-dim);
+}
+
+/* ═══ Э14.7 · Профиль — карточка игрока ════════════════════════════ */
+.dh-who { display: flex; align-items: center; gap: var(--s-4); }
+.dh-who img {
+  flex: none;
+  width: 72px;
+  height: 72px;
+  border-radius: var(--r-round);
+  object-fit: cover;
+  box-shadow: var(--sh-avatar);
+}
+
+/* Взнос справа: сумма и срок — то, из-за чего заявку могут не пропустить. */
+.dh-fee {
+  display: flex;
+  align-items: center;
+  gap: var(--s-4);
+  padding-left: var(--s-5);
+  border-left: 1px solid var(--c-glass-line);
+}
+.dh-fee .v { font-size: 26px; color: var(--c-ink); }
+.dh-fee .k {
+  margin-top: 4px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--c-dim);
+}
+
+/* ═══ Э14.13 / Э14.14 · Новости — обложка и есть шапка ═════════════
+   У материала уже есть картинка, и ставить над ней ещё и строку «Новости»
+   незачем. Шапка ленты — главный материал во всю ширину: заголовок стоит
+   поверх обложки, под тёмной шторкой, поэтому текст берётся только из
+   `--c-on-media` (на светлой теме `--c-ink` по фотографии пропадает). */
+.dh-lead {
+  position: relative;
+  display: block;
+  width: 100%;
+  min-height: 260px;
+  padding: var(--s-6);
+  margin-bottom: var(--s-5);
+  border: 0;
+  text-align: left;
+  /* Слои снизу вверх: тёмная база (она держит контраст при любой теме и
+     работает, даже когда обложки нет), обложка, узор и шторка под текстом.
+     `--c-cover-1` — сам по себе градиент, поэтому кладётся слоем целиком, а
+     не подставляется в `linear-gradient()`: во второй роли он делает всё
+     объявление невалидным, и фон пропадает вместе со шторкой. */
+  background-color: var(--c-screen-deep);
+  background-image:
+    linear-gradient(0deg, color-mix(in srgb, var(--c-screen-deep) 92%, transparent), color-mix(in srgb, var(--c-screen-deep) 25%, transparent) 68%),
+    var(--fx-pattern),
+    var(--c-cover-1);
+  background-size: auto, var(--fx-pattern-size), cover;
+  cursor: pointer;
+}
+.dh-lead .in {
+  position: absolute;
+  inset: auto var(--s-6) var(--s-6);
+}
+.dh-lead .tag {
+  display: inline-block;
+  padding: 4px 9px;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  color: var(--c-on-media);
+  background: color-mix(in srgb, var(--c-on-media) 18%, transparent);
+}
+.dh-lead h3 {
+  max-width: 26ch;
+  margin: 12px 0 0;
+  font-size: 40px;
+  line-height: 1.04;
+  color: var(--c-on-media);
+}
+.dh-lead p {
+  max-width: 62ch;
+  margin: 10px 0 0;
+  font-size: 14px;
+  line-height: 1.45;
+  color: var(--c-on-media-2);
+}
+.dh-lead .meta {
+  margin-top: 12px;
+  font-size: 12px;
+  color: var(--c-on-media-2);
+}
+
+/* Шапка самого материала (Э14.14): та же обложка, но заголовок длиннее и
+   набирается тише — читать его будут вблизи, а не выбирать из ленты. */
+.dh-lead.read { min-height: 300px; margin-bottom: 0; cursor: default; }
+.dh-lead.read h3 { max-width: 30ch; font-size: 34px; }
+
+/* Подпись к обложке идёт сразу под ней и отбивается от текста статьи: без
+   этого она прилипала к первому абзацу и читалась его началом. */
+.dh-lead.read + .mknews-cap { margin: 8px 0 var(--s-5); }

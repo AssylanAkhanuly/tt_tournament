@@ -21,11 +21,13 @@ import {
 import { ChartBox, soft, token } from './chart';
 import { BracketFlow } from '@/widgets/bracket/BracketFlow';
 import { DeskFrame, type DeskVariant } from '../deskShell';
-import { MY_GROUP, OTHER_GROUPS, myBracket, playoffBracket } from './myBracket';
+import { ME_ID, MY_GROUP, OTHER_GROUPS, myBracket, playoffBracket } from './myBracket';
 import type { ScreenMap } from './shell';
 import { R14 } from './roles';
 import { HomeG2Desk } from '../design/role14deskg2';
+import { CalendarDesk } from '../design/role14deskcal';
 import { Login0_1, SignUp0_5, SignUp0_5States } from './role00';
+import '../design/role14deskheads.css';
 
 /* Спортсмен макета — Ким Георгий (тот же, что в реестрах ролей 2 и 12). */
 const ME = A(44);
@@ -102,73 +104,17 @@ const Home14_1States = () => (
 
 /* ── Э14.2 · Календарь ─────────────────────────────────────────── */
 
-/** В календаре только то, куда спортсмен заявляется сам: открытые
-    республиканские. Старты, куда состав подаёт регион или клуб, сюда не
-    попадают — строка с неактивной кнопкой человеку ничего не даёт. */
-const OPEN = [
-  { nm: 'Кубок Алматы 2026', mt: 'Алматы · 12–14 сентября', till: 'приём до 05.09', fee: true },
-  { nm: 'ОРТ «Кубок Иртыша»', mt: 'Павлодар · 25 апреля', till: 'приём до 18.04', fee: true },
-  { nm: 'ОРТ «Шымкент Open»', mt: 'Шымкент · 9 мая', till: 'приём до 02.05', fee: false },
-];
+/* Экран нарисован заново и выбран федерацией: `дизайн: календарь в языке
+   Google, 25.08.2026` (flows/14-sportsmen.md). Прежний макет — две вкладки
+   («Куда могу заявиться» и «Мои турниры») со списком строк — заменён сеткой
+   месяца: у турнира главное «когда», а список строк отвечал на «что», и
+   ответить «свободен ли я в эти выходные» по нему было нельзя.
 
-/** Вкладка «Мои турниры»: где я уже заявлен — в том числе не собой. */
-const MINE = [
-  { nm: 'Чемпионат Республики Казахстан', mt: 'Астана · 18–22 сентября', by: 'заявил старший тренер региона' },
-  { nm: 'Евразийская лига · 3-й тур', mt: 'Шымкент · 16–18 мая', by: 'заявил клуб · команда «СКА», мужская 2 лига' },
-];
-
-/** Вкладка «Куда могу заявиться»: только открытые республиканские — те, куда
-    спортсмен подаёт заявку сам. */
-const Open14_2 = () => (
-  <>
-    <div className="dcount">
-      Главные старты и Лигу заявляют регион и клуб — они во вкладке «Мои турниры»
-    </div>
-    <Rows>
-      {OPEN.map((t) => (
-        <div className="drow" key={t.nm}>
-          <div className="who">
-            <div className="nm">{t.nm}</div>
-            <div className="rl">ОРТ · {t.mt} · {t.till}</div>
-          </div>
-          {t.fee && <P t="НУЖЕН ГОДОВОЙ ВЗНОС" cls="reg" />}
-          <button className="dpickbtn" data-to="Э14.3">Заявиться</button>
-        </div>
-      ))}
-    </Rows>
-  </>
-);
-
-/** Вкладка «Мои турниры»: где я уже заявлен, включая заявки региона и клуба. */
-const Mine14_2 = () => (
-  <>
-    <div className="dcount">Заявлен, но заявку подавал не я</div>
-    <Rows>
-      {MINE.map((t) => (
-        <Row key={t.nm} nm={t.nm} sub={`${t.mt} · ${t.by}`} pill={{ t: 'ЗАЯВЛЕН', cls: 'live' }} to="Э14.4" />
-      ))}
-      <Row
-        nm="Кубок Алматы 2026"
-        sub="Алматы · 12–14 сентября · заявился сам"
-        pill={{ t: 'ЗАЯВКА ПРИНЯТА', cls: 'live' }}
-        to="Э14.4"
-      />
-    </Rows>
-  </>
-);
-
-export function Calendar14_2({ tab }: { tab?: string }) {
-  return (
-    <RoleScreen role={R14} nav="Календарь" title="Календарь" sub="Открытые республиканские · сезон 2026">
-      <Tabs
-        active={tab}
-        items={[
-          { t: 'Куда могу заявиться · 3', view: <Open14_2 /> },
-          { t: 'Мои турниры · 3', view: <Mine14_2 /> },
-        ]}
-      />
-    </RoleScreen>
-  );
+   Вкладок больше нет: то, что они разделяли, стало переключателями слева —
+   мои турниры, открытые приёмы, старты, куда заявляет регион или клуб. Разбор
+   и сам компонент — в `src/design/role14deskcal.tsx`. */
+export function Calendar14_2({ variant }: { variant?: DeskVariant }) {
+  return <CalendarDesk variant={variant} />;
 }
 
 const Calendar14_2States = () => (
@@ -194,7 +140,7 @@ const Calendar14_2States = () => (
     >
       <Empty
         title="Сейчас заявиться некуда"
-        text="Ближайший открытый приём — ОРТ «Шымкент Open», с 20 апреля. Турниры, куда вас заявляют регион или клуб, — во вкладке «Мои турниры»."
+        text="Ближайший открытый приём — ОРТ «Шымкент Open», с 20 апреля. Турниры, куда вас заявляют регион или клуб, в месяце остаются: их видно серым, переключатель — слева."
       />
     </Shot>
   </States>
@@ -202,9 +148,32 @@ const Calendar14_2States = () => (
 
 /* ── Э14.3 · Заявка на ОРТ ─────────────────────────────────────── */
 
+/* Шапка экрана — своя (разбор в role14deskheads.css): бланк начинается не со
+   слова «Заявка», а с того, на какой турнир и до какого числа принимают. Срок
+   приёма стоит справа отдельно — это единственное, что здесь может кончиться,
+   и по нему решают «подавать сейчас или подумать». */
 export function Apply14_3() {
   return (
     <RoleScreen role={R14} nav="Календарь" title="Заявка на турнир" sub="Кубок Алматы 2026 · ОРТ">
+      <div className="o14-nohead">
+      <div className="dh">
+        <div className="dh-l">
+          <button type="button" className="dh-back" data-to="Э14.2">
+            <ChevronRight size={13} style={{ transform: 'rotate(180deg)' }} /> Календарь сезона
+          </button>
+          <div className="dh-t o14-disp">Кубок Алматы 2026</div>
+          <div className="dh-sub">
+            ОРТ · Алматы · 12–14 сентября · разряды: <b>одиночный, парный, микст</b>
+          </div>
+        </div>
+        <div className="dh-r">
+          <div className="dh-till">
+            <div className="v o14-disp">до 05.09</div>
+            <div className="k">приём заявок</div>
+          </div>
+        </div>
+      </div>
+
       <div className="mkcols">
         <Panel title="Заявка">
           <Form>
@@ -229,6 +198,7 @@ export function Apply14_3() {
           </Rows>
         </Panel>
       </div>
+      </div>
     </RoleScreen>
   );
 }
@@ -250,9 +220,33 @@ const Apply14_3States = () => (
 
 /* ── Э14.4 · Моя заявка ────────────────────────────────────────── */
 
+/* Шапка своя: на этот экран приходят с одним вопросом — «что с моей заявкой».
+   Поэтому состояние набрано крупно и с точкой своего цвета, а название турнира
+   ушло в подстрочник: какой это турнир, человек помнит, он его и выбирал.
+   Отзыв заявки стоит справа в шапке — пока приём открыт, это единственное
+   действие экрана, и внизу панели его искали. */
 export function MyApp14_4() {
   return (
     <RoleScreen role={R14} nav="Календарь" title="Моя заявка" sub="Кубок Алматы 2026 · подана 02.09">
+      <div className="o14-nohead">
+      <div className="dh">
+        <div className="dh-l">
+          <button type="button" className="dh-back" data-to="Э14.2">
+            <ChevronRight size={13} style={{ transform: 'rotate(180deg)' }} /> Календарь сезона
+          </button>
+          <div className="dh-state o14-disp">
+            <i />
+            На рассмотрении
+          </div>
+          <div className="dh-sub">
+            Кубок Алматы 2026 · подана <b>02.09.2026, 19:40</b> · решение принимает главный судья
+          </div>
+        </div>
+        <div className="dh-r">
+          <Ghost>Отозвать заявку</Ghost>
+        </div>
+      </div>
+
       <div className="mkcols">
         <Panel title="Состояние" extra={<P t="НА РАССМОТРЕНИИ" cls="wait" />}>
           <Form>
@@ -260,9 +254,8 @@ export function MyApp14_4() {
             <Field label="Разряд" value="Одиночный" />
             <Field label="Подана" value="02.09.2026, 19:40" />
           </Form>
-          <div className="dactionbar" style={{ marginTop: 12 }}>
-            <div className="dcount">Пока приём открыт, заявку можно отозвать</div>
-            <Ghost>Отозвать заявку</Ghost>
+          <div className="dcount" style={{ marginTop: 12 }}>
+            Пока приём открыт, заявку можно отозвать — кнопка в шапке экрана.
           </div>
         </Panel>
 
@@ -273,6 +266,7 @@ export function MyApp14_4() {
             <Row nm="Вызов на стол" sub="в день игры, уведомлением" pill={{ t: 'ПОТОМ', cls: 'done' }} />
           </Rows>
         </Panel>
+      </div>
       </div>
     </RoleScreen>
   );
@@ -568,7 +562,11 @@ export function Squads14_5({
     за турнир — написано в шапке экрана. */
 const Bracket14_5 = () => (
   <div className="mkbracket mkbracket-fill">
-    <BracketFlow bracket={myBracket} minZoom={0.15} fitPadding={0.06} />
+    {/* Холст светлый и мои матчи подсвечены — то же решение, что принято для
+        телефона 25.08.2026. Тёмный холст посреди светлого экрана читался
+        чужой врезкой, а без подсветки на 128 участников свой путь искали
+        глазами. `minePlayerId` красит мои пары и гасит остальные. */}
+    <BracketFlow bracket={myBracket} minZoom={0.15} fitPadding={0.06} tone="light" minePlayerId={ME_ID} />
   </div>
 );
 
@@ -608,7 +606,7 @@ const Groups14_5 = () => (
 /** Плей-офф после групп: сетка короче, и в неё попадают вышедшие из групп. */
 const Playoff14_5 = () => (
   <div className="mkbracket mkbracket-fill">
-    <BracketFlow bracket={playoffBracket} minZoom={0.15} fitPadding={0.06} />
+    <BracketFlow bracket={playoffBracket} minZoom={0.15} fitPadding={0.06} tone="light" minePlayerId={ME_ID} />
   </div>
 );
 
@@ -915,17 +913,41 @@ const Foes14_6 = () => (
   </Rows>
 );
 
+/* Шапка своя: за аналитикой приходят с вопросом «сколько у меня сейчас», и
+   ответ — число, а не слово «Аналитика». Поэтому рейтинг набран дисплейной
+   гарнитурой в 68 px, рядом прирост за сезон и место в стране, справа — три
+   числа сезона. Прежняя полка из четырёх плиток убрана: она повторяла ровно
+   эти же числа строкой ниже. */
 export function Stats14_6() {
   return (
     <RoleScreen role={R14} nav="Аналитика" title="Аналитика" sub="Сезон 2026 · 7 турниров · 27 матчей">
-      <Chips
-        items={[
-          { v: '2456', k: 'Рейтинг', tone: 'b' },
-          { v: '+68', k: 'За сезон', tone: 'g' },
-          { v: '70%', k: 'Побед' },
-          { v: '7', k: 'Турниров сыграно' },
-        ]}
-      />
+      <div className="o14-nohead">
+      <div className="dh">
+        <div className="dh-l">
+          <div className="o14-eyebrow">Мой рейтинг · сезон 2026</div>
+          <div className="dh-rating" style={{ marginTop: 8 }}>
+            <span className="v o14-disp">2456</span>
+            <span className="d o14-disp">+68</span>
+            <span className="p">за сезон · 7-е место в РК</span>
+          </div>
+        </div>
+        <div className="dh-r">
+          <div className="dh-nums">
+            <div>
+              <div className="v o14-disp">70%</div>
+              <div className="k">побед</div>
+            </div>
+            <div>
+              <div className="v o14-disp">7</div>
+              <div className="k">турниров</div>
+            </div>
+            <div>
+              <div className="v o14-disp">27</div>
+              <div className="k">матчей</div>
+            </div>
+          </div>
+        </div>
+      </div>
 
       {/* Блоки идут сверху вниз, а не в две колонки ✳: у каждого своя ширина
           по смыслу — кривой рейтинга нужна длинная ось времени, полосам личных
@@ -963,6 +985,7 @@ export function Stats14_6() {
           федерации нет. Всё, что выше, — базовая: она не платная.
         </Hint>
       </div>
+      </div>
     </RoleScreen>
   );
 }
@@ -996,9 +1019,40 @@ const Stats14_6States = () => (
 /** Один профиль вместо двух: сквозной «свой профиль» (контакты, язык, пароль) и
     спортивная карточка со взносом — это один экран, и человек ходил между ними
     зря. У спортсмена сюда же попадают по имени и фото в шапке. */
+/* Шапка своя: профиль — это карточка человека, поэтому фото, фамилия и разряд
+   стоят шапкой, а не строкой внутри панели, где они были одного кегля с полем
+   «Дата рождения». Справа — взнос: сумма и срок. Он вынесен наверх потому, что
+   это единственное, из-за чего заявку могут не пропустить, а раньше он лежал
+   во второй колонке ниже сгиба. */
 export function Profile14_7() {
   return (
     <RoleScreen role={R14} nav="Профиль" title="Мой профиль" sub="Ким Георгий · 2003 · Астана · СКА">
+      <div className="o14-nohead">
+      <div className="dh">
+        <div className="dh-l">
+          <div className="dh-who">
+            <img src={ME} alt="" />
+            <div>
+              <div className="dh-t o14-disp">Ким Георгий</div>
+              <div className="dh-sub">
+                мастер спорта · рейтинг <b>2456</b> · 7-е место в РК · Астана · СКА
+              </div>
+            </div>
+          </div>
+        </div>
+        <div className="dh-r">
+          <div className="dh-fee">
+            <div>
+              <div className="v o14-disp">₸ 10 000</div>
+              <div className="k">взнос 2026 · до 31 марта</div>
+            </div>
+            <button className="dsubmit" data-to="Э14.8" style={{ padding: '11px 16px' }}>
+              <CreditCard size={15} /> Оплатить картой
+            </button>
+          </div>
+        </div>
+      </div>
+
       <div className="mkcols">
         {/* Данные — на чтение. Правка вынесена отдельным экраном (Э14.9):
             телефон и почта меняются сразу, клуб — только после подтверждения
@@ -1012,19 +1066,8 @@ export function Profile14_7() {
               </button>
             }
           >
-            <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 14 }}>
-              <img
-                src={ME}
-                alt=""
-                style={{ width: 56, height: 56, borderRadius: 'var(--r-round)', objectFit: 'cover' }}
-              />
-              <div>
-                <div style={{ fontSize: 15, fontWeight: 700 }}>Ким Георгий</div>
-                <div style={{ fontSize: 12, color: 'var(--c-muted)', marginTop: 3 }}>
-                  Спортсмен · рейтинг 2456 · 7-е место в РК
-                </div>
-              </div>
-            </div>
+            {/* Фото и фамилия ушли в шапку экрана: здесь остаются данные —
+                то, что человек пришёл проверить или поправить. */}
             <Form>
               <Field label="Дата рождения" value="14.06.2003" />
               <Field label="Разряд" value="мастер спорта" />
@@ -1056,17 +1099,14 @@ export function Profile14_7() {
           <Form>
             <Field label="Сумма" value="₸ 10 000" />
             <Field label="Срок" value="до 31 марта" />
+            <Field label="Состояние" value="не оплачен" wide />
           </Form>
-          <div style={{ marginTop: 12 }}>
-            <button className="dsubmit" style={{ width: '100%' }} data-to="Э14.8">
-              <CreditCard size={15} /> Оплатить картой
-            </button>
-          </div>
           <Alert>
-            Оплата идёт на платёжной странице Халык Банка. Состояние поставится само, по
-            подтверждению банка — держать вкладку открытой не нужно.
+            Оплата идёт на платёжной странице Халык Банка — кнопка в шапке экрана. Состояние
+            поставится само, по подтверждению банка: держать вкладку открытой не нужно.
           </Alert>
         </Panel>
+      </div>
       </div>
     </RoleScreen>
   );
@@ -1133,13 +1173,26 @@ const NewsCard = ({ n, wide }: { n: (typeof NEWS)[number]; wide?: boolean }) => 
   </article>
 );
 
+/* Шапка своя — точнее, её нет вовсе: у новостной ленты шапка это и есть
+   главный материал. Строка «Новости / Объявления федерации» над ним ничего не
+   добавляла (пункт меню слева уже подсвечен), зато отодвигала обложку вниз.
+   Поэтому первый материал идёт полосой во всю ширину, с заголовком поверх
+   обложки, а остальные — сеткой под ним. */
 export function News14_13() {
   return (
     <RoleScreen role={R14} nav="Новости" title="Новости" sub="Объявления федерации, положения и итоги турниров">
-      <div className="mknews">
-        {/* Первая новость — крупной карточкой: в ленте всегда есть главное
-            за неделю, и оно не должно теряться среди одинаковых плиток. */}
-        <NewsCard n={NEWS[0]} wide />
+      <div className="mknews o14-nohead">
+        <article className="dh-lead" data-to="Э14.14">
+          <div className="in">
+            <span className="tag">{NEWS[0].tag}</span>
+            <h3 className="o14-disp">{NEWS[0].nm}</h3>
+            <p>{NEWS[0].sub}</p>
+            <div className="meta">
+              {NEWS[0].at} 2026 · {NEWS[0].by} · {NEWS[0].read}
+            </div>
+          </div>
+        </article>
+
         <div className="mknews-grid">
           {NEWS.slice(1).map((n) => (
             <NewsCard key={n.nm} n={n} />
@@ -1165,20 +1218,20 @@ export function Article14_14() {
       sub="Рубрика «Календарь» · опубликовано 15 апреля 2026"
       back={{ label: 'Все новости', to: 'Э14.13' }}
     >
-      <article className="mknews-read">
-        <div className="mknews-meta">
-          <span className="pill reg">КАЛЕНДАРЬ</span>
-          <i />
-          <span>15 апреля 2026</span>
-          <i />
-          <span>Пресс-служба ФНТ РК</span>
-          <i />
-          <span>3 мин чтения</span>
+      {/* Шапка своя: заголовок стоит поверх обложки, а не над ней. Раньше
+          заголовок печатался трижды — в шапке оболочки, в подзаголовке и над
+          текстом; теперь один раз и там, где у материала титул. */}
+      <div className="o14-nohead">
+      <article className="dh-lead read">
+        <div className="in">
+          <span className="tag">КАЛЕНДАРЬ</span>
+          <h3 className="o14-disp">Календарь сезона 2026 опубликован</h3>
+          <div className="meta">15 апреля 2026 · Пресс-служба ФНТ РК · 3 мин чтения</div>
         </div>
+      </article>
+      <figcaption className="mknews-cap">Фото: пресс-служба ФНТ РК, Кубок Казахстана 2026</figcaption>
 
-        <div className="mknews-cover tall" />
-        <figcaption className="mknews-cap">Фото: пресс-служба ФНТ РК, Кубок Казахстана 2026</figcaption>
-
+      <article className="mknews-read">
         <p className="lead">
           В сезоне 2026 года — восемь главных стартов, четыре тура Евразийской лиги и двадцать
           открытых республиканских турниров.
@@ -1219,6 +1272,7 @@ export function Article14_14() {
         {NEWS.slice(1).map((n) => (
           <NewsCard key={n.nm} n={n} />
         ))}
+      </div>
       </div>
     </RoleScreen>
   );
@@ -1279,8 +1333,12 @@ const Result14 = ({
   action: { t: string; to: string; icon: ReactNode };
   note: string;
 }) => (
+  /* Шапки у экрана нет вовсе (`o14-nohead`): «Оплата взноса» над «Оплата
+     прошла» — это один и тот же ответ, напечатанный дважды, причём мелким
+     сверху и крупным снизу. Из банка возвращаются с одним вопросом, и на
+     экране должен стоять один ответ. */
   <RoleScreen role={R14} nav="Профиль" title="Оплата взноса" sub="Годовой взнос 2026 · Ким Георгий">
-    <div className={'mkresult' + (ok ? ' ok' : ' bad')}>
+    <div className={'mkresult o14-nohead' + (ok ? ' ok' : ' bad')}>
       <span className="mkresult-ic">{ok ? <Check size={30} /> : <X size={30} />}</span>
       <div className="mkresult-t">{title}</div>
       <div className="mkresult-s">{lead}</div>
@@ -1382,6 +1440,28 @@ export function History14_12() {
       sub="Ким Георгий · взносы за все сезоны"
       back={{ label: 'Профиль', to: 'Э14.7' }}
     >
+      {/* Шапка своя: на этот экран приходят с вопросом «я же платил» — и
+          отвечает на него сумма, а не заголовок «История платежей». */}
+      <div className="o14-nohead">
+      <div className="dh">
+        <div className="dh-l">
+          <button type="button" className="dh-back" data-to="Э14.7">
+            <ChevronRight size={13} style={{ transform: 'rotate(180deg)' }} /> Профиль
+          </button>
+          <div className="o14-eyebrow">Оплачено взносов за три сезона</div>
+          <div className="dh-rating" style={{ marginTop: 8 }}>
+            <span className="v o14-disp" style={{ fontSize: 48 }}>₸ 26 000</span>
+            <span className="p">три платежа прошли, одна попытка не прошла</span>
+          </div>
+        </div>
+        <div className="dh-r">
+          <div className="dh-till">
+            <div className="v o14-disp" style={{ color: 'var(--c-ink)' }}>14.01.2026</div>
+            <div className="k">последний платёж</div>
+          </div>
+        </div>
+      </div>
+
       <div className="mkcols">
         <Panel title="Платежи" extra={<span className="dcount">{PAYMENTS.length} записи</span>}>
           <Rows>
@@ -1425,6 +1505,7 @@ export function History14_12() {
             <Ghost>Отправить на почту</Ghost>
           </div>
         </Panel>
+      </div>
       </div>
     </RoleScreen>
   );
@@ -1488,6 +1569,22 @@ export function Edit14_9() {
       sub="Ким Георгий · телефон и почта"
       back={{ label: 'Профиль', to: 'Э14.7' }}
     >
+      {/* Шапка своя и короткая: экран правит ровно две вещи, и написать это
+          честно важнее, чем повторить слово «Профиль» третий раз подряд. */}
+      <div className="o14-nohead">
+      <div className="dh">
+        <div className="dh-l">
+          <button type="button" className="dh-back" data-to="Э14.7">
+            <ChevronRight size={13} style={{ transform: 'rotate(180deg)' }} /> Профиль
+          </button>
+          <div className="dh-t o14-disp">Телефон и почта</div>
+          <div className="dh-sub">
+            Всё остальное меняется не здесь: в клуб зовёт <b>администратор клуба</b>, в регион —
+            <b> старший тренер</b>
+          </div>
+        </div>
+      </div>
+
       <div className="mkcols">
         <Panel title="Контакты" extra={<P t="МЕНЯЮТСЯ СРАЗУ" cls="live" />}>
           <Form>
@@ -1512,6 +1609,7 @@ export function Edit14_9() {
             вами: принять или нет.
           </Alert>
         </Panel>
+      </div>
       </div>
     </RoleScreen>
   );
@@ -1677,9 +1775,6 @@ export const SCREENS: ScreenMap = {
     view: () => (
       <>
         <Calendar14_2 />
-        <Also cap="Вкладка «Мои турниры» — куда меня заявили регион и клуб">
-          <Calendar14_2 tab="Мои турниры · 3" />
-        </Also>
         <Calendar14_2States />
       </>
     ),
