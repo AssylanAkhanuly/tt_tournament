@@ -28,6 +28,7 @@ import { RESULTS } from './role14home';
 import { TOURS } from './role14day';
 import { Chrome, NAV } from './role14mobile';
 import './role14mobile3.css';
+import './role14mobile7.css';
 
 function Screen({ cls, active = 'Главная', children }: { cls: string; active?: string; children: React.ReactNode }) {
   return (
@@ -112,6 +113,18 @@ const GAMES = [
 export function MobileMatch() {
   return (
     <Screen cls="m3m" active="Мой турнир">
+      {/* Вкладки стоят ПЕРВЫМИ и на всех четырёх экранах Э14.5 одинаково —
+          сразу под шапкой сайта. Раньше на «Моём матче» они висели под красным
+          полем, и при переключении вкладок строка прыгала на две сотни
+          пикселей: человек целился в «Участники», а попадал в пустоту. */}
+      <div className="m7-tabs">
+        {['Мой матч', 'Участники', 'Группы', 'Сетка'].map((t) => (
+          <span key={t} className={t === 'Мой матч' ? 'on' : ''} data-to="Э14.5">
+            {t}
+          </span>
+        ))}
+      </div>
+
       <div className="mbr-card m3m-card">
         <div className="mbr-band" />
         <div className="mbr-in">
@@ -154,14 +167,6 @@ export function MobileMatch() {
       </div>
 
       <div className="mbr-sheet">
-        {/* Вкладки экрана Э14.5 — те же, что на десктопе. */}
-        <div className="m3m-tabs">
-          <span className="on">Мой матч</span>
-          <span>Участники</span>
-          <span>Группы</span>
-          <span>Сетка</span>
-        </div>
-
         {/* Спортсмен здесь только смотрит: счёт ведёт судья стола. */}
         <div className="m3m-note">Счёт ведёт судья стола — вводить и подтверждать ничего не нужно.</div>
 
