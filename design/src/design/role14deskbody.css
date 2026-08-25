@@ -1,0 +1,271 @@
+/* Роль 14 · тела десктопных экранов в новом облике (25.08.2026).
+
+   ПОЧЕМУ ЗАНОВО. Шапки экранам мы уже переделали (role14deskheads.css), а тела
+   остались на прежнем наборе: `Panel` с полосой заголовка, `Form` с полями в
+   серых коробках, `Rows` из обведённых строк-карточек. Получилась смесь: сверху
+   новый язык, ниже старый. Смотреть на такое нельзя, и федерация это и
+   сказала.
+
+   ЧТО ВМЕСТО. Тот же набор решений, что уже принят на телефоне
+   (role14mobile5.tsx), только в десктопной плотности:
+
+     · лист вместо карточки. Панель с собственной полосой заголовка над каждым
+       блоком — это рамка вокруг рамки: экран и так лист. Остаётся белая
+       поверхность, а разделяют её волосяные линии;
+     · подпись раздела вместо заголовка панели: она мельче, стоит НАД листом и
+       не занимает целую строку внутри него;
+     · поле — строка, а не коробка. Название слева тише, значение крупнее и
+       набрано чернилами: в форме читают значения, а не подписи;
+     · условия допуска — галочки, а не строки с плашками: это проверка, и
+       ответ у неё «прошло / не прошло», а не «состояние»;
+     · «что дальше» — хроника с точками, а не список: у шагов есть порядок и
+       есть место, где мы сейчас;
+     · числа (рейтинг, место, год) — полосой, дисплейной гарнитурой.
+
+   Цвет и радиусы — только токены; углы прямые. Дисплейная строка и подпись
+   раздела берутся из role14home.css (`o14-disp`, `o14-eyebrow`). */
+
+/* ═══ Лист и подпись раздела ═══════════════════════════════════════ */
+.db-sheet {
+  background: var(--c-panel);
+  border: 1px solid var(--c-glass-line);
+  box-shadow: var(--sh-panel);
+}
+.db-sheet + .db-sec { margin-top: var(--s-6); }
+
+.db-sec {
+  margin: 0 0 10px;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--c-dim);
+}
+/* Правая часть подписи — пояснение обычным текстом: оно объясняет блок, а
+   капслоком его читать невозможно. */
+.db-sec span {
+  float: right;
+  font-weight: 600;
+  letter-spacing: 0;
+  text-transform: none;
+  font-size: 12px;
+  color: var(--c-muted);
+}
+
+.db-stack { display: grid; gap: var(--s-6); }
+
+/* ═══ Поля бланка ══════════════════════════════════════════════════
+   Строка на всю ширину: название слева, значение крупно, шеврон справа —
+   поле выбирается, а не печатается. Серых коробок нет: они делали форму
+   похожей на таблицу с данными, хотя это то, что человек меняет. */
+/* Колонка названия фиксирована (168 px), чтобы значения выстроились по одной
+   оси во всех строках; значение набрано полужирным — иначе при коротком
+   названии («Разряд») оно висело в пустоте и читалось выключкой по центру. */
+.db-f {
+  display: grid;
+  grid-template-columns: 168px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--s-3);
+  padding: 15px var(--s-5);
+  color: var(--c-dim);
+  cursor: pointer;
+}
+.db-f + .db-f { border-top: 1px solid var(--c-glass-line); }
+.db-f:hover { background: color-mix(in srgb, var(--c-accent) 4%, transparent); }
+.db-f .k { font-size: 13px; color: var(--c-muted); }
+.db-f .v { font-size: 16.5px; font-weight: 700; color: var(--c-ink); }
+.db-f .v.quiet { font-weight: 400; color: var(--c-dim); }
+
+/* Поле, в которое печатают (Э14.9): то же место в строке, но значение
+   подчёркнуто — иначе «на чтение» и «на ввод» выглядят одинаково и врут. */
+.db-f.edit { cursor: text; }
+.db-f.edit .v {
+  padding-bottom: 4px;
+  border-bottom: 1px solid var(--c-accent-line);
+}
+
+/* ═══ Условия допуска — галочки ════════════════════════════════════ */
+.db-t {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 13px var(--s-5);
+}
+.db-t + .db-t { border-top: 1px solid var(--c-glass-line); }
+.db-t .ic {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: var(--r-round);
+  color: var(--c-success-ink);
+  background: var(--c-success);
+}
+/* «Не нужен» — не победа и не провал: серый кружок без заливки цветом. */
+.db-t.off .ic {
+  color: var(--c-muted);
+  background: color-mix(in srgb, var(--c-ink) 8%, transparent);
+}
+.db-t .tx { display: grid; gap: 2px; }
+.db-t .nm { font-size: 14.5px; font-weight: 700; color: var(--c-ink); }
+.db-t .ss { font-size: 12.5px; color: var(--c-muted); }
+
+/* ═══ Полоса действия внизу листа ══════════════════════════════════ */
+.db-act {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-4);
+  padding: var(--s-4) var(--s-5);
+  border-top: 1px solid var(--c-glass-line);
+  background: color-mix(in srgb, var(--c-ink) 2%, var(--c-panel));
+}
+.db-act .note { font-size: 12.5px; color: var(--c-muted); }
+
+/* ═══ Хроника ══════════════════════════════════════════════════════
+   Шаги заявки: у них есть порядок и есть место, где мы сейчас. Линия идёт
+   через точки, пройденное зелёное, текущее — предупреждающим с ореолом,
+   будущее — пустым кружком. */
+.db-line { padding: var(--s-3) var(--s-5) var(--s-4); }
+.db-step {
+  position: relative;
+  display: grid;
+  grid-template-columns: 26px minmax(0, 1fr) auto;
+  align-items: start;
+  gap: var(--s-3);
+  padding: 13px 0;
+}
+.db-step::before {
+  content: '';
+  position: absolute;
+  left: 12px;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: var(--c-glass-line);
+}
+.db-step:first-child::before { top: 50%; }
+.db-step:last-child::before { bottom: 50%; }
+.db-step .dot {
+  position: relative;
+  justify-self: center;
+  margin-top: 4px;
+  width: 11px;
+  height: 11px;
+  border-radius: var(--r-round);
+  background: var(--c-panel);
+  border: 2px solid var(--c-line);
+}
+.db-step.done .dot { background: var(--c-success); border-color: var(--c-success); }
+.db-step.now .dot {
+  background: var(--c-warning);
+  border-color: var(--c-warning);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--c-warning) 22%, transparent);
+}
+/* Название и пояснение — блоками: строчными они слипались в одну строку
+   («Заявка поданавами, через календарь сезона»). */
+.db-step .nm { display: block; font-size: 14.5px; font-weight: 700; color: var(--c-ink); }
+.db-step .ss { display: block; }
+.db-step.done .nm,
+.db-step:not(.done):not(.now) .nm { font-weight: 600; color: var(--c-muted); }
+.db-step.now .nm { color: var(--c-ink); }
+.db-step .ss { margin-top: 3px; font-size: 12.5px; color: var(--c-muted); }
+.db-step .at { font-size: 12.5px; color: var(--c-dim); font-variant-numeric: tabular-nums; }
+
+/* ═══ Строки списка ════════════════════════════════════════════════ */
+.db-row {
+  display: flex;
+  align-items: center;
+  gap: var(--s-4);
+  padding: 13px var(--s-5);
+}
+.db-row + .db-row { border-top: 1px solid var(--c-glass-line); }
+.db-row[data-to] { cursor: pointer; }
+.db-row[data-to]:hover { background: color-mix(in srgb, var(--c-accent) 4%, transparent); }
+.db-row .tx { flex: 1; min-width: 0; display: grid; gap: 3px; }
+.db-row .nm { display: block; font-size: 14.5px; font-weight: 700; color: var(--c-ink); }
+.db-row .ss { display: block; font-size: 12.5px; color: var(--c-muted); }
+.db-row .amt { font-size: 17px; color: var(--c-ink); font-variant-numeric: tabular-nums; }
+/* Дельта рейтинга и счёт — единственное цветное в списках роли. */
+.db-row .d { font-size: 19px; font-variant-numeric: tabular-nums; }
+.db-row .d.up { color: var(--c-success-light); }
+.db-row .d.dn { color: var(--c-danger); }
+.db-row .ch { flex: none; color: var(--c-dim); }
+
+/* ═══ Полоса чисел ═════════════════════════════════════════════════ */
+.db-rail { display: flex; }
+.db-rail > div { flex: 1; padding: var(--s-4) var(--s-5); }
+.db-rail > div + div { border-left: 1px solid var(--c-glass-line); }
+.db-rail b { display: block; font-size: 30px; line-height: 1; color: var(--c-ink); }
+.db-rail span {
+  display: block;
+  margin-top: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--c-dim);
+}
+
+/* ═══ Данные на чтение: две колонки пар ════════════════════════════ */
+.db-data { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.db-d {
+  display: grid;
+  gap: 5px;
+  padding: 13px var(--s-5);
+  border-top: 1px solid var(--c-glass-line);
+}
+.db-data > .db-d:nth-child(-n + 2) { border-top: 0; }
+.db-data > .db-d:nth-child(2n) { border-left: 1px solid var(--c-glass-line); }
+.db-d .k { font-size: 12px; color: var(--c-muted); }
+.db-d .v { font-size: 15px; color: var(--c-ink); }
+
+/* ═══ Обложка карточки новости ═════════════════════════════════════
+   Была пустая серая плашка «место под картинку» — на светлой теме она
+   выглядела дырой. Слои те же, что у главного материала в шапке, только
+   ниже: тёмная база держит контраст, поверх обложка, узор и шторка. */
+.db-cover {
+  position: relative;
+  min-height: 132px;
+  padding: 12px;
+  background-color: var(--c-screen-deep);
+  background-image:
+    linear-gradient(0deg, color-mix(in srgb, var(--c-screen-deep) 80%, transparent), color-mix(in srgb, var(--c-screen-deep) 10%, transparent) 70%),
+    var(--fx-pattern),
+    var(--c-cover-2);
+  background-size: auto, var(--fx-pattern-size), cover;
+}
+.db-cover .tag {
+  display: inline-block;
+  padding: 4px 8px;
+  font-size: 9.5px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  color: var(--c-on-media);
+  background: color-mix(in srgb, var(--c-on-media) 18%, transparent);
+}
+
+/* ═══ Квитанция — документ, а не форма ═════════════════════════════
+   Её несут в бухгалтерию клуба, поэтому она набрана как бумага: получатель и
+   назначение крупно, реквизиты парами, сумма отдельной строкой. */
+.db-doc { padding: var(--s-5); }
+.db-doc .to { font-size: 12px; color: var(--c-muted); }
+.db-doc .org { margin-top: 4px; font-size: 16px; font-weight: 700; color: var(--c-ink); }
+.db-doc .sum {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--s-4);
+  margin: var(--s-4) 0;
+  padding: var(--s-3) 0;
+  border-top: 1px solid var(--c-glass-line);
+  border-bottom: 1px solid var(--c-glass-line);
+}
+.db-doc .sum .k { min-width: 0; font-size: 13px; color: var(--c-muted); }
+/* Сумма не переносится: «₸ 10 000» ломалось на «₸ 10» и «000». */
+.db-doc .sum .v { flex: none; font-size: 30px; white-space: nowrap; color: var(--c-ink); }
+.db-doc .pairs { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--s-3) var(--s-4); }
+.db-doc .pairs .k { font-size: 12px; color: var(--c-muted); }
+.db-doc .pairs .v { margin-top: 3px; font-size: 14px; color: var(--c-ink); }
+.db-doc .btns { display: flex; gap: var(--s-2); margin-top: var(--s-5); }

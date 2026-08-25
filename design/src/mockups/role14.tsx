@@ -28,6 +28,7 @@ import { HomeG2Desk } from '../design/role14deskg2';
 import { CalendarDesk } from '../design/role14deskcal';
 import { Login0_1, SignUp0_5, SignUp0_5States } from './role00';
 import '../design/role14deskheads.css';
+import '../design/role14deskbody.css';
 
 /* Спортсмен макета — Ким Георгий (тот же, что в реестрах ролей 2 и 12). */
 const ME = A(44);
@@ -148,6 +149,16 @@ const Calendar14_2States = () => (
 
 /* ── Э14.3 · Заявка на ОРТ ─────────────────────────────────────── */
 
+/* Условия допуска: их проверяет система, а не человек. `need: false` — условие
+   у этого турнира не выставлено (ценз по рейтингу): это не «провалено» и не
+   «пройдено», поэтому кружок серый. */
+const TERMS14_3 = [
+  { nm: 'Годовой взнос федерации', ss: 'оплачен 14.01.2026', need: true },
+  { nm: 'Удостоверение личности', ss: 'приложено при регистрации', need: true },
+  { nm: 'Медицинский допуск', ss: 'действует до 30.11.2026', need: true },
+  { nm: 'Ценз по рейтингу', ss: 'у этого турнира не требуется', need: false },
+];
+
 /* Шапка экрана — своя (разбор в role14deskheads.css): бланк начинается не со
    слова «Заявка», а с того, на какой турнир и до какого числа принимают. Срок
    приёма стоит справа отдельно — это единственное, что здесь может кончиться,
@@ -174,29 +185,56 @@ export function Apply14_3() {
         </div>
       </div>
 
+      {/* Бланк: слева то, что человек заполняет, справа — что система про него
+          уже знает. Поля строками, а не в серых коробках: в форме читают
+          значения, а подписи только помогают их найти. Условия допуска —
+          галочки: у проверки ответ «прошло», а не «состояние». */}
       <div className="mkcols">
-        <Panel title="Заявка">
-          <Form>
-            <Input label="Разряд" value="Одиночный" />
-            <Input label="Возрастная группа" value="Взрослые" />
-            <Input label="Парный разряд ✳" value="партнёр не выбран" wide />
-          </Form>
-          <div className="dactionbar" style={{ marginTop: 12 }}>
-            <div className="dcount">Решение принимает главный судья турнира</div>
-            <button className="dsubmit" style={{ padding: '11px 16px' }}>
-              <Send size={15} /> Подать заявку
-            </button>
+        <div>
+          <div className="db-sec">
+            Заявка<span>разряды — какие открыты у этого турнира</span>
           </div>
-        </Panel>
+          <div className="db-sheet">
+            <div className="db-f">
+              <span className="k">Разряд</span>
+              <span className="v">Одиночный</span>
+              <ChevronRight size={17} />
+            </div>
+            <div className="db-f">
+              <span className="k">Возрастная группа</span>
+              <span className="v">Взрослые</span>
+              <ChevronRight size={17} />
+            </div>
+            <div className="db-f">
+              <span className="k">Парный разряд ✳</span>
+              <span className="v quiet">партнёр не выбран</span>
+              <ChevronRight size={17} />
+            </div>
+            <div className="db-act">
+              <span className="note">Решение принимает главный судья турнира</span>
+              <button className="dsubmit" style={{ padding: '11px 16px' }} data-to="Э14.4">
+                <Send size={15} /> Подать заявку
+              </button>
+            </div>
+          </div>
+        </div>
 
-        <Panel title="Условия допуска">
-          <Rows>
-            <Row nm="Годовой взнос федерации" sub="оплачен 14.01.2026" pill={{ t: 'ПРОХОДИТ', cls: 'live' }} />
-            <Row nm="Удостоверение личности" sub="приложено" pill={{ t: 'ПРОХОДИТ', cls: 'live' }} />
-            <Row nm="Медицинский допуск" sub="действует до 30.11.2026" pill={{ t: 'ПРОХОДИТ', cls: 'live' }} />
-            <Row nm="Ценз по рейтингу" sub="не требуется" pill={{ t: 'НЕ НУЖЕН', cls: 'done' }} />
-          </Rows>
-        </Panel>
+        <div>
+          <div className="db-sec">
+            Условия допуска<span>проверено системой</span>
+          </div>
+          <div className="db-sheet">
+            {TERMS14_3.map((t) => (
+              <div className={'db-t' + (t.need ? '' : ' off')} key={t.nm}>
+                <span className="ic">{t.need ? <Check size={13} /> : <X size={13} />}</span>
+                <span className="tx">
+                  <span className="nm">{t.nm}</span>
+                  <span className="ss">{t.ss}</span>
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
       </div>
     </RoleScreen>
@@ -219,6 +257,14 @@ const Apply14_3States = () => (
 );
 
 /* ── Э14.4 · Моя заявка ────────────────────────────────────────── */
+
+/* Шаги заявки. `done` — уже случилось, `now` — то, чего ждём прямо сейчас. */
+const STEPS14_4 = [
+  { t: 'Заявка подана', ss: 'вами, через календарь сезона', at: '02.09, 19:40', done: true },
+  { t: 'Решение главного судьи', ss: 'придёт уведомлением', at: 'ждём', now: true },
+  { t: 'Жеребьёвка', ss: 'после закрытия приёма', at: '05.09' },
+  { t: 'Вызов на стол', ss: 'в день игры, уведомлением', at: '12.09' },
+];
 
 /* Шапка своя: на этот экран приходят с одним вопросом — «что с моей заявкой».
    Поэтому состояние набрано крупно и с точкой своего цвета, а название турнира
@@ -247,25 +293,55 @@ export function MyApp14_4() {
         </div>
       </div>
 
+      {/* Хроника вместо двух панелей «Состояние» и «Что дальше». У шагов
+          заявки есть порядок и есть место, где мы сейчас, — список из
+          обведённых строк с плашками «ЖДЁМ / ПОТОМ» этого не показывал, а
+          плашка «ПОТОМ» вообще ничего не сообщала. */}
       <div className="mkcols">
-        <Panel title="Состояние" extra={<P t="НА РАССМОТРЕНИИ" cls="wait" />}>
-          <Form>
-            <Field label="Турнир" value="Кубок Алматы 2026 · ОРТ" wide />
-            <Field label="Разряд" value="Одиночный" />
-            <Field label="Подана" value="02.09.2026, 19:40" />
-          </Form>
-          <div className="dcount" style={{ marginTop: 12 }}>
-            Пока приём открыт, заявку можно отозвать — кнопка в шапке экрана.
+        <div>
+          <div className="db-sec">
+            Что уже было и что дальше<span>даты появляются, когда шаг случится</span>
           </div>
-        </Panel>
+          <div className="db-sheet db-line">
+            {STEPS14_4.map((s) => (
+              <div className={'db-step' + (s.done ? ' done' : '') + (s.now ? ' now' : '')} key={s.t}>
+                <span className="dot" />
+                <span>
+                  <span className="nm">{s.t}</span>
+                  <span className="ss">{s.ss}</span>
+                </span>
+                <span className="at">{s.at}</span>
+              </div>
+            ))}
+          </div>
+        </div>
 
-        <Panel title="Что дальше">
-          <Rows>
-            <Row nm="Решение судьи" sub="придёт уведомлением" pill={{ t: 'ЖДЁМ', cls: 'wait' }} />
-            <Row nm="Жеребьёвка" sub="после закрытия приёма, 05.09" pill={{ t: 'ПОТОМ', cls: 'done' }} />
-            <Row nm="Вызов на стол" sub="в день игры, уведомлением" pill={{ t: 'ПОТОМ', cls: 'done' }} />
-          </Rows>
-        </Panel>
+        <div>
+          <div className="db-sec">Заявка</div>
+          <div className="db-sheet">
+            <div className="db-data">
+              <div className="db-d">
+                <span className="k">Турнир</span>
+                <span className="v">Кубок Алматы 2026 · ОРТ</span>
+              </div>
+              <div className="db-d">
+                <span className="k">Разряд</span>
+                <span className="v">Одиночный</span>
+              </div>
+              <div className="db-d">
+                <span className="k">Возрастная группа</span>
+                <span className="v">Взрослые</span>
+              </div>
+              <div className="db-d">
+                <span className="k">Подана</span>
+                <span className="v">02.09.2026, 19:40</span>
+              </div>
+            </div>
+            <div className="db-act">
+              <span className="note">Пока приём открыт, заявку можно отозвать — кнопка в шапке</span>
+            </div>
+          </div>
+        </div>
       </div>
       </div>
     </RoleScreen>
@@ -342,26 +418,70 @@ const COLS14: { k: 's' | 'nm' | 'club' | 'r'; t: string; num?: boolean }[] = [
 ];
 
 /** Вкладка «Мой матч»: с кем играю сейчас и как шёл по сетке. */
+/* Мой путь по сетке — хроника, а не список: у кругов есть порядок, и важно, в
+   каком из них мы сейчас. Плашка «ПОТОМ» у будущего круга ничего не сообщала. */
+const PATH14_5 = [
+  { t: '1/16 финала', ss: 'Оралбек Диас', at: '4 : 1', done: true },
+  { t: '1/8 финала', ss: 'Жумабеков Расул · идёт', at: '2 : 1', now: true },
+  { t: '1/4 финала', ss: 'соперник определится после 1/8', at: '—' },
+];
+
 const MyMatch14_5 = () => (
   <div className="mkcols">
-    <Panel title="Мой матч" extra={<P t="ИДЁТ" cls="live" />}>
-      <Rows>
-        <Row av={ME} nm="Ким Георгий" sub="рейтинг 2456" val="2" pill={{ t: 'ВЫ', cls: 'reg' }} />
-        <Row av={A(22)} nm="Жумабеков Расул" sub="рейтинг 2312" val="1" />
-      </Rows>
-      <div className="dactionbar" style={{ marginTop: 12 }}>
-        <div className="dcount">Счёт ведёт судья стола — вводить и подтверждать его не нужно</div>
-        <P t="ТОЛЬКО СМОТРИМ" cls="done" />
+    <div>
+      <div className="db-sec">
+        Мой матч<span>счёт ведёт судья стола — вводить и подтверждать его не нужно</span>
       </div>
-    </Panel>
+      {/* Счёт набран как на табло: крупные числа друг напротив друга, а не
+          колонка «val» в списке строк. Именно в этой форме счёт читают в зале
+          и в протоколе. */}
+      <div className="db-sheet">
+        <div className="db-row">
+          <img
+            src={ME}
+            alt=""
+            style={{ width: 40, height: 40, borderRadius: 'var(--r-round)', objectFit: 'cover', flex: 'none' }}
+          />
+          <span className="tx">
+            <span className="nm">Ким Георгий</span>
+            <span className="ss">рейтинг 2456 · вы</span>
+          </span>
+          <span className="d o14-disp" style={{ fontSize: 34 }}>2</span>
+        </div>
+        <div className="db-row">
+          <img
+            src={A(22)}
+            alt=""
+            style={{ width: 40, height: 40, borderRadius: 'var(--r-round)', objectFit: 'cover', flex: 'none' }}
+          />
+          <span className="tx">
+            <span className="nm">Жумабеков Расул</span>
+            <span className="ss">рейтинг 2312 · Шымкент, «Жетісу»</span>
+          </span>
+          <span className="d o14-disp" style={{ fontSize: 34 }}>1</span>
+        </div>
+        <div className="db-act">
+          <span className="note">Стол 5 · 1/8 финала · одиночный разряд</span>
+          <P t="ИДЁТ" cls="live" />
+        </div>
+      </div>
+    </div>
 
-    <Panel title="Мой путь по сетке">
-      <Rows>
-        <Row nm="1/16 финала" sub="Оралбек Д. · 4:1" pill={{ t: 'ПОБЕДА', cls: 'live' }} />
-        <Row nm="1/8 финала" sub="Жумабеков Р. · идёт" pill={{ t: 'СЕЙЧАС', cls: 'reg' }} />
-        <Row nm="1/4 финала" sub="соперник определится" pill={{ t: 'ПОТОМ', cls: 'done' }} />
-      </Rows>
-    </Panel>
+    <div>
+      <div className="db-sec">Мой путь по сетке</div>
+      <div className="db-sheet db-line">
+        {PATH14_5.map((s) => (
+          <div className={'db-step' + (s.done ? ' done' : '') + (s.now ? ' now' : '')} key={s.t}>
+            <span className="dot" />
+            <span>
+              <span className="nm">{s.t}</span>
+              <span className="ss">{s.ss}</span>
+            </span>
+            <span className="at">{s.at}</span>
+          </div>
+        ))}
+      </div>
+    </div>
   </div>
 );
 
@@ -893,24 +1013,27 @@ const History14_6 = () => (
     «что именно было». Одно без другого не работает: по столбикам не узнать
     счёта последней встречи, а по таблице из шести строк не увидеть баланса. */
 const Foes14_6 = () => (
-  <Rows>
+  <>
     {FOES.map((f) => (
-      <Row
-        key={f.nm}
-        av={f.av}
-        nm={f.nm}
-        sub={`${f.club} · рейтинг ${f.r} · партии ${f.sets[0]}:${f.sets[1]}`}
-        val={`${f.w}–${f.l}`}
-        pill={
-          f.w > f.l
-            ? { t: 'ПЕРЕВЕС У ВАС', cls: 'live' }
-            : f.w === f.l
-              ? { t: 'ПОРОВНУ', cls: 'reg' }
-              : { t: 'ПЕРЕВЕС У НЕГО', cls: 'bad' }
-        }
-      />
+      <div className="db-row" key={f.nm}>
+        <img
+          src={f.av}
+          alt=""
+          style={{ width: 34, height: 34, borderRadius: 'var(--r-round)', objectFit: 'cover', flex: 'none' }}
+        />
+        <span className="tx">
+          <span className="nm">{f.nm}</span>
+          <span className="ss">
+            {f.club} · рейтинг {f.r} · партии {f.sets[0]}:{f.sets[1]} · последняя {f.last}
+          </span>
+        </span>
+        {/* Баланс встреч — единственное цветное в строке: он и есть ответ. */}
+        <span className={'d ' + (f.w > f.l ? 'up' : f.w === f.l ? '' : 'dn')}>
+          {f.w}–{f.l}
+        </span>
+      </div>
     ))}
-  </Rows>
+  </>
 );
 
 /* Шапка своя: за аналитикой приходят с вопросом «сколько у меня сейчас», и
@@ -955,31 +1078,39 @@ export function Stats14_6() {
           колонках всё это ужималось вдвое, и график становился картинкой, по
           которой ничего не прочитать. Экран длинный, зато каждый блок отвечает
           на свой вопрос целиком. */}
-      <div className="mkstack">
-        <Panel title="Динамика рейтинга" extra={<span className="dcount">по сыгранным турнирам сезона</span>}>
-          <RatingChart />
-          <div className="dactionbar" style={{ marginTop: 10 }}>
-            <span className="dcount">Зелёная точка — турнир в плюс, красная — в минус</span>
-            <span className="dcount">2388 → 2456</span>
+      <div className="db-stack">
+        <div>
+          <div className="db-sec">
+            Динамика рейтинга<span>зелёная точка — турнир в плюс, красная — в минус · 2388 → 2456</span>
           </div>
-        </Panel>
+          <div className="db-sheet" style={{ padding: 'var(--s-4) var(--s-5)' }}>
+            <RatingChart />
+          </div>
+        </div>
 
-        <Panel
-          title="История турниров"
-          extra={<span className="dcount">строка открывает мою сетку и матчи того турнира</span>}
-        >
-          <History14_6 />
-        </Panel>
+        <div>
+          <div className="db-sec">
+            История турниров<span>строка открывает мою сетку и матчи того турнира</span>
+          </div>
+          <div className="db-sheet">
+            <History14_6 />
+          </div>
+        </div>
 
-        <Panel title="Личные встречи" extra={<BarChart3 size={15} />}>
-          <FoesChart />
-          <div style={{ marginTop: 10 }}>
+        <div>
+          <div className="db-sec">
+            Личные встречи<span>соперник появляется после первой сыгранной с ним встречи</span>
+          </div>
+          <div className="db-sheet" style={{ padding: 'var(--s-4) var(--s-5)' }}>
+            <FoesChart />
+          </div>
+          <div className="db-sheet" style={{ marginTop: 'var(--s-3)' }}>
             <Foes14_6 />
           </div>
-        </Panel>
+        </div>
       </div>
 
-      <div style={{ marginTop: 12 }}>
+      <div style={{ marginTop: 'var(--s-5)' }}>
         <Hint>
           ⚠ Расширенная аналитика — платная (§10): что в неё входит и как оплачивается, решения
           федерации нет. Всё, что выше, — базовая: она не платная.
@@ -1053,59 +1184,101 @@ export function Profile14_7() {
         </div>
       </div>
 
+      {/* Полоса чисел первой: рейтинг, место и год — то, чем спортсмен себя
+          называет. Дальше данные парами (на чтение; правка — Э14.9), справа
+          взнос и переходы. Панелей с полосами заголовков нет: экран и так
+          лист, а рамка вокруг рамки ничего не отделяет. */}
+      <div className="db-sheet db-rail" style={{ marginBottom: 'var(--s-6)' }}>
+        <div>
+          <b className="o14-disp">2456</b>
+          <span>рейтинг</span>
+        </div>
+        <div>
+          <b className="o14-disp">7</b>
+          <span>место в РК</span>
+        </div>
+        <div>
+          <b className="o14-disp">27</b>
+          <span>матчей за сезон</span>
+        </div>
+        <div>
+          <b className="o14-disp">2003</b>
+          <span>год рождения</span>
+        </div>
+      </div>
+
       <div className="mkcols">
-        {/* Данные — на чтение. Правка вынесена отдельным экраном (Э14.9):
-            телефон и почта меняются сразу, клуб — только после подтверждения
-            клубом, и на одном экране эти два поведения путаются. */}
-        <div style={{ display: 'grid', gap: 12 }}>
-          <Panel
-            title="Профиль"
-            extra={
+        <div>
+          <div className="db-sec">
+            Данные<span>меняются на отдельном экране</span>
+          </div>
+          <div className="db-sheet">
+            <div className="db-data">
+              {[
+                ['Дата рождения', '14.06.2003'],
+                ['Разряд', 'мастер спорта'],
+                ['Регион', 'Астана'],
+                ['Тренер', 'Гладун Игорь'],
+                ['Телефон', '+7 705 118 44 03'],
+                ['Почта', 'g.kim@mail.kz'],
+                ['Клуб', 'СКА · Астана'],
+                ['Принадлежность к клубу', 'подтвердил клуб «СКА», 12.01.2026'],
+              ].map(([k, v]) => (
+                <div className="db-d" key={k}>
+                  <span className="k">{k}</span>
+                  <span className="v">{v}</span>
+                </div>
+              ))}
+            </div>
+            <div className="db-act">
+              <span className="note">Клуб и регион меняются только по приглашению</span>
               <button className="dpickbtn" data-to="Э14.9">
                 <Pencil size={14} /> Изменить данные
               </button>
-            }
-          >
-            {/* Фото и фамилия ушли в шапку экрана: здесь остаются данные —
-                то, что человек пришёл проверить или поправить. */}
-            <Form>
-              <Field label="Дата рождения" value="14.06.2003" />
-              <Field label="Разряд" value="мастер спорта" />
-              <Field label="Регион" value="Астана" />
-              <Field label="Тренер" value="Гладун Игорь" />
-              <Field label="Телефон" value="+7 705 118 44 03" />
-              <Field label="Почта" value="g.kim@mail.kz" />
-              <Field label="Клуб" value="СКА · Астана" />
-              <Field label="Принадлежность к клубу" value="подтвердил клуб «СКА», 12.01.2026" />
-            </Form>
-          </Panel>
-
-          <Panel title="Безопасность и язык">
-            <Rows>
-              <Row nm="Пароль" sub="изменён 02.02.2026" action="Сменить" />
-              <Row nm="Язык интерфейса" sub="письма и уведомления приходят на нём же" val="Русский" />
-            </Rows>
-          </Panel>
+            </div>
+          </div>
         </div>
 
-        <Panel
-          title="Годовой взнос 2026"
-          extra={
-            <button className="dpickbtn" data-to="Э14.12">
-              <Receipt size={14} /> История платежей
-            </button>
-          }
-        >
-          <Form>
-            <Field label="Сумма" value="₸ 10 000" />
-            <Field label="Срок" value="до 31 марта" />
-            <Field label="Состояние" value="не оплачен" wide />
-          </Form>
-          <Alert>
-            Оплата идёт на платёжной странице Халык Банка — кнопка в шапке экрана. Состояние
-            поставится само, по подтверждению банка: держать вкладку открытой не нужно.
-          </Alert>
-        </Panel>
+        <div>
+          <div className="db-sec">Взнос и доступ</div>
+          <div className="db-sheet">
+            <div className="db-row" data-to="Э14.12">
+              <span className="tx">
+                <span className="nm">Годовой взнос 2026</span>
+                <span className="ss">срок до 31 марта · не оплачен</span>
+              </span>
+              <span className="amt o14-disp">₸ 10 000</span>
+              <Receipt size={16} className="ch" />
+            </div>
+            <div className="db-row" data-to="Э14.12">
+              <span className="tx">
+                <span className="nm">История платежей</span>
+                <span className="ss">взносы за все сезоны и квитанции</span>
+              </span>
+              <ChevronRight size={17} className="ch" />
+            </div>
+            <div className="db-row">
+              <span className="tx">
+                <span className="nm">Пароль</span>
+                <span className="ss">изменён 02.02.2026</span>
+              </span>
+              <button className="dpickbtn">Сменить</button>
+            </div>
+            <div className="db-row">
+              <span className="tx">
+                <span className="nm">Язык интерфейса</span>
+                <span className="ss">письма и уведомления приходят на нём же</span>
+              </span>
+              <span className="amt">Русский</span>
+            </div>
+          </div>
+          <div style={{ marginTop: 'var(--s-3)' }}>
+            <Alert>
+              Оплата идёт на платёжной странице Халык Банка — кнопка в шапке экрана. Состояние
+              поставится само, по подтверждению банка: держать вкладку открытой не нужно.
+            </Alert>
+          </div>
+        </div>
       </div>
       </div>
     </RoleScreen>
@@ -1156,8 +1329,10 @@ const Profile14_7States = () => (
     приходят из админки: рубрика, дата, заголовок, лид, автор и время чтения. */
 const NewsCard = ({ n, wide }: { n: (typeof NEWS)[number]; wide?: boolean }) => (
   <article className={'mknews-card' + (wide ? ' wide' : '')} data-to="Э14.14">
-    <div className="mknews-cover">
-      <span className="pill reg">{n.tag}</span>
+    {/* Обложка — слоями, как у главного материала, а не серая плашка «место
+        под картинку»: на светлой теме такая плашка выглядела дырой в ленте. */}
+    <div className="db-cover">
+      <span className="tag">{n.tag}</span>
     </div>
     <div className="mknews-body">
       <h3>{n.nm}</h3>
@@ -1254,10 +1429,22 @@ export function Article14_14() {
 
         {/* Новость почти всегда про что-то, что в системе есть: календарь,
             турнир, взнос. Ссылка ведёт туда — иначе человек ищет руками. */}
-        <Rows>
-          <Row nm="Календарь сезона" sub="все старты с датами, городами и сроками приёма" to="Э14.2" action="Открыть" />
-          <Row nm="Годовой взнос 2026" sub="оплатить картой до 31 марта" to="Э14.7" action="Открыть" />
-        </Rows>
+        <div className="db-sheet" style={{ margin: 'var(--s-5) 0' }}>
+          <div className="db-row" data-to="Э14.2">
+            <span className="tx">
+              <span className="nm">Календарь сезона</span>
+              <span className="ss">все старты с датами, городами и сроками приёма</span>
+            </span>
+            <ChevronRight size={17} className="ch" />
+          </div>
+          <div className="db-row" data-to="Э14.7">
+            <span className="tx">
+              <span className="nm">Годовой взнос 2026</span>
+              <span className="ss">оплатить картой до 31 марта</span>
+            </span>
+            <ChevronRight size={17} className="ch" />
+          </div>
+        </div>
 
         <div className="mknews-tags">
           <span>календарь 2026</span>
@@ -1463,15 +1650,18 @@ export function History14_12() {
       </div>
 
       <div className="mkcols">
-        <Panel title="Платежи" extra={<span className="dcount">{PAYMENTS.length} записи</span>}>
-          <Rows>
+        <div>
+          <div className="db-sec">
+            Платежи<span>неудачные попытки тоже видны: по ним понятно, что деньги не списаны</span>
+          </div>
+          <div className="db-sheet">
             {PAYMENTS.map((p) => (
-              <div className="drow" key={p.at}>
-                <div className="who">
-                  <div className="nm">{p.nm}</div>
-                  <div className="rl">{p.at} · {p.card}</div>
-                </div>
-                <div className="amt">{p.sum}</div>
+              <div className="db-row" key={p.at}>
+                <span className="tx">
+                  <span className="nm">{p.nm}</span>
+                  <span className="ss">{p.at} · {p.card}</span>
+                </span>
+                <span className="amt o14-disp">{p.sum}</span>
                 <P t={p.st} cls={p.cls} />
                 {p.ok && (
                   <button className="dpickbtn">
@@ -1480,31 +1670,48 @@ export function History14_12() {
                 )}
               </div>
             ))}
-          </Rows>
-          <div className="dcount" style={{ marginTop: 10 }}>
-            Неудачные попытки тоже видны: по ним понятно, что деньги не списаны.
           </div>
-        </Panel>
+        </div>
 
         {/* Квитанция — то, что человек несёт в бухгалтерию клуба или школы.
-            Собираем её мы: у банка это письмо, а не документ федерации. */}
-        <Panel title="Квитанция" extra={<P t="ГОДОВОЙ ВЗНОС 2026" cls="reg" />}>
-          <Form>
-            <Field label="Плательщик" value="Ким Георгий, 14.06.2003" />
-            <Field label="Назначение" value="Годовой взнос 2026" />
-            <Field label="Сумма" value="₸ 10 000" />
-            <Field label="Получатель" value="ОЮЛ «Федерация настольного тенниса РК»" wide />
-            <Field label="Номер заказа" value="100416" />
-            <Field label="Когда" value="14.01.2026, 10:42" />
-            <Field label="Способ" value="карта •••• 1234 · Halyk ePay" wide />
-          </Form>
-          <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
-            <button className="dsubmit" style={{ padding: '11px 16px' }}>
-              <Download size={15} /> Скачать PDF
-            </button>
-            <Ghost>Отправить на почту</Ghost>
+            Собираем её мы: у банка это письмо, а не документ федерации. Поэтому
+            и набрана она бумагой — получатель, сумма строкой, реквизиты
+            парами, — а не формой из серых коробок. */}
+        <div>
+          <div className="db-sec">
+            Квитанция<span>годовой взнос 2026</span>
           </div>
-        </Panel>
+          <div className="db-sheet db-doc">
+            <div className="to">Получатель</div>
+            <div className="org">ОЮЛ «Федерация настольного тенниса РК»</div>
+
+            <div className="sum">
+              <span className="k">Годовой взнос 2026 · Ким Георгий, 14.06.2003</span>
+              <span className="v o14-disp">₸ 10 000</span>
+            </div>
+
+            <div className="pairs">
+              {[
+                ['Номер заказа', '100416'],
+                ['Когда', '14.01.2026, 10:42'],
+                ['Способ', 'карта •••• 1234'],
+                ['Через', 'Halyk ePay'],
+              ].map(([k, v]) => (
+                <div key={k}>
+                  <div className="k">{k}</div>
+                  <div className="v">{v}</div>
+                </div>
+              ))}
+            </div>
+
+            <div className="btns">
+              <button className="dsubmit" style={{ padding: '11px 16px' }}>
+                <Download size={15} /> Скачать PDF
+              </button>
+              <Ghost>Отправить на почту</Ghost>
+            </div>
+          </div>
+        </div>
       </div>
       </div>
     </RoleScreen>
@@ -1585,30 +1792,57 @@ export function Edit14_9() {
         </div>
       </div>
 
+      {/* Поля на ввод подчёркнуты, поля на чтение — нет: одинаково нарисованное
+          «значение» и «то, что вводят» врёт человеку. Раньше и те и другие
+          лежали в серых коробках, и отличить их было нельзя. */}
       <div className="mkcols">
-        <Panel title="Контакты" extra={<P t="МЕНЯЮТСЯ СРАЗУ" cls="live" />}>
-          <Form>
-            <Input label="Телефон" value="+7 705 118 44 03" wide />
-            <Input label="Почта" value="g.kim@mail.kz" wide />
-          </Form>
-          <div style={{ marginTop: 12 }}>
-            <button className="dsubmit" style={{ width: '100%' }} data-to="Э14.7">
-              <Check size={15} /> Сохранить контакты
-            </button>
+        <div>
+          <div className="db-sec">
+            Контакты<span>сохраняются сразу</span>
           </div>
-        </Panel>
+          <div className="db-sheet">
+            <div className="db-f edit">
+              <span className="k">Телефон</span>
+              <span className="v">+7 705 118 44 03</span>
+              <Pencil size={15} />
+            </div>
+            <div className="db-f edit">
+              <span className="k">Почта</span>
+              <span className="v">g.kim@mail.kz</span>
+              <Pencil size={15} />
+            </div>
+            <div className="db-act">
+              <span className="note">На почту приходят решения судьи и уведомления о вызове</span>
+              <button className="dsubmit" style={{ padding: '11px 16px' }} data-to="Э14.7">
+                <Check size={15} /> Сохранить
+              </button>
+            </div>
+          </div>
+        </div>
 
-        <Panel title="Клуб и регион" extra={<P t="ТОЛЬКО ПО ПРИГЛАШЕНИЮ" cls="reg" />}>
-          <Form>
-            <Field label="Клуб" value="СКА · Астана · с 12.01.2026" />
-            <Field label="Регион" value="г. Астана" />
-          </Form>
-          <Alert>
-            Ни клуб, ни регион здесь не меняются: в клуб зовёт его администратор, в регион —
-            старший тренер. Придёт приглашение — оно появится уведомлением, и решение будет за
-            вами: принять или нет.
-          </Alert>
-        </Panel>
+        <div>
+          <div className="db-sec">
+            Клуб и регион<span>здесь не меняются</span>
+          </div>
+          <div className="db-sheet">
+            <div className="db-data">
+              <div className="db-d">
+                <span className="k">Клуб</span>
+                <span className="v">СКА · Астана · с 12.01.2026</span>
+              </div>
+              <div className="db-d">
+                <span className="k">Регион</span>
+                <span className="v">г. Астана</span>
+              </div>
+            </div>
+          </div>
+          <div style={{ marginTop: 'var(--s-3)' }}>
+            <Alert>
+              В клуб зовёт его администратор, в регион — старший тренер. Придёт приглашение — оно
+              появится уведомлением, и решение будет за вами: принять или нет.
+            </Alert>
+          </div>
+        </div>
       </div>
       </div>
     </RoleScreen>
