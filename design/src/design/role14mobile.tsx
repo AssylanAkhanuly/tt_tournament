@@ -73,7 +73,7 @@ export const NAV: [ReactNode, string][] = [
    Считать по макету теперь можно честно: сверху уходит статус-бар и панель
    адреса, снизу — панель браузера, и только между ними живёт страница со своей
    шапкой и своей навигацией. */
-export function Chrome({ children }: { children: ReactNode }) {
+export function Chrome({ children, bare = false }: { children: ReactNode; bare?: boolean }) {
   return (
     <>
       <div className="mbb-top">
@@ -89,6 +89,7 @@ export function Chrome({ children }: { children: ReactNode }) {
           из профиля, а метка непрочитанного стоит на самом фото. Так в шапке
           одна цель вместо двух, и красная точка не спорит с фотографией за
           соседнее место. */}
+      {!bare && (
       <div className="mb-site">
         <Brand size="sm" sub="Спортсмен" />
         <button type="button" className="mb-me" aria-label="Профиль и уведомления" data-to="Э14.7">
@@ -96,6 +97,7 @@ export function Chrome({ children }: { children: ReactNode }) {
           <i className="mb-me-dot" />
         </button>
       </div>
+      )}
 
       {children}
 

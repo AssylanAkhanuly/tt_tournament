@@ -70,6 +70,10 @@ function build(rounds: number, seeds: Side[]): Match[] {
   return matches;
 }
 
+/** Мой идущий матч: по нему подсвечивается пара на холсте и к нему ведёт
+    кнопка «Мой матч» на телефоне. */
+export const MY_MATCH_ID = build(5, sides).find((m) => m.status === 'live')?.id ?? '';
+
 export const myBracket: Bracket = {
   format: 'single_elimination',
   title: 'Кубок Алматы 2026',

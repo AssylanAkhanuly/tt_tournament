@@ -30,6 +30,7 @@ import {
   MobArticle, MobDeclined, MobEdit, MobNews, MobPaid, MobPay, MobPayments,
 } from './role14mobile6';
 import { MobBracket, MobGroups, MobPlayers } from './role14mobile7';
+import { MobBracketFull } from './role14mobile8';
 import { HomeG2Desk } from './role14deskg2';
 import wttTicker from '../assets/refs/wtt-ticker.jpg';
 
@@ -1303,3 +1304,10 @@ export const MobileArticle = { name: 'Мобильный · Э14.14 Новост
 export const MobileMatchPlayers = { name: 'Мобильный · Э14.5 Участники', render: () => <MobPlayers /> };
 export const MobileMatchGroups = { name: 'Мобильный · Э14.5 Группы', render: () => <MobGroups /> };
 export const MobileMatchBracket = { name: 'Мобильный · Э14.5 Сетка', render: () => <MobBracket /> };
+
+/* Сетка во весь экран: тот же React Flow, что на десктопе, с управлением под
+   палец. Разбор — role14mobile8.tsx. */
+export const MobileBracketFull = {
+  name: 'Мобильный · Э14.5 Сетка — весь экран',
+  render: () => <MobBracketFull />,
+};
