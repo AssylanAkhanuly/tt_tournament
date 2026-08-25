@@ -32,6 +32,7 @@ import {
 import { MobBracket, MobBracketCanvas, MobGroups, MobPlayers } from './role14mobile7';
 import { MobBracketFull } from './role14mobile8';
 import { MobCalendarGoogle } from './role14mobile9';
+import { CalendarDesk } from './role14deskcal';
 import { HomeG2Desk } from './role14deskg2';
 import wttTicker from '../assets/refs/wtt-ticker.jpg';
 
@@ -1323,4 +1324,10 @@ export const MobileBracketTab = {
 export const MobileCalendarGoogle = {
   name: 'Мобильный · Э14.2 Календарь — как Google (вариант)',
   render: () => <MobCalendarGoogle />,
+};
+
+/* Календарь на десктопе — тот же язык Google, но сеткой месяца. */
+export const CalendarDesktop = {
+  name: 'А · Э14.2 Календарь на десктопе',
+  render: () => <CalendarDesk />,
 };
