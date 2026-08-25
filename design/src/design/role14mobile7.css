@@ -185,3 +185,8 @@
 .m7-pair.now .sc { color: var(--c-accent); font-weight: 700; }
 .m7-pair.done .side { color: var(--c-muted); }
 .m7-pair.done .sc { color: var(--c-ink); font-weight: 700; }
+
+/* Холст сетки внутри вкладки: занимает всё, что осталось под вкладками.
+   Компонент рисует свой корень с height: 100vh — здесь он лишний. */
+.m7-canvas { position: relative; flex: 1; min-height: 0; }
+.m7-canvas > div { height: 100% !important; }

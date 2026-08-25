@@ -29,7 +29,7 @@ import { MobApply, MobCalendar, MobMyApp, MobProfile, MobStats } from './role14m
 import {
   MobArticle, MobDeclined, MobEdit, MobNews, MobPaid, MobPay, MobPayments,
 } from './role14mobile6';
-import { MobBracket, MobGroups, MobPlayers } from './role14mobile7';
+import { MobBracket, MobBracketCanvas, MobGroups, MobPlayers } from './role14mobile7';
 import { MobBracketFull } from './role14mobile8';
 import { HomeG2Desk } from './role14deskg2';
 import wttTicker from '../assets/refs/wtt-ticker.jpg';
@@ -1310,4 +1310,10 @@ export const MobileMatchBracket = { name: 'Мобильный · Э14.5 Сетк
 export const MobileBracketFull = {
   name: 'Мобильный · Э14.5 Сетка — весь экран',
   render: () => <MobBracketFull />,
+};
+
+/* Сетка как вкладка — вариант к обсуждению рядом с полноэкранным. */
+export const MobileBracketTab = {
+  name: 'Мобильный · Э14.5 Сетка — вкладкой (вариант)',
+  render: () => <MobBracketCanvas />,
 };

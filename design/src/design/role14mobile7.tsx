@@ -25,7 +25,8 @@ import { Search } from 'lucide-react';
 import { Frame } from '../PlayerApp';
 import { MiniTabBar } from '../respShell';
 import { Chrome, NAV } from './role14mobile';
-import { MY_GROUP, OTHER_GROUPS } from '../mockups/myBracket';
+import { BracketFlow } from '@/widgets/bracket/BracketFlow';
+import { ME_ID, MY_GROUP, OTHER_GROUPS, myBracket } from '../mockups/myBracket';
 import './role14mobile5.css';
 import './role14mobile7.css';
 
@@ -215,6 +216,32 @@ export function MobBracket() {
       <div className="m7-note">
         Ваша пара подсвечена. Сетку целиком удобнее смотреть на компьютере — на телефоне она
         читается только по кругам.
+      </div>
+    </Screen>
+  );
+}
+
+/* ═══ Сетка как вкладка: холст прямо под вкладками ══════════════════
+   Вариант к обсуждению (25.08.2026). Тот же React Flow, но не отдельным
+   экраном, а внутри Э14.5: контекст турнира и четыре вкладки остаются
+   сверху, всё оставшееся место — холст.
+
+   За что: участники и группы всегда в одно касание, не нужен ни отдельный
+   экран, ни кнопка «назад» — и вопрос «куда она ведёт» исчезает.
+   Чем платим: шапка с вкладками съедает около 90 px, холст ниже, и на общем
+   плане сетка мельче. */
+export function MobBracketCanvas() {
+  return (
+    <Screen tab="Сетка">
+      <div className="m7-canvas">
+        <BracketFlow
+          bracket={myBracket}
+          minePlayerId={ME_ID}
+          focusMine
+          controls={false}
+          minZoom={0.12}
+          fitPadding={0.12}
+        />
       </div>
     </Screen>
   );
