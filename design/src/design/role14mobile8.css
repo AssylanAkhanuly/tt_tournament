@@ -10,6 +10,7 @@
   flex-direction: column;
   /* Нижняя панель браузера лежит поверх страницы (60 px): без этого отступа
      полоса своего матча уезжает ровно под неё и не видна. */
+  /* Нижняя панель браузера лежит поверх страницы: 60 px её высоты. */
   padding: 0 0 60px;
   position: relative;
   overflow: hidden;
@@ -38,8 +39,9 @@
   border-radius: var(--r-sm);
   cursor: pointer;
 }
-.m8-bar .tx { flex: 1; min-width: 0; display: grid; }
 .m8-bar .nm {
+  flex: 1;
+  min-width: 0;
   font-size: 15px;
   font-weight: 700;
   color: var(--c-on-media);
@@ -47,7 +49,6 @@
   overflow: hidden;
   text-overflow: ellipsis;
 }
-.m8-bar .ss { font-size: 11px; color: var(--c-on-media-2); }
 
 /* Холст занимает всю оставшуюся высоту. Внутри компонент рисует свой корень
    с height: 100vh — здесь он лишний, поэтому высоту задаём мы. */
@@ -55,43 +56,3 @@
 .m8-canvas > div { height: 100% !important; }
 
 /* Подсказка о жесте: поверх холста, но не мешает — прозрачная и без действий. */
-/* Подсказка стоит под полосой контекста, а не над кнопками: внизу она
-   перекрывала карточки матчей, а читают её один раз. */
-.m8-hint {
-  position: absolute;
-  left: 12px;
-  right: 12px;
-  top: 62px;
-  z-index: 4;
-  padding: 8px 10px;
-  font-size: 11px;
-  line-height: 1.35;
-  color: var(--c-on-media-2);
-  background: color-mix(in srgb, var(--c-screen-deep) 78%, transparent);
-  pointer-events: none;
-}
-
-/* Полоса своего матча — единственная светлая вещь на экране: она про меня,
-   а всё вокруг про турнир. */
-.m8-mine {
-  flex: none;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 12px 14px;
-  color: var(--c-dim);
-  background: var(--c-panel);
-  box-shadow: inset 3px 0 0 var(--c-accent);
-  cursor: pointer;
-}
-.m8-mine .k {
-  flex: none;
-  font-size: 10px;
-  font-weight: 800;
-  letter-spacing: 0.18em;
-  color: var(--c-muted);
-  text-transform: uppercase;
-}
-.m8-mine .tx { flex: 1; min-width: 0; display: grid; }
-.m8-mine .nm { font-size: 15px; font-weight: 700; color: var(--c-ink); }
-.m8-mine .ss { font-size: 12px; color: var(--c-muted); }

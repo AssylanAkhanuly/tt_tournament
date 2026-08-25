@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo } from 'react';
+import { useEffect, useMemo } from 'react';
 import {
   Background,
   BackgroundVariant,
@@ -60,59 +60,28 @@ function MatchNode({ data }: NodeProps) {
 
 const nodeTypes = { match: MatchNode };
 
-/* Управление под палец. Стандартные Controls React Flow — кнопки в 26 px: на
-   телефоне в них не попасть, и стоят они в углу, куда большой палец не
-   дотягивается. Для `touch` рисуем свои: масштаб, «вся сетка» и главное —
-   возврат к своему матчу. Компонент живёт ВНУТРИ <ReactFlow>, иначе
-   `useReactFlow` не видит холста. */
-function TouchPad({ mineId, focusMine }: { mineId?: string; focusMine?: boolean }) {
+/* Открыть сетку сразу на своём матче. Кнопок на телефоне нет — щипок и
+   перетаскивание и так привычны, а лишние органы управления закрывают собой
+   ту самую сетку, ради которой экран открыли. Компонент без разметки, живёт
+   ВНУТРИ <ReactFlow>: иначе `useReactFlow` не видит холста. */
+function FocusMine({ matchId }: { matchId?: string }) {
   const flow = useReactFlow();
 
-  const toMine = useCallback(() => {
-    if (!mineId) return flow.fitView({ padding: 0.2, duration: 400 });
-    const n = flow.getNode(mineId);
-    if (!n) return;
-    const w = n.width ?? NODE_W;
-    const h = n.height ?? NODE_H;
-    /* Не просто центрируем, но и приближаем до читаемого: на общем плане
-       фамилии не читаются, а именно за ними сюда и заходят. */
-    return flow.setCenter(n.position.x + w / 2, n.position.y + h / 2, {
-      zoom: 1.1,
-      duration: 450,
-    });
-  }, [flow, mineId]);
-
-  /* На телефоне сетка открывается сразу на своей паре, а не на общем плане:
-     общий план на 393 px нечитаем, и первое, что человек делает, — ищет себя.
-     Кнопка «вся сетка» рядом, если нужен обзор. */
   useEffect(() => {
-    if (!focusMine) return;
-    const t = setTimeout(toMine, 60);
+    if (!matchId) return;
+    const t = setTimeout(() => {
+      const n = flow.getNode(matchId);
+      if (!n) return;
+      const w = n.width ?? NODE_W;
+      const h = n.height ?? NODE_H;
+      /* Не просто центрируем, но и приближаем до читаемого: на общем плане
+         фамилии не читаются, а именно за ними сюда и заходят. */
+      flow.setCenter(n.position.x + w / 2, n.position.y + h / 2, { zoom: 1.1, duration: 0 });
+    }, 60);
     return () => clearTimeout(t);
-  }, [focusMine, toMine]);
+  }, [flow, matchId]);
 
-  return (
-    <div className={s.pad}>
-      <button type="button" className={s.padMain} onClick={toMine}>
-        Мой матч
-      </button>
-      <div className={s.padZoom}>
-        <button type="button" onClick={() => flow.zoomIn({ duration: 200 })} aria-label="Приблизить">
-          +
-        </button>
-        <button type="button" onClick={() => flow.zoomOut({ duration: 200 })} aria-label="Отдалить">
-          −
-        </button>
-        <button
-          type="button"
-          onClick={() => flow.fitView({ padding: 0.16, duration: 400 })}
-          aria-label="Показать всю сетку"
-        >
-          ⤢
-        </button>
-      </div>
-    </div>
-  );
+  return null;
 }
 
 export function BracketFlow({
@@ -120,22 +89,24 @@ export function BracketFlow({
   minZoom = 0.4,
   maxZoom = 2.5,
   fitPadding = 0.3,
-  mineId,
-  touch = false,
+  minePlayerId,
+  controls = true,
   focusMine = false,
 }: {
   bracket: Bracket;
   minZoom?: number; // ниже — чтобы уместить всю сетку в узком контейнере (напр. телефон)
   maxZoom?: number;
   fitPadding?: number;
-  /** Мой матч: подсвечивается на холсте, к нему ведёт кнопка управления. */
-  mineId?: string;
-  /** Телефон: крупные кнопки под палец вместо стандартных Controls. */
-  touch?: boolean;
-  /** Открыть сразу на своей паре, а не на общем плане. */
+  /** Игрок, чей путь подсвечивается: помечаются ВСЕ его матчи в сетке —
+      сыгранные, идущий и будущие, — а не только текущий. */
+  minePlayerId?: string;
+  /** Стандартные Controls React Flow. На телефоне выключаем: они закрывают
+      сетку, а щипок и перетаскивание работают и без кнопок. */
+  controls?: boolean;
+  /** Открыть сразу на своём матче, а не на общем плане. */
   focusMine?: boolean;
 }) {
-  const { nodes, connectorD, extent } = useMemo(() => {
+  const { nodes, connectorD, extent, mineMatchId } = useMemo(() => {
     const layout = layoutSingleElimination(bracket, {
       nodeW: NODE_W,
       nodeH: NODE_H,
@@ -144,11 +115,20 @@ export function BracketFlow({
       padding: 0,
     });
 
+    /* Мои матчи — все, где я участник: пройденные, идущий и те, куда я уже
+       попал по сетке. Так виден путь целиком, а не одна точка на нём. */
+    const isMine = (m: Match) =>
+      minePlayerId != null && (m.a?.id === minePlayerId || m.b?.id === minePlayerId);
+    const mineMatches = layout.nodes.map((n) => n.match).filter(isMine);
+    /* Куда смотреть при открытии: идущий матч, иначе последний из моих. */
+    const mineMatchId =
+      mineMatches.find((m) => m.status === 'live')?.id ?? mineMatches.at(-1)?.id;
+
     const ns: Node[] = layout.nodes.map((n) => ({
       id: n.match.id,
       type: 'match',
       position: { x: n.x, y: n.y },
-      data: { match: n.match, mine: n.match.id === mineId },
+      data: { match: n.match, mine: isMine(n.match) },
       width: NODE_W,
       height: NODE_H,
       draggable: false,
@@ -173,8 +153,8 @@ export function BracketFlow({
       [right + m, bottom + m],
     ];
 
-    return { nodes: ns, connectorD, extent };
-  }, [bracket, mineId]);
+    return { nodes: ns, connectorD, extent, mineMatchId };
+  }, [bracket, minePlayerId]);
 
   return (
     <div className={s.root}>
@@ -205,7 +185,8 @@ export function BracketFlow({
             </svg>
           </ViewportPortal>
           <Background variant={BackgroundVariant.Dots} gap={24} size={1} color="rgba(255,255,255,0.05)" />
-          {touch ? <TouchPad mineId={mineId} focusMine={focusMine} /> : <Controls showInteractive={false} />}
+          {focusMine && <FocusMine matchId={mineMatchId} />}
+          {controls && <Controls showInteractive={false} />}
         </ReactFlow>
       </div>
     </div>

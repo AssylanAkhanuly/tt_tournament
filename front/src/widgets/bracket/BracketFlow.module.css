@@ -143,58 +143,12 @@
   display: none;
 }
 
-/* ── «Мой матч» на холсте ─────────────────────────────────────
-   Своя пара помечена не цветом линии, а кольцом: на сетке цветных состояний
-   и так хватает (идёт, победитель), а «моё» должно читаться поверх них. */
+/* ── Мой путь по сетке ────────────────────────────────────────
+   Помечены ВСЕ матчи игрока: сыгранные, идущий и следующий. Не цветом линии,
+   а кольцом — цветных состояний на сетке и так хватает (идёт, победитель), а
+   «моё» должно читаться поверх них. */
 .mine {
   border-color: var(--c-accent, #0a86cd);
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--c-accent, #0a86cd) 34%, transparent);
 }
 
-/* ── Сенсорное управление ─────────────────────────────────────
-   Кнопки крупные и внизу справа — там, где большой палец. Стандартные
-   Controls (26 px, левый нижний угол) на телефоне бесполезны. */
-.pad {
-  position: absolute;
-  right: 12px;
-  bottom: 12px;
-  z-index: 5;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 10px;
-}
-.padMain {
-  padding: 10px 14px;
-  font: inherit;
-  font-size: 14px;
-  font-weight: 700;
-  color: #fff;
-  background: var(--c-accent, #0a86cd);
-  border: 0;
-  border-radius: 10px;
-  box-shadow: 0 6px 18px -8px rgba(0, 0, 0, 0.6);
-  cursor: pointer;
-}
-.padZoom {
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  border-radius: 10px;
-  background: color-mix(in srgb, var(--c-screen-1, #0b1120) 82%, transparent);
-  border: 1px solid var(--c-glass-line, rgba(255, 255, 255, 0.14));
-  backdrop-filter: blur(6px);
-}
-.padZoom button {
-  width: 42px;
-  height: 42px;
-  font: inherit;
-  font-size: 18px;
-  line-height: 1;
-  color: var(--c-ink, #eef2fb);
-  background: transparent;
-  border: 0;
-  cursor: pointer;
-}
-.padZoom button + button { border-top: 1px solid var(--c-glass-line, rgba(255, 255, 255, 0.14)); }
-.padZoom button:active { background: rgba(255, 255, 255, 0.08); }
