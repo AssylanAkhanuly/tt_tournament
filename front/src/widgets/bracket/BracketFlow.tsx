@@ -94,6 +94,7 @@ export function BracketFlow({
   minePlayerId,
   controls = true,
   focusMine = false,
+  tone = 'dark',
 }: {
   bracket: Bracket;
   minZoom?: number; // ниже — чтобы уместить всю сетку в узком контейнере (напр. телефон)
@@ -107,6 +108,10 @@ export function BracketFlow({
   controls?: boolean;
   /** Открыть сразу на своём матче, а не на общем плане. */
   focusMine?: boolean;
+  /** Тон холста. По умолчанию тёмный — так сетка живёт в кабинете судьи и на
+      табло. Роль спортсмена рисуется на светлой теме, и чёрный холст посреди
+      светлых экранов выпадал из системы, поэтому там `light`. */
+  tone?: 'dark' | 'light';
 }) {
   const { nodes, connectorD, mineConnectorD, extent, mineMatchId } = useMemo(() => {
     const layout = layoutSingleElimination(bracket, {
@@ -171,13 +176,13 @@ export function BracketFlow({
   }, [bracket, minePlayerId]);
 
   return (
-    <div className={s.root}>
+    <div className={tone === 'light' ? [s.root, s.light].join(' ') : s.root}>
       <div className={s.canvas}>
         <ReactFlow
           nodes={nodes}
           edges={[]}
           nodeTypes={nodeTypes}
-          colorMode="dark"
+          colorMode={tone}
           fitView
           fitViewOptions={{ padding: fitPadding }}
           minZoom={minZoom}
@@ -195,13 +200,15 @@ export function BracketFlow({
               height={1}
               style={{ position: 'absolute', top: 0, left: 0, overflow: 'visible', pointerEvents: 'none' }}
             >
-              <path d={connectorD} fill="none" stroke="rgba(255,255,255,0.28)" strokeWidth={2} />
+              {/* Цвет линий задаётся в CSS свойством `color` — так он зависит
+                  от тона холста и от темы, а не зашит числом. */}
+              <path d={connectorD} fill="none" stroke="currentColor" strokeWidth={2} />
               {mineConnectorD && (
                 <path d={mineConnectorD} className={s.wireMine} fill="none" strokeWidth={4} />
               )}
             </svg>
           </ViewportPortal>
-          <Background variant={BackgroundVariant.Dots} gap={24} size={1} color="rgba(255,255,255,0.05)" />
+          <Background variant={BackgroundVariant.Dots} gap={24} size={1} color="currentColor" />
           {focusMine && <FocusMine matchId={mineMatchId} />}
           {controls && <Controls showInteractive={false} />}
         </ReactFlow>

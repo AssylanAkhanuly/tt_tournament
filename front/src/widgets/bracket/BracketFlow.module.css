@@ -159,3 +159,27 @@
 /* Линии моего пути — тем же акцентом и толще обычных. */
 .wireMine { stroke: var(--c-accent, #0a86cd); }
 
+
+/* ── Тон холста ───────────────────────────────────────────────
+   Цвет линий и точек задаётся свойством `color` и наследуется — так один и
+   тот же компонент живёт и на тёмной сетке судьи, и на светлых экранах
+   спортсмена, не зная о теме ничего лишнего. */
+.wires { color: var(--c-glass-line, rgba(255, 255, 255, 0.28)); }
+.canvas :global(.react-flow__background) { color: var(--c-glass-line-soft, rgba(255, 255, 255, 0.06)); }
+
+/* Светлый холст: роль спортсмена рисуется на светлой теме, и чёрная плоскость
+   посреди белых списков выпадала из системы. Фон — бумага экрана, точки и
+   линии — приглушённые чернила, карточки — белые панели с обычной гранью. */
+.light .canvas :global(.react-flow),
+.light .canvas :global(.react-flow__background) {
+  background: var(--c-screen-1, #f2f5fa);
+}
+.light .canvas :global(.react-flow__background) {
+  color: color-mix(in srgb, var(--c-ink, #0f172a) 14%, transparent);
+}
+.light .wires { color: color-mix(in srgb, var(--c-ink, #0f172a) 22%, transparent); }
+.light .card {
+  background: var(--c-panel, #fff);
+  border-color: var(--c-glass-line, rgba(15, 23, 42, 0.12));
+}
+.light .dim { opacity: 0.5; }

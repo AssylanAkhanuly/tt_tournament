@@ -48,6 +48,7 @@ export function MobBracketFull() {
                 minePlayerId={ME_ID}
                 focusMine
                 controls={false}
+                tone="light"
                 minZoom={0.12}
                 fitPadding={0.12}
               />
