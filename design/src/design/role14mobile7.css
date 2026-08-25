@@ -1,0 +1,187 @@
+/* Э14.5 · вкладки «Участники», «Группы», «Сетка» на телефоне.
+   Разбор — role14mobile7.tsx. Общие детали (подпись раздела, контекстная
+   строка, оболочка) берутся из role14mobile5.css и role14mobile.css. */
+
+/* Вкладки экрана: четыре, на 393 px впритык — поэтому лента с прокруткой, а
+   не сжатый шрифт. Активная помечена подчёркиванием акцентом. */
+.m7-tabs {
+  display: flex;
+  gap: 18px;
+  padding: 12px 18px 0;
+  background: var(--c-panel);
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.m7-tabs::-webkit-scrollbar { display: none; }
+.m7-tabs span {
+  padding-bottom: 9px;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--c-muted);
+  white-space: nowrap;
+  cursor: pointer;
+}
+.m7-tabs span.on { color: var(--c-ink); box-shadow: inset 0 -2px 0 var(--c-accent); }
+
+.m7-note {
+  padding: 10px 18px 14px;
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--c-muted);
+  background: var(--c-panel);
+}
+
+/* ═══ Участники ════════════════════════════════════════════════════ */
+/* Поиск — не поле ввода, а строка-кнопка: клавиатура на этом экране нужна
+   редко, а место она съедает всегда. Справа — сколько всего участников. */
+.m7-search {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 10px 18px 2px;
+  padding: 10px 12px;
+  color: var(--c-dim);
+  background: color-mix(in srgb, var(--c-ink) 5%, var(--c-panel));
+  cursor: pointer;
+}
+.m7-search span { flex: 1; font-size: 14px; }
+.m7-search b { font-size: 12px; font-weight: 700; color: var(--c-muted); }
+
+.m7-list { background: var(--c-panel); }
+.m7-row { display: flex; align-items: center; gap: 12px; padding: 10px 18px; cursor: pointer; }
+.m7-row + .m7-row { border-top: 1px solid var(--c-glass-line); }
+/* Номер посева — служебное число, поэтому серое и узкое. */
+.m7-row .n { flex: none; width: 26px; font-size: 18px; color: var(--c-muted); text-align: right; }
+.m7-row .tx { flex: 1; min-width: 0; display: grid; }
+.m7-row .nm {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--c-ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.m7-row .ss { font-size: 12px; color: var(--c-muted); }
+.m7-row .r { flex: none; font-size: 16px; color: var(--c-ink); font-variant-numeric: tabular-nums; }
+.m7-row .out { flex: none; font-size: 12px; font-weight: 700; color: var(--c-ink); }
+
+/* Я и соперник: единственные две строки, которые красятся. Синий — «это про
+   меня» (акцент), красный — эфир соперника не значит, поэтому у него
+   нейтральная метка. */
+.m7-row .tag {
+  flex: none;
+  padding: 3px 7px;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  color: var(--c-muted);
+  background: color-mix(in srgb, var(--c-ink) 7%, transparent);
+}
+.m7-row.me { background: color-mix(in srgb, var(--c-accent) 8%, transparent); }
+.m7-row.me .tag { color: var(--c-primary); background: var(--c-primary-soft); }
+.m7-row.me .n { color: var(--c-accent); }
+
+/* ═══ Группы ═══════════════════════════════════════════════════════ */
+/* Таблица на четыре строки — единственная, которая на телефоне уместна.
+   Колонки фиксированы, числа табличные: их сравнивают столбцом. */
+.m7-tbl { background: var(--c-panel); }
+.m7-th,
+.m7-tr {
+  display: grid;
+  grid-template-columns: 22px minmax(0, 1fr) 54px 58px;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 18px;
+}
+.m7-th {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  color: var(--c-muted);
+  text-transform: uppercase;
+  box-shadow: inset 0 -1px 0 var(--c-glass-line);
+}
+.m7-tr + .m7-tr { border-top: 1px solid var(--c-glass-line); }
+.m7-tr .p { font-size: 18px; color: var(--c-muted); }
+.m7-tr .nm { font-size: 15px; color: var(--c-ink); min-width: 0; }
+/* «в плей-офф» — не пилюля, а подпись под фамилией: пилюли в четыре строки
+   превращают таблицу в ковёр. */
+.m7-tr .nm i {
+  display: block;
+  font-size: 11px;
+  font-style: normal;
+  font-weight: 700;
+  color: var(--c-success-light);
+}
+.m7-tr .w,
+.m7-tr .s {
+  font-size: 14px;
+  color: var(--c-muted);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+.m7-tr.me { background: color-mix(in srgb, var(--c-accent) 8%, transparent); }
+.m7-tr.me .nm { font-weight: 800; }
+.m7-tr.me .p { color: var(--c-accent); }
+.m7-tr.out .p { color: var(--c-ink); font-weight: 800; }
+
+/* ═══ Сетка кругами ════════════════════════════════════════════════ */
+.m7-rounds {
+  display: flex;
+  gap: 8px;
+  padding: 12px 18px 10px;
+  background: var(--c-panel);
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.m7-rounds::-webkit-scrollbar { display: none; }
+.m7-rounds span {
+  flex: none;
+  padding: 7px 12px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--c-muted);
+  background: color-mix(in srgb, var(--c-ink) 5%, transparent);
+  cursor: pointer;
+}
+.m7-rounds span.done { color: var(--c-ink); }
+.m7-rounds span.on { color: var(--c-action-ink); background: var(--c-action); }
+
+/* Пара круга: две фамилии друг под другом и строка результата справа —
+   это форма, в которой пару читают на табло и в протоколе. */
+.m7-pairs { background: var(--c-panel); }
+.m7-pair {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-rows: auto auto;
+  align-items: center;
+  gap: 2px 12px;
+  padding: 10px 18px;
+}
+.m7-pair + .m7-pair { border-top: 1px solid var(--c-glass-line); }
+.m7-pair .side {
+  grid-column: 1;
+  font-size: 15px;
+  color: var(--c-ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.m7-pair .sc {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+  font-size: 13px;
+  color: var(--c-muted);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+/* Мой матч: подсвечен акцентом и грань слева — тот же приём, что у плашек
+   состояния на других экранах роли. */
+.m7-pair.now {
+  background: color-mix(in srgb, var(--c-accent) 8%, transparent);
+  box-shadow: inset 3px 0 0 var(--c-accent);
+}
+.m7-pair.now .side { font-weight: 800; }
+.m7-pair.now .sc { color: var(--c-accent); font-weight: 700; }
+.m7-pair.done .side { color: var(--c-muted); }
+.m7-pair.done .sc { color: var(--c-ink); font-weight: 700; }

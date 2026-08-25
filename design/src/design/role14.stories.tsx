@@ -29,6 +29,7 @@ import { MobApply, MobCalendar, MobMyApp, MobProfile, MobStats } from './role14m
 import {
   MobArticle, MobDeclined, MobEdit, MobNews, MobPaid, MobPay, MobPayments,
 } from './role14mobile6';
+import { MobBracket, MobGroups, MobPlayers } from './role14mobile7';
 import { HomeG2Desk } from './role14deskg2';
 import wttTicker from '../assets/refs/wtt-ticker.jpg';
 
@@ -1297,3 +1298,8 @@ export const MobilePayments = { name: 'Мобильный · Э14.12 Истор�
 export const MobileEdit = { name: 'Мобильный · Э14.9 Изменение данных', render: () => <MobEdit /> };
 export const MobileNews = { name: 'Мобильный · Э14.13 Новости', render: () => <MobNews /> };
 export const MobileArticle = { name: 'Мобильный · Э14.14 Новость', render: () => <MobArticle /> };
+
+/* Э14.5 · вкладки, которых на телефоне не было. Разбор — role14mobile7.tsx. */
+export const MobileMatchPlayers = { name: 'Мобильный · Э14.5 Участники', render: () => <MobPlayers /> };
+export const MobileMatchGroups = { name: 'Мобильный · Э14.5 Группы', render: () => <MobGroups /> };
+export const MobileMatchBracket = { name: 'Мобильный · Э14.5 Сетка', render: () => <MobBracket /> };
