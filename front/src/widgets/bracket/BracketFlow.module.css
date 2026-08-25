@@ -149,6 +149,13 @@
    «моё» должно читаться поверх них. */
 .mine {
   border-color: var(--c-accent, #0a86cd);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--c-accent, #0a86cd) 34%, transparent);
+  border-width: 2px;
+  background: color-mix(in srgb, var(--c-accent, #0a86cd) 22%, var(--c-screen-1, #0b1120));
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--c-accent, #0a86cd) 45%, transparent);
 }
+/* Чужие матчи гасим: путь игрока должен читаться с одного взгляда, а не
+   выискиваться среди шестидесяти одинаковых карточек. */
+.dim { opacity: 0.42; }
+/* Линии моего пути — тем же акцентом и толще обычных. */
+.wireMine { stroke: var(--c-accent, #0a86cd); }
 

@@ -42,12 +42,14 @@ function Row({ side, win, score }: { side: Side | null; win: boolean; score?: nu
 
 // data приходит как Record<string, unknown> — приводим к нужной форме
 function MatchNode({ data }: NodeProps) {
-  const d = data as { match: Match; mine?: boolean };
+  const d = data as { match: Match; mine?: boolean; dim?: boolean };
   const m = d.match;
   const live = m.status === 'live';
   /* «Мой матч» подсвечивается отдельно от «идёт сейчас»: на сетке из шестидесяти
      четырёх пар человек ищет свою пару, а не любую живую. */
-  const cls = [s.card, live ? s.live : '', d.mine ? s.mine : ''].filter(Boolean).join(' ');
+  const cls = [s.card, live ? s.live : '', d.mine ? s.mine : '', d.dim ? s.dim : '']
+    .filter(Boolean)
+    .join(' ');
   return (
     <div className={cls}>
       {live && <span className={s.stripe} />}
@@ -106,7 +108,7 @@ export function BracketFlow({
   /** Открыть сразу на своём матче, а не на общем плане. */
   focusMine?: boolean;
 }) {
-  const { nodes, connectorD, extent, mineMatchId } = useMemo(() => {
+  const { nodes, connectorD, mineConnectorD, extent, mineMatchId } = useMemo(() => {
     const layout = layoutSingleElimination(bracket, {
       nodeW: NODE_W,
       nodeH: NODE_H,
@@ -128,7 +130,7 @@ export function BracketFlow({
       id: n.match.id,
       type: 'match',
       position: { x: n.x, y: n.y },
-      data: { match: n.match, mine: isMine(n.match) },
+      data: { match: n.match, mine: isMine(n.match), dim: minePlayerId != null && !isMine(n.match) },
       width: NODE_W,
       height: NODE_H,
       draggable: false,
@@ -138,8 +140,20 @@ export function BracketFlow({
     // коннекторы-локти рисуем сами (тот же геометрический расчёт, что и в мобилке).
     // Ребра React Flow в связке Next16/Turbopack + xyflow12 не отрисовывались,
     // поэтому линии кладём своим SVG в координатах холста через ViewportPortal.
+    const d = (c: (typeof layout.connectors)[number]) =>
+      c.points.map((p, i) => `${i === 0 ? 'M' : 'L'}${p.x} ${p.y}`).join(' ');
+
+    /* Линии пути игрока рисуются отдельно и поверх: путь по сетке — это не
+       только карточки, но и связи между ними, иначе «до кого дошёл» приходится
+       прослеживать глазами. */
+    const mineIds = new Set(mineMatches.map((m) => m.id));
     const connectorD = layout.connectors
-      .map((c) => c.points.map((p, i) => `${i === 0 ? 'M' : 'L'}${p.x} ${p.y}`).join(' '))
+      .filter((c) => !(mineIds.has(c.fromId) && mineIds.has(c.toId)))
+      .map(d)
+      .join(' ');
+    const mineConnectorD = layout.connectors
+      .filter((c) => mineIds.has(c.fromId) && mineIds.has(c.toId))
+      .map(d)
       .join(' ');
 
     // границы «карты» — нельзя утащить сетку в бесконечную пустоту (translateExtent)
@@ -153,7 +167,7 @@ export function BracketFlow({
       [right + m, bottom + m],
     ];
 
-    return { nodes: ns, connectorD, extent, mineMatchId };
+    return { nodes: ns, connectorD, mineConnectorD, extent, mineMatchId };
   }, [bracket, minePlayerId]);
 
   return (
@@ -182,6 +196,9 @@ export function BracketFlow({
               style={{ position: 'absolute', top: 0, left: 0, overflow: 'visible', pointerEvents: 'none' }}
             >
               <path d={connectorD} fill="none" stroke="rgba(255,255,255,0.28)" strokeWidth={2} />
+              {mineConnectorD && (
+                <path d={mineConnectorD} className={s.wireMine} fill="none" strokeWidth={4} />
+              )}
             </svg>
           </ViewportPortal>
           <Background variant={BackgroundVariant.Dots} gap={24} size={1} color="rgba(255,255,255,0.05)" />
