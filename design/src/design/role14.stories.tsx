@@ -38,6 +38,7 @@ import { ApplyCleanG } from './role14deskg3';
 import { ApplyPassZh, ApplyPosterD, ApplyStripE } from './role14deskopt2';
 import { Base1Soft, Base2Sport, Base3Paper, Base4Brand } from './role14base';
 import { Layout1Top, Layout2Wide, Layout3Three, Layout4Focus } from './role14layout';
+import { ApplyKaspiDesk, ApplyKaspiMobile } from './role14kaspi';
 import { HomeG2Desk } from './role14deskg2';
 import wttTicker from '../assets/refs/wtt-ticker.jpg';
 
@@ -1639,3 +1640,9 @@ export const Lay1 = { name: 'Раскладка Л1 · Верхнее меню',
 export const Lay2 = { name: 'Раскладка Л2 · Широкая левая', render: () => <Layout2Wide /> };
 export const Lay3 = { name: 'Раскладка Л3 · Три колонки', render: () => <Layout3Three /> };
 export const Lay4 = { name: 'Раскладка Л4 · Фокус', render: () => <Layout4Focus /> };
+
+/* Э14.3 «как в Kaspi при подаче»: сайдбар остаётся, содержимое собрано в одну
+   колонку карточек с заголовками и номерами шагов, внизу итог и одна широкая
+   кнопка. Разбор — role14kaspi.css. */
+export const ApplyKaspi = { name: 'Заявка · как в Kaspi (десктоп)', render: () => <ApplyKaspiDesk /> };
+export const ApplyKaspiPhone = { name: 'Заявка · как в Kaspi (телефон)', render: () => <ApplyKaspiMobile /> };
