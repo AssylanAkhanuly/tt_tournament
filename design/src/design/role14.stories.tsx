@@ -34,6 +34,7 @@ import { MobBracketFull } from './role14mobile8';
 import { MobCalendarGoogle } from './role14mobile9';
 import { CalendarDesk } from './role14deskcal';
 import { ApplyDocA, ApplyFieldB, ApplyStepsV } from './role14deskopt';
+import { ApplyCleanG } from './role14deskg3';
 import { HomeG2Desk } from './role14deskg2';
 import wttTicker from '../assets/refs/wtt-ticker.jpg';
 
@@ -1400,3 +1401,9 @@ export const ApplyOptions = {
 export const ApplyA = { name: 'Заявка А · Бланк федерации', render: () => <ApplyDocA /> };
 export const ApplyB = { name: 'Заявка Б · Тёмное поле', render: () => <ApplyFieldB /> };
 export const ApplyV = { name: 'Заявка В · Шаги', render: () => <ApplyStepsV /> };
+
+/* Г · «Чистая рабочая область» — четвёртый заход. Три раскладки подряд мимо
+   означают, что вопрос не в расстановке блоков, а в отделке: обои под
+   содержимым, выпуклая кнопка, пустая правая половина и один вес на всё.
+   Разбор — role14deskg3.css. */
+export const ApplyG = { name: 'Заявка Г · Чистая рабочая область', render: () => <ApplyCleanG /> };
