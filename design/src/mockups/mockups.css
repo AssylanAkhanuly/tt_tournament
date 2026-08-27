@@ -372,6 +372,23 @@
 .mktable.mkmydocs .mktable-r { transition: background .12s ease; }
 .mktable.mkledger .mktable-r:hover,
 .mktable.mkmydocs .mktable-r:hover { background: var(--c-panel-2); }
+/* Аттестация судей (Э5.13): срок и допуск считаются из одной даты, поэтому
+   стоят рядом — «до какого числа» и «действует ли». Просроченная строка
+   подкрашена: такой судья в наряд не назначается. */
+.mktable.mkatt .mktable-h,
+.mktable.mkatt .mktable-r { grid-template-columns: minmax(0, 1fr) 132px 120px 104px 190px; }
+.mktable.mkatt .mark { display: flex; justify-content: flex-end; }
+.mktable.mkatt .mark .pill { margin: 0; }
+.mktable.mkatt .mktable-r { cursor: pointer; }
+.mktable.mkatt .mktable-h > span {
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  color: var(--c-dim);
+}
+.mktable.mkatt .mktable-h > span:last-child { justify-self: end; }
+
 /* Жеребьёвка (Э7.2): слот и человек одной строкой. Раньше это были две
    вкладки — «Слоты» по номерам и «Список участников» по алфавиту; сортировка по
    столбцу даёт оба взгляда одной таблицей. */

@@ -9,7 +9,7 @@
 
 import { useState, type ReactNode } from 'react';
 import {
-  ArrowUpDown, BadgeCheck, Ban, Check, FileCheck, Megaphone, Paperclip, Plus, Undo2, UserPlus, X,
+  ArrowUpDown, BadgeCheck, Ban, Bell, Check, FileCheck, Megaphone, Paperclip, Plus, Undo2, Upload, UserPlus, X,
 } from 'lucide-react';
 import {
   A, AW, ActionBar, Alert, Arrow, Attention, Board, Chips, DateField, Empty, Field, Filter, Form,
@@ -32,10 +32,12 @@ import { Login0_1 } from './role00';
 /* ── мелочи, общие для экранов роли ─────────────────────────────── */
 
 /** Второстепенное действие с переходом: та же тихая кнопка, что в каркасе. */
-const GhostPick = ({ to, children }: { to?: string; children: ReactNode }) => (
+const GhostPick = ({ to, onClick, children }: { to?: string; onClick?: () => void; children: ReactNode }) => (
   <button
+    type="button"
     className="dpickbtn"
     data-to={to}
+    onClick={onClick}
     style={{
       display: 'inline-flex',
       alignItems: 'center',
@@ -393,11 +395,34 @@ const TOUR_TABS5 = ['Регламент', 'Судьи', 'Участники', '�
 
 /** Регламент турнира на чтение. Пустые поля — не ошибка: столов и формата на
     момент заведения не знают, они появляются позже. */
+/** Кто назначает соревнование — по уровню, а не по одному правилу на всех ✳
+    (комментарий федерации, 09.2026):
+
+    - **чемпионат РК и турниры федерации** назначает Федерация РК;
+    - **любительские** — федерация того города или района, где играют.
+
+    Для председателя ГСК это не формальность: назначающая федерация и собирает
+    судейскую коллегию, а значит от неё зависит, чей это турнир и кто отвечает
+    за наряд. ⚠ Как это ложится на роли в системе — есть ли председатель ГСК у
+    городской федерации или наряд на любительский турнир собирает кто-то ещё, —
+    не решено. */
+const APPOINTER: Record<string, string> = {
+  'Главный старт': 'Федерация настольного тенниса РК',
+  'Чемпионат РК': 'Федерация настольного тенниса РК',
+  ОРТ: 'Федерация настольного тенниса РК',
+  Лига: 'Федерация настольного тенниса РК',
+  Любительский: 'Федерация города · Караганда',
+};
+
 const Rules5_10 = ({ full }: { full?: boolean }) => (
   <div className="mkcols">
     <Panel title="Регламент" extra={<P t={full ? 'ЗАПОЛНЕН' : 'ЗАПОЛНЕН НЕ ДО КОНЦА'} cls={full ? 'live' : 'wait'} />}>
       <Form>
         <Field label="Категория календаря" value="Главный старт" />
+        {/* Назначающая федерация выводится из категории, а не выбирается: по
+            правилу федерации главные старты и турниры ФНТ РК назначает она
+            сама, любительские — федерация города или района. */}
+        <Field label="Назначает соревнование" value={APPOINTER['Главный старт']} wide />
         <Field label="Город" value="Караганда" />
         <Field label="Окно дат" value="12–15 сентября 2026" />
         <Field label="Разряды" value="Одиночный · парный" />
@@ -408,6 +433,12 @@ const Rules5_10 = ({ full }: { full?: boolean }) => (
         <Hint>
           Формат и столы задаются позже: систему проведения строит главный судья по собранному
           составу (§4.5), утверждение коллегией ей не требуется (§4.6).
+        </Hint>
+      </div>
+      <div style={{ marginTop: 8 }}>
+        <Hint>
+          ⚠ Чемпионат РК и турниры федерации назначает ФНТ РК, любительские — федерация города
+          или района. Кто в этом случае собирает судейскую коллегию, не решено.
         </Hint>
       </div>
     </Panel>
@@ -494,6 +525,20 @@ export function Tour5_10() {
       back={{ label: 'Соревнования сезона', to: 'Э5.3' }}
       sub="Главный старт · Караганда · 12–15 сентября · судья назначен"
     >
+      {/* Чем турнир меряется — до вкладок ✳ (комментарий федерации, 09.2026):
+          сколько участников и из скольких регионов, какие разряды, сколько
+          судей нужно и сколько столов в зале. Председатель приходит в карточку
+          именно за размером турнира: от него зависит и бригада, и расписание, а
+          вкладки отвечают уже на «что с ним делать». */}
+      <Chips
+        items={[
+          { v: '128', k: 'Участников', tone: 'b' },
+          { v: '14', k: 'Регионов' },
+          { v: '2', k: 'Разряда · одиночный, парный' },
+          { v: '10', k: 'Судей в наряде' },
+          { v: '16', k: 'Столов в зале' },
+        ]}
+      />
       <Tabs
         items={[
           { t: TOUR_TABS5[0], view: <Rules5_10 /> },
@@ -998,13 +1043,59 @@ export function Protocol5_4() {
       back={{ label: 'Карточка турнира', to: 'Э5.10' }}
     >
       <div className="mkcols">
+        {/* Протокол — документ, а не список «кто с кем сыграл» ✳ (комментарий
+            федерации, 09.2026). Председатель утверждает бумагу, которая потом
+            уходит в архив федерации и на её основании считается рейтинг:
+            значит на экране должно стоять всё, что в этой бумаге есть, — шапка
+            турнира, судейская коллегия, итоговые места, особые случаи и
+            подписи. Раньше здесь была одна таблица результатов, и утверждать
+            приходилось вслепую. */}
         <Panel title="Итоговый протокол" extra={<P t={head[v].t} cls={head[v].cls} />}>
-          {/* Турнир, город и дата ушли из подписи под заголовком в шапку самого
-              протокола: там они стоят рядом с тем, кто его сформировал и когда,
-              — одной строкой вместо двух этажей над экраном. */}
-          <ActionBar count="«Алатау Опен» 2026 · Алматы · сыгран 09.08 · сформировал Оспанов Т. 10.08 в 19:40" />
-          <div style={{ height: 10 }} />
+          <div className="qsec">Соревнование</div>
+          <Form>
+            <Field label="Наименование" value="«Алатау Опен» 2026" wide />
+            <Field label="Категория" value="Открытый республиканский турнир" />
+            <Field label="Назначен" value="Федерация настольного тенниса РК" />
+            <Field label="Место проведения" value="Алматы, ЦСКА" />
+            <Field label="Сроки" value="07–09.08.2026" />
+            <Field label="Разряды" value="Одиночный · парный" />
+            <Field label="Участников" value="64 из 11 регионов" />
+          </Form>
+
+          <div className="qsec">Судейская коллегия</div>
+          <Rows>
+            <Row nm="Главный судья" sub="Оспанов Тимур · национальная категория" val="Астана" />
+            <Row nm="Главный секретарь" sub="Ким Лариса · первая категория" val="Караганда" />
+            <Row nm="Заместитель главного судьи" sub="Жумабеков Расул · судья по спорту" val="Караганда" />
+            <Row nm="Судей на столах" sub="по одному на стол, 8 столов" val="8" />
+          </Rows>
+
+          <div className="qsec">Итоговые места</div>
           <ResTable rows={RESULTS} />
+
+          <div className="qsec">Особые случаи</div>
+          <Rows>
+            <Row nm="Техническая победа · 1/4" sub="Токаев М. — Гладун И. · неявка соперника" pill={{ t: 'ТЕХПОБЕДА', cls: 'wait' }} />
+            <Row nm="Неявка · 1/4" sub="Гладун Игорь · снят с турнира" pill={{ t: 'НЕЯВКА', cls: 'bad' }} />
+          </Rows>
+
+          <div className="qsec">Подписи</div>
+          <Rows>
+            <Row nm="Главный судья" sub="Оспанов Т. · сформировал протокол 10.08 в 19:40" pill={{ t: 'ПОДПИСАН', cls: 'live' }} />
+            <Row nm="Главный секретарь" sub="Ким Л. · оформила 10.08 в 19:10" pill={{ t: 'ПОДПИСАН', cls: 'live' }} />
+            <Row
+              nm="Председатель ГСК"
+              sub="Мукашев Б. · подпись ставится утверждением"
+              pill={v === 'ok' ? { t: 'ПОДПИСАН', cls: 'live' } : { t: 'ЖДЁТ', cls: 'wait' }}
+            />
+          </Rows>
+          <div style={{ marginTop: 12 }}>
+            <Hint>
+              Утверждение председателя и есть его подпись под документом: отдельной кнопки
+              «подписать» нет ✳ — иначе одно и то же действие пришлось бы делать дважды.
+            </Hint>
+          </div>
+          <div style={{ height: 12 }} />
         </Panel>
 
         <Panel title="Зона сверки" extra={<P t="3 ПРАВКИ СЧЁТА" cls="bad" />}>
@@ -1469,6 +1560,230 @@ const Judge5_12States = () => (
   </States>
 );
 
+/* ── Э5.13 · Аттестация судей: онлайн-тест, комиссия, база вопросов ─ */
+
+/** Судья и его аттестация: когда прошёл, до какого срока действует и что с
+    допуском. Аттестация — то, чем судья подтверждает право работать: прошёл —
+    допуск проставляется сам, просрочил — работать нельзя.
+
+    Порядок аттестации пришёл комментарием федерации (09.2026): онлайн-тест,
+    аттестационная комиссия, уведомления по срокам, автоматический допуск
+    прошедшим и пополняемая база вопросов. ⚠ Периодичность, проходной балл и
+    число попыток не названы — уточнить. */
+type Att = {
+  av: string;
+  nm: string;
+  cat: string;
+  /** До какого числа действует аттестация. */
+  till: string;
+  /** Сколько дней осталось; отрицательное — просрочена. */
+  left: number;
+  score?: string;
+};
+
+const ATTEST: Att[] = [
+  { av: A(76), nm: 'Оспанов Тимур', cat: 'Национальная', till: '14.03.2027', left: 200, score: '92 из 100' },
+  { av: A(51), nm: 'Токаев Марат', cat: 'Национальная', till: '02.11.2026', left: 68, score: '88 из 100' },
+  { av: A(13), nm: 'Пак Сергей', cat: 'Первая', till: '30.09.2026', left: 35, score: '81 из 100' },
+  { av: AW(31), nm: 'Ким Лариса', cat: 'Первая', till: '20.09.2026', left: 25, score: '79 из 100' },
+  { av: A(19), nm: 'Цой Виктор', cat: 'Первая', till: '05.09.2026', left: 10 },
+  { av: A(22), nm: 'Жумабеков Расул', cat: 'Судья по спорту', till: '18.08.2026', left: -8 },
+  { av: AW(32), nm: 'Абдрахманова Айгерим', cat: 'Вторая', till: '01.08.2026', left: -25 },
+];
+
+/** Состояние аттестации считается из срока, а не хранится отдельно: иначе
+    «действует» и «до какого числа» разъедутся, и допуск повиснет на судье,
+    у которого срок вышел месяц назад. */
+const attState = (a: Att): { t: string; cls: Cls } => {
+  if (a.left < 0) return { t: 'ПРОСРОЧЕНА', cls: 'bad' };
+  if (a.left <= 30) return { t: `ИСТЕКАЕТ ЧЕРЕЗ ${a.left} ДН.`, cls: 'wait' };
+  return { t: 'ДЕЙСТВУЕТ', cls: 'live' };
+};
+
+const ATT_TABS = ['Сроки и допуск', 'Комиссия', 'База вопросов'];
+
+const COLS513: { k: 'nm' | 'cat' | 'till'; t: string }[] = [
+  { k: 'nm', t: 'Судья' },
+  { k: 'cat', t: 'Категория' },
+  { k: 'till', t: 'Аттестация до' },
+];
+
+/** База вопросов: тема, сколько вопросов и когда пополняли. Пополняет её
+    комиссия — этим тест и живёт: одни и те же вопросы из года в год судьи
+    выучивают наизусть. */
+const QBANK = [
+  { t: 'Правила игры ITTF', n: 68, upd: 'пополнена 12.06.2026 · Оспанов Т.' },
+  { t: 'Судейство матча и жесты', n: 42, upd: 'пополнена 03.05.2026 · Ким Л.' },
+  { t: 'Регламент ФНТ РК', n: 35, upd: 'пополнена 21.02.2026 · Мукашев Б.' },
+  { t: 'Системы проведения и сетки', n: 27, upd: 'пополнена 21.02.2026 · Мукашев Б.' },
+  { t: 'Инвентарь и оборудование', n: 18, upd: 'не пополнялась с 2025 года' },
+];
+
+export function Attest5_13() {
+  const [tab, setTab] = useState(ATT_TABS[0]);
+  const [q, setQ] = useState('');
+  const [sort, setSort] = useState<{ k: (typeof COLS513)[number]['k']; up: boolean }>({ k: 'till', up: true });
+  /* Кому уже отправили напоминание. Уведомление уходит тем, у кого срок на
+     исходе или уже вышел: остальным напоминать не о чем. */
+  const [told, setTold] = useState<string[]>([]);
+
+  const key = (d: string) => d.split('.').reverse().join('');
+  const found = ATTEST.filter((a) => {
+    const t = q.trim().toLowerCase();
+    return !t || a.nm.toLowerCase().includes(t) || a.cat.toLowerCase().includes(t);
+  });
+  const rows = [...found].sort((a, b) => {
+    const v = sort.k === 'till' ? key(a.till).localeCompare(key(b.till)) : String(a[sort.k]).localeCompare(String(b[sort.k]), 'ru');
+    return sort.up ? v : -v;
+  });
+  const due = ATTEST.filter((a) => a.left <= 30);
+  const gone = ATTEST.filter((a) => a.left < 0);
+
+  return (
+    <RoleScreen role={R05} nav="Аттестация" title="Аттестация судей">
+      <Chips
+        items={[
+          { v: String(ATTEST.length), k: 'Судей в реестре' },
+          { v: String(ATTEST.length - due.length), k: 'Аттестация действует', tone: 'g' },
+          { v: String(due.length - gone.length), k: 'Истекает в 30 дней', tone: 'a' },
+          { v: String(gone.length), k: 'Просрочена — к работе не допущены', tone: 'a' },
+        ]}
+      />
+
+      <Filter items={ATT_TABS} active={tab} onPick={setTab} />
+
+      {tab === ATT_TABS[0] && (
+        <>
+          <div className="dactionbar">
+            <Search value={q} placeholder="Фамилия или категория" onChange={setQ} wide />
+            {/* Уведомление уходит списком, а не по одному: срок подходит сразу
+                у многих, и разбирать их поштучно — работа ни о чём. */}
+            <GhostPick onClick={() => setTold(due.map((a) => a.nm))}>
+              <Bell size={13} /> Напомнить всем, у кого истекает
+            </GhostPick>
+          </div>
+
+          <div className="mktable mkcands mkatt">
+            <div className="mktable-h">
+              {COLS513.map((c) => (
+                <button
+                  key={c.k}
+                  type="button"
+                  className={sort.k === c.k ? 'on' : undefined}
+                  onClick={() => setSort({ k: c.k, up: sort.k === c.k ? !sort.up : true })}
+                >
+                  {c.t}
+                  {sort.k === c.k && <ArrowUpDown size={11} />}
+                </button>
+              ))}
+              <span>Балл</span>
+              <span>Допуск</span>
+            </div>
+            <div className="mktable-b">
+              {rows.map((a) => {
+                const st = attState(a);
+                return (
+                  <div className={'mktable-r' + (a.left < 0 ? ' no' : '')} key={a.nm} data-to="Э5.12">
+                    <span className="nm">
+                      <img src={a.av} alt="" />
+                      <i>
+                        {a.nm}
+                        {told.includes(a.nm) ? (
+                          <em className="on">напоминание отправлено</em>
+                        ) : (
+                          <em>{a.left < 0 ? 'к работе не допущен' : `до ${a.till}`}</em>
+                        )}
+                      </i>
+                    </span>
+                    <span>{a.cat}</span>
+                    <span>{a.till}</span>
+                    <span>{a.score ?? '—'}</span>
+                    <span className="mark"><P t={st.t} cls={st.cls} /></span>
+                  </div>
+                );
+              })}
+              {rows.length === 0 && (
+                <div className="dcount" style={{ padding: '14px 12px' }}>
+                  По запросу «{q}» никого нет — проверьте написание фамилии.
+                </div>
+              )}
+            </div>
+          </div>
+
+          <Hint>
+            Допуск к работе проставляется сам: сдал тест — аттестация действует до указанной даты,
+            вышел срок — судья в наряд не назначается ✳. Отдельной кнопки «допустить» нет, иначе
+            допуск разошёлся бы со сроком.
+          </Hint>
+        </>
+      )}
+
+      {tab === ATT_TABS[1] && (
+        <div className="mkcols">
+          <Panel title="Аттестационная комиссия" extra={<P t="НАЗНАЧЕНА НА СЕЗОН" cls="live" />}>
+            <Rows>
+              <Row av={A(83)} nm="Мукашев Б." sub="председатель ГСК · председатель комиссии" pill={{ t: 'ПРЕДСЕДАТЕЛЬ', cls: 'reg' }} />
+              <Row av={A(76)} nm="Оспанов Тимур" sub="национальная категория · Астана" pill={{ t: 'ЧЛЕН КОМИССИИ', cls: 'live' }} action="Убрать" />
+              <Row av={AW(31)} nm="Ким Лариса" sub="первая категория · Караганда" pill={{ t: 'ЧЛЕН КОМИССИИ', cls: 'live' }} action="Убрать" />
+              <Row av={A(51)} nm="Токаев Марат" sub="национальная категория · Шымкент" pill={{ t: 'ЧЛЕН КОМИССИИ', cls: 'live' }} action="Убрать" />
+            </Rows>
+            <div className="dactionbar" style={{ marginTop: 12 }}>
+              <span className="dcount">Комиссия принимает тест и пополняет базу вопросов</span>
+              <GhostPick to="Э5.5"><UserPlus size={13} /> Добавить из реестра судей</GhostPick>
+            </div>
+          </Panel>
+
+          <Panel title="Порядок аттестации" extra={<P t="⚠ УТОЧНИТЬ" cls="wait" />}>
+            <Form>
+              <Field label="Форма" value="Онлайн-тест" />
+              <Field label="Кто принимает" value="Аттестационная комиссия" />
+              <Field label="Периодичность" value="⚠ не названа федерацией" />
+              <Field label="Проходной балл" value="⚠ не назван" />
+              <Field label="Число попыток" value="⚠ не названо" />
+              <Field label="Срок действия" value="⚠ не назван — в макете год" />
+            </Form>
+            <div style={{ marginTop: 12 }}>
+              <Hint>
+                Пока эти четыре величины не заданы, экран показывает их как открытые вопросы, а не
+                подставляет свои: от периодичности и проходного балла зависит, кто вообще
+                допущен к судейству.
+              </Hint>
+            </div>
+            <div style={{ height: 12 }} />
+          </Panel>
+        </div>
+      )}
+
+      {tab === ATT_TABS[2] && (
+        <>
+          <div className="dactionbar">
+            <span className="dcount">
+              {QBANK.reduce((n, t) => n + t.n, 0)} вопросов в {QBANK.length} темах
+            </span>
+            <GhostPick><Upload size={13} /> Добавить вопросы</GhostPick>
+          </div>
+          <Rows>
+            {QBANK.map((t) => (
+              <Row
+                key={t.t}
+                nm={t.t}
+                sub={t.upd}
+                val={`${t.n} вопросов`}
+                pill={t.upd.startsWith('не пополнялась') ? { t: 'УСТАРЕЛА', cls: 'bad' } : undefined}
+                action="Открыть"
+              />
+            ))}
+          </Rows>
+          <Hint>
+            База пополняется, иначе тест перестаёт проверять ✳: одни и те же вопросы из года в год
+            судьи выучивают наизусть. Тема, которую не трогали больше года, помечена.
+          </Hint>
+        </>
+      )}
+    </RoleScreen>
+  );
+}
+
 /* ── Э5.6 · Документы на проверке: баллы подсказаны Положением ───── */
 
 /** Документ на балл. `pts` — что система насчитала по таблицам Положения:
@@ -1883,6 +2198,15 @@ const PICK = [
    поставить человека, чью квалификацию никто не видел. */
 
 export function PickJudge5_8() {
+  /* Кого выбрали в списке и кого в итоге добавили. Выбор и добавление — два
+     шага, а не один: судью надо сверить по категории, рейтингу и занятости, а
+     нажатие «Выбрать» рядом с фамилией слишком дёшево, чтобы сразу ставить
+     человека в наряд. */
+  const [pick, setPick] = useState<string | null>(null);
+  const [dep, setDep] = useState<string | null>(null);
+  const [open, setOpen] = useState(true);
+  const cur = PICK.find((j) => j.nm === pick);
+
   return (
     <RoleScreen
       role={R05}
@@ -1897,38 +2221,84 @@ export function PickJudge5_8() {
       <div className="mkduty">
         <div className="mkduty-i"><div className="k">Главный судья</div><div className="v">Оспанов Тимур</div></div>
         <div className="mkduty-i"><div className="k">Главный секретарь</div><div className="v">Ким Лариса</div></div>
-        <div className="mkduty-i free"><div className="k">Заместитель</div><div className="v">не назначен</div></div>
+        {/* Добор закрывает именно пустое место: выбранный судья встаёт сюда, и
+            полоса наряда отвечает, зачем вообще открывали реестр. */}
+        <div className={'mkduty-i' + (dep ? '' : ' free')}>
+          <div className="k">Заместитель</div>
+          <div className="v">{dep ?? 'не назначен'}</div>
+        </div>
         <div className="mkduty-i"><div className="k">Судья</div><div className="v">7 из 10</div></div>
       </div>
 
-      <Modal
-        title="Добавить судью в наряд"
-        sub="Кубок Республики Казахстан 2026 · 18–20 мая · Астана"
-        foot={
-          <>
-            <div className="dcount">Вместе с добавлением выдаётся роль «судья» на этот турнир</div>
-            <div style={{ display: 'flex', gap: 8 }}>
-              <Ghost>Закрыть</Ghost>
-              <button className="dsubmit" style={{ padding: '11px 16px' }}>Добавить</button>
-            </div>
-          </>
-        }
-      >
-        <ActionBar count="214 судей в реестре с подтверждённой категорией · 2 новых записи ждут подтверждения и здесь не предлагаются" />
-        <Rows>
-          {PICK.map((j) => (
-            <Row
-              key={j.nm}
-              av={j.av}
-              nm={j.nm}
-              sub={j.busy ? j.sub + ' · занят 18–20 мая на «Кубке Иртыша»' : j.sub}
-              val={j.r}
-              pill={j.busy ? { t: 'ЗАНЯТ', cls: 'wait' } : undefined}
-              action="Выбрать"
-            />
-          ))}
-        </Rows>
-      </Modal>
+      {!open && (
+        <div className="dactionbar">
+          {dep ? (
+            <P t={`${dep} — добавлен в наряд`} cls="live" />
+          ) : (
+            <span className="dcount">Реестр закрыт — наряд остался прежним</span>
+          )}
+          <GhostPick onClick={() => { setOpen(true); setPick(null); }}>
+            <UserPlus size={13} /> Добавить из реестра
+          </GhostPick>
+        </div>
+      )}
+
+      {open && (
+        <Modal
+          title="Добавить судью в наряд"
+          sub="Кубок Республики Казахстан 2026 · 18–20 мая · Астана"
+          onClose={() => setOpen(false)}
+          to="Э5.10"
+          foot={
+            <>
+              <div className="dcount">
+                {cur
+                  ? `Выбран ${cur.nm} · вместе с добавлением выдаётся роль «судья» на этот турнир`
+                  : 'Вместе с добавлением выдаётся роль «судья» на этот турнир'}
+              </div>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <Ghost onClick={() => { setOpen(false); setPick(null); }}>Закрыть</Ghost>
+                {/* Пока никто не выбран, добавлять нечего — кнопки нет, а не
+                    серая: недоступное действие мы не показываем. */}
+                {cur && (
+                  <button
+                    type="button"
+                    className="dsubmit"
+                    style={{ padding: '11px 16px' }}
+                    onClick={() => { setDep(cur.nm); setOpen(false); setPick(null); }}
+                  >
+                    Добавить
+                  </button>
+                )}
+              </div>
+            </>
+          }
+        >
+          <ActionBar count="214 судей в реестре с подтверждённой категорией · 2 новых записи ждут подтверждения и здесь не предлагаются" />
+          <Rows>
+            {PICK.map((j) => (
+              <Row
+                key={j.nm}
+                av={j.av}
+                nm={j.nm}
+                sub={j.busy ? j.sub + ' · занят 18–20 мая на «Кубке Иртыша»' : j.sub}
+                val={j.r}
+                pill={
+                  pick === j.nm
+                    ? { t: 'ВЫБРАН', cls: 'live' }
+                    : j.busy
+                      ? { t: 'ЗАНЯТ', cls: 'wait' }
+                      : undefined
+                }
+                /* Занятого выбрать можно: два наряда на одни даты — решение
+                   председателя, система только показывает пересечение. */
+                action={pick === j.nm ? 'Снять выбор' : 'Выбрать'}
+                onAction={() => setPick(pick === j.nm ? null : j.nm)}
+              />
+            ))}
+          </Rows>
+        </Modal>
+      )}
     </RoleScreen>
   );
 }
@@ -2152,6 +2522,11 @@ export const SCREENS: ScreenMap = {
     cap: 'Реестр судей: допуск и рейтинг',
     view: () => <Rating5_5 />,
     next: 'строка судьи',
+  },
+  'Э5.13': {
+    cap: 'Аттестация судей',
+    view: () => <Attest5_13 />,
+    next: 'карточка судьи',
   },
   'Э5.12': {
     cap: 'Карточка судьи',

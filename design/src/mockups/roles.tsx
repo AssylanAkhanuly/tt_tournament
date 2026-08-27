@@ -5,7 +5,8 @@
 
 import {
   BarChart3, Bell, CalendarDays, ClipboardCheck, ClipboardList, Eye, FileSpreadsheet,
-  FileText, Gavel, Grid3x3, History, LayoutDashboard, ListChecks, Megaphone, Newspaper, Scale,
+  FileText, Gavel, GraduationCap, Grid3x3, History, LayoutDashboard, ListChecks, Megaphone,
+  Newspaper, Scale,
   Scroll, Search, Shield, Table2, Timer, Trophy, User, UserCog, UserPlus, Users, Wallet,
 } from 'lucide-react';
 import { A, AW, type RoleUI } from './shell';
@@ -98,6 +99,11 @@ export const R05: RoleUI = {
        живут своим ритмом — документы приходят весь сезон, публикация бывает
        раз в период. Внутри рейтинга они прятались за числом в плитке. */
     [<ClipboardCheck size={18} />, 'Документы'],
+    /* Аттестация — свой раздел ✳ (комментарий федерации, 09.2026): онлайн-тест
+       с комиссией, сроками и базой вопросов. Внутри «Судей» это была бы третья
+       вещь на экране, а живёт она своим циклом — раз в период, по срокам, и
+       результат даёт судье допуск к работе. */
+    [<GraduationCap size={18} />, 'Аттестация'],
     [<Megaphone size={18} />, 'Публикация'],
   ],
 };
