@@ -372,6 +372,109 @@
 .mktable.mkmydocs .mktable-r { transition: background .12s ease; }
 .mktable.mkledger .mktable-r:hover,
 .mktable.mkmydocs .mktable-r:hover { background: var(--c-panel-2); }
+/* Состав заявки (Э6.2): игрок, четыре проверки колонками и состояние.
+   Галочки в столбцах читаются сверху вниз — непроходящего видно, не вчитываясь
+   в строку; раньше это были четыре подписи в ряд шириной с самого игрока. */
+/* Три столбца, а не шесть ✳: панель стоит в половине экрана, и четыре колонки
+   проверок её не держали — колонка с фамилией схлопывалась в ноль, а имя
+   наезжало на подписи соседних столбцов. */
+.mktable.mkbids .mktable-h,
+.mktable.mkbids .mktable-r { grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr) 160px; }
+.mktable.mkbids .fail,
+.mktable.mkbids .okall { display: inline-flex; align-items: center; gap: 5px; font-weight: 700; }
+.mktable.mkbids .fail { color: var(--c-danger); }
+.mktable.mkbids .okall { color: var(--c-success); }
+.mktable.mkbids .mktable-r.no { background: var(--c-danger-soft-2); }
+.mktable.mkbids .num.yes { color: var(--c-success); }
+.mktable.mkbids .num.nope { color: var(--c-danger); }
+.mktable.mkbids .mark { display: flex; justify-content: flex-end; }
+.mktable.mkbids .mktable-r .nm { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.mktable.mkbids .mktable-r .nm img { width: 30px; height: 30px; border-radius: 50%; object-fit: cover; flex: none; }
+.mktable.mkbids .mktable-r .nm i { font-style: normal; min-width: 0; }
+.mktable.mkbids .mktable-r .nm em {
+  display: block;
+  font-style: normal;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--c-dim);
+  margin-top: 1px;
+}
+.mktable.mkbids .mktable-r .nm em.off { color: var(--c-danger); }
+.mktable.mkbids .mktable-h > span {
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  color: var(--c-dim);
+}
+.mktable.mkbids .mktable-h > span:last-child { justify-self: end; }
+
+/* Группы перед отправкой протокола (Э6.7): судья сверяет, из чего сложились
+   места, — спор о выходе из группы после утверждения не переиграть. */
+.mktable.mkgrp6 .mktable-h,
+.mktable.mkgrp6 .mktable-r { grid-template-columns: minmax(0, 1.4fr) 104px minmax(0, 1fr) 128px; }
+.mktable.mkgrp6 .mark { display: flex; justify-content: flex-end; }
+.mktable.mkgrp6 .mktable-r { transition: background .12s ease; }
+.mktable.mkgrp6 .mktable-r:hover { background: var(--c-panel-2); }
+.mktable.mkgrp6 .mktable-r .nm i { font-style: normal; min-width: 0; }
+.mktable.mkgrp6 .mktable-r .nm em {
+  display: block;
+  font-style: normal;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--c-dim);
+  margin-top: 1px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.mktable.mkgrp6 .mktable-h > span {
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  color: var(--c-dim);
+}
+.mktable.mkgrp6 .mktable-h > span:last-child { justify-self: end; }
+
+/* Расписание судей (Э6.5) — той же таблицей, что расписание игр: время слева,
+   столы колонками, в клетках номера судей. Номер вместо фамилии затем и нужен,
+   чтобы строка влезала в ширину и читалась с расстояния на распечатке. */
+.mktable.mkjshift .mktable-h,
+.mktable.mkjshift .mktable-r { grid-template-columns: 92px repeat(6, minmax(0, 1fr)); }
+.mktable.mkjshift .num.tot { color: var(--c-ink); font-weight: 800; }
+.mktable.mkjshift .num.free { color: var(--c-danger); }
+.mktable.mkjshift .mktable-r { transition: background .12s ease; }
+.mktable.mkjshift .mktable-r:hover { background: var(--c-panel-2); }
+.mktable.mkjshift .mktable-r .nm i { font-style: normal; font-variant-numeric: tabular-nums; }
+.mktable.mkjshift .mktable-h > span {
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  color: var(--c-dim);
+}
+
+/* Регламент времени по кругам (Э6.3): минуты на матч и то, во что они
+   складываются. Стол-часы считаются из минут, а не задаются руками. */
+.mktable.mkrounds .mktable-h,
+.mktable.mkrounds .mktable-r { grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr) 132px 96px 116px; }
+.mktable.mkrounds .num.tot { color: var(--c-ink); font-weight: 800; }
+.mktable.mkrounds .mktable-r { transition: background .12s ease; }
+.mktable.mkrounds .mktable-r:hover { background: var(--c-panel-2); }
+.mktable.mkrounds .mktable-r .nm i { font-style: normal; }
+.mktable.mkrounds .mktable-h > span {
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  color: var(--c-dim);
+}
+
+/* Причина автоматического отказа в строке заявки (Э6.2): это не подпись, а то,
+   что игрок прочитал у себя в уведомлении, — и судья должен видеть ровно её. */
+.drow .rl.bad { color: var(--c-danger); }
+
 /* Аттестация судей (Э5.13): срок и допуск считаются из одной даты, поэтому
    стоят рядом — «до какого числа» и «действует ли». Просроченная строка
    подкрашена: такой судья в наряд не назначается. */
