@@ -500,14 +500,18 @@ export function Filter({
 
 /** Панель с заголовком — основной блок рабочей области.
     `body` — класс на тело панели: нужен там, где содержимому задаётся своя
-    высота (холст сетки), а не обычный поток. */
+    высота (холст сетки), а не обычный поток.
+    `sub` — уточнение под названием панели: в строку с названием оно не влезает,
+    заголовок разъезжается на два ряда. */
 export function Panel({
   title,
+  sub,
   extra,
   body,
   children,
 }: {
   title: string;
+  sub?: string;
   extra?: ReactNode;
   body?: string;
   children: ReactNode;
@@ -515,7 +519,16 @@ export function Panel({
   return (
     <div className="panel">
       <div className="phead">
-        {title}
+        {/* Без подписи заголовок остаётся голой строкой — как во всех
+            остальных панелях: обёртка появляется только там, где она нужна. */}
+        {sub ? (
+          <span className="pheadt">
+            {title}
+            <em>{sub}</em>
+          </span>
+        ) : (
+          title
+        )}
         {extra}
       </div>
       <div className={body ? `pbody ${body}` : 'pbody'}>{children}</div>

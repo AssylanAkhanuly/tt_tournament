@@ -409,6 +409,18 @@
 }
 .mktable.mkbids .mktable-h > span:last-child { justify-self: end; }
 
+/* Тело панели заявки (Э6.2) живёт в высоту панели ✳: полоса решения и правило
+   приёма стоят внизу и всегда видны, а ужимается и прокручивается список
+   игроков. Раньше список забирал свои 396 px, тело панели выходило за её край
+   на 63 px, и `overflow: hidden` срезал кнопки; со строкой выбранного игрока —
+   ещё на 48 px, то есть «Принять состав» и «Отклонить заявку с причиной»
+   уезжали за рамку целиком, и разобрать заявку было нечем. */
+.pbody.mkbidsbody { display: flex; flex-direction: column; min-height: 0; }
+/* Всё, кроме списка, — своей высоты и не сжимается. */
+.pbody.mkbidsbody > * { flex: none; }
+.pbody.mkbidsbody > .mktable { display: flex; flex-direction: column; flex: 1 1 0; min-height: 132px; }
+.pbody.mkbidsbody > .mktable > .mktable-b { flex: 1 1 auto; min-height: 0; max-height: none; }
+
 /* Группы перед отправкой протокола (Э6.7): судья сверяет, из чего сложились
    места, — спор о выходе из группы после утверждения не переиграть. */
 .mktable.mkgrp6 .mktable-h,
