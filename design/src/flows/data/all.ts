@@ -20,6 +20,8 @@ import { role11 } from './role11';
 import { role12 } from './role12';
 import { role13 } from './role13';
 import { role14 } from './role14';
+import { role15 } from './role15';
+import { role16 } from './role16';
 
 export const ROLES: RoleFlow[] = [
   role00,
@@ -37,4 +39,6 @@ export const ROLES: RoleFlow[] = [
   role12,
   role13,
   role14,
+  role15,
+  role16,
 ];
