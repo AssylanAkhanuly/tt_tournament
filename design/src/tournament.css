@@ -59,7 +59,30 @@
 .lp .serve { width: 8px; height: 8px; border-radius: 50%; background: var(--c-success); flex: none; }
 .lvs { display: flex; align-items: center; justify-content: center; gap: 16px; margin: 2px 0; }
 .lvs .setscore { font-size: 46px; font-weight: 800; font-variant-numeric: tabular-nums; letter-spacing: -2px; }
-.lvs .vs { font-size: 12px; font-weight: 700; color: var(--c-dim); }
+.lvs .vs { font-size: 12px; font-weight: 700; color: var(--c-dim); text-align: center; }
+/* Счёт по партиям вводится прямо на полосе (TZ §6.1): судья не ведёт ни очки,
+   ни счёт каждой партии, а вписывает итог и подтверждает. Поле — на две цифры:
+   счёт бывает и двузначным, и упирать его в одну значит не принять то, что
+   судья видит на столе. */
+.lvs .vs em { display: block; font-style: normal; font-size: 10px; font-weight: 600; color: var(--c-muted); margin-top: 3px; }
+.lvsin { gap: 12px; }
+/* Число счёта — само поле ✳: степперы отсюда убраны, потому что «+» трижды
+   ради тройки (и одиннадцать раз ради партии) — это тот же поочковый подсчёт,
+   от которого федерация просила уйти. Поле выглядит числом: рамка появляется
+   под курсором и в фокусе, на табло главное по-прежнему цифра. */
+.sin { font: inherit; font-weight: 800; font-variant-numeric: tabular-nums; text-align: center;
+  color: var(--c-ink); background: none; border: 1px solid transparent; border-radius: var(--r-xs);
+  padding: 2px 6px; line-height: 1; cursor: text; }
+.sin:hover { border-color: var(--c-glass-line); background: var(--c-panel); }
+.sin:focus { outline: none; border-color: var(--c-accent); background: var(--c-panel); }
+.sin.big { font-size: 46px; letter-spacing: -2px; width: 104px; padding: 0 4px; }
+.jsetp .sin { font-size: 40px; letter-spacing: -1px; width: 96px; }
+/* Итог задан руками — полоса подсвечена: это уже не производная от партий, а
+   самостоятельное число, и разница должна быть видна. */
+.lvsin.hand .setscore { color: var(--c-accent); }
+.lvsin.hand .vs em { color: var(--c-accent); }
+.setchip.link { font: inherit; font-size: 12px; font-weight: 700; cursor: pointer; color: var(--c-accent); }
+.setchip.link:hover { border-color: var(--c-accent-line); }
 .sets { display: flex; justify-content: center; gap: 6px; flex-wrap: wrap; }
 .setchip { font-size: 12px; font-weight: 700; font-variant-numeric: tabular-nums;
   padding: 5px 9px; border-radius: var(--r-xs); background: var(--c-panel); border: 1px solid var(--c-glass-line); color: var(--c-muted); }
@@ -86,6 +109,57 @@
   display: inline-flex; align-items: center; justify-content: center; gap: 6px; }
 .jbtn.ghost { background: var(--c-panel); border: 1px solid var(--c-glass-line); color: var(--c-ink); }
 .jbtn.pri { background: var(--c-success); color: var(--c-success-ink); box-shadow: 0 12px 26px -12px var(--c-success-glow); }
+
+/* Тайм-аут и карточки — отметки игрока прямо на его половине табло (TZ §6.5).
+   Мелкие и тихие, пока ничего не выписано: на экране ввода счёта главное —
+   числа, и три ярких значка под именем спорили бы с ними за внимание. Как
+   только карточка вынесена или тайм-аут взят, отметка загорается своим цветом
+   и остаётся до конца матча — судья должен видеть, что у этого игрока уже
+   есть, в момент, когда решает выносить следующую. */
+.jmarks { display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; }
+.jmark { display: inline-flex; align-items: stretch; border-radius: var(--r-xs); overflow: hidden;
+  font-size: 10.5px; font-weight: 700; letter-spacing: .02em;
+  background: var(--c-panel-2); border: 1px solid var(--c-glass-line); color: var(--c-dim); }
+.jmark .jmarkb { display: inline-flex; align-items: center; gap: 5px; padding: 5px 9px;
+  font: inherit; color: inherit; background: none; border: 0; cursor: pointer; }
+.jmark:hover { color: var(--c-ink); }
+.jmark.on { color: var(--c-ink); }
+/* Снять последнюю отметку ✳: карточку выносят пальцем по живому матчу, и
+   промахнуться по соседней кнопке легко. Кнопка появляется только у
+   выставленной — пока ничего не выписано, снимать нечего. */
+.jmark .jmarkx { padding: 0 8px; font: inherit; font-size: 13px; line-height: 1; color: inherit;
+  background: none; border: 0; border-left: 1px solid var(--c-glass-line); cursor: pointer; opacity: .65; }
+.jmark .jmarkx:hover { opacity: 1; }
+/* Взятый тайм-аут гаснет: второй раз за матч его не дают, и это видно, а не
+   держится в голове. Идущий — наоборот, самый заметный элемент половины. */
+.jmark.to.used { opacity: .45; cursor: default; }
+.jmark.to.live { background: var(--c-warning-soft); border-color: var(--c-warning); color: var(--c-warning); }
+.jmark.y.on { background: var(--c-warning-soft); border-color: var(--c-warning); color: var(--c-warning); }
+.jmark.r.on { background: var(--c-danger-soft); border-color: var(--c-danger); color: var(--c-danger); }
+/* Сама карточка нарисована карточкой, а не значком из набора: жёлтый и красный
+   прямоугольник судья узнаёт быстрее любой иконки. */
+.jcard { display: block; width: 9px; height: 13px; border-radius: var(--r-xs); flex: none; }
+.jcard.y { background: var(--c-warning); }
+.jcard.r { background: var(--c-danger); }
+/* Значок события в ленте матча: карточка и тайм-аут узнаются по цвету, а не
+   по тексту строки — их в истории ищут, а не читают подряд. */
+.badge.jbadge { display: grid; place-items: center; }
+.badge.jbadge.y { background: var(--c-warning-soft); color: var(--c-warning); }
+.badge.jbadge.r { background: var(--c-danger-soft); color: var(--c-danger); }
+.badge.jbadge.to { background: var(--c-panel-quiet); color: var(--c-muted); }
+
+/* Ввод по партиям (TZ §6.1): итог партии набирается степпером, а не
+   клавиатурой — телефон судья держит одной рукой, а числа тут маленькие. */
+.jsetin { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.jsetp { display: flex; flex-direction: column; align-items: center; gap: 10px;
+  background: var(--c-panel); border: 1px solid var(--c-glass-line); border-radius: var(--r-sm); padding: 13px;
+  box-shadow: inset 0 1px 0 var(--c-glass-hi); }
+.jsetp .who { display: flex; align-items: center; gap: 9px; align-self: stretch; min-width: 0; }
+.jsetp .who .nm { font-size: 13.5px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.jsetp .who .mt { font-size: 10.5px; color: var(--c-muted); margin-top: 1px; }
+.jsetp > .mt { font-size: 10.5px; color: var(--c-muted); margin-top: -4px; }
+.jsetp .stepper .pt { font-size: 34px; min-width: 42px; }
+.jsetp .stepbtn { width: 42px; height: 42px; font-size: 19px; font-weight: 800; cursor: pointer; }
 
 /* судья стола — назначение стола / итог матча */
 .jassign, .jdone { display: flex; flex-direction: column; align-items: center; gap: 14px; text-align: center; }
