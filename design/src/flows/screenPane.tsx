@@ -100,7 +100,10 @@ export function ScreenPane({
        пробуем по названию экрана: в макете пункт называется «Новости», а экран
        — «Новости и страницы». */
     const menu = (code: string, screen: Screen) => {
-      const byMenu = screen.entry.join(' ').match(/Пункт меню «(.+?)»/)?.[1];
+      /* «Пункт меню «Календарь»» и «Меню «Профиль»» — одно и то же ✳: данные
+         ролей пишут и так, и так, а пункт, не совпавший по подписи, молча
+         переставал нажиматься. */
+      const byMenu = screen.entry.join(' ').match(/(?:пункт\s+)?меню «(.+?)»/i)?.[1];
       return { code, byMenu: byMenu ? norm(byMenu) : null, title: norm(screen.title) };
     };
     const sections = [...byId.entries()].map(([code, sc]) => menu(code, sc));
