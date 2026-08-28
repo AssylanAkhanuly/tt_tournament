@@ -128,6 +128,13 @@
 .phead .seg span.on, .phead .seg button.on { color: var(--c-ink); background: var(--c-panel-2); }
 .phead .seg button:hover:not(.on) { color: var(--c-ink); }
 .pbody { padding: 16px; overflow: hidden; flex: 1; }
+/* Панель в рабочей области не сжимается ниже своего содержимого ✳: рабочая
+   область и так прокручивается, как настоящая страница, а сжатая панель резала
+   содержимое — `overflow: hidden` у тела обрезал строку таблицы посередине, и
+   выглядело это не как «прокрути», а как «сломалось». Так молча обрезались
+   одиннадцать панелей в шести ролях. Панели внутри колонок (`.dcols`,
+   `.mkcols`) это правило не трогает: там высоту задаёт сама колонка. */
+.dmain > .panel { flex: none; }
 /* панель сетки — настоящий React Flow во всю площадь панели (как карта) */
 .dbracketWrap { padding: 0; position: relative; }
 .dbracketWrap > div { position: absolute; inset: 0; height: 100% !important; }

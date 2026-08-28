@@ -487,6 +487,121 @@
    что игрок прочитал у себя в уведомлении, — и судья должен видеть ровно её. */
 .drow .rl.bad { color: var(--c-danger); }
 
+/* Судьи региона (Э15.1) ✳: срок аттестации и допуск стоят рядом — по ним
+   решают, можно ли ставить судью в наряд, и решают до того, как поставили.
+   Просроченная строка подкрашена целиком: такого судью в наряд не ставят. */
+.mktable.mkjreg .mktable-h,
+.mktable.mkjreg .mktable-r { grid-template-columns: minmax(0, 1.5fr) 148px 168px 68px 74px minmax(0, 1fr) 132px; }
+.mktable.mkjreg .mktable-r { cursor: pointer; transition: background .12s ease; }
+.mktable.mkjreg .mktable-r:hover { background: var(--c-panel-2); }
+.mktable.mkjreg .mktable-r.no { background: var(--c-danger-soft-2); }
+.mktable.mkjreg .mktable-r .nm { display: flex; align-items: center; gap: 9px; min-width: 0; }
+.mktable.mkjreg .mktable-r .nm img { width: 28px; height: 28px; border-radius: 50%; object-fit: cover; flex: none; }
+.mktable.mkjreg .mktable-r .nm i { font-style: normal; min-width: 0; }
+.mktable.mkjreg .mktable-r .nm em,
+.mktable.mkjreg .mktable-r .fail em,
+.mktable.mkjreg .mktable-r .soon em { display: block; font-style: normal; font-size: 11px; font-weight: 500; color: var(--c-dim); margin-top: 1px; }
+.mktable.mkjreg .fail { color: var(--c-danger); font-weight: 700; }
+.mktable.mkjreg .fail em { color: var(--c-danger); }
+.mktable.mkjreg .soon { color: var(--c-warning); font-weight: 700; }
+.mktable.mkjreg .soon em { color: var(--c-warning); }
+.mktable.mkjreg .mark { display: flex; justify-content: flex-end; }
+.mktable.mkjreg .mktable-h > span {
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  color: var(--c-dim);
+}
+.mktable.mkjreg .mktable-h > span:last-child { justify-self: end; }
+
+/* Судьи на столах у инспектора (Э10.2) ✳ — экран про судейство, а не про игру
+   (замечание федерации, 09.2026). Цифры критериев 1–5 и 7 (TZ §7.3) стоят
+   колонками: инспектор идёт по таблице глазами, и вышедшее за норму должно
+   останавливать взгляд без чтения — поэтому такие числа красные. */
+.mktable.mkjday .mktable-h,
+.mktable.mkjday .mktable-r { grid-template-columns: minmax(0, 1.4fr) 78px 118px 78px 112px 88px 128px 118px; }
+.mktable.mkjday .mktable-r { cursor: pointer; transition: background .12s ease; }
+.mktable.mkjday .mktable-r:hover { background: var(--c-panel-2); }
+.mktable.mkjday .mktable-r .nm em { display: block; font-style: normal; font-size: 11px; font-weight: 500; color: var(--c-dim); margin-top: 1px; }
+.mktable.mkjday .num.nope { color: var(--c-danger); font-weight: 800; }
+.mktable.mkjday .mark { display: flex; justify-content: flex-end; }
+.mktable.mkjday .mktable-h > span {
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  color: var(--c-dim);
+}
+.mktable.mkjday .mktable-h > span:last-child { justify-self: end; }
+
+/* Карта столов у инспектора: в клетке судья и его показатели, а не счёт. */
+.dtables.mkduty10 .dtable .jn { font-size: 12.5px; font-weight: 700; margin-top: 6px; }
+.dtables.mkduty10 .dtable .jm { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 5px; font-size: 10px; font-weight: 700; color: var(--c-dim); }
+.dtables.mkduty10 .dtable .jm .bad { color: var(--c-danger); }
+.dtables.mkduty10 .dtable .jm .wait { color: var(--c-warning); }
+.dtables.mkduty10 .dtable .jm .crd { color: var(--c-warning); }
+/* Стол в игре без судьи — не то же, что свободный стол: это критерий 1. */
+.dtables.mkduty10 .dtable.nojudge { border-color: var(--c-danger-line); background: var(--c-danger-soft-2); }
+.dtables.mkduty10 .dtable.nojudge .st { background: var(--c-danger); box-shadow: none; }
+.dtables.mkduty10 .dtable.nojudge .pl { color: var(--c-danger); font-weight: 700; }
+
+/* Оценка по критериям (Э10.4) ✳: критерий, измеренный факт, три ступени и
+   основание. Замечание без основания отправить нельзя (TZ §7.3), поэтому
+   колонка основания — не примечание, а часть формы. */
+.mktable.mkcrit .mktable-h,
+.mktable.mkcrit .mktable-r { grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr) 268px minmax(0, 1.1fr); align-items: center; }
+.mktable.mkcrit .mktable-r.no { background: var(--c-warning-soft); }
+.mktable.mkcrit .mktable-r .nm em { display: block; font-style: normal; font-size: 11px; font-weight: 500; color: var(--c-dim); margin-top: 1px; }
+.mktable.mkcrit .fact { font-size: 11.5px; color: var(--c-muted); }
+.mktable.mkcrit .fact.off { color: var(--c-dim); font-style: italic; }
+.mktable.mkcrit .grade { display: flex; gap: 4px; }
+.mktable.mkcrit .gbtn { font: inherit; font-size: 10.5px; font-weight: 700; padding: 6px 9px; border-radius: var(--r-xs);
+  background: var(--c-panel-2); border: 1px solid var(--c-glass-line); color: var(--c-dim); cursor: pointer; white-space: nowrap; }
+.mktable.mkcrit .gbtn:hover { color: var(--c-ink); }
+.mktable.mkcrit .gbtn.ok.on { background: var(--c-success-soft); border-color: var(--c-success); color: var(--c-success); }
+.mktable.mkcrit .gbtn.note.on { background: var(--c-warning-soft); border-color: var(--c-warning); color: var(--c-warning); }
+.mktable.mkcrit .gbtn.bad.on { background: var(--c-danger-soft); border-color: var(--c-danger); color: var(--c-danger); }
+.mktable.mkcrit .basis { font-size: 11px; }
+.mktable.mkcrit .basis .ok { display: inline-flex; align-items: center; gap: 5px; color: var(--c-muted); }
+.mktable.mkcrit .basis .need { color: var(--c-danger); font-weight: 700; }
+.mktable.mkcrit .mktable-h > span {
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  color: var(--c-dim);
+}
+
+/* Рейтинг судей (Э0.12): слагаемые S1–S4 стоят отдельными колонками ✳
+   (комментарий федерации, 09.2026). Вопрос, с которым сюда приходят, — «почему
+   он выше меня», и решается он именно слагаемыми: у одного добрана S3, у
+   другого выезды с коэффициентом. Своя строка помечена при любой сортировке. */
+.mktable.mkjrank .mktable-h,
+.mktable.mkjrank .mktable-r { grid-template-columns: 56px minmax(0, 1.5fr) minmax(0, 1fr) 56px 56px 56px 56px 68px 92px 96px; }
+.mktable.mkjrank .mktable-r { cursor: pointer; transition: background .12s ease; }
+.mktable.mkjrank .mktable-r:hover { background: var(--c-panel-2); }
+.mktable.mkjrank .mktable-r.on { background: var(--c-accent-soft); box-shadow: inset 2px 0 0 var(--c-accent); }
+.mktable.mkjrank .mktable-r .nm { display: flex; align-items: center; gap: 9px; min-width: 0; }
+.mktable.mkjrank .mktable-r .nm img { width: 28px; height: 28px; border-radius: 50%; object-fit: cover; flex: none; }
+.mktable.mkjrank .mktable-r .nm i { font-style: normal; min-width: 0; }
+.mktable.mkjrank .mktable-r .nm em { display: block; font-style: normal; font-size: 11px; font-weight: 500; color: var(--c-dim); margin-top: 1px; }
+.mktable.mkjrank .num.tot { color: var(--c-ink); font-weight: 800; }
+.mktable.mkjrank .num.nope { color: var(--c-danger); }
+.mktable.mkjrank .mark { display: flex; justify-content: flex-end; }
+.mktable.mkjrank .mktable-h > span {
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  color: var(--c-dim);
+}
+.mktable.mkjrank .mktable-h > span:last-child { justify-self: end; }
+
+/* Карточка судьи (Э0.13): в истории судейства помечено, что работа в коллегии
+   идёт в S4, а не в S1 — иначе «отсужено» считало бы заседания. */
+.mktable.mkjudge .mktable-r em.off { font-style: normal; font-size: 11px; font-weight: 500; color: var(--c-warning); }
+
 /* Аттестация судей (Э5.13): срок и допуск считаются из одной даты, поэтому
    стоят рядом — «до какого числа» и «действует ли». Просроченная строка
    подкрашена: такой судья в наряд не назначается. */

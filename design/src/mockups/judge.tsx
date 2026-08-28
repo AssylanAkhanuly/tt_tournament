@@ -10,7 +10,7 @@
    он стоял в наряде — от роли зависит коэффициент 1,5 (§7.2). */
 
 import { FileUp } from 'lucide-react';
-import { Chips, Panel, Row, Rows } from './shell';
+import { Chips, Field, Form, Hint, Panel, Row, Rows } from './shell';
 
 /* ── Кто перед нами ─────────────────────────────────────────────── */
 
@@ -185,6 +185,254 @@ export function JudgeRating({ me, tours }: { me: JudgeMe; tours: JudgeTour[] }) 
         </div>
       </Panel>
 
+    </>
+  );
+}
+
+/* ── Рейтинг-лист и карточка судьи ──────────────────────────────── */
+
+/** Строка рейтинг-листа: тот же человек, что в карточке, только сжатый до
+    слагаемых. Слагаемые стоят в самом списке ✳ (комментарий федерации,
+    09.2026): вопрос «почему он выше меня» решается именно ими — у одного
+    добрана S3, у другого выезды с коэффициентом. */
+export type JudgeRank = {
+  pl: number;
+  nm: string;
+  av: string;
+  cat: string;
+  region: string;
+  s1: number; s2: number; s3: number; s4: number;
+  /** Сколько соревнований отсудил за период — наряд, а не всякое участие. */
+  tours: number;
+  /** Это я: своя строка помечена при любой сортировке. */
+  me?: boolean;
+  /** Категория ещё не подтверждена — S2 не начисляется, в наряд не назначают. */
+  wait?: boolean;
+};
+
+const rsum = (j: { s1: number; s2: number; s3: number; s4: number }) => j.s1 + j.s2 + j.s3 + j.s4;
+/** Зачёт по Положению: баллы не меньше чем в трёх категориях из четырёх,
+    S1 и S2 обязательны (§6.3.1). */
+const scored = (j: { s1: number; s2: number; s3: number; s4: number }) =>
+  [j.s1, j.s2, j.s3, j.s4].filter((x) => x > 0).length >= 3 && j.s1 > 0 && j.s2 > 0;
+
+/** Рейтинг судей — лист, открытый всем судьям (TZ §7.2).
+
+    Раньше свой балл судья видел, а чужие нет: рейтинг-лист существовал только
+    у председателя ГСК в реестре. Федерация потребовала прозрачности — судья
+    должен видеть, откуда у него баллы, и сверять себя с другими. */
+export function JudgeRankList({ rows, period }: { rows: JudgeRank[]; period: string }) {
+  const mine = rows.find((r) => r.me);
+  return (
+    <>
+      <Chips
+        items={[
+          { v: String(rows.length), k: 'Судей в листе · ' + period },
+          { v: mine ? '№' + mine.pl : '—', k: 'Моё место', tone: 'b' },
+          { v: mine ? num(rsum(mine)) : '—', k: 'Мой балл R' },
+          {
+            /* Одно слово ✳: «НЕ ОПУБЛИКОВАН» в плитке ломалось на две строки и
+               перекашивало полосу — состояние договаривает подпись. */
+            v: 'ТЕКУЩИЙ',
+            k: 'Рейтинг за период не опубликован: апелляция откроется после публикации',
+            tone: 'a',
+          },
+        ]}
+      />
+
+      <Panel
+        title={'Рейтинг судей · ' + period}
+        extra={
+          <span className="dcount">
+            Слагаемые в самом списке: видно, чем один судья выше другого
+          </span>
+        }
+      >
+        <div className="mktable mkjrank">
+          <div className="mktable-h">
+            <span>Место</span>
+            <span>Судья</span>
+            <span>Регион</span>
+            <span className="num">S1</span>
+            <span className="num">S2</span>
+            <span className="num">S3</span>
+            <span className="num">S4</span>
+            <span className="num">R</span>
+            <span className="num">Отсужено</span>
+            <span>Зачёт</span>
+          </div>
+          <div className="mktable-b">
+            {rows.map((j) => (
+              /* Строка ведёт в карточку судьи: «посмотреть другого» — это не
+                 всплывающая подсказка, а тот же экран, что своя карточка. */
+              <div className={'mktable-r' + (j.me ? ' on' : '')} key={j.nm} data-to="Э0.13" role="button" tabIndex={0}>
+                <span className="num">{j.pl}</span>
+                <span className="nm">
+                  <img src={j.av} alt="" />
+                  <i>
+                    {j.nm}
+                    <em>{j.wait ? 'категория ждёт подтверждения' : j.cat}</em>
+                  </i>
+                </span>
+                <span>{j.region}</span>
+                <span className="num">{num(j.s1)}</span>
+                {/* Судья без подтверждённой категории стоит в листе без S2 ✳:
+                    видно, что балла нет не потому, что не работал. */}
+                <span className={'num' + (j.s2 === 0 ? ' nope' : '')}>{j.s2 === 0 ? '—' : num(j.s2)}</span>
+                <span className="num">{num(j.s3)}</span>
+                <span className="num">{num(j.s4)}</span>
+                <span className="num tot">{num(rsum(j))}</span>
+                <span className="num">{j.tours}</span>
+                <span className="mark">
+                  <span className={'pill ' + (scored(j) ? 'live' : 'bad')} style={{ margin: 0 }}>
+                    {scored(j) ? 'ЕСТЬ' : 'НЕТ'}
+                  </span>
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+        <div className="dcount" style={{ marginTop: 10 }}>
+          Своя строка помечена при любой сортировке: судья приходит сюда сравнить себя, а не читать
+          список. Период указан в шапке — рейтинг судьи считается за год (TZ §7.2)
+        </div>
+      </Panel>
+    </>
+  );
+}
+
+/** Карточка судьи — одна на человека ✳.
+
+    Свою судья открывает из рейтинга, чужую — из листа или из наряда турнира.
+    Разница только в том, что скрыто (контакты, файлы документов), а не в
+    раскладке: иначе «посмотреть другого» превратилось бы во второй экран,
+    который живёт своей жизнью и расходится с первым.
+
+    Карточку никто не заполняет руками — она собирается из турниров, нарядов и
+    подтверждённых документов и обновляется сама после каждого закрытого
+    протокола. На экране это сказано строкой: иначе первый же вопрос — «а кто
+    это вносил и когда обновлялось». */
+export function JudgeCard({ me, tours, own, player }: {
+  me: JudgeMe;
+  tours: JudgeTour[];
+  /** Своя карточка: видны документы и вход в апелляцию. */
+  own?: boolean;
+  /** Тот же человек играет ✳: судья бывает игроком и наоборот. */
+  player?: { rating: number; club: string };
+}) {
+  const r = rsum(me);
+  const ok = scored(me);
+  /* «Отсужено» считает наряд, а не всякое участие: работа в коллегии идёт в S4
+     (§7.2) и в счётчик соревнований не попадает. ⚠ Вопрос 17.4. */
+  const duty = tours.filter((t) => t.post !== 'Член ГСК');
+  return (
+    <>
+      <Chips
+        items={[
+          { v: num(r), k: `R = S1 ${num(me.s1)} + S2 ${num(me.s2)} + S3 ${num(me.s3)} + S4 ${num(me.s4)}` },
+          { v: '№' + me.pl, k: 'Место в рейтинге сезона' },
+          { v: String(duty.length), k: 'Соревнований отсужено за сезон' },
+          {
+            v: ok ? 'ЕСТЬ' : 'НЕТ',
+            k: 'Зачёт: баллы в трёх категориях из четырёх, S1 и S2 обязательны',
+            tone: ok ? 'g' : 'a',
+          },
+        ]}
+      />
+
+      <div className="mkcols">
+        <Panel
+          title={me.nm}
+          sub={`${me.cat} · регион учёта ${me.region}`}
+          extra={
+            <span className={'pill ' + (own ? 'reg' : 'wait')} style={{ margin: 0 }}>
+              {own ? 'МОЯ КАРТОЧКА' : 'ТОЛЬКО ПРОСМОТР'}
+            </span>
+          }
+        >
+          <Form>
+            <Field label="Категория" value={me.cat} />
+            <Field label="Подтвердил" value="Судейская коллегия ФНТ РК · 05.01.2026" />
+            <Field label="Регион учёта" value={me.region} />
+            <Field label="В реестре с" value="14.09.2021" />
+          </Form>
+
+          {/* Судья бывает игроком и наоборот ✳ (комментарий федерации,
+              09.2026): это один человек с двумя ролями, а не два аккаунта.
+              Рейтинги считаются раздельно и друг на друга не влияют. */}
+          {player && (
+            <div style={{ marginTop: 12 }}>
+              <Row
+                to="Э14.7"
+                nm="Ещё и спортсмен"
+                sub={`${player.club} · рейтинг игрока ${player.rating} — считается отдельно от судейского`}
+                pill={{ t: 'ОДИН ЧЕЛОВЕК', cls: 'reg' }}
+                action="Профиль"
+              />
+            </div>
+          )}
+
+          <div style={{ marginTop: 12 }}>
+            <Hint>
+              Карточку никто не заполняет руками: она собирается из турниров, нарядов и
+              подтверждённых документов и обновляется сама после каждого закрытого протокола.
+              {own
+                ? ' Документы на S3 и S4 и апелляция — в «Моём рейтинге».'
+                : ' В чужой карточке видно только рейтинговое: контакты, файлы документов и взносы закрыты.'}
+            </Hint>
+          </div>
+        </Panel>
+
+        <Panel title="Из чего собрался балл" extra={<span className="dcount">TZ §7.2</span>}>
+          <Rows>
+            <Row nm="S1 · судейство соревнований" sub="начисляет система по явке, после закрытия протокола" val={num(me.s1)} pill={{ t: 'АВТО', cls: 'live' }} />
+            <Row nm="S2 · квалификационная категория" sub="опорный балл, пока категория действует" val={num(me.s2)} pill={{ t: 'АВТО', cls: 'live' }} />
+            <Row nm="S3 · повышение квалификации" sub="семинары, курсы, аттестации — по документам" val={num(me.s3)} pill={{ t: 'ДОКУМЕНТ', cls: 'reg' }} />
+            <Row nm="S4 · иная деятельность" sub="награды, работа в коллегии — по документам" val={num(me.s4)} pill={{ t: 'ДОКУМЕНТ', cls: 'reg' }} />
+          </Rows>
+        </Panel>
+      </div>
+
+      <Panel
+        title={'История судейства · ' + tours.length + ' записи за сезон'}
+        extra={<span className="dcount">кем был на старте и почему такой коэффициент</span>}
+      >
+        <div className="mktable mkjudge">
+          <div className="mktable-h">
+            <span>Соревнование</span>
+            <span>Когда и где</span>
+            <span>Роль в наряде</span>
+            <span>Коэффициент</span>
+            <span>Балл</span>
+          </div>
+          <div className="mktable-b">
+            {tours.map((t) => (
+              <div className="mktable-r" key={t.nm + t.when}>
+                <span className="nm">
+                  {t.nm}
+                  <em>{t.kind} · базовый балл {num(t.base)}</em>
+                </span>
+                <span>{t.when} · {t.city}</span>
+                {/* Работа в коллегии — не S1 ✳: членство в ГСК идёт в S4, и
+                    такие строки помечены отдельно. Иначе таблица показывала бы
+                    «отсудил 14 соревнований» там, где на четырёх человек не
+                    судил, а заседал. */}
+                <span>
+                  {t.post}
+                  {t.post === 'Член ГСК' && <em className="off"> идёт в S4, а не в S1</em>}
+                </span>
+                <span>{t.miss ? '—' : t.k === 1 ? 'без коэффициента' : '× ' + num(t.k)}</span>
+                <span className="num">{sign(tourPoints(t))}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+        <div className="dcount" style={{ marginTop: 10 }}>
+          Коэффициент 1,5 — за роль в бригаде (главный судья, заместитель, секретарь) и за выезд на
+          республиканские из другого региона (TZ §7.2). ⚠ Что считать «отсудил соревнование» —
+          вопрос 17.4
+        </div>
+      </Panel>
     </>
   );
 }
