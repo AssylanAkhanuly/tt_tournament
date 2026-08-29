@@ -26,6 +26,14 @@ const ROLE_SOURCE = /\bsource:\s*'([^']+)'/;
 /** Экран в карте экранов роли: `'Э6.2': {`. */
 const MAP_CODE = /'(Э\d+\.\d+)':\s*\{/g;
 
+/** Роли, которые проектируются на светлой теме, — у их историй тема прибита,
+    как в разделе «Дизайн». Иначе экран роли показывается на теме из тулбара, и
+    один и тот же макет выглядит то светлым, то тёмным. По спортсмену решение
+    принято 22.08.2026 (flows/14-sportsmen.md). */
+const DAYLIGHT = new Set(['14']);
+const light = (num) => (DAYLIGHT.has(num) ? `
+  globals: { theme: 'daylight-fnt' },` : '');
+
 /** Номер с ведущим нулём — иначе Storybook сортирует 1, 10, 11, …, 2.
     Пара ролей («3 и 4») → `03–04`. Повторяет `pad` из `src/flows/types.ts`. */
 const pad = (num, sep = '–') => (num.match(/\d+/g) ?? ['0']).map((n) => n.padStart(2, '0')).join(sep);
@@ -78,7 +86,7 @@ import { ${board}, SCREENS } from '../mockups/${name}';
 
 export default {
   title: 'Флоу/${pad(num)} · ${title}',
-  parameters: { layout: 'fullscreen' },
+  parameters: { layout: 'fullscreen' },${light(num)}
 };
 
 /* Парный вид первым: под каждым узлом маршрута стоит его макет — требование и
