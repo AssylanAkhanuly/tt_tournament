@@ -27,7 +27,7 @@ import { Layout1Top, Layout2Wide, Layout3Three, Layout4Focus } from './role14lay
 import { ApplyKaspiDesk, ApplyKaspiMobile } from './role14kaspi';
 import { HomeG2Desk } from './role14deskg2';
 import { ProfA, ProfB, ProfG, ProfV } from './role14prof';
-import { ProfD, ProfDPhone } from './role14prof2';
+import { ProfD, ProfDPhone, ProfDSettings } from './role14prof2';
 import { H2H, H2HPhone } from './role14h2h';
 
 export default {
@@ -549,6 +549,13 @@ export const ProfileB = { name: 'Профиль · вариант Б — Вкл�
 export const ProfileV = { name: 'Профиль · вариант В — Моё место', render: () => <ProfV /> };
 export const ProfileG = { name: 'Профиль · вариант Г — Удостоверение', render: () => <ProfG /> };
 export const ProfileD = { name: 'Профиль · вариант Д — Личный кабинет', render: () => <ProfD /> };
+/* Настройки живут модальным окном по третьему референсу: открывает шестерёнка
+   в углу профиля. В истории выше окно открывается по клику, здесь — сразу,
+   чтобы состояние было видно на статичном скриншоте. */
+export const ProfileDSettings = {
+  name: 'Профиль · настройки модальным окном',
+  render: () => <ProfDSettings />,
+};
 export const ProfileDPhone = {
   name: 'Профиль · вариант Д — Личный кабинет на телефоне',
   render: () => <ProfDPhone />,

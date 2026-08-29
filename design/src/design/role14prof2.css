@@ -234,3 +234,126 @@
   background: var(--d-accent);
   color: var(--d-on-accent);
 }
+
+/* ═══ Настройки модальным окном (третий референс, 29.08.2026) ══════
+   Белое окно поверх страницы: слева «Настройки» и список разделов (активный
+   на серой подложке), справа заголовок с подписью, поля, синяя кнопка и
+   строки-действия со стрелкой ↗, часть из них погашена.
+
+   Окно светлое поверх тёмного профиля — так и в референсе. Цвета берутся из
+   светлой группы токенов (`--c-surface`, `--c-line`, `--c-text`, `--c-primary`):
+   она в системе и заведена под светлые экраны, и по теме не переключается —
+   здесь это ровно то, что нужно. */
+.p2-ovl {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--s-5);
+  background: color-mix(in srgb, var(--c-screen-deep) 68%, transparent);
+}
+.p2-modal {
+  display: grid;
+  grid-template-columns: 232px minmax(0, 1fr);
+  width: min(760px, 100%);
+  max-height: 100%;
+  overflow: hidden;
+  border-radius: var(--r-d-card);
+  background: var(--c-surface);
+  color: var(--c-text);
+  box-shadow: var(--sh-tabbar);
+}
+
+/* Левая колонка окна */
+.p2-mnav {
+  padding: var(--s-5) var(--s-3);
+  border-right: 1px solid var(--c-line);
+}
+.p2-mnav .cap {
+  padding: 0 var(--s-3) var(--s-4);
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--c-text);
+}
+.p2-mnav button {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 10px var(--s-3);
+  border: 0;
+  border-radius: var(--r-d-tile);
+  background: none;
+  font: inherit;
+  font-size: 13.5px;
+  color: var(--c-text-3);
+  text-align: left;
+  cursor: pointer;
+}
+.p2-mnav button:hover { background: var(--c-zebra); }
+.p2-mnav button.on { background: var(--c-chip); color: var(--c-text); font-weight: 600; }
+
+/* Правая колонка окна */
+.p2-mbody { position: relative; padding: var(--s-5) var(--s-6) var(--s-6); overflow: auto; }
+.p2-mbody h2 { margin: 0; font-size: 21px; font-weight: 700; color: var(--c-text); }
+.p2-mbody .sub { margin: 6px 0 var(--s-5); font-size: 13px; color: var(--c-text-3); }
+.p2-mx {
+  position: absolute;
+  top: var(--s-4);
+  right: var(--s-4);
+  display: inline-flex;
+  padding: 7px;
+  border: 0;
+  border-radius: var(--r-round);
+  background: var(--c-chip);
+  color: var(--c-text);
+  cursor: pointer;
+}
+.p2-mx:hover { background: var(--c-zebra); }
+
+.p2-f { display: block; margin-bottom: var(--s-4); }
+.p2-f span { display: block; margin-bottom: 6px; font-size: 12.5px; color: var(--c-text-2); }
+.p2-f input {
+  width: 100%;
+  padding: 11px 14px;
+  border: 0;
+  border-radius: var(--r-d-tile);
+  background: var(--c-chip);
+  font: inherit;
+  font-size: 14px;
+  color: var(--c-text);
+}
+.p2-save {
+  padding: 11px 20px;
+  border: 0;
+  border-radius: var(--r-d-tile);
+  background: var(--c-primary);
+  color: var(--c-primary-ink);
+  font: inherit;
+  font-size: 13.5px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+/* Строки-действия со стрелкой; погашенные — как в референсе. */
+.p2-links { display: flex; flex-direction: column; gap: var(--s-3); margin-top: var(--s-5); }
+.p2-link {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 15px var(--s-4);
+  border: 1px solid var(--c-line);
+  border-radius: var(--r-d-row);
+  background: var(--c-surface);
+  font: inherit;
+  font-size: 14px;
+  color: var(--c-text);
+  text-align: left;
+  cursor: pointer;
+}
+.p2-link span { flex: 1; }
+.p2-link:hover { background: var(--c-zebra); }
+.p2-link.off { color: var(--c-text-4); cursor: default; }
+.p2-link.off:hover { background: var(--c-surface); }
