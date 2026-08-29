@@ -28,6 +28,7 @@ import { ApplyKaspiDesk, ApplyKaspiMobile } from './role14kaspi';
 import { HomeG2Desk } from './role14deskg2';
 import { ProfA, ProfB, ProfG, ProfV } from './role14prof';
 import { ProfD, ProfDPhone } from './role14prof2';
+import { H2H, H2HPhone } from './role14h2h';
 
 export default {
   title: 'Дизайн/14 · Спортсмен',
@@ -551,4 +552,22 @@ export const ProfileD = { name: 'Профиль · вариант Д — Лич�
 export const ProfileDPhone = {
   name: 'Профиль · вариант Д — Личный кабинет на телефоне',
   render: () => <ProfDPhone />,
+};
+
+/* ── «Личные встречи» в языке референсов (29.08.2026) ────────────────
+   Второй присланный референс — карточка матча: соревнование сверху, соперники
+   по краям, счёт крупно посередине, акцентная рамка у идущего матча, точки
+   под карточкой, вкладки ниже. Блок «Личные встречи» описан во flows у Э14.6
+   (Аналитика), туда он и встанет — пока показан отдельно.
+
+   ⚠ Во flows блок описан С ГРАФИКОМ (Chart.js: полоса побед и поражений) плюс
+   список. Здесь график заменён карточками встреч — отступление, которое надо
+   утвердить или вернуть график рядом. */
+export const HeadToHead = {
+  name: 'Личные встречи · в языке референса (десктоп)',
+  render: () => <H2H />,
+};
+export const HeadToHeadPhone = {
+  name: 'Личные встречи · в языке референса (телефон)',
+  render: () => <H2HPhone />,
 };

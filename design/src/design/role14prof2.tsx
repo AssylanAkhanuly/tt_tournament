@@ -152,15 +152,13 @@ export function ProfD({ variant }: { variant?: DeskVariant } = {}) {
   return (
     <RoleScreen variant={variant} role={R14} nav="Профиль" title="Мой профиль">
       <div className="pf2 o14-nohead">
-        <header className="p2-hero">
-          <img className="cover" src={ME} alt="" />
-          <span className="scrim" />
+        {/* Обложки нет: у федерации есть один портрет, а отдельной съёмки под
+            баннер она не выдаёт — заглушка из того же кадра только мешала.
+            Экран открывается портретом на поле. */}
+        <div className="p2-who">
           <button type="button" className="edit" data-to="Э14.9">
             <Pencil size={15} />
           </button>
-        </header>
-
-        <div className="p2-who">
           <img className="ava" src={ME} alt="" />
           <h1 className="o14-disp">Ким Георгий</h1>
           <div className="sub">мастер спорта · Астана · клуб СКА</div>
@@ -190,17 +188,14 @@ export function ProfDPhone() {
   return (
     <div className="mb-wrap m5 pf2 pf2m">
       <Frame>
-        <Chrome>
+        {/* bare: шапка «ФНТ РК · Спортсмен» снята — в референсе её нет, экран
+            начинается портретом. */}
+        <Chrome bare>
           <div className="mb-body m5-body">
-            <header className="p2-hero">
-              <img className="cover" src={ME} alt="" />
-              <span className="scrim" />
+            <div className="p2-who">
               <button type="button" className="edit" data-to="Э14.9">
                 <Pencil size={14} />
               </button>
-            </header>
-
-            <div className="p2-who">
               <img className="ava" src={ME} alt="" />
               <h1 className="o14-disp">Ким Георгий</h1>
               <div className="sub">мастер спорта · Астана · клуб СКА</div>

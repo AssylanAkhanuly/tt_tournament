@@ -1,6 +1,10 @@
 /* Э14.7 · вариант Д «Личный кабинет» (29.08.2026) — ТОЧНАЯ КОПИЯ присланного
-   референса: обложка, круглый портрет поверх неё, чипы, заголовок раздела и
-   список пунктов «иконка · подпись · шеврон», тумблер последней строкой.
+   референса: круглый портрет, чипы, заголовок раздела и список пунктов
+   «иконка · подпись · шеврон», тумблер последней строкой.
+
+   Обложки нет — снята по просьбе 29.08.2026: у федерации есть один портрет, а
+   отдельной съёмки под баннер она не выдаёт, и заглушка из того же кадра
+   только мешала. Экран открывается портретом на поле.
 
    ЧЕМ ЭТОТ ЭКРАН ОТЛИЧАЕТСЯ ОТ ОСТАЛЬНЫХ. Скопированы и форма, и цвет — так
    попросили. Из этого следуют два осознанных отступления от правил системы,
@@ -16,8 +20,8 @@
    Сырых цветов здесь нет: палитра референса заведена токенами `--d-*` в
    `theme/tokens.css`, как палитры --p1…--p4, поэтому lint:colors работает.
 
-   Шапка и нижняя навигация ТЕЛЕФОНА перекрашены под референс, но только
-   внутри `.pf2m`: сами компоненты (`Chrome`, `MiniTabBar`) общие для всех
+   Шапка телефона снята совсем (`Chrome bare`) — в референсе её нет. Нижняя
+   навигация перекрашена под референс, но только внутри `.pf2m`: сами компоненты (`Chrome`, `MiniTabBar`) общие для всех
    шестнадцати экранов роли, поэтому переопределение живёт в этом файле и
    никуда не протекает. Десктопная оболочка (сайдбар и верхняя панель) не
    тронута вовсе — на ширине экран остаётся тёмным островом внутри светлой
@@ -35,59 +39,36 @@
   color: var(--d-ink);
 }
 
-/* ── Обложка ────────────────────────────────────────────────────── */
-.p2-hero {
-  position: relative;
-  height: 200px;
-  overflow: hidden;
-  background: var(--d-card);
-  border-radius: 0 0 var(--r-d-card) var(--r-d-card);
-}
-/* Обложки в системе НЕТ: федерация выдаёт один портрет, а в референсе на её
-   месте отдельная съёмка. Поэтому здесь тот же кадр, уведённый в фон — кроп
-   мимо лица, приглушение и расфокус: получается текстурная плоскость, а не
-   вторая копия портрета. Честная заглушка, названа ценой варианта. */
-.p2-hero .cover {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  object-position: 50% 88%;
-  filter: saturate(0.45) brightness(0.5) blur(3px);
-  transform: scale(1.08);
-}
-.p2-hero .scrim {
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(0deg, var(--d-bg), transparent 78%);
-}
-.p2-hero .edit {
-  position: absolute;
-  top: 14px;
-  right: 22px;
-  display: inline-flex;
-  padding: 8px;
-  border: 1px solid color-mix(in srgb, var(--d-ink) 22%, transparent);
-  border-radius: var(--r-d-tile);
-  background: color-mix(in srgb, var(--d-bg) 55%, transparent);
-  color: var(--d-ink);
-  cursor: pointer;
-}
-
 /* ── Портрет, имя, чипы ─────────────────────────────────────────── */
 .p2-who {
+  position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
-  margin-top: -50px;
-  padding: 0 22px var(--s-5);
+  padding: var(--s-6) 22px var(--s-5);
   text-align: center;
 }
+/* Кнопка правки стояла в углу обложки; обложки нет — она переехала в угол
+   самого экрана. */
+.p2-who .edit {
+  position: absolute;
+  top: var(--s-4);
+  right: 22px;
+  display: inline-flex;
+  padding: 8px;
+  border: 1px solid var(--d-line);
+  border-radius: var(--r-d-tile);
+  background: var(--d-card);
+  color: var(--d-ink);
+  cursor: pointer;
+}
+.p2-who .edit:hover { background: var(--d-card-2); }
 .p2-who .ava {
   width: 96px;
   height: 96px;
   border-radius: var(--r-round); /* круглое по сути: фотография человека */
   object-fit: cover;
-  border: 4px solid var(--d-bg);
+  border: 3px solid var(--d-line);
 }
 .p2-who h1 { margin: var(--s-3) 0 0; font-size: 34px; line-height: 1; color: var(--d-ink); }
 .p2-who .sub { margin-top: 6px; font-size: 13px; color: var(--d-muted); }
@@ -209,15 +190,14 @@
 .pf2m .mb-body {
   overflow-y: auto;
   overscroll-behavior: contain;
-  scrollbar-width: thin;
   background: var(--d-bg);
+  /* Полосу прокрутки прячем: это макет телефона, а на телефоне её не видно —
+     в кадре она читалась как элемент интерфейса. */
+  scrollbar-width: none;
 }
-.pf2m .p2-hero { height: 132px; }
-/* На узком экране кадр другой пропорции, и при 88% в полосу попадало лицо —
-   вторая копия портрета. Берём самый низ кадра. */
-.pf2m .p2-hero .cover { object-position: 50% 100%; }
-.pf2m .p2-hero .edit { top: 10px; right: 12px; }
-.pf2m .p2-who { margin-top: -44px; padding: 0 16px var(--s-4); }
+.pf2m .mb-body::-webkit-scrollbar { display: none; }
+.pf2m .p2-who { padding: var(--s-5) 16px var(--s-4); }
+.pf2m .p2-who .edit { top: 12px; right: 16px; padding: 7px; }
 .pf2m .p2-who .ava { width: 88px; height: 88px; border-width: 3px; }
 .pf2m .p2-who h1 { font-size: 30px; }
 .pf2m .p2-who .chips span {
@@ -239,13 +219,6 @@
    круг. Перекрашиваем ТОЛЬКО под `.pf2m`: `Chrome` и `MiniTabBar` общие для
    всех шестнадцати экранов роли, и глобально их трогать нельзя — здесь
    переопределение живёт внутри одного экрана и никуда не протекает. */
-.pf2m .mb-site {
-  background: var(--d-bg);
-  border-bottom-color: var(--d-line);
-}
-.pf2m .mb-site .ui-brand .wm b { color: var(--d-ink); }
-.pf2m .mb-site .ui-brand .wm i { color: var(--d-muted); }
-
 .pf2m .tabbar {
   background: var(--d-bg);
   border-top: 1px solid var(--d-line);
