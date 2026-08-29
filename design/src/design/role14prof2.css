@@ -235,7 +235,7 @@
 .pf2m .mb-body::-webkit-scrollbar { display: none; }
 .pf2m .p2-band { height: 120px; }
 .pf2m .p2-gear { top: 12px; right: 16px; padding: 8px; }
-.pf2m .p2-who { margin-top: -46px; padding: 0 16px var(--s-4); }
+.pf2m .p2-who { margin-top: -46px; padding: 0 16px var(--s-5); }
 .pf2m .p2-who .ava { width: 88px; height: 88px; border-width: 3px; }
 .pf2m .p2-who h1 { font-size: 30px; }
 .pf2m .p2-who .chips span {
@@ -247,7 +247,13 @@
   white-space: nowrap;
 }
 .pf2m .p2-who .chips b { font-size: 21px; }
+/* Воздух над заголовком раздела должен быть заметно больше, чем под ним:
+   иначе «Взнос и доступ» читается как подпись к предыдущей карточке, а не как
+   начало нового раздела. У `.mb-body` между блоками уже 12 px — добавляем
+   сверху ещё 16, а снизу, наоборот, поджимаем до 10. */
 .pf2m section { padding: 0 16px; }
+.pf2m section + section { margin-top: var(--s-4); }
+.pf2m .p2-cap { margin-bottom: 10px; }
 .pf2m .p2-row { padding: 12px; }
 .pf2m .p2-row .ic { width: 32px; height: 32px; }
 .pf2m .p2-row .nm { font-size: 13px; }

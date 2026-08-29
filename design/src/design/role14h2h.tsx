@@ -18,15 +18,15 @@
    сопернику полоса побед и поражений, а под ней список — клуб, рейтинг
    соперника, партии, кто в перевесе.
 
-   ⚠ Во flows этот блок описан С ГРАФИКОМ (Chart.js): «полоса побед и
-   поражений» плюс список. Здесь график заменён карточками встреч — это
-   отступление от описанного, и его надо либо утвердить, либо вернуть график
-   рядом. Помечено в flows/14-sportsmen.md.
+   Графики на месте и настоящие (Chart.js), как и требует флоу: кривая рейтинга
+   по турнирам и сравнение по соперникам полосами побед и поражений. Карточки
+   встреч добавлены к ним, а не вместо них: график отвечает «с кем как»,
+   карточки и список — «что именно было».
 
    Цвет и радиусы — палитра референса `--d-*` и радиусы `--r-d-*`, те же, что
    у варианта Д профиля (`role14prof2.css`). */
 
-import { ChevronRight } from 'lucide-react';
+import { ChartBox, soft, token } from '../mockups/chart';
 import { Frame } from '../PlayerApp';
 import { MiniTabBar } from '../respShell';
 import { RoleScreen } from '../mockups/shell';
@@ -93,6 +93,124 @@ const MEETS: Meet[] = [
 ];
 
 const TABS = ['Все', 'Победы', 'Поражения'];
+
+/** Рейтинг по сыгранным турнирам: точка = турнир. Настоящий график, а не
+    картинка — по нарисованному нельзя прочитать ни дельту, ни где закончил
+    (требование flows, Э14.6). */
+const SEASON: { t: string; r: number; d: number }[] = [
+  { t: 'Кубок Тараза', r: 2394, d: 12 },
+  { t: 'Кубок Астаны', r: 2378, d: -16 },
+  { t: 'Первенство РК', r: 2415, d: 37 },
+  { t: 'Кубок Шымкента', r: 2402, d: -13 },
+  { t: 'Чемпионат РК', r: 2448, d: 46 },
+  { t: 'Кубок Алматы', r: 2456, d: 8 },
+];
+
+/** Кривая рейтинга. Точки покрашены по знаку дельты: зелёная в плюс, красная
+    в минус — так видно не только уровень, но и чем кончился каждый турнир. */
+const RatingChart = () => (
+  <ChartBox
+    height={210}
+    label="Динамика рейтинга по турнирам сезона"
+    make={(el) => ({
+      type: 'line',
+      data: {
+        labels: SEASON.map((p) => p.t),
+        datasets: [
+          {
+            data: SEASON.map((p) => p.r),
+            borderColor: token('--c-accent', el),
+            backgroundColor: soft('--c-accent', 18, el),
+            fill: true,
+            tension: 0.35,
+            borderWidth: 2,
+            pointRadius: 5,
+            pointHoverRadius: 7,
+            pointBackgroundColor: SEASON.map((p) =>
+              token(p.d >= 0 ? '--c-success' : '--c-danger', el),
+            ),
+            pointBorderWidth: 0,
+          },
+        ],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            callbacks: {
+              label: (i) => {
+                const p = SEASON[i.dataIndex];
+                return `рейтинг ${p.r} · ${p.d >= 0 ? '+' : ''}${p.d} за турнир`;
+              },
+            },
+          },
+        },
+        scales: {
+          x: { grid: { display: false }, ticks: { color: token('--c-dim', el), font: { size: 10 } } },
+          y: {
+            grid: { color: soft('--c-glass-line', 60, el) },
+            ticks: { color: token('--c-dim', el), font: { size: 10 } },
+          },
+        },
+      },
+    })}
+  />
+);
+
+/** Сравнение по соперникам: победы и поражения одной полосой. Горизонтально —
+    подписи это фамилии, вертикаль их обрезала бы. */
+const RivalsChart = () => (
+  <ChartBox
+    height={200}
+    label="Личные встречи: победы и поражения по каждому сопернику"
+    make={(el) => ({
+      type: 'bar',
+      data: {
+        labels: RIVALS.map((r) => r.nm),
+        datasets: [
+          {
+            label: 'Победы',
+            data: RIVALS.map((r) => r.w),
+            backgroundColor: token('--c-success', el),
+            borderWidth: 0,
+          },
+          {
+            label: 'Поражения',
+            data: RIVALS.map((r) => r.l),
+            backgroundColor: soft('--c-danger', 70, el),
+            borderWidth: 0,
+          },
+        ],
+      },
+      options: {
+        indexAxis: 'y',
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            position: 'bottom',
+            labels: { color: token('--c-muted', el), boxWidth: 10, font: { size: 11 } },
+          },
+        },
+        scales: {
+          x: {
+            stacked: true,
+            grid: { color: soft('--c-glass-line', 60, el) },
+            ticks: { color: token('--c-dim', el), stepSize: 1, font: { size: 10 } },
+          },
+          y: { stacked: true, grid: { display: false }, ticks: { color: token('--c-ink', el), font: { size: 11 } } },
+        },
+      },
+    })}
+  />
+);
+
+/** Панель под график: у холста должно быть своё поле, иначе он висит в воздухе. */
+const Panel = ({ children }: { children: React.ReactNode }) => (
+  <div className="h2-panel">{children}</div>
+);
 
 /* ── Куски, общие для десктопа и телефона ───────────────────────── */
 
@@ -194,40 +312,27 @@ const List = () => (
   </div>
 );
 
-/** Блок «Личные встречи» без оболочки экрана — чтобы его можно было поставить
-    прямо на профиль (десктоп): лента соперников, карточки встреч и выход во
-    всю аналитику. Вкладок и длинного списка здесь нет: на профиле это врезка,
-    а не экран. */
-export function H2HSection() {
-  return (
-    <section className="h2 h2-inset">
-      <div className="h2-sec">
-        Личные встречи
-        <a className="h2-more" data-to="Э14.6">
-          Вся аналитика <ChevronRight size={15} />
-        </a>
-      </div>
-      <Rivals />
-      <div className="h2-cards">
-        {MEETS.map((m) => (
-          <Card m={m} key={m.tour} />
-        ))}
-      </div>
-    </section>
-  );
-}
-
 /* ═══ Десктоп ══════════════════════════════════════════════════════ */
 export function H2H({ variant }: { variant?: DeskVariant } = {}) {
   return (
-    <RoleScreen variant={variant} role={R14} nav="Аналитика" title="Личные встречи">
+    <RoleScreen variant={variant} role={R14} nav="Аналитика" title="Аналитика">
       <div className="h2 o14-nohead">
         <div className="h2-top">
-          <h1 className="o14-disp">Личные встречи</h1>
+          <h1 className="o14-disp">Аналитика</h1>
           <Chips />
         </div>
 
         <Rivals />
+
+        <div className="h2-sec">Динамика рейтинга</div>
+        <Panel>
+          <RatingChart />
+        </Panel>
+
+        <div className="h2-sec">С кем как</div>
+        <Panel>
+          <RivalsChart />
+        </Panel>
 
         <div className="h2-sec">Встречи</div>
         <div className="h2-cards">
@@ -253,10 +358,20 @@ export function H2HPhone() {
         <Chrome bare>
           <div className="mb-body m5-body">
             <div className="h2-top">
-              <h1 className="o14-disp">Личные встречи</h1>
+              <h1 className="o14-disp">Аналитика</h1>
             </div>
             <Chips />
             <Rivals />
+
+            <div className="h2-sec">Динамика рейтинга</div>
+            <Panel>
+              <RatingChart />
+            </Panel>
+
+            <div className="h2-sec">С кем как</div>
+            <Panel>
+              <RivalsChart />
+            </Panel>
 
             <div className="h2-sec">Встречи</div>
             <div className="h2-cards">

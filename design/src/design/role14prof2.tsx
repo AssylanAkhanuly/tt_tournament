@@ -32,7 +32,6 @@ import { Frame } from '../PlayerApp';
 import { MiniTabBar } from '../respShell';
 import { A } from '../fedCommon';
 import { Chrome, NAV } from './role14mobile';
-import { H2HSection } from './role14h2h';
 import './role14prof2.css';
 
 const ME = A(44);
@@ -273,12 +272,6 @@ export function ProfD({ variant }: { variant?: DeskVariant } = {}) {
           </div>
         </div>
 
-        {/* Аналитика стоит прямо на профиле (десктоп): личные встречи —
-            единственное, ради чего спортсмен заходит сюда между турнирами, и
-            прятать их за пунктом меню незачем. На телефоне остаётся пункт:
-            там на врезку нет места. */}
-        <H2HSection />
-
         <div className="p2-cols">
           <Group cap="Мой спорт" rows={MINE} />
           <Group cap="Взнос и доступ" rows={ACCESS} />
@@ -320,8 +313,6 @@ export function ProfDSettings({ variant }: { variant?: DeskVariant } = {}) {
             ))}
           </div>
         </div>
-
-        <H2HSection />
 
         <div className="p2-cols">
           <Group cap="Мой спорт" rows={MINE} />
