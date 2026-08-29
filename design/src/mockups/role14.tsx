@@ -26,6 +26,15 @@ import type { ScreenMap } from './shell';
 import { R14 } from './roles';
 import { HomeG2Desk } from '../design/role14deskg2';
 import { CalendarDesk } from '../design/role14deskcal';
+import { MobileBrand } from '../design/role14mobile';
+import { MobileMatch } from '../design/role14mobile3';
+import { MobApply, MobCalendar, MobMyApp, MobProfile, MobStats } from '../design/role14mobile5';
+import {
+  MobArticle, MobDeclined, MobEdit, MobNews, MobPaid, MobPay, MobPayments,
+} from '../design/role14mobile6';
+import { MobGroups, MobPlayers } from '../design/role14mobile7';
+import { MobBracketFull } from '../design/role14mobile8';
+import { MobCalendarGoogle } from '../design/role14mobile9';
 import { Login0_1, SignUp0_5, SignUp0_5States } from './role00';
 import '../design/role14deskheads.css';
 import '../design/role14deskbody.css';
@@ -1982,6 +1991,17 @@ const Pay14_8States = () => (
 
 
 /** Экраны роли по кодам: из этой карты собираются и борд, и карта флоу. */
+/* ── Телефон в тех же узлах ──────────────────────────────────────
+   Роль единственная, где сайт и приложение равноценны (TZ §10), и телефон
+   для неё рисовался первым: экраны Э14.2–Э14.14 собраны с телефона и только
+   потом перенесены на десктоп. Пока они лежали в разделе «Дизайн», флоу
+   показывал роль наполовину — маршрут был только десктопный. Теперь под
+   каждым узлом стоит и телефон: сравнивать надо один и тот же шаг маршрута,
+   а не два раздела дерева.
+
+   Э14.2 — исключение: на телефоне у календаря два варианта, «Месяцы» и «Как
+   Google» (25.08.2026), и решение федерации по ним не записано. Поэтому оба
+   стоят рядом с пометкой ✳, а не выбраны за неё. */
 export const SCREENS: ScreenMap = {
   'Э0.1': { cap: 'Вход', view: () => <Login0_1 />, next: '«Зарегистрироваться»' },
   'Э0.5': {
@@ -1999,6 +2019,9 @@ export const SCREENS: ScreenMap = {
     view: () => (
       <>
         <Home14_1 />
+        <Also cap="То же на телефоне">
+          <MobileBrand />
+        </Also>
         <Home14_1States />
       </>
     ),
@@ -2009,6 +2032,12 @@ export const SCREENS: ScreenMap = {
     view: () => (
       <>
         <Calendar14_2 />
+        <Also cap="То же на телефоне · вариант 1 «Месяцы»">
+          <MobCalendar />
+        </Also>
+        <Also cap="То же на телефоне · вариант 2 «Как Google» ✳ — решение не принято">
+          <MobCalendarGoogle />
+        </Also>
         <Calendar14_2States />
       </>
     ),
@@ -2019,6 +2048,9 @@ export const SCREENS: ScreenMap = {
     view: () => (
       <>
         <Apply14_3 />
+        <Also cap="То же на телефоне">
+          <MobApply />
+        </Also>
         <Apply14_3States />
       </>
     ),
@@ -2029,6 +2061,9 @@ export const SCREENS: ScreenMap = {
     view: () => (
       <>
         <MyApp14_4 />
+        <Also cap="То же на телефоне">
+          <MobMyApp />
+        </Also>
         <MyApp14_4States />
       </>
     ),
@@ -2052,6 +2087,18 @@ export const SCREENS: ScreenMap = {
         <Also cap="Формат «группы + плей-офф»: появляется вкладка «Группы», а «Сетка» — это плей-офф">
           <Match14_5 tab="Группы" groups />
         </Also>
+        <Also cap="То же на телефоне · вкладка «Мой матч»">
+          <MobileMatch />
+        </Also>
+        <Also cap="То же на телефоне · вкладка «Участники»">
+          <MobPlayers />
+        </Also>
+        <Also cap="То же на телефоне · вкладка «Группы»">
+          <MobGroups />
+        </Also>
+        <Also cap="То же на телефоне · вкладка «Сетка» — холст во весь экран">
+          <MobBracketFull />
+        </Also>
         <Match14_5States />
       </>
     ),
@@ -2062,6 +2109,9 @@ export const SCREENS: ScreenMap = {
     view: () => (
       <>
         <Stats14_6 />
+        <Also cap="То же на телефоне">
+          <MobStats />
+        </Also>
         <Stats14_6States />
       </>
     ),
@@ -2072,6 +2122,9 @@ export const SCREENS: ScreenMap = {
     view: () => (
       <>
         <Profile14_7 />
+        <Also cap="То же на телефоне">
+          <MobProfile />
+        </Also>
         <Profile14_7States />
       </>
     ),
@@ -2082,6 +2135,9 @@ export const SCREENS: ScreenMap = {
     view: () => (
       <>
         <Pay14_8 />
+        <Also cap="То же на телефоне">
+          <MobPay />
+        </Also>
         <Pay14_8States />
       </>
     ),
@@ -2092,6 +2148,9 @@ export const SCREENS: ScreenMap = {
     view: () => (
       <>
         <Paid14_10 />
+        <Also cap="То же на телефоне">
+          <MobPaid />
+        </Also>
         <Paid14_10States />
       </>
     ),
@@ -2101,6 +2160,9 @@ export const SCREENS: ScreenMap = {
     view: () => (
       <>
         <Declined14_11 />
+        <Also cap="То же на телефоне">
+          <MobDeclined />
+        </Also>
         <Declined14_11States />
       </>
     ),
@@ -2110,6 +2172,9 @@ export const SCREENS: ScreenMap = {
     view: () => (
       <>
         <News14_13 />
+        <Also cap="То же на телефоне">
+          <MobNews />
+        </Also>
         <News14_13States />
       </>
     ),
@@ -2120,6 +2185,9 @@ export const SCREENS: ScreenMap = {
     view: () => (
       <>
         <Article14_14 />
+        <Also cap="То же на телефоне">
+          <MobArticle />
+        </Also>
         <Article14_14States />
       </>
     ),
@@ -2129,6 +2197,9 @@ export const SCREENS: ScreenMap = {
     view: () => (
       <>
         <History14_12 />
+        <Also cap="То же на телефоне">
+          <MobPayments />
+        </Also>
         <History14_12States />
       </>
     ),
@@ -2138,6 +2209,9 @@ export const SCREENS: ScreenMap = {
     view: () => (
       <>
         <Edit14_9 />
+        <Also cap="То же на телефоне">
+          <MobEdit />
+        </Also>
         <Edit14_9States />
       </>
     ),
