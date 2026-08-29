@@ -25,10 +25,11 @@ import { ME_ID, MY_GROUP, OTHER_GROUPS, myBracket, playoffBracket } from './myBr
 import type { ScreenMap } from './shell';
 import { R14 } from './roles';
 import { HomeG2Desk } from '../design/role14deskg2';
+import { ProfD, ProfDPhone } from '../design/role14prof2';
 import { CalendarDesk } from '../design/role14deskcal';
 import { MobileBrand } from '../design/role14mobile';
 import { MobileMatch } from '../design/role14mobile3';
-import { MobApply, MobCalendar, MobMyApp, MobProfile, MobStats } from '../design/role14mobile5';
+import { MobApply, MobCalendar, MobMyApp, MobStats } from '../design/role14mobile5';
 import {
   MobArticle, MobDeclined, MobEdit, MobNews, MobPaid, MobPay, MobPayments,
 } from '../design/role14mobile6';
@@ -1156,142 +1157,23 @@ const Stats14_6States = () => (
 
 /* ── Э14.7 · Мой профиль ───────────────────────────────────────── */
 
-/** Один профиль вместо двух: сквозной «свой профиль» (контакты, язык, пароль) и
-    спортивная карточка со взносом — это один экран, и человек ходил между ними
-    зря. У спортсмена сюда же попадают по имени и фото в шапке. */
-/* Шапка своя: профиль — это карточка человека, поэтому фото, фамилия и разряд
-   стоят шапкой, а не строкой внутри панели, где они были одного кегля с полем
-   «Дата рождения». Справа — взнос: сумма и срок. Он вынесен наверх потому, что
-   это единственное, из-за чего заявку могут не пропустить, а раньше он лежал
-   во второй колонке ниже сгиба. */
-export function Profile14_7() {
-  return (
-    <RoleScreen role={R14} nav="Профиль" title="Мой профиль" sub="Ким Георгий · 2003 · Астана · СКА">
-      <div className="o14-nohead">
-      <div className="dh">
-        <div className="dh-l">
-          <div className="dh-who">
-            <img src={ME} alt="" />
-            <div>
-              <div className="dh-t o14-disp">Ким Георгий</div>
-              <div className="dh-sub">
-                мастер спорта · рейтинг <b>2456</b> · 7-е место в РК · Астана · СКА
-              </div>
-            </div>
-          </div>
-        </div>
-        <div className="dh-r">
-          <div className="dh-fee">
-            <div>
-              <div className="v o14-disp">₸ 10 000</div>
-              <div className="k">взнос 2026 · до 31 марта</div>
-            </div>
-            <button className="dsubmit" data-to="Э14.8" style={{ padding: '11px 16px' }}>
-              <CreditCard size={15} /> Оплатить картой
-            </button>
-          </div>
-        </div>
-      </div>
+/** Выбран вариант **Д «Личный кабинет»** (29.08.2026, `flows/14-sportsmen.md`):
+    профиль — хаб. Обложка, круглый портрет поверх неё, чипы «рейтинг / место /
+    разряд», дальше список входов в разделы: аналитика, личные данные, клуб и
+    разряд, подтверждение личности, взнос, история платежей, пароль, язык,
+    тумблер уведомлений. Состояния, из-за которых экран открывают — неоплаченный
+    взнос и неподтверждённая личность, — покрашены прямо в строках списка.
 
-      {/* Полоса чисел первой: рейтинг, место и год — то, чем спортсмен себя
-          называет. Дальше данные парами (на чтение; правка — Э14.9), справа
-          взнос и переходы. Панелей с полосами заголовков нет: экран и так
-          лист, а рамка вокруг рамки ничего не отделяет. */}
-      <div className="db-sheet db-rail" style={{ marginBottom: 'var(--s-6)' }}>
-        <div>
-          <b className="o14-disp">2456</b>
-          <span>рейтинг</span>
-        </div>
-        <div>
-          <b className="o14-disp">7</b>
-          <span>место в РК</span>
-        </div>
-        <div>
-          <b className="o14-disp">27</b>
-          <span>матчей за сезон</span>
-        </div>
-        <div>
-          <b className="o14-disp">2003</b>
-          <span>год рождения</span>
-        </div>
-      </div>
+    Прежний макет (шапка с аватаром 64 px, полоса из четырёх равных чисел, две
+    колонки панелей) снят: разбор спортивных профилей показал, что так профиль
+    не строит никто. Он и остальные четыре варианта — А «Карточка бойца»,
+    Б «Вкладки лиги», В «Моё место», Г «Удостоверение» — остались в разделе
+    «Дизайн», сам компонент — в `src/design/role14prof2.tsx`.
 
-      <div className="mkcols">
-        <div>
-          <div className="db-sec">
-            Данные<span>меняются на отдельном экране</span>
-          </div>
-          <div className="db-sheet">
-            <div className="db-data">
-              {[
-                ['Дата рождения', '14.06.2003'],
-                ['Разряд', 'мастер спорта'],
-                ['Регион', 'Астана'],
-                ['Тренер', 'Гладун Игорь'],
-                ['Телефон', '+7 705 118 44 03'],
-                ['Почта', 'g.kim@mail.kz'],
-                ['Клуб', 'СКА · Астана'],
-                ['Принадлежность к клубу', 'подтвердил клуб «СКА», 12.01.2026'],
-              ].map(([k, v]) => (
-                <div className="db-d" key={k}>
-                  <span className="k">{k}</span>
-                  <span className="v">{v}</span>
-                </div>
-              ))}
-            </div>
-            <div className="db-act">
-              <span className="note">Клуб и регион меняются только по приглашению</span>
-              <button className="dpickbtn" data-to="Э14.9">
-                <Pencil size={14} /> Изменить данные
-              </button>
-            </div>
-          </div>
-        </div>
-
-        <div>
-          <div className="db-sec">Взнос и доступ</div>
-          <div className="db-sheet">
-            <div className="db-row" data-to="Э14.12">
-              <span className="tx">
-                <span className="nm">Годовой взнос 2026</span>
-                <span className="ss">срок до 31 марта · не оплачен</span>
-              </span>
-              <span className="amt o14-disp">₸ 10 000</span>
-              <Receipt size={16} className="ch" />
-            </div>
-            <div className="db-row" data-to="Э14.12">
-              <span className="tx">
-                <span className="nm">История платежей</span>
-                <span className="ss">взносы за все сезоны и квитанции</span>
-              </span>
-              <ChevronRight size={17} className="ch" />
-            </div>
-            <div className="db-row">
-              <span className="tx">
-                <span className="nm">Пароль</span>
-                <span className="ss">изменён 02.02.2026</span>
-              </span>
-              <button className="dpickbtn">Сменить</button>
-            </div>
-            <div className="db-row">
-              <span className="tx">
-                <span className="nm">Язык интерфейса</span>
-                <span className="ss">письма и уведомления приходят на нём же</span>
-              </span>
-              <span className="amt">Русский</span>
-            </div>
-          </div>
-          <div style={{ marginTop: 'var(--s-3)' }}>
-            <Alert>
-              Оплата идёт на платёжной странице Халык Банка — кнопка в шапке экрана. Состояние
-              поставится само, по подтверждению банка: держать вкладку открытой не нужно.
-            </Alert>
-          </div>
-        </div>
-      </div>
-      </div>
-    </RoleScreen>
-  );
+    Паспортные поля с экрана ушли за пункт «Личные данные» — это решение
+    варианта и его цена, она записана в `flows/14-sportsmen.md`. */
+export function Profile14_7({ variant }: { variant?: DeskVariant } = {}) {
+  return <ProfD variant={variant} />;
 }
 
 const Profile14_7States = () => (
@@ -2123,7 +2005,7 @@ export const SCREENS: ScreenMap = {
       <>
         <Profile14_7 />
         <Also cap="То же на телефоне">
-          <MobProfile />
+          <ProfDPhone />
         </Also>
         <Profile14_7States />
       </>

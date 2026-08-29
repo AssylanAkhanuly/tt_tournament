@@ -15,12 +15,18 @@
   /* Отступы `.dmain` — 20/22 px. Гасим их здесь, а не у обложки: отрицательное
      поле у ребёнка скролл-контейнер срезает слева. */
   margin: -20px -22px;
-  background: var(--c-surface);
+  background: var(--c-screen-1);
   color: var(--c-ink);
 }
 
 /* ── Обложка ────────────────────────────────────────────────────── */
-.p2-hero { position: relative; height: 160px; overflow: hidden; background: var(--c-screen-deep); }
+.p2-hero {
+  position: relative;
+  height: 200px;
+  overflow: hidden;
+  background: var(--c-screen-deep);
+  border-radius: 0 0 var(--r-d-card) var(--r-d-card);
+}
 /* Обложки в системе НЕТ: федерация выдаёт один портрет, и в референсе на её
    месте отдельная съёмка. Поэтому здесь тот же кадр, но уведённый в фон —
    кроп мимо лица, приглушение и расфокус: получается текстурная плоскость, а
@@ -46,7 +52,7 @@
   display: inline-flex;
   padding: 8px;
   border: 1px solid color-mix(in srgb, var(--c-on-media) 34%, transparent);
-  border-radius: var(--r-sm);
+  border-radius: var(--r-d-tile);
   background: color-mix(in srgb, var(--c-screen-deep) 55%, transparent);
   color: var(--c-on-media);
   cursor: pointer;
@@ -66,9 +72,11 @@
   height: 96px;
   border-radius: var(--r-round); /* круглое по сути: фотография человека */
   object-fit: cover;
-  border: 4px solid var(--c-surface);
+  border: 4px solid var(--c-screen-1);
 }
-.p2-who h1 { margin: var(--s-3) 0 0; font-size: 34px; line-height: 1; }
+/* Цвет задан явно: экран попадает и в раздел «Флоу», где тема берётся из
+   тулбара, — на тёмной наследование давало имя почти в цвет фона. */
+.p2-who h1 { margin: var(--s-3) 0 0; font-size: 34px; line-height: 1; color: var(--c-ink); }
 .p2-who .sub { margin-top: 6px; font-size: 13px; color: var(--c-muted); }
 
 /* Чипы под именем — «рост / вес / возраст» референса. Не четыре равные плитки
@@ -78,8 +86,9 @@
   display: inline-flex;
   flex-direction: column;
   gap: 2px;
-  min-width: 92px;
-  padding: 8px 13px;
+  min-width: 96px;
+  padding: 10px 15px;
+  border-radius: var(--r-d-chip);
   background: var(--c-panel);
   border: 1px solid var(--c-glass-line);
   font-size: 10.5px;
@@ -105,26 +114,30 @@
   text-transform: uppercase;
   color: var(--c-dim);
 }
-.p2-list { border: 1px solid var(--c-glass-line); background: var(--c-panel); }
+/* В референсе пункты — отдельные скруглённые карточки с зазором, а не единый
+   лист с разделителями. Форму копируем как есть. */
+.p2-list { display: flex; flex-direction: column; gap: var(--s-2); }
 
 .p2-row {
   display: flex;
   align-items: center;
   gap: var(--s-3);
-  padding: var(--s-3) var(--s-4);
-  border-bottom: 1px solid var(--c-glass-line-soft);
+  padding: 14px var(--s-4);
+  border-radius: var(--r-d-row);
+  border: 1px solid var(--c-glass-line);
+  background: var(--c-panel);
   cursor: pointer;
 }
-.p2-row:last-child { border-bottom: 0; }
 .p2-row:hover { background: var(--c-panel-2); }
-/* Иконка в своей плашке — как в референсе, но квадратной: углы в системе прямые. */
+/* Иконка в скруглённой плашке — как в референсе. */
 .p2-row .ic {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 34px;
-  height: 34px;
+  width: 36px;
+  height: 36px;
   flex: none;
+  border-radius: var(--r-d-tile);
   background: var(--c-accent-soft);
   color: var(--c-accent);
 }
@@ -136,10 +149,10 @@
 
 /* Две строки красят состояние, а не тему: неоплаченный взнос и неподтверждённая
    личность — единственное, из-за чего экран вообще открывают между турнирами. */
-.p2-row.pay { background: var(--c-danger-fill); }
+.p2-row.pay { background: var(--c-danger-fill); border-color: var(--c-danger-line); }
 .p2-row.pay .ic { background: var(--c-danger-soft); color: var(--c-danger); }
 .p2-row.pay .ss { color: var(--c-danger); font-weight: 600; }
-.p2-row.warn { background: var(--c-warning-fill); }
+.p2-row.warn { background: var(--c-warning-fill); border-color: var(--c-warning-soft); }
 .p2-row.warn .ic { background: var(--c-warning-soft); color: var(--c-warning); }
 
 /* Тумблер — круглое по сути, под правило прямых углов не попадает. */
@@ -164,6 +177,14 @@
 
 /* ── Телефон ────────────────────────────────────────────────────── */
 .pf2m { margin: 0; height: auto; overflow: visible; background: none; }
+/* Экран длиннее телефона: список входов уходит под навигацию. Общий `.mb-body`
+   стоит с `overflow: hidden` (из-за карусели на главной), поэтому прокрутку
+   включаем точечно — только здесь. Нижнее поле уже оставлено под таббар. */
+.pf2m .mb-body {
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+}
 .pf2m .p2-hero { height: 132px; }
 /* На узком экране кадр другой пропорции, и при 88% в полосу попадало лицо —
    вторая копия портрета. Берём самый низ кадра. */

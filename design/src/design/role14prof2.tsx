@@ -25,6 +25,7 @@ import {
   BarChart3, Bell, ChevronRight, CreditCard, KeyRound, Pencil, Receipt, Settings,
   ShieldAlert, Trophy, User, Wallet,
 } from 'lucide-react';
+import type { DeskVariant } from '../deskShell';
 import { RoleScreen } from '../mockups/shell';
 import { R14 } from '../mockups/roles';
 import { Frame } from '../PlayerApp';
@@ -147,9 +148,9 @@ const Group = ({ cap, rows }: { cap: string; rows: Row[] }) => (
    Обложка во всю ширину, портрет поверх её нижнего края, имя и чипы под ним —
    как в референсе. Дальше список входов; на ширине он идёт двумя группами,
    иначе правая половина экрана пустует (эту цену мы уже платили на Э14.3). */
-export function ProfD() {
+export function ProfD({ variant }: { variant?: DeskVariant } = {}) {
   return (
-    <RoleScreen role={R14} nav="Профиль" title="Мой профиль">
+    <RoleScreen variant={variant} role={R14} nav="Профиль" title="Мой профиль">
       <div className="pf2 o14-nohead">
         <header className="p2-hero">
           <img className="cover" src={ME} alt="" />
