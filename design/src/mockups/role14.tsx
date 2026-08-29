@@ -26,6 +26,8 @@ import type { ScreenMap } from './shell';
 import { R14 } from './roles';
 import { HomeG2Desk } from '../design/role14deskg2';
 import { ProfD, ProfDPhone } from '../design/role14prof2';
+import { H2H, H2HPhone } from '../design/role14h2h';
+import { Article as ArticleNew, ArticlePhone, News as NewsNew, NewsPhone } from '../design/role14news';
 import { CalendarDesk } from '../design/role14deskcal';
 import { MobileBrand } from '../design/role14mobile';
 import { MobileMatch } from '../design/role14mobile3';
@@ -1990,9 +1992,9 @@ export const SCREENS: ScreenMap = {
     cap: 'Аналитика',
     view: () => (
       <>
-        <Stats14_6 />
+        <H2H />
         <Also cap="То же на телефоне">
-          <MobStats />
+          <H2HPhone />
         </Also>
         <Stats14_6States />
       </>
@@ -2053,9 +2055,9 @@ export const SCREENS: ScreenMap = {
     cap: 'Новости',
     view: () => (
       <>
-        <News14_13 />
+        <NewsNew />
         <Also cap="То же на телефоне">
-          <MobNews />
+          <NewsPhone />
         </Also>
         <News14_13States />
       </>
@@ -2066,9 +2068,9 @@ export const SCREENS: ScreenMap = {
     cap: 'Новость',
     view: () => (
       <>
-        <Article14_14 />
+        <ArticleNew />
         <Also cap="То же на телефоне">
-          <MobArticle />
+          <ArticlePhone />
         </Also>
         <Article14_14States />
       </>
