@@ -251,3 +251,31 @@
   background: var(--d-accent);
   color: var(--d-on-accent);
 }
+
+/* ── Врезка на профиле ──────────────────────────────────────────────
+   Тот же блок, но не экран: без своего поля и без отрицательных полей —
+   он живёт внутри чужой страницы. */
+.h2-inset {
+  height: auto;
+  overflow: visible;
+  margin: 0;
+  padding: 0 22px var(--s-6);
+  background: none;
+}
+.h2-inset .h2-sec {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--s-4);
+}
+.h2-more {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--d-accent);
+  cursor: pointer;
+}
+.h2-inset .h2-rivals { margin-bottom: var(--s-4); }
+.h2-inset .h2-cards { margin-bottom: 0; }

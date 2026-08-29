@@ -26,6 +26,7 @@
    Цвет и радиусы — палитра референса `--d-*` и радиусы `--r-d-*`, те же, что
    у варианта Д профиля (`role14prof2.css`). */
 
+import { ChevronRight } from 'lucide-react';
 import { Frame } from '../PlayerApp';
 import { MiniTabBar } from '../respShell';
 import { RoleScreen } from '../mockups/shell';
@@ -192,6 +193,29 @@ const List = () => (
     ))}
   </div>
 );
+
+/** Блок «Личные встречи» без оболочки экрана — чтобы его можно было поставить
+    прямо на профиль (десктоп): лента соперников, карточки встреч и выход во
+    всю аналитику. Вкладок и длинного списка здесь нет: на профиле это врезка,
+    а не экран. */
+export function H2HSection() {
+  return (
+    <section className="h2 h2-inset">
+      <div className="h2-sec">
+        Личные встречи
+        <a className="h2-more" data-to="Э14.6">
+          Вся аналитика <ChevronRight size={15} />
+        </a>
+      </div>
+      <Rivals />
+      <div className="h2-cards">
+        {MEETS.map((m) => (
+          <Card m={m} key={m.tour} />
+        ))}
+      </div>
+    </section>
+  );
+}
 
 /* ═══ Десктоп ══════════════════════════════════════════════════════ */
 export function H2H({ variant }: { variant?: DeskVariant } = {}) {

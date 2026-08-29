@@ -32,6 +32,7 @@ import { Frame } from '../PlayerApp';
 import { MiniTabBar } from '../respShell';
 import { A } from '../fedCommon';
 import { Chrome, NAV } from './role14mobile';
+import { H2HSection } from './role14h2h';
 import './role14prof2.css';
 
 const ME = A(44);
@@ -238,19 +239,28 @@ export function ProfD({ variant }: { variant?: DeskVariant } = {}) {
   return (
     <RoleScreen variant={variant} role={R14} nav="Профиль" title="Мой профиль">
       <div className="pf2 o14-nohead">
-        {/* Обложки нет: у федерации есть один портрет, а отдельной съёмки под
-            баннер она не выдаёт — заглушка из того же кадра только мешала.
-            Экран открывается портретом на поле. */}
-        <div className="p2-who">
+        {/* Шапка: не фотография, а градиентная полоса — фотографий-обложек
+            федерация не выдаёт, а полоса ничего не обещает и не врёт. Аватар
+            наезжает на неё снизу, карандаш — на самом аватаре, шестерёнка — в
+            углу полосы. */}
+        <div className="p2-band">
           <button
             type="button"
-            className="edit"
+            className="p2-gear"
             onClick={() => setSet(true)}
             aria-label="Настройки"
           >
-            <Settings size={16} />
+            <Settings size={17} />
           </button>
-          <img className="ava" src={ME} alt="" />
+        </div>
+
+        <div className="p2-who">
+          <span className="ava-w">
+            <img className="ava" src={ME} alt="" />
+            <button type="button" className="ava-edit" data-to="Э14.9" aria-label="Изменить фото">
+              <Pencil size={13} />
+            </button>
+          </span>
           <h1 className="o14-disp">Ким Георгий</h1>
           <div className="sub">мастер спорта · Астана · клуб СКА</div>
           <div className="chips">
@@ -262,6 +272,12 @@ export function ProfD({ variant }: { variant?: DeskVariant } = {}) {
             ))}
           </div>
         </div>
+
+        {/* Аналитика стоит прямо на профиле (десктоп): личные встречи —
+            единственное, ради чего спортсмен заходит сюда между турнирами, и
+            прятать их за пунктом меню незачем. На телефоне остаётся пункт:
+            там на врезку нет места. */}
+        <H2HSection />
 
         <div className="p2-cols">
           <Group cap="Мой спорт" rows={MINE} />
@@ -280,11 +296,19 @@ export function ProfDSettings({ variant }: { variant?: DeskVariant } = {}) {
   return (
     <RoleScreen variant={variant} role={R14} nav="Профиль" title="Мой профиль">
       <div className="pf2 o14-nohead">
-        <div className="p2-who">
-          <button type="button" className="edit" aria-label="Настройки">
-            <Settings size={16} />
+        <div className="p2-band">
+          <button type="button" className="p2-gear" aria-label="Настройки">
+            <Settings size={17} />
           </button>
-          <img className="ava" src={ME} alt="" />
+        </div>
+
+        <div className="p2-who">
+          <span className="ava-w">
+            <img className="ava" src={ME} alt="" />
+            <button type="button" className="ava-edit" aria-label="Изменить фото">
+              <Pencil size={13} />
+            </button>
+          </span>
           <h1 className="o14-disp">Ким Георгий</h1>
           <div className="sub">мастер спорта · Астана · клуб СКА</div>
           <div className="chips">
@@ -296,6 +320,8 @@ export function ProfDSettings({ variant }: { variant?: DeskVariant } = {}) {
             ))}
           </div>
         </div>
+
+        <H2HSection />
 
         <div className="p2-cols">
           <Group cap="Мой спорт" rows={MINE} />
@@ -319,11 +345,18 @@ export function ProfDPhone() {
             начинается портретом. */}
         <Chrome bare>
           <div className="mb-body m5-body">
+            {/* Шестерёнки на телефоне нет: настройки открываются модальным
+                окном только на десктопе, а на телефоне для них есть пункты
+                списка ниже. */}
+            <div className="p2-band" />
+
             <div className="p2-who">
-              <button type="button" className="edit" data-to="Э14.9">
-                <Pencil size={14} />
-              </button>
-              <img className="ava" src={ME} alt="" />
+              <span className="ava-w">
+                <img className="ava" src={ME} alt="" />
+                <button type="button" className="ava-edit" aria-label="Изменить фото">
+                  <Pencil size={12} />
+                </button>
+              </span>
               <h1 className="o14-disp">Ким Георгий</h1>
               <div className="sub">мастер спорта · Астана · клуб СКА</div>
               <div className="chips">
