@@ -21,10 +21,15 @@ export type PlayerState = {
   card: Card;
 };
 
+/** Разряд встречи. Им переключают верхний таббар пульта, и он же решает,
+ *  что показывать в эфире: вторую фамилию (пара) или счёт команд (командная). */
+export type MatchMode = 'single' | 'doubles' | 'team';
+
 export type TeamState = {
-  enabled: boolean; // нижняя строка «KAZ 1-2 JPN» (командные матчи)
-  left: number;
+  left: number; // общий счёт встречи, партии тут ни при чём
   right: number;
+  left_name: string; // «SPAIN», «Алматы»; пусто — берём код страны
+  right_name: string;
 };
 
 export type StatusLang = 'ru' | 'en';
@@ -33,6 +38,7 @@ export type ScoreboardState = {
   key: string; // какая доска: столов в турнире может быть несколько
   title: string; // человеческое название доски, например «Стол 3»
   rev: number; // версия; растёт на каждое изменение, по ней клиент отбрасывает устаревшее
+  mode: MatchMode; // одиночный | парный | командный
   match_label: string; // 'MT' — тип матча
   round_label: string; // 'R 16' — круг
   best_of: number; // до скольких партий играют (5 или 7)
@@ -56,6 +62,7 @@ export const DEFAULT_STATE: ScoreboardState = {
   key: 'main',
   title: '',
   rev: 0,
+  mode: 'single',
   match_label: 'MT',
   round_label: 'R 16',
   best_of: 5,
@@ -65,7 +72,7 @@ export const DEFAULT_STATE: ScoreboardState = {
   first_server: '',
   left: { name: '', name2: '', country: '', games: 0, points: 0, timeout: false, card: '' },
   right: { name: '', name2: '', country: '', games: 0, points: 0, timeout: false, card: '' },
-  team: { enabled: false, left: 0, right: 0 },
+  team: { left: 0, right: 0, left_name: '', right_name: '' },
 };
 
 // ── статус партии ────────────────────────────────────────────────────────
@@ -124,9 +131,22 @@ export function isMatchOver(s: ScoreboardState): boolean {
 // В паре подающих четверо и они идут по кругу: подающий → принимающий →
 // партнёр подающего → партнёр принимающего. Порядок тот же, просто цикл длиннее.
 
-/** Парный разряд определяется тем, что заполнено второе имя. */
+/** Парный разряд: его выбирают таббаром, а не угадывают по заполненным полям. */
 export function isDoubles(s: ScoreboardState): boolean {
-  return Boolean(s.left.name2.trim() || s.right.name2.trim());
+  return s.mode === 'doubles';
+}
+
+/** Командная встреча: сверху плашки идёт общий счёт команд. */
+export function isTeamMatch(s: ScoreboardState): boolean {
+  return s.mode === 'team';
+}
+
+/** Подпись команды в эфире: «SPAIN (ESP)», а если названия нет — просто «ESP». */
+export function teamLabel(s: ScoreboardState, side: SideKey): string {
+  const name = s.team[`${side}_name`].trim();
+  const country = s[side].country.trim();
+  if (name && country) return `${name} (${country})`;
+  return name || country;
 }
 
 /** Круг подающих: двое в одиночке, четверо в паре. */
@@ -173,6 +193,7 @@ const SWAPPED_SLOT: Record<Exclude<ServerSlot, ''>, ServerSlot> = {
 
 // ── действия пульта ──────────────────────────────────────────────────────
 export type ScoreboardPatch = {
+  mode?: MatchMode;
   match_label?: string;
   round_label?: string;
   best_of?: number;
@@ -244,7 +265,12 @@ export function reduce(s: ScoreboardState, a: ScoreboardAction): ScoreboardState
         left: s.right,
         right: s.left,
         first_server: s.first_server ? SWAPPED_SLOT[s.first_server] : '',
-        team: { ...s.team, left: s.team.right, right: s.team.left },
+        team: {
+          left: s.team.right,
+          right: s.team.left,
+          left_name: s.team.right_name,
+          right_name: s.team.left_name,
+        },
       };
     case 'serve':
       return withServer(s, a.slot);
@@ -264,11 +290,13 @@ export function reduce(s: ScoreboardState, a: ScoreboardAction): ScoreboardState
 }
 
 const NAME_MAX = 40;
+const TEAM_NAME_MAX = 24;
 const text = (v: unknown, max: number) => (typeof v === 'string' ? v.slice(0, max) : undefined);
 
 function applyPatch(s: ScoreboardState, p: ScoreboardPatch): ScoreboardState {
   const next: ScoreboardState = { ...s, left: { ...s.left }, right: { ...s.right }, team: { ...s.team } };
 
+  if (p.mode === 'single' || p.mode === 'doubles' || p.mode === 'team') next.mode = p.mode;
   const match_label = text(p.match_label, 12);
   if (match_label !== undefined) next.match_label = match_label;
   const round_label = text(p.round_label, 16);
@@ -294,9 +322,12 @@ function applyPatch(s: ScoreboardState, p: ScoreboardPatch): ScoreboardState {
   }
 
   if (p.team) {
-    if (typeof p.team.enabled === 'boolean') next.team.enabled = p.team.enabled;
     if (typeof p.team.left === 'number') next.team.left = clamp(p.team.left, MAX_GAMES);
     if (typeof p.team.right === 'number') next.team.right = clamp(p.team.right, MAX_GAMES);
+    const left_name = text(p.team.left_name, TEAM_NAME_MAX);
+    if (left_name !== undefined) next.team.left_name = left_name;
+    const right_name = text(p.team.right_name, TEAM_NAME_MAX);
+    if (right_name !== undefined) next.team.right_name = right_name;
   }
 
   return next;

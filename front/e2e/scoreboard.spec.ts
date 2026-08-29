@@ -13,6 +13,7 @@ const SHOTS = 'test-results/scoreboard';
 const BOARD_URL = '/api/scoreboard/main/';
 
 const CLEAN_BOARD = {
+  mode: 'single',
   match_label: 'MT',
   round_label: 'R 16',
   best_of: 5,
@@ -22,7 +23,7 @@ const CLEAN_BOARD = {
   first_server: '',
   left: { name: '', name2: '', country: '', games: 0, points: 0, timeout: false, card: '' },
   right: { name: '', name2: '', country: '', games: 0, points: 0, timeout: false, card: '' },
-  team: { enabled: false, left: 0, right: 0 },
+  team: { left: 0, right: 0, left_name: '', right_name: '' },
 };
 
 /** Запись требует ту версию, от которой отталкиваемся, — как и в пульте. */
@@ -124,20 +125,57 @@ test.describe('Табло трансляции /scoreboard', () => {
     await expect(second.getByTestId('points-left')).toHaveText('1');
   });
 
-  test('командный матч добавляет нижнюю строку', async ({ page, request }) => {
-    // Командная строка и коды стран задаются через API: на пульте их не правят.
+  test('командная встреча: счёт команд сверху плашки', async ({ page, request }) => {
+    // Коды стран задаются через API, названия команд — на пульте: их набирают
+    // так же часто, как фамилии.
     await writeBoard(request, {
-      team: { enabled: true, left: 0, right: 0 },
       left: { ...CLEAN_BOARD.left, country: 'KAZ' },
       right: { ...CLEAN_BOARD.right, country: 'JPN' },
     });
 
     const overlay = await openBoth(page);
+    await expect(overlay.getByTestId('team-score')).toHaveCount(0); // одиночный — строки нет
+
+    await page.getByRole('tab', { name: 'Командный' }).click();
+    await expect(overlay.getByTestId('team-score')).toBeVisible();
+
+    await page.getByLabel('Команда — Слева').fill('КАЗАХСТАН');
     await page.getByRole('button', { name: 'Командный счёт плюс — Слева' }).click();
     await page.getByRole('button', { name: 'Командный счёт плюс — Справа' }).click();
     await page.getByRole('button', { name: 'Командный счёт плюс — Справа' }).click();
 
-    await expect(overlay.getByTestId('team-score')).toHaveText('KAZ 1-2 JPN');
+    await expect(overlay.getByTestId('team-left')).toHaveText('1');
+    await expect(overlay.getByTestId('team-right')).toHaveText('2');
+    await expect(overlay.getByText('КАЗАХСТАН (KAZ)')).toBeVisible();
+    await expect(overlay.getByText('JPN', { exact: true })).toBeVisible(); // названия нет — код страны
+  });
+
+  test('таббар переключает разряд и меняет пульт с эфиром', async ({ page }) => {
+    const overlay = await openBoth(page);
+
+    // Одиночный: ни второго игрока, ни команд.
+    await expect(page.getByLabel('Второй игрок — Слева')).toHaveCount(0);
+    await expect(page.getByLabel('Команда — Слева')).toHaveCount(0);
+
+    await page.getByRole('tab', { name: 'Парный' }).click();
+    await expect(page.getByLabel('Второй игрок — Слева')).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Подача второго — Слева' })).toBeVisible();
+    await expect(overlay.getByTestId('team-score')).toHaveCount(0);
+
+    await page.getByRole('tab', { name: 'Командный' }).click();
+    await expect(page.getByLabel('Второй игрок — Слева')).toHaveCount(0);
+    await expect(page.getByLabel('Команда — Слева')).toBeVisible();
+    await expect(overlay.getByTestId('team-score')).toBeVisible();
+
+    await page.getByRole('tab', { name: 'Одиночный' }).click();
+    await expect(overlay.getByTestId('team-score')).toHaveCount(0);
+    // Выбранный разряд виден и после перезагрузки пульта: он в состоянии доски.
+    await page.getByRole('tab', { name: 'Командный' }).click();
+    await page.reload();
+    await expect(page.getByRole('tab', { name: 'Командный' })).toHaveAttribute(
+      'aria-selected',
+      'true',
+    );
   });
 
   test('два стола ведутся независимо', async ({ page, request }) => {
@@ -178,8 +216,9 @@ test.describe('Табло трансляции /scoreboard', () => {
   test('пара: вторая фамилия в эфире и своя подача', async ({ page }) => {
     const overlay = await openBoth(page);
 
+    // Парный разряд выбирают таббаром — тогда и появляется второе имя.
+    await page.getByRole('tab', { name: 'Парный' }).click();
     await page.getByLabel('Имя — Слева').fill('ГЕРАСИМЕНКО');
-    // Заполненное второе имя и делает разряд парным — переключателя нет.
     await page.getByLabel('Второй игрок — Слева').fill('КОЛОДЯЖНЫЙ');
     await expect(overlay.getByText('КОЛОДЯЖНЫЙ')).toBeVisible();
 
@@ -213,10 +252,11 @@ test.describe('Табло трансляции /scoreboard', () => {
 
   for (const tablet of TABLETS) {
     test(`пульт умещается в экран планшета: ${tablet.name}`, async ({ page, request }) => {
-      // Худший случай по высоте: парный разряд (второе имя и четвёртый
-      // переключатель) плюс командный матч (третий счётчик у каждой стороны).
+      // Худший случай по высоте — командная встреча: к таббару добавляются
+      // название команды и третий счётчик у каждой стороны.
       await writeBoard(request, {
-        team: { enabled: true, left: 0, right: 0 },
+        mode: 'team',
+        team: { left: 0, right: 0, left_name: 'КАЗАХСТАН', right_name: 'ЯПОНИЯ' },
         left: { ...CLEAN_BOARD.left, name: 'ИГРОК', name2: 'ПАРТНЁР' },
         right: { ...CLEAN_BOARD.right, name: 'ИГРОК', name2: 'ПАРТНЁР' },
       });
@@ -241,12 +281,12 @@ test.describe('Табло трансляции /scoreboard', () => {
         'Очко плюс — Справа',
         'Партия плюс — Слева',
         'Командный счёт плюс — Справа',
-        'Подача второго — Слева',
         'Карточка — Справа',
         'Завершить партию',
       ]) {
         await expect(page.getByRole('button', { name })).toBeInViewport();
       }
+      await expect(page.getByRole('tab', { name: 'Командный' })).toBeInViewport();
       await expect(page.getByTestId('board')).toBeInViewport(); // предпросмотр тоже
 
       // Прокрутки нет из-за overflow: hidden, поэтому лишнее не вылезает, а
@@ -262,6 +302,16 @@ test.describe('Табло трансляции /scoreboard', () => {
       expect(box?.height ?? 0).toBeGreaterThanOrEqual(44);
 
       await page.screenshot({ path: `${SHOTS}/control-${tablet.width}x${tablet.height}.png` });
+
+      // Второй худший случай — парный разряд: второе имя и четвёртый
+      // переключатель вместо командной строки.
+      await page.getByRole('tab', { name: 'Парный' }).click();
+      await expect(page.getByRole('button', { name: 'Подача второго — Слева' })).toBeInViewport();
+      await expect(page.getByRole('button', { name: 'Скрыть плашку' })).toBeInViewport({ ratio: 1 });
+      const pairOverflow = await page.evaluate(
+        () => document.documentElement.scrollHeight - document.documentElement.clientHeight,
+      );
+      expect(pairOverflow).toBeLessThanOrEqual(0);
     });
   }
 
@@ -341,7 +391,8 @@ test.describe('Табло трансляции /scoreboard', () => {
     // Собираем ровно ту картинку, что на референсе. Подписи матча и командная
     // строка задаются через API — на пульте их больше нет.
     await writeBoard(request, {
-      team: { enabled: true, left: 1, right: 2 },
+      mode: 'team',
+      team: { left: 1, right: 2, left_name: 'KAZAKHSTAN', right_name: 'JAPAN' },
       left: { ...CLEAN_BOARD.left, name: 'KIRILL GERASSIMENKO', country: 'KAZ' },
       right: { ...CLEAN_BOARD.right, name: 'TOMOKAZU HARIMOTO', country: 'JPN' },
     });
@@ -362,9 +413,10 @@ test.describe('Табло трансляции /scoreboard', () => {
     await expect(overlay.getByTestId('card-right')).toHaveAttribute('data-card', 'yellow');
 
     // Размер плашки = размер источника «Браузер» в OBS (BOARD_SIZE в виджете).
+    // Командная встреча — самая высокая: со строкой счёта команд сверху.
     const box = await overlay.getByTestId('board').boundingBox();
     expect(box?.width).toBe(860);
-    expect(box?.height).toBeLessThanOrEqual(160);
+    expect(box?.height).toBeLessThanOrEqual(170);
 
     // Эфир снимаем на синем фоне сцены — как это увидит зритель в OBS.
     await overlay.addStyleTag({

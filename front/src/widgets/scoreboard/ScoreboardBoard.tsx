@@ -5,7 +5,9 @@
 import {
   currentServer,
   isDoubles,
+  isTeamMatch,
   statusText,
+  teamLabel,
   type PlayerState,
   type ScoreboardState,
   type ServerSlot,
@@ -15,11 +17,11 @@ import {
 import styles from './ScoreboardBoard.module.css';
 
 /** Размер плашки = размер источника «Браузер» в OBS.
- *  Высота — с нижней строкой командного счёта; без неё плашка ниже,
- *  лишнее место в источнике остаётся прозрачным и в кадре не видно.
- *  В парном разряде вторая фамилия помещается в ту же высоту, поэтому
+ *  Высота — с верхней строкой счёта команд; в одиночном и парном разряде
+ *  плашка ниже, лишнее место в источнике остаётся прозрачным и в кадре не
+ *  видно. В парном разряде вторая фамилия помещается в ту же высоту, поэтому
  *  источник в OBS перенастраивать не нужно. */
-export const BOARD_SIZE = { width: 860, height: 160 } as const;
+export const BOARD_SIZE = { width: 860, height: 170 } as const;
 
 /** Строка имени: слева место под указатель подачи, чтобы фамилии не съезжали. */
 function NameLine({ name, serving, slot }: { name: string; serving: boolean; slot: string }) {
@@ -84,6 +86,24 @@ function Row({
   );
 }
 
+/** Счёт командной встречи — над игроками: он про всю встречу, а не про этот
+ *  стол, и зритель читает его первым (образец федерации, 29.08.2026). */
+function TeamStrip({ state }: { state: ScoreboardState }) {
+  return (
+    <div className={styles.teams} data-testid="team-score">
+      <span className={styles.teamName}>{teamLabel(state, 'left')}</span>
+      <span className={styles.teamScore}>
+        <span data-testid="team-left">{state.team.left}</span>
+        <span className={styles.teamColon}>:</span>
+        <span data-testid="team-right">{state.team.right}</span>
+      </span>
+      <span className={styles.teamName} data-side="right">
+        {teamLabel(state, 'right')}
+      </span>
+    </div>
+  );
+}
+
 export function ScoreboardBoard({ state }: { state: ScoreboardState }) {
   const status = statusText(state);
   const server = currentServer(state);
@@ -102,16 +122,12 @@ export function ScoreboardBoard({ state }: { state: ScoreboardState }) {
           ) : null}
         </div>
 
+        {isTeamMatch(state) ? <TeamStrip state={state} /> : null}
+
         <div className={styles.rows}>
           <Row player={state.left} side="left" server={server} doubles={doubles} />
           <Row player={state.right} side="right" server={server} doubles={doubles} />
         </div>
-
-        {state.team.enabled ? (
-          <div className={styles.footer} data-testid="team-score">
-            {state.left.country} {state.team.left}-{state.team.right} {state.right.country}
-          </div>
-        ) : null}
       </div>
     </div>
   );

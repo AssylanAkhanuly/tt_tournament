@@ -1,11 +1,18 @@
 from rest_framework import serializers
 
-from .models import CARD_CHOICES, MAX_GAMES, MAX_POINTS, SERVER_CHOICES, Scoreboard
+from .models import (
+    CARD_CHOICES,
+    MAX_GAMES,
+    MAX_POINTS,
+    MODE_CHOICES,
+    SERVER_CHOICES,
+    Scoreboard,
+)
 
 
 class PlayerSerializer(serializers.Serializer):
     name = serializers.CharField(max_length=40, allow_blank=True)
-    # Заполненное второе имя и означает парный разряд.
+    # Второй игрок стороны; в эфир идёт, когда разряд парный.
     name2 = serializers.CharField(max_length=40, allow_blank=True)
     country = serializers.CharField(max_length=3, allow_blank=True)
     games = serializers.IntegerField(min_value=0, max_value=MAX_GAMES)
@@ -15,9 +22,12 @@ class PlayerSerializer(serializers.Serializer):
 
 
 class TeamSerializer(serializers.Serializer):
-    enabled = serializers.BooleanField()
+    """Счёт командной встречи и названия команд. Показывается при mode=team."""
+
     left = serializers.IntegerField(min_value=0, max_value=MAX_GAMES)
     right = serializers.IntegerField(min_value=0, max_value=MAX_GAMES)
+    left_name = serializers.CharField(max_length=24, allow_blank=True)
+    right_name = serializers.CharField(max_length=24, allow_blank=True)
 
 
 class ScoreboardSerializer(serializers.Serializer):
@@ -28,6 +38,9 @@ class ScoreboardSerializer(serializers.Serializer):
     key = serializers.SlugField(read_only=True)
     title = serializers.CharField(read_only=True)
     rev = serializers.IntegerField(read_only=True)
+
+    # Разряд встречи: одиночный | парный | командный.
+    mode = serializers.ChoiceField(choices=[value for value, _ in MODE_CHOICES])
 
     # Кто подавал первым в партии; текущий подающий выводится по счёту.
     first_server = serializers.ChoiceField(choices=[value for value, _ in SERVER_CHOICES])
@@ -48,6 +61,7 @@ class ScoreboardSerializer(serializers.Serializer):
             "key": board.key,
             "title": board.title,
             "rev": board.rev,
+            "mode": board.mode,
             "first_server": board.first_server,
             "match_label": board.match_label,
             "round_label": board.round_label,
@@ -74,13 +88,15 @@ class ScoreboardSerializer(serializers.Serializer):
                 "card": board.right_card,
             },
             "team": {
-                "enabled": board.team_enabled,
                 "left": board.team_left,
                 "right": board.team_right,
+                "left_name": board.team_left_name,
+                "right_name": board.team_right_name,
             },
         }
 
     def update(self, board, validated):
+        board.mode = validated["mode"]
         board.match_label = validated["match_label"]
         board.round_label = validated["round_label"]
         board.best_of = validated["best_of"]
@@ -99,9 +115,10 @@ class ScoreboardSerializer(serializers.Serializer):
             setattr(board, side + "_games", player["games"])
             setattr(board, side + "_points", player["points"])
 
-        board.team_enabled = validated["team"]["enabled"]
         board.team_left = validated["team"]["left"]
         board.team_right = validated["team"]["right"]
+        board.team_left_name = validated["team"]["left_name"]
+        board.team_right_name = validated["team"]["right_name"]
 
         board.rev += 1
         board.save()

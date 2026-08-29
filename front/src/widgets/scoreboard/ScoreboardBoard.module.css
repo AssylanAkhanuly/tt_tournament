@@ -181,11 +181,42 @@
   background: var(--sb-points);
 }
 
-/* ── нижняя полоса: счёт командного матча ── */
-.footer {
-  min-height: calc(24 * var(--sb-unit));
-  padding: calc(4 * var(--sb-unit)) calc(10 * var(--sb-unit));
-  font-size: calc(16 * var(--sb-unit));
-  letter-spacing: 0.06em;
+/* ── верхняя полоса: счёт командной встречи ──
+   Стоит над игроками: счёт встречи важнее счёта отдельного стола и читается
+   первым (образец федерации «SPAIN (ESP) 3 : 2 GERMANY»). Названия по краям
+   тянутся, счёт держится в середине и не гуляет от длины названий. */
+.teams {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  gap: calc(12 * var(--sb-unit));
+  align-items: center;
+  height: calc(34 * var(--sb-unit));
+  padding: 0 calc(14 * var(--sb-unit));
+  background: var(--sb-navy);
+}
+
+.teamName {
+  overflow: hidden;
+  font-size: calc(21 * var(--sb-unit));
+  letter-spacing: 0.04em;
+  text-overflow: ellipsis;
   text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.teamName[data-side='right'] {
+  text-align: right;
+}
+
+.teamScore {
+  display: flex;
+  gap: calc(8 * var(--sb-unit));
+  align-items: center;
+  justify-content: center;
+  font-size: calc(26 * var(--sb-unit));
+  font-variant-numeric: tabular-nums;
+}
+
+.teamColon {
+  color: var(--sb-ink-dim);
 }

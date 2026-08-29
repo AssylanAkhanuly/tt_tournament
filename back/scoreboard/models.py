@@ -9,6 +9,17 @@ CARD_YELLOW = "yellow"
 CARD_RED = "red"
 CARD_CHOICES = [(CARD_NONE, "Нет"), (CARD_YELLOW, "Жёлтая"), (CARD_RED, "Красная")]
 
+# Разряд встречи. Его выбирают таббаром на пульте, и от него зависит, что видно
+# в эфире: вторая фамилия стороны (пара) или счёт команд сверху (командная).
+MODE_SINGLE = "single"
+MODE_DOUBLES = "doubles"
+MODE_TEAM = "team"
+MODE_CHOICES = [
+    (MODE_SINGLE, "Одиночный"),
+    (MODE_DOUBLES, "Парный"),
+    (MODE_TEAM, "Командный"),
+]
+
 # Кто подавал первым в текущей партии. Текущий подающий из этого выводится по
 # счёту, поэтому оператору не нужно щёлкать подачу каждые два очка.
 SERVER_CHOICES = [
@@ -34,6 +45,10 @@ class Scoreboard(models.Model):
     pulled from the draw instead of typed by hand; both stay optional, because a
     board is also used for friendlies that live in no tournament.
 
+    `mode` is the discipline of the match — single, doubles or a team tie. It is
+    what the panel's top tab bar sets, and it decides what goes on air: the
+    side's second name in doubles, the teams' overall score on top in a team tie.
+
     `rev` grows on every write. A panel sends back the rev it started from, so a
     second panel that wrote in between is answered with 409 instead of being
     silently overwritten."""
@@ -55,6 +70,8 @@ class Scoreboard(models.Model):
 
     rev = models.PositiveIntegerField(default=0)
 
+    mode = models.CharField(max_length=8, choices=MODE_CHOICES, default=MODE_SINGLE)
+
     first_server = models.CharField(
         max_length=6, choices=SERVER_CHOICES, blank=True, default=""
     )
@@ -73,8 +90,7 @@ class Scoreboard(models.Model):
     visible = models.BooleanField(default=True)
 
     left_name = models.CharField(max_length=40, blank=True, default="")
-    # Второе имя = парный разряд. Отдельного переключателя нет: пара
-    # определяется тем, что имя заполнено.
+    # Второй игрок стороны; показывается, когда разряд парный (`mode`).
     left_name2 = models.CharField(max_length=40, blank=True, default="")
     left_country = models.CharField(max_length=3, blank=True, default="")
     left_games = models.PositiveSmallIntegerField(
@@ -87,8 +103,7 @@ class Scoreboard(models.Model):
     left_card = models.CharField(max_length=6, choices=CARD_CHOICES, blank=True, default=CARD_NONE)
 
     right_name = models.CharField(max_length=40, blank=True, default="")
-    # Второе имя = парный разряд. Отдельного переключателя нет: пара
-    # определяется тем, что имя заполнено.
+    # Второй игрок стороны; показывается, когда разряд парный (`mode`).
     right_name2 = models.CharField(max_length=40, blank=True, default="")
     right_country = models.CharField(max_length=3, blank=True, default="")
     right_games = models.PositiveSmallIntegerField(
@@ -100,7 +115,10 @@ class Scoreboard(models.Model):
     right_timeout = models.BooleanField(default=False)  # тайм-аут взят
     right_card = models.CharField(max_length=6, choices=CARD_CHOICES, blank=True, default=CARD_NONE)
 
-    team_enabled = models.BooleanField(default=False)
+    # Счёт всей командной встречи — верхняя строка плашки в режиме `team`.
+    # Названия команд: пусто — в эфире остаётся код страны стороны.
+    team_left_name = models.CharField(max_length=24, blank=True, default="")
+    team_right_name = models.CharField(max_length=24, blank=True, default="")
     team_left = models.PositiveSmallIntegerField(
         default=0, validators=[MaxValueValidator(MAX_GAMES)]
     )

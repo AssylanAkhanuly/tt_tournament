@@ -5,15 +5,18 @@
 // состояние, плашка в OBS слушает поток изменений. Локально действие
 // применяется сразу, поэтому кнопки не «залипают» на время запроса.
 //
-// На экране только то, чем ведут счёт: предпросмотр эфира, две стороны и
-// действия над партией. Параметры матча (тип, круг, до скольких партий,
-// командная строка) живут в состоянии доски и правятся через API.
+// На экране только то, чем ведут счёт: разряд встречи, предпросмотр эфира, две
+// стороны и действия над партией. Остальные параметры матча (тип, круг, до
+// скольких партий, коды стран) живут в состоянии доски и правятся через API.
 
 import { useEffect } from 'react';
 
 import {
   currentServer,
+  isDoubles,
   isGameOver,
+  isTeamMatch,
+  type MatchMode,
   type ScoreboardState,
   type SideKey,
 } from '@/entities/scoreboard/model';
@@ -21,6 +24,14 @@ import { useScoreboardControl } from '@/features/scoreboard-live/useScoreboardCh
 import { ScoreboardBoard } from '@/widgets/scoreboard/ScoreboardBoard';
 
 import styles from './ScoreboardControlView.module.css';
+
+// Разряд встречи выбирают таббаром сверху: он решает, что спрашивать у
+// оператора (второго игрока пары, названия команд) и что показывать в эфире.
+const MODES: { value: MatchMode; label: string }[] = [
+  { value: 'single', label: 'Одиночный' },
+  { value: 'doubles', label: 'Парный' },
+  { value: 'team', label: 'Командный' },
+];
 
 export function ScoreboardControlView({ initial }: { initial: ScoreboardState }) {
   const { state, send } = useScoreboardControl(initial);
@@ -67,10 +78,11 @@ export function ScoreboardControlView({ initial }: { initial: ScoreboardState })
   // в aria-label: иначе две одинаковые пары кнопок неразличимы для читалки
   // экрана и для тестов.
   const server = currentServer(state);
+  const doubles = isDoubles(state);
+  const team = isTeamMatch(state);
 
   const sideBlock = (side: SideKey, title: string) => {
     const player = state[side];
-    const doubles = Boolean(player.name2.trim() || state[side === 'left' ? 'right' : 'left'].name2.trim());
 
     return (
       <section className={styles.side} key={side} aria-label={title}>
@@ -86,19 +98,35 @@ export function ScoreboardControlView({ initial }: { initial: ScoreboardState })
           />
         </label>
 
-        {/* Заполненное второе имя и делает разряд парным — отдельного
-            переключателя нет. */}
-        <label className={styles.field}>
-          <span className={styles.label}>Второй игрок (пары)</span>
-          <input
-            className={styles.input}
-            value={player.name2}
-            aria-label={`Второй игрок — ${title}`}
-            onChange={(event) =>
-              send({ type: 'patch', patch: { [side]: { name2: event.target.value } } })
-            }
-          />
-        </label>
+        {/* Второе имя спрашиваем только там, где оно бывает: в паре. */}
+        {doubles ? (
+          <label className={styles.field}>
+            <span className={styles.label}>Второй игрок (пары)</span>
+            <input
+              className={styles.input}
+              value={player.name2}
+              aria-label={`Второй игрок — ${title}`}
+              onChange={(event) =>
+                send({ type: 'patch', patch: { [side]: { name2: event.target.value } } })
+              }
+            />
+          </label>
+        ) : null}
+
+        {/* Название команды — оно же подпись в верхней строке эфира. */}
+        {team ? (
+          <label className={styles.field}>
+            <span className={styles.label}>Команда</span>
+            <input
+              className={styles.input}
+              value={state.team[`${side}_name`]}
+              aria-label={`Команда — ${title}`}
+              onChange={(event) =>
+                send({ type: 'patch', patch: { team: { [`${side}_name`]: event.target.value } } })
+              }
+            />
+          </label>
+        ) : null}
 
         <div className={styles.toggles}>
           <button
@@ -195,9 +223,9 @@ export function ScoreboardControlView({ initial }: { initial: ScoreboardState })
             </div>
           </div>
 
-          {state.team.enabled ? (
+          {team ? (
             <div className={styles.counter}>
-              <span className={styles.label}>Команда</span>
+              <span className={styles.label}>Счёт встречи</span>
               <div className={styles.stepper}>
                 <button
                   type="button"
@@ -226,6 +254,22 @@ export function ScoreboardControlView({ initial }: { initial: ScoreboardState })
 
   return (
     <main className={styles.page}>
+      <div className={styles.tabs} role="tablist" aria-label="Разряд встречи">
+        {MODES.map((item) => (
+          <button
+            key={item.value}
+            type="button"
+            role="tab"
+            className={styles.tab}
+            aria-selected={state.mode === item.value}
+            data-on={state.mode === item.value || undefined}
+            onClick={() => send({ type: 'patch', patch: { mode: item.value } })}
+          >
+            {item.label}
+          </button>
+        ))}
+      </div>
+
       <section className={styles.previewWrap} aria-label="Предпросмотр плашки">
         <div className={styles.preview}>
           <ScoreboardBoard state={state} />

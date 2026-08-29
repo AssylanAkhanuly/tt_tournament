@@ -9,10 +9,12 @@ import {
   DEFAULT_STATE,
   isDoubles,
   isGameOver,
+  isTeamMatch,
   isMatchOver,
   gamesToWin,
   reduce,
   statusText,
+  teamLabel,
   type ScoreboardState,
 } from './model';
 
@@ -59,12 +61,18 @@ describe('очки и партии', () => {
   });
 
   it('смена сторон меняет игроков и командный счёт местами', () => {
-    const before = state({ team: { enabled: true, left: 1, right: 2 } });
+    const before = state({
+      mode: 'team',
+      team: { left: 1, right: 2, left_name: 'ИСПАНИЯ', right_name: 'ГЕРМАНИЯ' },
+    });
     const after = reduce(before, { type: 'swap' });
     expect(after.left.name).toBe(before.right.name);
     expect(after.right.name).toBe(before.left.name);
     expect(after.team.left).toBe(2);
     expect(after.team.right).toBe(1);
+    // Название команды едет вместе со счётом, иначе стороны перепутаются.
+    expect(after.team.left_name).toBe('ГЕРМАНИЯ');
+    expect(after.team.right_name).toBe('ИСПАНИЯ');
   });
 
   it('новый матч обнуляет счёт, но оставляет имена', () => {
@@ -163,7 +171,8 @@ describe('подача', () => {
       right: { ...DEFAULT_STATE.right, ...patch.right, points: b },
     });
 
-  const pair = (patch: Partial<ScoreboardState> = {}) => ({
+  const pair = (patch: Partial<ScoreboardState> = {}): Partial<ScoreboardState> => ({
+    mode: 'doubles',
     left: { ...DEFAULT_STATE.left, name: 'A', name2: 'A2', ...patch.left },
     right: { ...DEFAULT_STATE.right, name: 'B', name2: 'B2', ...patch.right },
   });
@@ -198,8 +207,10 @@ describe('подача', () => {
     expect(s(8, 0)).toBe('left1'); // круг замкнулся
   });
 
-  it('пара определяется вторым именем, а не переключателем', () => {
+  it('разряд задаёт таббар, а не заполненные поля', () => {
     expect(isDoubles(state())).toBe(false);
+    // Второе имя само по себе разряд не меняет: оно осталось от прошлой встречи.
+    expect(isDoubles(state({ left: { ...DEFAULT_STATE.left, name2: 'A2' } }))).toBe(false);
     expect(isDoubles(state(pair()))).toBe(true);
   });
 
@@ -254,5 +265,44 @@ describe('карточки и тайм-аут', () => {
     expect(after.first_server).toBe('');
     expect(after.left.card).toBe('');
     expect(after.left.timeout).toBe(false);
+  });
+});
+
+describe('разряд встречи', () => {
+  it('таббар переключает разряд', () => {
+    const after = reduce(state(), { type: 'patch', patch: { mode: 'team' } });
+    expect(after.mode).toBe('team');
+    expect(isTeamMatch(after)).toBe(true);
+    expect(isDoubles(after)).toBe(false);
+  });
+
+  it('чужой разряд не проходит', () => {
+    const before = state({ mode: 'doubles' });
+    // @ts-expect-error — на вход приходит и то, чего в типе нет (чужой пульт, старый клиент)
+    const after = reduce(before, { type: 'patch', patch: { mode: 'mixed' } });
+    expect(after.mode).toBe('doubles');
+  });
+
+  it('счёт команд ведётся отдельно от партий и не сбрасывается новым матчем', () => {
+    let s = state({ mode: 'team', left: { ...DEFAULT_STATE.left, games: 3 } });
+    s = reduce(s, { type: 'teamScore', side: 'left', delta: 1 });
+    expect(s.team.left).toBe(1);
+    // Встреча — это несколько матчей подряд: следующий начинается с 0:0, а
+    // общий счёт команд остаётся.
+    s = reduce(s, { type: 'resetMatch' });
+    expect(s.left.games).toBe(0);
+    expect(s.team.left).toBe(1);
+  });
+
+  it('подпись команды: название с кодом страны, иначе — что есть', () => {
+    const s = state({
+      mode: 'team',
+      team: { ...DEFAULT_STATE.team, left_name: 'SPAIN' },
+      left: { ...DEFAULT_STATE.left, country: 'ESP' },
+      right: { ...DEFAULT_STATE.right, country: 'GER' },
+    });
+    expect(teamLabel(s, 'left')).toBe('SPAIN (ESP)');
+    expect(teamLabel(s, 'right')).toBe('GER'); // названия нет — остаётся код страны
+    expect(teamLabel(state({ mode: 'team' }), 'left')).toBe('');
   });
 });

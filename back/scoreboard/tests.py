@@ -7,6 +7,7 @@ from .models import Scoreboard
 from .views import _stream
 
 CLEAN = {
+    "mode": "single",
     "match_label": "MT",
     "round_label": "R 16",
     "best_of": 5,
@@ -18,7 +19,7 @@ CLEAN = {
              "timeout": False, "card": ""},
     "right": {"name": "", "name2": "", "country": "", "games": 0, "points": 0,
               "timeout": False, "card": ""},
-    "team": {"enabled": False, "left": 0, "right": 0},
+    "team": {"left": 0, "right": 0, "left_name": "", "right_name": ""},
 }
 
 
@@ -36,6 +37,7 @@ class ScoreboardApiTests(TestCase):
         response = self.client.get("/api/scoreboard/main/")
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.data["rev"], 0)
+        self.assertEqual(response.data["mode"], "single")  # новая доска — одиночный разряд
         self.assertEqual(response.data["left"]["points"], 0)
         self.assertTrue(Scoreboard.objects.filter(key="main").exists())
 
@@ -174,10 +176,28 @@ class ScoreboardServeAndCardsTests(TestCase):
         self.assertTrue(response.data["left"]["timeout"])
         self.assertEqual(response.data["left"]["card"], "yellow")
 
-    def test_unknown_card_and_server_are_rejected(self):
+    def test_stores_mode_and_team_names(self):
+        """Командная встреча: разряд и названия команд для верхней строки плашки."""
+        response = self.client.put(
+            "/api/scoreboard/main/",
+            payload(
+                0,
+                mode="team",
+                team={"left": 3, "right": 2, "left_name": "SPAIN", "right_name": "GERMANY"},
+            ),
+            format="json",
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data["mode"], "team")
+        self.assertEqual(response.data["team"]["left"], 3)
+        self.assertEqual(response.data["team"]["left_name"], "SPAIN")
+        self.assertEqual(response.data["team"]["right_name"], "GERMANY")
+
+    def test_unknown_card_server_and_mode_are_rejected(self):
         for field, body in (
             ("card", payload(0, left=dict(CLEAN["left"], card="blue"))),
             ("first_server", payload(0, first_server="left3")),
+            ("mode", payload(0, mode="mixed")),
         ):
             response = self.client.put("/api/scoreboard/main/", body, format="json")
             self.assertEqual(response.status_code, 400, field)
