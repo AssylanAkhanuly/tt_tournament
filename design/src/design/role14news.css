@@ -47,27 +47,138 @@
   text-transform: uppercase;
 }
 
-/* ── Крупная карточка первого материала ─────────────────────────── */
-.nw-lead {
-  display: grid;
-  grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
-  overflow: hidden;
+
+/* ── Верх ленты: поиск и фото ───────────────────────────────────── */
+.nw-top { display: flex; align-items: center; gap: var(--s-3); margin-bottom: var(--s-4); }
+.nw-search {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+  padding: 12px 16px;
   border: 1px solid var(--d-line);
-  border-radius: var(--r-d-card);
+  border-radius: var(--r-round);
   background: var(--d-card);
-  cursor: pointer;
-  /* Высота задана явно: у ячейки сетки её нет, и `height: 100%` у картинки
-     откатывался к собственной пропорции — квадратный портрет растягивал
-     карточку на две трети экрана. */
-  height: 300px;
+  font-size: 13.5px;
+  color: var(--d-dim);
 }
-.nw-lead:hover { background: var(--d-card-2); }
-.nw-lead img { width: 100%; height: 100%; object-fit: cover; object-position: 50% 28%; }
-.nw-lead .tx { display: flex; flex-direction: column; gap: var(--s-3); padding: var(--s-5); }
-.nw-lead .nw-tag { align-self: flex-start; }
-.nw-lead h2 { margin: 0; font-size: 32px; line-height: 1.05; color: var(--d-ink); }
-.nw-lead p { margin: 0; font-size: 14px; line-height: 1.55; color: var(--d-muted); }
-.nw-lead .at { margin-top: auto; font-size: 12px; color: var(--d-dim); }
+.nw-top img { width: 40px; height: 40px; border-radius: var(--r-round); object-fit: cover; flex: none; }
+
+/* ── Фильтры: чипы тем и круглые обложки турниров ───────────────── */
+.nw-chips { display: flex; gap: var(--s-2); overflow-x: auto; scrollbar-width: none; padding-bottom: 2px; }
+.nw-chips::-webkit-scrollbar { display: none; }
+.nw-chip {
+  flex: none;
+  padding: 9px 17px;
+  border: 1px solid var(--d-line);
+  border-radius: var(--r-round);
+  background: var(--d-card);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--d-muted);
+  cursor: pointer;
+}
+.nw-chip:hover { color: var(--d-ink); }
+.nw-chip.on { background: var(--d-accent); border-color: var(--d-accent); color: var(--d-on-accent); }
+
+.nw-tours {
+  display: flex;
+  gap: var(--s-4);
+  margin: var(--s-4) 0 var(--s-5);
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.nw-tours::-webkit-scrollbar { display: none; }
+.nw-tour {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  flex: none;
+  width: 78px;
+  border: 0;
+  background: none;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+/* Кольцо вокруг обложки — приём референса (там оно у эмблем лиг). */
+.nw-tour .ring {
+  display: inline-flex;
+  padding: 3px;
+  border: 2px solid var(--d-accent);
+  border-radius: var(--r-round);
+}
+.nw-tour img { width: 54px; height: 54px; border-radius: var(--r-round); object-fit: cover; }
+.nw-tour .nm { font-size: 11px; line-height: 1.2; text-align: center; color: var(--d-muted); }
+
+/* ── Идущий матч: «Live» референса ──────────────────────────────── */
+.nw-live {
+  padding: var(--s-4) var(--s-5);
+  border-radius: var(--r-d-card);
+  background: linear-gradient(120deg, var(--d-accent), color-mix(in srgb, var(--d-accent) 72%, var(--c-accent-2)));
+  /* Подпись на акценте — парный токен `--c-accent-ink`, а не «белый»: темы
+     считают его как более контрастный из двух, и на светлой он тёмный. Это
+     решение аудита контраста (flows/14-sportsmen.md), а не случайность. */
+  color: var(--d-on-accent);
+  cursor: pointer;
+}
+.nw-live .cap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--d-on-accent) 78%, transparent);
+}
+.nw-live .cap b { font-weight: 700; letter-spacing: 0; text-transform: none; font-size: 12.5px; }
+.nw-live .cap .wk { margin-left: auto; letter-spacing: 0; text-transform: none; font-size: 12px; }
+/* Точка «идёт» — круглое по сути. */
+.nw-live .dot {
+  width: 7px;
+  height: 7px;
+  border-radius: var(--r-round);
+  background: var(--d-on-accent);
+}
+.nw-live .mid {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: var(--s-3);
+  margin-top: var(--s-4);
+}
+.nw-live .side { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+.nw-live .side img {
+  width: 48px;
+  height: 48px;
+  border-radius: var(--r-round);
+  object-fit: cover;
+  border: 2px solid color-mix(in srgb, var(--d-on-accent) 40%, transparent);
+}
+.nw-live .side .nm { font-size: 12.5px; font-weight: 600; }
+.nw-live .sc { display: flex; flex-direction: column; align-items: center; gap: 3px; }
+.nw-live .sc b { font-size: 40px; line-height: 1; }
+.nw-live .sc .at { font-size: 11px; color: color-mix(in srgb, var(--d-on-accent) 75%, transparent); }
+
+.nw-dots { display: flex; justify-content: center; gap: 6px; margin: var(--s-3) 0 var(--s-5); }
+.nw-dots i { width: 18px; height: 3px; border-radius: var(--r-round); background: var(--d-line); }
+.nw-dots i.on { width: 26px; background: var(--d-accent); }
+
+/* ── Карусель «Главное» ─────────────────────────────────────────── */
+.nw-sec .more { margin-left: auto; font-size: 12.5px; font-weight: 600; color: var(--d-accent); cursor: pointer; }
+.nw-sec { display: flex; align-items: baseline; gap: var(--s-3); }
+.nw-carousel {
+  display: flex;
+  gap: var(--s-3);
+  overflow-x: auto;
+  scrollbar-width: none;
+  padding-bottom: var(--s-2);
+}
+.nw-carousel::-webkit-scrollbar { display: none; }
+.nw-carousel .nw-card { flex: none; width: 268px; }
 
 /* ── Сетка карточек ─────────────────────────────────────────────── */
 .nw-grid {
@@ -201,11 +312,17 @@
 .nwm .mb-body::-webkit-scrollbar { display: none; }
 .nwm .nw-h1 { padding: var(--s-5) 16px 0; margin-bottom: var(--s-3); font-size: 27px; }
 .nwm .nw-sec { padding: 0 16px; margin: var(--s-4) 0 var(--s-3); }
-.nwm .nw-lead { margin: 0 16px; grid-template-columns: minmax(0, 1fr); height: auto; }
-.nwm .nw-lead img { height: 168px; }
-.nwm .nw-lead .tx { padding: var(--s-4); gap: var(--s-2); }
-.nwm .nw-lead h2 { font-size: 22px; }
-.nwm .nw-lead p { font-size: 13px; }
+.nwm .nw-top { padding: var(--s-4) 16px 0; margin-bottom: var(--s-3); }
+.nwm .nw-chips { padding: 0 16px; }
+.nwm .nw-chip { padding: 8px 14px; font-size: 12.5px; }
+.nwm .nw-tours { padding: 0 16px; margin: var(--s-3) 0 var(--s-4); gap: var(--s-3); }
+.nwm .nw-tour { width: 70px; }
+.nwm .nw-tour img { width: 48px; height: 48px; }
+.nwm .nw-live { margin: 0 16px; padding: var(--s-4); }
+.nwm .nw-live .sc b { font-size: 32px; }
+.nwm .nw-dots { margin: var(--s-3) 0 var(--s-4); }
+.nwm .nw-carousel { padding: 0 16px var(--s-2); }
+.nwm .nw-carousel .nw-card { width: 232px; }
 .nwm .nw-rows { padding: 0 16px; }
 .nwm .nw-more { margin: var(--s-4) 16px 0; width: auto; }
 

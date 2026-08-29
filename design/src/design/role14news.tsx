@@ -9,14 +9,19 @@
                  автор · сколько читать», обложка во всю ширину, текст
                  абзацами с жирными врезками, плавающая пилюля внизу.
 
-   Что НЕ взято и почему:
+   С 29.08.2026 копия сделана ПОЛНОЙ — по прямой просьбе. Поэтому вернулись
+   две вещи, которых в первой версии не было:
 
-     — лента чипов-фильтров по видам спорта. По Э14.13 решение уже принято:
-       «фильтра по темам на экране нет — спортсмен читает ленту сверху вниз, а
-       не ищет в ней по рубрике; тема стоит на каждой карточке». Молча вернуть
-       фильтр значит отменить это решение мимо федерации;
-     — карточка идущего матча в шапке ленты: у спортсмена для этого есть
-       «Мой турнир» (Э14.5) и главная, дублировать их в новостях незачем;
+     — **фильтры**: лента чипов по темам и полоса круглых обложек турниров.
+       Это отменяет прежнее решение по Э14.13 «фильтра по темам на экране нет»
+       (спортсмен читает ленту сверху вниз). Отмена записана в
+       `flows/14-sportsmen.md`, чтобы решение не разъехалось молча;
+     — **карусели**: карточка идущего матча с точками-перелистыванием в шапке и
+       «Главное» горизонтальной лентой карточек. Матч в шапке дублирует «Мой
+       турнир» (Э14.5) — цена, принятая осознанно ради полноты копии.
+
+   Что по-прежнему НЕ взято:
+
      — пилюля с лайками, комментариями и закладками. Их в системе нет:
        материалы ведёт федерация, спортсмен читает. Форма пилюли сохранена, но
        внутри неё — **ссылка по делу**, которую Э14.14 и требует: новость почти
@@ -28,7 +33,7 @@
    Цвет и радиусы — те же токены, что у профиля и аналитики (`--d-*`,
    `--r-d-*`), чтобы роль читалась одной системой. */
 
-import { ArrowLeft, ArrowRight, CalendarDays, ChevronRight } from 'lucide-react';
+import { ArrowLeft, ArrowRight, CalendarDays, ChevronRight, Search } from 'lucide-react';
 import { RoleScreen } from '../mockups/shell';
 import { R14 } from '../mockups/roles';
 import type { DeskVariant } from '../deskShell';
@@ -92,6 +97,31 @@ const FEED: Item[] = [
   },
 ];
 
+/** Чипы-фильтры по темам — как «Football / Basketball» в референсе. */
+const TOPICS = ['Все', 'Календарь', 'Взносы', 'Сборная', 'Рейтинг', 'Документы'];
+
+/** Полоса круглых обложек — в референсе это лиги и клубы, у нас турниры
+    сезона: новость почти всегда про турнир, и это второй способ отфильтровать
+    ленту. */
+const TOURS: { nm: string; av: string }[] = [
+  { nm: 'Кубок Алматы', av: A(64) },
+  { nm: 'Чемпионат РК', av: A(12) },
+  { nm: 'Евразийская лига', av: AW(28) },
+  { nm: 'Первенство РК', av: A(31) },
+  { nm: 'Кубок Астаны', av: A(52) },
+];
+
+/** Идущий матч в шапке ленты — «Live» референса. Карусель: матчей может идти
+    несколько, точки под карточкой перелистывают их. */
+const LIVE = {
+  tour: 'Кубок Алматы 2026',
+  stage: '1/8 финала',
+  me: { nm: 'Ким Г.', club: 'СКА · Астана', av: A(44) },
+  rival: { nm: 'Оспанов Р.', club: 'Шахтёр · Караганда', av: A(12) },
+  score: '1:2',
+  at: '3-я партия',
+};
+
 /** Текст материала: абзацы с жирной врезкой в начале — приём референса. */
 const BODY: [string, string][] = [
   [
@@ -111,22 +141,6 @@ const BODY: [string, string][] = [
 /* ── Куски, общие для десктопа и телефона ───────────────────────── */
 
 const Tag = ({ t }: { t: string }) => <span className="nw-tag">{t}</span>;
-
-/** Крупная карточка первого материала: главное за неделю не должно теряться
-    среди одинаковых плиток (требование Э14.13). */
-const Lead = ({ n }: { n: Item }) => (
-  <article className="nw-lead" data-to="Э14.14">
-    <img src={n.cover} alt="" />
-    <div className="tx">
-      <Tag t={n.tag} />
-      <h2 className="o14-disp">{n.nm}</h2>
-      <p>{n.ss}</p>
-      <div className="at">
-        {n.at} · {n.by}
-      </div>
-    </div>
-  </article>
-);
 
 const CardItem = ({ n }: { n: Item }) => (
   <article className="nw-card" data-to="Э14.14">
@@ -156,6 +170,81 @@ const RowItem = ({ n }: { n: Item }) => (
   </article>
 );
 
+/** Строка поиска и фото — верх ленты в референсе. */
+const TopBar = () => (
+  <div className="nw-top">
+    <span className="nw-search">
+      <Search size={16} />
+      Поиск по новостям
+    </span>
+    <img src={A(44)} alt="" />
+  </div>
+);
+
+const Topics = () => (
+  <div className="nw-chips">
+    {TOPICS.map((t, i) => (
+      <button type="button" className={'nw-chip' + (i === 0 ? ' on' : '')} key={t}>
+        {t}
+      </button>
+    ))}
+  </div>
+);
+
+const Tours = () => (
+  <div className="nw-tours">
+    {TOURS.map((t) => (
+      <button type="button" className="nw-tour" key={t.nm}>
+        <span className="ring">
+          <img src={t.av} alt="" />
+        </span>
+        <span className="nm">{t.nm}</span>
+      </button>
+    ))}
+  </div>
+);
+
+/** Карточка идущего матча — «Live» референса: залитая акцентом, соперники по
+    краям, счёт посередине. Под ней точки: матчей может идти несколько. */
+const Live = () => (
+  <>
+    <div className="nw-live" data-to="Э14.5">
+      <div className="cap">
+        <span className="dot" /> Идёт
+        <b>{LIVE.tour}</b>
+        <span className="wk">{LIVE.stage}</span>
+      </div>
+      <div className="mid">
+        <span className="side">
+          <img src={LIVE.me.av} alt="" />
+          <span className="nm">{LIVE.me.nm}</span>
+        </span>
+        <span className="sc">
+          <b className="o14-disp">{LIVE.score}</b>
+          <span className="at">{LIVE.at}</span>
+        </span>
+        <span className="side">
+          <img src={LIVE.rival.av} alt="" />
+          <span className="nm">{LIVE.rival.nm}</span>
+        </span>
+      </div>
+    </div>
+    <div className="nw-dots">
+      <i className="on" />
+      <i />
+      <i />
+    </div>
+  </>
+);
+
+/** Заголовок раздела со ссылкой «Показать все» — как «See More». */
+const SecMore = ({ cap }: { cap: string }) => (
+  <div className="nw-sec">
+    {cap}
+    <a className="more">Показать все</a>
+  </div>
+);
+
 const More = () => (
   <button type="button" className="nw-more">
     Показать ещё
@@ -168,20 +257,24 @@ export function News({ variant }: { variant?: DeskVariant } = {}) {
   return (
     <RoleScreen variant={variant} role={R14} nav="Новости" title="Новости">
       <div className="nw o14-nohead">
-        <h1 className="nw-h1 o14-disp">Новости федерации</h1>
+        <TopBar />
+        <Topics />
+        <Tours />
+        <Live />
 
-        <Lead n={lead} />
-
-        <div className="nw-sec">Ещё материалы</div>
-        <div className="nw-grid">
+        <SecMore cap="Главное" />
+        {/* Карусель: карточки лентой с горизонтальной прокруткой, как
+            «Trending Now» в референсе. */}
+        <div className="nw-carousel">
+          <CardItem n={lead} key={lead.nm} />
           {rest.slice(0, 3).map((n) => (
             <CardItem n={n} key={n.nm} />
           ))}
         </div>
 
-        <div className="nw-sec">Раньше</div>
+        <SecMore cap="Ещё материалы" />
         <div className="nw-rows">
-          {rest.slice(3).map((n) => (
+          {rest.slice(1).map((n) => (
             <RowItem n={n} key={n.nm} />
           ))}
         </div>
@@ -255,11 +348,22 @@ export function NewsPhone() {
   const [lead, ...rest] = FEED;
   return (
     <Phone cls="nwm-feed">
-      <h1 className="nw-h1 o14-disp">Новости</h1>
-      <Lead n={lead} />
-      <div className="nw-sec">Ещё материалы</div>
+      <TopBar />
+      <Topics />
+      <Tours />
+      <Live />
+
+      <SecMore cap="Главное" />
+      <div className="nw-carousel">
+        <CardItem n={lead} key={lead.nm} />
+        {rest.slice(0, 3).map((n) => (
+          <CardItem n={n} key={n.nm} />
+        ))}
+      </div>
+
+      <SecMore cap="Ещё материалы" />
       <div className="nw-rows">
-        {rest.map((n) => (
+        {rest.slice(1).map((n) => (
           <RowItem n={n} key={n.nm} />
         ))}
       </div>
