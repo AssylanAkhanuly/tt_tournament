@@ -1,0 +1,188 @@
+/* Э14.7 · вариант Д «Личный кабинет» (29.08.2026) — по присланному референсу
+   фитнес-приложения: обложка, портрет поверх неё, чипы, «Аккаунт» и список
+   входов со строками «иконка · подпись · шеврон», тумблер последней строкой.
+
+   Из референса НЕ берём тёмную тему и скруглённые углы: роль рисуется на
+   светлой (22.08.2026), а `--r-*` в системе равны нулю — это рабочий
+   инструмент федерации. Круглое по сути остаётся круглым: портрет и тумблер.
+
+   Один файл на десктоп и телефон: различает `.pf2m`. Цвет и радиусы — только
+   токены. */
+
+.pf2 {
+  height: 100%;
+  overflow: auto;
+  /* Отступы `.dmain` — 20/22 px. Гасим их здесь, а не у обложки: отрицательное
+     поле у ребёнка скролл-контейнер срезает слева. */
+  margin: -20px -22px;
+  background: var(--c-surface);
+  color: var(--c-ink);
+}
+
+/* ── Обложка ────────────────────────────────────────────────────── */
+.p2-hero { position: relative; height: 160px; overflow: hidden; background: var(--c-screen-deep); }
+/* Обложки в системе НЕТ: федерация выдаёт один портрет, и в референсе на её
+   месте отдельная съёмка. Поэтому здесь тот же кадр, но уведённый в фон —
+   кроп мимо лица, приглушение и расфокус: получается текстурная плоскость, а
+   не вторая копия портрета. Это честная заглушка, и она названа ценой
+   варианта в разборе. */
+.p2-hero .cover {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: 50% 88%;
+  filter: saturate(0.45) brightness(0.5) blur(3px);
+  transform: scale(1.08);
+}
+.p2-hero .scrim {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(0deg, var(--c-screen-deep), transparent 78%);
+}
+.p2-hero .edit {
+  position: absolute;
+  top: 14px;
+  right: 22px;
+  display: inline-flex;
+  padding: 8px;
+  border: 1px solid color-mix(in srgb, var(--c-on-media) 34%, transparent);
+  border-radius: var(--r-sm);
+  background: color-mix(in srgb, var(--c-screen-deep) 55%, transparent);
+  color: var(--c-on-media);
+  cursor: pointer;
+}
+
+/* ── Портрет, имя, чипы ─────────────────────────────────────────── */
+.p2-who {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-top: -50px;
+  padding: 0 22px var(--s-5);
+  text-align: center;
+}
+.p2-who .ava {
+  width: 96px;
+  height: 96px;
+  border-radius: var(--r-round); /* круглое по сути: фотография человека */
+  object-fit: cover;
+  border: 4px solid var(--c-surface);
+}
+.p2-who h1 { margin: var(--s-3) 0 0; font-size: 34px; line-height: 1; }
+.p2-who .sub { margin-top: 6px; font-size: 13px; color: var(--c-muted); }
+
+/* Чипы под именем — «рост / вес / возраст» референса. Не четыре равные плитки
+   во всю ширину, как в нынешнем макете, а компактный ряд при имени. */
+.p2-who .chips { display: flex; gap: var(--s-2); margin-top: var(--s-3); }
+.p2-who .chips span {
+  display: inline-flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 92px;
+  padding: 8px 13px;
+  background: var(--c-panel);
+  border: 1px solid var(--c-glass-line);
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--c-dim);
+}
+.p2-who .chips b { font-size: 23px; letter-spacing: -0.01em; color: var(--c-ink); }
+
+/* ── Список входов ──────────────────────────────────────────────── */
+.p2-cols {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--s-6);
+  padding: 0 22px var(--s-6);
+}
+.p2-cap {
+  margin: 0 0 var(--s-3);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--c-dim);
+}
+.p2-list { border: 1px solid var(--c-glass-line); background: var(--c-panel); }
+
+.p2-row {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  padding: var(--s-3) var(--s-4);
+  border-bottom: 1px solid var(--c-glass-line-soft);
+  cursor: pointer;
+}
+.p2-row:last-child { border-bottom: 0; }
+.p2-row:hover { background: var(--c-panel-2); }
+/* Иконка в своей плашке — как в референсе, но квадратной: углы в системе прямые. */
+.p2-row .ic {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  flex: none;
+  background: var(--c-accent-soft);
+  color: var(--c-accent);
+}
+.p2-row .tx { display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0; }
+.p2-row .nm { font-size: 13.5px; font-weight: 600; }
+.p2-row .ss { font-size: 12px; color: var(--c-muted); }
+.p2-row .ch { color: var(--c-dim); flex: none; }
+.p2-row .val { font-size: 13px; color: var(--c-muted); white-space: nowrap; }
+
+/* Две строки красят состояние, а не тему: неоплаченный взнос и неподтверждённая
+   личность — единственное, из-за чего экран вообще открывают между турнирами. */
+.p2-row.pay { background: var(--c-danger-fill); }
+.p2-row.pay .ic { background: var(--c-danger-soft); color: var(--c-danger); }
+.p2-row.pay .ss { color: var(--c-danger); font-weight: 600; }
+.p2-row.warn { background: var(--c-warning-fill); }
+.p2-row.warn .ic { background: var(--c-warning-soft); color: var(--c-warning); }
+
+/* Тумблер — круглое по сути, под правило прямых углов не попадает. */
+.p2-row .sw {
+  position: relative;
+  width: 38px;
+  height: 22px;
+  flex: none;
+  border-radius: var(--r-round);
+  background: var(--c-accent);
+}
+.p2-row .sw::after {
+  content: '';
+  position: absolute;
+  top: 3px;
+  right: 3px;
+  width: 16px;
+  height: 16px;
+  border-radius: var(--r-round);
+  background: var(--c-accent-ink);
+}
+
+/* ── Телефон ────────────────────────────────────────────────────── */
+.pf2m { margin: 0; height: auto; overflow: visible; background: none; }
+.pf2m .p2-hero { height: 132px; }
+/* На узком экране кадр другой пропорции, и при 88% в полосу попадало лицо —
+   вторая копия портрета. Берём самый низ кадра. */
+.pf2m .p2-hero .cover { object-position: 50% 100%; }
+.pf2m .p2-hero .edit { top: 10px; right: 12px; }
+.pf2m .p2-who { margin-top: -44px; padding: 0 16px var(--s-4); }
+.pf2m .p2-who .ava { width: 88px; height: 88px; border-width: 3px; }
+.pf2m .p2-who h1 { font-size: 30px; }
+.pf2m .p2-who .chips span {
+  min-width: 0;
+  flex: 1;
+  padding: 8px 10px;
+  font-size: 9.5px;
+  letter-spacing: 0.1em;
+  white-space: nowrap;
+}
+.pf2m .p2-who .chips b { font-size: 21px; }
+.pf2m section { padding: 0 16px; }
+.pf2m .p2-row { padding: 10px 12px; }
+.pf2m .p2-row .ic { width: 30px; height: 30px; }
+.pf2m .p2-row .nm { font-size: 13px; }
+.pf2m .p2-row .ss { font-size: 11px; }
