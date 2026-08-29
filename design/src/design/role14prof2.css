@@ -1,13 +1,29 @@
-/* Э14.7 · вариант Д «Личный кабинет» (29.08.2026) — по присланному референсу
-   фитнес-приложения: обложка, портрет поверх неё, чипы, «Аккаунт» и список
-   входов со строками «иконка · подпись · шеврон», тумблер последней строкой.
+/* Э14.7 · вариант Д «Личный кабинет» (29.08.2026) — ТОЧНАЯ КОПИЯ присланного
+   референса: обложка, круглый портрет поверх неё, чипы, заголовок раздела и
+   список пунктов «иконка · подпись · шеврон», тумблер последней строкой.
 
-   Из референса НЕ берём тёмную тему и скруглённые углы: роль рисуется на
-   светлой (22.08.2026), а `--r-*` в системе равны нулю — это рабочий
-   инструмент федерации. Круглое по сути остаётся круглым: портрет и тумблер.
+   ЧЕМ ЭТОТ ЭКРАН ОТЛИЧАЕТСЯ ОТ ОСТАЛЬНЫХ. Скопированы и форма, и цвет — так
+   попросили. Из этого следуют два осознанных отступления от правил системы,
+   оба записаны в `flows/14-sportsmen.md`:
 
-   Один файл на десктоп и телефон: различает `.pf2m`. Цвет и радиусы — только
-   токены. */
+     1. Углы скруглены (`--r-d-*`), хотя в системе `--r-*` равны нулю. Второе
+        такое отступление после раскладки «как в Kaspi».
+     2. Экран покрашен палитрой референса (`--d-*`) жёстко и НЕ переключается
+        тулбаром темы вместе с остальными экранами роли. На светлой теме он
+        остаётся тёмным островом внутри светлой оболочки — это прямое
+        следствие точной копии, а не недосмотр.
+
+   Сырых цветов здесь нет: палитра референса заведена токенами `--d-*` в
+   `theme/tokens.css`, как палитры --p1…--p4, поэтому lint:colors работает.
+
+   Шапка и нижняя навигация ТЕЛЕФОНА перекрашены под референс, но только
+   внутри `.pf2m`: сами компоненты (`Chrome`, `MiniTabBar`) общие для всех
+   шестнадцати экранов роли, поэтому переопределение живёт в этом файле и
+   никуда не протекает. Десктопная оболочка (сайдбар и верхняя панель) не
+   тронута вовсе — на ширине экран остаётся тёмным островом внутри светлой
+   оболочки роли.
+
+   Один файл на десктоп и телефон: различает `.pf2m`. */
 
 .pf2 {
   height: 100%;
@@ -15,8 +31,8 @@
   /* Отступы `.dmain` — 20/22 px. Гасим их здесь, а не у обложки: отрицательное
      поле у ребёнка скролл-контейнер срезает слева. */
   margin: -20px -22px;
-  background: var(--c-screen-1);
-  color: var(--c-ink);
+  background: var(--d-bg);
+  color: var(--d-ink);
 }
 
 /* ── Обложка ────────────────────────────────────────────────────── */
@@ -24,14 +40,13 @@
   position: relative;
   height: 200px;
   overflow: hidden;
-  background: var(--c-screen-deep);
+  background: var(--d-card);
   border-radius: 0 0 var(--r-d-card) var(--r-d-card);
 }
-/* Обложки в системе НЕТ: федерация выдаёт один портрет, и в референсе на её
-   месте отдельная съёмка. Поэтому здесь тот же кадр, но уведённый в фон —
-   кроп мимо лица, приглушение и расфокус: получается текстурная плоскость, а
-   не вторая копия портрета. Это честная заглушка, и она названа ценой
-   варианта в разборе. */
+/* Обложки в системе НЕТ: федерация выдаёт один портрет, а в референсе на её
+   месте отдельная съёмка. Поэтому здесь тот же кадр, уведённый в фон — кроп
+   мимо лица, приглушение и расфокус: получается текстурная плоскость, а не
+   вторая копия портрета. Честная заглушка, названа ценой варианта. */
 .p2-hero .cover {
   width: 100%;
   height: 100%;
@@ -43,7 +58,7 @@
 .p2-hero .scrim {
   position: absolute;
   inset: 0;
-  background: linear-gradient(0deg, var(--c-screen-deep), transparent 78%);
+  background: linear-gradient(0deg, var(--d-bg), transparent 78%);
 }
 .p2-hero .edit {
   position: absolute;
@@ -51,10 +66,10 @@
   right: 22px;
   display: inline-flex;
   padding: 8px;
-  border: 1px solid color-mix(in srgb, var(--c-on-media) 34%, transparent);
+  border: 1px solid color-mix(in srgb, var(--d-ink) 22%, transparent);
   border-radius: var(--r-d-tile);
-  background: color-mix(in srgb, var(--c-screen-deep) 55%, transparent);
-  color: var(--c-on-media);
+  background: color-mix(in srgb, var(--d-bg) 55%, transparent);
+  color: var(--d-ink);
   cursor: pointer;
 }
 
@@ -72,15 +87,13 @@
   height: 96px;
   border-radius: var(--r-round); /* круглое по сути: фотография человека */
   object-fit: cover;
-  border: 4px solid var(--c-screen-1);
+  border: 4px solid var(--d-bg);
 }
-/* Цвет задан явно: экран попадает и в раздел «Флоу», где тема берётся из
-   тулбара, — на тёмной наследование давало имя почти в цвет фона. */
-.p2-who h1 { margin: var(--s-3) 0 0; font-size: 34px; line-height: 1; color: var(--c-ink); }
-.p2-who .sub { margin-top: 6px; font-size: 13px; color: var(--c-muted); }
+.p2-who h1 { margin: var(--s-3) 0 0; font-size: 34px; line-height: 1; color: var(--d-ink); }
+.p2-who .sub { margin-top: 6px; font-size: 13px; color: var(--d-muted); }
 
-/* Чипы под именем — «рост / вес / возраст» референса. Не четыре равные плитки
-   во всю ширину, как в нынешнем макете, а компактный ряд при имени. */
+/* Чипы под именем — «рост / вес / возраст» референса: скруглённые тёмные
+   коробки с тонкой границей, значение белое, подпись серая. */
 .p2-who .chips { display: flex; gap: var(--s-2); margin-top: var(--s-3); }
 .p2-who .chips span {
   display: inline-flex;
@@ -89,15 +102,15 @@
   min-width: 96px;
   padding: 10px 15px;
   border-radius: var(--r-d-chip);
-  background: var(--c-panel);
-  border: 1px solid var(--c-glass-line);
+  background: var(--d-card);
+  border: 1px solid var(--d-line);
   font-size: 10.5px;
   font-weight: 700;
   letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: var(--c-dim);
+  color: var(--d-dim);
 }
-.p2-who .chips b { font-size: 23px; letter-spacing: -0.01em; color: var(--c-ink); }
+.p2-who .chips b { font-size: 23px; letter-spacing: -0.01em; color: var(--d-ink); }
 
 /* ── Список входов ──────────────────────────────────────────────── */
 .p2-cols {
@@ -106,16 +119,16 @@
   gap: var(--s-6);
   padding: 0 22px var(--s-6);
 }
+/* В референсе заголовок раздела — обычный белый текст («Account»), а не
+   разрядка капителью, как в остальной системе. */
 .p2-cap {
   margin: 0 0 var(--s-3);
-  font-size: 11px;
-  font-weight: 800;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-  color: var(--c-dim);
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--d-ink);
 }
-/* В референсе пункты — отдельные скруглённые карточки с зазором, а не единый
-   лист с разделителями. Форму копируем как есть. */
+/* Пункты — отдельные скруглённые карточки с зазором, а не единый лист с
+   разделителями. */
 .p2-list { display: flex; flex-direction: column; gap: var(--s-2); }
 
 .p2-row {
@@ -124,12 +137,12 @@
   gap: var(--s-3);
   padding: 14px var(--s-4);
   border-radius: var(--r-d-row);
-  border: 1px solid var(--c-glass-line);
-  background: var(--c-panel);
+  border: 1px solid var(--d-line);
+  background: var(--d-card);
   cursor: pointer;
 }
-.p2-row:hover { background: var(--c-panel-2); }
-/* Иконка в скруглённой плашке — как в референсе. */
+.p2-row:hover { background: var(--d-card-2); }
+/* Иконка в скруглённой плашке; в референсе она светлая на тёмном. */
 .p2-row .ic {
   display: inline-flex;
   align-items: center;
@@ -138,41 +151,54 @@
   height: 36px;
   flex: none;
   border-radius: var(--r-d-tile);
-  background: var(--c-accent-soft);
-  color: var(--c-accent);
+  background: var(--d-card-2);
+  color: var(--d-ink);
 }
 .p2-row .tx { display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0; }
-.p2-row .nm { font-size: 13.5px; font-weight: 600; }
-.p2-row .ss { font-size: 12px; color: var(--c-muted); }
-.p2-row .ch { color: var(--c-dim); flex: none; }
-.p2-row .val { font-size: 13px; color: var(--c-muted); white-space: nowrap; }
+.p2-row .nm { font-size: 13.5px; font-weight: 600; color: var(--d-ink); }
+.p2-row .ss { font-size: 12px; color: var(--d-muted); }
+.p2-row .ch { color: var(--d-dim); flex: none; }
+.p2-row .val { font-size: 13px; color: var(--d-muted); white-space: nowrap; }
 
-/* Две строки красят состояние, а не тему: неоплаченный взнос и неподтверждённая
-   личность — единственное, из-за чего экран вообще открывают между турнирами. */
-.p2-row.pay { background: var(--c-danger-fill); border-color: var(--c-danger-line); }
-.p2-row.pay .ic { background: var(--c-danger-soft); color: var(--c-danger); }
-.p2-row.pay .ss { color: var(--c-danger); font-weight: 600; }
-.p2-row.warn { background: var(--c-warning-fill); border-color: var(--c-warning-soft); }
-.p2-row.warn .ic { background: var(--c-warning-soft); color: var(--c-warning); }
+/* Две строки красят состояние: неоплаченный взнос и неподтверждённая личность —
+   единственное, из-за чего экран открывают между турнирами. Цвета из палитры
+   референса, подложка приглушена до тёмной, чтобы не спорить с полем. */
+.p2-row.pay {
+  background: color-mix(in srgb, var(--d-danger) 14%, var(--d-card));
+  border-color: color-mix(in srgb, var(--d-danger) 40%, transparent);
+}
+.p2-row.pay .ic {
+  background: color-mix(in srgb, var(--d-danger) 22%, transparent);
+  color: var(--d-danger);
+}
+.p2-row.pay .ss { color: var(--d-danger); font-weight: 600; }
+.p2-row.warn {
+  background: color-mix(in srgb, var(--d-warning) 12%, var(--d-card));
+  border-color: color-mix(in srgb, var(--d-warning) 38%, transparent);
+}
+.p2-row.warn .ic {
+  background: color-mix(in srgb, var(--d-warning) 22%, transparent);
+  color: var(--d-warning);
+}
 
-/* Тумблер — круглое по сути, под правило прямых углов не попадает. */
+/* Тумблер — жёлтый, как в референсе. Круглое по сути. */
 .p2-row .sw {
   position: relative;
-  width: 38px;
-  height: 22px;
+  width: 44px;
+  height: 25px;
   flex: none;
   border-radius: var(--r-round);
-  background: var(--c-accent);
+  background: var(--d-accent);
 }
 .p2-row .sw::after {
   content: '';
   position: absolute;
   top: 3px;
   right: 3px;
-  width: 16px;
-  height: 16px;
+  width: 19px;
+  height: 19px;
   border-radius: var(--r-round);
-  background: var(--c-accent-ink);
+  background: var(--d-on-accent);
 }
 
 /* ── Телефон ────────────────────────────────────────────────────── */
@@ -184,6 +210,7 @@
   overflow-y: auto;
   overscroll-behavior: contain;
   scrollbar-width: thin;
+  background: var(--d-bg);
 }
 .pf2m .p2-hero { height: 132px; }
 /* На узком экране кадр другой пропорции, и при 88% в полосу попадало лицо —
@@ -203,7 +230,34 @@
 }
 .pf2m .p2-who .chips b { font-size: 21px; }
 .pf2m section { padding: 0 16px; }
-.pf2m .p2-row { padding: 10px 12px; }
-.pf2m .p2-row .ic { width: 30px; height: 30px; }
+.pf2m .p2-row { padding: 12px; }
+.pf2m .p2-row .ic { width: 32px; height: 32px; }
 .pf2m .p2-row .nm { font-size: 13px; }
 .pf2m .p2-row .ss { font-size: 11px; }
+
+/* Верх и низ телефона в референсе тоже тёмные, а активная вкладка — жёлтый
+   круг. Перекрашиваем ТОЛЬКО под `.pf2m`: `Chrome` и `MiniTabBar` общие для
+   всех шестнадцати экранов роли, и глобально их трогать нельзя — здесь
+   переопределение живёт внутри одного экрана и никуда не протекает. */
+.pf2m .mb-site {
+  background: var(--d-bg);
+  border-bottom-color: var(--d-line);
+}
+.pf2m .mb-site .ui-brand .wm b { color: var(--d-ink); }
+.pf2m .mb-site .ui-brand .wm i { color: var(--d-muted); }
+
+.pf2m .tabbar {
+  background: var(--d-bg);
+  border-top: 1px solid var(--d-line);
+  box-shadow: none;
+}
+.pf2m .tabbar .tab { color: var(--d-dim); }
+.pf2m .tabbar .tab.on { color: var(--d-ink); }
+/* Активная вкладка в референсе — иконка в жёлтом круге. */
+.pf2m .tabbar .tab.on svg {
+  box-sizing: content-box;
+  padding: 8px;
+  border-radius: var(--r-round);
+  background: var(--d-accent);
+  color: var(--d-on-accent);
+}
