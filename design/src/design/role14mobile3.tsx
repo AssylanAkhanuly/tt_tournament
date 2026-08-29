@@ -21,11 +21,9 @@
    ⚠ По межсезонью решение не закрыто: есть второй нарисованный герой — «итог
    сезона» вместо отсчёта (см. открытый вопрос во flows). Здесь показан первый. */
 
-import { ArrowRight, ChevronRight } from 'lucide-react';
+import { ChevronRight } from 'lucide-react';
 import { Frame } from '../PlayerApp';
 import { MiniTabBar } from '../respShell';
-import { RESULTS } from './role14home';
-import { TOURS } from './role14day';
 import { Chrome, NAV } from './role14mobile';
 import './role14mobile3.css';
 import './role14mobile7.css';
@@ -42,65 +40,6 @@ function Screen({ cls, active = 'Главная', children }: { cls: string; act
     </div>
   );
 }
-
-/* ── Главная, когда никуда не вызывали (межсезонье) ────────────────*/
-export function MobileOff() {
-  return (
-    <Screen cls="m3o">
-      <div className="mbr-card quiet m3o-card">
-        <div className="mbr-band" />
-        <div className="mbr-in">
-          <div className="mbr-top">
-            <span className="mbr-state">Ближайший старт</span>
-            <span className="mbr-time o14-disp">12–14.09</span>
-          </div>
-
-          <div className="mbr-num o14-disp">8</div>
-          <div className="mbr-k">дней</div>
-
-          <div className="mbr-vs">турнир</div>
-          <div className="mbr-foe o14-disp">Кубок Алматы 2026</div>
-          <div className="mbr-round">ОРТ · Алматы · заявка подана 03.09</div>
-        </div>
-      </div>
-
-      <div className="mbr-sheet">
-        {/* Кнопка такая же зелёная, как на всех экранах роли: цвет действия
-            в системе один. */}
-        <button type="button" className="mbr-go" data-to="Э14.4">
-          Моя заявка <ArrowRight size={17} />
-        </button>
-
-        <div className="mbr-group">
-        <div className="mbr-sec">Куда можно заявиться</div>
-        {TOURS.map((t) => (
-          <div className="mbr-row" key={t.nm} data-to="Э14.2">
-            <span className="tx">
-              <span className="nm">{t.nm}</span>
-              <span className="ss">{t.sub}</span>
-            </span>
-            <span className={'mbr-tag' + (t.on ? ' on' : '')}>{t.on ? 'ПОДАНА' : 'РЕГИОН'}</span>
-          </div>
-        ))}
-        </div>
-
-        <div className="mbr-group">
-        <div className="mbr-sec">Последние результаты</div>
-        {RESULTS.slice(0, 2).map((r) => (
-          <div className="mbr-row" key={r.nm} data-to="Э14.6">
-            <span className="tx">
-              <span className="nm">{r.nm}</span>
-              <span className="ss">{r.sub}</span>
-            </span>
-            <span className={'m3o-sc ' + (r.win ? 'w' : 'l')}>{r.sc}</span>
-          </div>
-        ))}
-        </div>
-      </div>
-    </Screen>
-  );
-}
-
 /* ── Э14.5 · куда ведёт «Открыть матч» ─────────────────────────────*/
 const GAMES = [
   [11, 8],
