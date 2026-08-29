@@ -4,11 +4,10 @@
    «дата · автор · сколько читать», обложка во всю ширину, абзацы с жирными
    врезками и плавающая пилюля внизу.
 
-   Цвета — палитра САМОГО референса (`--n-*` в tokens.css): почти чёрный
-   активный чип, синяя карточка идущего матча с белой подписью, оранжевая
-   пилюля темы. Это отступление от системного правила «подпись на акценте
-   тёмная» — принято сознательно по просьбе «copy from the reference», записано
-   в flows/14-sportsmen.md. Радиусы — те же `--r-d-*`, что у профиля.
+   Цвета системные: токены `--n-*` — слой имён поверх `--c-*`. Палитру самого
+   референса попробовали и сняли (29.08.2026): почти чёрный чип, оранжевая
+   пилюля и свой синий спорили с синим и жёлтым знака ФНТ. Радиусы — те же
+   `--r-d-*`, что у профиля.
 
    Обои с орнаментом здесь тоже погашены — под обложками узор шумит. `flex: 1`
    обязателен: без растяжения ниже содержимого остаётся полоса обоев.
@@ -68,7 +67,7 @@
 .nw-top img { width: 40px; height: 40px; border-radius: var(--r-round); object-fit: cover; flex: none; }
 
 /* ── Фильтры: чипы тем и круглые обложки турниров ───────────────── */
-.nw-chips { display: flex; gap: var(--s-2); overflow-x: auto; scrollbar-width: none; padding-bottom: 2px; }
+.nw-chips { display: flex; gap: var(--s-2); margin-bottom: var(--s-5); overflow-x: auto; scrollbar-width: none; padding-bottom: 2px; }
 .nw-chips::-webkit-scrollbar { display: none; }
 .nw-chip {
   flex: none;
@@ -84,37 +83,6 @@
 }
 .nw-chip:hover { color: var(--n-ink); }
 .nw-chip.on { background: var(--n-chip); border-color: var(--n-chip); color: var(--n-on-chip); }
-
-.nw-tours {
-  display: flex;
-  gap: var(--s-4);
-  margin: var(--s-4) 0 var(--s-5);
-  overflow-x: auto;
-  scrollbar-width: none;
-}
-.nw-tours::-webkit-scrollbar { display: none; }
-.nw-tour {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 6px;
-  flex: none;
-  width: 78px;
-  border: 0;
-  background: none;
-  font: inherit;
-  color: inherit;
-  cursor: pointer;
-}
-/* Кольцо вокруг обложки — приём референса (там оно у эмблем лиг). */
-.nw-tour .ring {
-  display: inline-flex;
-  padding: 3px;
-  border: 2px solid var(--n-live);
-  border-radius: var(--r-round);
-}
-.nw-tour img { width: 54px; height: 54px; border-radius: var(--r-round); object-fit: cover; }
-.nw-tour .nm { font-size: 11px; line-height: 1.2; text-align: center; color: var(--n-muted); }
 
 /* ── Идущий матч: «Live» референса ──────────────────────────────── */
 .nw-live {
@@ -316,11 +284,8 @@
 .nwm .nw-h1 { padding: var(--s-5) 16px 0; margin-bottom: var(--s-3); font-size: 27px; }
 .nwm .nw-sec { padding: 0 16px; margin: var(--s-4) 0 var(--s-3); }
 .nwm .nw-top { padding: var(--s-4) 16px 0; margin-bottom: var(--s-3); }
-.nwm .nw-chips { padding: 0 16px; }
+.nwm .nw-chips { padding: 0 16px; margin-bottom: var(--s-4); }
 .nwm .nw-chip { padding: 8px 14px; font-size: 12.5px; }
-.nwm .nw-tours { padding: 0 16px; margin: var(--s-3) 0 var(--s-4); gap: var(--s-3); }
-.nwm .nw-tour { width: 70px; }
-.nwm .nw-tour img { width: 48px; height: 48px; }
 .nwm .nw-live { margin: 0 16px; padding: var(--s-4); }
 .nwm .nw-live .sc b { font-size: 32px; }
 .nwm .nw-dots { margin: var(--s-3) 0 var(--s-4); }
