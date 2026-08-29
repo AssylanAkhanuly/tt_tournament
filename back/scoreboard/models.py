@@ -4,6 +4,21 @@ from django.db import models
 MAX_GAMES = 9
 MAX_POINTS = 99
 
+CARD_NONE = ""
+CARD_YELLOW = "yellow"
+CARD_RED = "red"
+CARD_CHOICES = [(CARD_NONE, "Нет"), (CARD_YELLOW, "Жёлтая"), (CARD_RED, "Красная")]
+
+# Кто подавал первым в текущей партии. Текущий подающий из этого выводится по
+# счёту, поэтому оператору не нужно щёлкать подачу каждые два очка.
+SERVER_CHOICES = [
+    ("", "Не задан"),
+    ("left1", "Слева, первый"),
+    ("left2", "Слева, второй"),
+    ("right1", "Справа, первый"),
+    ("right2", "Справа, второй"),
+]
+
 
 class Scoreboard(models.Model):
     """Live score of one streamed table: the operator's control panel writes it,
@@ -40,6 +55,10 @@ class Scoreboard(models.Model):
 
     rev = models.PositiveIntegerField(default=0)
 
+    first_server = models.CharField(
+        max_length=6, choices=SERVER_CHOICES, blank=True, default=""
+    )
+
     match_label = models.CharField(max_length=12, blank=True, default="MT")
     round_label = models.CharField(max_length=16, blank=True, default="R 16")
     best_of = models.PositiveSmallIntegerField(
@@ -54,6 +73,9 @@ class Scoreboard(models.Model):
     visible = models.BooleanField(default=True)
 
     left_name = models.CharField(max_length=40, blank=True, default="")
+    # Второе имя = парный разряд. Отдельного переключателя нет: пара
+    # определяется тем, что имя заполнено.
+    left_name2 = models.CharField(max_length=40, blank=True, default="")
     left_country = models.CharField(max_length=3, blank=True, default="")
     left_games = models.PositiveSmallIntegerField(
         default=0, validators=[MaxValueValidator(MAX_GAMES)]
@@ -61,8 +83,13 @@ class Scoreboard(models.Model):
     left_points = models.PositiveSmallIntegerField(
         default=0, validators=[MaxValueValidator(MAX_POINTS)]
     )
+    left_timeout = models.BooleanField(default=False)  # тайм-аут взят
+    left_card = models.CharField(max_length=6, choices=CARD_CHOICES, blank=True, default=CARD_NONE)
 
     right_name = models.CharField(max_length=40, blank=True, default="")
+    # Второе имя = парный разряд. Отдельного переключателя нет: пара
+    # определяется тем, что имя заполнено.
+    right_name2 = models.CharField(max_length=40, blank=True, default="")
     right_country = models.CharField(max_length=3, blank=True, default="")
     right_games = models.PositiveSmallIntegerField(
         default=0, validators=[MaxValueValidator(MAX_GAMES)]
@@ -70,6 +97,8 @@ class Scoreboard(models.Model):
     right_points = models.PositiveSmallIntegerField(
         default=0, validators=[MaxValueValidator(MAX_POINTS)]
     )
+    right_timeout = models.BooleanField(default=False)  # тайм-аут взят
+    right_card = models.CharField(max_length=6, choices=CARD_CHOICES, blank=True, default=CARD_NONE)
 
     team_enabled = models.BooleanField(default=False)
     team_left = models.PositiveSmallIntegerField(

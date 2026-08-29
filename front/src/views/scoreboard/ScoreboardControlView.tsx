@@ -11,7 +11,12 @@
 
 import { useEffect } from 'react';
 
-import { isGameOver, type ScoreboardState, type SideKey } from '@/entities/scoreboard/model';
+import {
+  currentServer,
+  isGameOver,
+  type ScoreboardState,
+  type SideKey,
+} from '@/entities/scoreboard/model';
 import { useScoreboardControl } from '@/features/scoreboard-live/useScoreboardChannel';
 import { ScoreboardBoard } from '@/widgets/scoreboard/ScoreboardBoard';
 
@@ -61,8 +66,12 @@ export function ScoreboardControlView({ initial }: { initial: ScoreboardState })
   // `title` на экране не подписан — стороны видно по расположению. Он остаётся
   // в aria-label: иначе две одинаковые пары кнопок неразличимы для читалки
   // экрана и для тестов.
+  const server = currentServer(state);
+
   const sideBlock = (side: SideKey, title: string) => {
     const player = state[side];
+    const doubles = Boolean(player.name2.trim() || state[side === 'left' ? 'right' : 'left'].name2.trim());
+
     return (
       <section className={styles.side} key={side} aria-label={title}>
         <label className={styles.field}>
@@ -76,6 +85,64 @@ export function ScoreboardControlView({ initial }: { initial: ScoreboardState })
             }
           />
         </label>
+
+        {/* Заполненное второе имя и делает разряд парным — отдельного
+            переключателя нет. */}
+        <label className={styles.field}>
+          <span className={styles.label}>Второй игрок (пары)</span>
+          <input
+            className={styles.input}
+            value={player.name2}
+            aria-label={`Второй игрок — ${title}`}
+            onChange={(event) =>
+              send({ type: 'patch', patch: { [side]: { name2: event.target.value } } })
+            }
+          />
+        </label>
+
+        <div className={styles.toggles}>
+          <button
+            type="button"
+            className={styles.toggle}
+            data-on={server === `${side}1` || undefined}
+            aria-label={`Подача — ${title}`}
+            onClick={() => send({ type: 'serve', slot: `${side}1` })}
+          >
+            Подача{doubles ? ' 1' : ''}
+          </button>
+
+          {doubles ? (
+            <button
+              type="button"
+              className={styles.toggle}
+              data-on={server === `${side}2` || undefined}
+              aria-label={`Подача второго — ${title}`}
+              onClick={() => send({ type: 'serve', slot: `${side}2` })}
+            >
+              Подача 2
+            </button>
+          ) : null}
+
+          <button
+            type="button"
+            className={styles.toggle}
+            data-on={player.timeout || undefined}
+            aria-label={`Тайм-аут — ${title}`}
+            onClick={() => send({ type: 'timeout', side })}
+          >
+            Тайм-аут
+          </button>
+
+          <button
+            type="button"
+            className={styles.toggle}
+            data-card={player.card || undefined}
+            aria-label={`Карточка — ${title}`}
+            onClick={() => send({ type: 'card', side })}
+          >
+            Карточка
+          </button>
+        </div>
 
         <div className={styles.counters}>
           <div className={styles.counter}>

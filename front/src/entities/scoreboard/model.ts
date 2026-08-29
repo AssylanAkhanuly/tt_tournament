@@ -5,11 +5,20 @@
 
 export type SideKey = 'left' | 'right';
 
+/** Карточка, выданная на столе. Пустая строка — карточки нет. */
+export type Card = '' | 'yellow' | 'red';
+
+/** Слот игрока: в одиночке заняты только первые, в паре — все четыре. */
+export type ServerSlot = '' | 'left1' | 'left2' | 'right1' | 'right2';
+
 export type PlayerState = {
   name: string;
+  name2: string; // второй игрок пары; пусто — одиночный разряд
   country: string; // код страны как его ввели: 'KAZ', 'JPN' (до 3 букв)
   games: number; // выигранные партии
   points: number; // очки в текущей партии
+  timeout: boolean; // тайм-аут взят (по правилам он один за матч)
+  card: Card;
 };
 
 export type TeamState = {
@@ -29,6 +38,9 @@ export type ScoreboardState = {
   best_of: number; // до скольких партий играют (5 или 7)
   status_lang: StatusLang; // язык автоподписи «сетбол/матчбол»
   status_override: string | null; // ручная подпись вместо автоматической
+  // Кто подавал первым в текущей партии. Текущего подающего из этого выводит
+  // currentServer: оператору не надо щёлкать подачу каждые два очка.
+  first_server: ServerSlot;
   visible: boolean; // показ плашки в эфире
   left: PlayerState;
   right: PlayerState;
@@ -50,8 +62,9 @@ export const DEFAULT_STATE: ScoreboardState = {
   status_lang: 'en',
   status_override: null,
   visible: true,
-  left: { name: '', country: '', games: 0, points: 0 },
-  right: { name: '', country: '', games: 0, points: 0 },
+  first_server: '',
+  left: { name: '', name2: '', country: '', games: 0, points: 0, timeout: false, card: '' },
+  right: { name: '', name2: '', country: '', games: 0, points: 0, timeout: false, card: '' },
   team: { enabled: false, left: 0, right: 0 },
 };
 
@@ -103,6 +116,61 @@ export function isMatchOver(s: ScoreboardState): boolean {
   return s.left.games >= need || s.right.games >= need;
 }
 
+// ── подача ───────────────────────────────────────────────────────────────
+// Подача меняется каждые два очка, а от 10:10 — каждое очко. Значит текущего
+// подающего можно вывести из счёта, если известно, кто подавал первым в партии.
+// Оператор отмечает это один раз, дальше плашка считает сама.
+//
+// В паре подающих четверо и они идут по кругу: подающий → принимающий →
+// партнёр подающего → партнёр принимающего. Порядок тот же, просто цикл длиннее.
+
+/** Парный разряд определяется тем, что заполнено второе имя. */
+export function isDoubles(s: ScoreboardState): boolean {
+  return Boolean(s.left.name2.trim() || s.right.name2.trim());
+}
+
+/** Круг подающих: двое в одиночке, четверо в паре. */
+export function serveCycle(s: ScoreboardState): Exclude<ServerSlot, ''>[] {
+  return isDoubles(s)
+    ? ['left1', 'right1', 'left2', 'right2']
+    : ['left1', 'right1'];
+}
+
+/** Сколько раз подача сменилась с начала партии. */
+export function serveSwaps(s: ScoreboardState): number {
+  const total = s.left.points + s.right.points;
+  // До 10:10 подача переходит через два очка, после — каждое.
+  return total < 20 ? Math.floor(total / 2) : 10 + (total - 20);
+}
+
+/** Кто подаёт сейчас. Пусто — первый подающий не отмечен. */
+export function currentServer(s: ScoreboardState): ServerSlot {
+  const cycle = serveCycle(s);
+  const start = cycle.indexOf(s.first_server as Exclude<ServerSlot, ''>);
+  if (start < 0) return ''; // не отмечен, либо слот пары в одиночном разряде
+  return cycle[(start + serveSwaps(s)) % cycle.length];
+}
+
+/** Отметить, что подаёт этот слот: считаем назад, кто тогда начинал партию. */
+function withServer(s: ScoreboardState, slot: ServerSlot): ScoreboardState {
+  if (!slot) return { ...s, first_server: '' };
+  const cycle = serveCycle(s);
+  const target = cycle.indexOf(slot as Exclude<ServerSlot, ''>);
+  if (target < 0) return s;
+  const length = cycle.length;
+  const first = cycle[(((target - serveSwaps(s)) % length) + length) % length];
+  return { ...s, first_server: first };
+}
+
+const NEXT_CARD: Record<Card, Card> = { '': 'yellow', yellow: 'red', red: '' };
+
+const SWAPPED_SLOT: Record<Exclude<ServerSlot, ''>, ServerSlot> = {
+  left1: 'right1',
+  left2: 'right2',
+  right1: 'left1',
+  right2: 'left2',
+};
+
 // ── действия пульта ──────────────────────────────────────────────────────
 export type ScoreboardPatch = {
   match_label?: string;
@@ -111,8 +179,8 @@ export type ScoreboardPatch = {
   status_lang?: StatusLang;
   status_override?: string | null;
   visible?: boolean;
-  left?: Partial<Pick<PlayerState, 'name' | 'country'>>;
-  right?: Partial<Pick<PlayerState, 'name' | 'country'>>;
+  left?: Partial<Pick<PlayerState, 'name' | 'name2' | 'country'>>;
+  right?: Partial<Pick<PlayerState, 'name' | 'name2' | 'country'>>;
   team?: Partial<TeamState>;
 };
 
@@ -124,6 +192,9 @@ export type ScoreboardAction =
   | { type: 'resetPoints' }
   | { type: 'resetMatch' } // очки и партии в ноль, имена оставляем
   | { type: 'swap' } // поменять игроков сторонами
+  | { type: 'serve'; slot: ServerSlot } // отметить, кто подаёт сейчас
+  | { type: 'timeout'; side: SideKey } // тайм-аут взят / снят
+  | { type: 'card'; side: SideKey } // нет → жёлтая → красная → нет
   | { type: 'patch'; patch: ScoreboardPatch };
 
 const clamp = (v: number, max: number) => Math.min(max, Math.max(0, Math.round(v)));
@@ -146,8 +217,13 @@ export function reduce(s: ScoreboardState, a: ScoreboardAction): ScoreboardState
     case 'finishGame': {
       if (s.left.points === s.right.points) return s; // ничьих в партии не бывает
       const winner: SideKey = s.left.points > s.right.points ? 'left' : 'right';
+      // Новую партию начинает подачей следующий по кругу — тот, кто в прошлой
+      // партии принимал.
+      const cycle = serveCycle(s);
+      const started = cycle.indexOf(s.first_server as Exclude<ServerSlot, ''>);
       return {
         ...s,
+        first_server: started < 0 ? s.first_server : cycle[(started + 1) % cycle.length],
         left: { ...s.left, points: 0, games: s.left.games + (winner === 'left' ? 1 : 0) },
         right: { ...s.right, points: 0, games: s.right.games + (winner === 'right' ? 1 : 0) },
       };
@@ -155,18 +231,31 @@ export function reduce(s: ScoreboardState, a: ScoreboardAction): ScoreboardState
     case 'resetPoints':
       return { ...s, left: { ...s.left, points: 0 }, right: { ...s.right, points: 0 } };
     case 'resetMatch':
+      // Новый матч: карточки, тайм-ауты и подача относились к прошлому.
       return {
         ...s,
-        left: { ...s.left, points: 0, games: 0 },
-        right: { ...s.right, points: 0, games: 0 },
+        first_server: '',
+        left: { ...s.left, points: 0, games: 0, timeout: false, card: '' },
+        right: { ...s.right, points: 0, games: 0, timeout: false, card: '' },
       };
     case 'swap':
       return {
         ...s,
         left: s.right,
         right: s.left,
+        first_server: s.first_server ? SWAPPED_SLOT[s.first_server] : '',
         team: { ...s.team, left: s.team.right, right: s.team.left },
       };
+    case 'serve':
+      return withServer(s, a.slot);
+    case 'timeout': {
+      const side = s[a.side];
+      return { ...s, [a.side]: { ...side, timeout: !side.timeout } };
+    }
+    case 'card': {
+      const side = s[a.side];
+      return { ...s, [a.side]: { ...side, card: NEXT_CARD[side.card] } };
+    }
     case 'patch':
       return applyPatch(s, a.patch);
     default:
@@ -198,6 +287,8 @@ function applyPatch(s: ScoreboardState, p: ScoreboardPatch): ScoreboardState {
     if (!patch) continue;
     const name = text(patch.name, NAME_MAX);
     if (name !== undefined) next[side].name = name;
+    const name2 = text(patch.name2, NAME_MAX);
+    if (name2 !== undefined) next[side].name2 = name2;
     const country = text(patch.country, 3);
     if (country !== undefined) next[side].country = country.toUpperCase();
   }

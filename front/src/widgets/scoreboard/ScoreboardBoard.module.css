@@ -74,12 +74,42 @@
 
 .nameCell {
   display: flex;
+  gap: calc(10 * var(--sb-unit));
   align-items: center;
-  gap: calc(14 * var(--sb-unit));
+  justify-content: space-between;
   min-width: 0;
   height: var(--sb-row);
-  padding: 0 calc(16 * var(--sb-unit));
+  padding: 0 calc(14 * var(--sb-unit));
   background: var(--sb-navy);
+}
+
+.names {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-width: 0;
+}
+
+.nameLine {
+  display: flex;
+  gap: calc(8 * var(--sb-unit));
+  align-items: center;
+  min-width: 0;
+}
+
+/* Указатель подачи. Место под него занято всегда, иначе фамилии съезжают,
+   когда подача переходит на другую строку. */
+.serve {
+  flex: none;
+  width: 0;
+  height: 0;
+  border-top: calc(7 * var(--sb-unit)) solid transparent;
+  border-bottom: calc(7 * var(--sb-unit)) solid transparent;
+  border-left: calc(11 * var(--sb-unit)) solid transparent;
+}
+
+.serve[data-on] {
+  border-left-color: var(--sb-ink);
 }
 
 .name {
@@ -88,6 +118,50 @@
   text-overflow: ellipsis;
   text-transform: uppercase;
   white-space: nowrap;
+}
+
+/* В паре в ту же высоту строки помещаются две фамилии — размер источника в
+   OBS менять не приходится. */
+.nameCell[data-doubles] .name {
+  font-size: calc(19 * var(--sb-unit));
+  line-height: calc(21 * var(--sb-unit));
+}
+
+.nameCell[data-doubles] .serve {
+  border-top-width: calc(5 * var(--sb-unit));
+  border-bottom-width: calc(5 * var(--sb-unit));
+  border-left-width: calc(8 * var(--sb-unit));
+}
+
+/* ── отметки: тайм-аут и карточка ── */
+.marks {
+  display: flex;
+  flex: none;
+  gap: calc(6 * var(--sb-unit));
+  align-items: center;
+}
+
+.timeout {
+  display: grid;
+  place-items: center;
+  width: calc(24 * var(--sb-unit));
+  height: calc(24 * var(--sb-unit));
+  background: var(--sb-ink);
+  color: var(--sb-navy);
+  font-size: calc(15 * var(--sb-unit));
+}
+
+.card {
+  width: calc(17 * var(--sb-unit));
+  height: calc(24 * var(--sb-unit));
+}
+
+.card[data-card='yellow'] {
+  background: var(--sb-yellow);
+}
+
+.card[data-card='red'] {
+  background: var(--sb-red);
 }
 
 .gamesCell,

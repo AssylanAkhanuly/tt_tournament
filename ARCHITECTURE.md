@@ -1193,9 +1193,12 @@ erDiagram
         uuid tournamentId FK "пусто у товарищеских встреч"
         int tableNumber
         int rev "версия; растёт на каждую запись"
-        string players "фамилии и коды стран сторон"
+        string players "фамилии и коды стран сторон; второе имя = парный разряд"
         int games "выигранные партии"
         int points "очки текущей партии"
+        string firstServer "кто подавал первым в партии; текущий выводится по счёту"
+        string cards "жёлтая и красная у сторон"
+        boolean timeouts "тайм-аут взят"
         boolean visible "плашка в эфире или убрана"
         datetime updatedAt
     }

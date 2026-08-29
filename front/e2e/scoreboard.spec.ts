@@ -19,8 +19,9 @@ const CLEAN_BOARD = {
   status_lang: 'en',
   status_override: null,
   visible: true,
-  left: { name: '', country: '', games: 0, points: 0 },
-  right: { name: '', country: '', games: 0, points: 0 },
+  first_server: '',
+  left: { name: '', name2: '', country: '', games: 0, points: 0, timeout: false, card: '' },
+  right: { name: '', name2: '', country: '', games: 0, points: 0, timeout: false, card: '' },
   team: { enabled: false, left: 0, right: 0 },
 };
 
@@ -158,6 +159,51 @@ test.describe('Табло трансляции /scoreboard', () => {
     await expect(mainOverlay.getByTestId('points-left')).toHaveText('0'); // соседний стол не тронут
   });
 
+  // ── замечания федерации 22.08.2026: подача, пары, тайм-аут, карточки ──
+
+  test('подача отмечается один раз и дальше переходит сама', async ({ page }) => {
+    const overlay = await openBoth(page);
+
+    await page.getByRole('button', { name: 'Подача — Слева' }).click();
+    await expect(overlay.getByTestId('serve-left1')).toHaveAttribute('data-on', 'true');
+    await expect(overlay.getByTestId('serve-right1')).not.toHaveAttribute('data-on', 'true');
+
+    // Два разыгранных очка — подача уходит сопернику, оператор ничего не нажимает.
+    await page.getByRole('button', { name: 'Очко плюс — Слева' }).click();
+    await page.getByRole('button', { name: 'Очко плюс — Справа' }).click();
+    await expect(overlay.getByTestId('serve-right1')).toHaveAttribute('data-on', 'true');
+    await expect(overlay.getByTestId('serve-left1')).not.toHaveAttribute('data-on', 'true');
+  });
+
+  test('пара: вторая фамилия в эфире и своя подача', async ({ page }) => {
+    const overlay = await openBoth(page);
+
+    await page.getByLabel('Имя — Слева').fill('ГЕРАСИМЕНКО');
+    // Заполненное второе имя и делает разряд парным — переключателя нет.
+    await page.getByLabel('Второй игрок — Слева').fill('КОЛОДЯЖНЫЙ');
+    await expect(overlay.getByText('КОЛОДЯЖНЫЙ')).toBeVisible();
+
+    const secondServe = page.getByRole('button', { name: 'Подача второго — Слева' });
+    await expect(secondServe).toBeVisible();
+    await secondServe.click();
+    await expect(overlay.getByTestId('serve-left2')).toHaveAttribute('data-on', 'true');
+  });
+
+  test('тайм-аут и карточки видны в эфире', async ({ page }) => {
+    const overlay = await openBoth(page);
+
+    await page.getByRole('button', { name: 'Тайм-аут — Слева' }).click();
+    await expect(overlay.getByTestId('timeout-left')).toBeVisible();
+
+    const card = page.getByRole('button', { name: 'Карточка — Справа' });
+    await card.click();
+    await expect(overlay.getByTestId('card-right')).toHaveAttribute('data-card', 'yellow');
+    await card.click();
+    await expect(overlay.getByTestId('card-right')).toHaveAttribute('data-card', 'red');
+    await card.click();
+    await expect(overlay.getByTestId('card-right')).toHaveCount(0); // круг замкнулся
+  });
+
   // Пульт метит в планшет у стола: всё должно быть видно сразу, без прокрутки,
   // и кнопки — под палец. Книжная и альбомная — разные худшие случаи по высоте.
   const TABLETS = [
@@ -167,8 +213,13 @@ test.describe('Табло трансляции /scoreboard', () => {
 
   for (const tablet of TABLETS) {
     test(`пульт умещается в экран планшета: ${tablet.name}`, async ({ page, request }) => {
-      // Худший случай по высоте — командный матч: у каждой стороны третий счётчик.
-      await writeBoard(request, { team: { enabled: true, left: 0, right: 0 } });
+      // Худший случай по высоте: парный разряд (второе имя и четвёртый
+      // переключатель) плюс командный матч (третий счётчик у каждой стороны).
+      await writeBoard(request, {
+        team: { enabled: true, left: 0, right: 0 },
+        left: { ...CLEAN_BOARD.left, name: 'ИГРОК', name2: 'ПАРТНЁР' },
+        right: { ...CLEAN_BOARD.right, name: 'ИГРОК', name2: 'ПАРТНЁР' },
+      });
 
       await page.setViewportSize({ width: tablet.width, height: tablet.height });
       await page.goto('/scoreboard');
@@ -190,6 +241,8 @@ test.describe('Табло трансляции /scoreboard', () => {
         'Очко плюс — Справа',
         'Партия плюс — Слева',
         'Командный счёт плюс — Справа',
+        'Подача второго — Слева',
+        'Карточка — Справа',
         'Завершить партию',
       ]) {
         await expect(page.getByRole('button', { name })).toBeInViewport();
@@ -289,8 +342,8 @@ test.describe('Табло трансляции /scoreboard', () => {
     // строка задаются через API — на пульте их больше нет.
     await writeBoard(request, {
       team: { enabled: true, left: 1, right: 2 },
-      left: { name: 'KIRILL GERASSIMENKO', country: 'KAZ', games: 0, points: 0 },
-      right: { name: 'TOMOKAZU HARIMOTO', country: 'JPN', games: 0, points: 0 },
+      left: { ...CLEAN_BOARD.left, name: 'KIRILL GERASSIMENKO', country: 'KAZ' },
+      right: { ...CLEAN_BOARD.right, name: 'TOMOKAZU HARIMOTO', country: 'JPN' },
     });
 
     const overlay = await openBoth(page);
@@ -301,6 +354,12 @@ test.describe('Табло трансляции /scoreboard', () => {
     for (let i = 0; i < 10; i += 1) await plusRight.click();
 
     await expect(overlay.getByTestId('status')).toHaveText('GAME POINT');
+
+    // Показываем на снимке всё, что просила федерация: подачу, тайм-аут и карточку.
+    await page.getByRole('button', { name: 'Подача — Справа' }).click();
+    await page.getByRole('button', { name: 'Тайм-аут — Слева' }).click();
+    await page.getByRole('button', { name: 'Карточка — Справа' }).click();
+    await expect(overlay.getByTestId('card-right')).toHaveAttribute('data-card', 'yellow');
 
     // Размер плашки = размер источника «Браузер» в OBS (BOARD_SIZE в виджете).
     const box = await overlay.getByTestId('board').boundingBox();

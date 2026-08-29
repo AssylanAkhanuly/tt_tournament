@@ -539,8 +539,11 @@ scoreboard: SCOREBOARD {
   tournament_id: uuid {constraint: foreign_key}
   table_number: int
   rev: "версия; растёт на каждую запись — по ней ловим двух секретарей сразу"
-  players: "фамилии и страны сторон"
+  players: "фамилии и страны сторон; второе имя = парный разряд"
   score: "партии и очки текущей партии, счёт командной встречи"
+  first_server: "кто подавал первым в партии — текущий подающий выводится по счёту"
+  cards: "жёлтая и красная у сторон"
+  timeouts: "тайм-аут взят"
   visible: bool
   updated_at: datetime
 }

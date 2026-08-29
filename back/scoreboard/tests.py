@@ -13,8 +13,11 @@ CLEAN = {
     "status_lang": "en",
     "status_override": None,
     "visible": True,
-    "left": {"name": "", "country": "", "games": 0, "points": 0},
-    "right": {"name": "", "country": "", "games": 0, "points": 0},
+    "first_server": "",
+    "left": {"name": "", "name2": "", "country": "", "games": 0, "points": 0,
+             "timeout": False, "card": ""},
+    "right": {"name": "", "name2": "", "country": "", "games": 0, "points": 0,
+              "timeout": False, "card": ""},
     "team": {"enabled": False, "left": 0, "right": 0},
 }
 
@@ -40,7 +43,8 @@ class ScoreboardApiTests(TestCase):
         self.client.get("/api/scoreboard/main/")
         response = self.client.put(
             "/api/scoreboard/main/",
-            payload(0, left={"name": "Герасименко", "country": "kaz", "games": 1, "points": 9}),
+            payload(0, left=dict(CLEAN["left"], name="Герасименко", country="kaz",
+                                 games=1, points=9)),
             format="json",
         )
         self.assertEqual(response.status_code, 200)
@@ -63,7 +67,7 @@ class ScoreboardApiTests(TestCase):
         self.client.get("/api/scoreboard/main/")
         response = self.client.put(
             "/api/scoreboard/main/",
-            payload(0, best_of=3, left={"name": "x", "country": "KZ", "games": 0, "points": 500}),
+            payload(0, best_of=3, left=dict(CLEAN["left"], name="x", country="KZ", points=500)),
             format="json",
         )
         self.assertEqual(response.status_code, 400)
@@ -91,7 +95,7 @@ class ScoreboardApiTests(TestCase):
 
         self.client.put(
             "/api/scoreboard/table-1/",
-            payload(0, left={"name": "A", "country": "KAZ", "games": 0, "points": 7}),
+            payload(0, left=dict(CLEAN["left"], name="A", country="KAZ", points=7)),
             format="json",
         )
 
@@ -144,3 +148,36 @@ class ScoreboardStreamTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response["Content-Type"], "text/event-stream; charset=utf-8")
         response.close()  # не вычитываем поток: он крутится до таймаута
+
+
+class ScoreboardServeAndCardsTests(TestCase):
+    """Поля из замечаний федерации 22.08.2026: подача, пары, тайм-аут, карточки."""
+
+    def setUp(self):
+        self.client = APIClient()
+        self.client.get("/api/scoreboard/main/")
+
+    def test_stores_serve_pair_timeout_and_card(self):
+        response = self.client.put(
+            "/api/scoreboard/main/",
+            payload(
+                0,
+                first_server="left2",
+                left=dict(CLEAN["left"], name="Герасименко", name2="Колодяжный",
+                          timeout=True, card="yellow"),
+            ),
+            format="json",
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data["first_server"], "left2")
+        self.assertEqual(response.data["left"]["name2"], "Колодяжный")
+        self.assertTrue(response.data["left"]["timeout"])
+        self.assertEqual(response.data["left"]["card"], "yellow")
+
+    def test_unknown_card_and_server_are_rejected(self):
+        for field, body in (
+            ("card", payload(0, left=dict(CLEAN["left"], card="blue"))),
+            ("first_server", payload(0, first_server="left3")),
+        ):
+            response = self.client.put("/api/scoreboard/main/", body, format="json")
+            self.assertEqual(response.status_code, 400, field)

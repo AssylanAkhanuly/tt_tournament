@@ -5,7 +5,9 @@ import { describe, expect, it } from 'vitest';
 
 import {
   computeStatus,
+  currentServer,
   DEFAULT_STATE,
+  isDoubles,
   isGameOver,
   isMatchOver,
   gamesToWin,
@@ -152,3 +154,105 @@ describe('patch', () => {
   });
 });
 
+
+describe('подача', () => {
+  const at = (a: number, b: number, patch: Partial<ScoreboardState> = {}) =>
+    state({
+      ...patch,
+      left: { ...DEFAULT_STATE.left, ...patch.left, points: a },
+      right: { ...DEFAULT_STATE.right, ...patch.right, points: b },
+    });
+
+  const pair = (patch: Partial<ScoreboardState> = {}) => ({
+    left: { ...DEFAULT_STATE.left, name: 'A', name2: 'A2', ...patch.left },
+    right: { ...DEFAULT_STATE.right, name: 'B', name2: 'B2', ...patch.right },
+  });
+
+  it('без отметки подающего не показываем', () => {
+    expect(currentServer(at(4, 3))).toBe('');
+  });
+
+  it('в одиночке подача переходит через два очка', () => {
+    const s = (a: number, b: number) => currentServer(at(a, b, { first_server: 'left1' }));
+    expect(s(0, 0)).toBe('left1');
+    expect(s(1, 0)).toBe('left1');
+    expect(s(2, 0)).toBe('right1');
+    expect(s(2, 1)).toBe('right1');
+    expect(s(2, 2)).toBe('left1');
+  });
+
+  it('от 10:10 подача переходит каждое очко', () => {
+    const s = (a: number, b: number) => currentServer(at(a, b, { first_server: 'left1' }));
+    expect(s(9, 9)).toBe('right1'); // 18 очков — ещё по два
+    expect(s(10, 10)).toBe('left1');
+    expect(s(11, 10)).toBe('right1');
+    expect(s(11, 11)).toBe('left1');
+  });
+
+  it('в паре подающие идут по кругу из четырёх', () => {
+    const s = (a: number, b: number) => currentServer(at(a, b, { first_server: 'left1', ...pair() }));
+    expect(s(0, 0)).toBe('left1');
+    expect(s(2, 0)).toBe('right1');
+    expect(s(4, 0)).toBe('left2');
+    expect(s(6, 0)).toBe('right2');
+    expect(s(8, 0)).toBe('left1'); // круг замкнулся
+  });
+
+  it('пара определяется вторым именем, а не переключателем', () => {
+    expect(isDoubles(state())).toBe(false);
+    expect(isDoubles(state(pair()))).toBe(true);
+  });
+
+  it('отметка подающего пересчитывает, кто начинал партию', () => {
+    // На 3:2 подача сменилась дважды; отмечаем правого — начинал тоже правый.
+    const after = reduce(at(3, 2), { type: 'serve', slot: 'right1' });
+    expect(after.first_server).toBe('right1');
+    expect(currentServer(after)).toBe('right1');
+  });
+
+  it('слот пары в одиночном разряде игнорируется', () => {
+    const before = at(0, 0, { first_server: 'left1' });
+    expect(reduce(before, { type: 'serve', slot: 'left2' })).toBe(before);
+  });
+
+  it('новую партию начинает тот, кто принимал', () => {
+    const after = reduce(at(11, 5, { first_server: 'left1' }), { type: 'finishGame' });
+    expect(after.first_server).toBe('right1');
+    expect(currentServer(after)).toBe('right1'); // очки обнулились
+  });
+
+  it('смена сторон переносит подачу вместе с игроком', () => {
+    const after = reduce(at(0, 0, { first_server: 'left1' }), { type: 'swap' });
+    expect(after.first_server).toBe('right1');
+  });
+});
+
+describe('карточки и тайм-аут', () => {
+  it('карточка идёт по кругу: нет → жёлтая → красная → нет', () => {
+    let s = state();
+    s = reduce(s, { type: 'card', side: 'left' });
+    expect(s.left.card).toBe('yellow');
+    s = reduce(s, { type: 'card', side: 'left' });
+    expect(s.left.card).toBe('red');
+    s = reduce(s, { type: 'card', side: 'left' });
+    expect(s.left.card).toBe('');
+    expect(s.right.card).toBe(''); // соседа не трогали
+  });
+
+  it('тайм-аут переключается', () => {
+    const after = reduce(state(), { type: 'timeout', side: 'right' });
+    expect(after.right.timeout).toBe(true);
+    expect(reduce(after, { type: 'timeout', side: 'right' }).right.timeout).toBe(false);
+  });
+
+  it('новый матч снимает карточки, тайм-ауты и подачу', () => {
+    const before = state({
+      first_server: 'left1',
+      left: { ...DEFAULT_STATE.left, card: 'red', timeout: true, points: 7 },
+    });
+    const after = reduce(before, { type: 'resetMatch' });
+    expect(after.first_server).toBe('');
+    expect(after.left.card).toBe('');
+    expect(after.left.timeout).toBe(false);
+  });
+});

@@ -34,7 +34,7 @@
 | `tournaments` | Tournaments, participants, bracket/group matches, table management |
 | `clubs` | Clubs, club admins (ClubAdmin), club tables (ClubTable) |
 | `notifications` | In-app notifications feed |
-| `scoreboard` | Live score of a streamed table: one row per board, read by the OBS overlay, written by the operator's panel (`front/` → `/scoreboard`). Clients subscribe over SSE (`<key>/stream/`); the stream watches the row's `rev` because gunicorn's two processes share no memory. Optimistic concurrency on `rev`, ETag/304 on the snapshot GET. **An open stream holds a gunicorn thread** — `nixpacks.toml` runs 12 threads per worker for that. Has tests — `manage.py test scoreboard` |
+| `scoreboard` | Live score of a streamed table: one row per board, read by the OBS overlay, written by the operator's panel (`front/` → `/scoreboard`). Clients subscribe over SSE (`<key>/stream/`); the stream watches the row's `rev` because gunicorn's two processes share no memory. Holds serve (`first_server` — who served first this game; the current server is derived from the score), the pair's second name (`*_name2`, non-empty = doubles), time-outs and cards. Optimistic concurrency on `rev`, ETag/304 on the snapshot GET. **An open stream holds a gunicorn thread** — `nixpacks.toml` runs 12 threads per worker for that. Has tests — `manage.py test scoreboard` |
 
 ## Auth
 - JWT stored in `HttpOnly` cookies (`access_token`, `refresh_token`)
