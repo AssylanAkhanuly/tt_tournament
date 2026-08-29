@@ -29,6 +29,7 @@ import { HomeG2Desk } from './role14deskg2';
 import { ProfA, ProfB, ProfG, ProfV } from './role14prof';
 import { ProfD, ProfDPhone, ProfDSettings } from './role14prof2';
 import { H2H, H2HPhone } from './role14h2h';
+import { Article, ArticlePhone, News, NewsPhone } from './role14news';
 
 export default {
   title: 'Дизайн/14 · Спортсмен',
@@ -578,3 +579,20 @@ export const HeadToHeadPhone = {
   name: 'Э14.6 · Аналитика в языке референса (телефон)',
   render: () => <H2HPhone />,
 };
+
+/* ── Новости в языке референса (29.08.2026) ──────────────────────────
+   Присланный референс — спортивное новостное приложение. Взято: крупная
+   карточка первого материала, карточки с обложкой и чипом темы, строки с
+   миниатюрой, а у материала — крупный заголовок, строка «дата · автор ·
+   сколько читать», обложка во всю ширину, абзацы с жирными врезками и
+   плавающая пилюля внизу.
+
+   Не взято: лента чипов-фильтров (по Э14.13 решено, что фильтра по темам на
+   экране нет — тема стоит на карточке), карточка идущего матча в шапке (для
+   этого есть «Мой турнир») и пилюля с лайками и закладками — их в системе
+   нет. Форма пилюли осталась, внутри неё «ссылка по делу», которую Э14.14 и
+   требует. Разбор — в role14news.tsx. */
+export const NewsFeed = { name: 'Э14.13 · Новости (десктоп)', render: () => <News /> };
+export const NewsFeedPhone = { name: 'Э14.13 · Новости (телефон)', render: () => <NewsPhone /> };
+export const NewsArticle = { name: 'Э14.14 · Новость (десктоп)', render: () => <Article /> };
+export const NewsArticlePhone = { name: 'Э14.14 · Новость (телефон)', render: () => <ArticlePhone /> };

@@ -1,0 +1,219 @@
+/* Э14.13 «Новости» и Э14.14 «Новость» в языке присланного референса
+   (29.08.2026): крупная карточка первого материала, сетка карточек с обложкой
+   и чипом темы, строки с миниатюрой, а у материала — крупный заголовок, строка
+   «дата · автор · сколько читать», обложка во всю ширину, абзацы с жирными
+   врезками и плавающая пилюля внизу.
+
+   Палитра и радиусы — те же `--d-*` и `--r-d-*`, что у профиля и аналитики:
+   роль должна читаться одной системой, а не набором заимствований.
+
+   Обои с орнаментом здесь тоже погашены — под обложками узор шумит. `flex: 1`
+   обязателен: без растяжения ниже содержимого остаётся полоса обоев.
+
+   Один файл на десктоп и телефон: различает `.nwm`. */
+
+.nw {
+  flex: 1;
+  min-height: 0;
+  height: 100%;
+  overflow: auto;
+  /* Отступы `.dmain` — 20/22 px; гасим и задаём свои. */
+  margin: -20px -22px;
+  padding: var(--s-6) 22px;
+  background: var(--d-bg);
+  color: var(--d-ink);
+}
+
+.nw-h1 { margin: 0 0 var(--s-5); font-size: 34px; line-height: 1; color: var(--d-ink); }
+
+.nw-sec {
+  margin: var(--s-6) 0 var(--s-3);
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--d-ink);
+}
+
+/* Тема материала чипом — она стоит на каждой карточке, потому что фильтра по
+   темам на экране нет (решение по Э14.13). */
+.nw-tag {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: var(--r-round);
+  background: color-mix(in srgb, var(--d-accent) 14%, transparent);
+  color: var(--d-accent);
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+/* ── Крупная карточка первого материала ─────────────────────────── */
+.nw-lead {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
+  overflow: hidden;
+  border: 1px solid var(--d-line);
+  border-radius: var(--r-d-card);
+  background: var(--d-card);
+  cursor: pointer;
+  /* Высота задана явно: у ячейки сетки её нет, и `height: 100%` у картинки
+     откатывался к собственной пропорции — квадратный портрет растягивал
+     карточку на две трети экрана. */
+  height: 300px;
+}
+.nw-lead:hover { background: var(--d-card-2); }
+.nw-lead img { width: 100%; height: 100%; object-fit: cover; object-position: 50% 28%; }
+.nw-lead .tx { display: flex; flex-direction: column; gap: var(--s-3); padding: var(--s-5); }
+.nw-lead .nw-tag { align-self: flex-start; }
+.nw-lead h2 { margin: 0; font-size: 32px; line-height: 1.05; color: var(--d-ink); }
+.nw-lead p { margin: 0; font-size: 14px; line-height: 1.55; color: var(--d-muted); }
+.nw-lead .at { margin-top: auto; font-size: 12px; color: var(--d-dim); }
+
+/* ── Сетка карточек ─────────────────────────────────────────────── */
+.nw-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: var(--s-3);
+}
+.nw-card {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid var(--d-line);
+  border-radius: var(--r-d-card);
+  background: var(--d-card);
+  cursor: pointer;
+}
+.nw-card:hover { background: var(--d-card-2); }
+.nw-card img { width: 100%; height: 148px; object-fit: cover; object-position: 50% 28%; }
+.nw-card .tx { display: flex; flex-direction: column; gap: 8px; padding: var(--s-4); }
+.nw-card .cap { display: flex; align-items: center; justify-content: space-between; gap: var(--s-3); }
+.nw-card .cap .at { font-size: 11.5px; color: var(--d-dim); }
+.nw-card h3 { margin: 0; font-size: 15px; line-height: 1.25; color: var(--d-ink); }
+.nw-card p {
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--d-muted);
+}
+
+/* ── Строки с миниатюрой ────────────────────────────────────────── */
+.nw-rows { display: flex; flex-direction: column; gap: var(--s-2); }
+.nw-row {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  padding: 10px var(--s-4) 10px 10px;
+  border: 1px solid var(--d-line);
+  border-radius: var(--r-d-row);
+  background: var(--d-card);
+  cursor: pointer;
+}
+.nw-row:hover { background: var(--d-card-2); }
+.nw-row img {
+  width: 68px;
+  height: 52px;
+  flex: none;
+  border-radius: var(--r-d-tile);
+  object-fit: cover;
+  object-position: 50% 28%;
+}
+.nw-row .tx { display: flex; flex-direction: column; gap: 3px; flex: 1; min-width: 0; }
+.nw-row .nm { font-size: 14px; font-weight: 600; color: var(--d-ink); }
+.nw-row .ss { font-size: 11.5px; color: var(--d-muted); }
+.nw-row .ch { color: var(--d-dim); flex: none; }
+
+.nw-more {
+  display: block;
+  width: 100%;
+  margin-top: var(--s-4);
+  padding: 13px;
+  border: 1px solid var(--d-line);
+  border-radius: var(--r-d-row);
+  background: var(--d-card);
+  font: inherit;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--d-ink);
+  cursor: pointer;
+}
+.nw-more:hover { background: var(--d-card-2); }
+
+/* ── Материал ───────────────────────────────────────────────────── */
+.nw-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  margin-bottom: var(--s-4);
+  padding: 8px 13px;
+  border: 1px solid var(--d-line);
+  border-radius: var(--r-round);
+  background: var(--d-card);
+  font: inherit;
+  font-size: 13px;
+  color: var(--d-ink);
+  cursor: pointer;
+}
+.nw-back:hover { background: var(--d-card-2); }
+
+/* Колонка в ширину чтения, а не во весь экран — требование Э14.14. */
+.nw-read { max-width: 720px; }
+.nw-read h1 { margin: var(--s-3) 0 0; font-size: 42px; line-height: 1.04; color: var(--d-ink); }
+.nw-read .meta { margin-top: var(--s-3); font-size: 13px; color: var(--d-dim); }
+.nw-read .hero {
+  width: 100%;
+  height: 320px;
+  object-position: 50% 28%;
+  margin: var(--s-5) 0;
+  border-radius: var(--r-d-card);
+  object-fit: cover;
+}
+/* Увеличенный интерлиньяж: единственный экран роли с длинным текстом. */
+.nw-read p { margin: 0 0 var(--s-4); font-size: 15.5px; line-height: 1.7; color: var(--d-muted); }
+.nw-read p b { color: var(--d-ink); }
+
+/* Плавающая пилюля из референса. Внутри — ссылка по делу, а не лайки:
+   их в системе нет. */
+.nw-pill {
+  position: sticky;
+  bottom: var(--s-4);
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: var(--s-4);
+  padding: 13px 20px;
+  border-radius: var(--r-round);
+  background: var(--d-accent);
+  color: var(--d-on-accent);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+/* ── Телефон ────────────────────────────────────────────────────── */
+.nwm { margin: 0; height: auto; padding: 0; overflow: visible; background: none; }
+.nwm .mb-body {
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  background: var(--d-bg);
+  scrollbar-width: none;
+}
+.nwm .mb-body::-webkit-scrollbar { display: none; }
+.nwm .nw-h1 { padding: var(--s-5) 16px 0; margin-bottom: var(--s-3); font-size: 27px; }
+.nwm .nw-sec { padding: 0 16px; margin: var(--s-4) 0 var(--s-3); }
+.nwm .nw-lead { margin: 0 16px; grid-template-columns: minmax(0, 1fr); height: auto; }
+.nwm .nw-lead img { height: 168px; }
+.nwm .nw-lead .tx { padding: var(--s-4); gap: var(--s-2); }
+.nwm .nw-lead h2 { font-size: 22px; }
+.nwm .nw-lead p { font-size: 13px; }
+.nwm .nw-rows { padding: 0 16px; }
+.nwm .nw-more { margin: var(--s-4) 16px 0; width: auto; }
+
+/* `.mb-body` — колонка-флекс, и inline-flex-кнопка в ней растягивалась во всю
+   ширину экрана. */
+.nwm .nw-back { align-self: flex-start; margin: var(--s-5) 16px var(--s-3); }
+.nwm .nw-read { padding: 0 16px; max-width: none; }
+.nwm .nw-read h1 { font-size: 27px; }
+.nwm .nw-read .hero { height: 190px; margin: var(--s-4) 0; }
+.nwm .nw-read p { font-size: 14.5px; line-height: 1.65; }
+.nwm .nw-pill { margin: 0 16px var(--s-4); bottom: var(--s-3); padding: 12px 18px; font-size: 13.5px; }
