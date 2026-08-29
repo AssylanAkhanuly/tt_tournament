@@ -4,8 +4,11 @@
    «дата · автор · сколько читать», обложка во всю ширину, абзацы с жирными
    врезками и плавающая пилюля внизу.
 
-   Палитра и радиусы — те же `--d-*` и `--r-d-*`, что у профиля и аналитики:
-   роль должна читаться одной системой, а не набором заимствований.
+   Цвета — палитра САМОГО референса (`--n-*` в tokens.css): почти чёрный
+   активный чип, синяя карточка идущего матча с белой подписью, оранжевая
+   пилюля темы. Это отступление от системного правила «подпись на акценте
+   тёмная» — принято сознательно по просьбе «copy from the reference», записано
+   в flows/14-sportsmen.md. Радиусы — те же `--r-d-*`, что у профиля.
 
    Обои с орнаментом здесь тоже погашены — под обложками узор шумит. `flex: 1`
    обязателен: без растяжения ниже содержимого остаётся полоса обоев.
@@ -20,17 +23,17 @@
   /* Отступы `.dmain` — 20/22 px; гасим и задаём свои. */
   margin: -20px -22px;
   padding: var(--s-6) 22px;
-  background: var(--d-bg);
-  color: var(--d-ink);
+  background: var(--n-bg);
+  color: var(--n-ink);
 }
 
-.nw-h1 { margin: 0 0 var(--s-5); font-size: 34px; line-height: 1; color: var(--d-ink); }
+.nw-h1 { margin: 0 0 var(--s-5); font-size: 34px; line-height: 1; color: var(--n-ink); }
 
 .nw-sec {
   margin: var(--s-6) 0 var(--s-3);
   font-size: 15px;
   font-weight: 600;
-  color: var(--d-ink);
+  color: var(--n-ink);
 }
 
 /* Тема материала чипом — она стоит на каждой карточке, потому что фильтра по
@@ -39,8 +42,8 @@
   display: inline-block;
   padding: 4px 10px;
   border-radius: var(--r-round);
-  background: color-mix(in srgb, var(--d-accent) 14%, transparent);
-  color: var(--d-accent);
+  background: var(--n-hot-bg);
+  color: var(--n-hot);
   font-size: 10.5px;
   font-weight: 800;
   letter-spacing: 0.1em;
@@ -56,11 +59,11 @@
   gap: 10px;
   flex: 1;
   padding: 12px 16px;
-  border: 1px solid var(--d-line);
+  border: 1px solid var(--n-line);
   border-radius: var(--r-round);
-  background: var(--d-card);
+  background: var(--n-card);
   font-size: 13.5px;
-  color: var(--d-dim);
+  color: var(--n-dim);
 }
 .nw-top img { width: 40px; height: 40px; border-radius: var(--r-round); object-fit: cover; flex: none; }
 
@@ -70,17 +73,17 @@
 .nw-chip {
   flex: none;
   padding: 9px 17px;
-  border: 1px solid var(--d-line);
+  border: 1px solid var(--n-line);
   border-radius: var(--r-round);
-  background: var(--d-card);
+  background: var(--n-card);
   font: inherit;
   font-size: 13px;
   font-weight: 600;
-  color: var(--d-muted);
+  color: var(--n-muted);
   cursor: pointer;
 }
-.nw-chip:hover { color: var(--d-ink); }
-.nw-chip.on { background: var(--d-accent); border-color: var(--d-accent); color: var(--d-on-accent); }
+.nw-chip:hover { color: var(--n-ink); }
+.nw-chip.on { background: var(--n-chip); border-color: var(--n-chip); color: var(--n-on-chip); }
 
 .nw-tours {
   display: flex;
@@ -107,21 +110,21 @@
 .nw-tour .ring {
   display: inline-flex;
   padding: 3px;
-  border: 2px solid var(--d-accent);
+  border: 2px solid var(--n-live);
   border-radius: var(--r-round);
 }
 .nw-tour img { width: 54px; height: 54px; border-radius: var(--r-round); object-fit: cover; }
-.nw-tour .nm { font-size: 11px; line-height: 1.2; text-align: center; color: var(--d-muted); }
+.nw-tour .nm { font-size: 11px; line-height: 1.2; text-align: center; color: var(--n-muted); }
 
 /* ── Идущий матч: «Live» референса ──────────────────────────────── */
 .nw-live {
   padding: var(--s-4) var(--s-5);
   border-radius: var(--r-d-card);
-  background: linear-gradient(120deg, var(--d-accent), color-mix(in srgb, var(--d-accent) 72%, var(--c-accent-2)));
+  background: var(--n-live);
   /* Подпись на акценте — парный токен `--c-accent-ink`, а не «белый»: темы
      считают его как более контрастный из двух, и на светлой он тёмный. Это
      решение аудита контраста (flows/14-sportsmen.md), а не случайность. */
-  color: var(--d-on-accent);
+  color: var(--n-on-live);
   cursor: pointer;
 }
 .nw-live .cap {
@@ -132,7 +135,7 @@
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: color-mix(in srgb, var(--d-on-accent) 78%, transparent);
+  color: color-mix(in srgb, var(--n-on-live) 78%, transparent);
 }
 .nw-live .cap b { font-weight: 700; letter-spacing: 0; text-transform: none; font-size: 12.5px; }
 .nw-live .cap .wk { margin-left: auto; letter-spacing: 0; text-transform: none; font-size: 12px; }
@@ -141,7 +144,7 @@
   width: 7px;
   height: 7px;
   border-radius: var(--r-round);
-  background: var(--d-on-accent);
+  background: var(--n-dot);
 }
 .nw-live .mid {
   display: grid;
@@ -156,19 +159,19 @@
   height: 48px;
   border-radius: var(--r-round);
   object-fit: cover;
-  border: 2px solid color-mix(in srgb, var(--d-on-accent) 40%, transparent);
+  border: 2px solid color-mix(in srgb, var(--n-on-live) 40%, transparent);
 }
 .nw-live .side .nm { font-size: 12.5px; font-weight: 600; }
 .nw-live .sc { display: flex; flex-direction: column; align-items: center; gap: 3px; }
 .nw-live .sc b { font-size: 40px; line-height: 1; }
-.nw-live .sc .at { font-size: 11px; color: color-mix(in srgb, var(--d-on-accent) 75%, transparent); }
+.nw-live .sc .at { font-size: 11px; color: color-mix(in srgb, var(--n-on-live) 75%, transparent); }
 
 .nw-dots { display: flex; justify-content: center; gap: 6px; margin: var(--s-3) 0 var(--s-5); }
-.nw-dots i { width: 18px; height: 3px; border-radius: var(--r-round); background: var(--d-line); }
-.nw-dots i.on { width: 26px; background: var(--d-accent); }
+.nw-dots i { width: 18px; height: 3px; border-radius: var(--r-round); background: var(--n-line); }
+.nw-dots i.on { width: 26px; background: var(--n-live); }
 
 /* ── Карусель «Главное» ─────────────────────────────────────────── */
-.nw-sec .more { margin-left: auto; font-size: 12.5px; font-weight: 600; color: var(--d-accent); cursor: pointer; }
+.nw-sec .more { margin-left: auto; font-size: 12.5px; font-weight: 600; color: var(--n-live); cursor: pointer; }
 .nw-sec { display: flex; align-items: baseline; gap: var(--s-3); }
 .nw-carousel {
   display: flex;
@@ -190,22 +193,22 @@
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  border: 1px solid var(--d-line);
+  border: 1px solid var(--n-line);
   border-radius: var(--r-d-card);
-  background: var(--d-card);
+  background: var(--n-card);
   cursor: pointer;
 }
-.nw-card:hover { background: var(--d-card-2); }
+.nw-card:hover { background: var(--n-card-2); }
 .nw-card img { width: 100%; height: 148px; object-fit: cover; object-position: 50% 28%; }
 .nw-card .tx { display: flex; flex-direction: column; gap: 8px; padding: var(--s-4); }
 .nw-card .cap { display: flex; align-items: center; justify-content: space-between; gap: var(--s-3); }
-.nw-card .cap .at { font-size: 11.5px; color: var(--d-dim); }
-.nw-card h3 { margin: 0; font-size: 15px; line-height: 1.25; color: var(--d-ink); }
+.nw-card .cap .at { font-size: 11.5px; color: var(--n-dim); }
+.nw-card h3 { margin: 0; font-size: 15px; line-height: 1.25; color: var(--n-ink); }
 .nw-card p {
   margin: 0;
   font-size: 12.5px;
   line-height: 1.5;
-  color: var(--d-muted);
+  color: var(--n-muted);
 }
 
 /* ── Строки с миниатюрой ────────────────────────────────────────── */
@@ -215,12 +218,12 @@
   align-items: center;
   gap: var(--s-3);
   padding: 10px var(--s-4) 10px 10px;
-  border: 1px solid var(--d-line);
+  border: 1px solid var(--n-line);
   border-radius: var(--r-d-row);
-  background: var(--d-card);
+  background: var(--n-card);
   cursor: pointer;
 }
-.nw-row:hover { background: var(--d-card-2); }
+.nw-row:hover { background: var(--n-card-2); }
 .nw-row img {
   width: 68px;
   height: 52px;
@@ -230,25 +233,25 @@
   object-position: 50% 28%;
 }
 .nw-row .tx { display: flex; flex-direction: column; gap: 3px; flex: 1; min-width: 0; }
-.nw-row .nm { font-size: 14px; font-weight: 600; color: var(--d-ink); }
-.nw-row .ss { font-size: 11.5px; color: var(--d-muted); }
-.nw-row .ch { color: var(--d-dim); flex: none; }
+.nw-row .nm { font-size: 14px; font-weight: 600; color: var(--n-ink); }
+.nw-row .ss { font-size: 11.5px; color: var(--n-muted); }
+.nw-row .ch { color: var(--n-dim); flex: none; }
 
 .nw-more {
   display: block;
   width: 100%;
   margin-top: var(--s-4);
   padding: 13px;
-  border: 1px solid var(--d-line);
+  border: 1px solid var(--n-line);
   border-radius: var(--r-d-row);
-  background: var(--d-card);
+  background: var(--n-card);
   font: inherit;
   font-size: 13.5px;
   font-weight: 600;
-  color: var(--d-ink);
+  color: var(--n-ink);
   cursor: pointer;
 }
-.nw-more:hover { background: var(--d-card-2); }
+.nw-more:hover { background: var(--n-card-2); }
 
 /* ── Материал ───────────────────────────────────────────────────── */
 .nw-back {
@@ -257,20 +260,20 @@
   gap: 7px;
   margin-bottom: var(--s-4);
   padding: 8px 13px;
-  border: 1px solid var(--d-line);
+  border: 1px solid var(--n-line);
   border-radius: var(--r-round);
-  background: var(--d-card);
+  background: var(--n-card);
   font: inherit;
   font-size: 13px;
-  color: var(--d-ink);
+  color: var(--n-ink);
   cursor: pointer;
 }
-.nw-back:hover { background: var(--d-card-2); }
+.nw-back:hover { background: var(--n-card-2); }
 
 /* Колонка в ширину чтения, а не во весь экран — требование Э14.14. */
 .nw-read { max-width: 720px; }
-.nw-read h1 { margin: var(--s-3) 0 0; font-size: 42px; line-height: 1.04; color: var(--d-ink); }
-.nw-read .meta { margin-top: var(--s-3); font-size: 13px; color: var(--d-dim); }
+.nw-read h1 { margin: var(--s-3) 0 0; font-size: 42px; line-height: 1.04; color: var(--n-ink); }
+.nw-read .meta { margin-top: var(--s-3); font-size: 13px; color: var(--n-dim); }
 .nw-read .hero {
   width: 100%;
   height: 320px;
@@ -280,8 +283,8 @@
   object-fit: cover;
 }
 /* Увеличенный интерлиньяж: единственный экран роли с длинным текстом. */
-.nw-read p { margin: 0 0 var(--s-4); font-size: 15.5px; line-height: 1.7; color: var(--d-muted); }
-.nw-read p b { color: var(--d-ink); }
+.nw-read p { margin: 0 0 var(--s-4); font-size: 15.5px; line-height: 1.7; color: var(--n-muted); }
+.nw-read p b { color: var(--n-ink); }
 
 /* Плавающая пилюля из референса. Внутри — ссылка по делу, а не лайки:
    их в системе нет. */
@@ -294,8 +297,8 @@
   margin-top: var(--s-4);
   padding: 13px 20px;
   border-radius: var(--r-round);
-  background: var(--d-accent);
-  color: var(--d-on-accent);
+  background: var(--n-live);
+  color: var(--n-on-live);
   font-size: 14px;
   font-weight: 600;
   cursor: pointer;
@@ -306,7 +309,7 @@
 .nwm .mb-body {
   overflow-y: auto;
   overscroll-behavior: contain;
-  background: var(--d-bg);
+  background: var(--n-bg);
   scrollbar-width: none;
 }
 .nwm .mb-body::-webkit-scrollbar { display: none; }
