@@ -63,19 +63,39 @@ import {
   Button,
   Card,
   CardBody,
+  CardFooter,
   CardHeader,
   Checkbox,
   Chip,
+  DateInput,
   DatePicker,
   Divider,
+  Drawer,
+  DrawerBody,
+  DrawerContent,
+  DrawerFooter,
+  DrawerHeader,
+  Form,
   HeroUIProvider,
   Input,
+  Menu,
+  MenuItem,
+  Modal,
+  ModalBody,
+  ModalContent,
+  ModalFooter,
+  ModalHeader,
+  Navbar,
+  NavbarBrand,
+  NavbarContent,
+  NavbarItem,
   Pagination,
   Progress,
   Radio,
   RadioGroup,
   Select,
   SelectItem,
+  Spacer,
   Slider,
   Switch,
   Tab,
@@ -471,6 +491,121 @@ export const Misc = {
           <Checkbox value="double">Парный</Checkbox>
           <Checkbox value="mixed">Микст</Checkbox>
         </CheckboxGroup>
+      </Block>
+    </Shell>
+  ),
+};
+
+/* ── Наложения ──────────────────────────────────────────────────────
+   Модалка и боковая панель показаны ОТКРЫТЫМИ и по отдельной истории на
+   каждую: в общей витрине они закрыли бы собой всё остальное, а закрытыми от
+   них видно только кнопку. Анимация выключена — иначе снимок ловит их на
+   полпути. */
+export const ModalWindow = {
+  name: 'Модальное окно',
+  render: () => (
+    <Shell>
+      <Modal isOpen disableAnimation onOpenChange={() => {}}>
+        <ModalContent>
+          <ModalHeader>Снять заявку?</ModalHeader>
+          <ModalBody>
+            <p className="text-sm text-default-600">
+              Заявка на Кубок Алматы 2026 будет отозвана. Подать её снова можно до 5 сентября,
+              пока идёт приём.
+            </p>
+          </ModalBody>
+          <ModalFooter>
+            <Button variant="light">Отмена</Button>
+            <Button color="danger">Снять заявку</Button>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
+    </Shell>
+  ),
+};
+
+export const SideDrawer = {
+  name: 'Боковая панель',
+  render: () => (
+    <Shell>
+      <Drawer isOpen disableAnimation onOpenChange={() => {}}>
+        <DrawerContent>
+          <DrawerHeader>Фильтры календаря</DrawerHeader>
+          <DrawerBody>
+            <CheckboxGroup label="Разряды" defaultValue={['single']}>
+              <Checkbox value="single">Одиночный</Checkbox>
+              <Checkbox value="double">Парный</Checkbox>
+              <Checkbox value="mixed">Микст</Checkbox>
+            </CheckboxGroup>
+            <Select label="Город" className="mt-4">
+              <SelectItem key="ast">Астана</SelectItem>
+              <SelectItem key="ala">Алматы</SelectItem>
+              <SelectItem key="shy">Шымкент</SelectItem>
+            </Select>
+          </DrawerBody>
+          <DrawerFooter>
+            <Button variant="light">Сбросить</Button>
+            <Button color="primary">Показать</Button>
+          </DrawerFooter>
+        </DrawerContent>
+      </Drawer>
+    </Shell>
+  ),
+};
+
+/* ── Каркас страницы ────────────────────────────────────────────── */
+export const Frame = {
+  name: 'Каркас · шапка, меню, форма',
+  render: () => (
+    <Shell>
+      <Block title="Шапка сайта">
+        <Navbar isBordered className="rounded-large">
+          <NavbarBrand>
+            <span className="font-semibold">ФНТ РК</span>
+          </NavbarBrand>
+          <NavbarContent justify="center">
+            <NavbarItem>Календарь</NavbarItem>
+            <NavbarItem isActive>Мой турнир</NavbarItem>
+            <NavbarItem>Новости</NavbarItem>
+          </NavbarContent>
+          <NavbarContent justify="end">
+            <NavbarItem>
+              <Button color="primary" size="sm">Заявиться</Button>
+            </NavbarItem>
+          </NavbarContent>
+        </Navbar>
+      </Block>
+
+      <Block title="Меню">
+        <Menu aria-label="Действия" className="max-w-xs rounded-medium border border-default-200">
+          <MenuItem key="open">Открыть заявку</MenuItem>
+          <MenuItem key="pay">Оплатить взнос</MenuItem>
+          <MenuItem key="hist">История платежей</MenuItem>
+        </Menu>
+      </Block>
+
+      <Block title="Форма" note="Form собирает поля и берёт на себя проверку при отправке.">
+        <Form className="w-full max-w-sm gap-3">
+          <Input isRequired label="Фамилия и имя" name="name" />
+          <DateInput label="Дата рождения" name="dob" />
+          <Button type="submit" color="primary">Отправить</Button>
+        </Form>
+      </Block>
+
+      <Block title="Карточка с подвалом и разделителями">
+        <Card className="max-w-sm">
+          <CardHeader>Кубок Алматы 2026</CardHeader>
+          <Divider />
+          <CardBody>
+            <User name="Ким Георгий" description="СКА · Астана" avatarProps={{ src: A(44) }} />
+            <Spacer y={2} />
+            <p className="text-sm text-default-600">1/8 финала · стол 5</p>
+          </CardBody>
+          <Divider />
+          <CardFooter>
+            <Button size="sm" color="primary">Открыть матч</Button>
+          </CardFooter>
+        </Card>
       </Block>
     </Shell>
   ),
