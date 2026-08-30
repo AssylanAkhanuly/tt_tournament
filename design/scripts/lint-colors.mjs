@@ -26,6 +26,11 @@ const TOKENS_FILE = 'src/theme/tokens.css';
    хранилище своей палитры и конструктор с пипетками. Всё остальное — только
    токены. */
 const SKIP_RAW = new Set([TOKENS_FILE, 'src/theme/themes.ts', 'src/theme/custom.ts', 'src/theme/Builder.tsx']);
+/* Сборка Tailwind — артефакт, а не наш код: его пишет `npm run kit:css` из
+   `src/kit/tailwind.src.css`. Внутри тысячи сырых цветов и радиусов самой
+   библиотеки; проверять их бессмысленно, править нечего. Источник рядом
+   проверяется как обычно. */
+const GENERATED = new Set(['tailwind.css']);
 const EXT = /\.(css|tsx|ts|html)$/;
 const RAW = /#[0-9a-fA-F]{3,8}\b|\brgba?\(|\bhsla?\(/g;
 /* Радиус мимо токена: `border-radius: 12px`, `borderRadius: 14`. Разрешены
@@ -45,7 +50,7 @@ function walk(dir) {
     if (SKIP_DIRS.has(name)) continue;
     const full = join(dir, name);
     if (statSync(full).isDirectory()) walk(full);
-    else if (EXT.test(name)) files.push(full);
+    else if (EXT.test(name) && !GENERATED.has(name)) files.push(full);
   }
 }
 

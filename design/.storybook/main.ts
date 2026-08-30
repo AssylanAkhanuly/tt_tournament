@@ -9,6 +9,9 @@ const config: StorybookConfig = {
   // Алиас `@` резолвит его импорты `@/entities/*`; dedupe — один React на всех
   // (design 18, front 19), иначе invalid hook call.
   async viteFinal(cfg) {
+    // Tailwind подключаем плагином Vite, а не через postcss.config.js: свой
+    // конфиг Storybook ищет от собственного корня и наш не находит — классы
+    // молча не генерировались, компоненты HeroUI приезжали без стилей.
     cfg.resolve ??= {};
     cfg.resolve.alias = {
       ...(cfg.resolve.alias as Record<string, string> | undefined),

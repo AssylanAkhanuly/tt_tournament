@@ -1,0 +1,54 @@
+/* ИСТОЧНИК Tailwind. Собирается в `tailwind.css` командой `npm run kit:css`,
+   и уже собранный файл импортирует `Hero.stories.tsx`.
+
+   Почему отдельным шагом, а не плагином Vite: `@tailwindcss/vite` под
+   Storybook 8 (Vite 5.4) CSS не трогает — файл приезжал в браузер сырым, с
+   `@import` и `@plugin` в виде текста, и компоненты HeroUI оставались без
+   стилей. CLI собирает тот же CSS предсказуемо, поэтому сборка вызывается из
+   `storybook` и `build`: забыть её нельзя.
+
+   ПОЧЕМУ НЕ `@import "tailwindcss"` ЦЕЛИКОМ. Полный импорт тянет preflight —
+   глобальный сброс Tailwind. В проекте двести файлов нативного CSS, написанных
+   до него: preflight обнулил бы у них поля, кегли и списки, и Storybook
+   развалился бы весь. Поэтому слои подключаются по отдельности, и preflight
+   среди них нет. Это документированный способ отказаться от сброса в
+   Tailwind 4.
+
+   `@source` нужен, потому что классы HeroUI лежат в его собранной теме, а не в
+   нашем коде: без этой строки Tailwind их не увидит и не сгенерирует. */
+@layer theme, base, components, utilities;
+
+@import 'tailwindcss/theme.css' layer(theme);
+@import 'tailwindcss/utilities.css' layer(utilities);
+
+@plugin './hero.ts';
+@source '../../node_modules/@heroui/theme/dist/**/*.{js,mjs}';
+
+/* HeroUI переключает тёмную тему классом на обёртке. */
+@custom-variant dark (&:is(.dark *));
+
+/* Локальный сброс вместо preflight.
+
+   Preflight выключен ради двухсот файлов, написанных до Tailwind, но HeroUI на
+   него рассчитывает: без сброса кнопки и поля сохраняют рамку и фон от
+   браузера, и все компоненты приезжают в серой обводке.
+
+   Поэтому сброс здесь — но только внутри `.hero-scope` и через `:where()`.
+   `:where()` не добавляет специфичности, поэтому любой класс HeroUI его
+   перебивает: контурная кнопка свою рамку сохраняет. Обычный селектор
+   (`.hero-scope button`) был бы специфичнее утилит Tailwind и, наоборот,
+   стирал бы у них границы. */
+@layer base {
+  :where(.hero-scope) :where(button, input, optgroup, select, textarea) {
+    font: inherit;
+    color: inherit;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    background: transparent;
+  }
+  :where(.hero-scope) :where(button) { cursor: pointer; }
+  :where(.hero-scope) :where(h1, h2, h3, h4, p) { margin: 0; font-size: inherit; font-weight: inherit; }
+  :where(.hero-scope) :where(ul, ol) { margin: 0; padding: 0; list-style: none; }
+  :where(.hero-scope) :where(img, svg) { display: block; }
+}
