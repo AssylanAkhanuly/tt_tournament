@@ -1,185 +1,168 @@
-/* Базовые компоненты — HeroUI ✳ (30.08.2026).
+/* Дизайн-система: основа — HeroUI 3 ✳ (30.08.2026).
 
-   Решение: базовый набор не рисуем сами, а берём готовый из HeroUI
-   (`@heroui/react`). Он построен на Tailwind, поэтому Tailwind стал основным
-   слоем стилей — граница «что Tailwind, что нативный CSS» записана в
-   корневом `CLAUDE.md`.
+   ПОЧЕМУ ТРОЙКА, А НЕ ДВОЙКА. Сначала стояла 2.8: тройка требует React 19, а в
+   `design/` был React 18. Обновили React — обошлось двумя ошибками типов (в
+   React 19 убран глобальный неймспейс `JSX`), и встала 3.2.4. Дело не в номере
+   версии: в двойке нет доброй половины того, что есть в документации — ни
+   выбора цвета, ни ComboBox, ни Meter, ни TagGroup, ни Toolbar, ни Typography,
+   а половина остального названа иначе (`Textarea` против `TextArea`,
+   `Progress` против `ProgressBar`, `Divider` против `Separator`).
 
-   Что важно знать про это подключение:
+   У тройки составные компоненты: `Card.Header`, `Drawer.Trigger`,
+   `Tabs.Panel`. Это не косметика — из-за неё витрина двойки не переносится
+   правкой имён, её пришлось переписать.
 
-   • Версия 2.x, а не 3.x: тройка требует React 19, в `design/` — React 18.
-     Обновление React здесь тянет за собой Storybook и `front/`, и делать его
-     заодно нельзя.
-   • Preflight Tailwind не подключён: его глобальный сброс снёс бы вёрстку
-     двухсот файлов, написанных до Tailwind. Вместо него — локальный сброс в
-     `tailwind.src.css`, действующий только внутри `.hero-scope`.
-   • CSS собирается отдельным шагом (`npm run kit:css`), а не плагином Vite:
-     под Storybook 8 (Vite 5.4) плагин CSS не трогал, и компоненты приезжали
-     без стилей. Сборка вызывается из `storybook` и `build`.
-   • Компоненты HeroUI красятся своей темой, а не токенами `--c-*`/`--k-*`.
-     Значит, проверка `lint:colors` их не покрывает: она следит за нашим CSS.
-     Если кит должен встать в фирменные цвета ФНТ — это отдельная настройка
-     темы HeroUI, и её надо делать осознанно.
+   Набор разложен на два слоя, оба в разделе «UI-кит»:
 
-   Здесь — витрина базового набора, чтобы было видно, что именно приехало. */
+     Основа     — этот файл: готовое из HeroUI;
+     Турнирные  — `Kit.stories.tsx`: то, чего в библиотеках нет и быть не
+                  может — значок идущего матча, карточка встречи, таблица
+                  группы. Они рисуются нами и садятся на ту же поверхность.
 
+   Локаль `ru-RU` обязательна: по умолчанию берётся локаль браузера, и
+   календарь приходит английским с датой в порядке «месяц/день/год». Для
+   федерации это прямая ошибка — 06.14 и 14.06 читаются по-разному.
+
+   Preflight Tailwind не подключён (снёс бы вёрстку двухсот файлов, написанных
+   до него) — вместо него локальный сброс внутри `.hero-scope`. CSS собирается
+   `npm run kit:css`; подробности — в `design/README.md`. */
+
+import type { ReactNode } from 'react';
 import {
-  Accordion,
-  AccordionItem,
   Alert,
-  BreadcrumbItem,
+  Avatar,
+  Badge,
   Breadcrumbs,
+  Button,
   ButtonGroup,
   Calendar,
+  Card,
+  Checkbox,
   CheckboxGroup,
-  CircularProgress,
+  Chip,
+  CloseButton,
   Code,
-  DateRangePicker,
-  Dropdown,
-  DropdownItem,
-  DropdownMenu,
-  DropdownTrigger,
-  Image,
-  InputOtp,
+  DateField,
+  DatePicker,
+  Disclosure,
+  Drawer,
+  EmptyState,
+  I18nProvider,
+  Input,
+  InputOTP,
+  Label,
   Kbd,
   Link,
-  Listbox,
-  ListboxItem,
-  NumberInput,
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-  RangeCalendar,
-  ScrollShadow,
-  Skeleton,
-  Snippet,
-  Spinner,
-  TimeInput,
-  Autocomplete,
-  AutocompleteItem,
-  Avatar,
-  AvatarGroup,
-  Badge,
-  Button,
-  Card,
-  CardBody,
-  CardFooter,
-  CardHeader,
-  Checkbox,
-  Chip,
-  DateInput,
-  DatePicker,
-  Divider,
-  Drawer,
-  DrawerBody,
-  DrawerContent,
-  DrawerFooter,
-  DrawerHeader,
-  Form,
-  HeroUIProvider,
-  Input,
+  ListBox,
   Menu,
-  MenuItem,
+  Meter,
   Modal,
-  ModalBody,
-  ModalContent,
-  ModalFooter,
-  ModalHeader,
-  Navbar,
-  NavbarBrand,
-  NavbarContent,
-  NavbarItem,
-  Pagination,
-  Progress,
+  NumberField,
+  Popover,
+  ProgressBar,
+  ProgressCircle,
   Radio,
   RadioGroup,
-  Select,
-  SelectItem,
-  Spacer,
+  RangeCalendar,
+  ScrollShadow,
+  SearchField,
+  Separator,
+  Skeleton,
   Slider,
+  Spinner,
   Switch,
-  Tab,
   Table,
-  TableBody,
-  TableCell,
-  TableColumn,
-  TableHeader,
-  TableRow,
   Tabs,
-  Textarea,
+  Tag,
+  TagGroup,
+  TextArea,
+  TextField,
+  TimeField,
+  ToggleButton,
   Tooltip,
-  User,
 } from '@heroui/react';
-import { A, AW } from '../fedCommon';
+import { A } from '../fedCommon';
+import coverBats from '../assets/news/bats-net.jpg';
+import coverBalls from '../assets/news/balls.jpg';
+import coverTop from '../assets/news/racquet-top.jpg';
 import './tailwind.css'; // собран из tailwind.src.css: npm run kit:css
 
 export default {
-  title: 'UI-кит/HeroUI',
+  title: 'UI-кит/Основа',
   parameters: { layout: 'fullscreen' },
 };
 
-/** Обёртка витрины: провайдер HeroUI обязателен — без него часть компонентов
-    (модалки, выпадающие списки, подсказки) не находит контекст.
-
-    `locale="ru-RU"` обязателен тоже: по умолчанию HeroUI берёт локаль браузера,
-    и календарь приходит английским с датой в порядке «месяц/день/год». Для
-    федерации это прямая ошибка: 06.14 и 14.06 читаются по-разному. */
-const Shell = ({ children }: { children: React.ReactNode }) => (
-  <HeroUIProvider locale="ru-RU">
-    {/* `hero-scope` включает локальный сброс браузерных стилей: preflight
-        Tailwind выключен глобально, а HeroUI на него рассчитывает. */}
-    <div className="hero-scope min-h-screen bg-white p-7 text-foreground">
-      <div className="mx-auto flex max-w-3xl flex-col gap-8">{children}</div>
+/** Поверхность витрины. `hero-scope` включает локальный сброс браузерных
+    стилей: preflight Tailwind выключен глобально, а HeroUI на него
+    рассчитывает. */
+export const Shell = ({ children }: { children: ReactNode }) => (
+  <I18nProvider locale="ru-RU">
+    {/* `data-theme="light"` обязателен, и причина неочевидная: наш
+        переключатель тем ставит `data-theme` на <html> (`applyTheme` в
+        themes.ts), а HeroUI 3 использует ровно этот же атрибут для своей
+        темы. При теме «Тёмная» библиотека молча уходила в тёмную: карточки
+        приезжали тёмными на белой странице, а заголовки на них пропадали.
+        Своим атрибутом на обёртке отвязываемся от тулбара — кит светлый. */}
+    <div
+      data-theme="light"
+      className="hero-scope min-h-screen bg-white p-7 text-neutral-900"
+    >
+      <div className="mx-auto flex max-w-3xl flex-col gap-9">{children}</div>
     </div>
-  </HeroUIProvider>
+  </I18nProvider>
 );
 
-const Block = ({ title, note, children }: { title: string; note?: string; children: React.ReactNode }) => (
+export const Block = ({
+  title,
+  note,
+  children,
+}: {
+  title: string;
+  note?: string;
+  children: ReactNode;
+}) => (
   <section className="flex flex-col gap-3">
     <div>
       <h3 className="text-base font-semibold">{title}</h3>
-      {note && <p className="mt-1 text-sm text-default-500">{note}</p>}
+      {note && <p className="mt-1 text-sm text-neutral-500">{note}</p>}
     </div>
-    <div className="flex flex-wrap items-center gap-3">{children}</div>
+    <div className="flex flex-wrap items-start gap-3">{children}</div>
   </section>
 );
 
 /* ── Действия ───────────────────────────────────────────────────── */
 export const Actions = {
-  name: 'Действия · кнопки, чипы',
+  name: 'Действия',
   render: () => (
     <Shell>
-      <Block
-        title="Кнопки"
-        note="Пять видов заливки и четыре цвета. Наш кит из этого набора использует solid и bordered."
-      >
-        <Button color="primary">Заявиться</Button>
-        <Button color="primary" variant="bordered">Отмена</Button>
-        <Button color="primary" variant="light">Подробнее</Button>
-        <Button color="primary" variant="flat">Фильтры</Button>
-        <Button color="danger">Снять заявку</Button>
-        <Button color="success">Подтвердить</Button>
+      <Block title="Кнопки">
+        <Button>Заявиться</Button>
+        <Button variant="outline">Отмена</Button>
+        <Button variant="ghost">Подробнее</Button>
         <Button isDisabled>Недоступно</Button>
-        <Button isLoading color="primary">Отправляем</Button>
       </Block>
 
-      <Block title="Размеры и форма">
-        <Button size="sm" color="primary">Мелкая</Button>
-        <Button size="md" color="primary">Обычная</Button>
-        <Button size="lg" color="primary">Крупная</Button>
-        <Button radius="full" color="primary">Пилюлей</Button>
-        <Button isIconOnly color="primary" aria-label="Поиск">
-          🔍
-        </Button>
+      <Block title="Группы и переключатели">
+        <ButtonGroup>
+          <Button variant="outline">Все</Button>
+          <Button variant="outline">Идут</Button>
+          <Button variant="outline">Завершены</Button>
+        </ButtonGroup>
+        <ToggleButton>Только мои</ToggleButton>
+        <CloseButton />
       </Block>
 
-      <Block title="Чипы" note="Состояния заявки и матча — то, для чего у нас были свои пилюли.">
-        <Chip color="success" variant="flat">Заявка принята</Chip>
-        <Chip color="warning" variant="flat">Ждём подтверждения</Chip>
-        <Chip color="danger" variant="flat">Оплата не прошла</Chip>
-        <Chip color="primary" variant="flat">Идёт</Chip>
-        <Chip variant="bordered">Завершён</Chip>
-        <Chip color="primary" onClose={() => {}}>Астана</Chip>
+      <Block title="Метки, ссылки, клавиши">
+        <Chip>Заявка принята</Chip>
+        <TagGroup aria-label="Города">
+          <TagGroup.List>
+            <Tag id="ast">Астана</Tag>
+            <Tag id="ala">Алматы</Tag>
+          </TagGroup.List>
+        </TagGroup>
+        <Link href="#">Положение о соревнованиях</Link>
+        <Code>Э14.7</Code>
+        <Kbd>K</Kbd>
       </Block>
     </Shell>
   ),
@@ -190,228 +173,48 @@ export const Fields = {
   name: 'Поля ввода',
   render: () => (
     <Shell>
-      <Block title="Текстовые поля" note="Три вида подложки: bordered, faded, flat.">
-        <Input label="Фамилия и имя" placeholder="Ким Георгий" className="max-w-xs" />
-        <Input
-          label="Телефон"
-          placeholder="+7 705 118 44 03"
-          variant="bordered"
-          className="max-w-xs"
-        />
-        <Input
-          label="Почта"
-          defaultValue="g.kim@mail.kz"
-          variant="faded"
-          className="max-w-xs"
-          description="Сюда приходят уведомления"
-        />
-        <Input
-          label="ИИН"
-          isInvalid
-          errorMessage="Двенадцать цифр"
-          defaultValue="0406"
-          className="max-w-xs"
-        />
+      <Block title="Текст, поиск, числа">
+        {/* У тройки поля составные: подпись — отдельный `Label` внутри поля,
+            а не пропс. Так подпись можно поставить куда угодно и связать с
+            полем без ручного `htmlFor`. */}
+        <TextField className="max-w-xs">
+          <Label>Фамилия и имя</Label>
+          <Input />
+        </TextField>
+        <SearchField className="max-w-xs">
+          <Label>Поиск по игрокам</Label>
+        </SearchField>
+        <NumberField className="max-w-40" defaultValue={3}>
+          <Label>Партий до победы</Label>
+        </NumberField>
+        <TextArea className="max-w-md">
+          <Label>Комментарий к заявке</Label>
+        </TextArea>
       </Block>
 
-      <Block title="Список и подсказка">
-        <Select label="Разряд" className="max-w-xs">
-          <SelectItem key="single">Одиночный</SelectItem>
-          <SelectItem key="double">Парный</SelectItem>
-          <SelectItem key="mixed">Микст</SelectItem>
-        </Select>
-        <Autocomplete label="Клуб" className="max-w-xs">
-          <AutocompleteItem key="ska">СКА · Астана</AutocompleteItem>
-          <AutocompleteItem key="alatau">Алатау · Алматы</AutocompleteItem>
-          <AutocompleteItem key="otan">Отан · Шымкент</AutocompleteItem>
-        </Autocomplete>
-        <DatePicker label="Дата рождения" className="max-w-xs" />
+      <Block title="Флажки и переключатели">
+        <Checkbox>Согласен с положением</Checkbox>
+        <CheckboxGroup aria-label="Разряды">
+          <Checkbox value="single">Одиночный</Checkbox>
+          <Checkbox value="double">Парный</Checkbox>
+        </CheckboxGroup>
+        <Switch>Уведомления</Switch>
+        <RadioGroup aria-label="Язык" defaultValue="ru">
+          <Radio value="ru">Русский</Radio>
+          <Radio value="kk">Қазақша</Radio>
+        </RadioGroup>
       </Block>
 
-      <Block title="Многострочное и выбор">
-        <Textarea label="Комментарий к заявке" className="max-w-md" />
-        <div className="flex flex-col gap-2">
-          <Checkbox defaultSelected>Согласен с положением</Checkbox>
-          <Switch defaultSelected>Уведомления</Switch>
-          <RadioGroup label="Язык" orientation="horizontal" defaultValue="ru">
-            <Radio value="ru">Русский</Radio>
-            <Radio value="kk">Қазақша</Radio>
-            <Radio value="en">English</Radio>
-          </RadioGroup>
-        </div>
-        <Slider label="Рейтинг соперника" defaultValue={[2000, 2500]} maxValue={3000} className="max-w-md" />
-      </Block>
-    </Shell>
-  ),
-};
-
-/* ── Показ данных ───────────────────────────────────────────────── */
-export const Data = {
-  name: 'Данные · таблица, карточки, люди',
-  render: () => (
-    <Shell>
-      <Block title="Таблица" note="Группа турнира: то же, что мы рисовали руками.">
-        <Table aria-label="Группа B" className="max-w-2xl">
-          <TableHeader>
-            <TableColumn>ИГРОК</TableColumn>
-            <TableColumn>И</TableColumn>
-            <TableColumn>В</TableColumn>
-            <TableColumn>П</TableColumn>
-            <TableColumn>ОЧКИ</TableColumn>
-          </TableHeader>
-          <TableBody>
-            <TableRow key="1">
-              <TableCell>Ким Георгий</TableCell>
-              <TableCell>3</TableCell>
-              <TableCell>3</TableCell>
-              <TableCell>0</TableCell>
-              <TableCell>6</TableCell>
-            </TableRow>
-            <TableRow key="2">
-              <TableCell>Оспанов Р.</TableCell>
-              <TableCell>3</TableCell>
-              <TableCell>2</TableCell>
-              <TableCell>1</TableCell>
-              <TableCell>5</TableCell>
-            </TableRow>
-            <TableRow key="3">
-              <TableCell>Ли Сергей</TableCell>
-              <TableCell>3</TableCell>
-              <TableCell>1</TableCell>
-              <TableCell>2</TableCell>
-              <TableCell>4</TableCell>
-            </TableRow>
-          </TableBody>
-        </Table>
-      </Block>
-
-      <Block title="Карточка">
-        <Card className="max-w-sm">
-          <CardHeader className="flex-col items-start gap-1">
-            <p className="text-sm text-default-500">Кубок Алматы 2026</p>
-            <h4 className="text-lg font-semibold">1/8 финала</h4>
-          </CardHeader>
-          <Divider />
-          <CardBody className="gap-3">
-            <User
-              name="Ким Георгий"
-              description="СКА · Астана · рейтинг 2456"
-              avatarProps={{ src: A(44) }}
-            />
-            <Progress label="Партии" value={40} color="primary" showValueLabel />
-          </CardBody>
-        </Card>
-      </Block>
-
-      <Block title="Люди и значки">
-        <AvatarGroup isBordered max={3}>
-          <Avatar src={A(44)} />
-          <Avatar src={A(12)} />
-          <Avatar src={A(23)} />
-          <Avatar src={AW(28)} />
-        </AvatarGroup>
-        <Badge content="14" color="danger">
-          <Avatar src={A(31)} radius="md" />
-        </Badge>
-        <Tooltip content="Рейтинг пересчитан после турнира">
-          <Button variant="bordered">Подсказка</Button>
-        </Tooltip>
-      </Block>
-    </Shell>
-  ),
-};
-
-/* ── Навигация ──────────────────────────────────────────────────── */
-export const Navigation = {
-  name: 'Навигация · вкладки, гармошка, страницы',
-  render: () => (
-    <Shell>
-      <Block title="Вкладки" note="Три вида: solid, underlined, bordered.">
-        <Tabs aria-label="Разделы матча" color="primary">
-          <Tab key="match" title="Матч" />
-          <Tab key="players" title="Участники" />
-          <Tab key="group" title="Группа" />
-          <Tab key="bracket" title="Сетка" />
-        </Tabs>
-      </Block>
-
-      <Block title="Вкладки подчёркиванием">
-        <Tabs aria-label="Разделы матча" variant="underlined" color="primary">
-          <Tab key="match" title="Матч" />
-          <Tab key="players" title="Участники" />
-          <Tab key="group" title="Группа" />
-        </Tabs>
-      </Block>
-
-      <Block title="Гармошка">
-        <Accordion className="max-w-xl">
-          <AccordionItem key="1" aria-label="Условия допуска" title="Условия допуска">
-            Годовой взнос оплачен, медицинский допуск действует, удостоверение приложено.
-          </AccordionItem>
-          <AccordionItem key="2" aria-label="Как подать заявку" title="Как подать заявку">
-            Заявка уходит главному судье турнира — решение придёт уведомлением.
-          </AccordionItem>
-        </Accordion>
-      </Block>
-
-      <Block title="Страницы">
-        <Pagination total={8} initialPage={1} color="primary" />
-      </Block>
-    </Shell>
-  ),
-};
-
-/* ── Обратная связь и наложения ─────────────────────────────────── */
-export const Feedback = {
-  name: 'Обратная связь · сообщения, ожидание',
-  render: () => (
-    <Shell>
-      <Block title="Сообщения" note="Четыре тона: тот же набор, что у наших Notice.">
-        <div className="flex w-full flex-col gap-3">
-          <Alert color="success" title="Заявка принята" description="Решение главного судьи — 14 апреля." />
-          <Alert color="warning" title="Взнос не оплачен" description="Без него заявка на ОРТ не пройдёт." />
-          <Alert color="danger" title="Оплата не прошла" description="Банк: недостаточно средств." />
-          <Alert color="primary" title="Рейтинг пересчитан" description="+8 после Кубка Алматы." />
-        </div>
-      </Block>
-
-      <Block title="Ожидание">
-        <Spinner label="Загружаем" />
-        <CircularProgress value={70} showValueLabel aria-label="Готовность" />
-        <Progress value={40} className="max-w-xs" aria-label="Партии" />
-        <div className="flex w-52 flex-col gap-2">
-          <Skeleton className="h-3 w-4/5 rounded-lg" />
-          <Skeleton className="h-3 w-full rounded-lg" />
-          <Skeleton className="h-3 w-2/3 rounded-lg" />
-        </div>
-      </Block>
-
-      <Block title="Наложения" note="Открываются по нажатию — на статичном снимке видны только кнопки.">
-        <Popover placement="bottom">
-          <PopoverTrigger>
-            <Button variant="bordered">Всплывающее окно</Button>
-          </PopoverTrigger>
-          <PopoverContent>
-            <div className="px-1 py-2 text-sm">Взнос за 2026 год: ₸ 10 000, срок до 31 марта.</div>
-          </PopoverContent>
-        </Popover>
-
-        <Dropdown>
-          <DropdownTrigger>
-            <Button variant="bordered">Меню</Button>
-          </DropdownTrigger>
-          <DropdownMenu aria-label="Действия с заявкой">
-            <DropdownItem key="open">Открыть заявку</DropdownItem>
-            <DropdownItem key="pay">Оплатить взнос</DropdownItem>
-            <DropdownItem key="drop" className="text-danger" color="danger">
-              Снять заявку
-            </DropdownItem>
-          </DropdownMenu>
-        </Dropdown>
-
-        <Tooltip content="Рейтинг пересчитан после турнира">
-          <Button variant="light">Подсказка</Button>
-        </Tooltip>
+      <Block title="Ползунок и код из SMS">
+        <Slider className="max-w-sm" aria-label="Рейтинг" defaultValue={2400} maxValue={3000} />
+        <InputOTP maxLength={4}>
+          <InputOTP.Group>
+            <InputOTP.Slot index={0} />
+            <InputOTP.Slot index={1} />
+            <InputOTP.Slot index={2} />
+            <InputOTP.Slot index={3} />
+          </InputOTP.Group>
+        </InputOTP>
       </Block>
     </Shell>
   ),
@@ -419,192 +222,310 @@ export const Feedback = {
 
 /* ── Даты ───────────────────────────────────────────────────────── */
 export const Dates = {
-  name: 'Даты · календарь, период, время',
+  name: 'Даты',
   render: () => (
     <Shell>
       <Block
-        title="Календарь"
-        note="Локаль ru-RU: неделя начинается с понедельника, месяцы и дни по-русски. По умолчанию HeroUI берёт локаль браузера и показывает месяц/день/год — для федерации это прямая ошибка."
+        title="Календари"
+        note="Локаль ru-RU: неделя с понедельника, месяцы по-русски, дата в порядке день.месяц.год."
       >
         <Calendar aria-label="Дата турнира" />
-        <RangeCalendar aria-label="Даты турнира" />
+        <RangeCalendar aria-label="Сроки турнира" />
       </Block>
 
-      <Block title="Поля дат">
-        <DatePicker label="Дата рождения" className="max-w-xs" />
-        <DateRangePicker label="Сроки турнира" className="max-w-sm" />
-        <TimeInput label="Начало матча" className="max-w-xs" />
+      <Block title="Поля дат и времени">
+        <DatePicker className="max-w-xs" aria-label="Дата рождения" />
+        <DateField className="max-w-xs" aria-label="Дата" />
+        <TimeField className="max-w-xs" aria-label="Начало матча" />
       </Block>
     </Shell>
   ),
 };
 
-/* ── Остальное ──────────────────────────────────────────────────── */
-export const Misc = {
-  name: 'Остальное · навигация, списки, мелочи',
+/* ── Данные ─────────────────────────────────────────────────────── */
+export const Data = {
+  name: 'Данные',
   render: () => (
     <Shell>
-      <Block title="Хлебные крошки и ссылки">
-        <Breadcrumbs>
-          <BreadcrumbItem>Календарь</BreadcrumbItem>
-          <BreadcrumbItem>Кубок Алматы 2026</BreadcrumbItem>
-          <BreadcrumbItem>Моя заявка</BreadcrumbItem>
-        </Breadcrumbs>
-        <Link href="#">Положение о соревнованиях</Link>
+      <Block title="Таблица">
+        <Table aria-label="Группа B" className="max-w-2xl">
+          <Table.Header>
+            <Table.Column isRowHeader>Игрок</Table.Column>
+            <Table.Column>И</Table.Column>
+            <Table.Column>В</Table.Column>
+            <Table.Column>Очки</Table.Column>
+          </Table.Header>
+          <Table.Body>
+            <Table.Row>
+              <Table.Cell>Ким Георгий</Table.Cell>
+              <Table.Cell>3</Table.Cell>
+              <Table.Cell>3</Table.Cell>
+              <Table.Cell>6</Table.Cell>
+            </Table.Row>
+            <Table.Row>
+              <Table.Cell>Оспанов Р.</Table.Cell>
+              <Table.Cell>3</Table.Cell>
+              <Table.Cell>2</Table.Cell>
+              <Table.Cell>5</Table.Cell>
+            </Table.Row>
+          </Table.Body>
+        </Table>
       </Block>
 
-      <Block title="Группа кнопок и списки">
-        <ButtonGroup>
-          <Button>Все</Button>
-          <Button color="primary">Идут</Button>
-          <Button>Завершены</Button>
-        </ButtonGroup>
-        <Listbox aria-label="Соперники" className="max-w-xs rounded-medium border border-default-200">
-          <ListboxItem key="1">Оспанов Р.</ListboxItem>
-          <ListboxItem key="2">Ли Сергей</ListboxItem>
-          <ListboxItem key="3">Ахметов Д.</ListboxItem>
-        </Listbox>
+      <Block title="Карточка">
+        <Card className="max-w-sm">
+          <Card.Header>
+            <Card.Title>Кубок Алматы 2026</Card.Title>
+            <Card.Description>1/8 финала · стол 5</Card.Description>
+          </Card.Header>
+          <Card.Content>
+            <div className="flex items-center gap-3">
+              <Avatar>
+                <Avatar.Image src={A(44)} alt="" />
+              </Avatar>
+              <span className="text-sm">Ким Георгий · СКА</span>
+            </div>
+          </Card.Content>
+          <Card.Footer>
+            <Button size="sm">Открыть матч</Button>
+          </Card.Footer>
+        </Card>
       </Block>
 
-      <Block title="Числа, код, клавиши">
-        <NumberInput label="Партий до победы" defaultValue={3} className="max-w-40" />
-        <InputOtp length={4} />
-        <Code>Э14.7</Code>
-        <Kbd keys={['command']}>K</Kbd>
-        <Snippet symbol="">fnt.kz/tournaments/2026</Snippet>
+      <Block title="Показатели и заглушки">
+        <Badge>14</Badge>
+        <Meter aria-label="Заполнено" value={64} className="max-w-xs" />
+        <ProgressBar aria-label="Партии" value={40} className="max-w-xs" />
+        <ProgressCircle aria-label="Готовность" value={70} />
+        <Spinner />
+        <div className="flex w-52 flex-col gap-2">
+          <Skeleton className="h-3 w-4/5" />
+          <Skeleton className="h-3 w-full" />
+        </div>
       </Block>
 
-      <Block title="Изображение и прокрутка">
-        <Image src={A(44)} width={120} alt="Ким Георгий" className="rounded-large" />
-        <ScrollShadow className="h-28 max-w-xs text-sm">
+      <Block title="Списки, пусто, прокрутка">
+        <ListBox aria-label="Соперники" className="max-w-xs">
+          <ListBox.Item id="1">Оспанов Р.</ListBox.Item>
+          <ListBox.Item id="2">Ли Сергей</ListBox.Item>
+        </ListBox>
+        <EmptyState className="max-w-xs">Заявок нет</EmptyState>
+        <ScrollShadow className="h-24 max-w-xs text-sm">
           <p className="pr-3">
             Календарь сезона 2026 собран целиком: восемь главных стартов, четыре тура Евразийской
-            лиги и двадцать открытых республиканских турниров. У каждого турнира указаны город,
-            зал, разряды и срок приёма заявок. Заявки на открытые турниры подаются самостоятельно.
+            лиги и двадцать открытых республиканских турниров.
           </p>
         </ScrollShadow>
-      </Block>
-
-      <Block title="Группа флажков">
-        <CheckboxGroup label="Разряды" orientation="horizontal" defaultValue={['single']}>
-          <Checkbox value="single">Одиночный</Checkbox>
-          <Checkbox value="double">Парный</Checkbox>
-          <Checkbox value="mixed">Микст</Checkbox>
-        </CheckboxGroup>
+        <Separator className="w-full" />
       </Block>
     </Shell>
   ),
 };
 
-/* ── Наложения ──────────────────────────────────────────────────────
-   Модалка и боковая панель показаны ОТКРЫТЫМИ и по отдельной истории на
-   каждую: в общей витрине они закрыли бы собой всё остальное, а закрытыми от
-   них видно только кнопку. Анимация выключена — иначе снимок ловит их на
-   полпути. */
-export const ModalWindow = {
-  name: 'Модальное окно',
+/* ── Навигация ──────────────────────────────────────────────────── */
+export const Navigation = {
+  name: 'Навигация',
   render: () => (
     <Shell>
-      <Modal isOpen disableAnimation onOpenChange={() => {}}>
-        <ModalContent>
-          <ModalHeader>Снять заявку?</ModalHeader>
-          <ModalBody>
-            <p className="text-sm text-default-600">
-              Заявка на Кубок Алматы 2026 будет отозвана. Подать её снова можно до 5 сентября,
-              пока идёт приём.
-            </p>
-          </ModalBody>
-          <ModalFooter>
-            <Button variant="light">Отмена</Button>
-            <Button color="danger">Снять заявку</Button>
-          </ModalFooter>
-        </ModalContent>
-      </Modal>
-    </Shell>
-  ),
-};
+      <Block title="Вкладки">
+        <Tabs className="w-full">
+          <Tabs.List aria-label="Разделы матча">
+            <Tabs.Tab id="match">Матч</Tabs.Tab>
+            <Tabs.Tab id="players">Участники</Tabs.Tab>
+            <Tabs.Tab id="group">Группа</Tabs.Tab>
+          </Tabs.List>
+          <Tabs.Panel id="match">Счёт по партиям и стол.</Tabs.Panel>
+          <Tabs.Panel id="players">Список участников турнира.</Tabs.Panel>
+          <Tabs.Panel id="group">Таблица группы.</Tabs.Panel>
+        </Tabs>
+      </Block>
 
-export const SideDrawer = {
-  name: 'Боковая панель',
-  render: () => (
-    <Shell>
-      <Drawer isOpen disableAnimation onOpenChange={() => {}}>
-        <DrawerContent>
-          <DrawerHeader>Фильтры календаря</DrawerHeader>
-          <DrawerBody>
-            <CheckboxGroup label="Разряды" defaultValue={['single']}>
-              <Checkbox value="single">Одиночный</Checkbox>
-              <Checkbox value="double">Парный</Checkbox>
-              <Checkbox value="mixed">Микст</Checkbox>
-            </CheckboxGroup>
-            <Select label="Город" className="mt-4">
-              <SelectItem key="ast">Астана</SelectItem>
-              <SelectItem key="ala">Алматы</SelectItem>
-              <SelectItem key="shy">Шымкент</SelectItem>
-            </Select>
-          </DrawerBody>
-          <DrawerFooter>
-            <Button variant="light">Сбросить</Button>
-            <Button color="primary">Показать</Button>
-          </DrawerFooter>
-        </DrawerContent>
-      </Drawer>
-    </Shell>
-  ),
-};
-
-/* ── Каркас страницы ────────────────────────────────────────────── */
-export const Frame = {
-  name: 'Каркас · шапка, меню, форма',
-  render: () => (
-    <Shell>
-      <Block title="Шапка сайта">
-        <Navbar isBordered className="rounded-large">
-          <NavbarBrand>
-            <span className="font-semibold">ФНТ РК</span>
-          </NavbarBrand>
-          <NavbarContent justify="center">
-            <NavbarItem>Календарь</NavbarItem>
-            <NavbarItem isActive>Мой турнир</NavbarItem>
-            <NavbarItem>Новости</NavbarItem>
-          </NavbarContent>
-          <NavbarContent justify="end">
-            <NavbarItem>
-              <Button color="primary" size="sm">Заявиться</Button>
-            </NavbarItem>
-          </NavbarContent>
-        </Navbar>
+      <Block title="Крошки и раскрывающийся блок">
+        <Breadcrumbs>
+          <Breadcrumbs.Item>Календарь</Breadcrumbs.Item>
+          <Breadcrumbs.Item>Кубок Алматы 2026</Breadcrumbs.Item>
+        </Breadcrumbs>
+        <Disclosure className="max-w-xl">
+          <Disclosure.Trigger>Условия допуска</Disclosure.Trigger>
+          <Disclosure.Content>
+            Взнос оплачен, медицинский допуск действует.
+          </Disclosure.Content>
+        </Disclosure>
       </Block>
 
       <Block title="Меню">
-        <Menu aria-label="Действия" className="max-w-xs rounded-medium border border-default-200">
-          <MenuItem key="open">Открыть заявку</MenuItem>
-          <MenuItem key="pay">Оплатить взнос</MenuItem>
-          <MenuItem key="hist">История платежей</MenuItem>
+        <Menu aria-label="Действия" className="max-w-xs">
+          <Menu.Item id="open">Открыть заявку</Menu.Item>
+          <Menu.Item id="pay">Оплатить взнос</Menu.Item>
         </Menu>
       </Block>
+    </Shell>
+  ),
+};
 
-      <Block title="Форма" note="Form собирает поля и берёт на себя проверку при отправке.">
-        <Form className="w-full max-w-sm gap-3">
-          <Input isRequired label="Фамилия и имя" name="name" />
-          <DateInput label="Дата рождения" name="dob" />
-          <Button type="submit" color="primary">Отправить</Button>
-        </Form>
+/* ── Сообщения и наложения ──────────────────────────────────────────
+   Здесь же ответ на вопрос «где Drawer»: он тут, `Drawer.Trigger` открывает
+   `Drawer.Content`. В витрине двойки он был отдельной историей, при переезде
+   на тройку переехал сюда — у неё он составной и без триггера не показывается. */
+export const Overlays = {
+  name: 'Сообщения и наложения',
+  render: () => (
+    <Shell>
+      <Block title="Сообщения">
+        <div className="flex w-full flex-col gap-3">
+          <Alert>
+            <Alert.Title>Заявка принята</Alert.Title>
+            <Alert.Description>Решение главного судьи — 14 апреля.</Alert.Description>
+          </Alert>
+          <Alert status="warning">
+            <Alert.Title>Взнос не оплачен</Alert.Title>
+            <Alert.Description>Без него заявка на ОРТ не пройдёт.</Alert.Description>
+          </Alert>
+          <Alert status="danger">
+            <Alert.Title>Оплата не прошла</Alert.Title>
+            <Alert.Description>Банк: недостаточно средств.</Alert.Description>
+          </Alert>
+        </div>
       </Block>
 
-      <Block title="Карточка с подвалом и разделителями">
-        <Card className="max-w-sm">
-          <CardHeader>Кубок Алматы 2026</CardHeader>
-          <Divider />
-          <CardBody>
-            <User name="Ким Георгий" description="СКА · Астана" avatarProps={{ src: A(44) }} />
-            <Spacer y={2} />
-            <p className="text-sm text-default-600">1/8 финала · стол 5</p>
-          </CardBody>
-          <Divider />
-          <CardFooter>
-            <Button size="sm" color="primary">Открыть матч</Button>
-          </CardFooter>
+      <Block title="Наложения" note="Открываются по нажатию — на статичном снимке видны триггеры.">
+        <Tooltip>
+          <Tooltip.Trigger>
+            <Button variant="outline">Подсказка</Button>
+          </Tooltip.Trigger>
+          <Tooltip.Content>Рейтинг пересчитан после турнира</Tooltip.Content>
+        </Tooltip>
+
+        <Popover>
+          <Popover.Trigger>
+            <Button variant="outline">Всплывающее окно</Button>
+          </Popover.Trigger>
+          <Popover.Content>Взнос 2026: ₸ 10 000, срок до 31 марта.</Popover.Content>
+        </Popover>
+
+        <Modal>
+          <Modal.Trigger>
+            <Button variant="outline">Модальное окно</Button>
+          </Modal.Trigger>
+          <Modal.Dialog>
+            <Modal.Header>
+              <Modal.Heading>Снять заявку?</Modal.Heading>
+            </Modal.Header>
+            <Modal.Body>Заявка на Кубок Алматы 2026 будет отозвана.</Modal.Body>
+            <Modal.Footer>
+              <Button variant="ghost">Отмена</Button>
+              <Button>Снять</Button>
+            </Modal.Footer>
+          </Modal.Dialog>
+        </Modal>
+
+        <Drawer>
+          <Drawer.Trigger>
+            <Button variant="outline">Боковая панель</Button>
+          </Drawer.Trigger>
+          <Drawer.Content>
+            <Drawer.Header>
+              <Drawer.Heading>Фильтры календаря</Drawer.Heading>
+            </Drawer.Header>
+            <Drawer.Body>
+              <CheckboxGroup aria-label="Разряды">
+                <Checkbox value="single">Одиночный</Checkbox>
+                <Checkbox value="double">Парный</Checkbox>
+              </CheckboxGroup>
+            </Drawer.Body>
+            <Drawer.Footer>
+              <Button>Показать</Button>
+            </Drawer.Footer>
+          </Drawer.Content>
+        </Drawer>
+      </Block>
+    </Shell>
+  ),
+};
+
+/* ── Новости на HeroUI ──────────────────────────────────────────────
+   Э14.13 и Э14.14, собранные не нашим CSS, а готовыми карточками библиотеки:
+   видно, что меняется при переходе. Обложка и тема остаются, а рамка, тени и
+   скругления теперь не наши, а её. */
+const NEWS = [
+  {
+    tag: 'Календарь',
+    nm: 'Календарь сезона 2026 опубликован',
+    ss: 'Восемь главных стартов, четыре тура Евразийской лиги и двадцать открытых турниров.',
+    at: '15 апреля · Пресс-служба ФНТ РК',
+    cover: coverTop,
+  },
+  {
+    tag: 'Взносы',
+    nm: 'Годовой взнос: срок до 31 марта',
+    ss: 'Без оплаты заявки на турниры, где взнос обязателен, не проходят.',
+    at: '2 марта · Исполком',
+    cover: coverBalls,
+  },
+  {
+    tag: 'Сборная',
+    nm: 'Состав на чемпионат Азии объявлен',
+    ss: 'Двенадцать спортсменов, сбор в Астане с 4 июня.',
+    at: '28 февраля · Тренерский совет',
+    cover: coverBats,
+  },
+];
+
+export const News = {
+  name: 'Новости на HeroUI',
+  render: () => (
+    <Shell>
+      <Block
+        title="Лента новостей"
+        note="Тот же материал, что в Э14.13, но карточка — библиотечная. Обложка, чип темы и дата остаются; форма карточки теперь её."
+      >
+        <div className="grid w-full gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {NEWS.map((n) => (
+            <Card key={n.nm}>
+              <img
+                src={n.cover}
+                alt=""
+                className="h-36 w-full rounded-t-large object-cover"
+                style={{ objectPosition: '50% 28%' }}
+              />
+              <Card.Header>
+                <div className="mb-1 flex items-center justify-between gap-2">
+                  <Chip>{n.tag}</Chip>
+                </div>
+                <Card.Title>{n.nm}</Card.Title>
+                <Card.Description>{n.ss}</Card.Description>
+              </Card.Header>
+              <Card.Footer>
+                <span className="text-xs text-neutral-500">{n.at}</span>
+              </Card.Footer>
+            </Card>
+          ))}
+        </div>
+      </Block>
+
+      <Block title="Материал" note="Э14.14: колонка в ширину чтения, ссылка по делу внизу.">
+        <Card className="max-w-2xl">
+          <img
+            src={coverTop}
+            alt=""
+            className="h-56 w-full rounded-t-large object-cover"
+            style={{ objectPosition: '50% 28%' }}
+          />
+          <Card.Header>
+            <Chip>Календарь</Chip>
+            <Card.Title>Календарь сезона 2026 опубликован</Card.Title>
+            <Card.Description>15 апреля 2026 · Пресс-служба ФНТ РК · 3 мин</Card.Description>
+          </Card.Header>
+          <Card.Content>
+            <p className="text-sm leading-relaxed text-neutral-600">
+              <b className="text-neutral-900">Что опубликовано.</b> Календарь сезона 2026 собран
+              целиком: восемь главных стартов, четыре тура Евразийской лиги и двадцать открытых
+              республиканских турниров.
+            </p>
+          </Card.Content>
+          <Card.Footer>
+            <Button>Открыть календарь</Button>
+          </Card.Footer>
         </Card>
       </Block>
     </Shell>

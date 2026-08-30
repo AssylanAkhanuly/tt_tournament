@@ -27,8 +27,9 @@
    Без слоя утилиты соревнуются по специфичности и класс сброс обходит. */
 @import 'tailwindcss/utilities.css';
 
-@plugin './hero.ts';
-@source '../../node_modules/@heroui/theme/dist/**/*.{js,mjs}';
+/* Стили HeroUI 3. В тройке нет плагина Tailwind и нет конфига темы: библиотека
+   отдаёт готовый CSS, а её оформление настраивается переменными. */
+@import '@heroui/react/styles';
 
 /* HeroUI переключает тёмную тему классом на обёртке. */
 @custom-variant dark (&:is(.dark *));

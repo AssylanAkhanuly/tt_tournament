@@ -14,19 +14,18 @@
     "kit:css": "tailwindcss -i src/kit/tailwind.src.css -o src/kit/tailwind.css"
   },
   "dependencies": {
-    "@heroui/react": "^2.8.10",
+    "@heroui/react": "^3.2.4",
     "@xyflow/react": "^12.10.2",
     "chart.js": "^4.5.1",
     "framer-motion": "^11.18.2",
     "lucide-react": "^1.27.0",
-    "react": "^18.3.1",
-    "react-dom": "^18.3.1",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8",
     "react-markdown": "^10.1.0",
     "remark-gfm": "^4.0.1",
     "swiper": "^14.1.0"
   },
   "devDependencies": {
-    "@heroui/theme": "^2.4.26",
     "@storybook/addon-essentials": "^8.6.0",
     "@storybook/addon-links": "^8.6.0",
     "@storybook/blocks": "^8.6.0",
@@ -34,8 +33,8 @@
     "@storybook/react-vite": "^8.6.0",
     "@tailwindcss/cli": "^4.3.3",
     "@tailwindcss/postcss": "^4.3.3",
-    "@types/react": "^18.3.0",
-    "@types/react-dom": "^18.3.0",
+    "@types/react": "^19.2.18",
+    "@types/react-dom": "^19.2.5",
     "@vitejs/plugin-react": "^4.3.4",
     "playwright-core": "^1.62.1",
     "postcss": "^8.5.26",

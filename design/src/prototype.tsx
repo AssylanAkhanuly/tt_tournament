@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import type { ReactElement } from 'react';
 import { Settings2 } from 'lucide-react';
 import type { DeskVariant } from './deskShell';
 import { Desk } from './deskShell';
@@ -25,7 +26,7 @@ import { FeesScreen } from './FedFees';
    ощущается в руках. Одно другое не заменяет. */
 
 type ScreenProps = { variant?: DeskVariant; onNavigate?: (item: string) => void };
-type Section = { screen: (p: ScreenProps) => JSX.Element; note?: string };
+type Section = { screen: (p: ScreenProps) => ReactElement; note?: string };
 
 /** раздел, который ещё не нарисован: показываем честную заглушку, а не пустоту */
 function stub(title: string, text: string, nav: [React.ReactNode, string][], active: string, role: typeof JUDGE) {
@@ -60,7 +61,7 @@ export function OrgPrototype({ variant = 'desktop' }: { variant?: DeskVariant })
   return <Screen variant={variant} onNavigate={setActive} />;
 }
 
-const ORG_PHONE: Record<string, (p: { onNavigate?: (item: string) => void }) => JSX.Element> = {
+const ORG_PHONE: Record<string, (p: { onNavigate?: (item: string) => void }) => ReactElement> = {
   'Обзор': RefereeMobile,
   'Сводка': RefereeMobile,
   'Сетка': BracketMobile,
