@@ -144,9 +144,6 @@
 .-top-1 {
   top: calc(var(--spacing) * -1);
 }
-.-top-2 {
-  top: calc(var(--spacing) * -2);
-}
 .-top-28 {
   top: calc(var(--spacing) * -28);
 }
@@ -516,9 +513,6 @@
 .w-11 {
   width: calc(var(--spacing) * 11);
 }
-.w-12 {
-  width: calc(var(--spacing) * 12);
-}
 .w-14 {
   width: calc(var(--spacing) * 14);
 }
@@ -767,6 +761,9 @@
 }
 .justify-end {
   justify-content: flex-end;
+}
+.justify-start {
+  justify-content: flex-start;
 }
 .gap-0\.5 {
   gap: calc(var(--spacing) * 0.5);

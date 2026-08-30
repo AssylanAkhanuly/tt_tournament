@@ -286,7 +286,12 @@ export function MiniMonth({
   const cur = parse(month);
   const m = cur.getUTCMonth();
   const start = monday(new Date(Date.UTC(cur.getUTCFullYear(), m, 1)));
-  const days = Array.from({ length: 42 }, (_, i) => addDays(start, i));
+  /* Недель ровно столько же, сколько в большой сетке: при жёстких шести
+     появлялась лишняя строка следующего месяца, и точка события на ней
+     показывала старт, которого в самой сетке нет. */
+  const endOfMonth = new Date(Date.UTC(cur.getUTCFullYear(), m + 1, 0));
+  const weeksCount = Math.max(5, Math.ceil((Math.round((endOfMonth.getTime() - start.getTime()) / 86400000) + 1) / 7));
+  const days = Array.from({ length: weeksCount * 7 }, (_, i) => addDays(start, i));
   const busy = new Set<string>();
   for (const ev of events) {
     const b = ev.till ? parse(ev.till) : parse(ev.from);
@@ -389,39 +394,56 @@ export function TimeGrid({
   nowLine?: string;
 }) {
   const hours = Array.from({ length: till - from + 1 }, (_, i) => from + i);
+  /* Высота полотна — по числу ЧАСОВЫХ ПРОМЕЖУТКОВ, а не подписей: иначе под
+     последним часом остаётся пустая строка и читается как «после 19:00 ещё
+     есть окно». */
+  const totalH = (till - from) * hourPx;
   const top = (t: string) => ((mins(t) - from * 60) / 60) * hourPx;
   const height = (a: string, b: string) => Math.max(18, ((mins(b) - mins(a)) / 60) * hourPx);
+  /* Сколько подробностей влезает во вторую строку блока — зависит от того,
+     сколько колонок делят ширину. Зал на полтора десятка столов даёт колонку
+     ýже полусотни пикселей, и период «10:00–12:30» превращается в огрызок
+     «10:0…»: там печатаем только начало, а конец видно по высоте блока.
+     Уточнение (`sub`) переживает только широкую сетку. */
+  const dense = cols.length > 8;
+  const roomy = cols.length <= 5;
 
   return (
     <div className="overflow-hidden rounded-xl border border-neutral-200 bg-white">
-      {/* Шапка колонок; левый столбец пуст — под шкалой часов. */}
+      {/* Шапка колонок; левый столбец пуст — под шкалой часов.
+          `min-w-0` обязателен: без него длинная подпись (`sub`) распирает свою
+          ячейку по содержимому и отбирает ширину у остальных — шапка перестаёт
+          совпадать с колонками тела, и номер стола повисает на разделителе. */}
       <div className="flex border-b border-neutral-200 bg-neutral-50">
         <div className="w-14 shrink-0" />
         {cols.map((c) => (
-          <div key={c.key} className="flex-1 border-l border-neutral-200 px-2 py-1.5 leading-tight">
-            <div className="text-[12.5px] font-semibold">{c.t}</div>
-            {c.sub && <div className="text-[11px] text-neutral-500">{c.sub}</div>}
+          <div key={c.key} className="min-w-0 flex-1 border-l border-neutral-200 px-2 py-1.5 leading-tight">
+            <div className="truncate text-[12.5px] font-semibold">{c.t}</div>
+            {c.sub && <div className="truncate text-[11px] text-neutral-500">{c.sub}</div>}
           </div>
         ))}
       </div>
 
       <div className="flex">
-        {/* Шкала часов. Подпись сдвинута вверх на пол-строки, чтобы стоять
-            ровно у своей линии, как в Google Calendar. */}
-        <div className="w-14 shrink-0">
-          {hours.map((h) => (
-            <div key={h} className="relative" style={{ height: hourPx }}>
-              <span className="absolute -top-2 right-2 text-[11px] tabular-nums text-neutral-400">
-                {d2(h)}:00
-              </span>
-            </div>
+        {/* Шкала часов: подпись стоит на своей линии, поэтому приподнята на
+            пол-строки. У первого часа сдвига нет — иначе она заезжает под
+            границу шапки и выглядит зачёркнутой. */}
+        <div className="relative w-14 shrink-0" style={{ height: totalH }}>
+          {hours.map((h, i) => (
+            <span
+              key={h}
+              className="absolute right-2 text-[11px] tabular-nums text-neutral-400"
+              style={{ top: i * hourPx - (i === 0 ? 0 : 8) }}
+            >
+              {d2(h)}:00
+            </span>
           ))}
         </div>
 
         {cols.map((c, ci) => {
           const own = events.filter((e) => e.col === c.key);
           return (
-            <div key={c.key} className="relative flex-1 border-l border-neutral-200" style={{ height: hours.length * hourPx }}>
+            <div key={c.key} className="relative min-w-0 flex-1 border-l border-neutral-200" style={{ height: totalH }}>
               {/* Часовые линии: сетка, по которой глаз считает время. */}
               {hours.map((h, i) => (
                 <div key={h} className="absolute inset-x-0 border-t border-neutral-100" style={{ top: i * hourPx }} />
@@ -433,28 +455,40 @@ export function TimeGrid({
                 const clash = own.filter((o) => mins(o.from) < mins(e.till) && mins(o.till) > mins(e.from));
                 const idx = clash.findIndex((o) => o.id === e.id);
                 const w = 100 / clash.length;
+                const h = height(e.from, e.till);
                 return (
                   <button
                     key={e.id}
                     type="button"
                     data-to={e.to}
                     title={`${e.nm} · ${e.from}–${e.till}${e.sub ? ` · ${e.sub}` : ''}`}
+                    /* `flex-col justify-start` обязателен: кнопка по умолчанию
+                       центрирует содержимое по вертикали, и у длинного блока
+                       подпись уезжала в середину — матч на 2 часа выглядел
+                       пустым прямоугольником, а его начало нечем было опознать.
+                       Подпись стоит у времени начала, как в Google Calendar. */
                     className={
-                      'absolute overflow-hidden rounded-md border px-1.5 py-1 text-left leading-tight ' +
+                      'absolute flex flex-col items-stretch justify-start overflow-hidden rounded-md border px-1.5 py-1 text-left leading-tight ' +
                       SLOT[e.tone ?? 'accent']
                     }
                     style={{
                       top: top(e.from) + 1,
-                      height: height(e.from, e.till) - 2,
+                      height: h - 2,
                       left: `calc(${idx * w}% + 2px)`,
                       width: `calc(${w}% - 4px)`,
                     }}
                   >
                     <span className="block truncate text-[11.5px] font-semibold">{e.nm}</span>
-                    <span className="block truncate text-[10.5px] opacity-70">
-                      {e.from}–{e.till}
-                      {e.sub ? ` · ${e.sub}` : ''}
-                    </span>
+                    {/* Вторая строка только там, где она целиком помещается:
+                        огрызок «10:0…» хуже, чем её отсутствие, — время всё
+                        равно читается по оси слева и по высоте блока. */}
+                    {h >= 34 && (
+                      <span className="block truncate text-[10.5px] opacity-70">
+                        {dense
+                          ? e.from
+                          : `${e.from}–${e.till}${roomy && e.sub ? ` · ${e.sub}` : ''}`}
+                      </span>
+                    )}
                   </button>
                 );
               })}
@@ -607,7 +641,9 @@ export const DayList = ({
           className="flex w-full items-start gap-2 border-t border-neutral-100 px-3 py-2 text-left first:border-t-0 hover:bg-neutral-50"
         >
           <span className={'mt-1.5 h-2 w-2 shrink-0 rounded-full ' + DOT[i.tone ?? 'accent']} />
-          <span className="w-12 shrink-0 text-[12px] tabular-nums text-neutral-500">{i.t}</span>
+          {/* Колонка под «весь день», а не только под «10:00»: у события на
+              весь день подпись иначе ломалась на две строки. */}
+          <span className="w-14 shrink-0 text-[12px] tabular-nums text-neutral-500">{i.t}</span>
           <span className="min-w-0 flex-1 leading-tight">
             <span className="block text-[12.5px] font-medium">{i.nm}</span>
             {i.sub && <span className="block text-[11.5px] text-neutral-500">{i.sub}</span>}
