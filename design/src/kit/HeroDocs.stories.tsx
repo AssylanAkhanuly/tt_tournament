@@ -18,6 +18,7 @@
    живут в «Основе»: их нельзя отрисовать одной строкой. */
 
 import type { ReactNode } from 'react';
+import { Check, Download, Pencil, Plus, Search, Trash2, X } from 'lucide-react';
 import {
   Alert,
   Avatar,
@@ -27,6 +28,16 @@ import {
   Checkbox,
   Chip,
   Code,
+  ButtonGroup,
+  CheckboxGroup,
+  RadioGroup,
+  Radio,
+  Separator,
+  ToggleButton,
+  ToggleButtonGroup,
+  buttonGroupVariants,
+  separatorVariants,
+  toggleButtonGroupVariants,
   I18nProvider,
   Kbd,
   Link,
@@ -323,6 +334,170 @@ export const Status = {
           prop="Switch"
           vals={['выключен', 'включён']}
           render={(v) => <Switch defaultSelected={v === 'включён'}>Уведомления</Switch>}
+        />
+      </Comp>
+    </Shell>
+  ),
+};
+
+/* ── Кнопки с иконками ──────────────────────────────────────────── */
+export const Icons = {
+  name: 'Кнопки с иконками',
+  render: () => (
+    <Shell>
+      <Comp
+        name="Иконка и подпись"
+        note="Иконка ставится ребёнком рядом с текстом — отдельного свойства для неё нет."
+      >
+        <Row
+          prop="иконка слева"
+          vals={values(buttonVariants, 'variant')}
+          render={(v) => (
+            <Button variant={v as never}>
+              <Plus size={16} /> Заявиться
+            </Button>
+          )}
+        />
+        <Row
+          prop="иконка справа"
+          vals={['primary', 'outline']}
+          render={(v) => (
+            <Button variant={v as never}>
+              Скачать <Download size={16} />
+            </Button>
+          )}
+        />
+      </Comp>
+
+      <Comp
+        name="Только иконка"
+        note="`isIconOnly` делает кнопку квадратной по высоте размера — подпись обязательна для читалки."
+      >
+        <Row
+          prop="variant"
+          vals={values(buttonVariants, 'variant')}
+          render={(v) => (
+            <Button isIconOnly variant={v as never} aria-label="Изменить">
+              <Pencil size={16} />
+            </Button>
+          )}
+        />
+        <Row
+          prop="size"
+          vals={values(buttonVariants, 'size')}
+          render={(v) => (
+            <Button isIconOnly size={v as never} aria-label="Поиск">
+              <Search size={16} />
+            </Button>
+          )}
+        />
+        <Row
+          prop="назначение"
+          vals={['подтвердить', 'удалить', 'закрыть']}
+          render={(v) => (
+            <Button
+              isIconOnly
+              variant={v === 'удалить' ? ('danger' as never) : ('outline' as never)}
+              aria-label={v}
+            >
+              {v === 'подтвердить' ? <Check size={16} /> : v === 'удалить' ? <Trash2 size={16} /> : <X size={16} />}
+            </Button>
+          )}
+        />
+      </Comp>
+    </Shell>
+  ),
+};
+
+/* ── Расположение ───────────────────────────────────────────────── */
+export const Orientation = {
+  name: 'Расположение',
+  render: () => (
+    <Shell>
+      <Comp
+        name="ButtonGroup"
+        note="Горизонтально и вертикально — значения взяты из buttonGroupVariants."
+      >
+        <Row
+          prop="orientation"
+          vals={values(buttonGroupVariants, 'orientation')}
+          render={(v) => (
+            <ButtonGroup orientation={v as never}>
+              <Button variant="outline">Все</Button>
+              <Button variant="outline">Идут</Button>
+              <Button variant="outline">Завершены</Button>
+            </ButtonGroup>
+          )}
+        />
+        <Row
+          prop="fullWidth"
+          vals={['false', 'true']}
+          render={(v) => (
+            <div className="w-56">
+              <ButtonGroup fullWidth={v === 'true'}>
+                <Button variant="outline">Все</Button>
+                <Button variant="outline">Идут</Button>
+              </ButtonGroup>
+            </div>
+          )}
+        />
+      </Comp>
+
+      <Comp name="ToggleButtonGroup">
+        <Row
+          prop="orientation"
+          vals={values(toggleButtonGroupVariants, 'orientation')}
+          render={(v) => (
+            <ToggleButtonGroup orientation={v as never}>
+              <ToggleButton id="s">Одиночный</ToggleButton>
+              <ToggleButton id="d">Парный</ToggleButton>
+            </ToggleButtonGroup>
+          )}
+        />
+        <Row
+          prop="isDetached"
+          vals={['false', 'true']}
+          render={(v) => (
+            <ToggleButtonGroup isDetached={v === 'true'}>
+              <ToggleButton id="s">Одиночный</ToggleButton>
+              <ToggleButton id="d">Парный</ToggleButton>
+            </ToggleButtonGroup>
+          )}
+        />
+      </Comp>
+
+      <Comp name="Separator">
+        <Row
+          prop="orientation"
+          vals={values(separatorVariants, 'orientation')}
+          render={(v) =>
+            v === 'vertical' ? (
+              <div className="flex h-12 items-center gap-3">
+                <span className="text-sm">Астана</span>
+                <Separator orientation="vertical" />
+                <span className="text-sm">Алматы</span>
+              </div>
+            ) : (
+              <div className="w-40">
+                <Separator />
+              </div>
+            )
+          }
+        />
+      </Comp>
+
+      <Comp name="Группы выбора" note="У флажков и радио расположение задаётся orientation.">
+        {/* У CheckboxGroup в тройке свойства orientation нет — проверено по
+            типам пакета; показываем только то, что есть. */}
+        <Row
+          prop="RadioGroup"
+          vals={['vertical', 'horizontal']}
+          render={(v) => (
+            <RadioGroup aria-label="Язык" orientation={v as never} defaultValue="ru">
+              <Radio value="ru">Русский</Radio>
+              <Radio value="kk">Қазақша</Radio>
+            </RadioGroup>
+          )}
         />
       </Comp>
     </Shell>
