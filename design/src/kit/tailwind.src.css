@@ -27,9 +27,26 @@
    Без слоя утилиты соревнуются по специфичности и класс сброс обходит. */
 @import 'tailwindcss/utilities.css';
 
-/* Стили HeroUI 3. В тройке нет плагина Tailwind и нет конфига темы: библиотека
-   отдаёт готовый CSS, а её оформление настраивается переменными. */
-@import '@heroui/react/styles';
+/* Стили HeroUI 3 — ПО ЧАСТЯМ, а не одним `@heroui/react/styles`.
+
+   Причина конкретная: его `index.css` первой же строкой делает
+   `@import "tailwindcss"`, то есть тащит ПОЛНЫЙ Tailwind вместе с preflight —
+   ровно тот глобальный сброс, который мы обходили стороной. Через него в
+   Storybook приезжали чужие `body`-стили: шрифт Nunito Sans вместо Inter и
+   тёмный фон со светлым текстом. От этого «ломались стили» во всём разделе, а
+   карточки казались тёмными.
+
+   Поэтому берём слои по отдельности и НЕ берём `base`: там и живут стили
+   `body`. Компоненты одеваются слоями components + theme + utilities +
+   variants — этого достаточно. */
+/* Анимации, на которые опираются компоненты HeroUI (`fade-in-0` и прочие):
+   их подключал его `index.css`, который мы обошли. */
+@import 'tw-animate-css';
+
+@import '@heroui/styles/components/index.css' layer(components);
+@import '@heroui/styles/themes/default' layer(theme);
+@import '@heroui/styles/utilities';
+@import '@heroui/styles/variants';
 
 /* HeroUI переключает тёмную тему классом на обёртке. */
 @custom-variant dark (&:is(.dark *));

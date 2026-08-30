@@ -124,13 +124,22 @@ svg { display: block; }
 .sect { font-size: 11px; font-weight: 700; letter-spacing: .9px; color: var(--c-muted); text-transform: uppercase; margin: 4px 2px -3px; opacity: .8; }
 
 /* ── СТЕКЛО: базовая панель (карточка / плитка / строка-уведомление) ── */
-.card, .stat, .item {
+/* `:not(:where(.hero-scope *))` — чтобы наши классы не красили компоненты
+   HeroUI: у него в разметке тоже есть `card`, а наше правило вне слоёв и
+   потому сильнее его слоёв. Карточки библиотеки приезжали тёмными на белой
+   странице, а заголовки на них пропадали.
+
+   `:where()` внутри `:not()` не добавляет специфичности, поэтому правило
+   остаётся ровно таким же сильным для всех остальных экранов — ни один из
+   сорока двух файлов, где стоит `card`, не меняется. */
+.card:not(:where(.hero-scope *)),
+.stat:not(:where(.hero-scope *)),
+.item:not(:where(.hero-scope *)) {
   background: var(--c-panel);
- 
   border: 1px solid var(--c-glass-line);
   box-shadow: inset 0 1px 0 var(--c-glass-hi), var(--sh-card);
 }
-.card { border-radius: var(--r-md); padding: 15px; }
+.card:not(:where(.hero-scope *)) { border-radius: var(--r-md); padding: 15px; }
 
 /* аватар-фото */
 .avatar { width: 50px; height: 50px; border-radius: 50%; object-fit: cover; flex: none; background: var(--c-avatar-bg); box-shadow: 0 0 0 1px var(--c-glass-ring), var(--sh-avatar); }
