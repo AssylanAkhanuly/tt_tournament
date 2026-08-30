@@ -43,6 +43,17 @@
    их подключал его `index.css`, который мы обошли. */
 @import 'tw-animate-css';
 
+/* Базовый слой HeroUI ВОЗВРАЩЁН, но внутрь `layer(base)`. Без него кнопки,
+   чипы и группы кнопок остаются с браузерными стилями и выглядят кривыми: в
+   нём не только оформление `body`, но и сбросы, на которых держится вся
+   разметка библиотеки.
+
+   Слой решает конфликт: наш собственный CSS написан вне слоёв, а правило вне
+   слоя сильнее любого правила внутри слоя. Поэтому шрифт и фон страницы
+   остаются нашими, а сбросы HeroUI действуют там, где мы ничего не задаём. */
+@import '@heroui/styles/base' layer(base);
+@import '@heroui/styles/base/scrollbar.css' layer(base);
+
 @import '@heroui/styles/components/index.css' layer(components);
 @import '@heroui/styles/themes/default' layer(theme);
 @import '@heroui/styles/utilities';

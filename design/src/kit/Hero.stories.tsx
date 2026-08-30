@@ -94,8 +94,11 @@ export default {
 
 /** Поверхность витрины. `hero-scope` включает локальный сброс браузерных
     стилей: preflight Tailwind выключен глобально, а HeroUI на него
-    рассчитывает. */
-export const Shell = ({ children }: { children: ReactNode }) => (
+    рассчитывает.
+
+    НЕ экспортируется: Storybook считает историей каждый именованный экспорт
+    файла, и служебные обёртки появлялись в дереве пустыми пунктами. */
+const Shell = ({ children }: { children: ReactNode }) => (
   <I18nProvider locale="ru-RU">
     {/* `data-theme="light"` обязателен, и причина неочевидная: наш
         переключатель тем ставит `data-theme` на <html> (`applyTheme` в
@@ -112,7 +115,7 @@ export const Shell = ({ children }: { children: ReactNode }) => (
   </I18nProvider>
 );
 
-export const Block = ({
+const Block = ({
   title,
   note,
   children,
@@ -143,9 +146,13 @@ export const Actions = {
       </Block>
 
       <Block title="Группы и переключатели">
+        {/* Разделители обязательны: без них три кнопки слипаются в одну
+            пилюлю и читаются как «ВсеИдутЗавершены». */}
         <ButtonGroup>
           <Button variant="outline">Все</Button>
+          <ButtonGroup.Separator />
           <Button variant="outline">Идут</Button>
+          <ButtonGroup.Separator />
           <Button variant="outline">Завершены</Button>
         </ButtonGroup>
         <ToggleButton>Только мои</ToggleButton>

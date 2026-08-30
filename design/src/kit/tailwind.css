@@ -50,8 +50,6 @@
     --blur-md: 12px;
     --default-transition-duration: 150ms;
     --default-transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
-    --default-font-family: var(--font-sans);
-    --default-mono-font-family: var(--font-mono);
     --shadow-overlay: var(--overlay-shadow);
     --border-width-field: var(--field-border-width, var(--border-width));
     --ease-smooth: ease;
@@ -347,6 +345,32 @@
   syntax: "*";
   inherits: false;
   initial-value: 0;
+}
+@layer base {
+  *, ::after, ::before, ::backdrop, ::file-selector-button {
+    border-color: var(--border, currentColor);
+  }
+  :root {
+    view-transition-name: none;
+  }
+  ::view-transition {
+    pointer-events: none;
+  }
+  [data-scrollbar="thin"] {
+    --scrollbar-width: thin;
+    --scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
+    --scrollbar-gutter: auto;
+  }
+  [data-scrollbar="default"] {
+    --scrollbar-width: auto;
+    --scrollbar-color: auto;
+    --scrollbar-gutter: auto;
+  }
+  [data-scrollbar="none"] {
+    --scrollbar-width: none;
+    --scrollbar-color: auto;
+    --scrollbar-gutter: auto;
+  }
 }
 @layer components {
   .close-button {
