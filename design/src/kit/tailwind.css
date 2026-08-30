@@ -7,6 +7,7 @@
     sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
     --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New',
     monospace;
+    --color-neutral-100: oklch(97% 0 none);
     --color-neutral-200: oklch(92.2% 0 none);
     --color-neutral-400: oklch(70.8% 0 none);
     --color-neutral-500: oklch(55.6% 0 none);
@@ -20,8 +21,6 @@
     --container-md: 28rem;
     --container-lg: 32rem;
     --container-xl: 36rem;
-    --container-2xl: 42rem;
-    --container-3xl: 48rem;
     --container-4xl: 56rem;
     --text-xs: 0.75rem;
     --text-xs--line-height: calc(1 / 0.75);
@@ -78,8 +77,17 @@
 .mx-auto {
   margin-inline: auto;
 }
+.ms-auto {
+  margin-inline-start: auto;
+}
 .mt-1 {
   margin-top: var(--spacing);
+}
+.mt-2 {
+  margin-top: calc(var(--spacing) * 2);
+}
+.mt-3 {
+  margin-top: calc(var(--spacing) * 3);
 }
 .block {
   display: block;
@@ -105,17 +113,48 @@
 .table {
   display: table;
 }
+.size-36 {
+  width: calc(var(--spacing) * 36);
+  height: calc(var(--spacing) * 36);
+}
 .h-3 {
   height: calc(var(--spacing) * 3);
 }
-.h-12 {
-  height: calc(var(--spacing) * 12);
+.h-4 {
+  height: calc(var(--spacing) * 4);
+}
+.h-6 {
+  height: calc(var(--spacing) * 6);
+}
+.h-9 {
+  height: calc(var(--spacing) * 9);
+}
+.h-10 {
+  height: calc(var(--spacing) * 10);
+}
+.h-40 {
+  height: calc(var(--spacing) * 40);
+}
+.h-80 {
+  height: calc(var(--spacing) * 80);
+}
+.h-96 {
+  height: calc(var(--spacing) * 96);
 }
 .min-h-screen {
   min-height: 100vh;
 }
-.w-24 {
-  width: calc(var(--spacing) * 24);
+.w-6 {
+  width: calc(var(--spacing) * 6);
+}
+.w-9 {
+  width: calc(var(--spacing) * 9);
+}
+.w-10 {
+  width: calc(var(--spacing) * 10);
+}
+.w-20 {
+  width: calc(var(--spacing) * 20);
 }
 .w-32 {
   width: calc(var(--spacing) * 32);
@@ -123,17 +162,53 @@
 .w-40 {
   width: calc(var(--spacing) * 40);
 }
+.w-44 {
+  width: calc(var(--spacing) * 44);
+}
 .w-48 {
   width: calc(var(--spacing) * 48);
+}
+.w-52 {
+  width: calc(var(--spacing) * 52);
 }
 .w-56 {
   width: calc(var(--spacing) * 56);
 }
+.w-64 {
+  width: calc(var(--spacing) * 64);
+}
 .w-72 {
   width: calc(var(--spacing) * 72);
 }
+.w-80 {
+  width: calc(var(--spacing) * 80);
+}
+.w-96 {
+  width: calc(var(--spacing) * 96);
+}
+.w-full {
+  width: 100%;
+}
+.w-lg {
+  width: var(--container-lg);
+}
+.w-max {
+  width: max-content;
+}
+.w-md {
+  width: var(--container-md);
+}
 .max-w-4xl {
   max-width: var(--container-4xl);
+}
+.max-w-xl {
+  max-width: var(--container-xl);
+}
+.min-w-0 {
+  min-width: 0px;
+}
+.flex-1 {
+  flex: 1;
 }
 .grow {
   flex-grow: 1;
@@ -144,14 +219,29 @@
 .flex-col {
   flex-direction: column;
 }
+.flex-row-reverse {
+  flex-direction: row-reverse;
+}
 .flex-wrap {
   flex-wrap: wrap;
 }
 .items-center {
   align-items: center;
 }
+.items-end {
+  align-items: flex-end;
+}
+.items-start {
+  align-items: flex-start;
+}
+.justify-between {
+  justify-content: space-between;
+}
 .gap-1 {
   gap: var(--spacing);
+}
+.gap-1\.5 {
+  gap: calc(var(--spacing) * 1.5);
 }
 .gap-2 {
   gap: calc(var(--spacing) * 2);
@@ -165,6 +255,20 @@
 .gap-10 {
   gap: calc(var(--spacing) * 10);
 }
+.gap-x-3 {
+  column-gap: calc(var(--spacing) * 3);
+}
+.gap-y-4 {
+  row-gap: calc(var(--spacing) * 4);
+}
+.truncate {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.rounded-full {
+  border-radius: calc(infinity * 1px);
+}
 .border {
   border-style: var(--tw-border-style);
   border-width: 1px;
@@ -176,14 +280,54 @@
 .border-neutral-200 {
   border-color: var(--color-neutral-200);
 }
+.bg-neutral-100 {
+  background-color: var(--color-neutral-100);
+}
+.bg-surface {
+  background-color: var(--surface);
+}
 .bg-white {
   background-color: var(--color-white);
+}
+.object-cover {
+  object-fit: cover;
+}
+.p-2 {
+  padding: calc(var(--spacing) * 2);
+}
+.p-3 {
+  padding: calc(var(--spacing) * 3);
+}
+.p-4 {
+  padding: calc(var(--spacing) * 4);
 }
 .p-7 {
   padding: calc(var(--spacing) * 7);
 }
+.px-1 {
+  padding-inline: var(--spacing);
+}
+.px-3 {
+  padding-inline: calc(var(--spacing) * 3);
+}
+.py-1 {
+  padding-block: var(--spacing);
+}
+.py-2 {
+  padding-block: calc(var(--spacing) * 2);
+}
 .pt-6 {
   padding-top: calc(var(--spacing) * 6);
+}
+.pt-14 {
+  padding-top: calc(var(--spacing) * 14);
+}
+.text-right {
+  text-align: right;
+}
+.text-2xl {
+  font-size: var(--text-2xl);
+  line-height: var(--tw-leading, var(--text-2xl--line-height));
 }
 .text-lg {
   font-size: var(--text-lg);
@@ -200,6 +344,14 @@
 .text-\[11px\] {
   font-size: 11px;
 }
+.font-bold {
+  --tw-font-weight: var(--font-weight-bold);
+  font-weight: var(--font-weight-bold);
+}
+.font-medium {
+  --tw-font-weight: var(--font-weight-medium);
+  font-weight: var(--font-weight-medium);
+}
 .font-semibold {
   --tw-font-weight: var(--font-weight-semibold);
   font-weight: var(--font-weight-semibold);
@@ -208,11 +360,17 @@
   --tw-tracking: var(--tracking-wider);
   letter-spacing: var(--tracking-wider);
 }
+.whitespace-nowrap {
+  white-space: nowrap;
+}
 .text-neutral-400 {
   color: var(--color-neutral-400);
 }
 .text-neutral-500 {
   color: var(--color-neutral-500);
+}
+.text-neutral-600 {
+  color: var(--color-neutral-600);
 }
 .text-neutral-900 {
   color: var(--color-neutral-900);
@@ -232,6 +390,10 @@
   outline-style: var(--tw-outline-style);
   outline-width: 1px;
 }
+.blur {
+  --tw-blur: blur(8px);
+  filter: var(--tw-blur,) var(--tw-brightness,) var(--tw-contrast,) var(--tw-grayscale,) var(--tw-hue-rotate,) var(--tw-invert,) var(--tw-saturate,) var(--tw-sepia,) var(--tw-drop-shadow,);
+}
 .filter {
   filter: var(--tw-blur,) var(--tw-brightness,) var(--tw-contrast,) var(--tw-grayscale,) var(--tw-hue-rotate,) var(--tw-invert,) var(--tw-saturate,) var(--tw-sepia,) var(--tw-drop-shadow,);
 }
@@ -241,6 +403,9 @@
 }
 .paused {
   animation-play-state: paused;
+}
+.ring-inset {
+  --tw-ring-inset: inset;
 }
 @property --tw-animation-delay {
   syntax: "*";
@@ -11200,6 +11365,16 @@
     list-style: none;
   }
   :where(.hero-scope) :where(img, svg) {
+    display: block;
+  }
+  :where(.hero-scope) :where(fieldset) {
+    border: 0;
+    margin: 0;
+    padding: 0;
+    min-width: 0;
+  }
+  :where(.hero-scope) :where(legend) {
+    padding: 0;
     display: block;
   }
 }

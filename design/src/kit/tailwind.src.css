@@ -86,4 +86,9 @@
   :where(.hero-scope) :where(h1, h2, h3, h4, p) { margin: 0; font-size: inherit; font-weight: inherit; }
   :where(.hero-scope) :where(ul, ol) { margin: 0; padding: 0; list-style: none; }
   :where(.hero-scope) :where(img, svg) { display: block; }
+  /* Fieldset у HeroUI — безрамочная flex-колонка, но браузерная рамка и
+     врезанная легенда сильнее его слоёв не по специфичности, а потому что это
+     стили UA на самом элементе. Сбрасываем, как сброшены кнопки выше. */
+  :where(.hero-scope) :where(fieldset) { border: 0; margin: 0; padding: 0; min-width: 0; }
+  :where(.hero-scope) :where(legend) { padding: 0; display: block; }
 }

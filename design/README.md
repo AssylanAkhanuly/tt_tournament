@@ -559,11 +559,21 @@ background: var(--fx-pattern) 0 0 / var(--fx-pattern-size) repeat, var(--c-scree
 **HeroUI и Tailwind** ✳ (30.08.2026). Базовый набор компонентов берём готовым
 из `@heroui/react`; он построен на Tailwind, поэтому Tailwind стал основным
 слоем стилей — граница «что Tailwind, что нативный CSS» записана в корневом
-`CLAUDE.md`. Витрина — раздел **UI-кит → HeroUI**.
+`CLAUDE.md`. Витрина — раздел **UI-кит → HeroUI**: восемь страниц
+(`src/kit/hero/*.stories.tsx`), покрывающих все компоненты пакета.
 
 Три вещи, которые надо знать про это подключение:
 
-- **Версия 2.x, а не 3.x**: тройка требует React 19, в `design/` — React 18.
+- **Версия 3.x (сейчас 3.2.4), API композиционный.** Компонент собирается из
+  частей: `<ProgressBar>` без `Track`+`Fill` или `<Checkbox>` без
+  `Control`+`Indicator` рендерят пустоту, причём молча — так выглядел
+  «сломанный HeroUI» первого захода, писавшийся монолитным API двойки.
+  Структуру каждой части сверяем по типам пакета
+  (`node_modules/@heroui/react/dist/components/*/…d.ts`), наборы значений
+  вариантов истории читают из `*Variants` самого пакета (`values()` в
+  `src/kit/hero/HeroKit.tsx`) — справочник не может разойтись с библиотекой.
+  `DateInputGroup` и `ColorInputGroup` из корня пакета не реэкспортируются —
+  только сабпутями `@heroui/react/date-input-group` и `…/color-input-group`.
 - **Preflight не подключён.** Глобальный сброс Tailwind снёс бы вёрстку двухсот
   файлов, написанных до него. Вместо него локальный сброс внутри `.hero-scope`
   (`src/kit/tailwind.src.css`), сделанный через `:where()` — нулевая
