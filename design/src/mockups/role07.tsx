@@ -1,95 +1,162 @@
-/* Роль 7 · Главный секретарь соревнований — макеты по флоу.
-   Экраны Э7.1–Э7.5 (см. `flows/07-glavnyy-sekretar.md` и схему роли).
+/* Роль 7 · Главный секретарь соревнований — макеты по флоу на новом слое
+   (HeroUI) ✳ (30.08.2026). Содержание, решения и переходы — прежние
+   (см. `flows/07-glavnyy-sekretar.md`); меняется подача: оболочка WebApp и
+   доменные компоненты `kit/hero/app` вместо старого макетного слоя.
 
    Главное, что должны показывать макеты: у турнира два рабочих места, и они
-   разведены — **судья решает, секретарь оформляет**. Поэтому у секретаря нет
-   экрана заявок, формат сетки приходит от судьи только на чтение, а каждая
-   готовая работа заканчивается кнопкой «Передать главному судье». */
+   разведены — **секретарь собирает, судья утверждает** (решение 19.08.2026).
+   Поэтому у секретаря нет экрана заявок, вводные судьи стоят на чтение, а
+   каждая готовая работа заканчивается кнопкой «Передать главному судье». */
 
 import { useState, type ReactNode } from 'react';
-import { ArrowUpDown, Printer, RefreshCw, Send, Shuffle } from 'lucide-react';
-import { BracketFlow } from '@/widgets/bracket/BracketFlow';
 import {
-  A, ActionBar, Alert, Area, Arrow, Board, Chips, DateField, Field, Filter, Form, Hint, Input, Panel,
-  RoleScreen, Row, Rows, Screen, Search, Shot, States, TabPanel, Tabs,
-} from './shell';
+  ArrowUpDown, CalendarDays, Grid3x3, LayoutDashboard, Printer, RefreshCw, Scroll, Send, Shuffle,
+} from 'lucide-react';
+import { Avatar, Button } from '@heroui/react';
+import {
+  A, AW, AreaInput, Bar, FieldView, FilterSeg, FormGrid, KV, Panel, Pill, Row, Rows,
+  ScreenScope, SearchInput, StatTiles, TextInput, WebApp, type RoleUI,
+} from '../kit/hero/app';
+/* Из старого слоя остаются только мета-компоненты борда: колонки, стрелки и
+   полки состояний. Сами экраны собраны новым слоем. */
+import { Board, States, Shot, type ScreenMap } from './shell';
 /* Сетка — тот же холст и та же модель, что у спортсмена (Э14.5), у
    администратора федерации (Э1.3) и на фронте: секретарь собирает ровно то,
    что потом увидят игроки. Пять кругов — плей-офф на 32: полная сетка на 128
    при вписывании в экран нечитаема, а формат Кубка — «олимпийская с группами»,
    и в плей-офф из групп выходят как раз 32. */
 import { makeBigBracket } from '../bigBracket';
-import type { DeskVariant } from '../deskShell';
-import type { ScreenMap } from './shell';
-import { FormSeg } from '../segs';
-import { R07 } from './roles';
+import { BracketFlow } from '@/widgets/bracket/BracketFlow';
 /* Маршрут судейской роли начинается раньше входа: судья заводит себя сам
    (Э0.7), а роль в наряде ему выдают уже потом. Без этой колонки борд и карта
    начинались с «Вход», и откуда взялся человек, из них было не видно. */
 import { Login0_1, SignUpJudge0_7, SignUpJudge0_7States } from './role00';
 
-/* ── мелочи, общие для экранов роли ─────────────────────────────── */
+/* ── Роль: сайдбар и подпись профиля ─────────────────────────────── */
 
-/** Второстепенное действие: форма кнопки та же, заливки акцентом нет. */
-const GHOST = {
-  background: 'var(--c-panel)',
-  color: 'var(--c-ink)',
-  border: '1px solid var(--c-glass-line)',
-  boxShadow: 'none',
-} as const;
+/** Данные роли — те же, что в старом слое (`roles.tsx`), тип — из нового.
+    Подписи пунктов те же слова: по ним карта флоу находит переходы. */
+const R07: RoleUI = {
+  num: '7',
+  title: 'Главный секретарь соревнований',
+  person: { nm: 'Ким Л.', rl: 'Главный секретарь', av: AW(31) },
+  brandName: 'Чемпионат Казахстана 2026',
+  brandSub: 'Одиночный · олимпийская · г. Астана',
+  badge: 'ИДЁТ',
+  nav: [
+    [<LayoutDashboard size={16} key="d" />, 'Рабочий стол'],
+    [<Grid3x3 size={16} key="b" />, 'Сетка'],
+    [<CalendarDays size={16} key="s" />, 'Расписание'],
+    [<Scroll size={16} key="p" />, 'Протоколы'],
+  ],
+};
 
-const Ghost = ({ onClick, children }: { onClick?: () => void; children: ReactNode }) => (
-  <button type="button" className="dsubmit" style={{ ...GHOST, fontSize: 13 }} onClick={onClick}>
-    {children}
-  </button>
+/** Значок состояния в шапке: на каждом экране турнир в своём состоянии (§4.3) —
+    у секретаря это «Система проведения», а протоколы открываются в «Итоговом
+    протоколе». Тем же приёмом собран главный судья (role06). */
+const at = (badge: string): RoleUI => ({ ...R07, badge });
+
+/* ── Мелочи, общие для экранов роли ─────────────────────────────── */
+
+/** Тона значков старого словаря → цвета `Pill` нового слоя: данные экранов
+    переносятся без переписывания. */
+type Cls = 'live' | 'wait' | 'bad' | 'reg' | 'done';
+const PC: Record<Cls, 'success' | 'warning' | 'danger' | 'accent' | 'default'> = {
+  live: 'success', wait: 'warning', bad: 'danger', reg: 'accent', done: 'default',
+};
+const Pl = ({ t, cls }: { t: string; cls: Cls }) => <Pill t={t} color={PC[cls]} />;
+
+/** Кадр состояния: фрагмент экрана в скоупе нового слоя — без обёртки фрагмент
+    на полке States остаётся без стилей HeroUI. */
+const Frag = ({ w = 560, children }: { w?: number; children: ReactNode }) => (
+  <ScreenScope>
+    <div style={{ width: w }}>{children}</div>
+  </ScreenScope>
 );
 
-const GhostPick = ({ to, onClick, children }: { to?: string; onClick?: () => void; children: ReactNode }) => (
+/** Таблица с «живыми» строками: шапка колонок задана, строки собирает экран —
+    у жребия строка меняет слот от броска, в расписании горит конфликтом.
+    ⚠ Временная дупликация с той же таблицей в role05/role06 — когда роли
+    доедут до нового слоя, таблице место в `kit/hero/app`. */
+const Sheet = ({ cols, grid, children }: { cols: ReactNode[]; grid: string; children: ReactNode }) => (
+  <div className="overflow-hidden rounded-xl border border-neutral-200 bg-white shadow-sm">
+    <div
+      className="grid items-center gap-3 border-b border-neutral-200 bg-neutral-50 px-4 py-2 text-[11px] font-semibold uppercase tracking-wider text-neutral-400"
+      style={{ gridTemplateColumns: grid }}
+    >
+      {cols.map((c, i) => <span key={i} className="min-w-0">{c}</span>)}
+    </div>
+    <div className="divide-y divide-neutral-100">{children}</div>
+  </div>
+);
+
+/** Заголовок сортируемого столбца: слоты сравнивают по номеру, людей — по
+    фамилии и рейтингу. ⚠ Дупликация с role05 — до общего компонента. */
+const Th = ({ t, on, onClick }: { t: string; on: boolean; onClick: () => void }) => (
   <button
     type="button"
-    className="dpickbtn"
-    style={{ ...GHOST, display: 'inline-flex', alignItems: 'center', gap: 6 }}
-    data-to={to}
     onClick={onClick}
+    className={'flex items-center gap-1 text-left ' + (on ? 'text-neutral-700' : 'hover:text-neutral-600')}
   >
-    {children}
+    {t}
+    {on && <ArrowUpDown size={11} />}
   </button>
 );
 
-type Cls = 'live' | 'wait' | 'bad' | 'reg';
-const P = ({ t, cls }: { t: string; cls: Cls }) => (
-  <span className={'pill ' + cls} style={{ margin: 0 }}>{t}</span>
+/** Пустой результат поиска — строкой таблицы, а не отдельным экраном. */
+const NoRows = ({ children }: { children: ReactNode }) => (
+  <div className="px-4 py-4 text-[12.5px] text-neutral-500">{children}</div>
 );
 
-/** Главное действие секретаря: работа готова — уходит судье. */
-const ToJudge = ({ onClick, children }: { onClick?: () => void; children: ReactNode }) => (
-  <button type="button" className="dsubmit" style={{ width: '100%', fontSize: 13 }} onClick={onClick}>
-    <Send size={15} />{children}
-  </button>
+/** Человек в строке таблицы: фото и две строки.
+    ⚠ Дупликация с role05 — до общего компонента. */
+const Who = ({ av, nm, sub }: { av?: string; nm: string; sub?: ReactNode }) => (
+  <span className="flex min-w-0 items-center gap-2.5">
+    {av && (
+      <Avatar size="sm">
+        <Avatar.Image alt={nm} src={av} />
+        <Avatar.Fallback>{nm.slice(0, 1)}</Avatar.Fallback>
+      </Avatar>
+    )}
+    <span className="min-w-0 leading-tight">
+      <span className="block truncate text-[13.5px] font-medium">{nm}</span>
+      {sub && <span className="block truncate text-xs text-neutral-500">{sub}</span>}
+    </span>
+  </span>
+);
+
+/** Главное действие секретаря: работа готова — уходит судье. Одна на экран. */
+const ToJudge = ({ onPress, children }: { onPress?: () => void; children: ReactNode }) => (
+  <Button variant="primary" className="w-full" onPress={onPress}>
+    <Send size={15} /> {children}
+  </Button>
 );
 
 /* ── Э7.1 · Рабочий стол: список работ и решение судьи ───────────── */
 
-export function Desk7_1({ variant }: { variant?: DeskVariant }) {
+/** Проп `variant` старой адаптивной рамки сохранён ради истории «Адаптив»:
+    у нового слоя своей планшетной рамки веба пока нет. */
+export function Desk7_1(_props: { variant?: 'desktop' | 'land' } = {}) {
   return (
-    <RoleScreen
-      variant={variant}
-      role={R07}
+    <WebApp
+      role={at('СИСТЕМА ПРОВЕДЕНИЯ')}
       nav="Рабочий стол"
       title="Рабочий стол секретаря"
       sub="Чемпионат Казахстана 2026 · 18–20.05.2026 · состояние «Система проведения»"
     >
-      <Chips
+      <StatTiles
         items={[
-          { v: '128', k: 'Участников', tone: 'b' },
+          { v: '128', k: 'Участников' },
           { v: '20', k: 'Столов в зале' },
           { v: '3', k: 'Игровых дня' },
           { v: '1 / 4', k: 'Работ готово', tone: 'a' },
         ]}
       />
-      <div className="mkcols">
-        <Panel title="Работы по турниру" extra={<P t="СИСТЕМА ПРОВЕДЕНИЯ" cls="reg" />}>
-          <Rows>
+      <div className="grid grid-cols-[1.25fr_1fr] items-start gap-4">
+        {/* Работы — главный акцент экрана: у каждой видно, готова ли она и у
+            кого сейчас лежит; строка ведёт на свой экран. */}
+        <Panel title="Работы по турниру" extra={<Pl t="СИСТЕМА ПРОВЕДЕНИЯ" cls="reg" />} flush>
+          <div className="divide-y divide-neutral-100">
             <Row
               to="Э7.3"
               nm="Система проведения и жеребьёвка"
@@ -117,23 +184,47 @@ export function Desk7_1({ variant }: { variant?: DeskVariant }) {
               sub="откроется, когда матчи сыграны"
               pill={{ t: 'ЖДЁТ МАТЧЕЙ', cls: 'wait' }}
             />
-          </Rows>
+          </div>
         </Panel>
 
-        <Panel title="Решение главного судьи · чтение" extra={<P t="ТОЛЬКО ПРОСМОТР" cls="wait" />}>
-          <Form>
-            <Field label="Система проведения" value="Олимпийская" />
-            <Field label="Дисциплина" value="Одиночная" />
-            <Field label="Партий в матче" value="до 3 из 5" />
-            <Field label="Утешительная сетка" value="нет" />
-            <Field label="Дни и столы" value="18–20 мая · 20 столов · 8 часов в день" wide />
-          </Form>
-          <div style={{ height: 12 }} />
+        {/* Вводные судьи — на чтение: секретарь работает по решению судьи ✳,
+            править их здесь нельзя, поэтому поля — подписями, а не формой. */}
+        <Panel title="Решение главного судьи · чтение" extra={<Pl t="ТОЛЬКО ПРОСМОТР" cls="wait" />}>
+          <KV
+            items={[
+              ['Система проведения', 'Олимпийская'],
+              ['Дисциплина', 'Одиночная'],
+              ['Партий в матче', 'до 3 из 5'],
+              ['Утешительная сетка', 'нет'],
+              ['Дни и столы', '18–20 мая · 20 столов · 8 часов в день'],
+            ]}
+          />
         </Panel>
       </div>
-    </RoleScreen>
+    </WebApp>
   );
 }
+
+const Desk7_1States = () => (
+  <States>
+    <Shot
+      tone="info"
+      title="До «Системы проведения» работы закрыты"
+      text="Пояснение «идёт приём заявок»; экрана заявок у секретаря нет."
+      wide
+    >
+      <Frag>
+        <Rows>
+          <Row nm="Жеребьёвка" sub="откроется, когда закроется приём заявок" pill={{ t: 'ЖДЁТ СОСТАВА', cls: 'done' }} />
+          <Row nm="Сетка" sub="строится после жеребьёвки" pill={{ t: 'ЖДЁТ', cls: 'done' }} />
+        </Rows>
+        <div className="mt-3">
+          <Bar>Состав ещё собирается: заявки принимает главный судья, секретарь их не видит.</Bar>
+        </div>
+      </Frag>
+    </Shot>
+  </States>
+);
 
 /* ── Жеребьёвка: часть параметров проведения (Э7.3) ──────────────── */
 
@@ -172,10 +263,10 @@ const SLOTS: SlotRow[] = [
     получают новые слоты из этого набора. */
 const LOTS = [12, 97, 44, 81, 29, 116];
 
-const COLS72: { k: 'slot' | 'nm' | 'rt' | 'seed'; t: string; num?: boolean }[] = [
-  { k: 'slot', t: 'Слот', num: true },
+const COLS72: { k: 'slot' | 'nm' | 'rt' | 'seed'; t: string }[] = [
+  { k: 'slot', t: 'Слот' },
   { k: 'nm', t: 'Участник' },
-  { k: 'rt', t: 'Рейтинг', num: true },
+  { k: 'rt', t: 'Рейтинг' },
   { k: 'seed', t: 'Основание' },
 ];
 
@@ -195,10 +286,11 @@ type DrawSt = 'draft' | 'done' | 'sent';
     «Провести жеребьёвку» и «Перебросить». */
 const WAYS = ['Посев по рейтингу', 'Жребий'];
 
+const SLOT_GRID = '64px 2.1fr 0.8fr 1.3fr';
+
 const DrawPanel = () => {
   const [way, setWay] = useState(WAYS[1]);
   const lot = way === WAYS[1];
-  const roll = () => { setN(n + 1); setSt('done'); };
   const [st, setSt] = useState<DrawSt>('draft');
   /* Сколько раз бросали. Первый бросок — не переброс, поэтому перебросов на
      один меньше: счётчик отвечает на вопрос «сколько раз переигрывали». */
@@ -208,7 +300,7 @@ const DrawPanel = () => {
      Сортировка по фамилии даёт второй взгляд, ради которого раньше держали
      отдельную вкладку. */
   const [sort, setSort] = useState<{ k: (typeof COLS72)[number]['k']; up: boolean }>({ k: 'slot', up: true });
-
+  const roll = () => { setN(n + 1); setSt('done'); };
 
   /* При посеве по рейтингу случайного места нет ни у кого: слоты идут по
      рейтингу, и в строке так и написано — «посев», а не «жребий». При жребии
@@ -247,96 +339,94 @@ const DrawPanel = () => {
           решение окончательно — **утверждает только главный судья** (Э6.3).
           Поэтому здесь нет и не может быть «утвердить»: работа уходит наверх
           передачей. */}
-      <div className="dactionbar">
-        <Filter
+      <div className="mb-3 flex flex-wrap items-center gap-3">
+        <FilterSeg
           items={WAYS}
           active={way}
           onPick={(v) => { setWay(v); setSt('draft'); setN(0); }}
         />
-        <P t={head[st].t} cls={head[st].cls} />
-        <span className="dcount">
+        <Pl t={head[st].t} cls={head[st].cls} />
+        <span className="text-[12.5px] text-neutral-500">
           {lot
             ? n === 0 ? 'жребий не бросали' : `бросок ${n} · перебросов ${n - 1}`
             : 'случайность не участвует — слоты считаются из рейтинга'}
         </span>
       </div>
 
-      <div className="dactionbar">
-        <Search value={q} placeholder="Фамилия, клуб или регион" onChange={setQ} wide />
-        <span className="dcount">
+      <div className="mb-3 flex items-center justify-between gap-4">
+        <SearchInput value={q} onChange={setQ} placeholder="Фамилия, клуб или регион" className="w-80" />
+        <span className="text-[12.5px] text-neutral-500">
           {rows.length === all.length ? `${all.length} участников` : `найдено ${rows.length} из ${all.length}`}
         </span>
       </div>
 
-      <div className="mktable mkdraw">
-        <div className="mktable-h">
-          {COLS72.map((c) => (
-            <button
-              key={c.k}
-              type="button"
-              className={(c.num ? 'num' : '') + (sort.k === c.k ? ' on' : '')}
-              onClick={() => setSort({ k: c.k, up: sort.k === c.k ? !sort.up : true })}
-            >
-              {c.t}
-              {sort.k === c.k && <ArrowUpDown size={11} />}
-            </button>
-          ))}
-        </div>
-        <div className="mktable-b">
-          {rows.map((r) => (
-            <div className="mktable-r" key={r.nm}>
-              <span className="num tot">{r.slot}</span>
-              <span className="nm">
-                <img src={r.av} alt="" />
-                <i>{r.nm}<em>{r.club}</em></i>
-              </span>
-              <span className="num">{r.rt}</span>
-              {/* Посев учитывается основанием строки, а не отдельной вкладкой:
-                  видно, почему человек стоит именно здесь — по рейтингу или по
-                  броску. У сеяных слот от жребия не зависит. */}
-              <span>
-                {r.seed
-                  ? <P t={`ПОСЕВ №${r.seed}`} cls="reg" />
-                  : <P t={n === 0 ? 'ЖДЁТ ЖРЕБИЯ' : 'ЖРЕБИЙ'} cls="wait" />}
-              </span>
-            </div>
-          ))}
-          {rows.length === 0 && (
-            <div className="dcount" style={{ padding: '14px 12px' }}>
-              По запросу «{q}» никого нет — проверьте написание фамилии.
-            </div>
-          )}
-        </div>
-      </div>
+      <Sheet
+        grid={SLOT_GRID}
+        cols={COLS72.map((c) => (
+          <Th
+            key={c.k}
+            t={c.t}
+            on={sort.k === c.k}
+            onClick={() => setSort({ k: c.k, up: sort.k === c.k ? !sort.up : true })}
+          />
+        ))}
+      >
+        {rows.map((r) => (
+          <div
+            key={r.nm}
+            className="grid items-center gap-3 px-4 py-2.5 text-[13px] hover:bg-neutral-50"
+            style={{ gridTemplateColumns: SLOT_GRID }}
+          >
+            <b className="tabular-nums">{r.slot}</b>
+            <Who av={r.av} nm={r.nm} sub={r.club} />
+            <span className="tabular-nums text-neutral-600">{r.rt}</span>
+            {/* Посев учитывается основанием строки, а не отдельной вкладкой:
+                видно, почему человек стоит именно здесь — по рейтингу или по
+                броску. У сеяных слот от жребия не зависит. */}
+            <span>
+              {r.seed
+                ? <Pl t={`ПОСЕВ №${r.seed}`} cls="reg" />
+                : <Pl t={n === 0 ? 'ЖДЁТ ЖРЕБИЯ' : 'ЖРЕБИЙ'} cls="wait" />}
+            </span>
+          </div>
+        ))}
+        {rows.length === 0 && (
+          <NoRows>По запросу «{q}» никого нет — проверьте написание фамилии.</NoRows>
+        )}
+      </Sheet>
 
       {/* Кнопки идут по состоянию работы: пока не бросали — перебрасывать и
           передавать нечего, поэтому их на экране нет. */}
-      <div style={{ display: 'flex', gap: 9 }}>
+      <div className="mt-3 flex gap-2">
         {!lot && st !== 'sent' && (
-          <ToJudge onClick={() => setSt('sent')}>Передать главному судье на утверждение</ToJudge>
+          <ToJudge onPress={() => setSt('sent')}>Передать главному судье на утверждение</ToJudge>
         )}
         {lot && st === 'draft' && (
-          <button type="button" className="dsubmit" style={{ flex: 1 }} onClick={roll}>
-            <Shuffle size={15} />Провести жеребьёвку
-          </button>
+          <Button variant="primary" className="flex-1" onPress={roll}>
+            <Shuffle size={15} /> Провести жеребьёвку
+          </Button>
         )}
         {lot && st !== 'draft' && (
           <>
             {st === 'done' && (
-              <ToJudge onClick={() => setSt('sent')}>Передать главному судье на утверждение</ToJudge>
+              <ToJudge onPress={() => setSt('sent')}>Передать главному судье на утверждение</ToJudge>
             )}
             {/* Прежний результат уходит в журнал: переигранный жребий — то, что
                 участники вправе проверить. */}
-            <Ghost onClick={roll}><RefreshCw size={15} />Перебросить жребий</Ghost>
+            <Button variant="outline" onPress={roll}>
+              <RefreshCw size={15} /> Перебросить жребий
+            </Button>
           </>
         )}
       </div>
 
-      <Alert>
-        {st === 'sent'
-          ? 'Жребий у главного судьи. Перебросить ещё можно — пока он не утвердил; новый бросок отзывает отправленный результат.'
-          : 'Жеребьёвка лежит на главном судье ✳: секретарь вправе с ней работать, но утверждает её только он (Э6.3).'}
-      </Alert>
+      <div className="mt-3">
+        <Bar>
+          {st === 'sent'
+            ? 'Жребий у главного судьи. Перебросить ещё можно — пока он не утвердил; новый бросок отзывает отправленный результат.'
+            : 'Жеребьёвка лежит на главном судье ✳: секретарь вправе с ней работать, но утверждает её только он (Э6.3).'}
+        </Bar>
+      </div>
     </>
   );
 };
@@ -353,14 +443,14 @@ const SYSTEMS: Sys[] = [
     sum: '111 матчей · 65 стол-часов · 14 % ресурса зала',
     calc: 'расчёт: 111 матчей × 35 мин ÷ 20 столов ≈ 3,2 часа чистой игры',
     idle: 'простой: в 1/2 и финале заняты 2 стола из 20 — третий день зал стоит',
-    p: 'УКЛАДЫВАЕТСЯ', cls: 'live',
+    p: 'УКЛАДЫВАЕТСЯ', cls: 'live', on: true,
   },
   {
     nm: 'Группы по 4 + плей-офф',
     sum: '223 матча · 130 стол-часов · 27 % ресурса зала',
     calc: 'расчёт: 28 групп × 6 матчей = 168, плей-офф 56 участников = 55; 223 × 35 мин ÷ 20 столов ≈ 6,5 часа',
     idle: 'простоя нет: у каждого участника не меньше трёх матчей',
-    p: 'УКЛАДЫВАЕТСЯ', cls: 'live', on: true,
+    p: 'УКЛАДЫВАЕТСЯ', cls: 'live',
   },
   {
     nm: 'Круговая в 8 группах по 14',
@@ -379,32 +469,35 @@ const SYSTEMS: Sys[] = [
 ];
 
 /** Вкладка «Свод»: варианты системы целиком — сколько матчей, часов и ресурса
-    зала съедает каждый. */
+    зала съедает каждый. Подсвечен вариант, который выбрал главный судья
+    (Э7.1, «Система проведения — Олимпийская»): подсказка сравнивает, но не
+    советует — граница «судья решает, секретарь оформляет» ✳. */
 const Systems7_3 = () => (
   <Rows>
     {SYSTEMS.map((s) => (
       <div
-        className={'drow' + (s.on ? ' pick' : '')}
         key={s.nm}
-        style={{ alignItems: 'flex-start', padding: '9px 12px' }}
+        className={'flex items-start justify-between gap-3 px-4 py-2.5 ' + (s.on ? 'bg-blue-50/60' : '')}
       >
-        <div className="who">
-          <div className="nm">
+        <span className="min-w-0 leading-tight">
+          <span className="flex flex-wrap items-center gap-2 text-[13.5px] font-medium">
             {s.nm}
-            {s.on && <span className="pill reg" style={{ margin: '0 0 0 8px' }}>РЕКОМЕНДУЕМ</span>}
-          </div>
-          <div className="rl">{s.sum}</div>
-          <div className="rl" style={{ fontSize: 11, color: 'var(--c-dim)' }}>{s.calc}</div>
-          <div className="rl" style={{ fontSize: 11, color: 'var(--c-dim)' }}>{s.idle}</div>
-        </div>
-        <span className={'pill ' + s.cls} style={{ margin: 0 }}>{s.p}</span>
+            {s.on && <Pl t="ВЫБРАН СУДЬЁЙ" cls="reg" />}
+          </span>
+          <span className="mt-0.5 block text-xs text-neutral-500">{s.sum}</span>
+          <span className="block text-[11px] text-neutral-400">{s.calc}</span>
+          <span className="block text-[11px] text-neutral-400">{s.idle}</span>
+        </span>
+        <Pl t={s.p} cls={s.cls} />
       </div>
     ))}
   </Rows>
 );
 
-/** Вкладка «По кругам»: тот же рекомендуемый вариант, но разложенный по кругам
-    — из этого видно, какой день чем занят и где зал простаивает. */
+/** Вкладка «По кругам»: вариант «группы + плей-офф» из подсказки, разложенный
+    по кругам — из этого видно, какой день чем занят и где зал простаивает.
+    ⚠ Судья выбрал олимпийскую — раскладка её по кругам в данных не описана;
+    рассинхрон помечен, не выдумываем. */
 const ROUNDS7_3 = [
   { nm: 'Групповой этап · 28 групп по 4', sub: 'день 1 · 168 матчей · 20 столов заняты', v: '98 стол-часов' },
   { nm: '1/32 и 1/16 плей-офф', sub: 'день 2 · 40 матчей · 20 столов заняты', v: '23 стол-часа' },
@@ -419,7 +512,7 @@ const ByRounds7_3 = () => (
         <Row key={r.nm} nm={r.nm} sub={r.sub} val={r.v} />
       ))}
     </Rows>
-    <div className="dcount" style={{ marginTop: 10 }}>
+    <div className="mt-3 text-[12.5px] text-neutral-500">
       Итого 223 матча · 130 стол-часов из 480 · третий день зал занят на два стола
     </div>
   </>
@@ -447,15 +540,15 @@ export function Bracket7_3() {
   const [sent, setSent] = useState(false);
   const [built, setBuilt] = useState(1);
   return (
-    <RoleScreen
-      role={R07}
+    <WebApp
+      role={at('СИСТЕМА ПРОВЕДЕНИЯ')}
       nav="Сетка"
       title="Система проведения и сетка"
       sub="Формат, жеребьёвка и сетка — собирает секретарь, утверждает главный судья"
     >
-      <Chips
+      <StatTiles
         items={[
-          { v: '128', k: 'Участников', tone: 'b' },
+          { v: '128', k: 'Участников' },
           { v: '7', k: 'Раундов' },
           { v: '64', k: 'Матча в 1/64' },
           { v: '16', k: 'Сеяных', tone: 'g' },
@@ -467,49 +560,40 @@ export function Bracket7_3() {
           один раз, а место они занимали наравне с самой сеткой. Решения по
           работе стоят полосой над предпросмотром: собранная сетка уходит судье,
           пересобрать можно, пока он её не утвердил. */}
-      <div className="dactionbar">
-        <P
+      <div className="mb-3 flex items-center justify-between gap-4">
+        <Pl
           t={sent ? 'У ГЛАВНОГО СУДЬИ' : built > 1 ? `ПЕРЕСОБРАНА ${built - 1} РАЗ` : 'СЕТКА СОБРАНА'}
           cls={sent ? 'reg' : 'live'}
         />
-        <div style={{ display: 'flex', gap: 8 }}>
-          <GhostPick onClick={() => { setBuilt(built + 1); setSent(false); }}>
+        <span className="flex items-center gap-2">
+          <Button variant="outline" onPress={() => { setBuilt(built + 1); setSent(false); }}>
             <RefreshCw size={14} /> Пересобрать сетку
-          </GhostPick>
+          </Button>
           {!sent && (
-            <button
-              type="button"
-              className="dsubmit"
-              style={{ padding: '10px 14px' }}
-              onClick={() => setSent(true)}
-            >
+            <Button variant="primary" onPress={() => setSent(true)}>
               <Send size={15} /> Передать главному судье
-            </button>
+            </Button>
           )}
-        </div>
+        </span>
       </div>
       {sent && (
-        <Alert>
+        <Bar>
           Сетка у главного судьи. Пересобрать ещё можно — пока он её не утвердил; новая сборка
           отзывает отправленную.
-        </Alert>
+        </Bar>
       )}
 
       {/* Два формата — два взгляда: олимпийку смотрят деревом, групповой этап
           таблицами. Вкладка «Таблица групп» — для формата «группы + плей-офф»
-          (TZ §5.1): пока группы не сыграны, дерево пустое.
-
-          Панели вокруг нет намеренно: холст сетки берёт высоту от рабочей
-          области, а внутри панели схлопывался в полоску — панель своей высоты
-          не задаёт. Тем же приёмом сетка стоит у спортсмена и у администратора
-          федерации: она занимает экран целиком, рядом с ней ничего не
-          помещается. */}
+          (TZ §5.1): пока группы не сыграны, дерево пустое. */}
       {/* Параметры проведения одним экраном ✳: формат с подсказкой системы,
           жеребьёвка и сама сетка. Жеребьёвка была отдельным пунктом меню между
           сеткой и расписанием, хотя без сетки бессмысленна — слоты жребия это и
           есть места в ней; а подсказка по системе стояла у главного судьи, хотя
           собирает по ней секретарь. */}
-      <Filter items={VIEW73} active={view} onPick={setView} />
+      <div className="mb-4">
+        <FilterSeg items={VIEW73} active={view} onPick={setView} />
+      </div>
       {view === VIEW73[0] ? (
         <Systems7_3 />
       ) : view === VIEW73[1] ? (
@@ -521,19 +605,22 @@ export function Bracket7_3() {
       ) : (
         <GroupTables7_3 />
       )}
-    </RoleScreen>
+    </WebApp>
   );
 }
 
 /** Вкладка «Дерево»: сетку рисует тот же компонент, что и на фронте, — не
     картинка и не свои прямоугольники, а настоящий холст по общей модели сетки.
     Тот же приём, что у спортсмена (Э14.5): сетка одна на всю систему, и
-    секретарь собирает ровно то, что потом увидят игроки. */
+    секретарь собирает ровно то, что потом увидят игроки. Светлый тон — новый
+    слой светлый, чёрная плоскость из него выпадала. */
 const bracket7_3 = { ...makeBigBracket(5), title: 'Чемпионат Казахстана 2026 · плей-офф' };
 
 const Tree7_3 = () => (
-  <div className="mkbracket mkbracket-fill">
-    <BracketFlow bracket={bracket7_3} minZoom={0.1} fitPadding={0.04} />
+  <div className="relative h-110 overflow-hidden rounded-xl border border-neutral-200 bg-white shadow-sm">
+    <div className="absolute inset-0 [&>div]:h-full!">
+      <BracketFlow bracket={bracket7_3} minZoom={0.1} fitPadding={0.04} tone="light" />
+    </div>
   </div>
 );
 
@@ -550,11 +637,13 @@ const GROUPS7_3: Grp[] = [
   { nm: 'Группа F', rows: 'Жумабеков Р. · Абдрахманов К. · Ли С. · Тлеу А.', out: '—', played: 2, of: 6, cls: 'wait' },
 ];
 
-const COLS73: { k: 'nm' | 'played' | 'out'; t: string; num?: boolean }[] = [
+const COLS73: { k: 'nm' | 'played' | 'out'; t: string }[] = [
   { k: 'nm', t: 'Группа и состав' },
-  { k: 'played', t: 'Сыграно', num: true },
+  { k: 'played', t: 'Сыграно' },
   { k: 'out', t: 'Выходят в плей-офф' },
 ];
+
+const GRP_GRID = '2.3fr 0.8fr 1.5fr 110px';
 
 /** Тем же приёмом, что состав участников у спортсмена (Э14.5): поиск и
     сортировка по столбцу. Строками это не работает — групп тридцать две, и
@@ -576,51 +665,51 @@ const GroupTables7_3 = () => {
     <>
       {/* Пояснения «32 группы по 4, выходят двое» нет ✳: сколько выходит, видно
           в столбце, а сколько сыграно — в соседнем. */}
-      <div className="dactionbar">
-        <Search value={q} placeholder="Группа или фамилия" onChange={setQ} wide />
-        <span className="dcount">
+      <div className="mb-3 flex items-center justify-between gap-4">
+        <SearchInput value={q} onChange={setQ} placeholder="Группа или фамилия" className="w-80" />
+        <span className="text-[12.5px] text-neutral-500">
           {rows.length === GROUPS7_3.length
             ? `${GROUPS7_3.length} групп`
             : `найдено ${rows.length} из ${GROUPS7_3.length}`}
         </span>
       </div>
 
-      <div className="mktable mkgrp">
-        <div className="mktable-h">
-          {COLS73.map((c) => (
-            <button
+      <Sheet
+        grid={GRP_GRID}
+        cols={[
+          ...COLS73.map((c) => (
+            <Th
               key={c.k}
-              type="button"
-              className={(c.num ? 'num' : '') + (sort.k === c.k ? ' on' : '')}
+              t={c.t}
+              on={sort.k === c.k}
               onClick={() => setSort({ k: c.k, up: sort.k === c.k ? !sort.up : true })}
-            >
-              {c.t}
-              {sort.k === c.k && <ArrowUpDown size={11} />}
-            </button>
-          ))}
-          <span>Состояние</span>
-        </div>
-        <div className="mktable-b">
-          {rows.map((g) => (
-            <div className="mktable-r" key={g.nm}>
-              <span className="nm"><i>{g.nm}<em>{g.rows}</em></i></span>
-              <span className="num">{g.played} из {g.of}</span>
-              <span>{g.out}</span>
-              <span className="mark">
-                <P
-                  t={g.cls === 'live' ? 'СЫГРАНА' : g.cls === 'wait' ? 'ИДЁТ' : 'НЕ НАЧАТА'}
-                  cls={g.cls}
-                />
-              </span>
-            </div>
-          ))}
-          {rows.length === 0 && (
-            <div className="dcount" style={{ padding: '14px 12px' }}>
-              По запросу «{q}» ничего нет — проверьте написание.
-            </div>
-          )}
-        </div>
-      </div>
+            />
+          )),
+          <span key="st">Состояние</span>,
+        ]}
+      >
+        {rows.map((g) => (
+          <div
+            key={g.nm}
+            className="grid items-center gap-3 px-4 py-2.5 text-[13px] hover:bg-neutral-50"
+            style={{ gridTemplateColumns: GRP_GRID }}
+          >
+            <span className="min-w-0 leading-tight">
+              <span className="block text-[13.5px] font-medium">{g.nm}</span>
+              <span className="block truncate text-xs text-neutral-500">{g.rows}</span>
+            </span>
+            <span className="tabular-nums text-neutral-600">{g.played} из {g.of}</span>
+            <span className="text-neutral-600">{g.out}</span>
+            <Pl
+              t={g.cls === 'live' ? 'СЫГРАНА' : g.cls === 'wait' ? 'ИДЁТ' : 'НЕ НАЧАТА'}
+              cls={g.cls}
+            />
+          </div>
+        ))}
+        {rows.length === 0 && (
+          <NoRows>По запросу «{q}» ничего нет — проверьте написание.</NoRows>
+        )}
+      </Sheet>
     </>
   );
 };
@@ -653,7 +742,10 @@ const MATCHES: Mch[] = [
   { id: 'm5', day: 1, time: '10:30', table: 7, pair: 'Пак — Мұрат', round: '1/16' },
   { id: 'm6', day: 1, time: '10:30', table: 8, pair: 'Байжанов — Ким', round: '1/16' },
   { id: 'm7', day: 1, time: '11:00', table: 4, pair: 'Смагулов — Пак', round: '1/8', clash: true },
-  { id: 'm8', day: 1, time: '11:00', table: 12, pair: 'Смагулов / Ким — пара', round: 'парный · 1/8', clash: true },
+  /* Второй матч конфликтной пары — тоже одиночный: турнир по решению судьи
+     одиночный, парному разряду взяться неоткуда. Соперник — не Досжан: тот в
+     11:00 уже играет (m9), и вышел бы второй, непомеченный конфликт. */
+  { id: 'm8', day: 1, time: '11:00', table: 12, pair: 'Смагулов — Сериков', round: '1/8', clash: true },
   { id: 'm9', day: 1, time: '11:00', table: 9, pair: 'Токаев — Досжан', round: '1/8' },
   { id: 'm10', day: 2, time: '10:00', table: 1, pair: 'Смагулов — Токаев', round: '1/4' },
   { id: 'm11', day: 2, time: '10:00', table: 2, pair: 'Ким — Пак', round: '1/4' },
@@ -667,6 +759,8 @@ const MATCHES: Mch[] = [
     которого здесь никто не задаёт. */
 const VIEW74 = ['По дням', 'Все дни'];
 const DAYS74 = ['День 1 · 18.05', 'День 2 · 19.05', 'День 3 · 20.05'];
+
+const SCHED_GRID = '120px 80px 1.7fr 1fr 130px';
 
 export function Schedule7_4() {
   const [view, setView] = useState(VIEW74[0]);
@@ -694,11 +788,11 @@ export function Schedule7_4() {
   const clashes = MATCHES.filter(clash);
 
   return (
-    <RoleScreen role={R07} nav="Расписание" title="Расписание">
-      <Chips
+    <WebApp role={at('СИСТЕМА ПРОВЕДЕНИЯ')} nav="Расписание" title="Расписание">
+      <StatTiles
         items={[
           { v: '3', k: 'Игровых дня' },
-          { v: '20', k: 'Столов', tone: 'b' },
+          { v: '20', k: 'Столов' },
           { v: String(MATCHES.length), k: 'Матчей в расписании' },
           {
             v: String(clashes.length),
@@ -711,52 +805,68 @@ export function Schedule7_4() {
       {/* Сначала как смотрим, потом — что именно. У длинного турнира дни в
           неделю не укладываются, у короткого недель нет вовсе; поэтому срез
           выбирается первым, а список под ним меняется. */}
-      <div className="dactionbar">
-        <Filter items={VIEW74} active={view} onPick={(v) => { setView(v); setPick(DAYS74[0]); }} />
-        {view !== VIEW74[1] && <Filter items={DAYS74} active={pick} onPick={setPick} />}
+      <div className="mb-3 flex flex-wrap items-center gap-3">
+        <FilterSeg items={VIEW74} active={view} onPick={(v) => { setView(v); setPick(DAYS74[0]); }} />
+        {view !== VIEW74[1] && <FilterSeg items={DAYS74} active={pick} onPick={setPick} />}
       </div>
 
-      <div className="mktable mksched">
-        <div className="mktable-h">
-          <span>Время</span>
-          <span>Стол</span>
-          <span>Матч</span>
-          <span>Круг</span>
-          <span>Состояние</span>
-        </div>
-        <div className="mktable-b">
-          {rows.map((m) => (
-            <div className={'mktable-r' + (clash(m) ? ' no' : '')} key={m.id}>
-              <span className="nm">
-                <i>{timeOf(m)}{moved[m.id] && <em>перенесён с {m.time}</em>}</i>
-              </span>
-              <span>стол {m.table}</span>
-              <span>{m.pair}</span>
-              <span>{m.round}</span>
-              <span className="mark">
-                {clash(m)
-                  ? <P t="КОНФЛИКТ" cls="bad" />
-                  : <span className="dcount">день {m.day}</span>}
-              </span>
-            </div>
-          ))}
-          {rows.length === 0 && (
-            <div className="dcount" style={{ padding: '14px 12px' }}>
-              В этом срезе матчей нет.
-            </div>
-          )}
-        </div>
-      </div>
+      <Sheet
+        grid={SCHED_GRID}
+        cols={[
+          <span key="t">Время</span>,
+          <span key="s">Стол</span>,
+          <span key="m">Матч</span>,
+          <span key="r">Круг</span>,
+          <span key="st">Состояние</span>,
+        ]}
+      >
+        {rows.map((m) => (
+          <div
+            key={m.id}
+            className={
+              'grid items-center gap-3 px-4 py-2.5 text-[13px] ' +
+              (clash(m) ? 'bg-red-50/60' : 'hover:bg-neutral-50')
+            }
+            style={{ gridTemplateColumns: SCHED_GRID }}
+          >
+            <span className="leading-tight">
+              <b className="tabular-nums">{timeOf(m)}</b>
+              {/* День — только в срезе «Все дни»: в срезе «По дням» он выбран
+                  фильтром, и подпись была бы его дублем. */}
+              {view === VIEW74[1] && (
+                <span className="block text-[11px] text-neutral-400">день {m.day}</span>
+              )}
+            </span>
+            <span className="text-neutral-600">стол {m.table}</span>
+            <span className="font-medium">{m.pair}</span>
+            <span className="text-neutral-600">{m.round}</span>
+            {/* Состояние матча, а не дубль фильтра: запланирован, перенесён
+                (откуда — тут же) или конфликт. */}
+            <span>
+              {clash(m)
+                ? <Pl t="КОНФЛИКТ" cls="bad" />
+                : (
+                  <span className="text-[12.5px] text-neutral-500">
+                    {moved[m.id] ? `перенесён с ${m.time}` : 'запланирован'}
+                  </span>
+                )}
+            </span>
+          </div>
+        ))}
+        {rows.length === 0 && <NoRows>В этом срезе матчей нет.</NoRows>}
+      </Sheet>
 
       {/* Конфликты — отдельным списком под расписанием: в таблице они помечены,
           но разбирают их подряд, а не выискивая красные строки. */}
-      <ActionBar count="">
+      <div className="mb-3 mt-4 flex items-center justify-end gap-4">
         {sent ? (
-          <P t="ОТПРАВЛЕНО ГЛАВНОМУ СУДЬЕ" cls="live" />
+          <Pl t="ОТПРАВЛЕНО ГЛАВНОМУ СУДЬЕ" cls="live" />
         ) : (
-          <GhostPick onClick={() => setSent(true)}>Передать главному судье на проверку</GhostPick>
+          <Button variant="outline" onPress={() => setSent(true)}>
+            <Send size={15} /> Передать главному судье на проверку
+          </Button>
         )}
-      </ActionBar>
+      </div>
       {clashes.length > 0 ? (
         <Rows>
           {clashes.map((m) => (
@@ -772,11 +882,11 @@ export function Schedule7_4() {
           ))}
         </Rows>
       ) : (
-        <Alert tone="success">
+        <Bar tone="success">
           Конфликтов нет: ни один игрок не стоит на двух столах в одно время.
-        </Alert>
+        </Bar>
       )}
-    </RoleScreen>
+    </WebApp>
   );
 }
 
@@ -817,15 +927,15 @@ export function Protocols7_5() {
   const [printed, setPrinted] = useState(false);
   const [list, setList] = useState(LISTS75[0]);
   return (
-    <RoleScreen
-      role={R07}
+    <WebApp
+      role={at('ИТОГОВЫЙ ПРОТОКОЛ')}
       nav="Протоколы"
       title="Оформление протокола"
       sub="Чемпионат Казахстана 2026 · матчи сыграны 20.05.2026"
     >
-      <Chips
+      <StatTiles
         items={[
-          { v: '127', k: 'Матчей сыграно', tone: 'b' },
+          { v: '127', k: 'Матчей сыграно' },
           { v: '2', k: 'Технические победы' },
           { v: '1', k: 'Неявка', tone: 'a' },
           { v: '20.05', k: 'Последний игровой день' },
@@ -835,90 +945,75 @@ export function Protocols7_5() {
           справа то, что заполняют. Список выбирается полосой — тем же
           переключателем, что «Дерево / Таблица групп» на сборке сетки и «По
           дням / Все дни» в расписании: один приём на всю роль. */}
-      <div className="mkcols">
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 12, minWidth: 0 }}>
-          <Filter items={LISTS75} active={list} onPick={setList} />
+      <div className="grid grid-cols-[1.2fr_1fr] items-start gap-4">
+        <div className="flex min-w-0 flex-col gap-3">
+          <div><FilterSeg items={LISTS75} active={list} onPick={setList} /></div>
           {list === LISTS75[0] ? (
-            <Panel title="Итоговый протокол" extra={<P t="МЕСТА 1–5 ИЗ 128" cls="reg" />}>
-              <Rows>
+            <Panel title="Итоговый протокол" extra={<Pl t="МЕСТА 1–5 ИЗ 128" cls="reg" />} flush>
+              <div className="divide-y divide-neutral-100">
                 {/* Место стоит первым в имени: «1 · Смагулов Алан» — так строка
                     читается слева направо, как в итоговой таблице на бумаге. */}
                 {RESULTS.map((r) => (
                   <Row key={r.pl} av={r.av} nm={`${r.pl} · ${r.nm}`} sub={r.club} val={r.sc} />
                 ))}
-              </Rows>
+              </div>
             </Panel>
           ) : (
-            <Panel title="Протоколы матчей" extra={<P t="127 МАТЧЕЙ" cls="reg" />}>
-              <Rows>
+            <Panel title="Протоколы матчей" extra={<Pl t="127 МАТЧЕЙ" cls="reg" />} flush>
+              <div className="divide-y divide-neutral-100">
                 {MATCH_PROTOCOLS.map((m) => (
                   <Row key={m.nm} nm={m.nm} sub={m.sub} val={m.sc} pill={{ t: m.tag, cls: m.cls }} />
                 ))}
-              </Rows>
+              </div>
             </Panel>
           )}
         </div>
 
         <Panel
           title="Оформление"
-          extra={<P t={sent ? 'У ГЛАВНОГО СУДЬИ' : 'В РАБОТЕ'} cls={sent ? 'reg' : 'wait'} />}
+          extra={<Pl t={sent ? 'У ГЛАВНОГО СУДЬИ' : 'В РАБОТЕ'} cls={sent ? 'reg' : 'wait'} />}
         >
-          <Form>
-            <DateField label="Дата составления" value="2026-05-20" />
-            <Input label="Место проведения" value="Астана, ЦСКА" />
+          <FormGrid>
+            {/* Дата — текстовым полем в формате ДД.ММ.ГГГГ ✳: нативный
+                input[type=date] рисуется локалью браузера и в en-US показывает
+                «05/20/2026» рядом с «20.05.2026» в подзаголовке. Календарь
+                вернётся, когда в ките будет поле даты с прибитой ru-локалью. */}
+            <TextInput label="Дата составления" value="20.05.2026" />
+            <TextInput label="Место проведения" value="Астана, ЦСКА" />
             {/* Наряд правится у председателя ГСК (Э5.2), а не здесь: секретарь
                 не назначает ни главного судью, ни себя. */}
-            <Field label="Главный судья" value="Оспанов Т." />
-            <Field label="Главный секретарь" value="Ким Л." />
-            <Input label="Состав бригады" value="14 человек · из наряда коллегии" wide />
-            <Area label="Примечания к протоколу" value="Техпобеда в 1/4 — неявка Байжанова А., подтверждена судьёй стола." wide />
-          </Form>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 14 }}>
+            <FieldView label="Главный судья" value="Оспанов Т." />
+            <FieldView label="Главный секретарь" value="Ким Л." />
+            <TextInput label="Состав бригады" value="14 человек · из наряда коллегии" wide />
+            <AreaInput label="Примечания к протоколу" value="Техпобеда в 1/4 — неявка Байжанова А., подтверждена судьёй стола." wide />
+          </FormGrid>
+          <div className="mt-4 flex flex-col gap-2">
             {sent ? (
-              <Ghost onClick={() => setSent(false)}>
-                <RefreshCw size={15} />Вернуть в работу
-              </Ghost>
+              <Button variant="outline" onPress={() => setSent(false)}>
+                <RefreshCw size={15} /> Вернуть в работу
+              </Button>
             ) : (
-              <ToJudge onClick={() => setSent(true)}>Передать главному судье на утверждение</ToJudge>
+              <ToJudge onPress={() => setSent(true)}>Передать главному судье на утверждение</ToJudge>
             )}
-            <Ghost onClick={() => setPrinted(true)}>
-              <Printer size={15} />{printed ? 'Отправлено на печать' : 'Печать протоколов'}
-            </Ghost>
+            {/* Кнопка отвечает «отправлено на печать» ✳: печать — действие без
+                экрана результата, и молчащая кнопка выглядела бы сломанной. */}
+            <Button variant="outline" onPress={() => setPrinted(true)}>
+              <Printer size={15} /> {printed ? 'Отправлено на печать' : 'Печать протоколов'}
+            </Button>
           </div>
           {sent && (
-            <>
-              <div style={{ height: 12 }} />
-              <Alert>
+            <div className="mt-3">
+              <Bar>
                 Протокол у главного судьи. Пока он не утвердил, работа ещё секретаря — «Вернуть в
                 работу» отзывает отправленное.
-              </Alert>
-            </>
+              </Bar>
+            </div>
           )}
-          <div style={{ height: 12 }} />
         </Panel>
       </div>
-    </RoleScreen>
+    </WebApp>
   );
 }
-
-/* ── Борд роли: пять экранов маршрута подряд ─────────────────────── */
-
-const Desk7_1States = () => (
-  <States>
-    <Shot
-      tone="info"
-      title="До «Системы проведения» работы закрыты"
-      text="Пояснение «идёт приём заявок»; экрана заявок у секретаря нет."
-      wide
-    >
-      <Rows>
-        <Row nm="Жеребьёвка" sub="откроется, когда закроется приём заявок" pill={{ t: 'ЖДЁТ СОСТАВА', cls: 'done' }} />
-        <Row nm="Сетка" sub="строится после жеребьёвки" pill={{ t: 'ЖДЁТ', cls: 'done' }} />
-      </Rows>
-      <Alert>Состав ещё собирается: заявки принимает главный судья, секретарь их не видит.</Alert>
-    </Shot>
-  </States>
-);
 
 const Protocols7_5States = () => (
   <States>
@@ -928,17 +1023,26 @@ const Protocols7_5States = () => (
       text="Секретарь видит причину и правит оформление; исправление результатов — не его право."
       wide
     >
-      <Rows>
-        <Row
-          nm="Кубок Республики Казахстан 2026"
-          sub="вернул Мукашев Б., 21.05 · «в парном разряде не указан второй номер пары»"
-          pill={{ t: 'ВОЗВРАЩЁН', cls: 'bad' }}
-        />
-      </Rows>
-      <Alert>Правится оформление протокола. Счёт и результаты меняет главный судья.</Alert>
+      <Frag>
+        <Rows>
+          {/* Тот же турнир, что и на всём борде роли (scope «один турнир»):
+              чужая запись в кадре читалась бы как другой турнир. Причина —
+              про оформление: парного разряда в одиночном турнире нет. */}
+          <Row
+            nm="Чемпионат Казахстана 2026"
+            sub="вернул Мукашев Б., 21.05 · «в составе бригады не указаны судьи столов»"
+            pill={{ t: 'ВОЗВРАЩЁН', cls: 'bad' }}
+          />
+        </Rows>
+        <div className="mt-3">
+          <Bar>Правится оформление протокола. Счёт и результаты меняет главный судья.</Bar>
+        </div>
+      </Frag>
     </Shot>
   </States>
 );
+
+/* ── Борд роли: экраны маршрута подряд ──────────────────────────── */
 
 /** Экраны роли по кодам: из этой карты собираются и борд, и карта флоу. */
 export const SCREENS: ScreenMap = {

@@ -9,6 +9,7 @@ import { Role11Board, SCREENS } from '../mockups/role11';
 export default {
   title: 'Флоу/11 · Главный тренер национальной команды',
   parameters: { layout: 'fullscreen' },
+  globals: { theme: 'daylight-fnt' },
 };
 
 /* Парный вид первым: под каждым узлом маршрута стоит его макет — требование и

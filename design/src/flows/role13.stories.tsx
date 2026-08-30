@@ -9,6 +9,7 @@ import { Role13Board, SCREENS } from '../mockups/role13';
 export default {
   title: 'Флоу/13 · Администратор клуба',
   parameters: { layout: 'fullscreen' },
+  globals: { theme: 'daylight-fnt' },
 };
 
 /* Парный вид первым: под каждым узлом маршрута стоит его макет — требование и

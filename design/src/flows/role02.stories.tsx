@@ -9,6 +9,7 @@ import { Role02Board, SCREENS } from '../mockups/role02';
 export default {
   title: 'Флоу/02 · Экономист / бухгалтер',
   parameters: { layout: 'fullscreen' },
+  globals: { theme: 'daylight-fnt' },
 };
 
 /* Парный вид первым: под каждым узлом маршрута стоит его макет — требование и

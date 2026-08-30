@@ -1,32 +1,64 @@
-/* Роль 6 · Главный судья соревнований — макеты по флоу.
-   Экраны Э6.1–Э6.7 (см. `flows/06-glavnyy-sudya.md` и схему роли).
+/* Роль 6 · Главный судья соревнований — макеты по флоу на новом слое (HeroUI)
+   ✳ (30.08.2026). Содержание, решения и переходы — прежние (см.
+   `flows/06-glavnyy-sudya.md`); меняется подача: оболочка WebApp и доменные
+   компоненты `kit/hero/app` вместо старого макетного слоя.
 
    Роль ключевая, и маршрут у неё — это жизненный цикл турнира (§4.3). Поэтому
-   значок состояния в шапке меняется от экрана к экрану: «Приём заявок игроков»
-   → «Система проведения» → «Идёт» → «Итоговый протокол». Читать борд слева
+   значок состояния в шапке меняется от экрана к экрану: «Приём заявок» →
+   «Система проведения» → «Идёт» → «Итоговый протокол». Читать борд слева
    направо = смотреть, как турнир проходит свои состояния.
 
    Блоки, которые заместитель (роль 8) видит один в один, отсюда
    экспортируются: шкала состояний, строка «что требуется», карта столов,
    живые матчи и очередь пар. */
 
-import { Fragment, useState, type ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import {
-  Ban, Check, ChevronRight, ClipboardList, Grid3x3, Lock, Pencil, Printer, Radio, Shield, Shuffle, TriangleAlert, X,
+  Ban, CalendarDays, Check, ChevronRight, ClipboardList, Grid3x3, LayoutDashboard, Lock, Pencil,
+  Printer, Radio, Scroll, Shield, Shuffle, Timer, X,
 } from 'lucide-react';
+import { Avatar, Button, Chip } from '@heroui/react';
 import {
-  A, AW, ActionBar, Alert, Arrow, Board, Chips, Empty, Field, Filter, Form, Ghost, Hint, Input, Modal, Off, Panel, RoleScreen, Row, Rows, Screen, Shot, States, Submit, TabPanel, Tabs,
-} from './shell';
+  A, AW, Bar, DataTable, DisabledAction, EmptyBox, FieldView, FilterSeg, FormGrid, InlineDialog,
+  MatchCard, PageTabs, Panel, Pill, PrimaryAction, QuietAction, Row, Rows, ScreenScope, StatTiles,
+  TextInput, TimeGrid, WebApp, type RoleUI, type SlotEvent,
+} from '../kit/hero/app';
+/* Из старого слоя остаются только мета-компоненты борда: колонки, стрелки и
+   полки состояний. Сами экраны собраны новым слоем. */
+import { Board, States, Shot, type ScreenMap } from './shell';
+/* Сетка — настоящий компонент фронта, как и в прежнем слое: вторая
+   нарисованная сетка разошлась бы с той, что увидят в продукте. */
 import { BracketFlow } from '@/widgets/bracket/BracketFlow';
 import { makeBigBracket } from '../bigBracket';
-import type { DeskVariant } from '../deskShell';
-import type { ScreenMap } from './shell';
-import { FormSeg } from '../segs';
-import { R06 } from './roles';
 /* Маршрут судейской роли начинается раньше входа: судья заводит себя сам
    (Э0.7), а роль в наряде ему выдают уже потом. Без этой колонки борд и карта
    начинались с «Вход», и откуда взялся человек, из них было не видно. */
 import { Login0_1, SignUpJudge0_7, SignUpJudge0_7States } from './role00';
+
+/* ── Роль: сайдбар и подпись профиля ─────────────────────────────── */
+
+/** Данные роли — те же, что в старом слое (`roles.tsx`), тип — из нового.
+    Подписи пунктов те же слова: по ним карта флоу находит переходы. */
+const R06: RoleUI = {
+  num: '6',
+  title: 'Главный судья соревнований',
+  person: { nm: 'Оспанов Т.', rl: 'Главный судья турнира', av: A(76) },
+  brandName: 'Чемпионат Казахстана 2026',
+  brandSub: 'Одиночный · олимпийская · г. Астана',
+  badge: 'ИДЁТ',
+  nav: [
+    [<LayoutDashboard size={16} key="t" />, 'Мой турнир'],
+    [<ClipboardList size={16} key="b" />, 'Заявки'],
+    [<Grid3x3 size={16} key="g" />, 'Сетка'],
+    [<CalendarDays size={16} key="s" />, 'Расписание'],
+    [<Shield size={16} key="j" />, 'Судьи на столах'],
+    [<Timer size={16} key="l" />, 'Ход турнира'],
+    [<Scroll size={16} key="p" />, 'Протокол'],
+  ],
+};
+
+/** Значок состояния в шапке: на каждом экране турнир в своём состоянии (§4.3). */
+const at = (badge: string): RoleUI => ({ ...R06, badge });
 
 /* ── Люди турнира ───────────────────────────────────────────────── */
 
@@ -37,8 +69,45 @@ const P = {
   pak: A(13), erl: A(75),   // судьи столов
 };
 
-/** Значок состояния в шапке: на каждом экране турнир в своём состоянии (§4.3). */
-const at = (badge: string) => ({ ...R06, badge });
+/* ── Мелочи, общие для экранов роли ─────────────────────────────── */
+
+/** Тона значков старого словаря → цвета `Pill` нового слоя: данные экранов
+    переносятся без переписывания. */
+type Cls = 'live' | 'wait' | 'bad' | 'reg' | 'done';
+const PC: Record<Cls, 'success' | 'warning' | 'danger' | 'accent' | 'default'> = {
+  live: 'success', wait: 'warning', bad: 'danger', reg: 'accent', done: 'default',
+};
+const Pl = ({ t, cls }: { t: string; cls: Cls }) => <Pill t={t} color={PC[cls]} />;
+
+/** Кадр состояния: фрагмент экрана в скоупе нового слоя — без обёртки фрагмент
+    на полке States остаётся без стилей HeroUI. */
+const Frag = ({ w = 560, children }: { w?: number; children: ReactNode }) => (
+  <ScreenScope>
+    <div style={{ width: w }}>{children}</div>
+  </ScreenScope>
+);
+
+/** Подзаголовок раздела внутри панели: журнал протокола, свободные судьи. */
+const Sec = ({ children }: { children: ReactNode }) => (
+  <div className="mb-1.5 mt-4 text-[11px] font-semibold uppercase tracking-wider text-neutral-400 first:mt-0">
+    {children}
+  </div>
+);
+
+/** Таблица с «живыми» строками: шапка колонок задана, строки собирает экран.
+    ⚠ Временная дупликация с той же таблицей в role05 — когда обе роли
+    устаканятся на новом слое, вынести в kit/hero/app. */
+const Sheet = ({ cols, grid, children }: { cols: ReactNode[]; grid: string; children: ReactNode }) => (
+  <div className="overflow-hidden rounded-xl border border-neutral-200 bg-white shadow-sm">
+    <div
+      className="grid items-center gap-3 border-b border-neutral-200 bg-neutral-50 px-4 py-2 text-[11px] font-semibold uppercase tracking-wider text-neutral-400"
+      style={{ gridTemplateColumns: grid }}
+    >
+      {cols.map((c, i) => <span key={i} className="min-w-0">{c}</span>)}
+    </div>
+    <div className="divide-y divide-neutral-100">{children}</div>
+  </div>
+);
 
 /* ── Общее с ролью 8 (заместитель видит те же блоки) ────────────── */
 
@@ -51,14 +120,20 @@ const STAGES = [
 export function Stages({ cur }: { cur: string }) {
   const now = STAGES.indexOf(cur);
   return (
-    <div className="dseg2">
+    <div className="mb-4 flex flex-wrap items-center gap-1 rounded-lg bg-neutral-100 p-1">
       {STAGES.map((s, i) => (
         <span
           key={s}
-          className={i === now ? 'on' : undefined}
-          style={i < now ? { color: 'var(--c-success)' } : undefined}
+          className={
+            'flex items-center gap-1 rounded-md px-2.5 py-1 text-[12px] font-medium ' +
+            (i === now
+              ? 'bg-white text-neutral-900 shadow-sm'
+              : i < now
+                ? 'text-green-700'
+                : 'text-neutral-400')
+          }
         >
-          {i < now && <Check size={12} style={{ display: 'inline-block', verticalAlign: '-2px', marginRight: 4 }} />}
+          {i < now && <Check size={12} />}
           {s}
         </span>
       ))}
@@ -71,59 +146,75 @@ export type Need = { ic: ReactNode; t: string; s: string; p: string; cls: 'live'
 
 export function NeedRow({ n, read }: { n: Need; read?: boolean }) {
   return (
-    <div className="drow">
-      <span
-        style={{
-          display: 'flex', width: 34, height: 34, flex: 'none', borderRadius: '50%',
-          alignItems: 'center', justifyContent: 'center',
-          background: 'var(--c-accent-soft)', color: 'var(--c-accent)',
-        }}
-      >
+    <div className="flex w-full items-center gap-3 px-4 py-2.5">
+      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-blue-50 text-blue-600">
         {n.ic}
       </span>
-      <div className="who"><div className="nm">{n.t}</div><div className="rl">{n.s}</div></div>
-      <span className={'pill ' + n.cls} style={{ margin: 0 }}>{n.p}</span>
+      <span className="min-w-0 flex-1 leading-tight">
+        <span className="block text-[13.5px] font-medium">{n.t}</span>
+        <span className="block text-xs text-neutral-500">{n.s}</span>
+      </span>
+      <Pill t={n.p} color={PC[n.cls]} />
       {read ? (
-        <span className="pill reg" style={{ margin: 0 }}><Lock size={10} /> ЧТЕНИЕ</span>
+        /* У заместителя без переданной смены — только чтение (роль 8). */
+        <Chip className="whitespace-nowrap" color="accent" size="sm" variant="primary">
+          <Lock size={10} className="mr-1" /> ЧТЕНИЕ
+        </Chip>
       ) : (
-        <button className="dpickbtn">
-          Открыть <ChevronRight size={12} style={{ display: 'inline-block', verticalAlign: '-2px' }} />
-        </button>
+        <Button size="sm" variant="outline">
+          Открыть <ChevronRight size={13} />
+        </Button>
       )}
     </div>
   );
 }
 
 /** Карта столов: счёт в реальном времени, свободные и заблокированные столы. */
-const SCORES = ['2 : 1', '1 : 1', '0 : 2', '3 : 2', '1 : 0', '2 : 2', '0 : 1', '1 : 3', '2 : 0', '1 : 2', '3 : 1', '0 : 0'];
+/* Счёт по партиям у идущего матча: партий до 3 из 5 (Э6.3), поэтому третья
+   выигранная партия матч заканчивает — на карте столов, где все матчи идут,
+   «3 : 1» и «3 : 2» стоять не может. */
+const SCORES = ['2 : 1', '1 : 1', '0 : 2', '2 : 2', '1 : 0', '2 : 2', '0 : 1', '1 : 2', '2 : 0', '1 : 2', '2 : 1', '0 : 0'];
 const BUSY = [1, 2, 3, 4, 5, 6, 8, 9, 10, 12, 13, 14];
 
 export function TableMap() {
   return (
-    <div className="dtables">
+    <div className="mb-4 grid grid-cols-5 gap-2">
       {Array.from({ length: 20 }, (_, i) => i + 1).map((n) => {
         /* стол без судьи матчи не принимает (§4.7); задержка старта — подсветкой */
         if (n === 7) {
           return (
-            <div key={n} className="dtable free" style={{ borderColor: 'var(--c-danger-line)' }}>
-              <div className="tn">Стол {n}<span className="st" /></div>
-              <div className="pl" style={{ color: 'var(--c-danger)' }}>нет судьи</div>
+            <div key={n} className="rounded-lg border border-red-300 bg-red-50 px-3 py-2">
+              <div className="flex items-center justify-between text-[11px] font-semibold text-neutral-500">
+                Стол {n} <span className="h-1.5 w-1.5 rounded-full bg-red-500" />
+              </div>
+              <div className="mt-0.5 text-[12px] font-semibold text-red-600">нет судьи</div>
             </div>
           );
         }
         if (n === 11) {
           return (
-            <div key={n} className="dtable busy" style={{ borderColor: 'var(--c-warning)' }}>
-              <div className="tn">Стол {n}<span className="st" /></div>
-              <div className="pl" style={{ color: 'var(--c-warning)' }}>задержка 12 мин</div>
+            <div key={n} className="rounded-lg border border-amber-300 bg-amber-50 px-3 py-2">
+              <div className="flex items-center justify-between text-[11px] font-semibold text-neutral-500">
+                Стол {n} <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />
+              </div>
+              <div className="mt-0.5 text-[12px] font-semibold text-amber-700">задержка 12 мин</div>
             </div>
           );
         }
         const b = BUSY.indexOf(n);
-        return (
-          <div key={n} className={'dtable ' + (b >= 0 ? 'busy' : 'free')}>
-            <div className="tn">Стол {n}<span className="st" /></div>
-            {b >= 0 ? <div className="sc">{SCORES[b]}</div> : <div className="pl">—</div>}
+        return b >= 0 ? (
+          <div key={n} className="rounded-lg border border-neutral-200 bg-white px-3 py-2 shadow-sm">
+            <div className="flex items-center justify-between text-[11px] font-semibold text-neutral-500">
+              Стол {n} <span className="h-1.5 w-1.5 rounded-full bg-green-500" />
+            </div>
+            <div className="mt-0.5 text-lg font-bold tabular-nums leading-tight tracking-tight">{SCORES[b]}</div>
+          </div>
+        ) : (
+          <div key={n} className="rounded-lg border border-dashed border-neutral-300 px-3 py-2">
+            <div className="flex items-center justify-between text-[11px] font-semibold text-neutral-400">
+              Стол {n} <span className="h-1.5 w-1.5 rounded-full bg-neutral-300" />
+            </div>
+            <div className="mt-0.5 text-lg font-medium leading-tight text-neutral-300">—</div>
           </div>
         );
       })}
@@ -131,36 +222,30 @@ export function TableMap() {
   );
 }
 
-type Side = { av: string; nm: string; s: string };
-
-function Live({ tbl, a, b }: { tbl: string; a: Side; b: Side }) {
-  return (
-    <div className="livem">
-      <div className="top">
-        <span className="tbl">{tbl}</span>
-        <span className="liv"><span className="d" />ИДЁТ</span>
-      </div>
-      <div className="pr"><img src={a.av} alt="" /><span className="n">{a.nm}</span><span className="s">{a.s}</span></div>
-      <div className="pr"><img src={b.av} alt="" /><span className="n">{b.nm}</span><span className="s">{b.s}</span></div>
-    </div>
-  );
-}
-
-/** Матчи, которые идут прямо сейчас: счёт по партиям обновляется сам. */
+/** Матчи, которые идут прямо сейчас: табло стола — карточкой матча со счётом
+    по партиям. Счёт обновляется сам. */
 export function LiveCards() {
   return (
-    <>
-      <Live
-        tbl="СТОЛ 3 · ЭФИР"
-        a={{ av: P.kim, nm: 'Ким Г.', s: '2' }}
-        b={{ av: P.tok, nm: 'Токаев М.', s: '1' }}
+    <div className="flex flex-col gap-3">
+      <MatchCard
+        tour="СТОЛ 3 · ЭФИР"
+        live
+        home={{ nm: 'Ким Г.', av: P.kim, sub: 'СКА · Астана' }}
+        away={{ nm: 'Токаев М.', av: P.tok, sub: 'Шымкент' }}
+        score="2 : 1"
+        games={[[11, 8], [9, 11], [11, 6]]}
+        note="4-я партия · 7 : 5"
       />
-      <Live
-        tbl="СТОЛ 1 · идёт 24 мин"
-        a={{ av: P.gla, nm: 'Гладун И.', s: '1' }}
-        b={{ av: P.bai, nm: 'Байжанов А.', s: '1' }}
+      <MatchCard
+        tour="СТОЛ 1 · идёт 24 мин"
+        live
+        home={{ nm: 'Гладун И.', av: P.gla, sub: 'Тараз' }}
+        away={{ nm: 'Байжанов А.', av: P.bai, sub: '«Алатау» · Алматы' }}
+        score="1 : 1"
+        games={[[11, 7], [8, 11]]}
+        note="3-я партия · 2 : 2"
       />
-    </>
+    </div>
   );
 }
 
@@ -173,39 +258,55 @@ const QUEUE = [
 /** Очередь ожидающих пар: кто играет следующим и куда его вызывать. */
 export function QueuePanel() {
   return (
-    <Panel title="Очередь пар" extra={<span className="pill wait" style={{ margin: 0 }}>8 ЖДУТ СТОЛА</span>}>
-      <div className="qsec">Ожидают вызова</div>
-      {QUEUE.map((q) => (
-        <div className="qitem" key={q.r}>
-          <span className="qav"><img src={q.a} alt="" /><img src={q.b} alt="" /></span>
-          <div className="q"><div className="n">{q.r}</div><div className="r">{q.s}</div></div>
-          <button className="callbtn">Вызвать</button>
-        </div>
-      ))}
+    <Panel title="Очередь пар" extra={<Pill t="8 ЖДУТ СТОЛА" color="warning" />} flush>
+      <div className="px-4 pb-1 pt-3 text-[11px] font-semibold uppercase tracking-wider text-neutral-400">
+        Ожидают вызова
+      </div>
+      <div className="divide-y divide-neutral-100">
+        {QUEUE.map((q) => (
+          <div key={q.r} className="flex items-center gap-3 px-4 py-2.5">
+            <span className="flex -space-x-2.5">
+              <Avatar size="sm" className="ring-2 ring-white">
+                <Avatar.Image alt="" src={q.a} />
+                <Avatar.Fallback>{q.r.slice(0, 1)}</Avatar.Fallback>
+              </Avatar>
+              <Avatar size="sm" className="ring-2 ring-white">
+                <Avatar.Image alt="" src={q.b} />
+                <Avatar.Fallback>{q.r.slice(0, 1)}</Avatar.Fallback>
+              </Avatar>
+            </span>
+            <span className="min-w-0 flex-1 leading-tight">
+              <span className="block truncate text-[13.5px] font-medium">{q.r}</span>
+              <span className="block text-xs text-neutral-500">{q.s}</span>
+            </span>
+            <Button size="sm" variant="outline">Вызвать</Button>
+          </div>
+        ))}
+      </div>
     </Panel>
   );
 }
 
+/* ── Заявки: авто-проверки и состав ─────────────────────────────── */
+
 /** Четыре авто-проверки допуска: у непроходящих — красная пометка. */
 const CHECKS = ['возраст', 'ценз', 'взнос', 'документы'];
 
-function Checks({ v }: { v: boolean[] }) {
-  return (
-    <div style={{ display: 'flex', gap: 10, flex: 'none' }}>
-      {CHECKS.map((k, i) => (
-        <span
-          key={k}
-          style={{
-            display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 11, fontWeight: 700,
-            color: v[i] ? 'var(--c-success)' : 'var(--c-danger)',
-          }}
-        >
-          {v[i] ? <Check size={12} /> : <X size={12} />}{k}
-        </span>
-      ))}
-    </div>
-  );
-}
+const Checks = ({ v }: { v: boolean[] }) => (
+  <span className="flex shrink-0 gap-2.5">
+    {CHECKS.map((k, i) => (
+      <span
+        key={k}
+        className={
+          'flex items-center gap-0.5 text-[11px] font-semibold ' + (v[i] ? 'text-green-700' : 'text-red-600')
+        }
+      >
+        {v[i] ? <Check size={12} /> : <X size={12} />}
+        {k}
+      </span>
+    ))}
+  </span>
+);
 
 /** Игрок в заявке. `v` — четыре авто-проверки; `auto` — заявку отклонила
     система, не дожидаясь судьи, и почему.
@@ -213,10 +314,8 @@ function Checks({ v }: { v: boolean[] }) {
     **Заявка разбирается автоматически** ✳ (комментарий федерации, 09.2026):
     взнос, документы и возраст — величины проверяемые, спорить в них не о чем.
     Если игрок по ним не проходит, система отклоняет заявку сама и **сразу
-    говорит игроку причину**: «взнос не оплачен», «нет медицинского допуска»,
-    «не проходите по возрасту». Раньше он ждал решения судьи, чтобы узнать то,
-    что известно в момент подачи, — и часто узнавал уже после закрытия приёма,
-    когда исправить было нечего.
+    говорит игроку причину**. Раньше он ждал решения судьи, чтобы узнать то,
+    что известно в момент подачи, — и часто узнавал уже после закрытия приёма.
 
     Судье остаётся то, что решается человеком: квота региона, спорный документ,
     заявка не по формату. */
@@ -237,17 +336,17 @@ const SQUAD: Ply[] = [
   { av: P.ahm, nm: 'Ахметов Дархан', sub: '2006 г.р. · «Алатау» · рейтинг 2120', v: [true, true, true, true], p: 'ДОПУЩЕН', cls: 'live' },
   {
     av: P.tle, nm: 'Тлеуова Аружан', sub: '2011 г.р. · «Достык» · рейтинг 1720',
-    v: [false, false, true, true], p: 'ОТКЛОНЕНА АВТОМАТИЧЕСКИ', cls: 'bad',
+    v: [false, false, true, true], p: 'ОТКЛОНЕНА СИСТЕМОЙ', cls: 'bad',
     auto: 'не проходите по возрасту: старт от 2008 г.р. и старше',
   },
   {
     av: P.bai, nm: 'Байжанов Асхат', sub: '2004 г.р. · «Алатау» · рейтинг 2180',
-    v: [true, true, false, true], p: 'ОТКЛОНЕНА АВТОМАТИЧЕСКИ', cls: 'bad',
+    v: [true, true, false, true], p: 'ОТКЛОНЕНА СИСТЕМОЙ', cls: 'bad',
     auto: 'годовой взнос федерации не оплачен',
   },
   {
     av: P.mur, nm: 'Мұрат Ерлан', sub: '2006 г.р. · «Алатау» · рейтинг 2040',
-    v: [true, true, true, false], p: 'ОТКЛОНЕНА АВТОМАТИЧЕСКИ', cls: 'bad',
+    v: [true, true, true, false], p: 'ОТКЛОНЕНА СИСТЕМОЙ', cls: 'bad',
     auto: 'нет действующего медицинского допуска',
   },
   {
@@ -269,47 +368,27 @@ const AGE_RULE =
 
 /* ── Э6.1 · Мой турнир ──────────────────────────────────────────── */
 
-const NEEDS: Need[] = [
-  {
-    ic: <ClipboardList size={16} />, t: '8 заявок ждут решения',
-    s: 'Э6.2 · приём открыт до 12.03, 18:00', p: 'СРОЧНО', cls: 'bad',
-  },
-  {
-    ic: <TriangleAlert size={16} />, t: 'В 3 заявках игроки не проходят допуск',
-    s: 'Э6.2 · возраст, годовой взнос, документы', p: 'ПРОВЕРИТЬ', cls: 'wait',
-  },
-  {
-    ic: <Shield size={16} />, t: 'На 2 столах нет судьи',
-    s: 'Э6.5 · матч не стартует, пока стол без судьи', p: 'ДО СТАРТА', cls: 'wait',
-  },
-  {
-    ic: <Grid3x3 size={16} />, t: 'Сетку соберём после закрытия приёма',
-    s: 'Э6.3 · строить сетку раньше состава нельзя', p: 'ПОЗЖЕ', cls: 'reg',
-  },
-];
-
-export function Tournament6_1({ variant }: { variant?: DeskVariant }) {
+/** Пульт турнира стал списком тех, кто подался ✳ (19.08.2026). До этого он был
+    панелью: шкала из восьми состояний, пять плиток, очередь «что сейчас
+    требуется» и условия допуска — четыре разных блока, и ни один не отвечал
+    на главный вопрос судьи в приёме заявок: **кто подался**. Шкалу состояний
+    убрали совсем: состояние написано в шапке турнира и повторять его рядом
+    незачем. Проп `variant` старой адаптивной рамки сохранён ради истории
+    «Адаптив»: у нового слоя своей планшетной рамки веба пока нет. */
+export function Tournament6_1(_props: { variant?: 'desktop' | 'land' } = {}) {
   return (
-    <RoleScreen
-      variant={variant}
+    <WebApp
       role={at('ПРИЁМ ЗАЯВОК')}
       nav="Мой турнир"
       title="Чемпионат Казахстана 2026"
       sub="Главный республиканский старт · одиночный · г. Астана · 12–14 марта"
     >
-      {/* Экран стал списком тех, кто подался ✳ (19.08.2026). До этого он был
-          панелью: шкала из восьми состояний, пять плиток, очередь «что сейчас
-          требуется» и условия допуска — четыре разных блока, и ни один не
-          отвечал на главный вопрос судьи в приёме заявок: **кто подался**.
-          Шкалу состояний убрали совсем: состояние написано в шапке турнира и
-          повторять его рядом незачем. */}
       {/* Карточка соревнования ✳ (комментарий федерации, 09.2026): те же
           величины, что видит председатель ГСК (Э5.10), — размер старта, от
-          которого зависит всё остальное. Раньше здесь стояли заявки, столы,
-          судьи и срок приёма: три из пяти, и ни регионов, ни разрядов. */}
-      <Chips
+          которого зависит всё остальное. */}
+      <StatTiles
         items={[
-          { v: '128 / 112', k: 'Заявок подано / принято', tone: 'b' },
+          { v: '128 / 112', k: 'Заявок подано / принято' },
           { v: '14', k: 'Регионов' },
           { v: '2', k: 'Разряда · одиночный, парный' },
           { v: '14', k: 'Судей в наряде' },
@@ -318,43 +397,73 @@ export function Tournament6_1({ variant }: { variant?: DeskVariant }) {
         ]}
       />
 
-      <div className="dactionbar">
-        <span className="dcount">
-          Кто подался · <b>8</b> заявок ждут решения, в трёх игроки не проходят допуск
+      <div className="mb-3 flex items-center justify-between gap-4">
+        <span className="text-[12.5px] text-neutral-500">
+          Кто подался · <b className="text-neutral-800">8</b> заявок ждут решения, в трёх игроки не проходят допуск
         </span>
-        <div style={{ display: 'flex', gap: 8 }}>
-          <Ghost>Условия допуска</Ghost>
-          <button className="dsubmit" style={{ padding: '10px 14px' }} data-to="Э6.2">
+        <div className="flex items-center gap-2">
+          <QuietAction>Условия допуска</QuietAction>
+          <Button variant="primary" data-to="Э6.2">
             <ClipboardList size={15} /> Разобрать заявки
-          </button>
+          </Button>
         </div>
       </div>
 
       {/* Тот же состав и те же авто-проверки, что на экране заявок (Э6.2): один
           список, а не два — второй разъехался бы с первым на первом же решении.
           Здесь он на чтение, решают на Э6.2. */}
-      <div className="plist">
+      <Rows>
         {SQUAD.map((p) => (
-          <div className="plist-row" key={p.nm}>
-            <img src={p.av} alt="" />
-            <div className="who">
-              <div className="nm">{p.nm}</div>
-              <div className="rl">{p.sub}</div>
-            </div>
+          <div key={p.nm} className="flex items-center gap-3 px-4 py-2.5">
+            <Avatar size="sm">
+              <Avatar.Image alt={p.nm} src={p.av} />
+              <Avatar.Fallback>{p.nm.slice(0, 1)}</Avatar.Fallback>
+            </Avatar>
+            <span className="min-w-0 flex-1 leading-tight">
+              <span className="block truncate text-[13.5px] font-medium">{p.nm}</span>
+              <span className="block truncate text-xs text-neutral-500">{p.sub}</span>
+            </span>
             <Checks v={p.v} />
-            <span className={'pill ' + p.cls} style={{ margin: 0 }}>{p.p}</span>
+            <Pl t={p.p} cls={p.cls} />
           </div>
         ))}
-      </div>
+      </Rows>
 
-      <div className="dactionbar" style={{ marginTop: 10 }}>
-        <span className="dcount">
-          Показаны последние 6 из 128 заявок · весь список с решениями — на «Заявках»
-        </span>
+      <div className="mt-3 text-[12.5px] text-neutral-500">
+        Показаны последние 6 из 128 заявок · весь список с решениями — на «Заявках»
       </div>
-    </RoleScreen>
+    </WebApp>
   );
 }
+
+const Tournament6_1States = () => (
+  <States>
+    <Shot tone="info" title="Состояние «Приём заявок игроков»" text="«N заявок ждут решения» со ссылкой на Э6.2.">
+      <Frag>
+        <Rows>
+          <Row nm="8 заявок ждут решения" sub="Э6.2 · приём открыт до 12.03, 18:00" pill={{ t: 'СРОЧНО', cls: 'bad' }} />
+        </Rows>
+      </Frag>
+    </Shot>
+
+    <Shot tone="info" title="Состояние «Система проведения»" text="«Сетка не собрана», «на 2 столах нет судьи» — ссылки на Э6.3 и Э6.5.">
+      <Frag>
+        <Rows>
+          <Row nm="Сетка не собрана" sub="Э6.3 · состав закрыт, можно строить" pill={{ t: 'ПОРА', cls: 'wait' }} />
+          <Row nm="На 2 столах нет судьи" sub="Э6.5 · матч не стартует без судьи" pill={{ t: 'ДО СТАРТА', cls: 'wait' }} />
+        </Rows>
+      </Frag>
+    </Shot>
+
+    <Shot tone="info" title="Состояние «Идёт»" text="«3 пары ждут стола» — ссылка на Э6.6.">
+      <Frag>
+        <Rows>
+          <Row nm="3 пары ждут стола" sub="Э6.6 · свободных столов нет" pill={{ t: 'ОЧЕРЕДЬ', cls: 'reg' }} />
+        </Rows>
+      </Frag>
+    </Shot>
+  </States>
+);
 
 /* ── Э6.2 · Заявки участников ───────────────────────────────────── */
 
@@ -399,7 +508,7 @@ const DecidedBids = ({ kind }: { kind: string }) => {
     <Panel
       title={`${kind} · ${DECIDED[kind].length}`}
       extra={
-        <span className="dcount">
+        <span className="text-xs text-neutral-500">
           {auto ? 'игроки уведомлены в момент подачи' : 'решение уже принято, состав не меняется'}
         </span>
       }
@@ -410,30 +519,16 @@ const DecidedBids = ({ kind }: { kind: string }) => {
         ))}
       </Rows>
       {auto && (
-        <div style={{ marginTop: 12 }}>
-          <Hint>
+        <div className="mt-4">
+          <Bar>
             Судья этих заявок не разбирал: взнос, документы и возраст проверяются в момент подачи,
             и игрок узнаёт причину сразу, а не после закрытия приёма ✳. Пока приём открыт, он
             может донести документ и подать заново.
-          </Hint>
+          </Bar>
         </div>
       )}
     </Panel>
   );
-};
-
-/** Вкладка «Ждут решения»: слева заявка, справа очередь остальных.
-
-    Очередь стала рабочей ✳: строка выбирается, и слева открывается её состав.
-    Раньше она была на чтение, а разбирать можно было только ту заявку, что
-    открыли по умолчанию, — то есть очередь показывала работу, которую нельзя
-    было делать. */
-const BIDS_SQUADS: Record<string, Ply[]> = {
-  'Сборная Алматы': SQUAD,
-  'Сборная Караганды': [SQUAD[0], SQUAD[1], SQUAD[2], SQUAD[6]],
-  'Сборная Шымкента': [SQUAD[0], SQUAD[2], SQUAD[4]],
-  'Сборная Павлодара': [SQUAD[1], SQUAD[3]],
-  'Сборная Тараза': [SQUAD[2], SQUAD[5]],
 };
 
 /** Склонение по числу: «1 игрок», «2 игрока», «5 игроков». Строка с числом
@@ -447,6 +542,26 @@ const plural = (n: number, one: string, few: string, many: string) => {
   if (b === 1) return one;
   return many;
 };
+
+/** Вкладка «Ждут решения»: слева заявка, справа очередь остальных.
+
+    Очередь рабочая ✳: строка выбирается, и слева открывается её состав.
+    Раньше она была на чтение, а разбирать можно было только ту заявку, что
+    открыли по умолчанию, — то есть очередь показывала работу, которую нельзя
+    было делать. */
+const BIDS_SQUADS: Record<string, Ply[]> = {
+  'Сборная Алматы': SQUAD,
+  'Сборная Караганды': [SQUAD[0], SQUAD[1], SQUAD[2], SQUAD[6]],
+  'Сборная Шымкента': [SQUAD[0], SQUAD[2], SQUAD[4]],
+  'Сборная Павлодара': [SQUAD[1], SQUAD[3]],
+  'Сборная Тараза': [SQUAD[2], SQUAD[5]],
+};
+
+/* Колонке «Состояние» — 180px: пилюля «ОТКЛОНЕНА СИСТЕМОЙ» должна помещаться
+   целиком, обрезанный краем панели значок читался как дефект. Формулировка —
+   та же, что у вкладки «Отклонены системой», а не «автоматически»: одно
+   решение — одно слово. */
+const SQUAD_GRID = '1.8fr 1fr 180px';
 
 const Waiting6_2 = () => {
   const [cur, setCur] = useState(BIDS[0].nm);
@@ -466,162 +581,144 @@ const Waiting6_2 = () => {
   const one = squad.find((x) => x.nm === pick);
 
   return (
-    <div className="dcols">
+    <div className="grid grid-cols-[1.5fr_1fr] items-start gap-4">
       <Panel
-        /* Заголовок короткий ✳: раньше он не помещался в строку и разъезжался
-           на два ряда — название заявки слева, «регион · тренер» справа. Кто
-           подал, ушло подписью под названием: это уточнение, а не заголовок. */
+        /* Заголовок короткий ✳: кто подал — подписью под названием, это
+           уточнение, а не заголовок. */
         title={bid.nm}
         sub={`${bid.who.toLowerCase() === 'регион' ? 'Заявка региона' : bid.who} · подал ${bid.sub}`}
-        /* Тело панели тянется в её высоту ✳: полоса решения стоит внизу и не
-           уезжает за край экрана. Список игроков занимал свои 396 px, и вместе
-           с полосой выбранного игрока «Принять состав» выдавливало за рамку —
-           заявку было нечем ни принять, ни отклонить. */
-        body="mkbidsbody"
         extra={
-          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
-            {/* Исключённые — пометкой в шапке ✳: серой строкой у кнопок это
-                терялось, а она меняет то, что произойдёт по «Принять состав». */}
+          <span className="flex items-center gap-2">
+            {/* Исключённые — пометкой в шапке ✳: она меняет то, что произойдёт
+                по «Принять состав». */}
             {out.length > 0 && !verdict && (
-              <span className="pill bad" style={{ margin: 0 }}>
-                {out.length} {plural(out.length, 'ИСКЛЮЧЁН', 'ИСКЛЮЧЕНО', 'ИСКЛЮЧЕНО')}
-              </span>
+              <Pl t={`${out.length} ${plural(out.length, 'ИСКЛЮЧЁН', 'ИСКЛЮЧЕНО', 'ИСКЛЮЧЕНО')}`} cls="bad" />
             )}
-            <span
-              className={'pill ' + (verdict === 'ok' ? 'live' : verdict === 'no' ? 'bad' : 'wait')}
-              style={{ margin: 0 }}
-            >
-              {verdict === 'ok' ? 'СОСТАВ ПРИНЯТ' : verdict === 'no' ? 'ЗАЯВКА ОТКЛОНЕНА' : 'ЖДЁТ РЕШЕНИЯ'}
-            </span>
+            <Pl
+              t={verdict === 'ok' ? 'СОСТАВ ПРИНЯТ' : verdict === 'no' ? 'ЗАЯВКА ОТКЛОНЕНА' : 'ЖДЁТ РЕШЕНИЯ'}
+              cls={verdict === 'ok' ? 'live' : verdict === 'no' ? 'bad' : 'wait'}
+            />
           </span>
         }
       >
-        {/* Список игроков таблицей ✳: игрок, что не прошло, состояние.
-
-            Четыре проверки отдельными колонками не поместились: панель стоит в
-            половине экрана, шесть столбцов её не держат — колонка с фамилией
-            схлопывалась в ноль, и имя наезжало на подписи «возраст», «ценз».
-            Четыре галочки и не нужны: у проходящих они все зелёные и не несут
-            ничего, а у непроходящего важно ровно то, ЧТО не прошло. Поэтому
-            один столбец, и в нём — названия несданных проверок. */}
-        <div className="mktable mkbids">
-          <div className="mktable-h">
-            <span>Игрок</span>
-            <span>Не пройдено</span>
-            <span>Состояние</span>
-          </div>
-          <div className="mktable-b">
-            {squad.map((pl) => {
-              const failed = CHECKS.filter((_, i) => !pl.v[i]);
-              const excluded = out.includes(pl.nm);
-              return (
-                <div
-                  className={'mktable-r' + (pl.auto || excluded ? ' no' : '') + (pl.nm === pick ? ' on' : '')}
-                  key={pl.nm}
-                  role="button"
-                  tabIndex={0}
-                  onClick={() => setPick(pl.nm === pick ? null : pl.nm)}
-                >
-                  <span className="nm">
-                    <img src={pl.av} alt="" />
-                    <i>
-                      {pl.nm}
-                      {/* Отклонённому пишем фразу, которая ушла игроку: судья
-                          должен видеть ровно то, что человек прочитал у себя. */}
-                      <em className={pl.auto ? 'off' : undefined}>{pl.auto ?? pl.sub}</em>
-                    </i>
-                  </span>
-                  <span className={failed.length ? 'fail' : 'okall'}>
-                    {failed.length
-                      ? <><X size={12} />{failed.join(' · ')}</>
-                      : <><Check size={12} />всё пройдено</>}
-                  </span>
-                  <span className="mark">
-                    <span className={'pill ' + (excluded ? 'bad' : pl.cls)} style={{ margin: 0 }}>
-                      {excluded ? 'ИСКЛЮЧЁН' : pl.p}
+        {/* Список игроков таблицей ✳: игрок, что не прошло, состояние. Четыре
+            галочки колонками не нужны: у проходящих они все зелёные и не несут
+            ничего, а у непроходящего важно ровно то, ЧТО не прошло. */}
+        <Sheet grid={SQUAD_GRID} cols={['Игрок', 'Не пройдено', 'Состояние']}>
+          {squad.map((pl) => {
+            const failed = CHECKS.filter((_, i) => !pl.v[i]);
+            const excluded = out.includes(pl.nm);
+            return (
+              <div
+                key={pl.nm}
+                role="button"
+                tabIndex={0}
+                onClick={() => setPick(pl.nm === pick ? null : pl.nm)}
+                className={
+                  'grid cursor-pointer items-center gap-3 px-4 py-2.5 text-[13px] ' +
+                  (pl.nm === pick ? 'bg-blue-50/60 ' : 'hover:bg-neutral-50 ') +
+                  (pl.auto || excluded ? 'opacity-55' : '')
+                }
+                style={{ gridTemplateColumns: SQUAD_GRID }}
+              >
+                <span className="flex min-w-0 items-center gap-2.5">
+                  <Avatar size="sm">
+                    <Avatar.Image alt={pl.nm} src={pl.av} />
+                    <Avatar.Fallback>{pl.nm.slice(0, 1)}</Avatar.Fallback>
+                  </Avatar>
+                  <span className="min-w-0 leading-tight">
+                    <span className="block truncate text-[13.5px] font-medium">{pl.nm}</span>
+                    {/* Отклонённому пишем фразу, которая ушла игроку: судья
+                        должен видеть ровно то, что человек прочитал у себя.
+                        Поэтому подпись переносится, а не режется многоточием:
+                        «не проходите по воз…» — это не та фраза, которую
+                        прочитал игрок. Имя выше остаётся в одну строку. */}
+                    <span className={'block text-xs ' + (pl.auto ? 'text-red-600' : 'text-neutral-500')}>
+                      {pl.auto ?? pl.sub}
                     </span>
                   </span>
-                </div>
-              );
-            })}
-          </div>
-        </div>
+                </span>
+                {failed.length ? (
+                  <span className="flex items-center gap-1 text-[12px] font-semibold text-red-600">
+                    <X size={12} /> {failed.join(' · ')}
+                  </span>
+                ) : (
+                  <span className="flex items-center gap-1 text-[12px] font-semibold text-green-700">
+                    <Check size={12} /> всё пройдено
+                  </span>
+                )}
+                <span>
+                  <Pl t={excluded ? 'ИСКЛЮЧЁН' : pl.p} cls={excluded ? 'bad' : pl.cls} />
+                </span>
+              </div>
+            );
+          })}
+        </Sheet>
 
-        {/* Выбранный игрок — решение по одному человеку: заявка целиком
-            принимается или отклоняется, но спорный в ней обычно один, и
-            исключить его дешевле, чем возвращать весь состав. */}
+        {/* Выбранный игрок — решение по одному человеку: исключить его дешевле,
+            чем возвращать весь состав. */}
         {one && !verdict && (
-          <div className="dactionbar" style={{ marginTop: 12 }}>
-            <div className="dcount">
+          <div className="mt-3 flex items-center justify-between gap-3 rounded-lg bg-neutral-50 px-3 py-2">
+            <span className="text-[12.5px] text-neutral-600">
               {one.nm} · {out.includes(one.nm) ? 'исключён из состава' : one.auto ?? 'проходит допуск'}
-            </div>
-            <button
-              type="button"
-              className="dpickbtn"
-              onClick={() => setOut(out.includes(one.nm) ? out.filter((x) => x !== one.nm) : [...out, one.nm])}
+            </span>
+            <Button
+              size="sm"
+              variant="outline"
+              onPress={() => setOut(out.includes(one.nm) ? out.filter((x) => x !== one.nm) : [...out, one.nm])}
             >
               {out.includes(one.nm) ? 'Вернуть в состав' : 'Исключить из состава'}
-            </button>
+            </Button>
           </div>
         )}
 
         {verdict ? (
-          <div style={{ marginTop: 12 }}>
-            <Alert tone={verdict === 'ok' ? 'success' : 'warning'}>
+          <div className="mt-3">
+            <Bar tone={verdict === 'ok' ? 'success' : 'warning'}>
               {verdict === 'ok'
                 ? `Состав принят${out.length ? ` без ${out.length} ${plural(out.length, 'игрока', 'игроков', 'игроков')}` : ''}. Заявитель уведомлён, участники попадают в состав турнира.`
                 : 'Заявка отклонена с причиной. Причина ушла заявителю — он может исправить и подать снова, пока приём открыт.'}
-            </Alert>
-            <div style={{ marginTop: 10 }}>
-              <Ghost
-                onClick={() => {
-                  const next = { ...done };
-                  delete next[cur];
-                  setDone(next);
-                }}
-              >
-                Вернуть заявку в очередь
-              </Ghost>
-            </div>
+            </Bar>
+            <QuietAction
+              onPress={() => {
+                const next = { ...done };
+                delete next[cur];
+                setDone(next);
+              }}
+            >
+              Вернуть заявку в очередь
+            </QuietAction>
           </div>
         ) : (
-          <div className="dactionbar" style={{ marginTop: 12 }}>
-            <div style={{ display: 'flex', gap: 8, marginLeft: 'auto' }}>
-              <button
-                type="button"
-                className="dpickbtn"
-                data-to="Э6.8"
-                onClick={() => { setDone({ ...done, [cur]: 'no' }); setPick(null); }}
-              >
-                Отклонить заявку с причиной
-              </button>
-              {/* Кнопка говорит, что именно сделает ✳: «принять состав» и
-                  «принять состав без двоих» — разные решения, и разница должна
-                  стоять на самой кнопке, а не подписью сбоку. */}
-              <button
-                type="button"
-                className="dsubmit"
-                style={{ padding: '9px 16px', fontSize: 12.5 }}
-                onClick={() => { setDone({ ...done, [cur]: 'ok' }); setPick(null); }}
-              >
-                <Check size={14} />
-                {out.length
-                  ? `Принять состав без ${out.length} ${plural(out.length, 'игрока', 'игроков', 'игроков')}`
-                  : 'Принять состав'}
-              </button>
-            </div>
+          <div className="mt-3 flex items-center justify-end gap-2">
+            <Button
+              variant="outline"
+              data-to="Э6.8"
+              onPress={() => { setDone({ ...done, [cur]: 'no' }); setPick(null); }}
+            >
+              Отклонить заявку с причиной
+            </Button>
+            {/* Кнопка говорит, что именно сделает ✳: «принять состав» и «принять
+                состав без двоих» — разные решения, и разница должна стоять на
+                самой кнопке, а не подписью сбоку. */}
+            <Button
+              variant="primary"
+              onPress={() => { setDone({ ...done, [cur]: 'ok' }); setPick(null); }}
+            >
+              <Check size={14} />
+              {out.length
+                ? `Принять состав без ${out.length} ${plural(out.length, 'игрока', 'игроков', 'игроков')}`
+                : 'Принять состав'}
+            </Button>
           </div>
         )}
-        <div style={{ marginTop: 10 }}>
-          <Hint>{AGE_RULE}</Hint>
+        <div className="mt-4">
+          <Bar>{AGE_RULE}</Bar>
         </div>
       </Panel>
 
-      <Panel
-        title="Ждут решения"
-        extra={<span className="pill wait" style={{ margin: 0 }}>{BIDS.length}</span>}
-      >
-        <Rows>
+      <Panel title="Ждут решения" extra={<Pill t={String(BIDS.length)} color="warning" />} flush>
+        <div className="divide-y divide-neutral-100">
           {BIDS.map((b) => (
             <Row
               key={b.nm}
@@ -638,9 +735,9 @@ const Waiting6_2 = () => {
               onSelect={() => { setCur(b.nm); setPick(null); }}
             />
           ))}
-        </Rows>
-        <div style={{ marginTop: 12 }}>
-          <Hint>Строка открывает состав заявки слева — разбирают их подряд, сверху вниз.</Hint>
+        </div>
+        <div className="px-4 pb-1 pt-3">
+          <Bar>Строка открывает состав заявки слева — разбирают их подряд, сверху вниз.</Bar>
         </div>
       </Panel>
     </div>
@@ -649,29 +746,57 @@ const Waiting6_2 = () => {
 
 export function Bids6_2({ tab }: { tab?: string }) {
   return (
-    <RoleScreen
+    <WebApp
       role={at('ПРИЁМ ЗАЯВОК')}
       nav="Заявки"
       title="Заявки участников"
       sub="Заявка № 14 · 6 игроков"
     >
-      <Tabs
+      <PageTabs
         active={tab}
         items={[
           { t: 'Ждут решения · 8', view: <Waiting6_2 /> },
           { t: 'Приняты · 104', view: <DecidedBids kind="Приняты" /> },
-          /* Отклонённые системой стоят отдельно от отклонённых судьёй ✳: это
-             разные вещи, и разбираются они по-разному — по авто-отказу игрок
-             может донести документ и подать заново, по решению судьи спор идёт
-             через федерацию. */
+          /* Отклонённые системой стоят отдельно от отклонённых судьёй ✳: по
+             авто-отказу игрок может донести документ и подать заново, по
+             решению судьи спор идёт через федерацию. */
           { t: 'Отклонены системой · 9', view: <DecidedBids kind="Отклонены системой" /> },
           { t: 'Отклонены судьёй · 3', view: <DecidedBids kind="Отклонены судьёй" /> },
           { t: 'Отозваны · 4', view: <DecidedBids kind="Отозваны" /> },
         ]}
       />
-    </RoleScreen>
+    </WebApp>
   );
 }
+
+const Bids6_2States = () => (
+  <States>
+    <Shot tone="info" title="Заявок нет" text="Пустое состояние со сроком приёма.">
+      <Frag w={480}>
+        <EmptyBox title="Заявок пока нет" text="Приём открыт до 12.03, 18:00." />
+      </Frag>
+    </Shot>
+
+    <Shot tone="warning" title="Заявка с непроходящим игроком" text="Кнопка «Принять» остаётся, но с предупреждением ✳.">
+      <Frag>
+        <Rows>
+          <Row nm="Жумабеков Расул" sub="взнос не оплачен · медицинский допуск не приложен" pill={{ t: 'НЕ ПРОХОДИТ', cls: 'bad' }} />
+        </Rows>
+        <div className="mt-3">
+          <Bar tone="warning">Решение за судьёй: система показывает несоответствие, но не решает за него.</Bar>
+        </div>
+      </Frag>
+    </Shot>
+
+    <Shot tone="info" title="Приём закрыт" text="Списки только на чтение." wide>
+      <Frag>
+        <Rows>
+          <Row nm="112 участников · приём закрыт 12.03" sub="решения приняты, состав зафиксирован" pill={{ t: 'СОСТАВ СОБРАН', cls: 'live' }} />
+        </Rows>
+      </Frag>
+    </Shot>
+  </States>
+);
 
 /* ── Э6.3 · Сетка: формат, посев, сборка ────────────────────────── */
 
@@ -679,23 +804,14 @@ export function Bids6_2({ tab }: { tab?: string }) {
 
     Собирает сетку секретарь (Э7.3): систему проведения, жеребьёвку и саму
     сетку. Главный судья её **утверждает или возвращает с замечанием** — так
-    границу задаёт документ федерации: у секретаря «сетки», у главного судьи
-    «утверждение сеток» (решение 19.08.2026).
+    границу задаёт документ федерации (решение 19.08.2026). При этом **доступ
+    к любым параметрам турнира у судьи есть** ✳: он отвечает за соревнование
+    целиком, но правка после утверждения уходит в журнал с автором (§12).
 
-    При этом **доступ к любым параметрам турнира у судьи есть** ✳: он отвечает
-    за соревнование целиком и может поправить что угодно — но правка после
-    утверждения уходит в журнал с автором (§12). Раньше здесь стояли подсказка
-    по системе и кнопка «Собрать сетку» — то есть работа секретаря. */
-/** Жеребьёвку проводит главный судья ✳ (комментарий федерации, 09.2026).
-
-    Раньше её проводил секретарь (Э7.2), а судья только утверждал результат: так
-    была прочитана формулировка документа. Федерация поправила — бросает судья.
-    Секретарь оформляет: он видит слоты и собирает по ним сетку, но не бросает и
-    не перебрасывает.
-
-    Здесь же судья задаёт **регламент времени по кругам**: сколько минут даётся
-    на матч в каждом круге. Без него расписание не составить — длительность
-    круга и есть то, из чего складывается игровой день. */
+    Жеребьёвку проводит главный судья ✳ (комментарий федерации, 09.2026):
+    раньше бросал секретарь, а судья утверждал — так была прочитана
+    формулировка документа. Федерация поправила — бросает судья. Здесь же судья
+    задаёт **регламент времени по кругам**: без него расписание не составить. */
 const DRAW_TABS = ['Жеребьёвка', 'Регламент времени', 'Сетка'];
 const DRAW_WAYS = ['Посев по рейтингу', 'Жребий'];
 
@@ -723,14 +839,10 @@ export function Bracket6_3() {
   const [n, setN] = useState(0);
 
   return (
-    <RoleScreen
-      role={at('СИСТЕМА ПРОВЕДЕНИЯ')}
-      nav="Сетка"
-      title="Жеребьёвка и сетка"
-    >
-      <Chips
+    <WebApp role={at('СИСТЕМА ПРОВЕДЕНИЯ')} nav="Сетка" title="Жеребьёвка и сетка">
+      <StatTiles
         items={[
-          { v: '112', k: 'Участников в составе', tone: 'b' },
+          { v: '112', k: 'Участников в составе' },
           { v: '14', k: 'Регионов' },
           { v: '223', k: 'Матча по сетке' },
           { v: '16', k: 'Сеяных', tone: 'g' },
@@ -738,58 +850,51 @@ export function Bracket6_3() {
         ]}
       />
 
-      <Filter items={DRAW_TABS} active={tab} onPick={setTab} />
+      <div className="mb-4">
+        <FilterSeg items={DRAW_TABS} active={tab} onPick={setTab} />
+      </div>
 
       {tab === DRAW_TABS[0] && (
-        <div className="mkcols">
+        <div className="grid grid-cols-2 items-start gap-4">
           <Panel
             title="Распределение по слотам"
-            extra={
-              <span
-                className={'pill ' + (!lot ? 'live' : n ? 'live' : 'wait')}
-                style={{ margin: 0 }}
-              >
-                {!lot ? 'ПОСЕВ ГОТОВ' : n ? 'ЖРЕБИЙ ПРОВЕДЁН' : 'ЖРЕБИЙ НЕ БРОШЕН'}
-              </span>
-            }
+            extra={<Pl t={!lot ? 'ПОСЕВ ГОТОВ' : n ? 'ЖРЕБИЙ ПРОВЕДЁН' : 'ЖРЕБИЙ НЕ БРОШЕН'} cls={!lot || n ? 'live' : 'wait'} />}
           >
-            <div className="dfield">
-              <label>Как разводим участников</label>
-              <FormSeg items={DRAW_WAYS} active={way} onPick={(v) => { setWay(v); setN(0); }} />
+            <div className="mb-3 flex flex-col gap-1">
+              <span className="text-xs font-medium text-neutral-500">Как разводим участников</span>
+              <div><FilterSeg items={DRAW_WAYS} active={way} onPick={(v) => { setWay(v); setN(0); }} /></div>
             </div>
-            <div style={{ height: 12 }} />
-            <Form>
-              <Field label="Основание посева" value="Рейтинг ФНТ РК на 05.03.2026" wide />
-              <Field label="Сеяных" value="16 · по разным четвертям" />
-              <Field
+            <FormGrid>
+              <FieldView label="Основание посева" value="Рейтинг ФНТ РК на 05.03.2026" wide />
+              <FieldView label="Сеяных" value="16 · по разным четвертям" />
+              <FieldView
                 label={lot ? 'Последний жребий' : 'Случайность'}
                 value={lot ? (n ? `бросок ${n} · Оспанов Т.` : 'не бросали') : 'не участвует'}
               />
-            </Form>
+            </FormGrid>
             {/* При посеве по рейтингу бросать нечего: расстановка выводится из
-                рейтинга целиком. Кнопки появляются только у жребия. */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 14 }}>
+                рейтинга целиком. Кнопка появляется только у жребия. */}
+            <div className="mt-4 flex flex-col items-start gap-2">
               {lot && (
-                <button type="button" className="dsubmit" onClick={() => setN(n + 1)}>
-                  <Shuffle size={15} />{n ? 'Перебросить жребий' : 'Провести жеребьёвку'}
-                </button>
+                <Button variant="primary" onPress={() => setN(n + 1)}>
+                  <Shuffle size={15} /> {n ? 'Перебросить жребий' : 'Провести жеребьёвку'}
+                </Button>
               )}
-              <Ghost>
+              <QuietAction>
                 <Pencil size={14} /> {lot ? 'Изменить состав сеяных' : 'Изменить основание посева'}
-              </Ghost>
+              </QuietAction>
             </div>
-            <div style={{ marginTop: 12 }}>
-              <Hint>
+            <div className="mt-3">
+              <Bar>
                 Жеребьёвка лежит на главном судье ✳ (комментарий федерации, 09.2026). Секретарь
                 вправе её видеть и с ней работать — бросить, перебросить, пересобрать слоты
-                (Э7.3), — но **утверждает только главный судья**. Прежний результат каждого
-                броска остаётся в журнале: переигранный жребий участники вправе проверить.
-              </Hint>
+                (Э7.3), — но утверждает только главный судья. Прежний результат каждого броска
+                остаётся в журнале: переигранный жребий участники вправе проверить.
+              </Bar>
             </div>
-            <div style={{ height: 12 }} />
           </Panel>
 
-          <Panel title="Кто где стоит" extra={<span className="dcount">первые слоты</span>}>
+          <Panel title="Кто где стоит" extra={<span className="text-xs text-neutral-500">первые слоты</span>}>
             <Rows>
               <Row av={P.kim} nm="1 · Ким Георгий" sub="«Алатау» · рейтинг 2401" pill={{ t: 'ПОСЕВ №1', cls: 'reg' }} />
               <Row av={P.tok} nm="128 · Токаев Марат" sub="«Алатау» · рейтинг 2350" pill={{ t: 'ПОСЕВ №2', cls: 'reg' }} />
@@ -801,8 +906,8 @@ export function Bracket6_3() {
                 pill={lot ? { t: n ? 'ЖРЕБИЙ' : 'ЖДЁТ ЖРЕБИЯ', cls: n ? 'wait' : 'done' } : { t: 'ПОСЕВ №7', cls: 'reg' }}
               />
             </Rows>
-            <div style={{ marginTop: 12 }}>
-              <Hint>Весь состав со слотами — у секретаря (Э7.3): он собирает по ним сетку.</Hint>
+            <div className="mt-3">
+              <Bar>Весь состав со слотами — у секретаря (Э7.3): он собирает по ним сетку.</Bar>
             </div>
           </Panel>
         </div>
@@ -812,58 +917,48 @@ export function Bracket6_3() {
         <>
           {/* Регламент времени ✳ (комментарий федерации, 09.2026): судья
               прописывает, сколько минут даётся на матч в каждом круге. Круги
-              идут не по одной мерке — предварительные короче финальных, — и
-              из этих чисел потом складывается игровой день в расписании. */}
-          <div className="dactionbar">
-            <span className="dcount">
+              идут не по одной мерке — предварительные короче финальных, — и из
+              этих чисел потом складывается игровой день в расписании. */}
+          <div className="mb-3 flex items-center justify-between gap-4">
+            <span className="text-[12.5px] text-neutral-500">
               Минуты на матч по кругам · из них складывается игровой день в расписании (Э6.4)
             </span>
-            <Ghost><Pencil size={14} /> Изменить регламент</Ghost>
+            <QuietAction><Pencil size={14} /> Изменить регламент</QuietAction>
           </div>
 
-          <div className="mktable mkrounds">
-            <div className="mktable-h">
-              <span>Этап</span>
-              <span>Круг</span>
-              <span className="num">Минут на матч</span>
-              <span className="num">Матчей</span>
-              <span className="num">Стол-часов</span>
-            </div>
-            <div className="mktable-b">
-              {ROUNDS6.map((r) => {
-                const games = r.rd === 'туры 1–3' ? 84 : r.rd === 'туры 4 и далее' ? 28 : r.rd === '1/32 — 1/8' ? 56 : r.rd.startsWith('1/4') ? 6 : 2;
-                return (
-                  <div className="mktable-r" key={r.st + r.rd}>
-                    <span className="nm"><i>{r.st}</i></span>
-                    <span>{r.rd}</span>
-                    <span className="num tot">{r.min}</span>
-                    <span className="num">{games}</span>
-                    <span className="num">{Math.round((games * r.min) / 60)}</span>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
+          <DataTable
+            cols={['Этап', 'Круг', 'Минут на матч', 'Матчей', 'Стол-часов']}
+            grid="1.2fr 1.2fr 120px 90px 100px"
+            rows={ROUNDS6.map((r) => {
+              const games = r.rd === 'туры 1–3' ? 84 : r.rd === 'туры 4 и далее' ? 28 : r.rd === '1/32 — 1/8' ? 56 : r.rd.startsWith('1/4') ? 6 : 2;
+              return {
+                key: r.st + r.rd,
+                cells: [
+                  <span key="s" className="font-medium">{r.st}</span>,
+                  <span key="r">{r.rd}</span>,
+                  <b key="m" className="tabular-nums">{r.min}</b>,
+                  <span key="g" className="tabular-nums">{games}</span>,
+                  <span key="h" className="tabular-nums text-neutral-500">{Math.round((games * r.min) / 60)}</span>,
+                ],
+              };
+            })}
+          />
 
-          <Hint>
-            Стол-часы считаются из регламента, а не задаются руками: поменял минуты — сразу видно,
-            влезает ли турнир в игровые дни. При 20 столах и 8 часах в день зал даёт 480 стол-часов.
-          </Hint>
+          <div className="mt-3">
+            <Bar>
+              Стол-часы считаются из регламента, а не задаются руками: поменял минуты — сразу
+              видно, влезает ли турнир в игровые дни. При 20 столах и 8 часах в день зал даёт
+              480 стол-часов.
+            </Bar>
+          </div>
         </>
       )}
 
       {tab === DRAW_TABS[2] && (
-        <div className="mkcols">
+        <div className="grid grid-cols-2 items-start gap-4">
           <Panel
             title="Что собрал секретарь"
-            extra={
-              <span
-                className={'pill ' + (ok === 'yes' ? 'live' : ok === 'back' ? 'bad' : 'wait')}
-                style={{ margin: 0 }}
-              >
-                {ok === 'yes' ? 'УТВЕРЖДЕНА' : ok === 'back' ? 'ВОЗВРАЩЕНА' : 'ЖДЁТ УТВЕРЖДЕНИЯ'}
-              </span>
-            }
+            extra={<Pl t={ok === 'yes' ? 'УТВЕРЖДЕНА' : ok === 'back' ? 'ВОЗВРАЩЕНА' : 'ЖДЁТ УТВЕРЖДЕНИЯ'} cls={ok === 'yes' ? 'live' : ok === 'back' ? 'bad' : 'wait'} />}
           >
             <Rows>
               <Row
@@ -876,54 +971,67 @@ export function Bracket6_3() {
               <Row nm="Кто собрал" sub="Ким Лариса · главный секретарь" val="Э7.3" to="Э7.3" />
             </Rows>
 
-            <div className="dactionbar" style={{ marginTop: 12 }}>
-              <span className="dcount">
+            <div className="mt-3 flex items-center justify-between gap-3">
+              <span className="text-[12.5px] text-neutral-500">
                 {ok === 'yes'
                   ? 'Сетка зафиксирована. Дальше расписание — его тоже собирает секретарь'
                   : ok === 'back'
                     ? 'Замечание ушло секретарю: он пересоберёт и передаст снова'
                     : 'Утверждение коллегией сетке не требуется (§4.6) — решение за главным судьёй'}
               </span>
-              <div style={{ display: 'flex', gap: 8 }}>
-                <Ghost onClick={() => setOk('back')}>Вернуть с замечанием</Ghost>
-                <button
-                  type="button"
-                  className="dsubmit"
-                  style={{ padding: '10px 14px' }}
-                  onClick={() => setOk('yes')}
-                >
+              <span className="flex shrink-0 items-center gap-2">
+                <QuietAction onPress={() => setOk('back')}>Вернуть с замечанием</QuietAction>
+                <Button variant="primary" onPress={() => setOk('yes')}>
                   <Check size={15} /> Утвердить сетку
-                </button>
-              </div>
+                </Button>
+              </span>
             </div>
           </Panel>
 
-          <Panel
-            title="Параметры турнира"
-            extra={<span className="pill reg" style={{ margin: 0 }}>ПОЛНЫЙ ДОСТУП</span>}
-          >
-            <Form>
-              <Field label="Формат" value="Группы по 4 + плей-офф" />
-              <Field label="Партий в матче" value="до 3 из 5" />
-              <Field label="Утешительная сетка" value="нет" />
-              <Field label="Столов в зале" value="20 · трансляция с 2" />
-            </Form>
-            <div style={{ marginTop: 12 }}>
-              <Hint>
+          <Panel title="Параметры турнира" extra={<Pl t="ПОЛНЫЙ ДОСТУП" cls="reg" />}>
+            <FormGrid>
+              <FieldView label="Формат" value="Группы по 4 + плей-офф" />
+              <FieldView label="Партий в матче" value="до 3 из 5" />
+              <FieldView label="Утешительная сетка" value="нет" />
+              <FieldView label="Столов в зале" value="20 · трансляция с 2" />
+            </FormGrid>
+            <div className="mt-3">
+              <Bar>
                 Главный судья отвечает за соревнование целиком и может поправить любой параметр —
                 формат, партии, столы. Правка после утверждения сохраняется с автором и уходит в
                 журнал (§12), а секретарь получает уведомление: он пересоберёт по новым вводным.
-              </Hint>
+              </Bar>
             </div>
-            <div style={{ marginTop: 12 }}>
-              <Ghost><Pencil size={14} /> Изменить параметры</Ghost>
-            </div>
+            <QuietAction><Pencil size={14} /> Изменить параметры</QuietAction>
           </Panel>
         </div>
       )}
-    </RoleScreen>
+    </WebApp>
   );
 }
+
+const Bracket6_3States = () => (
+  <States>
+    <Shot tone="danger" title="Состав не собран" text="Экран закрыт с пояснением: сетку раньше состава не строят.">
+      <Frag w={480}>
+        <EmptyBox title="Сетку строить рано" text="Приём заявок ещё открыт: сетка собирается по закрытому составу." />
+      </Frag>
+    </Shot>
+
+    <Shot
+      tone="warning"
+      title="Ни одна система не укладывается в столы и часы"
+      text="Все варианты с красным светофором, судья решает сам."
+    >
+      <Frag>
+        <Rows>
+          <Row nm="Олимпийская с группами" sub="нужно 9 часов · есть 8" pill={{ t: 'НЕ ВЛЕЗАЕТ', cls: 'bad' }} />
+          <Row nm="Круговая" sub="нужно 14 часов · есть 8" pill={{ t: 'НЕ ВЛЕЗАЕТ', cls: 'bad' }} />
+        </Rows>
+      </Frag>
+    </Shot>
+  </States>
+);
 
 /* ── Э6.4 · Расписание и столы ──────────────────────────────────── */
 
@@ -934,105 +1042,177 @@ const PAIRS = [
   'Ким Г. — Сәтбаев Е.', 'Токаев М. — Нұрғали А.', 'Гладун И. — Ахметов Д.', 'Байжанов А. — Досжан М.',
   'Мұрат Е. — Сарсенов А.', 'Тлеуова А. — Оралова М.', 'Ким Г. — Досжан М.', 'Токаев М. — Гладун И.',
 ];
-const ROUNDS = ['1/32', '1/32', '1/16', '1/16'];
-/** Подсвеченные конфликты: участник в двух местах и занятый стол. */
+/** Подсвеченные конфликты: участник в двух местах и занятый стол.
+    Ключ — «волна дня · стол», как и раньше. */
 const CONFLICT: Record<string, string> = {
   '2-3': 'участник уже на столе 6',
   '3-6': 'стол занят до 15:10',
 };
+/** Клетки без матча: стол в этот час свободен. */
 const EMPTY = new Set(['2-8', '3-7', '3-8']);
 
-/** Три дня игры: в каждом свои круги сетки — на третий день играют финалы, и
-    столов в работе остаётся меньше. Конфликты подсвечены только в том дне, где
-    они есть: день без конфликтов должен выглядеть спокойным. */
-const DAYS6_4 = [
-  { t: 'День 1 · 12.03', cap: 'День 1 · 12 марта · столы 1–8 из 20', rounds: ['1/32', '1/32', '1/16', '1/16'], bad: true },
-  { t: 'День 2 · 13.03', cap: 'День 2 · 13 марта · столы 1–8 из 20', rounds: ['1/8', '1/8', '1/4', '1/4'], bad: false },
-  { t: 'День 3 · 14.03', cap: 'День 3 · 14 марта · столы 1–2 из 20', rounds: ['1/2', '1/2', 'Финал', 'За 3-е место'], bad: false },
+/** Минут на матч по кругам — те же числа, что судья задал в регламенте времени
+    (Э6.3, `ROUNDS6`). Раньше день был таблицей одинаковых клеток, и
+    длительность круга в раскладке не участвовала вовсе: финал занимал ровно
+    столько же места, сколько 1/32. На шкале времени она задаёт высоту блока —
+    и день видно таким, каким он пройдёт. */
+const RD_MIN: Record<string, number> = {
+  '1/32': 25, '1/16': 25, '1/8': 25, '1/4': 30, '1/2': 30, Финал: 35, 'За 3-е место': 35,
+};
+
+/** Прибавить минуты к «ЧЧ:ММ»: конец матча считается из регламента, а не
+    пишется руками — поменялись минуты на круг, поменялась и сетка времени. */
+const plus = (t: string, m: number) => {
+  const [h, mm] = t.split(':').map(Number);
+  const all = h * 60 + mm + m;
+  return `${String(Math.floor(all / 60)).padStart(2, '0')}:${String(all % 60).padStart(2, '0')}`;
+};
+
+/** Волна дня: в какой час какой круг и на каких столах он идёт. */
+type Wave = { at: string; rd: string; tables: number[] };
+
+/** Волны первых двух дней: четыре часа × восемь столов минус свободные
+    клетки — ровно та раскладка, что была в таблице. */
+const wavesOf = (rounds: string[]): Wave[] =>
+  rounds.map((rd, r) => ({
+    at: HOURS[r],
+    rd,
+    tables: TABLES8.filter((c) => !EMPTY.has(`${r}-${c}`)),
+  }));
+
+/** Три дня игры: в каждом свои круги сетки. На третий день столов в работе
+    меньше и волн меньше: полуфинала два, финал и матч за 3-е место — по одному,
+    и растягивать их на восемь столов, как делала таблица, было неправдой.
+    Конфликты подсвечены только в том дне, где они есть: день без конфликтов
+    должен выглядеть спокойным. */
+type Day6 = { t: string; cap: string; waves: Wave[]; bad: boolean };
+
+const DAYS6_4: Day6[] = [
+  { t: 'День 1 · 12.03', cap: 'День 1 · 12 марта · столы 1–8 из 20', waves: wavesOf(['1/32', '1/32', '1/16', '1/16']), bad: true },
+  { t: 'День 2 · 13.03', cap: 'День 2 · 13 марта · столы 1–8 из 20', waves: wavesOf(['1/8', '1/8', '1/4', '1/4']), bad: false },
+  {
+    t: 'День 3 · 14.03',
+    cap: 'День 3 · 14 марта · столы 1–2 из 20',
+    waves: [
+      { at: '10:00', rd: '1/2', tables: [1, 2] },
+      { at: '13:00', rd: 'За 3-е место', tables: [2] },
+      { at: '14:30', rd: 'Финал', tables: [1] },
+    ],
+    bad: false,
+  },
 ];
 
-/** Сетка «дни × столы» одного дня. */
-const Grid6_4 = ({ day }: { day: (typeof DAYS6_4)[number] }) => {
-  const conflict = day.bad ? CONFLICT : {};
-  return (
-    <div style={{ display: 'grid', gridTemplateColumns: '54px repeat(8, minmax(0, 1fr))', gap: 8 }}>
-          <div />
-          {TABLES8.map((n) => (
-            <div
-              key={n}
-              style={{
-                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4,
-                fontSize: 11, fontWeight: 700, color: 'var(--c-muted)',
-              }}
-            >
-              Стол {n}
-              {STREAM.includes(n) && <Radio size={11} style={{ color: 'var(--c-broadcast)' }} />}
-            </div>
-          ))}
+/** «Стол занят до 15:10» — на шкале времени это не подпись, а настоящий наезд:
+    матч 13:00 на столе 6 тянется до 15:10, и матч 14:30 на этом столе стоять не
+    может. Ключ — тот же «волна · стол», что у конфликтов. */
+const OVERRUN: Record<string, string> = { '2-6': '15:10' };
 
-      {HOURS.map((h, r) => (
-        <Fragment key={h}>
-          <div style={{ alignSelf: 'center', fontSize: 11, fontWeight: 700, color: 'var(--c-dim)' }}>{h}</div>
-          {TABLES8.map((c) => {
-            const key = `${r}-${c}`;
-            const bad = conflict[key];
-            if (EMPTY.has(key)) {
-              return (
-                <div key={key} className="dtable free" style={{ padding: 7 }}>
-                  <div className="tn">—<span className="st" /></div>
-                  <div className="pl">свободно</div>
-                </div>
-              );
-            }
-            return (
-              <div
-                key={key}
-                className="dtable busy"
-                style={bad ? { padding: 7, borderColor: 'var(--c-danger)' } : { padding: 7 }}
-              >
-                <div className="tn">{day.rounds[r]}<span className="st" /></div>
-                <div className="pl">{PAIRS[(r * 3 + c) % PAIRS.length]}</div>
-                {bad && (
-                  <div style={{ marginTop: 4, fontSize: 10, fontWeight: 800, color: 'var(--c-danger)' }}>{bad}</div>
-                )}
-              </div>
-            );
-          })}
-        </Fragment>
-      ))}
+/** Матч на шкале времени: к блоку календаря нужны ещё стол и круг — они уходят
+    в список того же дня. */
+type Slot6 = SlotEvent & { tbl: number; rd: string };
+
+/** Матчи дня блоками: колонка — стол, начало — час волны, длина — минуты круга
+    из регламента (Э6.3). Один и тот же набор блоков кормит и сетку времени, и
+    список: два взгляда на один день расходиться не должны. */
+const slotsOf = (day: Day6): Slot6[] =>
+  day.waves.flatMap((w, r) =>
+    w.tables.map((c): Slot6 => {
+      const bad: string | undefined = day.bad ? CONFLICT[`${r}-${c}`] : undefined;
+      const over: string | undefined = day.bad ? OVERRUN[`${r}-${c}`] : undefined;
+      return {
+        id: `${r}-${c}`,
+        col: `s${c}`,
+        tbl: c,
+        rd: w.rd,
+        from: w.at,
+        till: over ?? plus(w.at, RD_MIN[w.rd] ?? 25),
+        nm: PAIRS[(r * 3 + c) % PAIRS.length],
+        sub: bad ?? (over ? `затянулся — стол занят до ${over}` : w.rd),
+        /* Красный — конфликт, жёлтый — затянувшийся матч, синий — стол с
+           трансляцией (его смотрят отдельно), серый — обычный матч по плану.
+           Заливать все 29 блоков одним цветом бессмысленно: тогда цвет ничего
+           не сообщает. */
+        tone: bad ? 'danger' : over ? 'warning' : STREAM.includes(c) ? 'accent' : 'neutral',
+      };
+    }),
+  );
+
+/** Колонки сетки — столы, занятые в этот день; у трансляционных подпись «эфир». */
+const colsOf = (day: Day6) =>
+  [...new Set(day.waves.flatMap((w) => w.tables))]
+    .sort((a, b) => a - b)
+    .map((n) => ({ key: `s${n}`, t: `Стол ${n}`, sub: STREAM.includes(n) ? 'эфир' : undefined }));
+
+/** Сетка «час × стол» одного дня — календарным `TimeGrid` (тем же приёмом, что
+    недельный вид Google Calendar).
+
+    Было: таблица из одинаковых клеток, где час стоял слева подписью, а
+    длительность матча в раскладке не участвовала. Три вещи, ради которых
+    расписание и смотрят, в ней не читались — когда стол реально занят, сколько
+    простоя между кругами и где два матча налезли друг на друга. На шкале
+    времени конфликт «стол занят» перестал быть красной подписью в клетке и стал
+    видимым пересечением блоков: `TimeGrid` делит ширину колонки между теми, кто
+    стоит в одно время. Свободные клетки исчезли за ненадобностью — пустое место
+    в сетке времени и есть свободный стол. */
+const Grid6_4 = ({ day }: { day: Day6 }) => (
+  <>
+    <div className="mb-2 flex flex-wrap items-center justify-between gap-3 text-[12px] text-neutral-500">
+      <span className="flex items-center gap-1.5">
+        <Radio size={12} className="text-red-500" /> Трансляция — столы {STREAM.join(' и ')}
+      </span>
+      <span>Высота блока — минуты на круг из регламента времени (Э6.3)</span>
     </div>
+    {/* Шкала с 10:00: игровой день начинается в 10, последнее, что на ней
+        стоит, — финал 14:30 плюс 35 минут регламента. Красной линии «сейчас»
+        здесь намеренно нет: расписание ещё утверждают, турнир не начался, и
+        линия текущего времени соврала бы. */}
+    <TimeGrid cols={colsOf(day)} events={slotsOf(day)} from={10} till={15} />
+  </>
+);
+
+/** Тот же день списком: когда, где, кто и какой круг — по порядку времени.
+    Строки собираются из тех же блоков, что стоят на шкале, поэтому список и
+    сетка не могут разойтись. */
+const List6_4 = ({ day }: { day: Day6 }) => {
+  const slots = [...slotsOf(day)].sort((a, b) => a.from.localeCompare(b.from) || a.tbl - b.tbl);
+  const shown = slots.slice(0, 12);
+  return (
+    <>
+      <Rows>
+        {shown.map((s) => (
+          <Row
+            key={s.id}
+            nm={s.nm}
+            sub={`${s.from}–${s.till} · стол ${s.tbl} · ${s.rd}`}
+            pill={
+              s.tone === 'danger'
+                ? { t: 'КОНФЛИКТ', cls: 'bad' }
+                : s.tone === 'warning'
+                  ? { t: 'ЗАТЯНУЛСЯ', cls: 'wait' }
+                  : { t: 'РАССТАВЛЕН', cls: 'reg' }
+            }
+          />
+        ))}
+      </Rows>
+      {slots.length > shown.length && (
+        <div className="mt-3 text-[12.5px] text-neutral-500">
+          Показаны первые {shown.length} матчей из {slots.length} — весь день целиком виден на сетке времени
+        </div>
+      )}
+    </>
   );
 };
 
-/** Тот же день списком: когда, где, кто и какой круг — по порядку времени. */
-const List6_4 = ({ day }: { day: (typeof DAYS6_4)[number] }) => (
-  <Rows>
-    {HOURS.map((h, r) =>
-      TABLES8.slice(0, 3).map((c) => (
-        <Row
-          key={`${h}-${c}`}
-          nm={PAIRS[(r * 3 + c) % PAIRS.length]}
-          sub={`${h} · стол ${c} · ${day.rounds[r]}`}
-          pill={
-            day.bad && CONFLICT[`${r}-${c}`]
-              ? { t: 'КОНФЛИКТ', cls: 'bad' }
-              : { t: 'РАССТАВЛЕН', cls: 'reg' }
-          }
-        />
-      )),
-    )}
-  </Rows>
-);
-
 /** День расписания: сетка «дни × столы» или тот же день списком. */
-const Day6_4 = ({ day }: { day: (typeof DAYS6_4)[number] }) => (
-  <TabPanel
-    title={day.cap}
-    items={[
-      { t: 'Дни × столы', view: <Grid6_4 day={day} /> },
-      { t: 'Списком', view: <List6_4 day={day} /> },
-    ]}
-  />
+const Day6_4 = ({ day }: { day: Day6 }) => (
+  <Panel title={day.cap}>
+    <PageTabs
+      items={[
+        { t: 'Дни × столы', view: <Grid6_4 day={day} /> },
+        { t: 'Списком', view: <List6_4 day={day} /> },
+      ]}
+    />
+  </Panel>
 );
 
 /** Как идут игры: по часам, живой очередью или вперемешку — часть турнира
@@ -1042,8 +1222,8 @@ const ORDER6 = ['По расписанию', 'Живая очередь', 'См�
 /** Живая очередь: очередь пар на освободившиеся столы. Часов нет — есть
     порядок; следующая пара уходит на тот стол, который освободился первым. */
 const LiveOrder6_4 = () => (
-  <div className="mkcols">
-    <Panel title="Очередь пар" extra={<span className="pill live" style={{ margin: 0 }}>ЖИВАЯ ОЧЕРЕДЬ</span>}>
+  <div className="grid grid-cols-2 items-start gap-4">
+    <Panel title="Очередь пар" extra={<Pl t="ЖИВАЯ ОЧЕРЕДЬ" cls="live" />}>
       <Rows>
         <Row nm="1 · Смагулов — Цой" sub="1/8 · вызвана на стол 4" pill={{ t: 'ИГРАЕТ', cls: 'live' }} />
         <Row nm="2 · Ким — Сериков" sub="1/8 · вызвана на стол 2" pill={{ t: 'ИГРАЕТ', cls: 'live' }} />
@@ -1051,27 +1231,27 @@ const LiveOrder6_4 = () => (
         <Row nm="4 · Пак — Мұрат" sub="1/8 · ждёт" />
         <Row nm="5 · Байжанов — Досжан" sub="1/8 · ждёт" />
       </Rows>
-      <div style={{ marginTop: 12 }}>
-        <Hint>
+      <div className="mt-3">
+        <Bar>
           Очередь ведёт главный судья: он вызывает пару на освободившийся стол (Э6.6). Времени в
           строке нет намеренно ✳ — в живой очереди его нельзя пообещать, а показанное время
           участники читают как обещание.
-        </Hint>
+        </Bar>
       </div>
     </Panel>
 
-    <Panel title="Столы" extra={<span className="dcount">8 из 20 в игре</span>}>
+    <Panel title="Столы" extra={<span className="text-xs text-neutral-500">8 из 20 в игре</span>}>
       <Rows>
         <Row nm="Стол 4" sub="Смагулов — Цой · идёт 12 минут" pill={{ t: 'ЗАНЯТ', cls: 'live' }} />
         <Row nm="Стол 2" sub="Ким — Сериков · идёт 4 минуты" pill={{ t: 'ЗАНЯТ', cls: 'live' }} />
         <Row nm="Стол 7" sub="освободился — следующая пара по очереди" pill={{ t: 'СВОБОДЕН', cls: 'wait' }} action="Вызвать пару" />
         <Row nm="Стол 9" sub="освободился" pill={{ t: 'СВОБОДЕН', cls: 'wait' }} action="Вызвать пару" />
       </Rows>
-      <div style={{ marginTop: 12 }}>
-        <Hint>
+      <div className="mt-3">
+        <Bar>
           Регламент времени по кругам (Э6.3) в живой очереди тоже работает: он говорит, сколько
           матч должен занять, — по нему судья и понимает, укладывается ли зал в игровой день.
-        </Hint>
+        </Bar>
       </div>
     </Panel>
   </div>
@@ -1080,58 +1260,56 @@ const LiveOrder6_4 = () => (
 export function Schedule6_4({ tab }: { tab?: string }) {
   const [order, setOrder] = useState(ORDER6[0]);
   return (
-    <RoleScreen
+    <WebApp
       role={at('СИСТЕМА ПРОВЕДЕНИЯ')}
       nav="Расписание"
       title="Расписание — утверждение"
       sub="Разложил секретарь (Э7.4) · дни × столы · 127 матчей сетки по трём дням игры"
     >
-      <Chips
+      <StatTiles
         items={[
-          { v: '127', k: 'Матчей в сетке', tone: 'b' },
+          { v: '127', k: 'Матчей в сетке' },
           { v: '3', k: 'Дня игры' },
           { v: '20', k: 'Столов в зале' },
           { v: '2', k: 'Конфликта', tone: 'a' },
           { v: '2', k: 'Трансляционных стола' },
         ]}
       />
-      {/* Порядок игр ✳ (комментарий федерации, 09.2026): турнир можно
-          запустить и **без расписания — по живой очерёдности**. Есть старты,
-          которые в расписание не укладываются: любительские, где состав
-          доигрывается на месте, или день, съехавший из-за затянувшихся матчей.
-          Тогда пары вызываются по очереди на освободившийся стол, а не по
-          часам.
-
-          Порядок выбирается **на весь турнир или на его часть**: первые дни по
+      {/* Порядок игр ✳ (комментарий федерации, 09.2026): турнир можно запустить
+          и **без расписания — по живой очерёдности**. Есть старты, которые в
+          расписание не укладываются: любительские, где состав доигрывается на
+          месте, или день, съехавший из-за затянувшихся матчей. Порядок
+          выбирается **на весь турнир или на его часть**: первые дни по
           расписанию, финальный день живой очередью — обычный случай. */}
-      <div className="dactionbar" style={{ marginBottom: 10 }}>
-        <Filter items={ORDER6} active={order} onPick={setOrder} />
-        <span className="dcount">
+      <div className="mb-3 flex items-center justify-between gap-4">
+        <FilterSeg items={ORDER6} active={order} onPick={setOrder} />
+        <span className="text-[12.5px] text-neutral-500">
           {order === ORDER6[0]
-            ? '2 конфликта: их видно на дне 2 — сначала их и разбирают'
+            ? '2 конфликта: их видно на дне 1 — сначала их и разбирают'
             : order === ORDER6[1]
               ? 'Пары вызываются на освободившийся стол; часов в расписании нет'
               : 'Дни 1–2 по расписанию, финальный день — живой очередью'}
         </span>
       </div>
 
+      {/* Утверждать в живой очереди нечего — кнопки утверждения там нет. */}
       {order !== ORDER6[1] && (
-        <div className="dactionbar" style={{ marginBottom: 10 }}>
-          <span className="pill wait" style={{ margin: 0 }}>ЖДЁТ УТВЕРЖДЕНИЯ</span>
-          <span className="dcount">Собрал секретарь (Э7.4) — судья утверждает или возвращает</span>
-          <div style={{ display: 'flex', gap: 8 }}>
-            <Ghost>Вернуть с замечанием</Ghost>
-            <button type="button" className="dsubmit" style={{ padding: '10px 14px' }}>
-              <Check size={15} /> Утвердить расписание
-            </button>
-          </div>
+        <div className="mb-3 flex items-center gap-3 rounded-xl border border-neutral-200 bg-white px-4 py-2.5 shadow-sm">
+          <Pl t="ЖДЁТ УТВЕРЖДЕНИЯ" cls="wait" />
+          <span className="flex-1 text-[12.5px] text-neutral-500">
+            Собрал секретарь (Э7.4) — судья утверждает или возвращает
+          </span>
+          <QuietAction>Вернуть с замечанием</QuietAction>
+          <Button variant="primary">
+            <Check size={15} /> Утвердить расписание
+          </Button>
         </div>
       )}
 
       {order === ORDER6[1] ? (
         <LiveOrder6_4 />
       ) : (
-        <Tabs
+        <PageTabs
           active={tab}
           items={
             order === ORDER6[2]
@@ -1143,9 +1321,19 @@ export function Schedule6_4({ tab }: { tab?: string }) {
           }
         />
       )}
-    </RoleScreen>
+    </WebApp>
   );
 }
+
+const Schedule6_4States = () => (
+  <States>
+    <Shot tone="info" title="Сетки ещё нет" text="Экран пуст, со ссылкой на Э6.3." wide>
+      <Frag>
+        <EmptyBox title="Расписание строится по сетке" text="Сначала соберите сетку — Э6.3." />
+      </Frag>
+    </Shot>
+  </States>
+);
 
 /* ── Э6.5 · Судьи на столах ─────────────────────────────────────── */
 
@@ -1196,12 +1384,16 @@ const jn = (nm: string) => (JNUM[nm] ? `С-${JNUM[nm]}` : '—');
 
 const JUDGE_VIEWS = ['Столы зала', 'Расписание судей'];
 
-/** Расписание судей — той же таблицей, что расписание игр ✳ (комментарий
-    федерации, 09.2026): день, час, стол и кто на нём стоит. Одна таблица на две
-    вещи, потому что вопрос один — «кто где и когда», — и печатаются они рядом.
+/** Расписание судей — той же сеткой времени, что расписание игр ✳ (комментарий
+    федерации, 09.2026): время слева, столы колонками, в блоке — номер. Одна
+    раскладка на две вещи, потому что вопрос один — «кто где и когда», — и
+    печатаются они рядом. Поэтому переезд расписания игр на календарный
+    `TimeGrid` (Э6.4) тянет за собой и это: разойдясь формой, два листа
+    перестали бы читаться как пара.
 
-    В клетках стоят номера: так строка влезает в ширину и читается с
-    расстояния. */
+    Часы смен прежние, но подряд идущие часы одного судьи на одном столе
+    склеены в один блок: в таблице это были пять одинаковых клеток, и длину
+    смены приходилось считать глазами, а пересменок был не виден вовсе. */
 const JSHIFT: { h: string; t: (string | null)[] }[] = [
   { h: '10:00', t: ['Пак Сергей', 'Ерлан Батыр', 'Ахметов Кайрат', 'Нұрланов Данияр', null, 'Абдрахманов Ерлан'] },
   { h: '11:30', t: ['Пак Сергей', 'Ерлан Батыр', 'Ахметов Кайрат', 'Нұрланов Данияр', 'Сейтқали Айдос', 'Абдрахманов Ерлан'] },
@@ -1210,36 +1402,62 @@ const JSHIFT: { h: string; t: (string | null)[] }[] = [
   { h: '16:00', t: ['Мұқанов Талғат', 'Ибраев Қанат', 'Қалиев Санжар', null, 'Дәулет Жасұлан', 'Жақсылық Бекзат'] },
 ];
 
+const JTABLES = [1, 2, 3, 4, 5, 6];
+/** Чем закрывается последняя смена: игровой день — восемь часов от 10:00 (то же
+    число, из которого Э6.3 считает стол-часы зала). */
+const JEND = '18:00';
+
+/** Смены блоками. Пустая клетка стала красным блоком «нет судьи»: это стол,
+    который в свой час не примет матч (§4.7), и оставить её пустотой нельзя —
+    в сетке времени пустое место читается как «свободно», а здесь оно означает
+    ровно обратное. */
+const JSLOTS: SlotEvent[] = JTABLES.flatMap((n, c) => {
+  const out: SlotEvent[] = [];
+  let r = 0;
+  while (r < JSHIFT.length) {
+    const who = JSHIFT[r].t[c];
+    /* Докуда тянется смена: пока в колонке стоит тот же судья (или та же
+       дыра). */
+    let k = r;
+    while (k + 1 < JSHIFT.length && JSHIFT[k + 1].t[c] === who) k += 1;
+    out.push({
+      id: `j${n}-${r}`,
+      col: `s${n}`,
+      from: JSHIFT[r].h,
+      till: k + 1 < JSHIFT.length ? JSHIFT[k + 1].h : JEND,
+      /* Номер — крупной строкой, фамилия — тихой: номер и читают с расстояния
+         на распечатке, а в блок, в отличие от клетки таблицы, помещаются оба. */
+      nm: who ? jn(who) : 'нет судьи',
+      sub: who ?? 'стол в свой час не примет матч',
+      tone: who ? 'neutral' : 'danger',
+    });
+    r = k + 1;
+  }
+  return out;
+});
+
+/** Колонки — те же столы и с той же пометкой эфира, что в расписании игр. */
+const JCOLS = JTABLES.map((n) => ({
+  key: `s${n}`,
+  t: `Стол ${n}`,
+  sub: STREAM.includes(n) ? 'эфир' : undefined,
+}));
+
 const JudgeShift6_5 = () => (
   <>
-    <div className="dactionbar">
-      <span className="dcount">
-        День 1 · столы 1–6 · в клетках номера судей, полный список — рядом
+    <div className="mb-3 flex items-center justify-between gap-4">
+      <span className="text-[12.5px] text-neutral-500">
+        День 1 · столы 1–6 · в блоках номера судей, полный список — рядом
       </span>
-      <Ghost><Printer size={14} /> Печать расписания</Ghost>
+      <QuietAction><Printer size={14} /> Печать расписания</QuietAction>
     </div>
 
-    <div className="mktable mkjshift">
-      <div className="mktable-h">
-        <span>Время</span>
-        {[1, 2, 3, 4, 5, 6].map((n) => <span key={n} className="num">Стол {n}</span>)}
-      </div>
-      <div className="mktable-b">
-        {JSHIFT.map((r) => (
-          <div className="mktable-r" key={r.h}>
-            <span className="nm"><i>{r.h}</i></span>
-            {r.t.map((j, i) => (
-              <span key={i} className={'num' + (j ? ' tot' : ' free')}>
-                {j ? jn(j) : '—'}
-              </span>
-            ))}
-          </div>
-        ))}
-      </div>
-    </div>
+    {/* Час строки — 44 px вместо стандартных 52: смена идёт полтора-два часа, и
+        на восьмичасовом дне сетка иначе не помещается на экран целиком. */}
+    <TimeGrid cols={JCOLS} events={JSLOTS} from={10} till={17} hourPx={44} />
 
-    <div className="dcols">
-      <Panel title="Кто под каким номером" extra={<span className="dcount">номер живёт один турнир</span>}>
+    <div className="mt-4 grid grid-cols-2 items-start gap-4">
+      <Panel title="Кто под каким номером" extra={<span className="text-xs text-neutral-500">номер живёт один турнир</span>}>
         <Rows>
           {Object.entries(JNUM).slice(0, 7).map(([nm, n]) => (
             <Row key={nm} nm={`С-${n} · ${nm}`} sub="наряд Чемпионата Казахстана 2026" />
@@ -1247,18 +1465,18 @@ const JudgeShift6_5 = () => (
         </Rows>
       </Panel>
 
-      <Panel title="Пустые клетки" extra={<span className="pill bad" style={{ margin: 0 }}>3 ЧАСА БЕЗ СУДЬИ</span>}>
+      <Panel title="Пустые клетки" extra={<Pl t="3 ЧАСА БЕЗ СУДЬИ" cls="bad" />}>
         <Rows>
           <Row nm="10:00 · стол 5" sub="судья не назначен" pill={{ t: 'ПУСТО', cls: 'bad' }} action="Назначить" />
           <Row nm="13:00 · стол 6" sub="судья не назначен" pill={{ t: 'ПУСТО', cls: 'bad' }} action="Назначить" />
           <Row nm="16:00 · стол 4" sub="судья не назначен" pill={{ t: 'ПУСТО', cls: 'bad' }} action="Назначить" />
         </Rows>
-        <div style={{ marginTop: 12 }}>
-          <Hint>
-            Пустая клетка в расписании судей — это стол, который в свой час не примет матч. На
-            любительском турнире его можно оставить пустым намеренно (см. полосу выше), на
-            официальном — нет.
-          </Hint>
+        <div className="mt-3">
+          <Bar>
+            Пустая клетка расписания стоит на шкале красным блоком «нет судьи»: это стол, который
+            в свой час не примет матч. На любительском турнире его можно оставить пустым намеренно
+            (см. полосу выше), на официальном — нет.
+          </Bar>
         </div>
       </Panel>
     </div>
@@ -1267,101 +1485,128 @@ const JudgeShift6_5 = () => (
 
 export function Judges6_5() {
   const [view, setView] = useState(JUDGE_VIEWS[0]);
-  /* Игра без судьи ✳ (комментарий федерации, 09.2026): на любительских турнирах
-     стол может работать без судьи — счёт ведут сами игроки. На официальном
-     старте так нельзя: там судья на столе обязателен, и пустой слот означает,
-     что стол в игру не пойдёт. */
-  const [noJudge, setNoJudge] = useState(false);
 
   return (
-    <RoleScreen
+    <WebApp
       role={at('СИСТЕМА ПРОВЕДЕНИЯ')}
       nav="Судьи на столах"
       title="Судьи на столах"
       sub="Наряд турнира набирает председатель ГСК (Э5.2) — главный судья расставляет его по столам"
     >
-      <Chips
+      <StatTiles
         items={[
-          { v: '20', k: 'Столов в зале', tone: 'b' },
+          { v: '20', k: 'Столов в зале' },
           { v: '14', k: 'Столов в игре' },
           { v: '12', k: 'Столов с судьёй', tone: 'g' },
-          { v: '2', k: noJudge ? 'Столов без судьи — разрешено' : 'Столов без судьи', tone: noJudge ? 'g' : 'a' },
+          { v: '2', k: 'Столов без судьи', tone: 'a' },
           { v: '2', k: 'Судьи свободны' },
         ]}
       />
 
-      {/* Игра без судьи — свойство турнира, а не стола ✳: разрешение даётся на
-          соревнование целиком, иначе на одном столе счёт ведёт судья, на
-          соседнем игроки, и протокол собирается из разного. */}
-      <div className="dactionbar">
-        <Filter items={JUDGE_VIEWS} active={view} onPick={setView} />
-        <span className="dcount">
-          {noJudge
-            ? 'Любительский турнир: стол может работать без судьи — счёт ведут игроки'
-            : 'Официальный старт: судья на столе обязателен, пустой стол в игру не идёт'}
+      {/* Игра без судьи — свойство турнира, а не стола ✳ (комментарий
+          федерации, 09.2026): разрешение даётся на соревнование целиком, иначе
+          на одном столе счёт ведёт судья, на соседнем игроки, и протокол
+          собирается из разного. На **официальном** старте разрешить её нельзя
+          вовсе — Чемпионат Казахстана именно такой, поэтому кнопка здесь
+          заблокирована, а живой она бывает только на любительском турнире
+          (кадр в полке состояний). */}
+      <div className="mb-3 flex items-center justify-between gap-3">
+        <FilterSeg items={JUDGE_VIEWS} active={view} onPick={setView} />
+        <span className="flex-1 text-right text-[12.5px] text-neutral-500">
+          Официальный старт: судья на столе обязателен, пустой стол в игру не идёт
         </span>
-        <button
-          type="button"
-          className="dpickbtn"
-          onClick={() => setNoJudge(!noJudge)}
-        >
-          {noJudge ? 'Требовать судью на каждом столе' : 'Разрешить игру без судьи'}
-        </button>
+        <DisabledAction>Разрешить игру без судьи</DisabledAction>
       </div>
 
       {view === JUDGE_VIEWS[1] ? (
         <JudgeShift6_5 />
       ) : (
-      <div className="dcols">
-        <Panel title="Столы зала" extra={<span className="pill bad" style={{ margin: 0 }}>2 ПУСТЫХ СЛОТА</span>}>
-          <div className="djudges">
-            {SLOTS.map((s) => (
-              <div
-                key={s.n}
-                className="djudge"
-                style={s.j ? undefined : { borderColor: 'var(--c-danger-line)' }}
-              >
-                <span className="tn">Стол {s.n}</span>
-                {s.j
-                  ? <span className="jn">{s.j} · {s.cat}</span>
-                  : <span className="pill bad" style={{ margin: 0 }}>СУДЬЯ НЕ НАЗНАЧЕН</span>}
-              </div>
-            ))}
-          </div>
-        </Panel>
+        <div className="grid grid-cols-2 items-start gap-4">
+          <Panel title="Столы зала" extra={<Pl t="2 ПУСТЫХ СЛОТА" cls="bad" />}>
+            <div className="grid grid-cols-2 gap-2">
+              {SLOTS.map((s) => (
+                <div
+                  key={s.n}
+                  className={
+                    'rounded-lg border px-3 py-2 leading-tight ' +
+                    (s.j ? 'border-neutral-200 bg-white' : 'border-red-300 bg-red-50')
+                  }
+                >
+                  <div className="text-[11px] font-semibold text-neutral-500">Стол {s.n}</div>
+                  {s.j ? (
+                    <div className="mt-0.5 truncate text-[12.5px] font-medium">
+                      {s.j} <span className="text-neutral-400">· {s.cat}</span>
+                    </div>
+                  ) : (
+                    <div className="mt-1"><Pl t="СУДЬЯ НЕ НАЗНАЧЕН" cls="bad" /></div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </Panel>
 
-        <Panel title="Судьи наряда" extra={<span className="pill wait" style={{ margin: 0 }}>2 СВОБОДНЫ</span>}>
-          <div className="qsec">Свободны сейчас</div>
-          <Rows>
-            <Row av={P.erl} nm="Мұқанов Талғат" sub="высшая национальная категория" action="На стол" />
-            <Row av={P.pak} nm="Ибраев Қанат" sub="первая категория" action="На стол" />
-          </Rows>
-          <div className="qsec">Уже на столах</div>
-          <Rows>
-            <Row nm="Пак Сергей" sub="первая категория" val="стол 1" pill={{ t: 'НА СТОЛЕ', cls: 'live' }} />
-            <Row nm="Ерлан Батыр" sub="национальная категория" val="стол 2" pill={{ t: 'НА СТОЛЕ', cls: 'live' }} />
-            <Row nm="Ахметов Кайрат" sub="первая категория" val="стол 3" pill={{ t: 'НА СТОЛЕ', cls: 'live' }} />
-          </Rows>
-        </Panel>
-      </div>
+          <Panel title="Судьи наряда" extra={<Pl t="2 СВОБОДНЫ" cls="wait" />}>
+            <Sec>Свободны сейчас</Sec>
+            <Rows>
+              <Row av={P.erl} nm="Мұқанов Талғат" sub="высшая национальная категория" action="На стол" />
+              <Row av={P.pak} nm="Ибраев Қанат" sub="первая категория" action="На стол" />
+            </Rows>
+            <Sec>Уже на столах</Sec>
+            <Rows>
+              <Row nm="Пак Сергей" sub="первая категория" val="стол 1" pill={{ t: 'НА СТОЛЕ', cls: 'live' }} />
+              <Row nm="Ерлан Батыр" sub="национальная категория" val="стол 2" pill={{ t: 'НА СТОЛЕ', cls: 'live' }} />
+              <Row nm="Ахметов Кайрат" sub="первая категория" val="стол 3" pill={{ t: 'НА СТОЛЕ', cls: 'live' }} />
+            </Rows>
+          </Panel>
+        </div>
       )}
-    </RoleScreen>
+    </WebApp>
   );
 }
+
+const Judges6_5States = () => (
+  <States>
+    <Shot tone="danger" title="На столе нет судьи" text="Слот подсвечен; стол не примет матчи, пока судья не назначен." wide>
+      <Frag>
+        <Rows>
+          <Row nm="Стол 7" sub="судья не назначен" pill={{ t: 'НЕТ СУДЬИ', cls: 'bad' }} action="Назначить" />
+        </Rows>
+        <div className="mt-3">
+          <Bar tone="danger">Матч не стартует, пока на стол не назначен судья.</Bar>
+        </div>
+      </Frag>
+    </Shot>
+
+    {/* На официальном старте (макет выше) кнопка заблокирована — живой тумблер
+        существует только здесь, на любительском турнире ✳. */}
+    <Shot tone="info" title="Любительский турнир — игра без судьи разрешена ✳" text="Разрешение — свойство турнира, а не стола; счёт ведут сами игроки.">
+      <Frag>
+        <Rows>
+          <Row
+            nm="Игра без судьи разрешена"
+            sub="стол работает без судьи — счёт ведут сами игроки"
+            pill={{ t: 'ЛЮБИТЕЛЬСКИЙ', cls: 'reg' }}
+            action="Требовать судью"
+          />
+        </Rows>
+      </Frag>
+    </Shot>
+  </States>
+);
 
 /* ── Э6.6 · Ход турнира ─────────────────────────────────────────── */
 
 export function Live6_6() {
   return (
-    <RoleScreen
+    <WebApp
       role={at('ИДЁТ')}
       nav="Ход турнира"
       title="Ход турнира"
       sub="Карта столов · счёт обновляется в реальном времени · сетка пересобирается после каждого результата"
     >
-      <Chips
+      <StatTiles
         items={[
-          { v: '12', k: 'Идут сейчас', tone: 'b' },
+          { v: '12', k: 'Идут сейчас' },
           { v: '8', k: 'Ждут стола', tone: 'a' },
           { v: '60 / 127', k: 'Матчей сыграно', tone: 'g' },
           { v: '1', k: 'Задержка старта' },
@@ -1370,29 +1615,43 @@ export function Live6_6() {
       />
       <TableMap />
 
-      <div className="dcols">
-        <Panel title="Идут сейчас" extra={<span className="pill live" style={{ margin: 0 }}>12 СТОЛОВ В ИГРЕ</span>}>
+      <div className="grid grid-cols-2 items-start gap-4">
+        <Panel title="Идут сейчас" extra={<Pl t="12 СТОЛОВ В ИГРЕ" cls="live" />}>
           <LiveCards />
-          <div className="dactionbar" style={{ marginTop: 12 }}>
-            <div className="dcount">Правка — в пределах лимита, в журнал с автором</div>
-            <div style={{ display: 'flex', gap: 8 }}>
-              <button className="dpickbtn">
-                <Pencil size={13} style={{ display: 'inline-block', verticalAlign: '-2px', marginRight: 5 }} />
-                Исправить счёт
-              </button>
-              <button className="dpickbtn">
-                <Ban size={13} style={{ display: 'inline-block', verticalAlign: '-2px', marginRight: 5 }} />
-                Техническая победа
-              </button>
-            </div>
+          <div className="mt-3 flex items-center justify-between gap-3">
+            <span className="text-[12.5px] text-neutral-500">Правка — в пределах лимита, в журнал с автором</span>
+            <span className="flex shrink-0 items-center gap-2">
+              <Button size="sm" variant="outline"><Pencil size={13} /> Исправить счёт</Button>
+              <Button size="sm" variant="outline"><Ban size={13} /> Техническая победа</Button>
+            </span>
           </div>
         </Panel>
 
         <QueuePanel />
       </div>
-    </RoleScreen>
+    </WebApp>
   );
 }
+
+const Live6_6States = () => (
+  <States>
+    <Shot tone="danger" title="Матч не может стартовать" text="На карточке стола причина — «нет судьи».">
+      <Frag>
+        <Rows>
+          <Row nm="Стол 7 · Ерлан — Пак" sub="пара вызвана, судьи нет" pill={{ t: 'НЕ СТАРТУЕТ', cls: 'bad' }} />
+        </Rows>
+      </Frag>
+    </Shot>
+
+    <Shot tone="warning" title="Обрыв связи у стола" text="Карточка помечена; при расхождении приоритет у судьи стола.">
+      <Frag>
+        <Rows>
+          <Row nm="Стол 4" sub="связи нет 2 минуты · счёт ведётся локально" pill={{ t: 'БЕЗ СВЯЗИ', cls: 'wait' }} />
+        </Rows>
+      </Frag>
+    </Shot>
+  </States>
+);
 
 /* ── Э6.7 · Итоговый протокол ───────────────────────────────────── */
 
@@ -1409,18 +1668,56 @@ const PLACES: Place[] = [
 
 const PROTO = ['Формируется', 'На утверждении', 'Возвращён', 'Закрыт'];
 
+/** Полоса состояний протокола: текущее — заливкой, остальные приглушены. */
+const ProtoStrip = ({ cur }: { cur: string }) => (
+  <div className="mb-3 inline-flex flex-wrap gap-1 rounded-lg bg-neutral-100 p-1">
+    {PROTO.map((s) => (
+      <span
+        key={s}
+        className={
+          'rounded-md px-2.5 py-1 text-[12px] font-medium ' +
+          (s === cur ? 'bg-white text-neutral-900 shadow-sm' : 'text-neutral-400')
+        }
+      >
+        {s}
+      </span>
+    ))}
+  </div>
+);
+
 /** Компактная строка журнала: техпобеда или правка счёта. */
-function LogRow({ t, s, p }: { t: string; s: string; p: string }) {
-  return (
-    <div className="drow" style={{ padding: '8px 11px' }}>
-      <div className="who">
-        <div className="nm" style={{ fontSize: 12.5 }}>{t}</div>
-        <div className="rl">{s}</div>
-      </div>
-      <span className={'pill ' + (p === 'В ЖУРНАЛЕ' ? 'reg' : 'bad')} style={{ margin: 0 }}>{p}</span>
-    </div>
-  );
-}
+const LogRow = ({ t, s, p }: { t: string; s: string; p: string }) => (
+  <div className="flex items-center gap-3 px-4 py-2">
+    <span className="min-w-0 flex-1 leading-tight">
+      <span className="block text-[12.5px] font-medium">{t}</span>
+      <span className="block text-xs text-neutral-500">{s}</span>
+    </span>
+    <Pill t={p} color={p === 'В ЖУРНАЛЕ' ? 'accent' : 'danger'} />
+  </div>
+);
+
+/** Строка итогового места: номер, человек, результат. */
+const PlaceRow = ({ p }: { p: Place }) => (
+  <div className="flex items-center gap-3 px-4 py-2">
+    <span
+      className={
+        'flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[13px] font-bold tabular-nums ' +
+        (p.pl === 1 ? 'bg-amber-100 text-amber-800' : p.pl <= 3 ? 'bg-neutral-200 text-neutral-700' : 'bg-neutral-100 text-neutral-500')
+      }
+    >
+      {p.pl}
+    </span>
+    <Avatar size="sm">
+      <Avatar.Image alt={p.nm} src={p.av} />
+      <Avatar.Fallback>{p.nm.slice(0, 1)}</Avatar.Fallback>
+    </Avatar>
+    <span className="min-w-0 flex-1 leading-tight">
+      <span className="block truncate text-[13.5px] font-medium">{p.nm}</span>
+      <span className="block truncate text-xs text-neutral-500">{p.club}</span>
+    </span>
+    <span className="text-[12.5px] tabular-nums text-neutral-600">{p.res}</span>
+  </div>
+);
 
 const bracket6_7 = { ...makeBigBracket(5), title: 'Чемпионат Казахстана 2026 · плей-офф' };
 
@@ -1437,17 +1734,18 @@ const PROTO_VIEWS = ['Итоги и решение', 'Сетка', 'Группы
 export function Protocol6_7() {
   const [view, setView] = useState(PROTO_VIEWS[0]);
   return (
-    <RoleScreen
+    <WebApp
       role={at('ИТОГОВЫЙ ПРОТОКОЛ')}
       nav="Протокол"
       title="Итоговый протокол"
       sub="Все 127 матчей сыграны · ввод результатов заблокирован"
     >
-      <Chips
+      <StatTiles
         items={[
           { v: '127 / 127', k: 'Матчей сыграно', tone: 'g' },
-          { v: '112', k: 'Участников в протоколе', tone: 'b' },
-          { v: '2', k: 'Технические победы', tone: 'a' },
+          { v: '112', k: 'Участников в протоколе' },
+          /* Плитка считает то же, что журнал ниже: техпобеда + снятие = 2. */
+          { v: '2', k: 'Техпобед и снятий', tone: 'a' },
           { v: '5', k: 'Правок счёта' },
         ]}
       />
@@ -1455,209 +1753,101 @@ export function Protocol6_7() {
       {/* Сетка и группы — здесь, до отправки ✳ (комментарий федерации,
           09.2026). Судья подписывается под итоговыми местами, а места берутся
           из сетки: не сверив её, он утверждает список, происхождение которого
-          не видел. Раньше сетку приходилось открывать отдельным пунктом меню и
-          возвращаться обратно по памяти. */}
-      <Filter items={PROTO_VIEWS} active={view} onPick={setView} />
+          не видел. */}
+      <div className="mb-4">
+        <FilterSeg items={PROTO_VIEWS} active={view} onPick={setView} />
+      </div>
 
       {view === PROTO_VIEWS[1] && (
         <>
-          <div className="mkbracket mkbracket-fill">
-            <BracketFlow bracket={bracket6_7} minZoom={0.1} fitPadding={0.04} />
+          {/* Настоящая сетка тем же компонентом, что на фронте; светлый тон —
+              новый слой светлый, чёрная плоскость из него выпадала. */}
+          <div className="relative h-[430px] overflow-hidden rounded-xl border border-neutral-200 shadow-sm">
+            <div className="absolute inset-0 [&>div]:h-full!">
+              <BracketFlow bracket={bracket6_7} minZoom={0.1} fitPadding={0.04} tone="light" />
+            </div>
           </div>
-          <Hint>
-            Та же сетка, что видят игроки и секретарь: одна модель на всю систему. Места в
-            протоколе выводятся из неё — сверить их и есть смысл этого взгляда.
-          </Hint>
+          <div className="mt-3">
+            <Bar>
+              Та же сетка, что видят игроки и секретарь: одна модель на всю систему. Места в
+              протоколе выводятся из неё — сверить их и есть смысл этого взгляда.
+            </Bar>
+          </div>
         </>
       )}
 
       {view === PROTO_VIEWS[2] && (
         <>
-          <div className="mktable mkgrp6">
-            <div className="mktable-h">
-              <span>Группа и состав</span>
-              <span className="num">Сыграно</span>
-              <span>Вышли в плей-офф</span>
-              <span>Состояние</span>
-            </div>
-            <div className="mktable-b">
-              {GROUPS6_7.map((g) => (
-                <div className="mktable-r" key={g.nm}>
-                  <span className="nm"><i>{g.nm}<em>{g.rows}</em></i></span>
-                  <span className="num">{g.played} из {g.of}</span>
-                  <span>{g.out}</span>
-                  <span className="mark">
-                    <span className="pill live" style={{ margin: 0 }}>СЫГРАНА</span>
-                  </span>
-                </div>
-              ))}
-            </div>
+          <DataTable
+            cols={['Группа и состав', 'Сыграно', 'Вышли в плей-офф', 'Состояние']}
+            grid="1.8fr 90px 1.2fr 110px"
+            rows={GROUPS6_7.map((g) => ({
+              key: g.nm,
+              cells: [
+                <span key="n" className="leading-tight">
+                  <span className="block font-medium">{g.nm}</span>
+                  <span className="block text-xs text-neutral-500">{g.rows}</span>
+                </span>,
+                <span key="p" className="tabular-nums">{g.played} из {g.of}</span>,
+                <span key="o">{g.out}</span>,
+                <Pl key="s" t="СЫГРАНА" cls="live" />,
+              ],
+            }))}
+          />
+          <div className="mt-3">
+            <Bar>
+              Групповой этап смотрят перед отправкой не ради красоты: спор о месте в плей-офф
+              решается местом в группе, и после утверждения переиграть его нельзя.
+            </Bar>
           </div>
-          <Hint>
-            Групповой этап смотрят перед отправкой не ради красоты: спор о месте в плей-офф
-            решается местом в группе, и после утверждения переиграть его нельзя.
-          </Hint>
         </>
       )}
 
       {view === PROTO_VIEWS[0] && (
-      <div className="dcols">
-        <Panel
-          title="Итоговые места"
-          extra={<span className="pill live" style={{ margin: 0 }}>РЕЙТИНГ ПЕРЕСЧИТАЕТСЯ ПОСЛЕ ЗАКРЫТИЯ</span>}
-        >
-          <Rows>
-            {PLACES.map((p) => (
-              <div className="drow" key={p.pl} style={{ padding: '9px 12px' }}>
-                <span className="rank">{p.pl}</span>
-                <img src={p.av} alt="" />
-                <div className="who"><div className="nm">{p.nm}</div><div className="rl">{p.club}</div></div>
-                <div className="amt">{p.res}</div>
-              </div>
-            ))}
-          </Rows>
-          <div className="dactionbar" style={{ marginTop: 12 }}>
-            <div className="dcount">Протокол сформирован — правка результатов закрыта</div>
-            <button className="dpickbtn">
-              <Printer size={13} style={{ display: 'inline-block', verticalAlign: '-2px', marginRight: 5 }} />
-              Печать · после утверждения
-            </button>
-          </div>
-        </Panel>
+        <div className="grid grid-cols-2 items-start gap-4">
+          <Panel title="Итоговые места" extra={<Pl t="РЕЙТИНГ ПЕРЕСЧИТАЕТСЯ ПОСЛЕ ЗАКРЫТИЯ" cls="live" />} flush>
+            <div className="divide-y divide-neutral-100">
+              {PLACES.map((p) => <PlaceRow key={p.pl} p={p} />)}
+            </div>
+            <div className="flex items-center justify-between gap-3 border-t border-neutral-100 bg-neutral-50 px-4 py-2.5">
+              <span className="text-[12.5px] text-neutral-500">Протокол сформирован — правка результатов закрыта</span>
+              <QuietAction><Printer size={13} /> Печать · после утверждения</QuietAction>
+            </div>
+          </Panel>
 
-        <Panel title="Протокол турнира">
-          <div className="dseg2" style={{ marginBottom: 12 }}>
-            {PROTO.map((s) => <span key={s} className={s === 'Формируется' ? 'on' : undefined}>{s}</span>)}
-          </div>
+          <Panel title="Протокол турнира">
+            <ProtoStrip cur="Формируется" />
 
-          <div className="qsec">Технические победы и снятия · 2</div>
-          <Rows>
-            <LogRow t="Байжанов А. — неявка" s="1/16 · стол 4 · 12.03, 11:20" p="ТЕХПОБЕДА" />
-            <LogRow t="Мұрат Е. — отказ, травма" s="1/8 · стол 9 · 13.03, 15:40" p="СНЯТИЕ" />
-          </Rows>
+            <Sec>Технические победы и снятия · 2</Sec>
+            <Rows>
+              <LogRow t="Байжанов А. — неявка" s="1/16 · стол 4 · 12.03, 11:20" p="ТЕХПОБЕДА" />
+              <LogRow t="Мұрат Е. — отказ, травма" s="1/8 · стол 9 · 13.03, 15:40" p="СНЯТИЕ" />
+            </Rows>
 
-          <div className="qsec">Правки счёта · 5, последние</div>
-          <Rows>
-            <LogRow t="Стол 3 · 1/16 · 2 : 1 → 2 : 0" s="Оспанов Т. · 12.03, 12:41" p="В ЖУРНАЛЕ" />
-            <LogRow t="Стол 7 · 1/32 · 3 : 0 → 3 : 1" s="Жумабеков Р., заместитель · 12.03, 11:05" p="В ЖУРНАЛЕ" />
-          </Rows>
+            <Sec>Правки счёта · 5, последние</Sec>
+            <Rows>
+              <LogRow t="Стол 3 · 1/16 · 2 : 1 → 2 : 0" s="Оспанов Т. · 12.03, 12:41" p="В ЖУРНАЛЕ" />
+              <LogRow t="Стол 7 · 1/32 · 3 : 0 → 3 : 1" s="Жумабеков Р., заместитель · 12.03, 11:05" p="В ЖУРНАЛЕ" />
+            </Rows>
 
-          <div style={{ marginTop: 12 }}>
-            <Submit>Отправить председателю ГСК</Submit>
-          </div>
-        </Panel>
-      </div>
+            <div className="mt-4">
+              <PrimaryAction>Отправить председателю ГСК</PrimaryAction>
+            </div>
+          </Panel>
+        </div>
       )}
-    </RoleScreen>
+    </WebApp>
   );
 }
-
-/* ── Борд роли ──────────────────────────────────────────────────── */
-
-const Tournament6_1States = () => (
-  <States>
-    <Shot tone="info" title="Состояние «Приём заявок игроков»" text="«N заявок ждут решения» со ссылкой на Э6.2.">
-      <Rows>
-        <Row nm="8 заявок ждут решения" sub="Э6.2 · приём открыт до 12.03, 18:00" pill={{ t: 'СРОЧНО', cls: 'bad' }} />
-      </Rows>
-    </Shot>
-
-    <Shot tone="info" title="Состояние «Система проведения»" text="«Сетка не собрана», «на 2 столах нет судьи» — ссылки на Э6.3 и Э6.5.">
-      <Rows>
-        <Row nm="Сетка не собрана" sub="Э6.3 · состав закрыт, можно строить" pill={{ t: 'ПОРА', cls: 'wait' }} />
-        <Row nm="На 2 столах нет судьи" sub="Э6.5 · матч не стартует без судьи" pill={{ t: 'ДО СТАРТА', cls: 'wait' }} />
-      </Rows>
-    </Shot>
-
-    <Shot tone="info" title="Состояние «Идёт»" text="«3 пары ждут стола» — ссылка на Э6.6.">
-      <Rows>
-        <Row nm="3 пары ждут стола" sub="Э6.6 · свободных столов нет" pill={{ t: 'ОЧЕРЕДЬ', cls: 'reg' }} />
-      </Rows>
-    </Shot>
-  </States>
-);
-
-const Bids6_2States = () => (
-  <States>
-    <Shot tone="info" title="Заявок нет" text="Пустое состояние со сроком приёма.">
-      <Empty title="Заявок пока нет" text="Приём открыт до 12.03, 18:00." />
-    </Shot>
-
-    <Shot tone="warning" title="Заявка с непроходящим игроком" text="Кнопка «Принять» остаётся, но с предупреждением ✳.">
-      <Rows>
-        <Row nm="Жумабеков Расул" sub="взнос не оплачен · медицинский допуск не приложен" pill={{ t: 'НЕ ПРОХОДИТ', cls: 'bad' }} />
-      </Rows>
-      <Alert>Решение за судьёй: система показывает несоответствие, но не решает за него.</Alert>
-    </Shot>
-
-    <Shot tone="info" title="Приём закрыт" text="Списки только на чтение." wide>
-      <Rows>
-        <Row nm="112 участников · приём закрыт 12.03" sub="решения приняты, состав зафиксирован" pill={{ t: 'СОСТАВ СОБРАН', cls: 'live' }} />
-      </Rows>
-    </Shot>
-  </States>
-);
-
-const Bracket6_3States = () => (
-  <States>
-    <Shot tone="danger" title="Состав не собран" text="Экран закрыт с пояснением: сетку раньше состава не строят.">
-      <Empty title="Сетку строить рано" text="Приём заявок ещё открыт: сетка собирается по закрытому составу." />
-    </Shot>
-
-    <Shot
-      tone="warning"
-      title="Ни одна система не укладывается в столы и часы"
-      text="Все варианты с красным светофором, судья решает сам."
-    >
-      <Rows>
-        <Row nm="Олимпийская с группами" sub="нужно 9 часов · есть 8" pill={{ t: 'НЕ ВЛЕЗАЕТ', cls: 'bad' }} />
-        <Row nm="Круговая" sub="нужно 14 часов · есть 8" pill={{ t: 'НЕ ВЛЕЗАЕТ', cls: 'bad' }} />
-      </Rows>
-    </Shot>
-  </States>
-);
-
-const Schedule6_4States = () => (
-  <States>
-    <Shot tone="info" title="Сетки ещё нет" text="Экран пуст, со ссылкой на Э6.3." wide>
-      <Empty title="Расписание строится по сетке" text="Сначала соберите сетку — Э6.3." />
-    </Shot>
-  </States>
-);
-
-const Judges6_5States = () => (
-  <States>
-    <Shot tone="danger" title="На столе нет судьи" text="Слот подсвечен; стол не примет матчи, пока судья не назначен." wide>
-      <Rows>
-        <Row nm="Стол 7" sub="судья не назначен" pill={{ t: 'НЕТ СУДЬИ', cls: 'bad' }} action="Назначить" />
-      </Rows>
-      <Alert tone="danger">Матч не стартует, пока на стол не назначен судья.</Alert>
-    </Shot>
-  </States>
-);
-
-const Live6_6States = () => (
-  <States>
-    <Shot tone="danger" title="Матч не может стартовать" text="На карточке стола причина — «нет судьи».">
-      <Rows>
-        <Row nm="Стол 7 · Ерлан — Пак" sub="пара вызвана, судьи нет" pill={{ t: 'НЕ СТАРТУЕТ', cls: 'bad' }} />
-      </Rows>
-    </Shot>
-
-    <Shot tone="warning" title="Обрыв связи у стола" text="Карточка помечена; при расхождении приоритет у судьи стола.">
-      <Rows>
-        <Row nm="Стол 4" sub="связи нет 2 минуты · счёт ведётся локально" pill={{ t: 'БЕЗ СВЯЗИ', cls: 'wait' }} />
-      </Rows>
-    </Shot>
-  </States>
-);
 
 const Protocol6_7States = () => (
   <States>
     <Shot tone="info" title="Ожидание решения ГСК" text="Экран «протокол на утверждении» — без кнопок правки." wide>
-      <Rows>
-        <Row nm="Протокол отправлен" sub="председателю ГСК · 20.05, 19:10" pill={{ t: 'НА УТВЕРЖДЕНИИ', cls: 'wait' }} />
-      </Rows>
+      <Frag>
+        <Rows>
+          <Row nm="Протокол отправлен" sub="председателю ГСК · 20.05, 19:10" pill={{ t: 'НА УТВЕРЖДЕНИИ', cls: 'wait' }} />
+        </Rows>
+      </Frag>
     </Shot>
   </States>
 );
@@ -1666,22 +1856,25 @@ const Protocol6_7States = () => (
 
 export function Reject6_8() {
   return (
-    <RoleScreen role={R06} nav="Заявки" title="Заявки участников" sub="Приём открыт до 12.03, 18:00">
+    /* Значок в шапке — «ПРИЁМ ЗАЯВОК», как на Э6.1–Э6.2: отклонение с причиной
+       живёт только пока приём открыт, значок «ИДЁТ» спорил бы с подзаголовком. */
+    <WebApp role={at('ПРИЁМ ЗАЯВОК')} nav="Заявки" title="Заявки участников" sub="Приём открыт до 12.03, 18:00">
       <Rows>
         <Row nm="Жумабеков Расул" sub="2007 · Караганда · «Шахтёр»" pill={{ t: 'НЕ ПРОХОДИТ', cls: 'bad' }} />
         <Row nm="Ерлан Бекзат" sub="2006 · Актобе · спортшкола №3" pill={{ t: 'ЗАЯВКА', cls: 'reg' }} />
       </Rows>
 
-      <Modal
+      <InlineDialog
         title="Отклонить заявку с причиной"
         sub="Жумабеков Расул · одиночный разряд"
+        to="Э6.2"
         foot={
           <>
-            <div className="dcount">Причина уйдёт заявителю и останется в журнале</div>
-            <div style={{ display: 'flex', gap: 8 }}>
-              <Ghost>Закрыть</Ghost>
-              <button className="dsubmit" style={{ padding: '11px 16px' }}>Отклонить</button>
-            </div>
+            <span className="mr-auto text-xs text-neutral-500">
+              Причина уйдёт заявителю и останется в журнале
+            </span>
+            <QuietAction>Закрыть</QuietAction>
+            <Button variant="danger">Отклонить</Button>
           </>
         }
       >
@@ -1690,29 +1883,41 @@ export function Reject6_8() {
           <Row nm="Медицинский допуск" sub="документ не приложен" pill={{ t: 'НЕ ПРОХОДИТ', cls: 'bad' }} />
           <Row nm="Возраст" sub="2007 · граница «без ограничения»" pill={{ t: 'ПРОХОДИТ', cls: 'live' }} />
         </Rows>
-        <Form>
-          <Input label="Причина" value="нет медицинского допуска и не оплачен годовой взнос" wide />
-        </Form>
-        <Alert>Проверку система сделала сама, но решение — судьи: он может принять и с замечанием.</Alert>
-      </Modal>
-    </RoleScreen>
+        <div className="mt-3">
+          <FormGrid>
+            <TextInput label="Причина" value="нет медицинского допуска и не оплачен годовой взнос" wide />
+          </FormGrid>
+        </div>
+        <div className="mt-3">
+          <Bar tone="warning">Проверку система сделала сама, но решение — судьи: он может принять и с замечанием.</Bar>
+        </div>
+      </InlineDialog>
+    </WebApp>
   );
 }
 
 const Reject6_8States = () => (
   <States>
     <Shot tone="danger" title="Причина не заполнена" text="Кнопка неактивна.">
-      <div className="dfield">
-        <div className="k">Причина</div>
-        <div className="dval" style={{ color: 'var(--c-danger)' }}>— не заполнена</div>
-      </div>
-      <Off>Отклонить</Off>
+      <Frag w={480}>
+        <FormGrid>
+          <div className="flex flex-col gap-1">
+            <span className="text-xs font-medium text-neutral-500">Причина</span>
+            <span className="w-full rounded-lg bg-red-50 px-3 py-1.5 text-sm font-medium text-red-700">
+              — не заполнена
+            </span>
+          </div>
+        </FormGrid>
+        <div className="mt-3"><DisabledAction>Отклонить</DisabledAction></div>
+      </Frag>
     </Shot>
 
     <Shot tone="warning" title="Приём уже закрыт ✳" text="В уведомлении не обещаем повторную подачу.">
-      <Rows>
-        <Row nm="Приём заявок" sub="закрыт 12.03, 18:00" pill={{ t: 'ЗАКРЫТ', cls: 'done' }} />
-      </Rows>
+      <Frag>
+        <Rows>
+          <Row nm="Приём заявок" sub="закрыт 12.03, 18:00" pill={{ t: 'ЗАКРЫТ', cls: 'done' }} />
+        </Rows>
+      </Frag>
     </Shot>
   </States>
 );
@@ -1721,21 +1926,22 @@ const Reject6_8States = () => (
 
 export function Finish6_9() {
   return (
-    <RoleScreen role={R06} nav="Протокол" title="Итоговый протокол" sub="Чемпионат Казахстана 2026">
+    <WebApp role={R06} nav="Протокол" title="Итоговый протокол" sub="Чемпионат Казахстана 2026">
       <Rows>
         <Row nm="Сыграно матчей" sub="127 из 127" pill={{ t: 'ВСЁ СЫГРАНО', cls: 'live' }} />
       </Rows>
 
-      <Modal
+      <InlineDialog
         title="Сформировать итоговый протокол"
         sub="Чемпионат Казахстана 2026 · шаг необратим"
+        to="Э6.7"
         foot={
           <>
-            <div className="dcount">После формирования ввод результатов закрыт</div>
-            <div style={{ display: 'flex', gap: 8 }}>
-              <Ghost>Закрыть</Ghost>
-              <button className="dsubmit" style={{ padding: '11px 16px' }}>Сформировать</button>
-            </div>
+            <span className="mr-auto text-xs text-neutral-500">
+              После формирования ввод результатов закрыт
+            </span>
+            <QuietAction>Закрыть</QuietAction>
+            <Button variant="primary">Сформировать</Button>
           </>
         }
       >
@@ -1744,33 +1950,43 @@ export function Finish6_9() {
           <Row nm="Незакрытых протестов нет" sub="проверено" pill={{ t: 'ДА', cls: 'live' }} />
           <Row nm="Столы освобождены" sub="20 из 20" pill={{ t: 'ДА', cls: 'live' }} />
         </Rows>
-        <Alert>
-          Ввод результатов закроется, турнир перейдёт в «Итоговый протокол», а сам протокол уйдёт
-          председателю ГСК на утверждение.
-        </Alert>
-      </Modal>
-    </RoleScreen>
+        <div className="mt-3">
+          <Bar>
+            Ввод результатов закроется, турнир перейдёт в «Итоговый протокол», а сам протокол
+            уйдёт председателю ГСК на утверждение.
+          </Bar>
+        </div>
+      </InlineDialog>
+    </WebApp>
   );
 }
 
 const Finish6_9States = () => (
   <States>
     <Shot tone="danger" title="Есть несыгранные матчи" text="«Сформировать» неактивна со списком того, что мешает.">
-      <Rows>
-        <Row nm="Не сыграно матчей" sub="стол 4 — 1/4 финала, стол 9 — за 3-е место" val="2" pill={{ t: 'МЕШАЕТ', cls: 'bad' }} />
-      </Rows>
-      <Off>Сформировать</Off>
+      <Frag>
+        <Rows>
+          <Row nm="Не сыграно матчей" sub="стол 4 — 1/4 финала, стол 9 — за 3-е место" val="2" pill={{ t: 'МЕШАЕТ', cls: 'bad' }} />
+        </Rows>
+        <div className="mt-3"><DisabledAction>Сформировать</DisabledAction></div>
+      </Frag>
     </Shot>
 
     <Shot tone="info" title="Протокол уже сформирован" text="Вместо кнопки — состояние «на утверждении».">
-      <Rows>
-        <Row nm="Протокол отправлен" sub="председателю ГСК · 20.05, 19:10" pill={{ t: 'НА УТВЕРЖДЕНИИ', cls: 'wait' }} />
-      </Rows>
+      <Frag>
+        <Rows>
+          <Row nm="Протокол отправлен" sub="председателю ГСК · 20.05, 19:10" pill={{ t: 'НА УТВЕРЖДЕНИИ', cls: 'wait' }} />
+        </Rows>
+      </Frag>
     </Shot>
   </States>
 );
 
-/** Экраны роли по кодам: из этой карты собираются и борд, и карта флоу. */
+/* ── Борд роли: экраны маршрута подряд ──────────────────────────── */
+
+/** Экраны роли по кодам: из этой карты собираются и борд, и карта флоу.
+    Коды, подписи и порядок — те же, что были: по ним сходятся flows/, данные
+    роли и Storybook. */
 export const SCREENS: ScreenMap = {
   /* Борд роли начинается со входа — как у всех ролей (flows/00): маршрут не
      должен обрываться на середине. Регистрация стоит следом: это путь ДО

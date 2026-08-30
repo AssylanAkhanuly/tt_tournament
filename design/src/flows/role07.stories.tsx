@@ -9,6 +9,7 @@ import { Role07Board, SCREENS } from '../mockups/role07';
 export default {
   title: 'Флоу/07 · Главный секретарь соревнований',
   parameters: { layout: 'fullscreen' },
+  globals: { theme: 'daylight-fnt' },
 };
 
 /* Парный вид первым: под каждым узлом маршрута стоит его макет — требование и

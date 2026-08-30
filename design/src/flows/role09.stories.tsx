@@ -9,6 +9,7 @@ import { Role09Board, SCREENS } from '../mockups/role09';
 export default {
   title: 'Флоу/09 · Судья',
   parameters: { layout: 'fullscreen' },
+  globals: { theme: 'daylight-fnt' },
 };
 
 /* Парный вид первым: под каждым узлом маршрута стоит его макет — требование и

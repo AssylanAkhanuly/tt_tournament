@@ -9,6 +9,7 @@ import { Role16Board, SCREENS } from '../mockups/role16';
 export default {
   title: 'Флоу/16 · Дисциплинарный комитет',
   parameters: { layout: 'fullscreen' },
+  globals: { theme: 'daylight-fnt' },
 };
 
 /* Парный вид первым: под каждым узлом маршрута стоит его макет — требование и

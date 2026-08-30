@@ -1,5 +1,7 @@
-/* Роль 1 · Администратор Федерации — макеты по флоу.
-   Экраны Э1.1–Э1.14 (см. `flows/01-admin-federacii.md` и схему роли).
+/* Роль 1 · Администратор Федерации — макеты по флоу на новом слое (HeroUI) ✳
+   (30.08.2026). Содержание, решения и переходы — прежние (см.
+   `flows/01-admin-federacii.md`); меняется подача: оболочка WebApp и доменные
+   компоненты `kit/hero/app` вместо старого макетного слоя.
 
    Роль работает с десктопа и видит всю систему: календарь и турниры, роли,
    реестры, журнал, контент. Полный доступ безопасен потому, что система
@@ -7,7 +9,12 @@
 
    Под каждым экраном стоит полка `States` — тот же экран в других ситуациях
    (пусто, поле не заполнено, действие запрещено). Подписи кадров повторяют
-   `states[]` из данных роли: `src/flows/data/role01.ts`.
+   `states[]` из данных роли: `src/flows/data/role01.ts`; у входа (Э0.1) —
+   из данных сквозных экранов, `role00.ts`. Кроме состояний на полке бывает
+   кадр зоны — то, что на самом экране открывается кликом и в снимок борда не
+   попадает (карточка человека с ролями на Э1.5); соседний вид того же экрана
+   стоит врезкой `Also` (выбор контекста на Э0.1, шаг 2 мастера на Э1.4, вид
+   «Календарь» на Э1.2, раздел «Расписание» на Э1.3).
 
    Сегодня в макете — 15 апреля 2026: идёт 2-й тур Евразийской лиги, ближайший
    главный старт (Кубок РК) — 18 мая. От этой даты считаются все «сегодня»,
@@ -15,61 +22,284 @@
 
 import { Fragment, useState, type ReactNode } from 'react';
 import {
-  AlertTriangle, ArrowUpDown, Check, ChevronDown, Copy, FileSpreadsheet, GitMerge, Merge, Minus,
-  Pencil, Plus, Send, UserPlus, X,
+  Bell, CalendarDays, Check, ChevronDown, ChevronRight, Copy, FileSpreadsheet, GitMerge, History,
+  LayoutDashboard, Merge, Minus, Newspaper, Pencil, Plus, Send, UserCog, UserPlus, X,
 } from 'lucide-react';
+import { Avatar, Button } from '@heroui/react';
+/* Кит-компоненты берутся поимённо. У календаря кита есть свои `MONTHS` и
+   `MONTHS_GEN`, а роль экспортирует одноимённые (ими пользуются роли 12 и 13):
+   импортировать их отсюда нельзя — имена столкнутся. */
 import {
-  A, ActionBar, Alert, Also, Area, Arrow, AW, Board, Chips, DateField, Derived, Empty, Field,
-  FilePick, Filter, Form, Ghost, Hint, Input, Modal, Off, P, Pager, Panel, RoleScreen, Row, Rows,
-  Screen, Search, Select, Shot, States, Attention as AttnStrip,
-} from './shell';
-import type { AttnItem } from './shell';
-import type { ScreenMap } from './shell';
-import type { DeskVariant } from '../deskShell';
-import { Switch } from '../ui/forms';
+  A, AW, Attention as AttnQueue, AreaInput, Bar, dateWords, DayList, Derived, DisabledAction,
+  EmptyBox, FieldView, FileDrop, FilterSeg, FormGrid, InlineDialog, MiniMonth, MonthGrid, Pager,
+  Panel, PickField, Pill, QuietAction, Row, Rows, ScreenScope, SearchInput, TextInput, TimeGrid,
+  StatTiles, WebApp,
+  type AttnItem, type CalEvent, type CalTone, type RoleUI, type SlotEvent,
+} from '../kit/hero/app';
+/* Из старого слоя остаются только мета-компоненты борда: колонки, стрелки,
+   полки состояний и врезки. Сами экраны собраны новым слоем. */
+import { Also, Board, States, Shot, type ScreenMap } from './shell';
+/* Сетка — настоящий компонент фронта, как и в прежнем слое: вторая
+   нарисованная сетка разошлась бы с той, что увидят в продукте. */
 import { BracketFlow } from '@/widgets/bracket/BracketFlow';
 import { makeBigBracket } from '../bigBracket';
-
-/** Плей-офф Кубка РК: 32 вышедших из групп. Формат турнира — «олимпийская с
-    группами», и сетка на выбывание начинается после группового этапа. */
-const playoff32 = { ...makeBigBracket(5), title: 'Кубок Республики Казахстан 2026 · плей-офф' };
-import { R01 } from './roles';
-import { Login0_1 } from './role00';
+/* Вход и выбор контекста — сквозные экраны (Э0.1): их рисует `role00`, борд
+   роли ставит их первой колонкой. Полка состояний входа собрана здесь: борд
+   роли начинается со входа, и без неё три объявленных состояния нигде не
+   показаны. */
+import { Context0_1, Login0_1 } from './role00';
 /* Состав участников и его таблица — те же, что у спортсмена (Э14.5) и у клуба
    (Э13.9): список участников турнира у всех ролей один, разный только срез
    «мои». Второй такой же список — это два состава одного турнира, которые
    разъедутся. */
 import { PLAYERS as ROSTER, Players14_5, type Ply14 } from './role14';
 
+/** Плей-офф Кубка РК: 32 вышедших из групп. Формат турнира — «олимпийская с
+    группами», и сетка на выбывание начинается после группового этапа. */
+const playoff32 = { ...makeBigBracket(5), title: 'Кубок Республики Казахстан 2026 · плей-офф' };
+
+/* ── Роль: сайдбар и подпись профиля ─────────────────────────────── */
+
+/** Данные роли — те же, что в старом слое (`roles.tsx`), тип — из нового.
+    `badge: false` — роль вне турнира, значка состояния в шапке нет. */
+const R01: RoleUI = {
+  num: '1',
+  title: 'Администратор Федерации',
+  person: { nm: 'Абаева Д.', rl: 'Администратор Федерации', av: AW(44) },
+  brandName: 'Сезон 2026',
+  brandSub: 'Календарь ФНТ РК · 8 главных стартов',
+  badge: false,
+  nav: [
+    [<LayoutDashboard size={16} key="p" />, 'Панель'],
+    [<CalendarDays size={16} key="c" />, 'Календарь'],
+    [<UserCog size={16} key="u" />, 'Пользователи'],
+    [<History size={16} key="j" />, 'Журнал'],
+    [<Newspaper size={16} key="n" />, 'Новости'],
+  ],
+};
+
 /* ── Общие мелочи роли ──────────────────────────────────────────── */
 
-/** Второстепенная кнопка с иконкой: `dpickbtn` — не флекс-контейнер, а иконки
-    в макетном слое блочные, поэтому раскладку задаём здесь. */
+/** Тона значков старого словаря → цвета `Pill` нового слоя: данные экранов
+    переносятся без переписывания. */
+type Cls = 'live' | 'wait' | 'bad' | 'reg' | 'done';
+const PC: Record<Cls, 'success' | 'warning' | 'danger' | 'accent' | 'default'> = {
+  live: 'success', wait: 'warning', bad: 'danger', reg: 'accent', done: 'default',
+};
+const P = ({ t, cls }: { t: string; cls: Cls }) => <Pill t={t} color={PC[cls]} />;
+
+/** Второстепенная кнопка с иконкой. Экспортируется: ею пользуются
+    роли-наблюдатели (role0304) — подпись и место те же, подача новая. */
 export const Btn = ({ children }: { children: ReactNode }) => (
-  <button className="dpickbtn" style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-    {children}
-  </button>
+  <Button size="sm" variant="outline">{children}</Button>
 );
 
-/** Раздел диалога с отбивкой: без неё подпись раздела читается как подпись к
-    предыдущему полю формы. */
-export const Block = ({ title, children }: { title: string; children: ReactNode }) => (
-  <div style={{ borderTop: '1px solid var(--c-glass-line)', paddingTop: 12 }}>
-    <div className="dcount" style={{ marginBottom: 8 }}>{title}</div>
-    {children}
+/** Кадр состояния: фрагмент экрана в скоупе нового слоя — без обёртки фрагмент
+    на полке States остаётся без стилей HeroUI. */
+const Frag = ({ w = 560, children }: { w?: number; children: ReactNode }) => (
+  <ScreenScope>
+    <div style={{ width: w }}>{children}</div>
+  </ScreenScope>
+);
+
+/* ⚠ Временная дупликация с role05: Sheet/Th/NoRows/Who — общие мелочи нового
+   слоя, но общего дома у них пока нет, а импортировать их из чужого roleNN
+   нельзя. Когда мелочи переедут в kit/hero — заменить на общие. */
+
+/** Таблица с «живыми» строками: шапка колонок задана, строки собирает экран. */
+const Sheet = ({ cols, grid, children }: { cols: ReactNode[]; grid: string; children: ReactNode }) => (
+  <div className="overflow-hidden rounded-xl border border-neutral-200 bg-white shadow-sm">
+    <div
+      className="grid items-center gap-3 border-b border-neutral-200 bg-neutral-50 px-4 py-2 text-[11px] font-semibold uppercase tracking-wider text-neutral-400"
+      style={{ gridTemplateColumns: grid }}
+    >
+      {cols.map((c, i) => <span key={i} className="min-w-0">{c}</span>)}
+    </div>
+    <div className="divide-y divide-neutral-100">{children}</div>
   </div>
 );
 
-/** Пара строк-подсказок под списком: чтобы плашки не слипались. */
-export const Notes = ({ children }: { children: ReactNode }) => (
-  <div style={{ display: 'grid', gap: 10, marginTop: 12 }}>{children}</div>
+/** Заголовок сортируемого столбца. */
+const Th = ({ t, on, onClick }: { t: string; on: boolean; onClick: () => void }) => (
+  <button
+    type="button"
+    onClick={onClick}
+    className={'flex items-center gap-1 text-left uppercase tracking-wider ' + (on ? 'text-neutral-700' : 'hover:text-neutral-600')}
+  >
+    {t}
+    {on && <ChevronDown size={11} />}
+  </button>
 );
+
+/** Пустой результат поиска — строкой таблицы, а не отдельным экраном. */
+const NoRows = ({ children }: { children: ReactNode }) => (
+  <div className="px-4 py-4 text-[12.5px] text-neutral-500">{children}</div>
+);
+
+/** Человек в строке таблицы: фото и две строки. */
+const Who = ({ av, nm, sub }: { av?: string; nm: string; sub?: ReactNode }) => (
+  <span className="flex min-w-0 items-center gap-2.5">
+    {av && (
+      <Avatar size="sm">
+        <Avatar.Image alt={nm} src={av} />
+        <Avatar.Fallback>{nm.slice(0, 1)}</Avatar.Fallback>
+      </Avatar>
+    )}
+    <span className="min-w-0 leading-tight">
+      <span className="block truncate text-[13.5px] font-medium">{nm}</span>
+      {sub && <span className="block truncate text-xs text-neutral-500">{sub}</span>}
+    </span>
+  </span>
+);
+
+/** Малые плитки-показатели внутри панели или диалога. */
+const CELL_TONE = { g: 'text-green-700', a: 'text-amber-600', r: 'text-red-600', b: 'text-blue-700' } as const;
+const Cells = ({ items, cols = 3 }: { items: { v: string; k: string; tone?: keyof typeof CELL_TONE }[]; cols?: number }) => (
+  <div className="grid gap-2" style={{ gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))` }}>
+    {items.map((c) => (
+      <div key={c.k} className="rounded-lg bg-neutral-50 px-3 py-2.5">
+        <div className={'text-lg font-semibold leading-tight tabular-nums ' + (c.tone ? CELL_TONE[c.tone] : '')}>{c.v}</div>
+        <div className="mt-0.5 text-[11px] text-neutral-500">{c.k}</div>
+      </div>
+    ))}
+  </div>
+);
+
+/** Подзаголовок раздела внутри диалога или панели-документа. */
+const Sec = ({ children }: { children: ReactNode }) => (
+  <div className="mb-2 mt-5 text-[11px] font-semibold uppercase tracking-wider text-neutral-400 first:mt-0">{children}</div>
+);
+
+/** Тумблер условия допуска: статичный вид с переключением — Switch старого
+    слоя в новом не живёт, а Tailwind такие вещи выражает сам. */
+const Flag = ({ label, on: initial = true }: { label: string; on?: boolean }) => {
+  const [on, setOn] = useState(initial);
+  return (
+    <button
+      type="button"
+      onClick={() => setOn(!on)}
+      className="flex w-full items-center justify-between gap-3 rounded-lg bg-neutral-50 px-3 py-2 text-left text-sm"
+    >
+      {label}
+      <span className={'relative h-5 w-9 shrink-0 rounded-full ' + (on ? 'bg-blue-600' : 'bg-neutral-300')}>
+        <span className={'absolute top-0.5 h-4 w-4 rounded-full bg-white shadow ' + (on ? 'right-0.5' : 'left-0.5')} />
+      </span>
+    </button>
+  );
+};
+
+/** Переключатель языка: он стоит в шапке на каждом экране системы (Э0.1, зона
+    «Язык»; Э1.1, зона «Шапка»). Свой маленький, а не `FilterSeg`: в шапке
+    нужен кегль мельче. */
+const Langs = () => {
+  const [l, setL] = useState('RU');
+  return (
+    <div data-seg className="inline-flex gap-0.5 rounded-lg bg-neutral-100 p-0.5">
+      {['RU', 'KZ', 'EN'].map((t) => (
+        <button
+          key={t}
+          type="button"
+          aria-selected={t === l}
+          onClick={() => setL(t)}
+          className={
+            'rounded-md px-2 py-1 text-[11px] font-semibold ' +
+            (t === l ? 'on bg-white text-neutral-900 shadow-sm' : 'text-neutral-500 hover:text-neutral-800')
+          }
+        >
+          {t}
+        </button>
+      ))}
+    </div>
+  );
+};
+
+/* ── Э0.1 · Вход: состояния экрана ─────────────────────────────── */
+
+/** Полка состояний входа. Сам экран общий (`Login0_1` из `role00`), а полка у
+    каждого борда своя: маршрут роли начинается со входа, и без неё три
+    объявленных состояния — неверный пароль, истёкшая роль, неактивированный
+    аккаунт — не показаны нигде. Подписи — из данных сквозных экранов
+    (`src/flows/data/role00.ts`). */
+const Login0_1States = () => (
+  <States>
+    <Shot
+      tone="danger"
+      title="Неверный логин или пароль"
+      text="Ошибка под полем; поля не очищаются."
+    >
+      <Frag w={420}>
+        <FormGrid>
+          <TextInput label="Телефон или почта" value="+7 705 431 20 18" wide />
+          <div className="col-span-2 flex flex-col gap-1">
+            <span className="text-xs font-medium text-neutral-500">Пароль</span>
+            <span className="w-full rounded-lg border border-red-300 bg-red-50 px-3 py-1.5 text-sm text-red-700">
+              ••••••
+            </span>
+            <span className="text-[11.5px] leading-snug text-red-600">
+              Неверный логин или пароль. Проверьте раскладку или восстановите пароль
+            </span>
+          </div>
+        </FormGrid>
+        <div className="mt-3">
+          <DisabledAction>Войти</DisabledAction>
+        </div>
+      </Frag>
+    </Shot>
+
+    <Shot
+      tone="warning"
+      title="Роль истекла"
+      text="Роли нет в списке контекстов, история действий человека сохраняется."
+    >
+      <Frag>
+        <Rows>
+          <Row
+            nm="Администратор Федерации · система"
+            sub="выдана 12.01.2026 · бессрочно"
+            pill={{ t: 'ДЕЙСТВУЕТ', cls: 'live' }}
+          />
+          <Row
+            nm="Судья · Открытие сезона 2026"
+            sub="срок вышел 21.01.2026"
+            pill={{ t: 'ИСТЕКЛА', cls: 'done' }}
+          />
+        </Rows>
+        <div className="mt-3">
+          <Bar>
+            Истёкшая роль в выбор не попадает: войти под ней нельзя. Всё, что человек делал в ней,
+            остаётся в журнале с его именем.
+          </Bar>
+        </div>
+      </Frag>
+    </Shot>
+
+    <Shot
+      tone="warning"
+      title="Аккаунт не активирован ✳"
+      text="Приглашение отправлено, но пароль ещё не задан — стыкуется с Э1.10."
+      wide
+    >
+      <Frag>
+        <Bar>
+          На этот адрес отправлено приглашение 15.04.2026: ссылку выпустил администратор Федерации
+          (Э1.10). Пароль человек задаёт сам, открыв её, — до этого вход не работает.
+        </Bar>
+        <div className="flex items-center gap-2">
+          <QuietAction>Отправить приглашение ещё раз</QuietAction>
+          <DisabledAction>Войти</DisabledAction>
+        </div>
+      </Frag>
+    </Shot>
+  </States>
+);
+
+/* ── Календарь сезона: данные ───────────────────────────────────── */
 
 /** Категория соревнования — ею фильтруется календарь (ROLES.md §«по категориям»).
     «Клубные» в календарь федерации не попадают: их ведёт администратор клуба. */
 export type Cat = 'Главный старт' | 'Лига' | 'ОРТ';
 
-/** Месяцы сезона: именительный — шапка плитки в сетке, родительный — дата.
+/** Месяцы сезона: именительный — подпись в полосе месяцев, родительный — дата.
     Календарь есть не только у федерации (у клуба — свой, Э13.6), а месяцы и
     «сегодня» во всех макетах одни: иначе сезоны в них разъедутся. */
 export const MONTHS = [
@@ -105,7 +335,7 @@ type Tour = {
   teams?: { men: [number, number]; women: [number, number] };
   judge?: string;
   st: string;
-  cls: string;
+  cls: Cls;
 };
 
 /** Подпись под названием — собирается из полей, а не дублируется в данных. */
@@ -163,29 +393,34 @@ export const UPCOMING = TOURS.filter(
 );
 
 /** Строка календаря. `judge` — показывать ли колонку главного судьи:
-    не назначен — прочерк с подсветкой, как требует флоу. */
+    не назначен — прочерк с подсветкой, как требует флоу. Экспортируется:
+    те же строки смотрят роли-наблюдатели (Э3.1, Э3.2). */
 export const TourRow = ({ t, judge }: { t: Tour; judge?: boolean }) => (
-  <div className="drow" data-to="Э1.3">
-    <div className="who">
-      <div className="nm">{t.nm}</div>
-      <div className="rl">{meta(t)}</div>
-    </div>
+  <div
+    data-to="Э1.3"
+    data-row
+    className="flex w-full cursor-pointer items-center gap-3 px-4 py-2.5 text-left hover:bg-neutral-50"
+  >
+    <span className="min-w-0 flex-1 leading-tight">
+      <span className="block truncate text-[13.5px] font-medium">{t.nm}</span>
+      <span className="block truncate text-xs text-neutral-500">{meta(t)}</span>
+    </span>
     {judge &&
       (t.judge ? (
-        <div className="amt" style={{ color: 'var(--c-muted)' }}>{t.judge}</div>
+        <span className="shrink-0 text-[13px] text-neutral-500">{t.judge}</span>
       ) : (
-        <div className="amt" style={{ color: 'var(--c-warning)' }}>— судьи нет</div>
+        <span className="shrink-0 text-[13px] font-medium text-amber-700">— судьи нет</span>
       ))}
     {/* У Лиги в этой колонке не «заявок подано / принято», а команды: заявляется
         клуб, и мужской с женским розыгрышем идут отдельными лигами (TZ §4.1).
         Одним числом их не свести — «12 команд» скрывало, что розыгрыша два. */}
     {t.teams ? (
-      <div className="amt tteams">
-        <span><i>муж</i> {t.teams.men[0]} команд · {t.teams.men[1]} лиг</span>
-        <span><i>жен</i> {t.teams.women[0]} команд · {t.teams.women[1]} лиги</span>
-      </div>
+      <span className="shrink-0 text-right text-[11px] leading-tight text-neutral-600">
+        <span className="block"><i className="mr-1 not-italic text-neutral-400">муж</i>{t.teams.men[0]} команд · {t.teams.men[1]} лиг</span>
+        <span className="block"><i className="mr-1 not-italic text-neutral-400">жен</i>{t.teams.women[0]} команд · {t.teams.women[1]} лиги</span>
+      </span>
     ) : (
-      <div className="amt">{t.apps}</div>
+      <span className="shrink-0 text-[13px] tabular-nums text-neutral-700">{t.apps}</span>
     )}
     <P t={t.st} cls={t.cls} />
   </div>
@@ -341,24 +576,12 @@ const ATTENTION: AttnItem[] = [
   },
 ];
 
-/** Список за счётчиком: чем дело снимается и кто его снимает.
-
-    Заголовка у списка нет: он повторял бы подпись раскрытого счётчика прямо
-    над собой. Сколько строк показано из скольких — в подвале. */
-
-/** Строка очереди под плитками: счётчик раскрывает свой список на месте.
-
-    Раскрытым по умолчанию стоит первый счётчик — макет должен показывать сам
-    разбор, а не прятать его за клик; остальные переключаются кликом.
-
-    `action` — главная кнопка экрана, она стоит в одном ряду со счётчиками:
-    раньше ряд собирался снаружи полосой `dactionbar`, но теперь под ним
-    раскрывается список, и полоса разъезжалась. */
-/** Очередь администратора федерации: общий компонент со своими данными. */
+/** Очередь администратора федерации: общий компонент нового слоя со своими
+    данными. Экспортируется — её же смотрят роли-наблюдатели (Э3.1), без
+    переходов (`act={false}`). */
 export const Attention = (props: { act?: boolean; action?: ReactNode; max?: number }) => (
-  <AttnStrip items={ATTENTION} {...props} />
+  <AttnQueue items={ATTENTION} {...props} />
 );
-
 
 /** «Сегодня идут»: тур Лиги идёт двумя дивизионами сразу, на разных столах.
 
@@ -370,12 +593,17 @@ export const TodayRows = ({ act = true, one }: { act?: boolean; one?: boolean })
       { nm: 'Суперлига · мужчины', sub: 'Евразийская лига, 2-й тур · Караганда · столы 1–6', v: '34 из 60' },
       { nm: 'Суперлига · женщины', sub: 'Евразийская лига, 2-й тур · Караганда · столы 7–10', v: '26 из 48' },
     ].slice(0, one ? 1 : undefined).map((r) => (
-      <div className="drow" key={r.nm} data-to="Э1.3">
-        <div className="who">
-          <div className="nm">{r.nm}</div>
-          <div className="rl">{r.sub}</div>
-        </div>
-        <div className="amt">{r.v}</div>
+      <div
+        key={r.nm}
+        data-to={act ? 'Э1.3' : undefined}
+        data-row
+        className={'flex w-full items-center gap-3 px-4 py-2.5 text-left' + (act ? ' cursor-pointer hover:bg-neutral-50' : '')}
+      >
+        <span className="min-w-0 flex-1 leading-tight">
+          <span className="block truncate text-[13.5px] font-medium">{r.nm}</span>
+          <span className="block truncate text-xs text-neutral-500">{r.sub}</span>
+        </span>
+        <span className="text-[13px] tabular-nums text-neutral-700">{r.v}</span>
         <P t="ИДЁТ" cls="live" />
       </div>
     ))}
@@ -383,8 +611,8 @@ export const TodayRows = ({ act = true, one }: { act?: boolean; one?: boolean })
 );
 
 /** «Сегодня идут» в межсезонье — пустая зона (её же показывают роли 3 и 4). */
-export const TodayEmpty = () => (
-  <Empty
+const TodayEmpty = () => (
+  <EmptyBox
     title="Сегодня матчей нет"
     text="Здесь появляются турниры в состоянии «Идёт» со счётом сыгранных матчей и ссылкой на ход турнира."
   />
@@ -392,47 +620,83 @@ export const TodayEmpty = () => (
 
 /* ── Э1.1 · Панель Федерации ───────────────────────────────────── */
 
-export function Dash1_1({ variant }: { variant?: DeskVariant }) {
+/** Проп `variant` старой адаптивной рамки сохранён ради истории «Адаптив»
+    (role01resp): у нового слоя своей планшетной рамки веба пока нет. */
+export function Dash1_1(_props: { variant?: 'desktop' | 'land' } = {}) {
   return (
-    <RoleScreen
-      variant={variant}
+    <WebApp
       role={R01}
       nav="Панель"
       title="Панель Федерации"
       sub="Сезон 2026 · 15 апреля"
     >
-      <Chips items={KPI} />
+      <StatTiles items={KPI} />
       {/* В раскрытом счётчике две строки: панель обязана поместиться на экран
-          целиком вместе с календарём под ней, а весь список открывается в
+          целиком вместе с панелями под ней, а весь список открывается в
           календаре сезона. Сколько строк из скольких — подписано. */}
       <Attention
         max={2}
         action={
-          <button className="dsubmit" style={{ padding: '10px 14px' }}>
+          <Button variant="primary">
             <Plus size={15} /> Завести соревнование
-          </button>
+          </Button>
         }
       />
-      {/* «Сегодня идут» — в широкой колонке: в узкой её строки переносили
-          кнопку «Ход турнира» на вторую строку, и панель вырастала вдвое. */}
-      <div className="mkcols">
+      {/* «Сегодня идут» — в широкой колонке: в узкой её строки переносились и
+          панель вырастала вдвое. */}
+      <div className="grid grid-cols-[1.35fr_1fr] items-start gap-4">
+        {/* TodayRows сам рисует рамку списка (его берут и роли-наблюдатели),
+            поэтому панель с отступом, а не flush — иначе рамка в рамке. */}
         <Panel title="Сегодня идут">
           <TodayRows />
         </Panel>
         <Panel
           title="Ближайшие старты"
-          extra={<span className="dcount">ещё {UPCOMING.length - 1} в календаре</span>}
+          extra={<span className="text-xs text-neutral-500">ещё {UPCOMING.length - 1} в календаре</span>}
+          flush
         >
-          <Rows>
-            {UPCOMING.slice(0, 1).map((t) => (
-              <TourRow key={t.nm} t={t} />
-            ))}
-          </Rows>
+          {UPCOMING.slice(0, 1).map((t) => (
+            <TourRow key={t.nm} t={t} />
+          ))}
         </Panel>
       </div>
-    </RoleScreen>
+    </WebApp>
   );
 }
+
+/** Шапка крупным планом: зона «Шапка» из данных роли — сезон, переключатель
+    языка, уведомления, профиль.
+
+    Отдельным кадром, потому что переключателя языка в общей оболочке кита
+    (`kit/hero/app/chrome`) пока нет ⚠, а он обязан стоять на каждом экране
+    системы (Э0.1, зона «Язык»). Кадр показывает, где именно ему место: между
+    названием сезона и колокольчиком. */
+const Head1_1 = () => (
+  <Frag w={620}>
+    <div className="flex items-center gap-3 rounded-xl border border-neutral-200 bg-white px-4 py-2.5 shadow-sm">
+      <span className="min-w-0 leading-tight">
+        <span className="block text-[13.5px] font-semibold">Сезон 2026</span>
+        <span className="block text-[11px] text-neutral-500">Календарь ФНТ РК · 8 главных стартов</span>
+      </span>
+      <span className="flex-1" />
+      <span className="shrink-0"><Langs /></span>
+      <span className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-neutral-600">
+        <Bell size={17} />
+        <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-red-500 ring-2 ring-white" />
+      </span>
+      <span className="flex shrink-0 items-center gap-2.5">
+        <Avatar size="sm">
+          <Avatar.Image alt="Абаева Д." src={AW(44)} />
+          <Avatar.Fallback>А</Avatar.Fallback>
+        </Avatar>
+        <span className="leading-tight">
+          <span className="block text-[13px] font-semibold">Абаева Д.</span>
+          <span className="block text-[11px] text-neutral-500">Администратор Федерации</span>
+        </span>
+      </span>
+    </div>
+  </Frag>
+);
 
 const Dash1_1States = () => (
   <States>
@@ -441,14 +705,20 @@ const Dash1_1States = () => (
       title="Всё разобрано"
       text="Зона «Требует внимания» пустая, с подписью «всё в порядке»."
     >
-      <div className="mkattn">
-        <span className="mkattn-h">Требует внимания</span>
-        <span className="mkattn-i"><b>0</b> нерешённых дел</span>
-      </div>
-      <Empty
-        title="Всё в порядке"
-        text="Нерешённых дел по календарю нет. Плитки вернутся, как только появится турнир без судьи или зависшая заявка."
-      />
+      <Frag>
+        <div className="mb-2 flex items-center gap-2">
+          <span className="text-[11px] font-semibold uppercase tracking-wider text-neutral-400">
+            Требует внимания
+          </span>
+          <span className="rounded-full border border-neutral-200 bg-white px-3 py-1.5 text-[13px]">
+            <b className="tabular-nums">0</b> нерешённых дел
+          </span>
+        </div>
+        <EmptyBox
+          title="Всё в порядке"
+          text="Нерешённых дел по календарю нет. Счётчики вернутся, как только появится турнир без судьи или зависшая заявка."
+        />
+      </Frag>
     </Shot>
 
     <Shot
@@ -456,11 +726,15 @@ const Dash1_1States = () => (
       title="Межсезонье"
       text="Вместо ближайших стартов — приглашение завести сезон, «Сегодня идут» пустая."
     >
-      <Empty
-        title="Сезон 2027 ещё не заведён"
-        text="Календарь сезона пуст: заведите первое соревнование или скопируйте прошлогодний календарь."
-      />
-      <TodayEmpty />
+      <Frag>
+        <div className="grid gap-3">
+          <EmptyBox
+            title="Сезон 2027 ещё не заведён"
+            text="Календарь сезона пуст: заведите первое соревнование или скопируйте прошлогодний календарь."
+          />
+          <TodayEmpty />
+        </div>
+      </Frag>
     </Shot>
   </States>
 );
@@ -479,130 +753,286 @@ const CATS: { k: 'Все категории' | Cat; sub: string }[] = [
   { k: 'ОРТ', sub: '20 открытых республиканских' },
 ];
 
-/** Кант категории у строки в сетке: одна синяя семья и нейтральный.
+/* ── Тот же сезон календарём ─────────────────────────────────────
+   Раньше вторым видом стояла своя сетка из двенадцати плиток, где турнир был
+   строкой «числа + название»: трёхдневный старт в ней выглядел так же, как
+   однодневный, а наложение двух стартов приходилось вычитывать глазами. Место
+   занял календарь кита (`kit/hero/app/calendar`): турнир рисуется ПОЛОСОЙ через
+   все свои дни, и столкновение видно сразу. Год при этом не потерян — его
+   держит полоса месяцев над сеткой. */
 
-    Цвета состояний (значки `live/wait/bad/reg/done`) заняты под другое, и
-    заводить рядом второй язык из тех же зелёного с янтарным нельзя — в плитке
-    месяца они читались бы как состояние. */
-const CAT_CLS: Record<Cat, string> = {
-  'Главный старт': 'gs',
-  'Лига': 'lg',
-  'ОРТ': 'ort',
+/** Состояние турнира → тон события календаря. Язык тот же, что у значка в
+    строке списка (`PC`): одно состояние не может называться в списке одним
+    цветом, а в календаре другим. */
+const CAL_TONE: Record<Cls, CalTone> = {
+  live: 'success', wait: 'warning', bad: 'danger', reg: 'accent', done: 'neutral',
 };
 
-/** Сетка месяцев: как сезон разложен по времени.
+/** Дата сезона в формате календаря — 'ГГГГ-ММ-ДД'. В `TOURS` она намеренно
+    разобрана на месяц и числа («14–16»): по строке показа не фильтруют. Сборка
+    ISO живёт здесь, рядом с календарём, а не в данных. */
+const isoDay = (m: number, d: number) =>
+  `2026-${String(m + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
 
-    Список отвечает на «что в сезоне», сетка — на то, чего в списке не видно:
-    где старты сталкиваются, а где в календаре дыра. Двенадцать плиток по
-    месяцам, внутри — строки по дате.
+/** Сегодня в макете — 15 апреля 2026 (см. шапку файла). */
+const TODAY = isoDay(NOW_M, 15);
 
-    Дневной сетки (месяц × тридцать клеток) намеренно нет: на двенадцати
-    месяцах она нечитаема, и это уже инструмент расписания, а не обзор сезона.
-    Пустой месяц остаётся пустым и видимым — дыра в календаре тоже информация,
-    схлопывать её нельзя. */
-const MonthGrid = ({ rows }: { rows: Tour[] }) => (
-  <div className="mkmg">
-    {MONTHS.map((nm, m) => {
-      const inM = rows.filter((t) => t.m === m);
-      /* Плитка фиксированной высоты: год должен быть виден целиком, поэтому
-         месяц показывает пять стартов, а остаток сворачивает в «ещё N».
-         Иначе один плотный месяц растягивает всю строку сетки.
+/** Турнир → событие календаря. Переход тот же, что у строки списка: карточка
+    турнира. Числа «14–16» разбираются на первый и последний день — однодневный
+    старт остаётся без `till`. */
+const toEvent = (t: Tour): CalEvent => {
+  const [a, b] = t.d.split(/[–—-]/).map((s) => Number(s.trim()));
+  return {
+    id: t.nm,
+    nm: t.nm,
+    from: isoDay(t.m, a),
+    till: b && b !== a ? isoDay(t.m, b) : undefined,
+    tone: CAL_TONE[t.cls],
+    sub: `${t.cat} · ${t.city}`,
+    to: 'Э1.3',
+  };
+};
 
-         Строк всегда ровно пять: когда есть остаток, «ещё N» занимает пятую —
-         иначе она вылезает за нижний край плитки. */
-      const shown = inM.length > 5 ? inM.slice(0, 4) : inM;
-      const rest = inM.length - shown.length;
-      return (
-        <div className={'mkmg-m' + (m === NOW_M ? ' now' : '')} key={nm}>
-          <div className="mkmg-h">
-            <b>{nm}</b>
-            {m === NOW_M ? <span className="tag">сегодня 15-е</span> : <span>{inM.length || ''}</span>}
-          </div>
-          {inM.length ? (
-            <div className="mkmg-b">
-              {shown.map((t) => (
-                <div
-                  className={'mkmg-t ' + CAT_CLS[t.cat]}
-                  key={t.nm}
-                  data-to="Э1.3"
-                  title={`${t.nm} · ${t.city} · ${t.d} ${MONTHS_GEN[m]} · ${t.st}`}
-                >
-                  <span className="d">{t.d}</span>
-                  <span className="n">{t.nm}</span>
-                  <span className={'mkmg-dot ' + t.cls} />
-                </div>
-              ))}
-              {rest > 0 && <div className="mkmg-more" data-to="Э1.2">ещё {rest}</div>}
-            </div>
-          ) : (
-            <div className="mkmg-e">стартов нет</div>
-          )}
-        </div>
-      );
-    })}
+/** День недели словом: «15 апреля» без него читается как дата из документа, а
+    не как день календаря. Считаем в UTC — как кит, иначе день съедет. */
+const DOW = ['понедельник', 'вторник', 'среда', 'четверг', 'пятница', 'суббота', 'воскресенье'];
+const dowOf = (day: string) => DOW[(new Date(`${day}T00:00:00Z`).getUTCDay() + 6) % 7];
+
+/** Полоса месяцев: сезон длиной в год, а календарь показывает один месяц.
+    Из апреля не видно, что в июне стартов пять, а в августе два, — полоса
+    отвечает ровно на это и заменяет прежние двенадцать плиток. Пустой месяц
+    остаётся видимым с прочерком: дыра в календаре тоже информация. */
+const MonthStrip = ({ counts, m, onPick }: { counts: number[]; m: number; onPick: (i: number) => void }) => (
+  <div className="mb-2 grid grid-cols-12 gap-1">
+    {MONTHS.map((nm, i) => (
+      <button
+        key={nm}
+        type="button"
+        aria-selected={i === m}
+        onClick={() => onPick(i)}
+        title={`${nm} 2026 · ${counts[i] ? `стартов: ${counts[i]}` : 'стартов нет'}`}
+        className={
+          'flex items-baseline justify-center gap-1 rounded-lg border px-1 py-1 text-[11.5px] leading-none ' +
+          (i === m
+            ? 'border-blue-300 bg-blue-50 font-semibold text-blue-800'
+            : 'border-neutral-200 bg-white text-neutral-600 hover:border-neutral-300') +
+          /* Текущий месяц отмечен даже когда смотрят другой: «где мы сейчас» —
+             это не то же самое, что «на что смотрим». */
+          (i === NOW_M && i !== m ? ' ring-1 ring-blue-200' : '')
+        }
+      >
+        {nm.slice(0, 3)}
+        <span className={'text-[10px] tabular-nums ' + (counts[i] ? 'text-neutral-500' : 'text-neutral-300')}>
+          {counts[i] || '—'}
+        </span>
+      </button>
+    ))}
   </div>
 );
 
-const VIEWS = ['Список', 'Сетка месяцев'] as const;
+/** Что означает цвет полосы. В сетке цвет — единственная подпись состояния, а
+    цвет без легенды остаётся просто цветом. Стоит в левой колонке: в главной
+    всю высоту занимает месяц. */
+const CalLegend = () => (
+  <div className="rounded-xl border border-neutral-200 bg-white px-3 py-2.5 text-[11.5px] text-neutral-500">
+    <div className="mb-1.5 text-[11px] font-semibold uppercase tracking-wider text-neutral-400">
+      Цвет полосы — состояние
+    </div>
+    {[
+      ['bg-green-500', 'идёт или принимает заявки'],
+      ['bg-amber-500', 'ждёт судью'],
+      ['bg-blue-500', 'судья назначен'],
+      ['bg-neutral-400', 'черновик или завершён'],
+    ].map(([dot, txt]) => (
+      <div key={txt} className="flex items-center gap-2 leading-relaxed">
+        <span className={'h-2 w-2 shrink-0 rounded-full ' + dot} />
+        {txt}
+      </div>
+    ))}
+    <div className="mt-1.5 text-[11px] text-neutral-400">
+      Полоса идёт через все дни турнира, а не только через первый.
+    </div>
+  </div>
+);
 
-export function Cal1_2({ variant }: { variant?: DeskVariant }) {
+/** Календарь сезона: месяц с полосами турниров, слева — мини-месяц, список
+    выбранного дня и легенда. Мини-месяц и сетка выбирают один и тот же день:
+    два календаря рядом, показывающие разное, — это не сайдбар, а вторая
+    правда. */
+const SeasonCalendar = ({ rows }: { rows: Tour[] }) => {
+  const [m, setM] = useState(NOW_M);
+  const [day, setDay] = useState(TODAY);
+  const events = rows.map(toEvent);
+  const counts = MONTHS.map((_, i) => rows.filter((t) => t.m === i).length);
+  const month = isoDay(m, 1);
+  /* Список дня: события, которые этот день накрывают, — многодневный турнир
+     стоит в каждом своём дне, а не только в первом. */
+  const inDay = events.filter((e) => e.from <= day && day <= (e.till ?? e.from));
+  /* Смена месяца уводит и выбранный день: сетка показывала бы июнь, а список
+     рядом — апрельский день. В свой месяц возвращаемся на сегодня. */
+  const pickMonth = (i: number) => {
+    setM(i);
+    setDay(i === NOW_M ? TODAY : isoDay(i, 1));
+  };
+  return (
+    <div className="flex gap-4">
+      <div className="flex w-56 shrink-0 flex-col gap-3">
+        <MiniMonth month={month} events={events} today={TODAY} selected={day} onPick={setDay} />
+        <DayList
+          title={`${dateWords(day)}, ${dowOf(day)}`}
+          items={inDay.map((e) => ({
+            id: e.id,
+            /* Времени у турнира в календаре сезона нет и быть не должно: часы
+               появляются в расписании игрового дня, а здесь старт занимает день
+               целиком. */
+            t: 'весь день',
+            nm: e.nm,
+            sub: e.sub,
+            tone: e.tone,
+            to: e.to,
+          }))}
+        />
+        <CalLegend />
+      </div>
+      <div className="min-w-0 flex-1">
+        <MonthStrip counts={counts} m={m} onPick={pickMonth} />
+        <MonthGrid month={month} events={events} today={TODAY} selected={day} onPick={setDay} />
+      </div>
+    </div>
+  );
+};
+
+/* Второй вид называется «Календарь», а не «Сетка месяцев»: сеткой месяцев были
+   двенадцать плиток, а теперь это настоящий календарь. ⚠ В `flows/` и в данных
+   роли вид пока назван по-старому — расхождение вынесено в отчёт. */
+const VIEWS = ['Список', 'Календарь'] as const;
+
+/** Фильтр строки фильтров: подпись и значение одной кнопкой. Отдельной
+    подписью сверху (как у поля формы) строка вырастала вдвое, а это не ввод, а
+    сужение списка. Выбор статичный — порталов в макетах нет. */
+const FilterPick = ({ k, v }: { k: string; v: string }) => (
+  <button
+    type="button"
+    className="flex shrink-0 items-center gap-1.5 rounded-lg border border-neutral-300 bg-white px-2.5 py-1.5 text-[13px]"
+  >
+    <span className="text-neutral-500">{k}</span>
+    <span className="font-medium">{v}</span>
+    <ChevronDown size={13} className="text-neutral-400" />
+  </button>
+);
+
+/** Остальные фильтры зоны «Фильтры и поиск»: пол, возраст, город, состояние.
+    Стоят рядом с поиском и действуют на оба вида — и на список, и на сетку
+    месяцев. Значения по умолчанию — «не сужаем», поэтому в макете список полон. */
+const CAL_FILTERS: [string, string][] = [
+  ['Пол', 'любой'],
+  ['Возраст', 'любой'],
+  ['Город', 'все'],
+  ['Состояние', 'любое'],
+];
+
+export function Cal1_2(_props: { variant?: 'desktop' | 'land' } = {}) {
   const [cat, setCat] = useState<'Все категории' | Cat>('Все категории');
   const [view, setView] = useState<(typeof VIEWS)[number]>('Список');
-  const rows = cat === 'Все категории' ? TOURS : TOURS.filter((t) => t.cat === cat);
+  /* Поиск по названию — живой: фильтр обязан фильтровать, иначе это картинка
+     поля, а не поле. Ищем по названию и по городу — в календаре спрашивают
+     и «где Кубок Иртыша», и «что у нас в Шымкенте». */
+  const [q, setQ] = useState('');
+  const t = q.trim().toLowerCase();
+  const inCat = cat === 'Все категории' ? TOURS : TOURS.filter((x) => x.cat === cat);
+  const rows = t
+    ? inCat.filter((x) => x.nm.toLowerCase().includes(t) || x.city.toLowerCase().includes(t))
+    : inCat;
   return (
-    <RoleScreen
-      variant={variant}
+    <WebApp
       role={R01}
       nav="Календарь"
       title="Календарь сезона"
       sub={`Сезон 2026 · ${CATS.find((c) => c.k === cat)!.sub}`}
     >
-      <div className="dactionbar">
-        <Filter items={CATS.map((c) => c.k)} active={cat} onPick={(v) => setCat(v as typeof cat)} />
-        <Filter items={[...VIEWS]} active={view} onPick={(v) => setView(v as typeof view)} />
+      <div className="mb-3 flex items-center justify-between gap-4">
+        <FilterSeg items={CATS.map((c) => c.k)} active={cat} onPick={(v) => setCat(v as typeof cat)} />
+        <FilterSeg items={[...VIEWS]} active={view} onPick={(v) => setView(v as typeof view)} />
       </div>
-      <div className="dactionbar" style={{ justifyContent: 'flex-end' }}>
-        <div style={{ display: 'flex', gap: 8 }}>
-          <Btn>
-            {/* Формат назван на кнопке: «выгрузить» без формата — обещание,
-                под которым человек ждёт свой Excel, а получает csv. */}
-            <FileSpreadsheet size={14} /> Выгрузить в Excel
-          </Btn>
-          <button className="dsubmit" style={{ padding: '10px 14px' }}>
-            <Plus size={15} /> Завести соревнование
-          </button>
-        </div>
+      {/* Поиск и остальные фильтры — одной полосой: это одно действие, «сузить
+          календарь», и разводить его по трём рядам незачем. */}
+      <div className="mb-3 flex flex-wrap items-center gap-2">
+        <SearchInput value={q} onChange={setQ} placeholder="Название соревнования" className="w-60" />
+        {CAL_FILTERS.map(([k, v]) => (
+          <FilterPick key={k} k={k} v={v} />
+        ))}
+        {/* Счёт — только при поиске: сколько всего в категории, уже написано в
+            подзаголовке экрана, и второй раз это не число, а шум. */}
+        {t && (
+          <span className="ml-auto whitespace-nowrap text-[12.5px] text-neutral-500">
+            найдено {rows.length} из {inCat.length}
+          </span>
+        )}
+      </div>
+      <div className="mb-3 flex items-center justify-end gap-2">
+        <Btn>
+          {/* Формат назван на кнопке: «выгрузить» без формата — обещание,
+              под которым человек ждёт свой Excel, а получает csv. */}
+          <FileSpreadsheet size={14} /> Выгрузить в Excel
+        </Btn>
+        <Button variant="primary">
+          <Plus size={15} /> Завести соревнование
+        </Button>
       </div>
       {!rows.length ? (
-        <Empty
-          title={`В категории «${cat}» соревнований нет`}
-          text="Смените категорию или заведите первое соревнование в этой категории."
+        <EmptyBox
+          title={t ? `По запросу «${q}» ничего не нашлось` : `В категории «${cat}» соревнований нет`}
+          text={
+            t
+              ? 'Проверьте написание названия или снимите фильтр категории.'
+              : 'Смените категорию или заведите первое соревнование в этой категории.'
+          }
         />
       ) : view === 'Список' ? (
         <Rows>
-          {rows.map((t) => (
-            <TourRow key={t.nm} t={t} judge />
+          {rows.map((x) => (
+            <TourRow key={x.nm} t={x} judge />
           ))}
         </Rows>
       ) : (
-        <MonthGrid rows={rows} />
+        <SeasonCalendar rows={rows} />
       )}
-    </RoleScreen>
+    </WebApp>
   );
 }
+
+/** Календарный вид Э1.2 врезкой ✳. На самом экране список и календарь
+    переключаются, и по умолчанию открыт список — на борде календарь не был
+    виден вовсе, хотя ради него и заводился второй вид: полоса через все дни
+    турнира, наложение стартов, мини-месяц с днём. Кадр — тот же экран, открытый
+    на календаре, с той же выборкой, что стоит по умолчанию (весь сезон, без
+    фильтров и поиска).
+
+    Ширина кадра — рабочая область оболочки: 1200 ноутбука минус сайдбар (212) и
+    поля (2×24). Уже — и месяц раскладывается не так, как его увидят. */
+const Cal1_2Also = () => (
+  <Also cap="Вид «Календарь» — тот же сезон полосами по дням">
+    <Frag w={940}>
+      <SeasonCalendar rows={TOURS} />
+    </Frag>
+  </Also>
+);
 
 const Cal1_2States = () => (
   <States>
     <Shot tone="info" title="Пустой сезон" text="Приглашение завести первое соревнование." wide>
-      <ActionBar count="0 соревнований · сезон 2027">
-        <button className="dsubmit" style={{ padding: '10px 14px' }}>
-          <Plus size={15} /> Завести соревнование
-        </button>
-      </ActionBar>
-      <Empty
-        title="В сезоне 2027 соревнований нет"
-        text="Календарь наполняется по мере заведения: главные старты, туры Евразийской лиги, открытые республиканские турниры."
-      />
+      <Frag>
+        <div className="mb-3 flex items-center justify-between gap-3">
+          <span className="text-[12.5px] text-neutral-500">0 соревнований · сезон 2027</span>
+          <Button variant="primary">
+            <Plus size={15} /> Завести соревнование
+          </Button>
+        </div>
+        <EmptyBox
+          title="В сезоне 2027 соревнований нет"
+          text="Календарь наполняется по мере заведения: главные старты, туры Евразийской лиги, открытые республиканские турниры."
+        />
+      </Frag>
     </Shot>
   </States>
 );
@@ -614,77 +1044,6 @@ const Cal1_2States = () => (
    него правится на карточке (Э1.3). Держать их в мастере значило спрашивать всё
    сразу там, где достаточно назвать турнир и поставить даты. */
 const STEPS = ['1 · Категория', '2 · Основное'];
-
-/** Оболочка мастера: шаги сверху, текущий подсвечен, по ним можно листать.
-
-    Раньше мастер стоял пятью кадрами подряд, и до второго шага надо было
-    доскроллить — в карте флоу он выглядел экраном с одним шагом. Теперь это
-    один экран, который листается: так он и работает у человека. */
-const Wizard = ({
-  step,
-  onStep,
-  children,
-}: {
-  step: number;
-  onStep: (n: number) => void;
-  children: ReactNode;
-}) => (
-  <RoleScreen
-    role={R01}
-    nav="Календарь"
-    title="Завести соревнование"
-    /* Возврат сверху один и следует за местом: на первом шаге уводит из мастера
-       в календарь, дальше — на предыдущий шаг. Второй «Назад» внизу был тем же
-       действием другой кнопкой. */
-    back={
-      step === 1
-        ? { label: 'Календарь сезона', to: 'Э1.2' }
-        : { label: STEPS[step - 2], onClick: () => onStep(step - 1) }
-    }
-  >
-    <div className="dseg2">
-      {STEPS.map((s, i) => (
-        <button
-          key={s}
-          type="button"
-          className={i + 1 === step ? 'on' : undefined}
-          onClick={() => onStep(i + 1)}
-        >
-          {s}
-        </button>
-      ))}
-    </div>
-    {children}
-  </RoleScreen>
-);
-
-/** Полоса шага: что позади, что впереди и главное действие. */
-const WizardBar = ({
-  step,
-  onStep,
-  btn,
-}: {
-  step: number;
-  onStep: (n: number) => void;
-  btn: string;
-}) => (
-  <div className="dactionbar" style={{ justifyContent: 'flex-end' }}>
-    <div style={{ display: 'flex', gap: 8 }}>
-      {/* На втором шаге кнопка не «дальше», а «Создать»: турнир заводится в
-          состоянии «Черновик» и открывается его карточка (Э1.3), где ему и
-          задают регламент. */}
-      <button
-        type="button"
-        className="dsubmit"
-        style={{ padding: '12px 18px' }}
-        data-to={step === 2 ? 'Э1.3' : undefined}
-        onClick={() => onStep(Math.min(2, step + 1))}
-      >
-        {btn}
-      </button>
-    </div>
-  </div>
-);
 
 /** Выбор категории на первом шаге. Категория — единственное, от чего зависят
     остальные шаги (TZ §4.1), поэтому выбирают её карточками, а не строкой
@@ -698,19 +1057,23 @@ const CAT_PICK: { k: Cat; sub: string }[] = [
 const CatPick = () => {
   const [cat, setCat] = useState<Cat>('Главный старт');
   return (
-    <div className="mkpick">
+    <div className="grid grid-cols-3 gap-3">
       {CAT_PICK.map((c) => (
         <button
           key={c.k}
           type="button"
-          className={'mkpick-i' + (c.k === cat ? ' on' : '')}
+          aria-selected={c.k === cat}
           onClick={() => setCat(c.k)}
+          className={
+            'rounded-xl border bg-white p-4 text-left shadow-sm ' +
+            (c.k === cat ? 'border-blue-400 ring-1 ring-blue-200' : 'border-neutral-200 hover:border-neutral-300')
+          }
         >
-          <span className="t">
+          <span className="flex items-center justify-between gap-2 text-[13.5px] font-semibold">
             {c.k === 'Лига' ? 'Евразийская лига' : c.k}
-            {c.k === cat && <P t="ВЫБРАНО" cls="live" />}
+            {c.k === cat && <Pill t="ВЫБРАНО" color="success" />}
           </span>
-          <span className="s">{c.sub}</span>
+          <span className="mt-1 block text-xs text-neutral-500">{c.sub}</span>
         </button>
       ))}
     </div>
@@ -718,19 +1081,22 @@ const CatPick = () => {
 };
 
 const RANKS = ['Одиночный · парный', 'Одиночный', 'Парный'];
-/* Тело каждого шага. На пятом — сводка: перед «Создать» видно, что создастся. */
+
+/* Тело каждого шага. На втором — не «дальше», а «Создать»: турнир заводится в
+   состоянии «Черновик» и открывается его карточка (Э1.3), где ему и задают
+   регламент. */
 const STEP_BODY: Record<number, () => ReactNode> = {
   1: () => <CatPick />,
   2: () => (
     <Panel title="Основное">
-      <Form>
-        <Input label="Название" value="Первенство РК · 2012 г.р. и моложе" wide />
-        <Input label="Город" value="Актобе · ДС «Коктем»" />
-        <Input label="Окно дат" value="12–14 сентября 2026" placeholder="дд–дд месяц гггг" />
-        <Select label="Разряды" items={RANKS} />
+      <FormGrid>
+        <TextInput label="Название" value="Первенство РК · 2012 г.р. и моложе" wide />
+        <TextInput label="Город" value="Актобе · ДС «Коктем»" />
+        <TextInput label="Окно дат" value="12–14 сентября 2026" placeholder="дд–дд месяц гггг" />
+        <PickField label="Разряды" value={RANKS[0]} />
         {/* Сезон не выбирают: он следует из окна дат. */}
         <Derived k="Сезон" v="2026" />
-      </Form>
+      </FormGrid>
     </Panel>
   ),
 };
@@ -745,10 +1111,29 @@ const STEP_BTN: Record<number, string> = {
 export function New1_4() {
   const [step, setStep] = useState(1);
   return (
-    <Wizard step={step} onStep={setStep}>
+    <WebApp
+      role={R01}
+      nav="Календарь"
+      title="Завести соревнование"
+      back={{ label: 'Календарь сезона', to: 'Э1.2' }}
+      sub="Только название и даты: остальное дозаполняется в карточке черновика"
+    >
+      {/* Полоса шагов сверху, текущий подсвечен, по ним можно листать: мастер —
+          один экран, который листается, а не пять кадров подряд. */}
+      <div className="mb-4">
+        <FilterSeg items={STEPS} active={STEPS[step - 1]} onPick={(s) => setStep(STEPS.indexOf(s) + 1)} />
+      </div>
       {STEP_BODY[step]()}
-      <WizardBar step={step} onStep={setStep} btn={STEP_BTN[step]} />
-    </Wizard>
+      <div className="mt-4 flex justify-end">
+        <Button
+          variant="primary"
+          data-to={step === 2 ? 'Э1.3' : undefined}
+          onPress={() => setStep(Math.min(2, step + 1))}
+        >
+          {STEP_BTN[step]}
+        </Button>
+      </div>
+    </WebApp>
   );
 }
 
@@ -760,59 +1145,82 @@ const New1_4States = () => (
       text="«Создать» неактивна, с пояснением."
       wide
     >
-      <Form>
-        <Field label="Название" value="Первенство РК · 2012 г.р. и моложе" />
-        <div className="dfield">
-          <div className="k">Окно дат</div>
-          <div className="dval" style={{ color: 'var(--c-warning)' }}>— не выбрано</div>
+      <Frag w={520}>
+        <FormGrid>
+          <FieldView label="Название" value="Первенство РК · 2012 г.р. и моложе" />
+          <div className="flex flex-col gap-1">
+            <span className="text-xs font-medium text-neutral-500">Окно дат</span>
+            <span className="w-full rounded-lg bg-amber-50 px-3 py-1.5 text-sm font-medium text-amber-700">
+              — не выбрано
+            </span>
+          </div>
+        </FormGrid>
+        <div className="mt-3 flex items-center justify-between gap-3">
+          <span className="text-[12.5px] font-medium text-amber-700">
+            Заполните обязательное поле «Окно дат» — без него соревнование не создать
+          </span>
+          <DisabledAction>Создать</DisabledAction>
         </div>
-      </Form>
-      <div className="dactionbar">
-        <div className="dcount" style={{ color: 'var(--c-warning)' }}>
-          Заполните обязательное поле «Окно дат» — без него соревнование не создать
-        </div>
-        <Off>Создать</Off>
-      </div>
+      </Frag>
     </Shot>
   </States>
 );
 
 /* ── Э1.3 · Карточка турнира ───────────────────────────────────── */
 
-/** Восемь состояний турнира (TZ §4.3) — шкала с подсветкой текущего. */
-/** Разделы карточки турнира — один ряд вместо двух.
-
-    Раньше сверху стояла шкала из восьми состояний, а под ней семь вкладок:
-    два ряда одинаковых кнопок, и по ним не читалось, чем один отличается от
-    другого. Теперь ряд один и идёт **по ходу турнира**: сначала его заводят,
-    потом набирают судей, потом игроков, потом строят сетку и расписание. У
-    каждого шага ровно одно, на что смотрят.
-
-    `NOW` — где турнир сейчас: пройденное читается спокойнее. */
+/** Разделы карточки турнира — один ряд, и он идёт **по ходу турнира**: сначала
+    его заводят, потом набирают судей, потом игроков, потом строят сетку и
+    расписание. У каждого шага ровно одно, на что смотрят. `NOW_STAGE` — где
+    турнир сейчас: пройденное читается спокойнее. */
 const SECTIONS = [
   'Черновик', 'Заявки судей', 'Заявки игроков', 'Участники', 'Группы', 'Сетка', 'Расписание',
 ];
 const NOW_STAGE = 'Заявки судей';
 
-/** Ряд разделов: один вместо шкалы состояний и вкладок. Пройденное читается
-    спокойнее, текущее — акцентом, синим наливается то, под курсором. */
+/** Ряд разделов: пройденное тише, текущее — акцентом. */
 const SectionRow = ({ on, onPick }: { on: string; onPick?: (s: string) => void }) => {
   const at = SECTIONS.indexOf(NOW_STAGE);
   return (
-    <div className="dstages seq">
+    <div className="mb-4 flex flex-wrap items-center gap-1">
       {SECTIONS.map((s, i) => (
-        <button
-          key={s}
-          type="button"
-          className={'dstage' + (i < at ? ' past' : '') + (s === on ? ' now' : '')}
-          onClick={onPick ? () => onPick(s) : undefined}
-        >
-          {s}
-        </button>
+        <Fragment key={s}>
+          {i > 0 && <ChevronRight size={12} className="shrink-0 text-neutral-300" />}
+          <button
+            type="button"
+            aria-selected={s === on}
+            onClick={onPick ? () => onPick(s) : undefined}
+            className={
+              'rounded-lg border px-2.5 py-1.5 text-[12.5px] font-medium ' +
+              (s === on
+                ? 'border-blue-200 bg-blue-50 text-blue-800'
+                : i < at
+                  ? 'border-transparent text-neutral-400 hover:bg-neutral-100'
+                  : 'border-neutral-200 bg-white text-neutral-600 hover:border-neutral-300')
+            }
+          >
+            {s}
+          </button>
+        </Fragment>
       ))}
     </div>
   );
 };
+
+const FORMATS = ['Олимпийская с группами', 'Олимпийская', 'Круговая', 'Швейцарская'];
+const AGE_LIMITS = ['без ограничения', '2012 г.р. и моложе', '2010 г.р. и моложе', '2008 г.р. и моложе'];
+
+/** Флаги допуска (§4.2) — тумблер и название, без пояснений: каждый называет
+    себя сам. Ценз стоит только здесь: раньше он был и селектором с порогом, и
+    флагом, то есть спрашивался дважды. */
+const FLAGS = ['Годовой взнос федерации', 'Документы к заявке', 'Ценз по рейтингу'];
+
+/** Регламент в три колонки ✳: панели «Действия по турниру» рядом нет, и её
+    ширину забрал сам регламент — поля идут по трое в ряд, а не по двое в
+    половине панели. Своя сетка, а не `FormGrid` кита: тот прибит к двум
+    колонкам и к `max-w-2xl`, и в нём регламент занимал полпанели. */
+const RulesGrid = ({ children }: { children: ReactNode }) => (
+  <div className="grid max-w-5xl grid-cols-3 gap-x-4 gap-y-3.5">{children}</div>
+);
 
 /** Регламент турнира. В черновике он правится прямо здесь — это единственное
     место, где у турнира задаются даты, формат, столы и условия допуска: из
@@ -822,51 +1230,43 @@ const SectionRow = ({ on, onPick }: { on: string; onPick?: (s: string) => void }
     только для чтения. */
 const TourRules = ({ edit }: { edit?: boolean }) =>
   edit ? (
-    <Form>
-      <Input label="Даты" value="18–20 мая 2026" />
-      <Input label="Город" value="Астана · ДС «Барыс»" />
-      <Select label="Разряды" items={RANKS} />
-      <Select label="Формат" items={FORMATS} />
-      <Input label="Столов" value="16" />
-      <Input label="Трансляция со столов" value="1–4" />
-      <Select label="Возрастная граница" items={AGE_LIMITS} />
+    <RulesGrid>
+      <TextInput label="Даты" value="18–20 мая 2026" />
+      <TextInput label="Город" value="Астана · ДС «Барыс»" />
+      <PickField label="Разряды" value={RANKS[0]} />
+      <PickField label="Формат" value={FORMATS[0]} />
+      <TextInput label="Столов" value="16" />
+      <TextInput label="Трансляция со столов" value="1–4" />
+      <PickField label="Возрастная граница" value={AGE_LIMITS[0]} />
       {/* Три флага — простым списком, без рамок и подписей: каждый называет
           себя сам, а обведённые строки читались как три отдельных блока. */}
-      <div className="dfield wide">
-        <div className="k">Условия допуска</div>
-        <div className="dflags">
+      <div className="col-span-3 flex flex-col gap-1">
+        <span className="text-xs font-medium text-neutral-500">Условия допуска</span>
+        <div className="grid grid-cols-3 gap-1.5">
           {FLAGS.map((f) => (
-            <div className="dflag" key={f}>
-              <span>{f}</span>
-              <Switch defaultChecked={f !== 'Ценз по рейтингу'} />
-            </div>
+            <Flag key={f} label={f} on={f !== 'Ценз по рейтингу'} />
           ))}
         </div>
       </div>
-    </Form>
+    </RulesGrid>
   ) : (
-    <Form>
-      <Field label="Даты" value="18–20 мая 2026" />
-      <Field label="Город" value="Астана · ДС «Барыс»" />
-      <Field label="Разряды" value="Одиночный · парный" />
-      <Field label="Формат" value="Олимпийская с группами" />
-      <Field label="Столов" value="16 · трансляция со столов 1–4" />
-      <Field label="Возрастная граница" value="без ограничения" />
-      <Field
-        label="Условия допуска"
-        value="годовой взнос обязателен · документы к заявке обязательны · ценз по рейтингу не требуется"
-        wide
-      />
-    </Form>
+    <RulesGrid>
+      <FieldView label="Даты" value="18–20 мая 2026" />
+      <FieldView label="Город" value="Астана · ДС «Барыс»" />
+      <FieldView label="Разряды" value="Одиночный · парный" />
+      <FieldView label="Формат" value="Олимпийская с группами" />
+      <FieldView label="Столов" value="16 · трансляция со столов 1–4" />
+      <FieldView label="Возрастная граница" value="без ограничения" />
+      {/* Обёртка на всю ширину: `wide` у поля кита — это `col-span-2`, то есть
+          две трети ряда, а условия допуска идут строкой под остальными. */}
+      <div className="col-span-3">
+        <FieldView
+          label="Условия допуска"
+          value="годовой взнос обязателен · документы к заявке обязательны · ценз по рейтингу не требуется"
+        />
+      </div>
+    </RulesGrid>
   );
-
-const FORMATS = ['Олимпийская с группами', 'Олимпийская', 'Круговая', 'Швейцарская'];
-const AGE_LIMITS = ['без ограничения', '2012 г.р. и моложе', '2010 г.р. и моложе', '2008 г.р. и моложе'];
-
-/** Флаги допуска (§4.2) — тумблер и название, без пояснений: каждый называет
-    себя сам. Ценз стоит только здесь: раньше он был и селектором с порогом, и
-    флагом, то есть спрашивался дважды. */
-const FLAGS = ['Годовой взнос федерации', 'Документы к заявке', 'Ценз по рейтингу'];
 
 /* ── Наряд турнира ──────────────────────────────────────────────── */
 
@@ -886,9 +1286,7 @@ const JUDGES = [
     их место включается и выключается само по себе.
 
     Поэтому три кнопки в ряд, одинаковые в каждой строке: колонка читается
-    сверху вниз, и видно, кто на что поставлен, без вчитывания. Селектор в
-    каждой строке этого не даёт — пришлось бы открывать шесть списков, чтобы
-    собрать наряд. */
+    сверху вниз, и видно, кто на что поставлен, без вчитывания. */
 const JudgeApps = () => {
   const [chief, setChief] = useState('Оспанов Тимур');
   const [sec, setSec] = useState('Абдрахманова Сауле');
@@ -916,42 +1314,37 @@ const JudgeApps = () => {
     if (sec === nm) setSec('');
   };
   const named = [chief, sec, ...tables].filter(Boolean).length;
+  const SEATS: { t: string; on: (nm: string) => boolean; pick: (nm: string) => void }[] = [
+    { t: 'Главный', on: (nm) => chief === nm, pick: pickChief },
+    { t: 'Секретарь', on: (nm) => sec === nm, pick: pickSec },
+    { t: 'Стол', on: (nm) => tables.includes(nm), pick: pickTable },
+  ];
   return (
     <Panel
       title="Заявки на судейство"
-      extra={<span className="dcount">{JUDGES.length} подано · {named} в наряде</span>}
+      extra={<span className="text-xs text-neutral-500">{JUDGES.length} подано · {named} в наряде</span>}
+      flush
     >
-      <div className="plist">
+      <div className="divide-y divide-neutral-100">
         {JUDGES.map((j) => (
-          <div className="plist-row" key={j.nm}>
-            <img src={j.av} alt="" />
-            <div className="who">
-              <div className="nm">{j.nm}</div>
-              <div className="rl">{j.sub}</div>
-            </div>
-            <div className="rchips">
-              <button
-                type="button"
-                className={'rchip' + (chief === j.nm ? ' on' : '')}
-                onClick={() => pickChief(j.nm)}
-              >
-                Главный
-              </button>
-              <button
-                type="button"
-                className={'rchip' + (sec === j.nm ? ' on' : '')}
-                onClick={() => pickSec(j.nm)}
-              >
-                Секретарь
-              </button>
-              <button
-                type="button"
-                className={'rchip' + (tables.includes(j.nm) ? ' on' : '')}
-                onClick={() => pickTable(j.nm)}
-              >
-                Стол
-              </button>
-            </div>
+          <div key={j.nm} className="flex items-center gap-3 px-4 py-2.5">
+            <Who av={j.av} nm={j.nm} sub={j.sub} />
+            <span className="ml-auto flex overflow-hidden rounded-lg border border-neutral-200">
+              {SEATS.map((s, i) => (
+                <button
+                  key={s.t}
+                  type="button"
+                  onClick={() => s.pick(j.nm)}
+                  className={
+                    'px-2.5 py-1 text-[11.5px] font-medium ' +
+                    (s.on(j.nm) ? 'bg-blue-600 text-white' : 'text-neutral-500 hover:bg-neutral-100') +
+                    (i > 0 ? ' border-l border-neutral-200' : '')
+                  }
+                >
+                  {s.t}
+                </button>
+              ))}
+            </span>
           </div>
         ))}
       </div>
@@ -984,37 +1377,44 @@ const PlayerApps = () => {
   return (
     <Panel
       title="Заявки участников"
-      extra={<span className="dcount">{PLAYERS.length} подано · {yes} принято</span>}
+      extra={<span className="text-xs text-neutral-500">{PLAYERS.length} подано · {yes} принято</span>}
+      flush
     >
-      <div className="plist">
+      <div className="divide-y divide-neutral-100">
         {PLAYERS.map((p) => (
-          <div className="plist-row" key={p.nm}>
-            <img src={p.av} alt="" />
-            <div className="who">
-              <div className="nm">{p.nm}</div>
-              <div className="rl">{p.sub}</div>
-            </div>
+          <div key={p.nm} className="flex items-center gap-3 px-4 py-2.5">
+            <Who av={p.av} nm={p.nm} sub={p.sub} />
             {/* Пока не нажато ни одной — заявка без решения, и это видно по
                 тому, что обе кнопки спокойные. */}
-            <div className="vset">
-              {v[p.nm] === 0 && <span className="vwait">без решения</span>}
+            <span className="ml-auto flex items-center gap-1.5">
+              {v[p.nm] === 0 && <span className="mr-1 text-xs text-neutral-400">без решения</span>}
               <button
                 type="button"
-                className={'vbtn yes' + (v[p.nm] === 1 ? ' on' : '')}
                 title="Принять заявку"
                 onClick={() => set(p.nm, 1)}
+                className={
+                  'flex h-7 w-7 items-center justify-center rounded-md border ' +
+                  (v[p.nm] === 1
+                    ? 'border-green-600 bg-green-600 text-white'
+                    : 'border-neutral-200 text-neutral-400 hover:bg-green-50 hover:text-green-600')
+                }
               >
                 <Check size={15} />
               </button>
               <button
                 type="button"
-                className={'vbtn no' + (v[p.nm] === -1 ? ' on' : '')}
                 title="Отклонить заявку"
                 onClick={() => set(p.nm, -1)}
+                className={
+                  'flex h-7 w-7 items-center justify-center rounded-md border ' +
+                  (v[p.nm] === -1
+                    ? 'border-red-600 bg-red-600 text-white'
+                    : 'border-neutral-200 text-neutral-400 hover:bg-red-50 hover:text-red-600')
+                }
               >
                 <X size={15} />
               </button>
-            </div>
+            </span>
           </div>
         ))}
       </div>
@@ -1024,112 +1424,65 @@ const PlayerApps = () => {
 
 /* ── Расписание ─────────────────────────────────────────────────── */
 
-/** Расписание считается по сетке, а не пишется рядом с ней: круги, число матчей
-    в каждом и порядок заданы сеткой, и расходиться им нельзя.
+/* Расписание считается по сетке, а не пишется рядом с ней: круги, число матчей
+   в каждом и порядок заданы сеткой, и расходиться им нельзя.
 
-    Строка — круг: день, время, столы и сколько матчей. Первый день занимает
-    групповой этап (96 принятых заявок в 24 группах), дальше плей-офф из 32
-    вышедших — те же пять кругов, что в сетке.
+   Матч за матчем здесь не расписан намеренно: их 175, и таблица из 175 строк
+   отвечает на «когда мой матч», а этот экран отвечает на «влезает ли турнир в
+   три дня и шестнадцать столов». Поматчевое расписание — у главного судьи. */
 
-    Матч за матчем здесь не расписан намеренно: их 175, и таблица из 175 строк
-    отвечает на «когда мой матч», а этот экран отвечает на «влезает ли турнир в
-    три дня и шестнадцать столов». Поматчевое расписание — у главного судьи. */
 /** Игровой день: с 10:00 до 19:00. Ось времени общая у всех трёх дней — иначе
     блоки не сравнить, а сравнение здесь и есть смысл. */
-const DAY_FROM = 10 * 60;
-const DAY_TO = 19 * 60;
-const HOURS = [10, 11, 12, 13, 14, 15, 16, 17, 18, 19];
+const DAY_HOURS = { from: 10, till: 19 };
 
-const hhmm = (m: number) => `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`;
+/** Колонки сетки времени — дни турнира, а не столы.
 
-type Block = { round: string; from: number; to: number; tables: number; n: string };
-
-const SCHEDULE: { day: string; dow: string; blocks: Block[] }[] = [
-  {
-    day: '18 мая',
-    dow: 'понедельник',
-    blocks: [
-      { round: 'Группы', from: 600, to: 840, tables: 16, n: '24 группы' },
-      { round: 'Группы', from: 900, to: 1140, tables: 16, n: '144 матча' },
-    ],
-  },
-  {
-    day: '19 мая',
-    dow: 'вторник',
-    blocks: [
-      { round: '1/16', from: 600, to: 750, tables: 8, n: '16 матчей' },
-      { round: '1/8', from: 810, to: 930, tables: 8, n: '8 матчей' },
-      { round: '1/4', from: 990, to: 1080, tables: 4, n: '4 матча' },
-    ],
-  },
-  {
-    day: '20 мая',
-    dow: 'среда',
-    blocks: [
-      { round: '1/2', from: 660, to: 750, tables: 2, n: '2 матча' },
-      { round: 'Финал', from: 840, to: 930, tables: 1, n: 'стол 1 · трансляция' },
-    ],
-  },
+    Столов у Кубка шестнадцать, но по столам расписан каждый матч, а их 175:
+    поматчевое расписание ведёт главный судья (Э6.4), здесь стоит круг целиком.
+    Сколько столов круг занимает — сказано в самом блоке. */
+const SCHED_DAYS = [
+  { key: '2026-05-18', t: '18 мая', sub: 'понедельник' },
+  { key: '2026-05-19', t: '19 мая', sub: 'вторник' },
+  { key: '2026-05-20', t: '20 мая', sub: 'среда' },
 ];
 
-/** Расписание календарём: дни колонками, время осью, круг — блоком.
+/** Блоки расписания: круг, окно времени, сколько матчей и сколько из
+    шестнадцати столов занято. Значения те же, что были в своей разметке, —
+    минуты от полуночи переведены в 'ЧЧ:ММ', как их ждёт сетка кита.
+
+    Загрузка зала была полоской внизу блока и теперь стоит словами: у финала на
+    одном столе полоска выходила в несколько пикселей и всё равно ничего не
+    показывала. */
+const SCHEDULE: SlotEvent[] = [
+  { id: 'd1a', col: '2026-05-18', from: '10:00', till: '14:00', nm: 'Группы', sub: '24 группы · 16 из 16 столов' },
+  { id: 'd1b', col: '2026-05-18', from: '15:00', till: '19:00', nm: 'Группы', sub: '144 матча · 16 из 16 столов' },
+  { id: 'd2a', col: '2026-05-19', from: '10:00', till: '12:30', nm: '1/16', sub: '16 матчей · 8 из 16 столов' },
+  { id: 'd2b', col: '2026-05-19', from: '13:30', till: '15:30', nm: '1/8', sub: '8 матчей · 8 из 16 столов' },
+  { id: 'd2c', col: '2026-05-19', from: '16:30', till: '18:00', nm: '1/4', sub: '4 матча · 4 из 16 столов' },
+  { id: 'd3a', col: '2026-05-20', from: '11:00', till: '12:30', nm: '1/2', sub: '2 матча · 2 из 16 столов' },
+  { id: 'd3b', col: '2026-05-20', from: '14:00', till: '15:30', nm: 'Финал', sub: 'стол 1 · трансляция', tone: 'success' },
+];
+
+/** Расписание сеткой времени: дни колонками, часы осью, круг — блоком.
 
     Таблицей это было списком фактов, и главный вопрос экрана — «влезает ли
     турнир в три дня и шестнадцать столов» — приходилось считать в голове. На
     оси времени он виден сразу: первый день забит с утра до вечера, третий почти
-    пуст, а перерывы между кругами — это зазоры между блоками, а не строка
-    «14:00–15:00 пусто».
+    пуст, а перерывы между кругами — это зазоры между блоками.
 
-    Ширина блока показывает занятые столы: 16 столов — во всю колонку, финал на
-    одном — узкой полосой. Так на одной картинке и время, и загрузка зала.
-
-    Экспортируется: то же расписание того же турнира смотрит председатель ГСК в
-    карточке турнира (Э5.10) — второе такое же было бы вторым расписанием одного
-    турнира, и они разъехались бы. */
-export const Schedule = () => (
-  <Panel title="Расписание" extra={<span className="dcount">3 дня · 16 столов · 175 матчей</span>}>
-    <div className="cal">
-      <div className="cal-time">
-        {HOURS.map((h) => (
-          <span key={h} style={{ top: `${((h * 60 - DAY_FROM) / (DAY_TO - DAY_FROM)) * 100}%` }}>
-            {String(h).padStart(2, '0')}:00
-          </span>
-        ))}
-      </div>
-      {SCHEDULE.map((d) => (
-        <div className="cal-day" key={d.day}>
-          <div className="cal-head">
-            <b>{d.day}</b>
-            <span>{d.dow}</span>
-          </div>
-          <div className="cal-grid">
-            {HOURS.map((h) => (
-              <i key={h} style={{ top: `${((h * 60 - DAY_FROM) / (DAY_TO - DAY_FROM)) * 100}%` }} />
-            ))}
-            {d.blocks.map((b) => (
-              <div
-                className="cal-block"
-                key={b.round + b.from}
-                style={{
-                  top: `${((b.from - DAY_FROM) / (DAY_TO - DAY_FROM)) * 100}%`,
-                  height: `${((b.to - b.from) / (DAY_TO - DAY_FROM)) * 100}%`,
-                }}
-              >
-                <b>{b.round}</b>
-                <span>{hhmm(b.from)}–{hhmm(b.to)} · {b.n}</span>
-                {/* Загрузка зала — полосой внизу блока, а не шириной самого блока:
-                    шириной финал на одном столе выходил в 18 пикселей, и подпись
-                    в него не влезала. */}
-                <em title={`${b.tables} из 16 столов`}>
-                  <s style={{ width: `${(b.tables / 16) * 100}%` }} />
-                  {b.tables} из 16 столов
-                </em>
-              </div>
-            ))}
-          </div>
-        </div>
-      ))}
-    </div>
+    Своя разметка делала ровно это же, но руками; сетка кита рисует расписание
+    так же, как у главного судьи и у коллегии, — одно расписание в системе
+    выглядит одинаково. Линии «сейчас» нет намеренно: турнир 18–20 мая, а
+    сегодня в макете 15 апреля. */
+const Schedule = () => (
+  <Panel title="Расписание" extra={<span className="text-xs text-neutral-500">3 дня · 16 столов · 175 матчей</span>}>
+    <TimeGrid
+      cols={SCHED_DAYS}
+      events={SCHEDULE}
+      from={DAY_HOURS.from}
+      till={DAY_HOURS.till}
+      hourPx={40}
+    />
   </Panel>
 );
 
@@ -1206,11 +1559,6 @@ const Players1_3 = () => (
   />
 );
 
-/** Вкладка «Группы»: 24 группы карточками, а не одним списком на 96 строк —
-    группа читается целиком, вместе с местами и партиями.
-
-    Поиск ищет человека по всем группам сразу: вопрос к этому экрану — «в какой
-    он группе и вышел ли», и листать двадцать четыре карточки ради него незачем. */
 /** «1 группа», «2 группы», «5 групп» — счётчик читается вслух, и «2 групп» в
     нём звучит как опечатка. */
 const grp = (n: number) => {
@@ -1220,6 +1568,11 @@ const grp = (n: number) => {
   return o === 1 ? 'группа' : o > 1 && o < 5 ? 'группы' : 'групп';
 };
 
+/** Вкладка «Группы»: 24 группы карточками, а не одним списком на 96 строк —
+    группа читается целиком, вместе с местами и партиями.
+
+    Поиск ищет человека по всем группам сразу: вопрос к этому экрану — «в какой
+    он группе и вышел ли», и листать двадцать четыре карточки ради него незачем. */
 const Groups1_3 = () => {
   const [q, setQ] = useState('');
   const t = q.trim().toLowerCase();
@@ -1227,9 +1580,9 @@ const Groups1_3 = () => {
   const shown = t ? GROUPS1_3.filter((g) => g.rows.some((r) => hit(r.p.nm))) : GROUPS1_3;
   return (
     <>
-      <div className="dactionbar">
-        <Search value={q} onChange={setQ} placeholder="Фамилия участника" wide />
-        <span className="dcount">
+      <div className="mb-3 flex items-center justify-between gap-4">
+        <SearchInput value={q} onChange={setQ} placeholder="Фамилия участника" className="w-72" />
+        <span className="text-[12.5px] text-neutral-500">
           {t
             ? `${shown.length} ${grp(shown.length)} из ${GROUPS1_3.length}`
             : '24 группы по 4 · выходят 32: победители групп и восемь лучших вторых ✳'}
@@ -1237,19 +1590,18 @@ const Groups1_3 = () => {
       </div>
 
       {shown.length === 0 ? (
-        <Empty title={`По запросу «${q}» никого нет`} text="Проверьте написание фамилии." />
+        <EmptyBox title={`По запросу «${q}» никого нет`} text="Проверьте написание фамилии." />
       ) : (
-        <div className="mkgroups-b">
-          <div className="mkgroups">
+        <div className="max-h-[430px] overflow-auto pr-1">
+          <div className="grid grid-cols-4 gap-2">
             {shown.map((g) => (
-              <div className="mkgroup" key={g.nm}>
-                <div className="mkgroup-h">
-                  <b>Группа {g.nm}</b>
-                  <span className="dcount">6 матчей · сыграна</span>
+              <div key={g.nm} className="overflow-hidden rounded-lg border border-neutral-200 bg-white">
+                <div className="flex items-baseline justify-between border-b border-neutral-100 px-2.5 py-1.5">
+                  <b className="text-[12px] font-semibold">Группа {g.nm}</b>
+                  <span className="text-[10px] text-neutral-400">6 матчей · сыграна</span>
                 </div>
                 {g.rows.map((r) => (
                   <div
-                    className={'mkgroup-r' + (r.out ? ' out' : '') + (hit(r.p.nm) ? ' hit' : '')}
                     key={r.p.s}
                     title={
                       r.add
@@ -1258,12 +1610,17 @@ const Groups1_3 = () => {
                           ? 'Победитель группы — в плей-офф'
                           : 'Выбыл после группового этапа'
                     }
+                    className={
+                      'flex items-center gap-1.5 px-2.5 py-1 text-[11px] ' +
+                      (r.out ? 'bg-green-50/70 ' : '') +
+                      (hit(r.p.nm) ? 'ring-1 ring-inset ring-blue-300' : '')
+                    }
                   >
-                    <span className="pl">{r.place}</span>
-                    <span className="nm">{r.p.nm}</span>
-                    <span className="num">{r.wl}</span>
-                    <span className="num">{r.won} — {r.lost}</span>
-                    {r.add && <em>добор</em>}
+                    <span className="w-3 shrink-0 tabular-nums text-neutral-400">{r.place}</span>
+                    <span className={'min-w-0 flex-1 truncate ' + (r.out ? 'font-medium' : 'text-neutral-600')}>{r.p.nm}</span>
+                    <span className="shrink-0 tabular-nums text-neutral-500">{r.wl}</span>
+                    <span className="w-9 shrink-0 text-right tabular-nums text-neutral-500">{r.won} — {r.lost}</span>
+                    {r.add && <em className="shrink-0 not-italic text-[9.5px] font-semibold uppercase text-green-700">добор</em>}
                   </div>
                 ))}
               </div>
@@ -1272,10 +1629,8 @@ const Groups1_3 = () => {
         </div>
       )}
 
-      <div className="dactionbar" style={{ marginTop: 10 }}>
-        <span className="dcount">
-          Подсвечены вышедшие в плей-офф: победитель группы и восемь лучших вторых по разнице партий ✳
-        </span>
+      <div className="mt-2 text-[12.5px] text-neutral-500">
+        Подсвечены вышедшие в плей-офф: победитель группы и восемь лучших вторых по разнице партий ✳
       </div>
     </>
   );
@@ -1288,20 +1643,16 @@ const SECTION_BODY: Record<string, () => ReactNode> = {
   'Заявки игроков': () => <PlayerApps />,
   'Участники': () => <Players1_3 />,
   'Группы': () => <Groups1_3 />,
-  /* Сетка — настоящая, тем же компонентом, что на фронте (`widgets/bracket`), по
-     общей модели сетки: макет не изображает её своими прямоугольниками.
-
-     Кругов пять, а не семь, потому что формат Кубка РК — «олимпийская **с
-     группами**»: 96 принятых заявок играют групповой этап, и в сетку на
-     выбывание выходят 32. Полная сетка на 128 в экран не влезает читаемо —
-     столько и не нужно, в плей-офф столько не выходит.
-
-     Занимает всю рабочую область: ни заголовка, ни подписей — что за турнир,
-     написано в шапке экрана. Рядом с сеткой ничего не помещается, её и на фронте
-     смотрят на весь экран. */
+  /* Сетка — настоящая, тем же компонентом, что на фронте (`widgets/bracket`),
+     по общей модели сетки: макет не изображает её своими прямоугольниками.
+     Кругов пять, а не семь: формат Кубка РК — «олимпийская с группами», 96
+     принятых заявок играют групповой этап, и в сетку на выбывание выходят 32.
+     Светлый тон: новый слой светлый, чёрная плоскость из него выпадала. */
   'Сетка': () => (
-    <div className="mkbracket mkbracket-fill">
-      <BracketFlow bracket={playoff32} minZoom={0.1} fitPadding={0.04} />
+    <div className="relative h-[430px] overflow-hidden rounded-xl border border-neutral-200 shadow-sm">
+      <div className="absolute inset-0 [&>div]:h-full!">
+        <BracketFlow bracket={playoff32} minZoom={0.1} fitPadding={0.04} tone="light" />
+      </div>
     </div>
   ),
   'Расписание': () => <Schedule />,
@@ -1314,7 +1665,7 @@ export function Tour1_3() {
      то же самое, что первая правка: она уходит в журнал с автором (§12). */
   const [closed, setClosed] = useState(false);
   return (
-    <RoleScreen
+    <WebApp
       role={R01}
       nav="Календарь"
       title="Кубок Республики Казахстан 2026"
@@ -1326,39 +1677,54 @@ export function Tour1_3() {
       ) : (
         /* Регламент правится прямо здесь: после мастера в два шага это
            единственное место, где у турнира задаются формат, столы и допуск.
-           Панели «Действия по турниру» рядом нет ✳: в ней стояло одно действие
-           над этим же регламентом — закрыть его или открыть обратно. Отдельная
-           панель делала из него «действие по турниру», хотя турнира это не
-           касается, и забирала половину ширины у самой формы. Кнопка встала под
-           регламентом, а рядом с ней — то, что мешает идти дальше. */
+           Панели «Действия по турниру» рядом нет ✳: кнопка закрытия стоит под
+           самим регламентом, а рядом с ней — то, что мешает идти дальше. */
         <Panel
           title="Регламент"
           extra={<P t={closed ? 'РЕГЛАМЕНТ ЗАКРЫТ' : 'ЧЕРНОВИК'} cls={closed ? 'reg' : 'done'} />}
         >
-          {/* Форма не растягивается на всю панель: растянутая, она разгоняла
-              поля по вертикали и выдавливала кнопку под ней за край экрана. */}
-          <div className="mkrules">
-            <TourRules edit={!closed} />
-          </div>
+          <TourRules edit={!closed} />
           {/* Одна кнопка на два состояния: закрыть регламент и открыть его
               обратно. Держать обе сразу незачем — доступна всегда ровно та,
               которая сейчас имеет смысл. */}
-          <div className="dactionbar" style={{ marginTop: 14 }}>
-            <span className="dcount">
+          <div className="mt-4 flex items-center justify-between gap-4">
+            <span className="max-w-lg text-[12.5px] text-neutral-500">
               {closed
                 ? 'Регламент закрыт. Правка после этого сохраняется с автором и уходит в журнал.'
                 : 'Пока регламент не закрыт, турнир нельзя опубликовать и на него нельзя открыть приём заявок судей.'}
             </span>
-            <button type="button" className="dsubmit" onClick={() => setClosed(!closed)}>
-              {closed ? <Pencil size={15} /> : <Check size={15} />}
-              {closed ? 'Изменить' : 'Завершить'}
-            </button>
+            {/* «Отменить / перенести» стоит рядом: это единственный вход в
+                Э1.9, и держать его где-то ещё было негде — панели «Действия по
+                турниру» у карточки нет. Действие доступно до «Завершён», а
+                спорить с главной кнопкой не должно: обводка, не заливка. */}
+            <span className="flex shrink-0 items-center gap-2">
+              <Button variant="outline" data-to="Э1.9">
+                Отменить / перенести
+              </Button>
+              <Button variant="primary" onPress={() => setClosed(!closed)}>
+                {closed ? <Pencil size={15} /> : <Check size={15} />}
+                {closed ? 'Изменить' : 'Завершить'}
+              </Button>
+            </span>
           </div>
         </Panel>
       )}
-    </RoleScreen>
+    </WebApp>
   );
 }
+
+/** Расписание Э1.3 врезкой ✳. Разделы карточки листаются, а открыт по
+    умолчанию «Черновик» с регламентом: сетка времени — последний из семи
+    разделов, и на борде её не было видно. Кадр показывает то, ради чего
+    расписание рисуется шкалой: первый день забит с утра до вечера, третий почти
+    пуст, перерывы между кругами — зазоры между блоками. */
+const Sched1_3Also = () => (
+  <Also cap="Раздел «Расписание» — три дня турнира на шкале времени">
+    <Frag w={940}>
+      <Schedule />
+    </Frag>
+  </Also>
+);
 
 const Tour1_3States = () => (
   <States>
@@ -1367,19 +1733,25 @@ const Tour1_3States = () => (
       title="«Черновик» — незаполненные обязательные поля"
       text="Поля подсвечены; с ними нельзя публиковать."
     >
-      <Form>
-        <Field label="Даты" value="9 мая 2026" />
-        <div className="dfield">
-          <div className="k">Формат</div>
-          <div className="dval" style={{ color: 'var(--c-warning)' }}>— не выбран</div>
+      <Frag w={520}>
+        <FormGrid>
+          <FieldView label="Даты" value="9 мая 2026" />
+          <div className="flex flex-col gap-1">
+            <span className="text-xs font-medium text-neutral-500">Формат</span>
+            <span className="w-full rounded-lg bg-amber-50 px-3 py-1.5 text-sm font-medium text-amber-700">— не выбран</span>
+          </div>
+          <div className="flex flex-col gap-1">
+            <span className="text-xs font-medium text-neutral-500">Столов</span>
+            <span className="w-full rounded-lg bg-amber-50 px-3 py-1.5 text-sm font-medium text-amber-700">— не указано</span>
+          </div>
+        </FormGrid>
+        <div className="mt-3">
+          <Bar tone="warning">
+            Пока регламент не заполнен, турнир нельзя опубликовать и на него нельзя открыть приём заявок судей.
+          </Bar>
+          <DisabledAction>Опубликовать</DisabledAction>
         </div>
-        <div className="dfield">
-          <div className="k">Столов</div>
-          <div className="dval" style={{ color: 'var(--c-warning)' }}>— не указано</div>
-        </div>
-      </Form>
-      <Alert>Пока регламент не заполнен, турнир нельзя опубликовать и на него нельзя открыть приём заявок судей.</Alert>
-      <Off>Опубликовать</Off>
+      </Frag>
     </Shot>
 
     <Shot
@@ -1387,14 +1759,16 @@ const Tour1_3States = () => (
       title="После состояния «Завершён»"
       text="Всё только чтение, кнопок правки нет."
     >
-      <div className="dactionbar">
-        <div className="dcount">Кубок Республики Казахстан 2026</div>
-        <P t="ЗАВЕРШЁН" cls="done" />
-      </div>
-      <Rows>
-        <Row nm="Итоговый протокол" sub="утверждён председателем ГСК · 21.01.2026" pill={{ t: 'ЗАКРЫТ', cls: 'done' }} action="Печать" />
-        <Row nm="Рейтинг" sub="пересчитан по 142 матчам · 21.01.2026" pill={{ t: 'УЧТЁН', cls: 'done' }} />
-      </Rows>
+      <Frag>
+        <div className="mb-2 flex items-center justify-between gap-3">
+          <span className="text-[12.5px] text-neutral-500">Кубок Республики Казахстан 2026</span>
+          <P t="ЗАВЕРШЁН" cls="done" />
+        </div>
+        <Rows>
+          <Row nm="Итоговый протокол" sub="утверждён председателем ГСК · 21.01.2026" pill={{ t: 'ЗАКРЫТ', cls: 'done' }} action="Печать" />
+          <Row nm="Рейтинг" sub="пересчитан по 142 матчам · 21.01.2026" pill={{ t: 'УЧТЁН', cls: 'done' }} />
+        </Rows>
+      </Frag>
     </Shot>
   </States>
 );
@@ -1404,10 +1778,11 @@ const Tour1_3States = () => (
 export function Cancel1_9() {
   /* Диалог открыт: экран Э1.9 — это он и есть. Крестик и «Закрыть» возвращают
      на карточку турнира, поверх которой он открыт (Э1.3), — она под ним и
-     нарисована. «Отменить / перенести» во вкладках открывает снова. */
+     нарисована. «Отменить / перенести» в шапке регламента открывает снова. */
   const [open, setOpen] = useState(true);
+  const [mode, setMode] = useState('Перенести');
   return (
-    <RoleScreen
+    <WebApp
       role={R01}
       nav="Календарь"
       title="Кубок Республики Казахстан 2026"
@@ -1419,9 +1794,9 @@ export function Cancel1_9() {
           open ? (
             <P t={NOW_STAGE.toUpperCase()} cls="reg" />
           ) : (
-            <button type="button" className="dpickbtn" onClick={() => setOpen(true)}>
+            <Button size="sm" variant="outline" onPress={() => setOpen(true)}>
               Отменить / перенести
-            </button>
+            </Button>
           )
         }
       >
@@ -1429,63 +1804,79 @@ export function Cancel1_9() {
       </Panel>
 
       {open && (
-      <Modal
-        title="Отменить или перенести соревнование"
-        sub="Кубок Республики Казахстан 2026 · 18–20 мая · Астана"
-        onClose={() => setOpen(false)}
-        to="Э1.3"
-        foot={
-          <>
-            <div className="dcount">Причина уйдёт заявителям и в журнал</div>
-            <div style={{ display: 'flex', gap: 8 }}>
-              <Ghost onClick={() => setOpen(false)}>Закрыть</Ghost>
-              <button className="dsubmit" style={{ padding: '11px 16px' }}>Перенести</button>
-            </div>
-          </>
-        }
-      >
-        <div className="dseg2">
-          <span className="on">Перенести</span>
-          <span>Отменить совсем</span>
-        </div>
-        <Form>
-          <Field label="Было" value="18–20 мая 2026" />
-          <Field label="Новое окно дат" value="1–3 июня 2026" />
-          <Field
-            label="Причина"
-            value="ДС «Барыс» занят под другое мероприятие; зал подтвердил новые даты"
-            wide
-          />
-        </Form>
-        <Block title="Кого затрагивает">
-          <Chips
+        <InlineDialog
+          title="Отменить или перенести соревнование"
+          sub="Кубок Республики Казахстан 2026 · 18–20 мая · Астана"
+          to="Э1.3"
+          foot={
+            <>
+              <span className="mr-auto text-xs text-neutral-500">Причина уйдёт заявителям и в журнал</span>
+              <QuietAction onPress={() => setOpen(false)}>Закрыть</QuietAction>
+              <Button variant="primary">Перенести</Button>
+            </>
+          }
+        >
+          <div className="mb-3">
+            <FilterSeg items={['Перенести', 'Отменить совсем']} active={mode} onPick={setMode} />
+          </div>
+          <FormGrid>
+            <FieldView label="Было" value="18–20 мая 2026" />
+            <FieldView label="Новое окно дат" value="1–3 июня 2026" />
+            <FieldView
+              label="Причина"
+              value="ДС «Барыс» занят под другое мероприятие; зал подтвердил новые даты"
+              wide
+            />
+          </FormGrid>
+          <Sec>Кого затрагивает</Sec>
+          <Cells
             items={[
               { v: '128', k: 'Заявок подано' },
               { v: '96', k: 'Принято', tone: 'g' },
               { v: '14', k: 'Судей в наряде', tone: 'b' },
             ]}
           />
-        </Block>
-      </Modal>
+          {/* Что будет с заявками — здесь же, а не в уведомлении после: это
+              первое, о чём спрашивают, увидев числа выше. */}
+          <Sec>Что будет с заявками</Sec>
+          <Rows>
+            <Row
+              nm="Заявки сохраняются"
+              sub="и при переносе, и при отмене — подавать их заново не нужно"
+              pill={{ t: 'СОХРАНЯЮТСЯ', cls: 'live' }}
+            />
+            <Row
+              nm="При переносе переезжают на новые даты"
+              sub="1–3 июня 2026 · заявителям уходит уведомление с причиной"
+              pill={{ t: 'ПЕРЕЕДУТ', cls: 'reg' }}
+            />
+          </Rows>
+        </InlineDialog>
       )}
-    </RoleScreen>
+    </WebApp>
   );
 }
 
 const Cancel1_9States = () => (
   <States>
     <Shot tone="danger" title="Причина не заполнена" text="Обе кнопки неактивны, с пояснением.">
-      <div className="dfield">
-        <div className="k">Причина</div>
-        <div className="dval" style={{ color: 'var(--c-danger)' }}>— не заполнена</div>
-      </div>
-      <Alert tone="danger">
-        Без причины ни перенести, ни отменить нельзя: она уходит людям в уведомление и остаётся в журнале.
-      </Alert>
-      <div style={{ display: 'flex', gap: 8 }}>
-        <Off>Перенести</Off>
-        <Off>Отменить соревнование</Off>
-      </div>
+      <Frag w={480}>
+        <FormGrid>
+          <div className="col-span-2 flex flex-col gap-1">
+            <span className="text-xs font-medium text-neutral-500">Причина</span>
+            <span className="w-full rounded-lg bg-red-50 px-3 py-1.5 text-sm font-medium text-red-700">— не заполнена</span>
+          </div>
+        </FormGrid>
+        <div className="mt-3">
+          <Bar tone="danger">
+            Без причины ни перенести, ни отменить нельзя: она уходит людям в уведомление и остаётся в журнале.
+          </Bar>
+        </div>
+        <div className="flex gap-2">
+          <DisabledAction>Перенести</DisabledAction>
+          <DisabledAction>Отменить соревнование</DisabledAction>
+        </div>
+      </Frag>
     </Shot>
 
     <Shot
@@ -1493,13 +1884,17 @@ const Cancel1_9States = () => (
       title="Турнир в состоянии «Идёт» ✳"
       text="Предупреждение, что часть матчей уже сыграна и отмена их результаты не удаляет."
     >
-      <Rows>
-        <Row nm="Сыграно матчей" sub="Суперлига (мужчины) · день 2 из 3" val="34 из 60" pill={{ t: 'ИДЁТ', cls: 'live' }} />
-      </Rows>
-      <Alert>
-        <AlertTriangle size={13} style={{ verticalAlign: '-2px' }} /> Турнир уже идёт: сыгранные матчи
-        останутся в журнале и в истории игроков, но турнир не будет доигран.
-      </Alert>
+      <Frag>
+        <Rows>
+          <Row nm="Сыграно матчей" sub="Суперлига (мужчины) · день 2 из 3" val="34 из 60" pill={{ t: 'ИДЁТ', cls: 'live' }} />
+        </Rows>
+        <div className="mt-3">
+          <Bar tone="warning">
+            Турнир уже идёт: сыгранные матчи останутся в журнале и в истории игроков, но турнир не
+            будет доигран.
+          </Bar>
+        </div>
+      </Frag>
     </Shot>
 
     <Shot
@@ -1508,44 +1903,39 @@ const Cancel1_9States = () => (
       text="Среди восьми состояний «отменён» нет, и кто именно отменяет — тоже открыто."
       wide
     >
-      <div className="dseg2">
-        <span>Черновик</span>
-        <span>Приём заявок судей</span>
-        <span>Судья назначен</span>
-        <span>Приём заявок игроков</span>
-        <span>Система проведения</span>
-        <span>Идёт</span>
-        <span>Итоговый протокол</span>
-        <span>Завершён</span>
-        <span style={{ color: 'var(--c-danger)', borderColor: 'var(--c-danger-line)' }}>Отменён — ⚠ такого состояния в ТЗ нет</span>
-      </div>
-      <Alert tone="danger">
-        Пока не решено: остаётся ли отменённый турнир в календаре, кто его отменяет — председатель ГСК
- или администратор Федерации по «полному доступу», и что происходит с уже сыгранными
-        матчами. В макете это место помечено, а не придумано.
-      </Alert>
+      <Frag w={720}>
+        <div className="mb-3 flex flex-wrap gap-1">
+          {['Черновик', 'Приём заявок судей', 'Судья назначен', 'Приём заявок игроков', 'Система проведения', 'Идёт', 'Итоговый протокол', 'Завершён'].map((s) => (
+            <span key={s} className="rounded-lg border border-neutral-200 bg-white px-2.5 py-1.5 text-[12px] text-neutral-600">{s}</span>
+          ))}
+          <span className="rounded-lg border border-red-300 bg-red-50 px-2.5 py-1.5 text-[12px] font-medium text-red-700">
+            Отменён — ⚠ такого состояния в ТЗ нет
+          </span>
+        </div>
+        <Bar tone="danger">
+          Пока не решено: остаётся ли отменённый турнир в календаре, кто его отменяет — председатель
+          ГСК или администратор Федерации по «полному доступу», и что происходит с уже сыгранными
+          матчами. В макете это место помечено, а не придумано.
+        </Bar>
+      </Frag>
     </Shot>
   </States>
 );
 
-/* ── Э1.5 · Пользователи и роли ────────────────────────────────── */
+/* ── Э1.5 · Пользователи и роли: данные ────────────────────────── */
 
-/** Учётная запись: строка списка слева и карточка справа — одни и те же данные.
-
-    Карточка была нарисована на одного человека, и по макету не читалось, чья
-    она и откуда берётся. Теперь у каждой записи свои контакты и свои выданные
-    роли, а карточка показывает выбранную строку. */
+/** Учётная запись: строка списка и карточка — одни и те же данные. У каждой
+    записи свои контакты и свои выданные роли; система именная (TZ §12) — у
+    каждой выдачи есть автор, и он виден здесь. */
 type User = {
   av: string;
   nm: string;
   /** Роли одной строкой — то, что видно в списке. */
   roles: string;
   st: string;
-  cls: string;
+  cls: Cls;
   phone: string;
   mail: string;
-  /** Выданные роли: роль с областью и сроком, кто выдал и когда. Система
-      именная (TZ §12) — у каждой выдачи есть автор, и он виден здесь. */
   grants: { nm: string; sub: string }[];
 };
 
@@ -1588,554 +1978,6 @@ const USERS: User[] = [
   },
 ];
 
-export function Users1_5() {
-  /* Экран показывает реестр, а не отдельный список учётных записей: роль
-     выдают человеку, а человек живёт в реестре. Два списка одних и тех же
-     людей заставляли прыгать между экранами, чтобы понять, кто это и что ему
-     можно. */
-  const [reg, setReg] = useState(REGISTRIES[0].k);
-  const [open, setOpen] = useState<Entry | null>(null);
-  const r = REGISTRIES.find((x) => x.k === reg)!;
-  return (
-    <RoleScreen role={R01} nav="Пользователи" title="Пользователи и роли">
-      <div className="ttabs">
-        {REGISTRIES.map((x) => (
-          <button
-            key={x.k}
-            type="button"
-            className={'ttab' + (x.k === reg ? ' on' : '')}
-            onClick={() => { setReg(x.k); setOpen(null); }}
-          >
-            {x.k} · {x.n}
-          </button>
-        ))}
-      </div>
-      <div className="dactionbar" style={{ justifyContent: 'flex-end' }}>
-        <button className="dsubmit" style={{ padding: '10px 14px' }} data-to="Э1.10">
-          <UserPlus size={15} /> Пригласить человека
-        </button>
-      </div>
-      {/* «Выдать роль» стоит в строке рядом с «Открыть»: роль выдают конкретному
-          человеку, и выбирать его надо там же, где на него смотрят. */}
-      {/* `key` по реестру: у каждой вкладки свой поиск, свой фильтр и своя
-          страница — вкладки это четыре разных списка, а не один с фильтром. */}
-      <RegTable key={r.k} r={r} onOpen={setOpen} withGrant />
-      {open && <RegCard e={open} r={r} roles onClose={() => setOpen(null)} to="Э1.5" />}
-    </RoleScreen>
-  );
-}
-
-const Users1_5States = () => (
-  <States>
-    <Shot
-      tone="warning"
-      title="Попытка выдать роль «главный судья» ✳"
-      text="Подсказка, что на официальный турнир судью назначает председатель ГСК через заявки, а не этот экран."
-    >
-      <Rows>
-        <div className="drow">
-          <img src={A(76)} alt="" />
-          <div className="who">
-            <div className="nm">Оспанов Тимур</div>
-            <div className="rl">Главный судья · Кубок РК · назначил председатель ГСК, 12.04.2026</div>
-          </div>
-          <P t="НАЗНАЧЕН ГСК" cls="reg" />
-        </div>
-      </Rows>
-      <Alert>
-        У этой роли нет ни «Выдать», ни «Отозвать»: она появилась из решения по заявке судьи.
-        Снять её можно только сменой главного судьи на турнире.
-      </Alert>
-    </Shot>
-
-    <Shot
-      tone="warning"
-      title="⚠ 12.8 — один аккаунт на федерацию или несколько"
-      text="Не решено и то, нужен ли технический администратор без доступа к спортивным решениям."
-    >
-      <Rows>
-        <Row av={AW(44)} nm="Абаева Динара" sub="Администратор Федерации · система · бессрочно" pill={{ t: 'АКТИВЕН', cls: 'live' }} />
-        <Row av={A(60)} nm="Сериков Нурлан" sub="Экономист · система · бессрочно" pill={{ t: 'АКТИВЕН', cls: 'live' }} />
-      </Rows>
-      <Alert>
-        Сколько людей держат роль администратора и нужен ли отдельный технический администратор —
-        без доступа к спортивным решениям и персональным данным — федерация ещё не ответила.
-      </Alert>
-    </Shot>
-  </States>
-);
-
-/* ── Э1.10 · Приглашение человека ──────────────────────────────── */
-
-export function NewUser1_10() {
-  return (
-    <RoleScreen
-      role={R01}
-      nav="Пользователи"
-      title="Пригласить человека"
-      back={{ label: 'Пользователи и роли', to: 'Э1.5' }}
-    >
-      <Panel title="Человек и контакты">
-        <Form>
-          <Input label="Фамилия" value="Абдрахманова" />
-          <Input label="Имя, отчество" value="Айгерим Ерлановна" />
-          <Input label="Год рождения ✳" value="1994" />
-          <Input label="Телефон" value="+7 707 118 44 03" placeholder="+7 ___ ___ __ __" />
-          <Input label="Почта" value="a.abdrakhmanova@ttfrk.kz" placeholder="имя@домен" />
-          <Field label="Хотя бы один контакт ✳" value="телефон и почта заполнены" wide />
-        </Form>
-      </Panel>
-
-      {/* Приглашение — одна ссылка, а не выбор «почта или SMS».
-
-          Канал выбирать незачем: ссылку администратор отправляет чем угодно —
-          мессенджером, письмом, надиктовывает по телефону, и системе не нужно
-          ни знать этот канал, ни уметь слать письма с SMS. Пароль человек задаёт
-          сам, открыв ссылку, — мы его не знаем и не храним. */}
-      <Panel title="Приглашение — ссылка ✳">
-        {/* Ссылка и правило под ней — один блок, а не две отдельные плашки с
-            отбивкой: правило объясняет поле над собой, и разносить их незачем.
-            Про то, что канал отправки любой, здесь не пишем — это следует из
-            того, что канала на экране нет. */}
-        <div style={{ display: 'grid', gap: 8 }}>
-          <div className="dactionbar">
-            <Input label="Ссылка приглашения" value="https://ttfrk.kz/invite/8f3a-91c2-4d70" wide />
-            <Btn>
-              <Copy size={14} /> Скопировать
-            </Btn>
-          </div>
-          <Hint>Одноразовая, действует 7 дней ✳. Пароль человек задаёт сам — мы его не храним.</Hint>
-        </div>
-      </Panel>
-
-      <div className="dactionbar" style={{ justifyContent: 'flex-end' }}>
-        <div style={{ display: 'flex', gap: 8 }}>
-          <Ghost>Выдать роль сразу</Ghost>
-          <button className="dsubmit" style={{ padding: '12px 18px' }}>
-            <Send size={15} /> Пригласить и получить ссылку
-          </button>
-        </div>
-      </div>
-    </RoleScreen>
-  );
-}
-
-const NewUser1_10States = () => (
-  <States>
-    <Shot
-      tone="warning"
-      title="Найден похожий человек ✳"
-      text="Система сама сверяет ФИО, год рождения и город и предлагает связать, а не заводить вторую запись."
-    >
-      <Rows>
-        <div className="drow">
-          <img src={AW(32)} alt="" />
-          <div className="who">
-            <div className="nm">Абдрахманова Айгерим Ерлановна</div>
-            <div className="rl">1994 · Астана · судья второй категории · есть в реестре</div>
-          </div>
-          <P t="СОВПАДЕНИЕ" cls="wait" />
-        </div>
-      </Rows>
-      <div style={{ display: 'flex', gap: 8 }}>
-        <button className="dpickbtn">Связать с этой записью</button>
-        <Ghost>Всё равно завести новую</Ghost>
-      </div>
-    </Shot>
-
-    <Shot
-      tone="danger"
-      title="Срок ссылки вышел ✳"
-      text="Вместо ссылки — «выпустить новую»; старая больше не работает."
-    >
-      <Rows>
-        <div className="drow">
-          <div className="who">
-            <div className="nm">https://ttfrk.kz/invite/8f3a-91c2-4d70</div>
-            <div className="rl" style={{ color: 'var(--c-danger)' }}>выпущена 07.04.2026 · срок вышел 14.04.2026 · не открыта</div>
-          </div>
-          <P t="ПРОСРОЧЕНА" cls="bad" />
-          <button className="dpickbtn">Выпустить новую</button>
-        </div>
-      </Rows>
-      <Alert tone="danger">Аккаунт остаётся неактивным: человек не задал пароль и войти не может.</Alert>
-    </Shot>
-  </States>
-);
-
-/* ── Э1.11 · Выдача роли ───────────────────────────────────────── */
-
-/* Область выдачи: система / турнир / клуб / стол по флоу, плюс регион ✳.
-
-   Региона в списке ТЗ нет, а он нужен: старший тренер региона (роль 12) работает
-   своим регионом и только им — «заявить спортсмена не своего региона» ему прямо
-   запрещено (ROLES.md §12). Системой его выдать нельзя, турниром и клубом — тоже.
-   Это дырка в перечне областей, её надо подтвердить с федерацией. */
-type Scope = 'Система' | 'Регион' | 'Турнир' | 'Клуб' | 'Стол';
-
-/** Регионы — области Казахстана и три города республиканского значения. */
-const REGIONS = [
-  'Абайская область', 'Акмолинская область', 'Актюбинская область', 'Алматинская область',
-  'Атырауская область', 'Восточно-Казахстанская область', 'Жамбылская область',
-  'Жетысуская область', 'Западно-Казахстанская область', 'Карагандинская область',
-  'Костанайская область', 'Кызылординская область', 'Мангистауская область',
-  'Павлодарская область', 'Северо-Казахстанская область', 'Туркестанская область',
-  'Улытауская область', 'г. Астана', 'г. Алматы', 'г. Шымкент',
-];
-
-/** Клубы — те же, что в реестрах и на экране взносов. */
-const CLUBS = [
-  '«Алатау» · Алматы', '«Барыс» · Астана', '«Шахтёр» · Караганда',
-  '«Иртыш» · Павлодар', '«Достык» · Шымкент',
-];
-
-/** Роль выдают на то, что ещё не кончилось: завершённый турнир прав не даёт. */
-const GRANTABLE = TOURS.filter((t) => t.st !== 'ЗАВЕРШЁН');
-
-/** Сколько столов у турнира — по категории: у главного старта их больше, чем у
-    однодневного ОРТ. В регламенте столы задаются турниру отдельно (Э1.4, шаг 5),
-    здесь довольно типового числа: селектору столов нужен диапазон. */
-const TABLES: Record<Cat, number> = { 'Главный старт': 16, 'Лига': 10, 'ОРТ': 8 };
-
-/** Последний день турнира — им же кончается роль, выданная на этот турнир. */
-const till = (t: Tour) =>
-  `до ${t.d.split('–').pop()!.padStart(2, '0')}.${String(t.m + 1).padStart(2, '0')}.2026`;
-
-/** Срок для областей без привязки к турниру. */
-const TERMS = ['до 31.12.2026 — по конец сезона', 'бессрочно'];
-
-/** Объект области: что именно выбирают, выбрав систему, регион, клуб, турнир
-    или стол.
-
-    **Стол — единственная область с двойным выбором**: сначала турнир, потом
-    стол в нём. Стол сам по себе не адрес: «судья на стол 4» без турнира ничего
-    не значит, столы нумеруются заново на каждом соревновании.
-
-    **Срок у турнира и стола не выбирают** — он следует из турнира. Иначе
-    область перестаёт работать: можно выдать судье доступ, который переживёт
-    турнир, ради которого выдавался. У системы, региона и клуба такой привязки
-    нет, там срок выбирается.
-
-    Ключ по области (`key={scope}` у вызова) сбрасывает выбор при смене области:
-    турнир, выбранный для стола, не должен всплыть в клубе. */
-const ScopeFields = ({ scope }: { scope: Scope }) => {
-  const [tour, setTour] = useState(GRANTABLE[0].nm);
-  const [club, setClub] = useState(CLUBS[0]);
-  const [region, setRegion] = useState('г. Алматы');
-  const [table, setTable] = useState('Стол 1');
-  const [term, setTerm] = useState(TERMS[0]);
-  const t = GRANTABLE.find((x) => x.nm === tour)!;
-
-  if (scope === 'Система') {
-    return (
-      <Form>
-        <Field label="Область" value="Вся система" />
-        <Select label="Срок" items={['бессрочно', ...TERMS.slice(0, 1)]} value={term} onChange={setTerm} />
-      </Form>
-    );
-  }
-  if (scope === 'Регион' || scope === 'Клуб') {
-    const byRegion = scope === 'Регион';
-    return (
-      <Form>
-        <Select
-          label={byRegion ? 'Регион ✳' : 'Клуб'}
-          items={byRegion ? REGIONS : CLUBS}
-          value={byRegion ? region : club}
-          onChange={byRegion ? setRegion : setClub}
-        />
-        <Select label="Срок" items={TERMS} value={term} onChange={setTerm} />
-      </Form>
-    );
-  }
-  return (
-    <>
-      <Form>
-        <Select
-          label="Турнир"
-          items={GRANTABLE.map((x) => x.nm)}
-          value={tour}
-          /* Смена турнира сбрасывает стол: у другого турнира своя нумерация. */
-          onChange={(v) => { setTour(v); setTable('Стол 1'); }}
-          wide={scope === 'Турнир'}
-        />
-        {scope === 'Стол' && (
-          <Select
-            label="Стол — из столов этого турнира"
-            items={Array.from({ length: TABLES[t.cat] }, (_, i) => `Стол ${i + 1}`)}
-            value={table}
-            onChange={setTable}
-          />
-        )}
-      </Form>
-      {/* Срок не выбирают — он следует из турнира, поэтому и нарисован иначе:
-          строкой без рамки, а не полем. Объяснять это плашкой не нужно, форма
-          сама показывает разницу. */}
-      <Derived k="Срок — по последний день турнира" v={till(t)} />
-    </>
-  );
-};
-
-/** Роль в диалоге выдачи: какие ей доступны области и что она даёт человеку.
-
-    Сводка прав — главное в этом экране: выдающий должен видеть, что именно
-    раздаёт (флоу Э1.11). Формулировки — из ROLES.md «Что может нажать»; только
-    то, что роль даёт. Запретов в списке нет: экран отвечает на «что человек
-    сможет», и перечислять в нём то, чего он не сможет, — значит отвечать на
-    вопрос, который здесь не задавали. */
-type Grant = {
-  nm: string;
-  /** Области, которыми роль выдаётся. Первая — по умолчанию. */
-  scopes: Scope[];
-  can?: { nm: string; sub: string }[];
-  /** Роль не раздаётся руками — почему. */
-  block?: string;
-  /** Функционал в документе федерации не заполнен (ROLES.md, вопрос 12.1). */
-  open?: string;
-};
-
-const GRANTS: Grant[] = [
-  {
-    nm: 'Администратор Федерации',
-    scopes: ['Система'],
-    can: [
-      { nm: 'Заводить соревнования и править регламент', sub: 'календарь, карточка турнира, отмена и перенос' },
-      { nm: 'Заводить аккаунты и выдавать роли', sub: 'этот же диалог — роль передаётся дальше' },
-    ],
-  },
-  {
-    nm: 'Экономист',
-    scopes: ['Система'],
-    can: [
-      { nm: 'Отмечать оплату годового взноса', sub: 'и снимать отметку с причиной ✳' },
-      { nm: 'Выгружать списки по взносам', sub: 'по региону, клубу, состоянию оплаты' },
-    ],
-  },
-  {
-    nm: 'Менеджер по спорту',
-    scopes: ['Система'],
-    can: [
-      { nm: 'Смотреть и выгружать любой модуль', sub: 'календарь, заявки, сетки, взносы, рейтинг' },
-      { nm: 'Подписываться на соревнование ✳', sub: 'уведомления о смене состояния' },
-    ],
-  },
-  {
-    nm: 'Менеджер соревнований',
-    scopes: ['Система'],
-    can: [
-      { nm: 'Смотреть и выгружать любой модуль', sub: 'то же, что у менеджера по спорту' },
-      { nm: 'Подписываться на соревнование ✳', sub: 'уведомления о смене состояния' },
-    ],
-  },
-  {
-    nm: 'Председатель ГСК',
-    scopes: ['Система'],
-    can: [
-      { nm: 'Назначать главного судью и наряд', sub: 'из заявок судей на турнир' },
-      { nm: 'Утверждать протоколы и решать апелляции', sub: 'и возвращать с причиной' },
-    ],
-  },
-  {
-    nm: 'Главный судья',
-    scopes: ['Турнир'],
-    block:
-      'Эта роль не раздаётся руками: судьи подают заявки на судейство, председатель ГСК выбирает ' +
-      'одного, и он становится главным судьёй турнира.',
-    can: [
-      { nm: 'Принимать заявки и собирать сетку', sub: 'посев или жеребьёвка, расписание по столам' },
-      { nm: 'Ставить судей на столы и вести протокол', sub: 'исправление счёта идёт через него' },
-    ],
-  },
-  {
-    nm: 'Главный секретарь',
-    scopes: ['Турнир'],
-    can: [
-      { nm: 'Проводить жеребьёвку и собирать сетку', sub: 'вместе с главным судьёй' },
-      { nm: 'Оформлять и печатать протокол', sub: 'итоговый протокол турнира' },
-    ],
-  },
-  {
-    nm: 'Заместитель судьи',
-    scopes: ['Турнир'],
-    open:
-      'Функционал этой роли в документе федерации не заполнен — вопрос 12.1. Неизвестно даже ' +
-      'главное: права те же, что у главного судьи, но только в его отсутствие, или постоянно. ' +
-      'Пока на вопрос нет ответа, выдавать роль нечем — сводки прав не существует.',
-  },
-  {
-    nm: 'Судья',
-    scopes: ['Турнир', 'Стол'],
-    can: [
-      { nm: 'Вести счёт на своём столе', sub: 'матч не стартует, пока стол без судьи' },
-      { nm: 'Видеть расписание и вызовы', sub: 'уведомление о вызове пары приходит мгновенно' },
-    ],
-  },
-  {
-    nm: 'Инспектор',
-    scopes: ['Турнир', 'Система'],
-    can: [
-      { nm: 'Создавать заключение по турниру', sub: 'с материалами; уходит в ГСК' },
-      { nm: 'Смотреть, фильтровать, выгружать', sub: 'весь турнир целиком' },
-    ],
-  },
-  {
-    nm: 'Главный тренер',
-    scopes: ['Система'],
-    open:
-      'Функционал этой роли в документе федерации не заполнен — вопрос 12.1. Он смотрит составы и ' +
-      'рейтинги или ещё и заявляет сборную на международные старты, которых в календаре пока нет? ' +
-      'В матрице ему проставлено только чтение, и это наше допущение, а не решение федерации.',
-  },
-  {
-    nm: 'Старший тренер региона',
-    scopes: ['Регион'],
-    can: [
-      { nm: 'Регистрировать спортсменов своего региона', sub: 'с документами; заявка списком' },
-      { nm: 'Подавать заявку на главные старты', sub: 'только он заявляет на них состав' },
-    ],
-  },
-  {
-    nm: 'Администратор клуба',
-    scopes: ['Клуб'],
-    can: [
-      { nm: 'Вести клуб: спортсмены, тренеры, команды', sub: 'и заявлять команду в Лигу' },
-      { nm: 'Заводить клубные турниры', sub: 'с флагами: судьи, рейтинг, плата, ценз' },
-    ],
-  },
-  {
-    nm: 'Спортсмен',
-    scopes: ['Система'],
-    can: [
-      { nm: 'Заявляться на ОРТ и клубные турниры', sub: 'сам за себя; платить годовой взнос' },
-      { nm: 'Смотреть свой рейтинг и матчи', sub: 'и сетки с расписанием' },
-    ],
-  },
-];
-
-export function GrantRole1_11() {
-  const [role, setRole] = useState('Судья');
-  const [scope, setScope] = useState<Scope>('Турнир');
-  /* Диалог открыт по умолчанию: экран Э1.11 — это и есть выдача роли, и в борде
-     колонка должна показывать её, а не список под ней. Крестик закрывает,
-     «Выдать роль» в строке открывает снова. */
-  const [open, setOpen] = useState(true);
-  const g = GRANTS.find((x) => x.nm === role)!;
-  /* Область переключается вместе с ролью: у судьи это турнир или стол, у
-     администратора клуба — только клуб. Оставить прежнюю было бы враньём —
-     диалог показал бы область, которой у роли не бывает. */
-  const pick = (x: Grant) => {
-    setRole(x.nm);
-    setScope(x.scopes[0]);
-  };
-  return (
-    <RoleScreen
-      role={R01}
-      nav="Пользователи"
-      title="Пользователи и роли"
-    >
-      {/* Под диалогом — тот же экран, с которого пришли (Э1.5), и тот же реестр:
-          закрыл крестиком — вернулся ровно туда, откуда нажал «Выдать роль».
-          Раньше здесь лежала копия старого списка учётных записей, и подложка
-          показывала экран, которого уже нет. */}
-      <div className="ttabs">
-        {REGISTRIES.map((x) => (
-          <span key={x.k} className={'ttab' + (x.k === 'Судьи' ? ' on' : '')}>
-            {x.k} · {x.n}
-          </span>
-        ))}
-      </div>
-      <RegTable r={REGISTRIES[1]} onOpen={() => setOpen(true)} withGrant />
-
-      {open && (
-      <Modal
-        title="Выдать роль"
-        sub="Пак Сергей · +7 705 431 20 18 · уже есть роль «Судья стола · стол 4»"
-        onClose={() => setOpen(false)}
-        to="Э1.5"
-        foot={
-          <div style={{ marginLeft: 'auto' }}>
-            {g.block || g.open ? (
-              <Off>Выдать</Off>
-            ) : (
-              <button className="dsubmit" style={{ padding: '11px 16px' }}>Выдать</button>
-            )}
-          </div>
-        }
-      >
-        {/* Роль — селектором, а не рядом кнопок: их четырнадцать, кнопками они
-            занимали четыре строки и топили собой всё остальное в диалоге. */}
-        <Select
-          label="Роль"
-          items={GRANTS.map((x) => x.nm)}
-          value={role}
-          onChange={(v) => pick(GRANTS.find((x) => x.nm === v)!)}
-          wide
-        />
-        <Block title="Область — состав зависит от роли">
-          {/* Недоступные области не показываем серыми — их просто нет: у роли
-              они не бывают, и выбор из одной кнопки сам это говорит. */}
-          <Filter items={g.scopes} active={scope} onPick={(v) => setScope(v as Scope)} />
-          <div style={{ marginTop: 12, display: 'grid', gap: 10 }}>
-            {/* Ключ по области сбрасывает выбор при её смене: турнир, выбранный
-                для стола, не должен всплыть в клубе. */}
-            <ScopeFields key={scope} scope={scope} />
-          </div>
-        </Block>
-        <Block title="Что человек сможет ✳">
-          {g.open ? (
-            <Alert>{g.open} ⚠</Alert>
-          ) : (
-            <>
-              {g.block && <Alert tone="danger">{g.block}</Alert>}
-              {/* Значка «ДА» у строк нет: заголовок зоны уже сказал, что это
-                  список того, что человек сможет, и метка на каждой строке
-                  повторяет его четырежды. */}
-              <Rows>
-                {g.can!.map((c) => (
-                  <Row key={c.nm} nm={c.nm} sub={c.sub} />
-                ))}
-              </Rows>
-            </>
-          )}
-        </Block>
-      </Modal>
-      )}
-    </RoleScreen>
-  );
-}
-
-const GrantRole1_11States = () => (
-  <States>
-    <Shot
-      tone="danger"
-      title="Выбрана роль «Главный судья соревнований»"
-      text="Выдать нельзя: на официальный турнир судью назначает председатель ГСК через заявки."
-    >
-      <div className="dseg2">
-        <span>Судья</span>
-        <span style={{ color: 'var(--c-danger)', borderColor: 'var(--c-danger-line)' }}>Главный судья</span>
-        <span>Инспектор</span>
-      </div>
-      <Alert tone="danger">
-        Эта роль не раздаётся руками: судьи подают заявки на судейство, председатель ГСК выбирает одного,
-        и он становится главным судьёй турнира.
-      </Alert>
-      <Off>Выдать</Off>
-    </Shot>
-
-    <Shot tone="warning" title="Срок указан в прошлом" text="«Выдать» неактивна.">
-      <Form>
-        <Field label="Роль и область" value="Судья · Кубок Республики Казахстан 2026" />
-        <div className="dfield">
-          <div className="k">Срок</div>
-          <div className="dval" style={{ color: 'var(--c-warning)' }}>до 20.05.2025 — дата уже прошла</div>
-        </div>
-      </Form>
-      <Off>Выдать</Off>
-    </Shot>
-  </States>
-);
-
 /* ── Реестры: данные и таблица ──────────────────────────────────── */
 
 /** Запись реестра. Колонка `val` у каждого реестра своя: у спортсмена рейтинг
@@ -2157,7 +1999,7 @@ type Entry = {
   ok: boolean;
   /** Что именно значит галочка у этой записи — в подсказке при наведении. */
   st: string;
-  /** Карточка, которая открывается по «Открыть». */
+  /** Карточка, которая открывается по клику на строку. */
   card: { k: string; v: string }[];
 };
 
@@ -2166,9 +2008,7 @@ type Registry = {
       (`fill` ниже): число на вкладке и длина таблицы расходиться не должны. */
   k: string;
   n: string;
-  /** Заголовок первой колонки. Раньше она не была подписана — «Кто» ничего не
-      сообщало. Теперь заголовок это кнопка сортировки по алфавиту, и он
-      называет, кого сортируешь: в реестре на пять тысяч строк алфавит нужен. */
+  /** Заголовок первой колонки — он же кнопка сортировки по алфавиту. */
   who: string;
   /** Что ищет поиск по этому реестру — подсказка в поле. */
   find: string;
@@ -2179,8 +2019,7 @@ type Registry = {
   flt: [string, string];
   /** Подпись кнопки заведения: заводят не «запись», а спортсмена или клуб. */
   add: string;
-  /** Карточка записи. Нарисована пока только у спортсмена (Э1.12) — у судьи,
-      тренера и клуба своей карточки в макетах ещё нет. */
+  /** Карточка записи целым экраном — пока только у спортсмена (Э1.12). */
   to?: string;
   rows: Entry[];
 };
@@ -2464,7 +2303,6 @@ const REGISTRIES: Registry[] = [
   },
 ];
 
-
 /* ── Реестры: настоящий объём ───────────────────────────────────── */
 
 /* В реестре федерации пять тысяч спортсменов, а в таблице их было шесть — и
@@ -2698,6 +2536,9 @@ const PER_REG = 20;
 /** Колонки, по которым сортируют: кто, значение, состояние. */
 type RegKey = 'nm' | 'val' | 'ok';
 
+const REG_GRID = '2.6fr 100px 110px 120px';
+const REG_GRID_PLAIN = '2.6fr 100px 110px';
+
 /** Таблица реестра — одна на реестры и на пользователей.
 
     Реестр — это тысячи строк, и лентой строк он не работает: человека в нём
@@ -2753,92 +2594,80 @@ const RegTable = ({
     setSort({ k, up: sort.k === k ? !sort.up : k !== 'val' });
     setPage(0);
   };
-  const head = (k: RegKey, t2: string, cls?: string) => (
-    <button
-      type="button"
-      className={(cls ? cls + ' ' : '') + (sort.k === k ? 'on' : '')}
-      onClick={() => pick(k)}
-    >
-      {t2}
-      {sort.k === k && <ArrowUpDown size={11} />}
-    </button>
-  );
+
+  const grid = grant ? REG_GRID : REG_GRID_PLAIN;
+  const cols: ReactNode[] = [
+    <Th key="nm" t={r.who} on={sort.k === 'nm'} onClick={() => pick('nm')} />,
+    <Th key="val" t={r.cols[0]} on={sort.k === 'val'} onClick={() => pick('val')} />,
+    <Th key="ok" t={r.cols[1]} on={sort.k === 'ok'} onClick={() => pick('ok')} />,
+  ];
+  if (grant) cols.push(<span key="act" />);
 
   return (
     <>
       {/* Поиск, фильтр и счёт — одной полосой: три отдельных ряда над таблицей
           съедали её же высоту, а вместе они одно действие — «сузить список». */}
-      <div className="dactionbar" style={{ marginBottom: 10 }}>
-        <Search
+      <div className="mb-3 flex items-center gap-3">
+        <SearchInput
           value={q}
-          placeholder={r.find}
           onChange={(v) => { setQ(v); setPage(0); }}
-          wide
+          placeholder={r.find}
+          className="w-72"
         />
-        <Filter items={['Все', ...r.flt]} active={f} onPick={(v) => { setF(v); setPage(0); }} />
-        <span className="dcount">
+        <FilterSeg items={['Все', ...r.flt]} active={f} onPick={(v) => { setF(v); setPage(0); }} />
+        <span className="ml-auto whitespace-nowrap text-[12.5px] text-neutral-500">
           {rows.length === r.rows.length
             ? `${r.n} в реестре`
             : `найдено ${cnt(rows.length)} из ${r.n}`}
         </span>
       </div>
 
-      <div className={'mktable mkreg' + (grant ? '' : ' plain')}>
-        {/* Заголовок первой колонки — кнопка сортировки по алфавиту: раньше она
-            не была подписана («Кто» ничего не сообщало), но в реестре на пять
-            тысяч строк алфавит нужен, а нажимать не на что. */}
-        <div className="mktable-h">
-          {head('nm', r.who)}
-          {head('val', r.cols[0], 'num')}
-          {head('ok', r.cols[1], 'mid')}
-          {grant && <span />}
-        </div>
-        <div className="mktable-b">
-          {shown.map((e) => (
-            /* Карточку открывает сама строка, а не кнопка «Открыть»: строка и
-               так про этого человека, и отдельная кнопка занимала колонку,
-               повторяя то, что делает клик по имени. */
-            <div className="mktable-r" key={e.id ?? e.nm} onClick={() => onOpen(e)}>
-              <span className="who">
-                {e.av && <img src={e.av} alt="" />}
-                <i>
-                  <b className="nm">{e.nm}</b>
-                  <em>{e.sub}</em>
-                </i>
+      <Sheet grid={grid} cols={cols}>
+        {shown.map((e) => (
+          /* Карточку открывает сама строка, а не кнопка «Открыть»: строка и
+             так про этого человека, и отдельная кнопка занимала колонку,
+             повторяя то, что делает клик по имени. */
+          <div
+            key={e.id ?? e.nm}
+            role="button"
+            tabIndex={0}
+            data-row
+            onClick={() => onOpen(e)}
+            className="grid cursor-pointer items-center gap-3 px-4 py-2 text-[13px] hover:bg-neutral-50"
+            style={{ gridTemplateColumns: grid }}
+          >
+            <Who av={e.av} nm={e.nm} sub={e.sub} />
+            <span className="font-semibold tabular-nums">{e.val}</span>
+            {/* Состояние — галочкой: в колонке с заголовком слово повторялось
+                бы столько раз, сколько строк. Что именно значит — в подсказке. */}
+            <span>
+              <span
+                title={e.st}
+                className={
+                  'inline-flex h-5 w-5 items-center justify-center rounded-full ' +
+                  (e.ok ? 'bg-green-100 text-green-700' : 'bg-neutral-100 text-neutral-400')
+                }
+              >
+                {e.ok ? <Check size={13} /> : <Minus size={13} />}
               </span>
-              <span className="num">{e.val}</span>
-              {/* Состояние — галочкой: в колонке с заголовком слово повторялось
-                  бы столько раз, сколько строк. Что именно значит — в подсказке. */}
-              <span className="mid">
-                <span className={'rchk ' + (e.ok ? 'ok' : 'no')} title={e.st}>
-                  {e.ok ? <Check size={13} /> : <Minus size={13} />}
-                </span>
+            </span>
+            {grant && (
+              /* Кнопка не открывает карточку: она уводит в диалог выдачи роли. */
+              <span className="flex justify-end" onClick={(ev) => ev.stopPropagation()}>
+                <Button size="sm" variant="outline" data-to="Э1.11">
+                  Выдать роль
+                </Button>
               </span>
-              {grant && (
-                /* Кнопка не открывает карточку: она уводит в диалог выдачи роли. */
-                <span className="act">
-                  <button
-                    type="button"
-                    className="dpickbtn"
-                    data-to="Э1.11"
-                    onClick={(ev) => ev.stopPropagation()}
-                  >
-                    Выдать роль
-                  </button>
-                </span>
-              )}
-            </div>
-          ))}
-          {shown.length === 0 && (
-            <div className="dcount" style={{ padding: '14px 12px' }}>
-              Ничего не нашлось — проверьте написание или снимите фильтр.
-            </div>
-          )}
-        </div>
-      </div>
+            )}
+          </div>
+        ))}
+        {shown.length === 0 && (
+          <NoRows>Ничего не нашлось — проверьте написание или снимите фильтр.</NoRows>
+        )}
+      </Sheet>
 
-      <div className="dactionbar" style={{ marginTop: 10 }}>
-        <span className="dcount">
+      <div className="mt-1 flex items-center justify-between gap-3">
+        <span className="text-[12.5px] text-neutral-500">
           {rows.length
             ? `${cnt(cur * PER_REG + 1)}–${cnt(cur * PER_REG + shown.length)} из ${cnt(rows.length)}`
             : '0 из 0'}
@@ -2849,9 +2678,9 @@ const RegTable = ({
   );
 };
 
-/** Карточка записи окном: смотрят её мельком, из списка, и уходить с места в
-    списке ради этого незачем. `roles` — показывать ли выданные роли: на экране
-    пользователей они и есть главное, в реестре им не место. */
+/** Карточка записи диалогом: смотрят её мельком, из списка, и уходить с места
+    в списке ради этого незачем. `roles` — показывать ли выданные роли: на
+    экране пользователей они и есть главное, в реестре им не место. */
 const RegCard = ({
   e,
   r,
@@ -2867,26 +2696,27 @@ const RegCard = ({
 }) => {
   const g = grantsOf(e.nm);
   return (
-    <Modal
+    <InlineDialog
       title={e.nm}
       sub={`${r.k} · ${e.sub}`}
-      onClose={onClose}
       to={to}
       foot={
         <>
-          <div className="dcount">{e.st}</div>
+          <span className="mr-auto text-xs text-neutral-500">{e.st}</span>
+          <QuietAction onPress={onClose}>Закрыть</QuietAction>
           {r.to && <Btn>Открыть полностью</Btn>}
         </>
       }
     >
-      <Form>
+      <FormGrid>
         {e.card.map((f) => (
-          <Field key={f.k} label={f.k} value={f.v} />
+          <FieldView key={f.k} label={f.k} value={f.v} />
         ))}
-      </Form>
-      <Derived k={r.cols[0]} v={e.val} />
+        <Derived k={r.cols[0]} v={e.val} />
+      </FormGrid>
       {roles && (
-        <Block title="Роли · кто выдал и когда">
+        <>
+          <Sec>Роли · кто выдал и когда</Sec>
           {g ? (
             <Rows>
               {g.map((x) => (
@@ -2896,65 +2726,683 @@ const RegCard = ({
           ) : (
             /* Запись в реестре и учётная запись — разные вещи: человек может
                быть в реестре и не иметь входа в систему. */
-            <Alert>Учётной записи нет: человек есть в реестре, но в систему не входит. Роль выдаётся вместе с аккаунтом ⚠</Alert>
+            <Bar tone="warning">
+              Учётной записи нет: человек есть в реестре, но в систему не входит. Роль выдаётся
+              вместе с аккаунтом ⚠
+            </Bar>
           )}
-        </Block>
+        </>
       )}
-    </Modal>
+    </InlineDialog>
   );
 };
+
+/* ── Э1.5 · Пользователи и роли ────────────────────────────────── */
+
+/** Подпись вкладки реестра: название и живой счёт записей. */
+const regTab = (r: Registry) => `${r.k} · ${r.n}`;
+
+export function Users1_5() {
+  /* Экран показывает реестр, а не отдельный список учётных записей: роль
+     выдают человеку, а человек живёт в реестре. Два списка одних и тех же
+     людей заставляли прыгать между экранами, чтобы понять, кто это и что ему
+     можно. */
+  const [reg, setReg] = useState(REGISTRIES[0].k);
+  const [open, setOpen] = useState<Entry | null>(null);
+  const r = REGISTRIES.find((x) => x.k === reg)!;
+  return (
+    <WebApp role={R01} nav="Пользователи" title="Пользователи и роли">
+      <div className="mb-3 flex items-center justify-between gap-4">
+        <FilterSeg
+          items={REGISTRIES.map(regTab)}
+          active={regTab(r)}
+          onPick={(v) => {
+            const hit = REGISTRIES.find((x) => regTab(x) === v);
+            if (hit) { setReg(hit.k); setOpen(null); }
+          }}
+        />
+        <Button variant="primary" data-to="Э1.10">
+          <UserPlus size={15} /> Пригласить человека
+        </Button>
+      </div>
+      {/* «Выдать роль» стоит в строке: роль выдают конкретному человеку, и
+          выбирать его надо там же, где на него смотрят. `key` по реестру: у
+          каждой вкладки свой поиск, свой фильтр и своя страница — вкладки это
+          четыре разных списка, а не один с фильтром. */}
+      <RegTable key={r.k} r={r} onOpen={setOpen} withGrant />
+      {open && <RegCard e={open} r={r} roles onClose={() => setOpen(null)} to="Э1.5" />}
+    </WebApp>
+  );
+}
+
+const Users1_5States = () => (
+  <States>
+    <Shot
+      tone="warning"
+      title="Попытка выдать роль «главный судья» ✳"
+      text="Подсказка, что на официальный турнир судью назначает председатель ГСК через заявки, а не этот экран."
+    >
+      <Frag>
+        <Rows>
+          <Row
+            av={A(76)}
+            nm="Оспанов Тимур"
+            sub="Главный судья · Кубок РК · назначил председатель ГСК, 12.04.2026"
+            pill={{ t: 'НАЗНАЧЕН ГСК', cls: 'reg' }}
+          />
+        </Rows>
+        <div className="mt-3">
+          <Bar tone="warning">
+            У этой роли нет ни «Выдать», ни «Отозвать»: она появилась из решения по заявке судьи.
+            Снять её можно только сменой главного судьи на турнире.
+          </Bar>
+        </div>
+      </Frag>
+    </Shot>
+
+    <Shot
+      tone="warning"
+      title="⚠ 12.8 — один аккаунт на федерацию или несколько"
+      text="Не решено и то, нужен ли технический администратор без доступа к спортивным решениям."
+    >
+      <Frag>
+        <Rows>
+          <Row av={AW(44)} nm="Абаева Динара" sub="Администратор Федерации · система · бессрочно" pill={{ t: 'АКТИВЕН', cls: 'live' }} />
+          <Row av={A(60)} nm="Сериков Нурлан" sub="Экономист · система · бессрочно" pill={{ t: 'АКТИВЕН', cls: 'live' }} />
+        </Rows>
+        <div className="mt-3">
+          <Bar tone="warning">
+            Сколько людей держат роль администратора и нужен ли отдельный технический администратор —
+            без доступа к спортивным решениям и персональным данным — федерация ещё не ответила.
+          </Bar>
+        </div>
+      </Frag>
+    </Shot>
+
+    {/* Зона «Реестр»: карточка окном с ролями. На самом экране она открывается
+        по клику на строку, и в снимке борда её не видно — а «кто выдал и
+        когда» вместе с «Отозвать» живут только в ней. */}
+    <Shot
+      tone="info"
+      title="Карточка человека окном — роли, кто выдал и когда"
+      text="Открывается кликом по строке реестра: каждая выданная роль с автором, датой и сроком, рядом «Отозвать»."
+      wide
+    >
+      <Frag w={520}>
+        <div className="mb-2 flex items-center justify-between gap-3">
+          <span className="text-[12.5px] text-neutral-500">
+            Пак Сергей · судьи · первая категория · Павлодар
+          </span>
+          <P t="АКТИВЕН" cls="live" />
+        </div>
+        <Sec>Роли · кто выдал и когда</Sec>
+        <Rows>
+          {USERS.find((u) => u.nm === 'Пак Сергей')!.grants.map((g) => (
+            <Row key={g.nm} nm={g.nm} sub={g.sub} action="Отозвать" />
+          ))}
+        </Rows>
+        <div className="mt-3">
+          <Bar>
+            Отзыв закрывает доступ сразу; всё, что человек сделал в этой роли, остаётся в журнале с
+            его именем (§12).
+          </Bar>
+        </div>
+      </Frag>
+    </Shot>
+  </States>
+);
+
+/* ── Э1.10 · Приглашение человека ──────────────────────────────── */
+
+export function NewUser1_10() {
+  return (
+    <WebApp
+      role={R01}
+      nav="Пользователи"
+      title="Пригласить человека"
+      back={{ label: 'Пользователи и роли', to: 'Э1.5' }}
+    >
+      <Panel title="Человек и контакты">
+        <FormGrid>
+          <TextInput label="Фамилия" value="Абдрахманова" />
+          <TextInput label="Имя, отчество" value="Айгерим Ерлановна" />
+          <TextInput label="Год рождения ✳" value="1994" />
+          <TextInput label="Телефон" value="+7 707 118 44 03" placeholder="+7 ___ ___ __ __" />
+          <TextInput label="Почта" value="a.abdrakhmanova@ttfrk.kz" placeholder="имя@домен" />
+          <FieldView label="Хотя бы один контакт ✳" value="телефон и почта заполнены" />
+        </FormGrid>
+      </Panel>
+
+      {/* Приглашение — одна ссылка, а не выбор «почта или SMS».
+
+          Канал выбирать незачем: ссылку администратор отправляет чем угодно —
+          мессенджером, письмом, надиктовывает по телефону, и системе не нужно
+          ни знать этот канал, ни уметь слать письма с SMS. Пароль человек задаёт
+          сам, открыв ссылку, — мы его не знаем и не храним. */}
+      <Panel title="Приглашение — ссылка ✳">
+        <div className="flex items-end gap-2">
+          <div className="min-w-0 flex-1">
+            <TextInput label="Ссылка приглашения" value="https://ttfrk.kz/invite/8f3a-91c2-4d70" wide />
+          </div>
+          <Btn>
+            <Copy size={14} /> Скопировать
+          </Btn>
+        </div>
+        {/* Ссылка и правило под ней — один блок: правило объясняет поле над
+            собой. Про то, что канал отправки любой, здесь не пишем — это
+            следует из того, что канала на экране нет. */}
+        <p className="mt-2 text-[12.5px] text-neutral-500">
+          Одноразовая, действует 7 дней ✳. Пароль человек задаёт сам — мы его не храним.
+        </p>
+      </Panel>
+
+      <div className="flex items-center justify-end gap-2">
+        <QuietAction>Выдать роль сразу</QuietAction>
+        <Button variant="primary">
+          <Send size={15} /> Пригласить и получить ссылку
+        </Button>
+      </div>
+    </WebApp>
+  );
+}
+
+const NewUser1_10States = () => (
+  <States>
+    <Shot
+      tone="warning"
+      title="Найден похожий человек ✳"
+      text="Система сама сверяет ФИО, год рождения и город и предлагает связать, а не заводить вторую запись."
+    >
+      <Frag>
+        <Rows>
+          <Row
+            av={AW(32)}
+            nm="Абдрахманова Айгерим Ерлановна"
+            sub="1994 · Астана · судья второй категории · есть в реестре"
+            pill={{ t: 'СОВПАДЕНИЕ', cls: 'wait' }}
+          />
+        </Rows>
+        <div className="mt-3 flex gap-2">
+          <Button size="sm" variant="outline">Связать с этой записью</Button>
+          <Button size="sm" variant="ghost">Всё равно завести новую</Button>
+        </div>
+      </Frag>
+    </Shot>
+
+    <Shot
+      tone="danger"
+      title="Срок ссылки вышел ✳"
+      text="Вместо ссылки — «выпустить новую»; старая больше не работает."
+    >
+      <Frag>
+        <Rows>
+          <div className="flex items-center gap-3 px-4 py-2.5">
+            <span className="min-w-0 flex-1 leading-tight">
+              <span className="block truncate text-[13.5px] font-medium">https://ttfrk.kz/invite/8f3a-91c2-4d70</span>
+              <span className="block truncate text-xs text-red-600">выпущена 07.04.2026 · срок вышел 14.04.2026 · не открыта</span>
+            </span>
+            <P t="ПРОСРОЧЕНА" cls="bad" />
+            <Button size="sm" variant="outline">Выпустить новую</Button>
+          </div>
+        </Rows>
+        <div className="mt-3">
+          <Bar tone="danger">Аккаунт остаётся неактивным: человек не задал пароль и войти не может.</Bar>
+        </div>
+      </Frag>
+    </Shot>
+  </States>
+);
+
+/* ── Э1.11 · Выдача роли ───────────────────────────────────────── */
+
+/* Область выдачи: система / турнир / клуб / стол по флоу, плюс регион ✳.
+
+   Региона в списке ТЗ нет, а он нужен: старший тренер региона (роль 12) работает
+   своим регионом и только им — «заявить спортсмена не своего региона» ему прямо
+   запрещено (ROLES.md §12). Системой его выдать нельзя, турниром и клубом — тоже.
+   Это дырка в перечне областей, её надо подтвердить с федерацией. */
+type Scope = 'Система' | 'Регион' | 'Турнир' | 'Клуб' | 'Стол';
+
+/** Регионы — области Казахстана и три города республиканского значения. */
+const REGIONS = [
+  'Абайская область', 'Акмолинская область', 'Актюбинская область', 'Алматинская область',
+  'Атырауская область', 'Восточно-Казахстанская область', 'Жамбылская область',
+  'Жетысуская область', 'Западно-Казахстанская область', 'Карагандинская область',
+  'Костанайская область', 'Кызылординская область', 'Мангистауская область',
+  'Павлодарская область', 'Северо-Казахстанская область', 'Туркестанская область',
+  'Улытауская область', 'г. Астана', 'г. Алматы', 'г. Шымкент',
+];
+
+/** Клубы — те же, что в реестрах и на экране взносов. */
+const CLUBS = [
+  '«Алатау» · Алматы', '«Барыс» · Астана', '«Шахтёр» · Караганда',
+  '«Иртыш» · Павлодар', '«Достык» · Шымкент',
+];
+
+/** Роль выдают на то, что ещё не кончилось: завершённый турнир прав не даёт. */
+const GRANTABLE = TOURS.filter((t) => t.st !== 'ЗАВЕРШЁН');
+
+/** Сколько столов у турнира — по категории: у главного старта их больше, чем у
+    однодневного ОРТ. В регламенте столы задаются турниру отдельно, здесь
+    довольно типового числа: полю стола нужен диапазон. */
+const TABLES: Record<Cat, number> = { 'Главный старт': 16, 'Лига': 10, 'ОРТ': 8 };
+
+/** Последний день турнира — им же кончается роль, выданная на этот турнир. */
+const till = (t: Tour) =>
+  `до ${t.d.split('–').pop()!.padStart(2, '0')}.${String(t.m + 1).padStart(2, '0')}.2026`;
+
+/** Срок для областей без привязки к турниру. */
+const TERMS = ['до 31.12.2026 — по конец сезона', 'бессрочно'];
+
+/** Объект области: что именно выбирают, выбрав систему, регион, клуб, турнир
+    или стол.
+
+    **Стол — единственная область с двойным выбором**: сначала турнир, потом
+    стол в нём. Стол сам по себе не адрес: «судья на стол 4» без турнира ничего
+    не значит, столы нумеруются заново на каждом соревновании.
+
+    **Срок у турнира и стола не выбирают** — он следует из турнира. Иначе
+    область перестаёт работать: можно выдать судье доступ, который переживёт
+    турнир, ради которого выдавался. У системы, региона и клуба такой привязки
+    нет, там срок выбирается.
+
+    Выбор — статичный PickField (порталов в макетах нет); регион, клуб и стол
+    показаны первыми значениями списков REGIONS/CLUBS/TABLES. */
+const ScopeFields = ({ scope }: { scope: Scope }) => {
+  const t = GRANTABLE[0];
+  if (scope === 'Система') {
+    return (
+      <FormGrid>
+        <FieldView label="Область" value="Вся система" />
+        <PickField label="Срок" value="бессрочно" />
+      </FormGrid>
+    );
+  }
+  if (scope === 'Регион' || scope === 'Клуб') {
+    return (
+      <FormGrid>
+        <PickField
+          label={scope === 'Регион' ? 'Регион ✳' : 'Клуб'}
+          value={scope === 'Регион' ? REGIONS[18] : CLUBS[0]}
+        />
+        <PickField label="Срок" value={TERMS[0]} />
+      </FormGrid>
+    );
+  }
+  return (
+    <FormGrid>
+      <PickField label="Турнир" value={t.nm} wide={scope === 'Турнир'} />
+      {scope === 'Стол' && (
+        <PickField label="Стол — из столов этого турнира" value={`Стол 1 из ${TABLES[t.cat]}`} />
+      )}
+      {/* Срок не выбирают — он следует из турнира, поэтому и нарисован иначе:
+          строкой без рамки, а не полем. Объяснять это плашкой не нужно, форма
+          сама показывает разницу. */}
+      <Derived k="Срок — по последний день турнира" v={till(t)} />
+    </FormGrid>
+  );
+};
+
+/** Роль в диалоге выдачи: какие ей доступны области и что она даёт человеку.
+
+    Сводка прав — главное в этом экране: выдающий должен видеть, что именно
+    раздаёт (флоу Э1.11). Формулировки — из ROLES.md «Что может нажать»; только
+    то, что роль даёт. Запретов в списке нет: экран отвечает на «что человек
+    сможет», и перечислять в нём то, чего он не сможет, — значит отвечать на
+    вопрос, который здесь не задавали. */
+type Grant = {
+  nm: string;
+  /** Области, которыми роль выдаётся. Первая — по умолчанию. */
+  scopes: Scope[];
+  can?: { nm: string; sub: string }[];
+  /** Роль не раздаётся руками — почему. */
+  block?: string;
+  /** Функционал в документе федерации не заполнен (ROLES.md, вопрос 12.1). */
+  open?: string;
+};
+
+const GRANTS: Grant[] = [
+  {
+    nm: 'Администратор Федерации',
+    scopes: ['Система'],
+    can: [
+      { nm: 'Заводить соревнования и править регламент', sub: 'календарь, карточка турнира, отмена и перенос' },
+      { nm: 'Заводить аккаунты и выдавать роли', sub: 'этот же диалог — роль передаётся дальше' },
+    ],
+  },
+  {
+    nm: 'Экономист',
+    scopes: ['Система'],
+    can: [
+      { nm: 'Отмечать оплату годового взноса', sub: 'и снимать отметку с причиной ✳' },
+      { nm: 'Выгружать списки по взносам', sub: 'по региону, клубу, состоянию оплаты' },
+    ],
+  },
+  {
+    nm: 'Менеджер по спорту',
+    scopes: ['Система'],
+    can: [
+      { nm: 'Смотреть и выгружать любой модуль', sub: 'календарь, заявки, сетки, взносы, рейтинг' },
+      { nm: 'Подписываться на соревнование ✳', sub: 'уведомления о смене состояния' },
+    ],
+  },
+  {
+    nm: 'Менеджер соревнований',
+    scopes: ['Система'],
+    can: [
+      { nm: 'Смотреть и выгружать любой модуль', sub: 'то же, что у менеджера по спорту' },
+      { nm: 'Подписываться на соревнование ✳', sub: 'уведомления о смене состояния' },
+    ],
+  },
+  {
+    nm: 'Председатель ГСК',
+    scopes: ['Система'],
+    can: [
+      { nm: 'Назначать главного судью и наряд', sub: 'из заявок судей на турнир' },
+      { nm: 'Утверждать протоколы и решать апелляции', sub: 'и возвращать с причиной' },
+    ],
+  },
+  {
+    nm: 'Главный судья',
+    scopes: ['Турнир'],
+    block:
+      'Эта роль не раздаётся руками: судьи подают заявки на судейство, председатель ГСК выбирает ' +
+      'одного, и он становится главным судьёй турнира.',
+    can: [
+      { nm: 'Принимать заявки и собирать сетку', sub: 'посев или жеребьёвка, расписание по столам' },
+      { nm: 'Ставить судей на столы и вести протокол', sub: 'исправление счёта идёт через него' },
+    ],
+  },
+  {
+    nm: 'Главный секретарь',
+    scopes: ['Турнир'],
+    can: [
+      { nm: 'Проводить жеребьёвку и собирать сетку', sub: 'вместе с главным судьёй' },
+      { nm: 'Оформлять и печатать протокол', sub: 'итоговый протокол турнира' },
+    ],
+  },
+  {
+    nm: 'Заместитель судьи',
+    scopes: ['Турнир'],
+    open:
+      'Функционал этой роли в документе федерации не заполнен — вопрос 12.1. Неизвестно даже ' +
+      'главное: права те же, что у главного судьи, но только в его отсутствие, или постоянно. ' +
+      'Пока на вопрос нет ответа, выдавать роль нечем — сводки прав не существует.',
+  },
+  {
+    nm: 'Судья',
+    scopes: ['Турнир', 'Стол'],
+    can: [
+      { nm: 'Вести счёт на своём столе', sub: 'матч не стартует, пока стол без судьи' },
+      { nm: 'Видеть расписание и вызовы', sub: 'уведомление о вызове пары приходит мгновенно' },
+    ],
+  },
+  {
+    nm: 'Инспектор',
+    scopes: ['Турнир', 'Система'],
+    can: [
+      { nm: 'Создавать заключение по турниру', sub: 'с материалами; уходит в ГСК' },
+      { nm: 'Смотреть, фильтровать, выгружать', sub: 'весь турнир целиком' },
+    ],
+  },
+  {
+    nm: 'Главный тренер',
+    scopes: ['Система'],
+    open:
+      'Функционал этой роли в документе федерации не заполнен — вопрос 12.1. Он смотрит составы и ' +
+      'рейтинги или ещё и заявляет сборную на международные старты, которых в календаре пока нет? ' +
+      'В матрице ему проставлено только чтение, и это наше допущение, а не решение федерации.',
+  },
+  {
+    nm: 'Старший тренер региона',
+    scopes: ['Регион'],
+    can: [
+      { nm: 'Регистрировать спортсменов своего региона', sub: 'с документами; заявка списком' },
+      { nm: 'Подавать заявку на главные старты', sub: 'только он заявляет на них состав' },
+    ],
+  },
+  {
+    nm: 'Администратор клуба',
+    scopes: ['Клуб'],
+    can: [
+      { nm: 'Вести клуб: спортсмены, тренеры, команды', sub: 'и заявлять команду в Лигу' },
+      { nm: 'Заводить клубные турниры', sub: 'с флагами: судьи, рейтинг, плата, ценз' },
+    ],
+  },
+  {
+    nm: 'Спортсмен',
+    scopes: ['Система'],
+    can: [
+      { nm: 'Заявляться на ОРТ и клубные турниры', sub: 'сам за себя; платить годовой взнос' },
+      { nm: 'Смотреть свой рейтинг и матчи', sub: 'и сетки с расписанием' },
+    ],
+  },
+];
+
+/** Выбор роли — раскрывающийся список внутри диалога, а не портал: ролей
+    четырнадцать, кнопками они занимали четыре строки, а закрытый список
+    оставляет место сводке прав. Раскрытие рисуется на месте, вниз. */
+const RolePick = ({ value, onPick }: { value: string; onPick: (g: Grant) => void }) => {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="flex flex-col gap-1">
+      <span className="text-xs font-medium text-neutral-500">Роль</span>
+      <button
+        type="button"
+        aria-expanded={open}
+        onClick={() => setOpen(!open)}
+        className="flex w-full items-center justify-between rounded-lg border border-neutral-300 bg-white px-3 py-1.5 text-sm"
+      >
+        {value}
+        <ChevronDown size={14} className={'text-neutral-400 ' + (open ? 'rotate-180' : '')} />
+      </button>
+      {open && (
+        <div className="max-h-44 overflow-auto rounded-lg border border-neutral-200 bg-white shadow-sm">
+          {GRANTS.map((g) => (
+            <button
+              key={g.nm}
+              type="button"
+              onClick={() => { onPick(g); setOpen(false); }}
+              className={
+                'flex w-full items-center gap-2 px-3 py-1.5 text-left text-sm hover:bg-neutral-50 ' +
+                (g.nm === value ? 'bg-blue-50/60 font-medium' : '')
+              }
+            >
+              <span className="w-4">{g.nm === value && <Check size={13} className="text-blue-600" />}</span>
+              {g.nm}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+
+export function GrantRole1_11() {
+  const [role, setRole] = useState('Судья');
+  const [scope, setScope] = useState<Scope>('Турнир');
+  /* Диалог открыт по умолчанию: экран Э1.11 — это и есть выдача роли, и в борде
+     колонка должна показывать её, а не список под ней. Крестик закрывает,
+     «Выдать роль» в строке открывает снова. */
+  const [open, setOpen] = useState(true);
+  const g = GRANTS.find((x) => x.nm === role)!;
+  /* Область переключается вместе с ролью: у судьи это турнир или стол, у
+     администратора клуба — только клуб. Оставить прежнюю было бы враньём —
+     диалог показал бы область, которой у роли не бывает. */
+  const pick = (x: Grant) => {
+    setRole(x.nm);
+    setScope(x.scopes[0]);
+  };
+  return (
+    <WebApp role={R01} nav="Пользователи" title="Пользователи и роли">
+      {/* Под диалогом — тот же экран, с которого пришли (Э1.5), и тот же реестр:
+          закрыл крестиком — вернулся ровно туда, откуда нажал «Выдать роль». */}
+      <div className="mb-3 flex items-center justify-between gap-4">
+        <FilterSeg
+          items={REGISTRIES.map(regTab)}
+          active={regTab(REGISTRIES[1])}
+          onPick={() => {}}
+        />
+        <Button variant="primary" data-to="Э1.10">
+          <UserPlus size={15} /> Пригласить человека
+        </Button>
+      </div>
+      <RegTable r={REGISTRIES[1]} onOpen={() => setOpen(true)} withGrant />
+
+      {open && (
+        <InlineDialog
+          title="Выдать роль"
+          sub="Пак Сергей · +7 705 431 20 18 · уже есть роль «Судья стола · стол 4»"
+          to="Э1.5"
+          foot={
+            <>
+              <span className="mr-auto"><QuietAction onPress={() => setOpen(false)}>Закрыть</QuietAction></span>
+              {g.block || g.open ? (
+                <DisabledAction>Выдать</DisabledAction>
+              ) : (
+                <Button variant="primary">Выдать</Button>
+              )}
+            </>
+          }
+        >
+          <RolePick value={role} onPick={pick} />
+          <Sec>Область — состав зависит от роли</Sec>
+          {/* Недоступные области не показываем серыми — их просто нет: у роли
+              они не бывают, и выбор из одной кнопки сам это говорит. */}
+          <div className="mb-3">
+            <FilterSeg items={g.scopes} active={scope} onPick={(v) => setScope(v as Scope)} />
+          </div>
+          {/* Ключ по области сбрасывает выбор при её смене: турнир, выбранный
+              для стола, не должен всплыть в клубе. */}
+          <ScopeFields key={scope} scope={scope} />
+          <Sec>Что человек сможет ✳</Sec>
+          {g.open ? (
+            <Bar tone="warning">{g.open} ⚠</Bar>
+          ) : (
+            <>
+              {g.block && <Bar tone="danger">{g.block}</Bar>}
+              {/* Значка «ДА» у строк нет: заголовок зоны уже сказал, что это
+                  список того, что человек сможет, и метка на каждой строке
+                  повторяет его четырежды. */}
+              <Rows>
+                {g.can!.map((c) => (
+                  <Row key={c.nm} nm={c.nm} sub={c.sub} />
+                ))}
+              </Rows>
+            </>
+          )}
+        </InlineDialog>
+      )}
+    </WebApp>
+  );
+}
+
+const GrantRole1_11States = () => (
+  <States>
+    <Shot
+      tone="danger"
+      title="Выбрана роль «Главный судья соревнований»"
+      text="Выдать нельзя: на официальный турнир судью назначает председатель ГСК через заявки."
+    >
+      <Frag>
+        <div className="mb-3 flex flex-wrap gap-1">
+          <span className="rounded-lg border border-neutral-200 bg-white px-2.5 py-1.5 text-[12.5px] text-neutral-600">Судья</span>
+          <span className="rounded-lg border border-red-300 bg-red-50 px-2.5 py-1.5 text-[12.5px] font-medium text-red-700">Главный судья</span>
+          <span className="rounded-lg border border-neutral-200 bg-white px-2.5 py-1.5 text-[12.5px] text-neutral-600">Инспектор</span>
+        </div>
+        <Bar tone="danger">
+          Эта роль не раздаётся руками: судьи подают заявки на судейство, председатель ГСК выбирает
+          одного, и он становится главным судьёй турнира.
+        </Bar>
+        <DisabledAction>Выдать</DisabledAction>
+      </Frag>
+    </Shot>
+
+    <Shot
+      tone="warning"
+      title="Выбрана роль с незаполненным функционалом ⚠"
+      text="Вместо сводки прав стоит сам вопрос 12.1, «Выдать» неактивна — выдавать нечем."
+    >
+      <Frag>
+        <Bar tone="warning">
+          Заместитель главного судьи и главный тренер национальной команды: функционала в документе
+          федерации нет (вопрос 12.1). Пока не сказано, что роль даёт, сводки прав не существует.
+        </Bar>
+        <DisabledAction>Выдать</DisabledAction>
+      </Frag>
+    </Shot>
+
+    <Shot tone="warning" title="Срок указан в прошлом" text="«Выдать» неактивна.">
+      <Frag w={480}>
+        <FormGrid>
+          <FieldView label="Роль и область" value="Судья · Кубок Республики Казахстан 2026" />
+          <div className="flex flex-col gap-1">
+            <span className="text-xs font-medium text-neutral-500">Срок</span>
+            <span className="w-full rounded-lg bg-amber-50 px-3 py-1.5 text-sm font-medium text-amber-700">
+              до 20.05.2025 — дата уже прошла
+            </span>
+          </div>
+        </FormGrid>
+        <div className="mt-3"><DisabledAction>Выдать</DisabledAction></div>
+      </Frag>
+    </Shot>
+  </States>
+);
 
 /* ── Э1.12 · Карточка спортсмена ───────────────────────────────── */
 
 export function Athlete1_12() {
   return (
-    <RoleScreen
+    <WebApp
       role={R01}
       nav="Пользователи"
       title="Смагулов Алан"
       sub="2004 · Алматы · «Алатау» · КМС"
       back={{ label: 'Пользователи и роли', to: 'Э1.5' }}
     >
-      <ActionBar count="Каждая правка профиля пишется в журнал: кто, когда, было → стало">
-        <div style={{ display: 'flex', gap: 8 }}>
+      <div className="mb-3 flex items-center justify-between gap-4">
+        <span className="text-[12.5px] text-neutral-500">
+          Каждая правка профиля пишется в журнал: кто, когда, было → стало
+        </span>
+        <span className="flex gap-2">
           <Btn>Действия по человеку</Btn>
-          <Ghost>
+          <QuietAction>
             <GitMerge size={14} /> Объединить с другой записью
-          </Ghost>
-          <button className="dpickbtn">Править</button>
-        </div>
-      </ActionBar>
+          </QuietAction>
+          <Button size="sm" variant="outline">Править</Button>
+        </span>
+      </div>
 
-      <div className="mkcols">
-        <div style={{ display: 'grid', gap: 12 }}>
+      <div className="grid grid-cols-[1.35fr_1fr] items-start gap-4">
+        <div>
           <Panel title="Профиль" extra={<P t="ЗАРЕГИСТРИРОВАЛСЯ САМ" cls="reg" />}>
-            <Form>
-              <Field label="Год рождения · пол" value="2004 · мужской" />
-              <Field label="Разряд" value="кандидат в мастера спорта" />
-              <Field label="Регион и клуб" value="Алматы · «Алатау»" />
-              <Field label="Тренер" value="Смагулов Асхат" />
-              <Field label="Источник записи ✳" value="зарегистрировался сам, 11.01.2026 · подтвердил клуб «Алатау»" wide />
-            </Form>
+            <FormGrid>
+              <FieldView label="Год рождения · пол" value="2004 · мужской" />
+              <FieldView label="Разряд" value="кандидат в мастера спорта" />
+              <FieldView label="Регион и клуб" value="Алматы · «Алатау»" />
+              <FieldView label="Тренер" value="Смагулов Асхат" />
+              <FieldView label="Источник записи ✳" value="зарегистрировался сам, 11.01.2026 · подтвердил клуб «Алатау»" wide />
+            </FormGrid>
           </Panel>
 
-          <Panel title="История матчей" extra={<span className="dcount">42 матча за две кампании</span>}>
-            <Rows>
+          <Panel title="История матчей" extra={<span className="text-xs text-neutral-500">42 матча за две кампании</span>} flush>
+            <div className="divide-y divide-neutral-100">
               <Row av={A(44)} nm="Ким Георгий" sub="Открытие сезона 2026 · 1/4 финала · 19.01.2026" val="2 : 4" pill={{ t: 'ПОРАЖЕНИЕ', cls: 'bad' }} />
               <Row av={A(13)} nm="Пак Сергей" sub="Открытие сезона 2026 · 1/8 финала · 18.01.2026" val="4 : 1" pill={{ t: 'ПОБЕДА', cls: 'live' }} />
-            </Rows>
+            </div>
           </Panel>
         </div>
 
-        <div style={{ display: 'grid', gap: 12 }}>
+        <div>
           <Panel title="Рейтинг">
-            <Chips
+            <Cells
               items={[
                 { v: '2456', k: 'Рейтинг', tone: 'b' },
                 { v: '7', k: 'Место в РК' },
                 { v: '+38', k: 'За сезон', tone: 'g' },
               ]}
             />
-            <div style={{ marginTop: 10 }}>
+            <div className="mt-3">
               <Rows>
                 <Row nm="Открытие сезона 2026" sub="1/4 финала · 19.01.2026" val="+22" pill={{ t: 'РЕЙТИНГОВЫЙ', cls: 'reg' }} />
                 <Row nm="ОРТ «Кубок Иртыша» 2025" sub="финал · 26.10.2025" val="+16" pill={{ t: 'РЕЙТИНГОВЫЙ', cls: 'reg' }} />
@@ -2962,12 +3410,12 @@ export function Athlete1_12() {
             </div>
           </Panel>
 
-          <Panel title="Годовой взнос" extra={<P t="ОПЛАЧЕН" cls="live" />}>
+          <Panel title="Годовой взнос" extra={<P t="ОПЛАЧЕН" cls="live" />} flush>
             <Row nm="2026 · ₸ 10 000" sub="оплачен 14.01.2026 · картой через Halyk ePay" />
           </Panel>
         </div>
       </div>
-    </RoleScreen>
+    </WebApp>
   );
 }
 
@@ -2978,14 +3426,16 @@ const Athlete1_12States = () => (
       title="Взнос не оплачен"
       text="Плашка, что заявки на турниры с обязательным взносом не пройдут."
     >
-      <div className="dactionbar">
-        <div className="dcount">Годовой взнос 2026</div>
-        <P t="НЕ ОПЛАЧЕН" cls="wait" />
-      </div>
-      <Alert>
-        Пока взнос не отмечен, заявки этого спортсмена на турниры с включённым флагом взноса приниматься
-        не будут. Отметку ставит экономист — с этого экрана её не поставить.
-      </Alert>
+      <Frag>
+        <div className="mb-2 flex items-center justify-between gap-3">
+          <span className="text-[12.5px] text-neutral-500">Годовой взнос 2026</span>
+          <P t="НЕ ОПЛАЧЕН" cls="wait" />
+        </div>
+        <Bar tone="warning">
+          Пока взнос не отмечен, заявки этого спортсмена на турниры с включённым флагом взноса
+          приниматься не будут. Отметку ставит экономист — с этого экрана её не поставить.
+        </Bar>
+      </Frag>
     </Shot>
 
     <Shot
@@ -2993,10 +3443,12 @@ const Athlete1_12States = () => (
       title="Запись заведена клубом или самим человеком ✳"
       text="Виден источник записи."
     >
-      <Form>
-        <Field label="Спортсмен" value="Тлеуова Аружан · 2009 · Шымкент" />
-        <Field label="Источник записи" value="завёл клуб «Достык», 03.02.2026 · федерация не правила" wide />
-      </Form>
+      <Frag w={520}>
+        <FormGrid>
+          <FieldView label="Спортсмен" value="Тлеуова Аружан · 2009 · Шымкент" wide />
+          <FieldView label="Источник записи" value="завёл клуб «Достык», 03.02.2026 · федерация не правила" wide />
+        </FormGrid>
+      </Frag>
     </Shot>
   </States>
 );
@@ -3024,14 +3476,14 @@ const MergeCol = ({
     title={nm}
     extra={<P t={main ? 'ГЛАВНАЯ ЗАПИСЬ' : 'ДУБЛЬ'} cls={main ? 'live' : 'wait'} />}
   >
-    <Form>
-      <Field label="Источник записи" value={sub} wide />
-      <Field label="Год рождения · город" value={`${born} · ${city}`} />
-      <Field label="Клуб" value={club} />
-      <Field label="Рейтинг" value={rating} wide />
-    </Form>
+    <FormGrid>
+      <FieldView label="Источник записи" value={sub} wide />
+      <FieldView label="Год рождения · город" value={`${born} · ${city}`} />
+      <FieldView label="Клуб" value={club} />
+      <FieldView label="Рейтинг" value={rating} wide />
+    </FormGrid>
     {!main && (
-      <div style={{ marginTop: 12 }}>
+      <div className="mt-3">
         <Btn>Сделать главной</Btn>
       </div>
     )}
@@ -3040,14 +3492,14 @@ const MergeCol = ({
 
 export function Merge1_13() {
   return (
-    <RoleScreen
+    <WebApp
       role={R01}
       nav="Пользователи"
       title="Объединение дублей"
       sub="Реестр спортсменов · две записи об одном человеке"
       back={{ label: 'Карточка спортсмена', to: 'Э1.12' }}
     >
-      <div className="mkcols" style={{ gridTemplateColumns: '1fr 1fr' }}>
+      <div className="grid grid-cols-2 items-start gap-4">
         <MergeCol
           main
           nm="Ерлан Бекзат"
@@ -3069,26 +3521,38 @@ export function Merge1_13() {
 
       <Panel
         title="Что переедет в главную запись ✳"
-        extra={<span className="dcount">совпали ФИО, год рождения и город — пара предложена как дубль</span>}
+        extra={<span className="text-xs text-neutral-500">совпали ФИО, год рождения и город — пара предложена как дубль</span>}
+        flush
       >
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-          <Row nm="История матчей" sub="34 + 8 матчей — в одну историю" val="42" pill={{ t: 'ПЕРЕЕДЕТ', cls: 'live' }} />
-          <Row nm="Взносы" sub="2025 и 2026 оплачены" val="2 года" pill={{ t: 'ПЕРЕЕДЕТ', cls: 'live' }} />
-          <Row nm="Заявки на турниры" sub="в том числе одна на Кубок РК" val="6" pill={{ t: 'ПЕРЕЕДЕТ', cls: 'live' }} />
-          <Row nm="Рейтинг" sub="2105 и 1840 — что остаётся, не решено" val="⚠" pill={{ t: 'ВОПРОС', cls: 'bad' }} />
+        {/* Пять слагаемых зоны: история матчей, заявки, роли, взносы, рейтинг.
+            Роли — тоже переезд: дубль человек завёл сам, и роль спортсмена
+            выдана именно ему; без этой строки после объединения было бы
+            непонятно, чем он теперь входит. */}
+        <div className="grid grid-cols-2 divide-x divide-neutral-100">
+          <div className="divide-y divide-neutral-100">
+            <Row nm="История матчей" sub="34 + 8 матчей — в одну историю" val="42" pill={{ t: 'ПЕРЕЕДЕТ', cls: 'live' }} />
+            <Row nm="Заявки на турниры" sub="в том числе одна на Кубок РК" val="6" pill={{ t: 'ПЕРЕЕДЕТ', cls: 'live' }} />
+            <Row nm="Роли" sub="спортсмен — с записи, которую человек завёл сам" val="1" pill={{ t: 'ПЕРЕЕДЕТ', cls: 'live' }} />
+          </div>
+          <div className="divide-y divide-neutral-100">
+            <Row nm="Взносы" sub="2025 и 2026 оплачены" val="2 года" pill={{ t: 'ПЕРЕЕДЕТ', cls: 'live' }} />
+            <Row nm="Рейтинг" sub="2105 и 1840 — что остаётся, не решено" val="⚠" pill={{ t: 'ВОПРОС', cls: 'bad' }} />
+          </div>
         </div>
       </Panel>
 
-      <div className="dactionbar">
-        <Alert>Объединение пишется в журнал, но само не откатывается: разделять придётся руками.</Alert>
-        <div style={{ display: 'flex', gap: 8 }}>
-          <Ghost>Это разные люди</Ghost>
-          <button className="dsubmit" style={{ padding: '12px 18px' }}>
+      <div className="flex items-center justify-between gap-4">
+        <span className="max-w-md text-[12.5px] text-neutral-500">
+          Объединение пишется в журнал, но само не откатывается: разделять придётся руками.
+        </span>
+        <span className="flex gap-2">
+          <QuietAction>Это разные люди</QuietAction>
+          <Button variant="primary">
             <Merge size={15} /> Объединить
-          </button>
-        </div>
+          </Button>
+        </span>
       </div>
-    </RoleScreen>
+    </WebApp>
   );
 }
 
@@ -3099,15 +3563,19 @@ const Merge1_13States = () => (
       title="Пол или год рождения расходятся ✳"
       text="Предупреждение, что это, возможно, разные люди: объединять без проверки нельзя."
     >
-      <Rows>
-        <Row nm="Ерлан Бекзат · 2006 · мужской" sub="завела федерация, 14.01.2026" pill={{ t: 'ЗАПИСЬ A', cls: 'reg' }} />
-        <Row nm="Ерлан Бекзат · 2009 · мужской" sub="завёл клуб «Достык», 03.02.2026" pill={{ t: 'ЗАПИСЬ Б', cls: 'wait' }} />
-      </Rows>
-      <Alert tone="danger">
-        Год рождения расходится на три года — это может быть однофамилец. Объединение закрыто, пока
-        расхождение не разобрано.
-      </Alert>
-      <Off>Объединить</Off>
+      <Frag>
+        <Rows>
+          <Row nm="Ерлан Бекзат · 2006 · мужской" sub="завела федерация, 14.01.2026" pill={{ t: 'ЗАПИСЬ A', cls: 'reg' }} />
+          <Row nm="Ерлан Бекзат · 2009 · мужской" sub="завёл клуб «Достык», 03.02.2026" pill={{ t: 'ЗАПИСЬ Б', cls: 'wait' }} />
+        </Rows>
+        <div className="mt-3">
+          <Bar tone="danger">
+            Год рождения расходится на три года — это может быть однофамилец. Объединение закрыто,
+            пока расхождение не разобрано.
+          </Bar>
+        </div>
+        <DisabledAction>Объединить</DisabledAction>
+      </Frag>
     </Shot>
 
     <Shot
@@ -3115,27 +3583,26 @@ const Merge1_13States = () => (
       title="⚠ У обеих записей есть рейтинг"
       text="Не решено, какой рейтинг остаётся у объединённой записи и пересчитывается ли история."
     >
-      <div className="dactionbar">
-        <div className="dcount">Рейтинг записи A</div>
-        <div className="amt">2105 · 34 матча</div>
-      </div>
-      <div className="dactionbar">
-        <div className="dcount">Рейтинг записи Б</div>
-        <div className="amt">1840 · 8 матчей</div>
-      </div>
-      <Alert>
-        Взять больший, взять рейтинг главной записи или пересчитать движком по объединённой истории —
-        решение за федерацией и движком рейтинга. В макете место помечено вопросом.
-      </Alert>
+      <Frag>
+        <Rows>
+          <Row nm="Рейтинг записи A" sub="завела федерация" val="2105 · 34 матча" />
+          <Row nm="Рейтинг записи Б" sub="зарегистрировался сам" val="1840 · 8 матчей" />
+        </Rows>
+        <div className="mt-3">
+          <Bar>
+            Взять больший, взять рейтинг главной записи или пересчитать движком по объединённой
+            истории — решение за федерацией и движком рейтинга. В макете место помечено вопросом.
+          </Bar>
+        </div>
+      </Frag>
     </Shot>
   </States>
 );
 
 /* ── Э1.7 · Журнал действий ────────────────────────────────────── */
 
-/** Запись журнала. Раньше «кто», «над чем» и «когда» лежали одной строкой, и
-    таблицу из этого было не собрать — только читать глазами. Теперь поля
-    разобраны: у каждого столбца свои данные.
+/** Запись журнала: «кто», «что сделал», «было → стало» и «когда» разобраны по
+    полям — у каждого столбца свои данные.
 
     `ago` — сколько дней назад, от 15 апреля 2026; по нему работает фильтр
     периода. Хранить и дату строкой, и число дней — не дубль: дату показываем,
@@ -3184,14 +3651,13 @@ const LOG: Log[] = [
   { av: A(60), who: 'Сериков Н.', role: 'Экономист', act: 'Отметил оплату взноса', obj: 'Смагулов А.', was: 'не оплачен', now: 'оплачен', date: '14.01.2026', time: '10:42', type: 'Взносы', ago: 91 },
 ];
 
+const LOG_GRID = '1.1fr 1.3fr 1.1fr 92px';
+
 /** Журнал таблицей: кто · что сделал · детали · когда.
 
-    Раньше это был список строк, и «было → стало» в каждой стояло на своём
-    месте — сравнить две записи глазами было нельзя. У таблицы столбцы
-    подписаны один раз, а значения выстроены в колонку.
-
-    «Детали» — это и есть «было → стало»: без него запись говорит, что
-    что-то поменяли, но не говорит что. */
+    «Детали» — это и есть «было → стало»: без него запись говорит, что что-то
+    поменяли, но не говорит что. Старое зачёркнуто, новое выделено — стрелка не
+    нужна, направление видно и так. */
 export function Log1_7() {
   const [type, setType] = useState<string>(LOG_TYPES[0]);
   const [period, setPeriod] = useState(LOG_PERIODS[0]);
@@ -3199,10 +3665,10 @@ export function Log1_7() {
     (l) => (type === LOG_TYPES[0] || l.type === type) && l.ago <= period.days,
   );
   return (
-    <RoleScreen role={R01} nav="Журнал" title="Журнал действий">
-      <div className="dactionbar">
-        <Filter items={[...LOG_TYPES]} active={type} onPick={setType} />
-        <Filter
+    <WebApp role={R01} nav="Журнал" title="Журнал действий" sub="Записи не редактируются и не удаляются (TZ §12) · новые сверху">
+      <div className="mb-3 flex items-center justify-between gap-4">
+        <FilterSeg items={[...LOG_TYPES]} active={type} onPick={setType} />
+        <FilterSeg
           items={LOG_PERIODS.map((x) => x.k)}
           active={period.k}
           onPick={(k) => setPeriod(LOG_PERIODS.find((x) => x.k === k)!)}
@@ -3210,46 +3676,38 @@ export function Log1_7() {
       </div>
 
       {rows.length ? (
-        <div className="jtab">
-          <div className="jtab-h">
-            <span>Кто</span>
-            <span>Что сделал</span>
-            <span>Детали</span>
-            <span className="jwhen">Когда</span>
-          </div>
+        <Sheet grid={LOG_GRID} cols={['Кто', 'Что сделал', 'Детали', <span key="w" className="text-right">Когда</span>]}>
           {rows.map((l) => (
-            <div className="jrow" key={l.act + l.who + l.time}>
-              <div className="jwho">
-                <img src={l.av} alt="" />
-                <div>
-                  <div className="nm">{l.who}</div>
-                  {/* Под какой ролью действовал: у человека их бывает несколько,
-                      и без этого запись не отвечает, кем он тут был. */}
-                  <div className="rl">{l.role}</div>
-                </div>
-              </div>
-              <div className="jact">
-                <div className="nm">{l.act}</div>
-                <div className="rl">{l.obj}</div>
-              </div>
-              <div className="jwas">
-                <s>{l.was}</s>
-                <b>{l.now}</b>
-              </div>
-              <div className="jwhen">
-                <div className="nm">{l.date}</div>
-                <div className="rl">{l.time}</div>
-              </div>
+            <div
+              key={l.act + l.who + l.time}
+              className="grid items-center gap-3 px-4 py-2 text-[13px]"
+              style={{ gridTemplateColumns: LOG_GRID }}
+            >
+              {/* Под какой ролью действовал: у человека их бывает несколько, и
+                  без этого запись не отвечает, кем он тут был. */}
+              <Who av={l.av} nm={l.who} sub={l.role} />
+              <span className="min-w-0 leading-tight">
+                <span className="block truncate font-medium">{l.act}</span>
+                <span className="block truncate text-xs text-neutral-500">{l.obj}</span>
+              </span>
+              <span className="min-w-0 leading-tight">
+                <s className="block truncate text-xs text-neutral-400 line-through">{l.was}</s>
+                <b className="block truncate font-semibold">{l.now}</b>
+              </span>
+              <span className="text-right leading-tight">
+                <span className="block tabular-nums">{l.date}</span>
+                <span className="block text-xs tabular-nums text-neutral-500">{l.time}</span>
+              </span>
             </div>
           ))}
-        </div>
+        </Sheet>
       ) : (
-        <Empty
+        <EmptyBox
           title="Под этот фильтр записей не попало"
           text="Записи журнала не удаляются: пусто здесь означает только то, что выбранный тип изменений за выбранный период не встречался."
         />
       )}
-    </RoleScreen>
+    </WebApp>
   );
 }
 
@@ -3261,15 +3719,15 @@ const Log1_7States = () => (
       text="Журнал пуст только по фильтру, а не вообще: видно, какой фильтр это дал."
       wide
     >
-      <div className="dseg2">
-        <span>Все действия</span>
-        <span className="on">Взносы</span>
-        <span>Результаты</span>
-      </div>
-      <Empty
-        title="За 7 дней по взносам изменений не было"
-        text="Записи журнала не удаляются и не правятся: пусто здесь означает только то, что под фильтр ничего не попало."
-      />
+      <Frag>
+        <div className="mb-3">
+          <FilterSeg items={['Все действия', 'Взносы', 'Результаты']} active="Взносы" onPick={() => {}} />
+        </div>
+        <EmptyBox
+          title="За 7 дней по взносам изменений не было"
+          text="Записи журнала не удаляются и не правятся: пусто здесь означает только то, что под фильтр ничего не попало."
+        />
+      </Frag>
     </Shot>
   </States>
 );
@@ -3289,6 +3747,8 @@ const NEWS: News[] = [
 
 const NEWS_TABS = ['Все материалы', 'Новости', 'Страницы'] as const;
 
+const NEWS_GRID = '2.2fr 170px 230px';
+
 /** Материалы таблицей: материал · состояние · действия.
 
     Заполненность языков из списка убрана: место, где видно, чего не переведено,
@@ -3301,82 +3761,66 @@ export function News1_8() {
   const [pub, setPub] = useState<Record<string, boolean>>(
     Object.fromEntries(NEWS.map((n) => [n.nm, n.pub])),
   );
-  /* Правка открывается окном поверх списка: материал правят мельком, из списка,
-     и уходить с места ради этого незачем. Форма внутри — та же, что на своём
-     экране (Э1.14), одним компонентом. */
+  /* Правка открывается диалогом поверх списка: материал правят мельком, из
+     списка, и уходить с места ради этого незачем. Форма внутри — та же, что на
+     своём экране (Э1.14), одним компонентом. */
   const [edit, setEdit] = useState<string | null>(null);
   const rows = tab === NEWS_TABS[0] ? NEWS : NEWS.filter((n) => n.kind === (tab === 'Новости' ? 'Новость' : 'Страница'));
   const count = (t: string) =>
     t === NEWS_TABS[0] ? NEWS.length : NEWS.filter((n) => n.kind === (t === 'Новости' ? 'Новость' : 'Страница')).length;
   return (
-    <RoleScreen role={R01} nav="Новости" title="Новости и страницы">
-      {/* Полоса вкладок без стрелок: у категорий материалов порядка нет, стрелка
-          врала бы — она осталась только у шкалы состояний турнира. */}
-      <div className="dstages big">
-        {NEWS_TABS.map((t) => (
-          <button
-            key={t}
-            type="button"
-            className={'dstage' + (t === tab ? ' now' : '')}
-            onClick={() => setTab(t)}
-          >
-            {t} · {count(t)}
-          </button>
-        ))}
-      </div>
-
-      <div className="dactionbar" style={{ justifyContent: 'flex-end' }}>
-        <button className="dsubmit" style={{ padding: '10px 14px' }} data-to="Э1.14">
+    <WebApp role={R01} nav="Новости" title="Новости и страницы">
+      <div className="mb-3 flex items-center justify-between gap-4">
+        {/* Вкладки со счётчиками: сколько материалов в каждой, видно до нажатия. */}
+        <FilterSeg
+          items={NEWS_TABS.map((t) => `${t} · ${count(t)}`)}
+          active={`${tab} · ${count(tab)}`}
+          onPick={(v) => setTab(NEWS_TABS.find((t) => v.startsWith(t)) ?? NEWS_TABS[0])}
+        />
+        <Button variant="primary" data-to="Э1.14">
           <Plus size={15} /> Создать материал
-        </button>
+        </Button>
       </div>
 
-      <div className="ntab">
-        <div className="ntab-h">
-          <span>Материал</span>
-          <span>Состояние</span>
-          <span />
-        </div>
+      <Sheet grid={NEWS_GRID} cols={['Материал', 'Состояние', <span key="a" className="text-right">Действия</span>]}>
         {rows.map((n) => (
-          <div className="nrow" key={n.nm}>
-            <div>
-              <div className="nm">{n.nm}</div>
-              <div className="rl">{n.kind} · {n.date}</div>
-            </div>
-            <P t={pub[n.nm] ? 'ОПУБЛИКОВАНО' : 'ЧЕРНОВИК'} cls={pub[n.nm] ? 'live' : 'done'} />
-            <div className="nact">
-              <Ghost onClick={() => setEdit(n.nm)}>Править</Ghost>
-              <button
-                type="button"
-                className="dpickbtn"
-                onClick={() => setPub({ ...pub, [n.nm]: !pub[n.nm] })}
-              >
+          <div
+            key={n.nm}
+            className="grid items-center gap-3 px-4 py-2 text-[13px]"
+            style={{ gridTemplateColumns: NEWS_GRID }}
+          >
+            <span className="min-w-0 leading-tight">
+              <span className="block truncate font-medium">{n.nm}</span>
+              <span className="block truncate text-xs text-neutral-500">{n.kind} · {n.date}</span>
+            </span>
+            <span><P t={pub[n.nm] ? 'ОПУБЛИКОВАНО' : 'ЧЕРНОВИК'} cls={pub[n.nm] ? 'live' : 'done'} /></span>
+            <span className="flex justify-end gap-1.5">
+              <Button size="sm" variant="ghost" onPress={() => setEdit(n.nm)}>Править</Button>
+              <Button size="sm" variant="outline" onPress={() => setPub({ ...pub, [n.nm]: !pub[n.nm] })}>
                 {pub[n.nm] ? 'Снять' : 'Опубликовать'}
-              </button>
-            </div>
+              </Button>
+            </span>
           </div>
         ))}
-      </div>
+      </Sheet>
 
       {edit && (
-        <Modal
+        <InlineDialog
           title={edit}
           sub={`${NEWS.find((n) => n.nm === edit)!.kind} · ${pub[edit] ? 'опубликовано' : 'черновик'}`}
-          onClose={() => setEdit(null)}
           to="Э1.8"
+          wide
           foot={
-            <div style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
-              <Ghost onClick={() => setEdit(null)}>Сохранить</Ghost>
-              <button type="button" className="dsubmit" style={{ padding: '11px 16px' }} data-to="Э1.14">
-                Открыть в редакторе
-              </button>
-            </div>
+            <>
+              <QuietAction onPress={() => setEdit(null)}>Сохранить</QuietAction>
+              <Button variant="primary" data-to="Э1.14">Открыть в редакторе</Button>
+            </>
           }
         >
           <MaterialForm closed={false} />
-        </Modal>
+        </InlineDialog>
       )}
-    </RoleScreen>
+    </WebApp>
   );
 }
 
@@ -3388,87 +3832,98 @@ const News1_8States = () => (
       text="Колонка языков убрана: где перевода нет, теперь узнают только в редакторе."
       wide
     >
-      <Alert>
-        Материал переводится не весь и не сразу. Пока заполненность была в списке, непереведённые
-        находились одним взглядом; теперь их надо искать, открывая материалы по одному. Нужно решить,
-        где это место — фильтр «без перевода», колонка обратно или отдельная сводка.
-      </Alert>
+      <Frag>
+        <Bar tone="warning">
+          Материал переводится не весь и не сразу. Пока заполненность была в списке, непереведённые
+          находились одним взглядом; теперь их надо искать, открывая материалы по одному. Нужно
+          решить, где это место — фильтр «без перевода», колонка обратно или отдельная сводка.
+        </Bar>
+      </Frag>
     </Shot>
   </States>
 );
 
 /* ── Э1.14 · Редактор материала ────────────────────────────────── */
 
-const KINDS = ['Новость', 'Страница'];
+/** Дата в форме: русский формат ДД.ММ.ГГГГ и значок календаря.
 
-/** Форма материала — одна на редактор (Э1.14) и на окно правки из списка (Э1.8).
+    Нативный `input[type="date"]` (`DateInput` кита) рисуется локалью браузера:
+    в снимке он показал «04/12/2026» — по-русски это читается как 4 декабря,
+    хотя материал датирован 12 апреля и в списке Э1.8 стоит «12.04.2026». Дату
+    по-прежнему выбирают календарём — календарь и открывается по этому полю, —
+    но написана она так, как её читают в системе. */
+const DateField = ({ label, value }: { label: string; value: string }) => (
+  <label className="flex flex-col gap-1">
+    <span className="text-xs font-medium text-neutral-500">{label}</span>
+    <span className="flex w-full items-center justify-between rounded-lg border border-neutral-300 bg-white px-3 py-1.5 text-sm">
+      <span className="tabular-nums">{value}</span>
+      <CalendarDays size={14} className="text-neutral-400" />
+    </span>
+  </label>
+);
 
-    Общая нарочно: это одно и то же содержимое, и если развести его двумя
-    разметками, они разойдутся — на одном экране появится поле, которого нет на
-    другом. `closed` — черновик закрыт: поля только читаются. */
+/** Форма материала — одна на редактор (Э1.14) и на диалог правки из списка
+    (Э1.8). Общая нарочно: это одно и то же содержимое, и если развести его
+    двумя разметками, они разойдутся — на одном экране появится поле, которого
+    нет на другом. `closed` — черновик закрыт: поля только читаются. */
 const MaterialForm = ({ closed }: { closed: boolean }) => (
-  <div className="mkcols">
+  <div className="grid grid-cols-[1.35fr_1fr] items-start gap-4">
     <Panel title="Текст">
       {closed ? (
-        <Form>
-          <Field label="Заголовок" value="Кубок Республики: приём заявок открыт" wide />
-          <Field
+        <FormGrid>
+          <FieldView label="Заголовок" value="Кубок Республики: приём заявок открыт" wide />
+          <FieldView
             label="Лид"
             value="Заявки на Кубок Республики Казахстан 2026 принимаются до 10 мая через личный кабинет спортсмена."
             wide
           />
-          <Field
+          <FieldView
             label="Текст"
             value="Соревнование пройдёт 18–20 мая в Астане, ДС «Барыс». Главный судья — Оспанов Т. Допуск: годовой взнос федерации и документы к заявке."
             wide
           />
-        </Form>
+        </FormGrid>
       ) : (
         /* Заголовок строкой, лид и текст — многострочные: у них разный объём, и
            одинаковые поля врали бы про то, сколько сюда пишут. */
-        <Form>
-          <Input label="Заголовок" value="Кубок Республики: приём заявок открыт" wide />
-          <Area
+        <FormGrid>
+          <TextInput label="Заголовок" value="Кубок Республики: приём заявок открыт" wide />
+          <AreaInput
             label="Лид"
             value="Заявки на Кубок Республики Казахстан 2026 принимаются до 10 мая через личный кабинет спортсмена."
             rows={2}
             wide
           />
-          <Area
+          <AreaInput
             label="Текст"
             value="Соревнование пройдёт 18–20 мая в Астане, ДС «Барыс». Главный судья — Оспанов Т. Допуск: годовой взнос федерации и документы к заявке."
             rows={5}
             wide
           />
-        </Form>
+        </FormGrid>
       )}
     </Panel>
 
     <Panel title="Материал">
       {closed ? (
-        <Form>
-          <Field label="Тип" value="Новость" />
-          <Field label="Дата публикации" value="12.04.2026" />
-        </Form>
+        <FormGrid>
+          <FieldView label="Тип" value="Новость" />
+          <FieldView label="Дата публикации" value="12.04.2026" />
+          <div className="col-span-2">
+            <EmptyBox title="Обложка не загружена" text="Материал выйдет без картинки." />
+          </div>
+        </FormGrid>
       ) : (
-        <Form>
-          <Select label="Тип" items={KINDS} />
+        <FormGrid>
+          <PickField label="Тип" value="Новость" />
           {/* Дату выбирают календарём, а не вписывают: набранная руками приходит
-              с опечатками и в разных форматах. */}
-          <DateField label="Дата публикации" value="2026-04-12" />
-        </Form>
+              с опечатками и в разных форматах. Показана по-русски — формат не
+              зависит от локали браузера, в котором открыт макет. */}
+          <DateField label="Дата публикации" value="12.04.2026" />
+          {/* Формат и размер сказаны до выбора, а не в ошибке после. */}
+          <FileDrop label="Обложка 16:9" hint="jpg или png, от 1600 px по ширине" />
+        </FormGrid>
       )}
-      <div style={{ marginTop: 12 }}>
-        {closed ? (
-          <Empty title="Обложка не загружена" text="Материал выйдет без картинки." />
-        ) : (
-          <FilePick
-            label="Обложка 16:9"
-            hint="jpg или png, от 1600 px по ширине"
-            accept="image/jpeg,image/png"
-          />
-        )}
-      </div>
     </Panel>
   </div>
 );
@@ -3482,26 +3937,24 @@ const MaterialForm = ({ closed }: { closed: boolean }) => (
 export function Editor1_14() {
   const [closed, setClosed] = useState(false);
   return (
-    <RoleScreen
+    <WebApp
       role={R01}
       nav="Новости"
       title="Кубок Республики: приём заявок открыт"
       back={{ label: 'Новости и страницы', to: 'Э1.8' }}
     >
       <MaterialForm closed={closed} />
-      <div className="dactionbar" style={{ justifyContent: 'flex-end' }}>
-        <div style={{ display: 'flex', gap: 8 }}>
-          <Ghost onClick={() => setClosed(!closed)}>
-            {closed ? 'Править' : 'Сохранить черновик'}
-          </Ghost>
-          {/* ⚠ Куда ведёт «Опубликовать», не решено: у публичной страницы
-              материала (Э0.4) нет своего кода экрана. */}
-          <button type="button" className="dsubmit" style={{ padding: '12px 18px' }}>
-            <Send size={15} /> Опубликовать
-          </button>
-        </div>
+      <div className="flex items-center justify-end gap-2">
+        <QuietAction onPress={() => setClosed(!closed)}>
+          {closed ? 'Править' : 'Сохранить черновик'}
+        </QuietAction>
+        {/* ⚠ Куда ведёт «Опубликовать», не решено: у публичной страницы
+            материала (Э0.4) нет своего кода экрана. */}
+        <Button variant="primary">
+          <Send size={15} /> Опубликовать
+        </Button>
       </div>
-    </RoleScreen>
+    </WebApp>
   );
 }
 
@@ -3512,11 +3965,13 @@ const Editor1_14States = () => (
       title="Материала на трёх языках больше нет ⚠"
       text="Переключатель RU / KZ / EN убран — у материала одна версия текста."
     >
-      <Alert>
-        Сайт по ТЗ трёхъязычный, а редактор теперь ведёт один текст: где живут казахская и английская
-        версии, надо решить — тремя полями в этой же форме, тремя материалами в списке или отдельным
-        экраном перевода.
-      </Alert>
+      <Frag>
+        <Bar tone="warning">
+          Сайт по ТЗ трёхъязычный, а редактор теперь ведёт один текст: где живут казахская и
+          английская версии, надо решить — тремя полями в этой же форме, тремя материалами в списке
+          или отдельным экраном перевода.
+        </Bar>
+      </Frag>
     </Shot>
 
     <Shot
@@ -3524,14 +3979,16 @@ const Editor1_14States = () => (
       title="Правка опубликованного материала ✳"
       text="Изменения видны сразу, и каждая версия пишется в журнал."
     >
-      <div className="dactionbar">
-        <div className="dcount">Материал опубликован 12.04.2026</div>
-        <P t="ОПУБЛИКОВАНО" cls="live" />
-      </div>
-      <Rows>
-        <Row nm="Версия 2 · сейчас" sub="Абаева Д. · 15.04.2026, 09:20 · правка лида" pill={{ t: 'ТЕКУЩАЯ', cls: 'reg' }} />
-        <Row nm="Версия 1" sub="Абаева Д. · 12.04.2026, 11:05 · публикация" />
-      </Rows>
+      <Frag>
+        <div className="mb-2 flex items-center justify-between gap-3">
+          <span className="text-[12.5px] text-neutral-500">Материал опубликован 12.04.2026</span>
+          <P t="ОПУБЛИКОВАНО" cls="live" />
+        </div>
+        <Rows>
+          <Row nm="Версия 2 · сейчас" sub="Абаева Д. · 15.04.2026, 09:20 · правка лида" pill={{ t: 'ТЕКУЩАЯ', cls: 'reg' }} />
+          <Row nm="Версия 1" sub="Абаева Д. · 12.04.2026, 11:05 · публикация" />
+        </Rows>
+      </Frag>
     </Shot>
   </States>
 );
@@ -3542,7 +3999,15 @@ const Editor1_14States = () => (
 export const SCREENS: ScreenMap = {
   'Э0.1': {
     cap: 'Вход',
-    view: () => <Login0_1 />,
+    view: () => (
+      <>
+        <Login0_1 />
+        <Also cap="Выбор контекста — если ролей несколько ✳">
+          <Context0_1 />
+        </Also>
+        <Login0_1States />
+      </>
+    ),
     next: 'первый экран роли',
   },
   'Э1.1': {
@@ -3550,6 +4015,9 @@ export const SCREENS: ScreenMap = {
     view: () => (
       <>
         <Dash1_1 />
+        <Also cap="Шапка · переключатель языка: RU / KZ / EN рядом с уведомлениями и профилем">
+          <Head1_1 />
+        </Also>
         <Dash1_1States />
       </>
     ),
@@ -3560,6 +4028,9 @@ export const SCREENS: ScreenMap = {
     view: () => (
       <>
         <Cal1_2 />
+        {/* Второй вид экрана: на самом экране он открывается переключателем
+            «Список / Календарь», и в снимок борда попадает только список. */}
+        <Cal1_2Also />
         <Cal1_2States />
       </>
     ),
@@ -3570,6 +4041,12 @@ export const SCREENS: ScreenMap = {
     view: () => (
       <>
         <New1_4 />
+        {/* Второй шаг мастера целиком: на самом экране он открывается кнопкой
+            «Дальше · основное», и в снимке борда виден только первый. Поля
+            шага — из данных роли: название, город, окно дат, разряды. */}
+        <Also cap="Шаг 2 «Основное» — название, город, окно дат, разряды">
+          <Frag w={620}>{STEP_BODY[2]()}</Frag>
+        </Also>
         <New1_4States />
       </>
     ),
@@ -3580,6 +4057,9 @@ export const SCREENS: ScreenMap = {
     view: () => (
       <>
         <Tour1_3 />
+        {/* Последний из семи разделов карточки: на экране он открывается
+            кликом по ряду разделов, а по умолчанию стоит «Черновик». */}
+        <Sched1_3Also />
         <Tour1_3States />
       </>
     ),

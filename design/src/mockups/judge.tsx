@@ -1,4 +1,4 @@
-/* Судейская часть, общая для ролей 6, 7, 8 и 9.
+/* Судейская часть, общая для ролей 6, 7, 8 и 9 — на новом слое (HeroUI) ✳ (30.08.2026).
 
    Рейтинг судьи один на всех, кто судит: председатель ГСК ведёт его по
    Положению (TZ §7.2), а видит его про себя каждый судья — и главный судья, и
@@ -7,10 +7,16 @@
    рейтинга» разъехались бы на первой же правке Положения.
 
    Разный только человек: имя, категория, место в рейтинге и то, в какой роли
-   он стоял в наряде — от роли зависит коэффициент 1,5 (§7.2). */
+   он стоял в наряде — от роли зависит коэффициент 1,5 (§7.2).
 
+   Здесь только фрагменты — без оболочки: JudgeRating, JudgeRankList и
+   JudgeCard вставляются в экраны ролей (role00j, role09, role15), и оболочку
+   (WebApp своей роли) даёт сам экран. */
+
+import type { ReactNode } from 'react';
 import { FileUp } from 'lucide-react';
-import { Chips, Field, Form, Hint, Panel, Row, Rows } from './shell';
+import { Avatar, Button } from '@heroui/react';
+import { Bar, KV, Panel, Pill, Row, Rows, StatTiles } from '../kit/hero/app';
 
 /* ── Кто перед нами ─────────────────────────────────────────────── */
 
@@ -21,6 +27,8 @@ import { Chips, Field, Form, Hint, Panel, Row, Rows } from './shell';
     указывается ещё при регистрации (Э0.7). */
 export type JudgeMe = {
   nm: string;
+  /** Фото: шапка карточки судьи (Э0.13) начинается с него — как строка листа. */
+  av?: string;
   cat: string;
   region: string;
   /** Место в рейтинге сезона. */
@@ -78,6 +86,87 @@ export const JUDGE_DOCS = [
   { t: 'Протокол теста аттестации', sub: 'S3 · отклонён 27.02.2026 — «скан не читается»', st: 'ОТКЛОНЁН', cls: 'bad' as const },
 ];
 
+/* ── Местные кирпичи нового слоя ────────────────────────────────── */
+
+/* ⚠ Временная дупликация с role05.tsx (локальный Sheet): готовый DataTable
+   не умеет заголовки-ReactNode, а у таблиц рейтинга числовые колонки без
+   выравнивания по правому краю не читаются. Этот Sheet — без своей рамки:
+   он живёт в Panel flush и рамку берёт у панели. */
+const Sheet = ({ cols, grid, children }: { cols: ReactNode[]; grid: string; children: ReactNode }) => (
+  <div>
+    <div
+      className="grid items-center gap-3 border-b border-neutral-200 bg-neutral-50 px-4 py-2 text-[11px] font-semibold uppercase tracking-wider text-neutral-400"
+      style={{ gridTemplateColumns: grid }}
+    >
+      {cols.map((c, i) => (
+        <span key={i} className="min-w-0">{c}</span>
+      ))}
+    </div>
+    <div className="divide-y divide-neutral-100">{children}</div>
+  </div>
+);
+
+/** Заголовок числовой колонки — по правому краю, как и сами числа. */
+const Th = ({ children }: { children: ReactNode }) => <span className="block text-right">{children}</span>;
+
+/** Сноска под таблицей в панели flush: правило, из-за которого числа такие. */
+const Foot = ({ children }: { children: ReactNode }) => (
+  <div className="border-t border-neutral-100 px-4 py-2.5 text-xs leading-relaxed text-neutral-500">{children}</div>
+);
+
+/** Мелкая подпись в правом краю заголовка панели. */
+const Cap = ({ children }: { children: ReactNode }) => (
+  <span className="text-xs text-neutral-500">{children}</span>
+);
+
+/** История судейства: пять однородных колонок, коэффициент читается колонкой
+    сверху вниз — видно, за что дали полтора. Шапка у «моего рейтинга» и у
+    карточки своя (слова разные), таблица одна. */
+function TourTable({
+  tours,
+  cols,
+  /** В карточке строки «Член ГСК» помечены: заседание — это S4, а не S1. */
+  committee,
+}: {
+  tours: JudgeTour[];
+  cols: [what: string, role: string, points: string];
+  committee?: boolean;
+}) {
+  const grid = 'minmax(0,1.9fr) minmax(0,1.1fr) minmax(0,1.4fr) minmax(0,1fr) 72px';
+  return (
+    <Sheet cols={[cols[0], 'Когда и где', cols[1], 'Коэффициент', <Th key="p">{cols[2]}</Th>]} grid={grid}>
+      {tours.map((t) => {
+        const pts = tourPoints(t);
+        return (
+          <div key={t.nm + t.when} className="grid items-center gap-3 px-4 py-2.5 text-[13px]" style={{ gridTemplateColumns: grid }}>
+            <span className="min-w-0 leading-tight">
+              <span className="block truncate font-medium">{t.nm}</span>
+              <span className="block truncate text-xs text-neutral-500">{t.kind} · базовый балл {num(t.base)}</span>
+            </span>
+            <span className="text-neutral-600">{t.when} · {t.city}</span>
+            <span className="min-w-0 leading-tight text-neutral-700">
+              {t.post}
+              {/* Работа в коллегии — не S1 ✳: членство в ГСК идёт в S4, и такие
+                  строки помечены отдельно. Иначе таблица показывала бы «отсудил
+                  14 соревнований» там, где человек не судил, а заседал. */}
+              {committee && t.post === 'Член ГСК' && (
+                <span className="block text-[11px] text-neutral-400">идёт в S4, а не в S1</span>
+              )}
+            </span>
+            <span className={t.miss || t.k === 1 ? 'text-neutral-500' : 'font-medium text-neutral-800'}>
+              {t.miss ? '—' : t.k === 1 ? 'без коэффициента' : '× ' + num(t.k)}
+            </span>
+            {/* Неявка — единственное красное число таблицы: минус балл (§7.2). */}
+            <span className={'text-right font-semibold tabular-nums ' + (pts < 0 ? 'text-red-600' : 'text-neutral-800')}>
+              {sign(pts)}
+            </span>
+          </div>
+        );
+      })}
+    </Sheet>
+  );
+}
+
 /* ── Экран «Мой рейтинг судьи» ──────────────────────────────────── */
 
 /** Что видит про себя любой судья: из чего сложился рейтинг и что с ним делать.
@@ -105,7 +194,7 @@ export function JudgeRating({ me, tours }: { me: JudgeMe; tours: JudgeTour[] }) 
       {/* Одна полоса, а не две: слагаемые стоят формулой в подписи под R —
           так видно и итог, и из чего он сложился, а экран не съедается
           восемью плитками. Судья приходит сюда именно за «чего не хватает». */}
-      <Chips
+      <StatTiles
         items={[
           {
             /* Цветом число не выделяем: в плитке оно и так самое крупное, а
@@ -125,35 +214,14 @@ export function JudgeRating({ me, tours }: { me: JudgeMe; tours: JudgeTour[] }) 
 
       <Panel
         title={'История судейства в турнирах · ' + tours.length + ' за сезон'}
-        extra={<span className="dcount">S1 система начисляет сама, по явке</span>}
+        extra={<Cap>S1 система начисляет сама, по явке</Cap>}
+        flush
       >
-        <div className="mktable mkjudge">
-          <div className="mktable-h">
-            <span>Турнир</span>
-            <span>Когда и где</span>
-            <span>Моя роль в наряде</span>
-            <span>Коэффициент</span>
-            <span>Балл S1</span>
-          </div>
-          <div className="mktable-b">
-            {tours.map((t) => (
-              <div className="mktable-r" key={t.nm + t.when}>
-                <span className="nm">
-                  {t.nm}
-                  <em>{t.kind} · базовый балл {num(t.base)}</em>
-                </span>
-                <span>{t.when} · {t.city}</span>
-                <span>{t.post}</span>
-                <span>{t.miss ? '—' : t.k === 1 ? 'без коэффициента' : '× ' + num(t.k)}</span>
-                <span className="num">{sign(tourPoints(t))}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-        <div className="dcount" style={{ marginTop: 10 }}>
+        <TourTable tours={tours} cols={['Турнир', 'Моя роль в наряде', 'Балл S1']} />
+        <Foot>
           Коэффициент 1,5 — за роль в бригаде (главный судья, заместитель, секретарь) и за выезд на
           республиканские из другого региона; неявка по заявке — минус балл без коэффициента (TZ §7.2)
-        </div>
+        </Foot>
       </Panel>
 
       {/* Второй блок — то, что судья приносит сам: награды, семинары, работа в
@@ -163,12 +231,13 @@ export function JudgeRating({ me, tours }: { me: JudgeMe; tours: JudgeTour[] }) 
       <Panel
         title="Награды и документы · S3 и S4"
         extra={
-          <button className="dpickbtn">
+          <Button size="sm" variant="outline">
             <FileUp size={14} /> Добавить
-          </button>
+          </Button>
         }
+        flush
       >
-        <Rows>
+        <div className="divide-y divide-neutral-100">
           {JUDGE_DOCS.map((d) => (
             <Row
               key={d.t}
@@ -178,13 +247,12 @@ export function JudgeRating({ me, tours }: { me: JudgeMe; tours: JudgeTour[] }) 
               action={d.send ? 'Подать' : undefined}
             />
           ))}
-        </Rows>
-        <div className="dcount" style={{ marginTop: 10 }}>
+        </div>
+        <Foot>
           Баллы по документам подсказывает Положение, подтверждает председатель ГСК (Э5.6). Смена
           категории — тоже документ: он обновляет её в профиле, и дальше S2 идёт автоматически
-        </div>
+        </Foot>
       </Panel>
-
     </>
   );
 }
@@ -223,12 +291,16 @@ const scored = (j: { s1: number; s2: number; s3: number; s4: number }) =>
     должен видеть, откуда у него баллы, и сверять себя с другими. */
 export function JudgeRankList({ rows, period }: { rows: JudgeRank[]; period: string }) {
   const mine = rows.find((r) => r.me);
+  const grid = '44px minmax(0,1.9fr) minmax(0,1fr) 44px 44px 44px 44px 52px 72px 80px';
   return (
     <>
-      <Chips
+      <StatTiles
         items={[
           { v: String(rows.length), k: 'Судей в листе · ' + period },
-          { v: mine ? '№' + mine.pl : '—', k: 'Моё место', tone: 'b' },
+          /* Своё место не красим: в новом слое цвет плитки — это тревога
+             (amber/red), а «моё место» — не тревога; строка в листе и так
+             подсвечена. */
+          { v: mine ? '№' + mine.pl : '—', k: 'Моё место' },
           { v: mine ? num(rsum(mine)) : '—', k: 'Мой балл R' },
           {
             /* Одно слово ✳: «НЕ ОПУБЛИКОВАН» в плитке ломалось на две строки и
@@ -242,60 +314,72 @@ export function JudgeRankList({ rows, period }: { rows: JudgeRank[]; period: str
 
       <Panel
         title={'Рейтинг судей · ' + period}
-        extra={
-          <span className="dcount">
-            Слагаемые в самом списке: видно, чем один судья выше другого
-          </span>
-        }
+        extra={<Cap>Слагаемые в самом списке: видно, чем один судья выше другого</Cap>}
+        flush
       >
-        <div className="mktable mkjrank">
-          <div className="mktable-h">
-            <span>Место</span>
-            <span>Судья</span>
-            <span>Регион</span>
-            <span className="num">S1</span>
-            <span className="num">S2</span>
-            <span className="num">S3</span>
-            <span className="num">S4</span>
-            <span className="num">R</span>
-            <span className="num">Отсужено</span>
-            <span>Зачёт</span>
-          </div>
-          <div className="mktable-b">
-            {rows.map((j) => (
-              /* Строка ведёт в карточку судьи: «посмотреть другого» — это не
-                 всплывающая подсказка, а тот же экран, что своя карточка. */
-              <div className={'mktable-r' + (j.me ? ' on' : '')} key={j.nm} data-to="Э0.13" role="button" tabIndex={0}>
-                <span className="num">{j.pl}</span>
-                <span className="nm">
-                  <img src={j.av} alt="" />
-                  <i>
-                    {j.nm}
-                    <em>{j.wait ? 'категория ждёт подтверждения' : j.cat}</em>
-                  </i>
-                </span>
-                <span>{j.region}</span>
-                <span className="num">{num(j.s1)}</span>
-                {/* Судья без подтверждённой категории стоит в листе без S2 ✳:
-                    видно, что балла нет не потому, что не работал. */}
-                <span className={'num' + (j.s2 === 0 ? ' nope' : '')}>{j.s2 === 0 ? '—' : num(j.s2)}</span>
-                <span className="num">{num(j.s3)}</span>
-                <span className="num">{num(j.s4)}</span>
-                <span className="num tot">{num(rsum(j))}</span>
-                <span className="num">{j.tours}</span>
-                <span className="mark">
-                  <span className={'pill ' + (scored(j) ? 'live' : 'bad')} style={{ margin: 0 }}>
-                    {scored(j) ? 'ЕСТЬ' : 'НЕТ'}
+        <Sheet
+          grid={grid}
+          cols={[
+            'Место',
+            'Судья',
+            'Регион',
+            <Th key="s1">S1</Th>,
+            <Th key="s2">S2</Th>,
+            <Th key="s3">S3</Th>,
+            <Th key="s4">S4</Th>,
+            <Th key="r">R</Th>,
+            <Th key="t">Отсужено</Th>,
+            'Зачёт',
+          ]}
+        >
+          {rows.map((j) => (
+            /* Строка ведёт в карточку судьи: «посмотреть другого» — это не
+               всплывающая подсказка, а тот же экран, что своя карточка. */
+            <button
+              key={j.nm}
+              type="button"
+              data-to="Э0.13"
+              data-row
+              className={
+                'grid w-full items-center gap-3 px-4 py-2.5 text-left text-[13px] tabular-nums ' +
+                (j.me ? 'bg-blue-50/60' : 'hover:bg-neutral-50')
+              }
+              style={{ gridTemplateColumns: grid }}
+            >
+              <span className="text-neutral-600">{j.pl}</span>
+              <span className="flex min-w-0 items-center gap-2.5">
+                <Avatar size="sm">
+                  <Avatar.Image alt={j.nm} src={j.av} />
+                  <Avatar.Fallback>{j.nm.slice(0, 1)}</Avatar.Fallback>
+                </Avatar>
+                <span className="min-w-0 leading-tight">
+                  <span className="block truncate font-medium">{j.nm}</span>
+                  <span className={'block truncate text-xs ' + (j.wait ? 'text-amber-700' : 'text-neutral-500')}>
+                    {j.wait ? 'категория ждёт подтверждения' : j.cat}
                   </span>
                 </span>
-              </div>
-            ))}
-          </div>
-        </div>
-        <div className="dcount" style={{ marginTop: 10 }}>
+              </span>
+              <span className="truncate text-neutral-600">{j.region}</span>
+              <span className="text-right">{num(j.s1)}</span>
+              {/* Судья без подтверждённой категории стоит в листе без S2 ✳:
+                  видно, что балла нет не потому, что не работал. */}
+              <span className={'text-right ' + (j.s2 === 0 ? 'text-neutral-400' : '')}>
+                {j.s2 === 0 ? '—' : num(j.s2)}
+              </span>
+              <span className="text-right">{num(j.s3)}</span>
+              <span className="text-right">{num(j.s4)}</span>
+              <span className="text-right font-semibold">{num(rsum(j))}</span>
+              <span className="text-right text-neutral-600">{j.tours}</span>
+              <span>
+                <Pill t={scored(j) ? 'ЕСТЬ' : 'НЕТ'} color={scored(j) ? 'success' : 'danger'} />
+              </span>
+            </button>
+          ))}
+        </Sheet>
+        <Foot>
           Своя строка помечена при любой сортировке: судья приходит сюда сравнить себя, а не читать
           список. Период указан в шапке — рейтинг судьи считается за год (TZ §7.2)
-        </div>
+        </Foot>
       </Panel>
     </>
   );
@@ -327,7 +411,7 @@ export function JudgeCard({ me, tours, own, player }: {
   const duty = tours.filter((t) => t.post !== 'Член ГСК');
   return (
     <>
-      <Chips
+      <StatTiles
         items={[
           { v: num(r), k: `R = S1 ${num(me.s1)} + S2 ${num(me.s2)} + S3 ${num(me.s3)} + S4 ${num(me.s4)}` },
           { v: '№' + me.pl, k: 'Место в рейтинге сезона' },
@@ -340,50 +424,63 @@ export function JudgeCard({ me, tours, own, player }: {
         ]}
       />
 
-      <div className="mkcols">
-        <Panel
-          title={me.nm}
-          sub={`${me.cat} · регион учёта ${me.region}`}
-          extra={
-            <span className={'pill ' + (own ? 'reg' : 'wait')} style={{ margin: 0 }}>
-              {own ? 'МОЯ КАРТОЧКА' : 'ТОЛЬКО ПРОСМОТР'}
-            </span>
-          }
-        >
-          <Form>
-            <Field label="Категория" value={me.cat} />
-            <Field label="Подтвердил" value="Судейская коллегия ФНТ РК · 05.01.2026" />
-            <Field label="Регион учёта" value={me.region} />
-            <Field label="В реестре с" value="14.09.2021" />
-          </Form>
+      <div className="grid grid-cols-2 items-start gap-4">
+        <Panel>
+          {/* Шапка начинается с фото — как строка листа (Э0.12): зона «Шапка
+              карточки» в данных роли открывается словами «Фото, фамилия…».
+              Заголовок панели не умеет аватар, поэтому шапка собрана в теле. */}
+          <div className="mb-3 flex items-center gap-3 border-b border-neutral-100 pb-3">
+            <Avatar size="lg">
+              {me.av && <Avatar.Image alt={me.nm} src={me.av} />}
+              <Avatar.Fallback>{me.nm.slice(0, 1)}</Avatar.Fallback>
+            </Avatar>
+            <div className="min-w-0 flex-1 leading-tight">
+              <h3 className="text-[13.5px] font-semibold">{me.nm}</h3>
+              <p className="mt-0.5 text-xs text-neutral-500">{me.cat} · регион учёта {me.region}</p>
+            </div>
+            <Pill t={own ? 'МОЯ КАРТОЧКА' : 'ТОЛЬКО ПРОСМОТР'} color={own ? 'accent' : 'warning'} />
+          </div>
+          {/* Паспортная часть — строками «подпись — значение»: карточка
+              читается сверху вниз, а не сеткой полей формы — заполнять тут
+              нечего. */}
+          <KV
+            items={[
+              ['Категория', me.cat],
+              ['Подтвердил', 'Судейская коллегия ФНТ РК · 05.01.2026'],
+              ['Регион учёта', me.region],
+              ['В реестре с', '14.09.2021'],
+            ]}
+          />
 
           {/* Судья бывает игроком и наоборот ✳ (комментарий федерации,
               09.2026): это один человек с двумя ролями, а не два аккаунта.
               Рейтинги считаются раздельно и друг на друга не влияют. */}
           {player && (
-            <div style={{ marginTop: 12 }}>
-              <Row
-                to="Э14.7"
-                nm="Ещё и спортсмен"
-                sub={`${player.club} · рейтинг игрока ${player.rating} — считается отдельно от судейского`}
-                pill={{ t: 'ОДИН ЧЕЛОВЕК', cls: 'reg' }}
-                action="Профиль"
-              />
+            <div className="mt-3">
+              <Rows>
+                <Row
+                  to="Э14.7"
+                  nm="Ещё и спортсмен"
+                  sub={`${player.club} · рейтинг игрока ${player.rating} — считается отдельно от судейского`}
+                  pill={{ t: 'ОДИН ЧЕЛОВЕК', cls: 'reg' }}
+                  action="Профиль"
+                />
+              </Rows>
             </div>
           )}
 
-          <div style={{ marginTop: 12 }}>
-            <Hint>
+          <div className="mt-4">
+            <Bar>
               Карточку никто не заполняет руками: она собирается из турниров, нарядов и
               подтверждённых документов и обновляется сама после каждого закрытого протокола.
               {own
                 ? ' Документы на S3 и S4 и апелляция — в «Моём рейтинге».'
                 : ' В чужой карточке видно только рейтинговое: контакты, файлы документов и взносы закрыты.'}
-            </Hint>
+            </Bar>
           </div>
         </Panel>
 
-        <Panel title="Из чего собрался балл" extra={<span className="dcount">TZ §7.2</span>}>
+        <Panel title="Из чего собрался балл" extra={<Cap>TZ §7.2</Cap>}>
           <Rows>
             <Row nm="S1 · судейство соревнований" sub="начисляет система по явке, после закрытия протокола" val={num(me.s1)} pill={{ t: 'АВТО', cls: 'live' }} />
             <Row nm="S2 · квалификационная категория" sub="опорный балл, пока категория действует" val={num(me.s2)} pill={{ t: 'АВТО', cls: 'live' }} />
@@ -395,43 +492,15 @@ export function JudgeCard({ me, tours, own, player }: {
 
       <Panel
         title={'История судейства · ' + tours.length + ' записи за сезон'}
-        extra={<span className="dcount">кем был на старте и почему такой коэффициент</span>}
+        extra={<Cap>кем был на старте и почему такой коэффициент</Cap>}
+        flush
       >
-        <div className="mktable mkjudge">
-          <div className="mktable-h">
-            <span>Соревнование</span>
-            <span>Когда и где</span>
-            <span>Роль в наряде</span>
-            <span>Коэффициент</span>
-            <span>Балл</span>
-          </div>
-          <div className="mktable-b">
-            {tours.map((t) => (
-              <div className="mktable-r" key={t.nm + t.when}>
-                <span className="nm">
-                  {t.nm}
-                  <em>{t.kind} · базовый балл {num(t.base)}</em>
-                </span>
-                <span>{t.when} · {t.city}</span>
-                {/* Работа в коллегии — не S1 ✳: членство в ГСК идёт в S4, и
-                    такие строки помечены отдельно. Иначе таблица показывала бы
-                    «отсудил 14 соревнований» там, где на четырёх человек не
-                    судил, а заседал. */}
-                <span>
-                  {t.post}
-                  {t.post === 'Член ГСК' && <em className="off"> идёт в S4, а не в S1</em>}
-                </span>
-                <span>{t.miss ? '—' : t.k === 1 ? 'без коэффициента' : '× ' + num(t.k)}</span>
-                <span className="num">{sign(tourPoints(t))}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-        <div className="dcount" style={{ marginTop: 10 }}>
+        <TourTable tours={tours} cols={['Соревнование', 'Роль в наряде', 'Балл']} committee />
+        <Foot>
           Коэффициент 1,5 — за роль в бригаде (главный судья, заместитель, секретарь) и за выезд на
           республиканские из другого региона (TZ §7.2). ⚠ Что считать «отсудил соревнование» —
           вопрос 17.4
-        </div>
+        </Foot>
       </Panel>
     </>
   );

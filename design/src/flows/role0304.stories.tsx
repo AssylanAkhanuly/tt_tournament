@@ -9,6 +9,7 @@ import { Role0304Board, SCREENS } from '../mockups/role0304';
 export default {
   title: 'Флоу/03–04 · Менеджеры-наблюдатели',
   parameters: { layout: 'fullscreen' },
+  globals: { theme: 'daylight-fnt' },
 };
 
 /* Парный вид первым: под каждым узлом маршрута стоит его макет — требование и

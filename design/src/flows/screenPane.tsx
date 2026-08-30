@@ -81,7 +81,9 @@ export function ScreenPane({
     const root = inner.current;
     if (!root || !tab) return;
     const want = norm(tab);
-    const hit = [...root.querySelectorAll<HTMLElement>('.dseg2 button, .seg button')].find((b) => {
+    /* `[data-seg]` — переключатели нового слоя макетов (kit/hero/app): у них
+       нет классов макетного слоя, вкладку помечает атрибут. */
+    const hit = [...root.querySelectorAll<HTMLElement>('.dseg2 button, .seg button, [data-seg] button')].find((b) => {
       const label = norm(b.textContent ?? '');
       return label === want || label.startsWith(want);
     });
@@ -107,7 +109,7 @@ export function ScreenPane({
       return { code, byMenu: byMenu ? norm(byMenu) : null, title: norm(screen.title) };
     };
     const sections = [...byId.entries()].map(([code, sc]) => menu(code, sc));
-    root.querySelectorAll<HTMLElement>('.dni, .tabbar .tab').forEach((nav) => {
+    root.querySelectorAll<HTMLElement>('.dni, .tabbar .tab, [data-nav]').forEach((nav) => {
       const label = norm(nav.textContent ?? '');
       if (!label) return;
       const hit =
@@ -137,7 +139,7 @@ export function ScreenPane({
     const targets = (spec?.actions ?? []).filter((a) => a.to);
     const cands = [
       ...root.querySelectorAll<HTMLElement>(
-        'button, .drow, .item, .ttab, .dchip, .dseg2 span, .jstart, .jbtn, [data-to]',
+        'button, .drow, .item, .ttab, .dchip, .dseg2 span, .jstart, .jbtn, [data-to], [data-row]',
       ),
     ];
     setLinks(
@@ -151,7 +153,7 @@ export function ScreenPane({
           cands.find((c) => c.dataset.to === a.to) ??
           cands.find(
             (c) =>
-              (c.classList.contains('drow') || c.classList.contains('item')) &&
+              (c.classList.contains('drow') || c.classList.contains('item') || c.hasAttribute('data-row')) &&
               (c.textContent ?? '').includes(a.to!),
           ) ??
           cands.find((c) => want.length > 2 && norm(c.textContent ?? '').includes(want));

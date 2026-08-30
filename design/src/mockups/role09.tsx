@@ -1,39 +1,116 @@
-/* Роль 9 · Судья — макеты по флоу.
-   Экраны Э9.1–Э9.5 (см. `flows/09-sudya.md` и схему роли).
+/* Роль 9 · Судья — макеты по флоу на новом слое (HeroUI) ✳ (30.08.2026).
+   Содержание, коды экранов и переходы — прежние (см. `flows/09-sudya.md` и
+   `flows/data/role09.ts`); меняется подача: судья стола работает за столом с
+   планшета (TZ §6), и экраны собраны оболочкой TabletApp нового слоя
+   `kit/hero/app` — крупный счёт, кнопки под палец, минимум элементов.
 
-   Макеты — десктопом, как у всех остальных ролей ✳ (18.08.2026). Работает
-   судья за столом с планшета (TZ §6), и экран ввода счёта под палец и остаётся:
-   крупный счёт, две половины по игроку, кнопка очка размером в ладонь. Но
-   макеты по флоу мы держим в одной оболочке — иначе борд роли читается как из
-   другой системы, и сравнить его с соседними ролями нельзя. Так же поступили со
-   спортсменом: веб-десктоп сейчас, приложение отдельно (`role14app.tsx`).
+   Прежнее решение «макеты — десктопом» (18.08.2026) снимается ✳: оно
+   держалось на том, что у старого слоя не было своей планшетной рамки и борд
+   роли читался бы как из другой системы. У нового слоя рамка есть и она
+   общая для всех ролей — теперь борд честно показывает устройство роли.
 
-   Планшетная раскладка — не другой экран, а тот же в узкой ширине: она живёт
-   отдельной историей адаптива, а не отдельным набором макетов. Цвет — только
-   токенами. */
+   Три мысли, которые макеты обязаны передать:
+   1. главный экран роли — ввод счёта: под палец и скорость (TZ §6), режим
+      ввода выбирает сам судья стола (по очкам / по партиям / итог напрямую);
+   2. расписание живёт у главного судьи: у стола вопрос один — «пара пришла —
+      начинаем?», очереди стола на экране нет;
+   3. подтверждение результата — единственное необратимое действие судьи за
+      столом: дальше правит только главный судья (TZ §6). */
 
 import { useState, type ReactNode } from 'react';
 import {
-  Check, Clock, History, Pause, Radio, RefreshCw, Timer, Trophy, Undo2, Upload, UserX,
+  Check, History, Pause, Radio, RefreshCw, Table2, Timer, Trophy, Undo2,
 } from 'lucide-react';
+import { Avatar, Button, Chip } from '@heroui/react';
 import {
-  A, ActionBar, Alert, Arrow, Board, Chips, Empty, Hint, P, Panel, RoleScreen, Row, Rows, Screen,
-  Shot, States, Tabs,
-} from './shell';
-import type { ScreenMap } from './shell';
-/* История судейства и её формат — общие со всеми судейскими ролями: рейтинг
-   ведётся по одному Положению (TZ §7.2). Планшет судьи рисует те же данные
-   списком, а не таблицей: пять колонок в 1024 пикселя не читаются. */
+  A, Bar, DataTable, DisabledAction, EmptyBox, FormGrid, GameCells, Pill, Row, Rows,
+  ScreenScope, TabletApp, TextInput,
+  type RoleUI,
+} from '../kit/hero/app';
+/* Из старого слоя остаются только мета-компоненты борда: колонки, стрелки и
+   полки состояний. Сами экраны собраны новым слоем. */
+import { Board, States, Shot, type ScreenMap } from './shell';
+/* История судейства и её баллы — общие со всеми судейскими ролями: рейтинг
+   ведётся по одному Положению (TZ §7.2), и считать балл второй формулой
+   нельзя — она разъедется с кабинетом судьи при первой правке Положения. */
 import { tourPoints, type JudgeTour } from './judge';
-import { R09 } from './roles';
 /* Маршрут судейской роли начинается раньше входа: судья заводит себя сам
    (Э0.7), а роль в наряде ему выдают уже потом. Без этой колонки борд и карта
    начинались с «Вход», и откуда взялся человек, из них было не видно. */
 import { Login0_1, SignUpJudge0_7, SignUpJudge0_7States } from './role00';
 
-/* ── данные экранов ──────────────────────────────────────────────── */
+/* ── Роль: разделы и подпись профиля ─────────────────────────────── */
 
+/** Данные роли — те же, что в старом слое (`roles.tsx`), тип — из нового.
+    Пункты nav — те же два слова: по ним их находит карта флоу. */
+const NAV9: [ReactNode, string][] = [
+  [<Trophy size={15} key="t" />, 'Мои турниры'],
+  [<Table2 size={15} key="s" />, 'Мой стол'],
+];
+
+const R09: RoleUI = {
+  num: '9',
+  title: 'Судья',
+  person: { nm: 'Оралбай Е.', rl: 'Судья · стол 4', av: A(39) },
+  brandName: 'Чемпионат Казахстана 2026',
+  brandSub: 'Одиночный · олимпийская · г. Астана',
+  badge: 'ИДЁТ',
+  nav: NAV9,
+};
+
+/* ── Мелочи, общие для экранов роли ─────────────────────────────── */
+
+/** Тона значков старого словаря → цвета `Pill` нового слоя: данные экранов
+    переносятся без переписывания. */
 type Cls = 'live' | 'wait' | 'bad' | 'reg' | 'done';
+const PC: Record<Cls, 'success' | 'warning' | 'danger' | 'accent' | 'default'> = {
+  live: 'success', wait: 'warning', bad: 'danger', reg: 'accent', done: 'default',
+};
+const P = ({ t, cls }: { t: string; cls: Cls }) => <Pill t={t} color={PC[cls]} />;
+
+/** Разделы роли на планшете — переключателем под шапкой: сайдбара у планшета
+    нет, а два раздела старого меню («Мои турниры», «Мой стол») остаются теми
+    же словами. `data-nav` — крючок карты флоу. */
+const SectionNav = ({ active }: { active: string }) => (
+  <div className="flex gap-1 self-start rounded-lg bg-neutral-100 p-1">
+    {NAV9.map(([icon, label]) => (
+      <button
+        key={label}
+        type="button"
+        data-nav
+        aria-current={label === active || undefined}
+        className={
+          'flex items-center gap-2 rounded-md px-3.5 py-2 text-[13px] font-medium ' +
+          (label === active ? 'bg-white text-blue-700 shadow-sm' : 'text-neutral-500 hover:text-neutral-800')
+        }
+      >
+        {icon}
+        {label}
+      </button>
+    ))}
+  </div>
+);
+
+/** Подзаголовок раздела внутри экрана. */
+const SecT = ({ children }: { children: ReactNode }) => (
+  <div className="text-[11px] font-semibold uppercase tracking-wider text-neutral-400">{children}</div>
+);
+
+/** Кадр состояния: фрагмент экрана в скоупе нового слоя — без обёртки фрагмент
+    на полке States остаётся без стилей HeroUI.
+
+    Своей ширины у кадра нет ✳ (приёмка 30.08.2026): фиксированные 560px были
+    шире узкой колонки полки — кнопки и значки уезжали за край и налезали на
+    соседние кадры, — а широкие кадры, наоборот, зажимали. Ширину задаёт сама
+    колонка: скоуп — flex-элемент тела кадра и растягивается на неё.
+    ⚠ Дупликация с role05.tsx. */
+const Frag = ({ children }: { children: ReactNode }) => (
+  <ScreenScope>
+    <div>{children}</div>
+  </ScreenScope>
+);
+
+/* ── данные экранов ──────────────────────────────────────────────── */
 
 type Assign = { t: string; sub: string; st: string; cls: Cls };
 
@@ -47,7 +124,12 @@ const ASSIGN: Assign[] = [
 
 /* лента событий матча: розыгрыши, партии, служебные события, тайм-ауты и
    карточки. Карточки — свой тон ✳: жёлтая и красная это единственное, о чём
-   спрашивают после матча, и искать их в ровном списке строк судья не должен. */
+   спрашивают после матча, и искать их в ровном списке строк судья не должен.
+
+   Тон значка — по типу события, а не по стороне игрока ✳ (приёмка
+   30.08.2026): очко любого игрока — «+1», «−1» — только у отмены, закрытие
+   партии — служебное. Иначе судья, ищущий отмены глазами, принимает чужое
+   очко за отмену. */
 type Ev = { at: string; t: string; s: string; tone: 'win' | 'loss' | 'flat' | 'y' | 'r' | 'to' };
 
 const EVENTS: Ev[] = [
@@ -56,33 +138,19 @@ const EVENTS: Ev[] = [
   { at: '15:45', t: 'Тайм-аут — Смагулов Алан', s: 'использован · 1 минута · второй за матч не берётся', tone: 'to' },
   { at: '15:44', t: 'Пауза 1 минута', s: 'запрошена Токаевым М. · отмечена судьёй стола', tone: 'flat' },
   { at: '15:43', t: 'Отмена последнего очка', s: 'вернули 6 : 6 — очко записано не той стороне', tone: 'loss' },
-  { at: '15:42', t: 'Очко — Токаев Марат', s: 'счёт в партии 4: 6 : 6', tone: 'loss' },
+  { at: '15:42', t: 'Очко — Токаев Марат', s: 'счёт в партии 4: 6 : 6', tone: 'win' },
   { at: '15:41', t: 'Смена подачи', s: 'подача перешла к Токаеву М. · автоматически по счёту', tone: 'flat' },
-  { at: '15:39', t: 'Партия 3 закрыта — 11 : 7', s: 'счёт по партиям стал 2 : 1 в пользу Смагулова А.', tone: 'win' },
+  { at: '15:39', t: 'Партия 3 закрыта — 11 : 7', s: 'счёт по партиям стал 2 : 1 в пользу Смагулова А.', tone: 'flat' },
   { at: '15:22', t: 'Смена сторон', s: 'по регламенту, после второй партии', tone: 'flat' },
   { at: '14:58', t: 'Матч начат', s: 'стол 4 · первая подача — Смагулов А.', tone: 'flat' },
 ];
 
-const LEDGER: [string, string, string, string, string][] = [
-  ['16.03', 'S1', 'Чемпионат Казахстана 2026 · судейство', 'республиканские · коэффициент 1,5 — командирован из другого региона', '+4,5'],
-  ['22.02', 'S1', 'Кубок Казахстана 2026 · судейство', 'республиканские · без коэффициента', '+3,0'],
-  ['09.02', 'S3', 'Офлайн-семинар ФНТ РК, г. Астана', 'коэффициент 1,5 — семинар за пределами региона учёта', '+4,5'],
-  ['12.01', 'S4', 'Работа в коллегии региона, 6 месяцев', 'подтверждено справкой судейской коллегии', '+2,0'],
-  ['05.01', 'S2', 'Судья национальной категории', 'опорный балл, пока категория действует', '+4,0'],
-];
+/** История судейства судьи стола. Тип и формула балла общие с остальными
+    судейскими ролями (`judge.tsx`): рейтинг у них один.
 
-const DOCS: { t: string; sub: string; st: string; cls: Cls }[] = [
-  { t: 'Сертификат офлайн-семинара ФНТ РК', sub: 'S3 · подан 09.02.2026 · проверил Мукашев Б.', st: 'ПРИНЯТ +4,5', cls: 'live' },
-  { t: 'Благодарственное письмо акимата', sub: 'S4 · подан 03.04.2026 · у рейтинговой комиссии', st: 'НА ПРОВЕРКЕ', cls: 'wait' },
-  { t: 'Протокол теста аттестации', sub: 'S3 · подан 27.02.2026 · причина: скан не читается', st: 'ОТКЛОНЁН', cls: 'bad' },
-];
-
-/** История судейства судьи стола. Тип общий с остальными судейскими ролями
-    (`judge.tsx`): рейтинг у них один, и разъезжаться формату строки нельзя.
-
-    Видно и главное отличие роли: коэффициент 1,5 судье стола даётся не за место
-    в бригаде, а только за выезд — командировку на республиканские соревнования
-    из своего региона (TZ §7.2). */
+    Видно и главное отличие роли: коэффициент 1,5 судье стола даётся не за
+    место в бригаде, а только за выезд — командировку на республиканские
+    соревнования из своего региона (TZ §7.2). */
 const JUDGE_TOURS9: JudgeTour[] = [
   { nm: 'Чемпионат Казахстана 2026', when: '12–16.03', city: 'Астана', kind: 'Республиканские', post: 'Судья стола', base: 3, k: 1.5 },
   { nm: 'Кубок Казахстана 2026', when: '18–22.02', city: 'Павлодар', kind: 'Республиканские', post: 'Судья стола', base: 3, k: 1 },
@@ -90,35 +158,32 @@ const JUDGE_TOURS9: JudgeTour[] = [
   { nm: 'Кубок Иртыша', when: '02–03.06', city: 'Павлодар', kind: 'Региональные', post: 'Судья стола', base: 1, k: 1, miss: true },
 ];
 
+const num9 = (n: number) => (n < 0 ? '' : '+') + String(Math.round(n * 10) / 10).replace('.', ',');
+
 /* ── Э9.1 · Мои турниры ──────────────────────────────────────────── */
 
 export function Tours9_1() {
+  /* Баллы считаются формулой кабинета (`tourPoints`), а не второй копией:
+     сумма под списком — та же, что увидит судья в Э0.11. */
+  const s1 = JUDGE_TOURS9.reduce((s, t) => s + tourPoints(t), 0);
+  const played = JUDGE_TOURS9.filter((t) => !t.miss).length;
   return (
-    <RoleScreen
-      role={R09}
-      nav="Мои турниры"
-      title="Мои турниры"
-      sub="Оралбай Ержан · судья · сезон 2026"
-    >
-      {/* Назначения — таблицей, как списки у председателя: одна рамка на
-          список, строки волосяной линией, подсветка под курсором. Карточками
-          с просветом пять назначений занимали весь экран. */}
-      <div className="sect">Мои назначения</div>
-      <div className="mktable mkcands mkassign">
-        <div className="mktable-h">
-          <span>Турнир</span>
-          <span>Состояние</span>
-        </div>
-        <div className="mktable-b">
-          {ASSIGN.map((a) => (
-            <div className="mktable-r" key={a.t} data-to="Э9.2" role="button" tabIndex={0}>
-              <span className="nm">
-                <i>{a.t}<em>{a.sub}</em></i>
-              </span>
-              <span className="mark"><P t={a.st} cls={a.cls} /></span>
-            </div>
-          ))}
-        </div>
+    /* Значка «ИДЁТ» в шапке нет ✳: экран про сезон целиком, а не про идущий
+       турнир — значок стоит на экранах матча (Э9.2–Э9.5). */
+    <TabletApp title="Мои турниры" sub="Оралбай Ержан · судья · сезон 2026">
+      <SectionNav active="Мои турниры" />
+
+      {/* Назначения — списком с волосяными линиями: карточками с просветом
+          пять назначений занимали весь экран. Строка ведёт на мой стол. */}
+      <SecT>Мои назначения</SecT>
+      <Rows>
+        {ASSIGN.map((a) => (
+          <Row key={a.t} nm={a.t} sub={a.sub} pill={{ t: a.st, cls: a.cls }} to="Э9.2" />
+        ))}
+      </Rows>
+      <div className="text-xs leading-relaxed text-neutral-500">
+        Отсужено {played} турнира за сезон · баллы S1 {num9(s1)} — рейтинг судья смотрит в кабинете,
+        а не здесь; судье стола коэффициент 1,5 идёт только за выезд (TZ §7.2)
       </div>
 
       {/* Открытых приёмов и подачи заявок здесь больше нет ✳ (18.08.2026): они
@@ -126,65 +191,173 @@ export function Tours9_1() {
           то есть у человека, который уже назначен: попасть на турнир мог только
           тот, кто на турнире уже есть. Экран роли — про работу на турнире, а не
           про то, как на него попасть. */}
-      <div className="sect">Куда подавать заявки</div>
-      <div className="item" style={{ marginTop: 0 }} data-to="Э0.9">
-        <div className="ic"><Clock size={17} /></div>
-        <div className="tx">
-          <div className="tt">Турниры и заявки на судейство</div>
-          <div className="ss">Открытые приёмы, мои заявки и решения — в кабинете судьи</div>
-        </div>
-        <span className="pill reg" style={{ margin: 0 }}>3 ПРИЁМА</span>
-      </div>
-    </RoleScreen>
+      <SecT>Куда подавать заявки</SecT>
+      <Rows>
+        <Row
+          nm="Турниры и заявки на судейство"
+          sub="Открытые приёмы, мои заявки и решения — в кабинете судьи"
+          pill={{ t: '3 ПРИЁМА', cls: 'reg' }}
+          to="Э0.9"
+        />
+      </Rows>
+    </TabletApp>
   );
 }
+
+const Tours9_1States = () => (
+  <States>
+    <Shot tone="info" title="Назначений нет" text="Пустое состояние со списком открытых приёмов.">
+      <Frag>
+        <EmptyBox
+          title="Назначений нет"
+          text="Открыт приём заявок на два турнира — можно подать заявку на судейство."
+        />
+      </Frag>
+    </Shot>
+
+    <Shot
+      tone="warning"
+      title="Заявки на судейство или прямое назначение — не решено"
+      text="⚠ 12.6: сохраняется ли конкурс заявок. От ответа зависит, есть ли на экране кнопка «Подать заявку»."
+    >
+      <Frag>
+        <Rows>
+          <Row nm="Конкурс заявок" sub="наше допущение — судья подаёт заявку сам" pill={{ t: 'СЕЙЧАС ТАК', cls: 'reg' }} />
+          <Row nm="Прямое назначение" sub="если так — кнопки подачи не будет" pill={{ t: 'ВОПРОС', cls: 'bad' }} />
+        </Rows>
+      </Frag>
+    </Shot>
+  </States>
+);
 
 /* ── Э9.2 · Мой стол ─────────────────────────────────────────────── */
 
 export function Table9_2() {
   return (
-    <RoleScreen
-      role={R09}
-      nav="Мой стол"
-      title="Мой стол 4"
-      sub="Чемпионат Казахстана 2026 · день 2 · 13 марта"
-    >
+    <TabletApp title="Мой стол 4" sub="Чемпионат Казахстана 2026 · день 2 · 13 марта" badge="ИДЁТ">
+      <SectionNav active="Мой стол" />
+
       {/* Очереди стола на экране нет ✳ (18.08.2026): расписание строит главный
           судья, и оно живёт в его руках — у судьи стола оно ничего не решало, а
-          место занимало больше, чем сам матч. Судья за столом отвечает на один
-          вопрос: эта пара пришла — начинаем? */}
-      {/* Подписи «вызвана пара» нет: на экране одна карточка и одна кнопка —
-          пересказывать это строкой сверху незачем. */}
-      <div className="card">
-        <div className="jvs">
-          <div className="jvp">
-            <img className="avatar" src={A(32)} alt="" />
-            <span>Смагулов Алан</span>
-            <span style={{ fontSize: 11, fontWeight: 500, color: 'var(--c-muted)' }}>Алматы · клуб «Алатау»</span>
-          </div>
-          <span className="jvsx">VS</span>
-          <div className="jvp">
-            <img className="avatar" src={A(51)} alt="" />
-            <span>Токаев Марат</span>
-            <span style={{ fontSize: 11, fontWeight: 500, color: 'var(--c-muted)' }}>Астана · клуб «Барыс»</span>
-          </div>
+          место занимало больше, чем сам матч. За столом вопрос один: пара
+          пришла — начинаем? Подписи «вызвана пара» тоже нет: на экране одна
+          карточка и одна кнопка. */}
+      <div className="rounded-xl border border-neutral-200 bg-white p-6 shadow-sm">
+        <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-4">
+          {([
+            { av: A(32), nm: 'Смагулов Алан', sub: 'Алматы · клуб «Алатау»' },
+            { av: A(51), nm: 'Токаев Марат', sub: 'Астана · клуб «Барыс»' },
+          ] as const).map((p, i) => (
+            <div key={p.nm} className={'flex flex-col items-center gap-1.5 text-center' + (i === 1 ? ' order-3' : '')}>
+              <Avatar size="lg">
+                <Avatar.Image alt={p.nm} src={p.av} />
+                <Avatar.Fallback>{p.nm.slice(0, 1)}</Avatar.Fallback>
+              </Avatar>
+              <div className="text-lg font-bold tracking-tight">{p.nm}</div>
+              <div className="text-xs text-neutral-500">{p.sub}</div>
+            </div>
+          ))}
+          <span className="order-2 text-sm font-semibold tracking-widest text-neutral-300">VS</span>
         </div>
-        <div className="jhint" style={{ marginTop: 12 }}>
+        {/* Регламент — тот же, что на вводе счёта (Э9.3) и в итоге (Э9.5):
+            три экрана одного матча не должны рассказывать про разные матчи.
+            Режим по очкам назван заранее — его включил главный судья. */}
+        <div className="mt-5 rounded-lg bg-neutral-50 px-4 py-2.5 text-center text-[12.5px] text-neutral-500">
           1/8 финала · до 4 побед в партиях · режим ввода — по очкам
         </div>
       </div>
 
-      {/* Одна кнопка ✳: за столом решение одно — начинать. Неявка бывает реже
-          и не должна стоять рядом с главным действием: её место в состояниях
-          экрана, когда игрок не пришёл. */}
-      <div className="jstart" data-to="Э9.3">
-        <Radio size={16} />Старт матча
-      </div>
-    </RoleScreen>
+      {/* Одна кнопка ✳ — и размером в ладонь: за столом решение одно.
+          Неявка бывает реже и не должна стоять рядом с главным действием: её
+          место в состояниях экрана, когда игрок не пришёл. */}
+      <Button variant="primary" className="h-16 w-full text-lg" data-to="Э9.3">
+        <Radio size={18} /> Старт матча
+      </Button>
+    </TabletApp>
   );
 }
 
+const Table9_2States = () => (
+  <States>
+    <Shot
+      tone="info"
+      title="Матча нет — «стол свободен»"
+      text="Вызов придёт от главного судьи: расписание в его руках, судья стола его не ведёт."
+    >
+      <Frag>
+        <EmptyBox
+          title="Стол свободен"
+          text="Пары на столе сейчас нет. Когда главный судья вызовет следующую, она появится здесь вместе с кнопкой старта."
+        />
+      </Frag>
+    </Shot>
+
+    {/* Неявка ушла с главного экрана ✳: она бывает реже старта и не должна
+        стоять рядом с ним — судья за столом жмёт «Старт» десятки раз за день,
+        а неявку пару раз за турнир.
+
+        Кадр во всю ширину полки ✳ (приёмка 30.08.2026): в половинной колонке
+        значок «НЕ ЯВИЛСЯ» и кнопка «Отметить неявку» — то, ради чего кадр и
+        заведён, — отжимали строку до узкого столбика текста. */}
+    <Shot
+      tone="warning"
+      title="Игрок не пришёл — вместо старта неявка ✳"
+      text="Кнопка появляется, когда пару вызвали, а игрока нет: решение о технической победе принимает главный судья (Э6.6)."
+      wide
+    >
+      <Frag>
+        <Rows>
+          <Row
+            nm="Токаев Марат"
+            sub="вызван 14:20 · на столе не появился"
+            pill={{ t: 'НЕ ЯВИЛСЯ', cls: 'bad' }}
+            action="Отметить неявку"
+          />
+        </Rows>
+        <div className="mt-3">
+          <Bar>
+            Неявка судьи по поданной заявке — минус балл в его рейтинге (TZ §7.2); неявка игрока —
+            решение главного судьи о технической победе, судья стола только отмечает факт.
+          </Bar>
+        </div>
+      </Frag>
+    </Shot>
+
+    <Shot
+      tone="info"
+      title="На турнире включён режим по очкам"
+      text="Об этом сказано в карточке матча заранее."
+    >
+      <Frag>
+        <Rows>
+          {/* Регламент тот же, что в карточке матча выше и на вводе счёта ✳:
+              «до 3 побед» в кадре спорило с «до 4 побед» на самом экране. */}
+          <Row nm={`Матч до ${WIN} побед в партиях`} sub="партия до 11 очков, разница 2" pill={{ t: 'ПО ОЧКАМ', cls: 'reg' }} />
+        </Rows>
+      </Frag>
+    </Shot>
+  </States>
+);
+
 /* ── Э9.3 · Ввод счёта — главный экран роли ──────────────────────── */
+
+type Pl = { av: string; nm: string; city: string };
+type Mark = { to: boolean; y: number; r: number };
+
+/** Регламент матча: до скольких побед в партиях (TZ §5). Тот же, что назван на
+    «Моём столе» (Э9.2) и по которому сложился итог на «Результат отправлен»
+    (Э9.5) — иначе три экрана одного матча рассказывают про разные матчи. */
+const WIN = 4;
+const PL: [Pl, Pl] = [
+  { av: A(32), nm: 'Смагулов Алан', city: 'Алматы · «Алатау»' },
+  { av: A(51), nm: 'Токаев Марат', city: 'Астана · «Барыс»' },
+];
+
+/** Карточка нарушения — жёлтый или красный прямоугольник, как у судьи в руке:
+    её ищут глазами по цвету, а не читают подпись. */
+const CardIco = ({ c }: { c: 'y' | 'r' }) => (
+  <i className={'inline-block h-3.5 w-2.5 rounded-sm ' + (c === 'y' ? 'bg-amber-400' : 'bg-red-500')} />
+);
 
 /** Отметки игрока — тайм-аут и карточки прямо на его половине табло ✳
     (комментарий федерации, 09.2026).
@@ -207,40 +380,63 @@ function Marks({ m, live, off, onTo, onCard, onUndo }: {
 }) {
   /* Отметка — не одна кнопка, а пара: тело ставит, «×» снимает. Отмена
      появляется только у выставленной ✳: пока ничего не выписано, снимать
-     нечего, и второй значок в ряду был бы шумом. Отдельной кнопкой, а не
-     повторным тапом по телу, потому что повторный тап уже занят — вторая
-     жёлтая за матч бывает, и «нажал ещё раз» не должно значить два разных
-     действия. */
-  const mark = (cls: string, on: boolean, label: ReactNode, add: () => void, k: 'to' | 'y' | 'r') => (
-    <span className={'jmark' + cls + (on ? ' on' : '')}>
+     нечего. Отдельной кнопкой, а не повторным тапом по телу, потому что
+     повторный тап уже занят — вторая жёлтая за матч бывает. */
+  const pill = (tone: string, on: boolean, label: ReactNode, add: () => void, k: 'to' | 'y' | 'r') => (
+    <span className={'inline-flex items-stretch overflow-hidden rounded-lg border text-xs font-medium ' + tone}>
       {off ? (
-        <span className="jmarkb">{label}</span>
+        <span className="flex items-center gap-1.5 px-2.5 py-1.5">{label}</span>
       ) : (
-        <button type="button" className="jmarkb" onClick={add}>{label}</button>
+        <button type="button" className="flex items-center gap-1.5 px-2.5 py-1.5" onClick={add}>
+          {label}
+        </button>
       )}
       {on && !off && (
-        <button type="button" className="jmarkx" onClick={() => onUndo(k)} aria-label="снять">×</button>
+        <button
+          type="button"
+          aria-label="снять"
+          className="border-l border-neutral-200 px-1.5 text-neutral-400 hover:bg-neutral-100 hover:text-neutral-700"
+          onClick={() => onUndo(k)}
+        >
+          ×
+        </button>
       )}
     </span>
   );
   return (
-    <div className="jmarks">
-      {mark(
-        live ? ' to live' : m.to ? ' to used' : ' to',
+    <div className="flex flex-wrap justify-center gap-1.5">
+      {pill(
+        live
+          ? 'border-blue-300 bg-blue-50 text-blue-700'
+          : m.to
+            ? 'border-neutral-200 bg-neutral-100 text-neutral-400'
+            : 'border-neutral-200 bg-white text-neutral-500',
         live || m.to,
         <><Timer size={13} />{live ? 'идёт' : m.to ? 'взят' : 'тайм-аут'}</>,
         onTo,
         'to',
       )}
-      {mark(' y', m.y > 0, <><i className="jcard y" />{m.y > 1 ? `× ${m.y}` : 'жёлтая'}</>, () => onCard('y'), 'y')}
-      {mark(' r', m.r > 0, <><i className="jcard r" />{m.r > 1 ? `× ${m.r}` : 'красная'}</>, () => onCard('r'), 'r')}
+      {pill(
+        m.y > 0 ? 'border-amber-300 bg-amber-50 text-amber-800' : 'border-neutral-200 bg-white text-neutral-500',
+        m.y > 0,
+        <><CardIco c="y" />{m.y > 1 ? `× ${m.y}` : 'жёлтая'}</>,
+        () => onCard('y'),
+        'y',
+      )}
+      {pill(
+        m.r > 0 ? 'border-red-300 bg-red-50 text-red-700' : 'border-neutral-200 bg-white text-neutral-500',
+        m.r > 0,
+        <><CardIco c="r" />{m.r > 1 ? `× ${m.r}` : 'красная'}</>,
+        () => onCard('r'),
+        'r',
+      )}
     </div>
   );
 }
 
-/** Половина экрана — один игрок: имя, огромный счёт и кнопка очка.
+/** Половина табло — один игрок: имя, огромный счёт и кнопка очка.
 
-    Указателя подачи здесь нет: судья за столом и так знает, кто подаёт, а на
+    Указателя подачи здесь нет ✳: судья за столом и так знает, кто подаёт, а на
     экране это была строка мелким шрифтом под именем — прочитать её с
     расстояния всё равно нельзя. Половины равны и цветом ничего не выделяется:
     единственное, что должно бросаться в глаза, — сами числа. */
@@ -256,43 +452,26 @@ function Half({ av, nm, city, pts, onPoint, off, marks }: {
   marks: ReactNode;
 }) {
   return (
-    <div
-      className="card"
-      style={{ padding: 12, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}
-    >
-      <img className="avatar sm" src={av} alt="" />
-      <div style={{ fontSize: 16, fontWeight: 800, letterSpacing: '-.2px' }}>{nm}</div>
-      <div style={{ fontSize: 11.5, color: 'var(--c-muted)' }}>{city}</div>
-      {/* Ряд отметок встал между именем и счётом ✳: цифру он потеснил на
-          полтора десятка пунктов, и это правильный размен — число всё ещё
-          читается с другого конца стола, а тайм-аут и карточки видно, не
-          отводя глаз от счёта. Ниже кнопки очка им места нет: туда судья
-          смотрит, когда уже нажимает. */}
+    <div className="flex flex-col items-center gap-2 rounded-xl border border-neutral-200 bg-white p-4 shadow-sm">
+      <Avatar size="md">
+        <Avatar.Image alt={nm} src={av} />
+        <Avatar.Fallback>{nm.slice(0, 1)}</Avatar.Fallback>
+      </Avatar>
+      <div className="text-lg font-bold tracking-tight">{nm}</div>
+      <div className="text-xs text-neutral-500">{city}</div>
+      {/* Ряд отметок встал между именем и счётом ✳: цифру он потеснил, и это
+          правильный размен — число всё ещё читается с другого конца стола, а
+          тайм-аут и карточки видно, не отводя глаз от счёта. */}
       {marks}
-      <div
-        style={{
-          fontSize: 78,
-          lineHeight: .96,
-          fontWeight: 800,
-          letterSpacing: '-6px',
-          fontVariantNumeric: 'tabular-nums',
-          color: 'var(--c-ink-bright)',
-        }}
+      <div className="text-[88px] font-bold leading-none tracking-tighter tabular-nums">{pts}</div>
+      <Button
+        variant={off ? 'outline' : 'primary'}
+        isDisabled={off}
+        className="h-14 w-full text-lg"
+        onPress={onPoint}
       >
-        {pts}
-      </div>
-      {off ? (
-        <div className="jbtn ghost" style={{ padding: 13, fontSize: 13.5, width: '100%' }}>+1 очко</div>
-      ) : (
-        <button
-          type="button"
-          className="jstart"
-          style={{ padding: 13, fontSize: 13.5, width: '100%' }}
-          onClick={onPoint}
-        >
-          +1 очко
-        </button>
-      )}
+        +1 очко
+      </Button>
     </div>
   );
 }
@@ -300,10 +479,10 @@ function Half({ av, nm, city, pts, onPoint, off, marks }: {
 /** Число счёта, которое вписывают ✳ (комментарий федерации, 09.2026).
 
     Степперы «−/+» отсюда убраны: чтобы поставить 3 : 1, судья жал плюс трижды,
-    а чтобы записать партию 11 : 9 — одиннадцать раз. Это не «ввести счёт
-    сразу», это тот же поочковый подсчёт, от которого федерация и просила уйти.
-    Поле выглядит самим числом — рамка появляется под курсором и в фокусе:
-    на табло главное по-прежнему цифра, а не форма вокруг неё. */
+    а чтобы записать партию 11 : 9 — одиннадцать раз. Это тот же поочковый
+    подсчёт, от которого федерация просила уйти. Поле выглядит самим числом —
+    рамка появляется под пальцем и в фокусе: на табло главное по-прежнему
+    цифра, а не форма вокруг неё. */
 function ScoreInput({ v, big, onSet }: {
   v: number;
   /** Крупное число полосы «счёт по партиям». */
@@ -312,12 +491,14 @@ function ScoreInput({ v, big, onSet }: {
 }) {
   return (
     <input
-      className={'sin' + (big ? ' big' : '')}
+      className={
+        'rounded-lg border border-transparent bg-transparent text-center font-bold tabular-nums tracking-tight outline-none hover:border-neutral-300 focus:border-blue-500 ' +
+        (big ? 'w-24 text-5xl' : 'w-20 text-4xl')
+      }
       value={v}
       inputMode="numeric"
-      /* Две цифры и в счёте партий тоже ✳: одной цифрой поле было ограничено
-         зря — счёт бывает и двузначным, а поле, в которое не влезает то, что
-         судья видит на столе, хуже отсутствующего. */
+      /* Две цифры и в счёте партий тоже ✳: счёт бывает двузначным, а поле, в
+         которое не влезает то, что судья видит на столе, хуже отсутствующего. */
       maxLength={2}
       size={2}
       aria-label="счёт"
@@ -325,24 +506,12 @@ function ScoreInput({ v, big, onSet }: {
         const d = e.target.value.replace(/\D/g, '').slice(0, 2);
         onSet(d === '' ? 0 : Number(d));
       }}
-      /* Клик выделяет число целиком: судья вписывает новое, а не дописывает
+      /* Тап выделяет число целиком: судья вписывает новое, а не дописывает
          цифру к старому. */
       onFocus={(e) => e.target.select()}
     />
   );
 }
-
-type Pl = { av: string; nm: string; city: string };
-type Mark = { to: boolean; y: number; r: number };
-
-/** Регламент матча: до скольких побед в партиях (TZ §5). Тот же, что назван на
-    «Моём столе» (Э9.2) и по которому сложился итог на «Результат отправлен»
-    (Э9.5) — иначе три экрана одного матча рассказывают про разные матчи. */
-const WIN = 4;
-const PL: [Pl, Pl] = [
-  { av: A(32), nm: 'Смагулов Алан', city: 'Алматы · «Алатау»' },
-  { av: A(51), nm: 'Токаев Марат', city: 'Астана · «Барыс»' },
-];
 
 /** Ввод по очкам (TZ §6.2): каждое очко отдельной кнопкой, счёт видно с
     расстояния, последнее действие отменяется. Режим открывает на турнире
@@ -375,10 +544,10 @@ function ByPoints9_3({ pts, sets, swap, paused, off, done, ready, over, marks, h
   /* Смена сторон меняет местами половины экрана, а не игроков: после смены
      сторон человек, сидевший слева, оказывается справа, и судья ищет его там,
      где видит. Счёт при этом остаётся своим. */
-  const order: (0 | 1)[] = swap ? [1, 0] : [0, 1];
+  const order: [0 | 1, 0 | 1] = swap ? [1, 0] : [0, 1];
   return (
-    <>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, flex: 'none' }}>
+    <div className="flex flex-col gap-3.5">
+      <div className="grid grid-cols-2 gap-3.5">
         {order.map((i) => (
           <Half
             key={PL[i].nm}
@@ -393,63 +562,68 @@ function ByPoints9_3({ pts, sets, swap, paused, off, done, ready, over, marks, h
 
       {/* Счёт по партиям — один раз и по центру, и его вписывают прямо здесь ✳
           (комментарий федерации, 09.2026): «указать только итоговый счёт в
-          партиях». Это третий, самый короткий путь — судья не ведёт ни очки, ни
-          счёт каждой партии, а ставит 3 : 1 и подтверждает.
-
-          Числа — поля, а не степперы: «+» трижды ради тройки это тот же
-          поочковый подсчёт, только медленнее. */}
-      <div className={'lvs lvsin' + (hand ? ' hand' : '')} style={{ flex: 'none' }}>
+          партиях». Это третий, самый короткий путь — судья не ведёт ни очки,
+          ни счёт каждой партии, а ставит 3 : 1 и подтверждает. */}
+      <div
+        className={
+          'flex items-center justify-center gap-6 rounded-xl border px-4 py-3 ' +
+          (hand ? 'border-amber-300 bg-amber-50' : 'border-neutral-200 bg-white')
+        }
+      >
         <ScoreInput big v={won(order[0])} onSet={(n) => onSet(order[0], n)} />
-        <span className="vs">
-          СЧЁТ ПО ПАРТИЯМ
-          <em>{hand ? 'итог задан вручную' : 'впишите итог — партии заполнять не нужно'}</em>
+        <span className="flex flex-col items-center leading-tight">
+          <span className="text-[11px] font-semibold uppercase tracking-wider text-neutral-400">
+            Счёт по партиям
+          </span>
+          <span className={'text-[11px] ' + (hand ? 'font-medium text-amber-700' : 'text-neutral-400')}>
+            {hand ? 'итог задан вручную' : 'впишите итог — партии заполнять не нужно'}
+          </span>
         </span>
         <ScoreInput big v={won(order[1])} onSet={(n) => onSet(order[1], n)} />
       </div>
 
-      {/* Сыгранные партии — счётом, без номера: номер читается по месту в ряду,
-          а идущая партия видна по крупным числам выше.
+      {/* Сыгранные партии — как на табло: пара чисел столбиком, победная цифра
+          тёмная. Номера нет: он читается по месту в ряду, а идущая партия
+          видна по крупным числам выше.
 
           Задал итог руками — партии молчат ✳: показывать 11–9 под счётом,
           который набран не из них, значит врать. Вернуть счёт к партиям можно
           той же строкой. */}
       {hand ? (
-        <div className="sets" style={{ flex: 'none' }}>
-          <span className="setchip">партии не заполнялись — записан итог матча</span>
-          <button type="button" className="setchip link" onClick={onDropHand}>
+        <div className="flex flex-wrap items-center justify-center gap-2 text-xs">
+          <span className="rounded-md bg-neutral-100 px-2.5 py-1.5 text-neutral-500">
+            партии не заполнялись — записан итог матча
+          </span>
+          <button
+            type="button"
+            className="rounded-md px-2.5 py-1.5 font-medium text-blue-600 hover:bg-blue-50"
+            onClick={onDropHand}
+          >
             считать по партиям
           </button>
         </div>
-      ) : (
-        <div className="sets" style={{ flex: 'none' }}>
-          {sets.map(([a, b], n) => (
-            <span className="setchip" key={n}>
-              {a > b ? <b>{a}</b> : a}–{b > a ? <b>{b}</b> : b}
-            </span>
-          ))}
-          {sets.length === 0 && <span className="setchip">партий ещё нет</span>}
+      ) : sets.length ? (
+        <div className="flex justify-center">
+          <GameCells games={sets} />
         </div>
+      ) : (
+        <div className="text-center text-xs text-neutral-400">партий ещё нет</div>
       )}
 
-      {/* Полоса управления живёт внутри ввода по очкам: отмена очка, смена
-          сторон и пауза — про сам розыгрыш. На вкладке «По партиям» их нет, а
-          после подтверждения матча нет вовсе: счёт стал итогом. */}
+      {/* Полоса управления живёт внутри ввода по очкам: отмена, смена сторон и
+          пауза — про сам розыгрыш. На вкладке «По партиям» их нет, а после
+          подтверждения матча нет вовсе: счёт стал итогом. */}
       {!done && (
-        <div style={{ display: 'flex', gap: 9, flex: 'none' }}>
-          <button type="button" className="jbtn ghost" style={{ padding: 12 }} onClick={onUndo}>
-            <Undo2 size={15} />Отменить последнее
-          </button>
-          <button type="button" className="jbtn ghost" style={{ padding: 12 }} onClick={onSwap}>
-            <RefreshCw size={15} />Смена сторон
-          </button>
-          <button
-            type="button"
-            className={'jbtn ghost' + (paused ? ' on' : '')}
-            style={{ padding: 12 }}
-            onClick={onPause}
-          >
-            <Pause size={15} />{paused ? 'Продолжить' : 'Пауза'}
-          </button>
+        <div className="flex gap-2">
+          <Button variant="outline" className="h-12 flex-1" onPress={onUndo}>
+            <Undo2 size={15} /> Отменить последнее
+          </Button>
+          <Button variant="outline" className="h-12 flex-1" onPress={onSwap}>
+            <RefreshCw size={15} /> Смена сторон
+          </Button>
+          <Button variant={paused ? 'primary' : 'outline'} className="h-12 flex-1" onPress={onPause}>
+            <Pause size={15} /> {paused ? 'Продолжить' : 'Пауза'}
+          </Button>
         </div>
       )}
 
@@ -457,33 +631,27 @@ function ByPoints9_3({ pts, sets, swap, paused, off, done, ready, over, marks, h
 
           Партия доиграна — счёт держится на экране, пока судья его не
           подтвердит, и кнопка появляется только в этот момент. Пока она стоит,
-          кнопки матча нет: зелёная одна. Два одинаково главных «подтвердить»
+          кнопки матча нет: главная одна. Два одинаково главных «подтвердить»
           рядом судья за столом выбирает не глядя, а подтвердить матч с
           незакрытой партией нельзя. */}
       {ready && !done && (
-        <button type="button" className="jbtn pri" style={{ padding: 13, flex: 'none' }} onClick={onKeep}>
-          <Check size={15} />Подтвердить партию {sets.length + 1} · {pts[0]} : {pts[1]}
-        </button>
+        <Button variant="primary" className="h-14 w-full text-base" onPress={onKeep}>
+          <Check size={16} /> Подтвердить партию {sets.length + 1} · {pts[0]} : {pts[1]}
+        </Button>
       )}
       {!ready && !done && over && (
-        <button
-          type="button"
-          className="jbtn pri"
-          style={{ padding: 13, flex: 'none' }}
-          data-to="Э9.5"
-          onClick={onDone}
-        >
-          <Check size={15} />Подтвердить результат · {won(order[0])} : {won(order[1])}
-        </button>
+        <Button variant="primary" className="h-14 w-full text-base" data-to="Э9.5" onPress={onDone}>
+          <Check size={16} /> Подтвердить результат · {won(order[0])} : {won(order[1])}
+        </Button>
       )}
       {/* Матч не доигран — на месте кнопки сказано, чего ждут ✳: пустое место
           читается как «сломалось», а серая кнопка — как «нажми ещё раз». */}
       {!ready && !done && !over && (
-        <div className="jhint" style={{ flex: 'none' }}>
+        <div className="rounded-lg bg-neutral-50 py-3 text-center text-[13px] text-neutral-500">
           Матч идёт: до {WIN} побед в партиях, сейчас {won(order[0])} : {won(order[1])}
         </div>
       )}
-    </>
+    </div>
   );
 }
 
@@ -493,8 +661,7 @@ function ByPoints9_3({ pts, sets, swap, paused, off, done, ready, over, marks, h
     Планшетов у федерации нет, а с телефона вести счёт по каждому очку и
     одновременно переворачивать настольный счётчик тяжело или невозможно — одна
     рука занята. Поэтому режим доступен всегда и выбирается самим судьёй стола;
-    по очкам при этом не отменяется. Раньше вкладка была на чтение, и вопрос
-    «остаётся ли режим» стоял открытым.
+    по очкам при этом не отменяется.
 
     Состояние общее с вводом по очкам: закрытые партии — из `sets`, идущая — из
     текущего счёта. Переключиться можно посреди матча, и ничего не теряется —
@@ -513,96 +680,92 @@ function BySets9_3({ sets, pts, done, over, marks, won, onSet, onKeep, onDone }:
   onDone: () => void;
 }) {
   return (
-    <>
+    <div className="flex flex-col gap-3.5">
       {/* Что теряется, когда ведут по партиям, сказано прямо на экране ✳:
           по этому столу нет ни прямого эфира, ни поочковой аналитики, ни
           наложения счёта на трансляцию (TZ §6.3). */}
-      <Alert tone="warning">
+      <Bar tone="warning">
         Матч ведут по партиям: судья вносит итог каждой партии. По этому столу нет прямого эфира и
         поочковой аналитики — счёт на трансляцию не накладывается.
-      </Alert>
+      </Bar>
 
       {/* Счёт партии вписывают числом ✳: степпер требовал одиннадцати нажатий
           на партию — это тот же поочковый подсчёт, только медленнее. */}
-      <div className="jsetin">
+      <div className="grid grid-cols-2 gap-3.5">
         {([0, 1] as const).map((i) => (
-          <div className="jsetp" key={PL[i].nm}>
-            <div className="who">
-              <img className="avatar sm" src={PL[i].av} alt="" />
-              <div>
-                <div className="nm">{PL[i].nm}</div>
-                <div className="mt">партий выиграно: {won(i)}</div>
+          <div key={PL[i].nm} className="flex flex-col items-center gap-2.5 rounded-xl border border-neutral-200 bg-white p-4 shadow-sm">
+            <div className="flex w-full items-center gap-2.5">
+              <Avatar size="sm">
+                <Avatar.Image alt={PL[i].nm} src={PL[i].av} />
+                <Avatar.Fallback>{PL[i].nm.slice(0, 1)}</Avatar.Fallback>
+              </Avatar>
+              <div className="min-w-0 leading-tight">
+                <div className="truncate text-[13.5px] font-semibold">{PL[i].nm}</div>
+                <div className="text-xs text-neutral-500">партий выиграно: {won(i)}</div>
               </div>
             </div>
             {marks(i)}
+            <ScoreInput v={pts[i]} onSet={(n) => onSet(i, n)} />
             {/* Подпись под числом ✳: поле выглядит самим счётом, и без строки
                 «впишите» на него не нажимают — ждут кнопок, которых больше нет. */}
-            <ScoreInput v={pts[i]} onSet={(n) => onSet(i, n)} />
-            <div className="mt">впишите счёт партии</div>
+            <div className="text-xs text-neutral-400">впишите счёт партии</div>
           </div>
         ))}
       </div>
 
-      {/* Закрытые партии — той же таблицей, что и раньше: идущая строка внизу
-          читается из тех же чисел, что стоят в степперах выше. */}
-      <div className="mktable mkcands mksets">
-        <div className="mktable-h">
-          <span>Партия</span>
-          <span className="num">{PL[0].nm.split(' ')[0]}</span>
-          <span className="num">{PL[1].nm.split(' ')[0]}</span>
-          <span>Состояние</span>
-        </div>
-        <div className="mktable-b">
-          {sets.map(([a, bb], i) => (
-            <div className="mktable-r" key={i}>
-              <span className="nm"><i>Партия {i + 1}</i></span>
-              {/* Победитель партии выделен: по колонке сразу видно, кто как шёл. */}
-              <span className={'num' + (a > bb ? ' tot' : '')}>{a}</span>
-              <span className={'num' + (bb > a ? ' tot' : '')}>{bb}</span>
-              <span className="mark"><P t="СЫГРАНА" cls="live" /></span>
-            </div>
-          ))}
-          {!done && (
-            <div className="mktable-r">
-              <span className="nm"><i>Партия {sets.length + 1}</i></span>
-              <span className="num">{pts[0]}</span>
-              <span className="num">{pts[1]}</span>
-              <span className="mark"><P t="ИДЁТ" cls="wait" /></span>
-            </div>
-          )}
-        </div>
-      </div>
+      {/* Закрытые партии таблицей: идущая строка внизу читается из тех же
+          чисел, что стоят в полях выше. Победитель партии выделен — по
+          колонке сразу видно, кто как шёл. */}
+      <DataTable
+        cols={['Партия', PL[0].nm.split(' ')[0], PL[1].nm.split(' ')[0], 'Состояние']}
+        grid="1fr 100px 100px 130px"
+        rows={[
+          ...sets.map(([a, b], i) => ({
+            key: 'p' + i,
+            cells: [
+              <span key="n" className="font-medium">Партия {i + 1}</span>,
+              <span key="a" className={'tabular-nums ' + (a > b ? 'font-semibold' : 'text-neutral-400')}>{a}</span>,
+              <span key="b" className={'tabular-nums ' + (b > a ? 'font-semibold' : 'text-neutral-400')}>{b}</span>,
+              <P key="s" t="СЫГРАНА" cls="live" />,
+            ],
+          })),
+          ...(!done
+            ? [{
+              key: 'cur',
+              cells: [
+                <span key="n" className="font-medium">Партия {sets.length + 1}</span>,
+                <span key="a" className="tabular-nums">{pts[0]}</span>,
+                <span key="b" className="tabular-nums">{pts[1]}</span>,
+                <P key="s" t="ИДЁТ" cls="wait" />,
+              ],
+            }]
+            : []),
+        ]}
+      />
 
       {!done && (
-        <div style={{ display: 'flex', gap: 9, flex: 'none' }}>
-          <button type="button" className="jbtn ghost" style={{ padding: 12 }} onClick={onKeep}>
-            <Check size={15} />Записать партию {sets.length + 1} · {pts[0]} : {pts[1]}
-          </button>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" className="h-12 flex-1" onPress={onKeep}>
+            <Check size={15} /> Записать партию {sets.length + 1} · {pts[0]} : {pts[1]}
+          </Button>
           {/* Результат подтверждают у доигранного матча ✳ — тот же порог, что
               и в режиме по очкам: экран один, регламент один. */}
           {over ? (
-            <button
-              type="button"
-              className="jbtn pri"
-              style={{ padding: 12 }}
-              data-to="Э9.5"
-              onClick={onDone}
-            >
-              <Check size={15} />Подтвердить результат · {won(0)} : {won(1)}
-            </button>
+            <Button variant="primary" className="h-12 flex-1" data-to="Э9.5" onPress={onDone}>
+              <Check size={15} /> Подтвердить результат · {won(0)} : {won(1)}
+            </Button>
           ) : (
-            <div className="jhint" style={{ flex: 1, alignSelf: 'center' }}>
+            <div className="flex-1 text-center text-[13px] text-neutral-500">
               До {WIN} побед в партиях · сейчас {won(0)} : {won(1)}
             </div>
           )}
         </div>
       )}
-    </>
+    </div>
   );
 }
 
 export function Score9_3({ tab }: { tab?: string }) {
-  /* Счёт в идущей партии и закрытые партии. */
   /* Матч показан у развязки ✳: 3 : 2 по партиям и подача в шестой. Раньше на
      экране стояло 1 : 1, и «Подтвердить результат» уводило на Э9.5, где счёт
      4 : 2 и шесть партий, — два экрана одного матча показывали разные матчи.
@@ -640,9 +803,7 @@ export function Score9_3({ tab }: { tab?: string }) {
   const fromSets = (i: 0 | 1) => sets.filter(([a, b]) => (i === 0 ? a > b : b > a)).length;
   const won = (i: 0 | 1) => (hand ? hand[i] : fromSets(i));
   /* Матч сыгран, когда кто-то взял свои партии по регламенту ✳. До этого
-     «Подтвердить результат» на экране нет вовсе: подтверждать нечего, а кнопка
-     стояла активной с первой же партии и уводила на «результат отправлен» с
-     недоигранного матча. */
+     «Подтвердить результат» на экране нет вовсе: подтверждать нечего. */
   const over = won(0) >= WIN || won(1) >= WIN;
   /* Итог по партиям вписывают числом: пришло из поля, а не набралось шагами. */
   const setWon = (i: 0 | 1, n: number) => {
@@ -688,8 +849,8 @@ export function Score9_3({ tab }: { tab?: string }) {
     next[i] = n;
     setPts(next);
   };
-  /* Тайм-аут: первый раз — берётся и идёт, повторное нажатие возвращает в игру.
-     Взятый гаснет: второй раз за матч его не дают. */
+  /* Тайм-аут: первый раз — берётся и идёт, повторное нажатие возвращает в
+     игру. Взятый гаснет: второй раз за матч его не дают. */
   const timeout = (i: 0 | 1) => {
     if (done) return;
     if (to === i) { setTo(null); return; }
@@ -731,183 +892,107 @@ export function Score9_3({ tab }: { tab?: string }) {
   );
 
   return (
-    <RoleScreen role={R09} nav="Мой стол" title="Ввод счёта" sub={`Стол 4 · Смагулов А. — Токаев М. · 1/8 финала · до ${WIN} побед в партиях`}>
+    <TabletApp
+      title="Ввод счёта"
+      sub={`Стол 4 · Смагулов А. — Токаев М. · 1/8 финала · до ${WIN} побед в партиях`}
+      badge="ИДЁТ"
+    >
       {/* В полосе над вкладками осталась одна «История матча» — справа, как
           второстепенное действие. Подтверждение результата уехало вниз, к
           счёту: подтверждают то, на что смотрят, а не то, что стоит в шапке.
 
-          Состояния связи здесь нет: пока связь есть, сообщать нечего — работа
-          без сети (TZ §6) показана отдельным кадром в полке состояний. */}
-      <ActionBar count={to !== null ? `Тайм-аут · ${PL[to].nm}` : ''}>
-        <button type="button" className="dpickbtn" data-to="Э9.4">
+          Индикатора связи здесь нет ✳: пока связь есть, сообщать нечего —
+          работа без сети (TZ §6) показана отдельным кадром в состояниях. */}
+      <div className="flex items-center justify-between gap-3">
+        {to !== null ? (
+          <span className="flex items-center gap-1.5 text-[13px] font-medium text-blue-700">
+            <Timer size={15} /> Тайм-аут · {PL[to].nm}
+          </span>
+        ) : (
+          <span />
+        )}
+        <Button size="sm" variant="outline" data-to="Э9.4">
           <History size={14} /> История матча
-        </button>
-      </ActionBar>
+        </Button>
+      </div>
 
       {/* Два режима ввода, и выбирает судья стола ✳ (комментарий федерации,
           09.2026): по очкам режим открывает главный судья соревнований, по
           партиям доступен всегда. Счёт у вкладок общий, поэтому переключиться
           можно посреди матча — закрытые партии остаются закрытыми, идущая
-          переезжает как есть. */}
-      <Tabs
+          переезжает как есть. PageTabs не берём: его переключатель стоит с
+          отступом веб-раздела, а здесь вкладки должны быть под палец. */}
+      <ScoreTabs
         active={tab}
-        items={[
-          {
-            t: 'По очкам',
-            view: (
-              <ByPoints9_3
-                pts={pts}
-                sets={sets}
-                swap={swap}
-                paused={paused}
-                off={off}
-                done={done}
-                ready={ready}
-                over={over}
-                marks={marks}
-                hand={hand !== null}
-                won={won}
-                onSet={setWon}
-                onDropHand={() => setHand(null)}
-                onPoint={point}
-                onUndo={undo}
-                onSwap={() => setSwap(!swap)}
-                onPause={() => setPaused(!paused)}
-                onKeep={keep}
-                onDone={() => setDone(true)}
-              />
-            ),
-          },
-          {
-            t: 'По партиям',
-            view: (
-              <BySets9_3
-                sets={sets}
-                pts={pts}
-                done={done}
-                over={over}
-                marks={marks}
-                won={won}
-                onSet={setPoint}
-                onKeep={keep}
-                onDone={() => setDone(true)}
-              />
-            ),
-          },
-        ]}
+        points={
+          <ByPoints9_3
+            pts={pts}
+            sets={sets}
+            swap={swap}
+            paused={paused}
+            off={off}
+            done={done}
+            ready={ready}
+            over={over}
+            marks={marks}
+            hand={hand !== null}
+            won={won}
+            onSet={setWon}
+            onDropHand={() => setHand(null)}
+            onPoint={point}
+            onUndo={undo}
+            onSwap={() => setSwap(!swap)}
+            onPause={() => setPaused(!paused)}
+            onKeep={keep}
+            onDone={() => setDone(true)}
+          />
+        }
+        bySets={
+          <BySets9_3
+            sets={sets}
+            pts={pts}
+            done={done}
+            over={over}
+            marks={marks}
+            won={won}
+            onSet={setPoint}
+            onKeep={keep}
+            onDone={() => setDone(true)}
+          />
+        }
       />
-
-    </RoleScreen>
+    </TabletApp>
   );
 }
 
-/* ── Э9.4 · История матча ────────────────────────────────────────── */
-
-export function Log9_4() {
+/** Вкладки режима ввода — касабельные, на всю ширину: у готового PageTabs
+    кнопки под курсор, а здесь по ним попадают пальцем, не глядя. */
+function ScoreTabs({ active, points, bySets }: { active?: string; points: ReactNode; bySets: ReactNode }) {
+  const items: [string, ReactNode][] = [['По очкам', points], ['По партиям', bySets]];
+  const [cur, setCur] = useState(active ?? items[0][0]);
+  const hit = items.find(([t]) => t === cur) ?? items[0];
   return (
-    <RoleScreen
-      role={R09}
-      nav="Мой стол"
-      title="История матча"
-      sub="Стол 4 · Смагулов А. — Токаев М. · каждое действие с автором и временем"
-      back={{ label: 'Ввод счёта', to: 'Э9.3' }}
-    >
-      {/* Подписи «Лента событий по времени» нет: экран так и называется
-          историей матча, а лента — единственное, что на нём есть. Строка
-          отзывается под курсором: её читают сверху вниз, и подсветка держит
-          место. */}
-      <div className="card" style={{ padding: '4px 15px' }}>
-        <div className="list">
-          {EVENTS.map((e) => (
-            <div className="match hoverable" key={e.at + e.t}>
-              {/* Карточка в ленте нарисована карточкой, а тайм-аут — часами:
-                  оба события ищут глазами, а не читают подряд. */}
-              {e.tone === 'y' || e.tone === 'r' ? (
-                <span className={'badge jbadge ' + e.tone}><i className={'jcard ' + e.tone} /></span>
-              ) : e.tone === 'to' ? (
-                <span className="badge jbadge to"><Timer size={13} /></span>
-              ) : (
-                <span
-                  className={e.tone === 'flat' ? 'badge' : 'badge ' + (e.tone === 'win' ? 'win' : 'loss')}
-                  style={
-                    e.tone === 'flat'
-                      ? { background: 'var(--c-panel-quiet)', color: 'var(--c-dim)' }
-                      : undefined
-                  }
-                >
-                  {e.tone === 'win' ? '+1' : e.tone === 'loss' ? '−1' : '·'}
-                </span>
-              )}
-              {/* Второй строки под названием нет: событие названо целиком в
-                  первой, а счёт после каждого розыгрыша пересказывал то, что и
-                  так видно на экране ввода. */}
-              <div className="who">
-                <div className="nm">{e.t}</div>
-              </div>
-              <div className="dt">{e.at}</div>
-            </div>
-          ))}
-        </div>
+    <>
+      <div data-seg className="grid grid-cols-2 gap-1 rounded-lg bg-neutral-100 p-1">
+        {items.map(([t]) => (
+          <button
+            key={t}
+            type="button"
+            aria-selected={t === cur}
+            className={
+              'rounded-md py-2.5 text-sm font-medium ' +
+              (t === cur ? 'on bg-white text-neutral-900 shadow-sm' : 'text-neutral-500 hover:text-neutral-800')
+            }
+            onClick={() => setCur(t)}
+          >
+            {t}
+          </button>
+        ))}
       </div>
-    </RoleScreen>
+      {hit[1]}
+    </>
   );
 }
-
-/* ── борд роли ───────────────────────────────────────────────────── */
-
-const Tours9_1States = () => (
-  <States>
-    <Shot tone="info" title="Назначений нет" text="Пустое состояние со списком открытых приёмов.">
-      <Empty title="Назначений нет" text="Открыт приём заявок на два турнира — можно подать заявку на судейство." />
-    </Shot>
-
-    <Shot
-      tone="warning"
-      title="Заявки на судейство или прямое назначение — не решено"
-      text="⚠ 12.6: сохраняется ли конкурс заявок. От ответа зависит, есть ли на экране кнопка «Подать заявку»."
-    >
-      <Rows>
-        <Row nm="Конкурс заявок" sub="наше допущение — судья подаёт заявку сам" pill={{ t: 'СЕЙЧАС ТАК', cls: 'reg' }} />
-        <Row nm="Прямое назначение" sub="если так — кнопки подачи не будет" pill={{ t: 'ВОПРОС', cls: 'bad' }} />
-      </Rows>
-    </Shot>
-  </States>
-);
-
-const Table9_2States = () => (
-  <States>
-    <Shot tone="info" title="Матча нет — «стол свободен»" text="Вызов придёт от главного судьи: расписание в его руках, судья стола его не ведёт.">
-      <Empty title="Стол свободен" text="Пары на столе сейчас нет. Когда главный судья вызовет следующую, она появится здесь вместе с кнопкой старта." />
-    </Shot>
-
-    {/* Неявка ушла с главного экрана ✳: она бывает реже старта и не должна
-        стоять рядом с ним — судья за столом жмёт «Старт» десятки раз за день, а
-        неявку пару раз за турнир. */}
-    <Shot
-      tone="warning"
-      title="Игрок не пришёл — вместо старта неявка ✳"
-      text="Кнопка появляется, когда пару вызвали, а игрока нет: решение о технической победе принимает главный судья (Э6.6)."
-    >
-      <Rows>
-        <Row nm="Токаев Марат" sub="вызван 14:20 · на столе не появился" pill={{ t: 'НЕ ЯВИЛСЯ', cls: 'bad' }} action="Отметить неявку" />
-      </Rows>
-      <Alert>
-        Неявка судьи по поданной заявке — минус балл в его рейтинге (TZ §7.2); неявка игрока —
-        решение главного судьи о технической победе, судья стола только отмечает факт.
-      </Alert>
-    </Shot>
-
-    <Shot
-      tone="info"
-      title="На турнире включён режим по очкам"
-      text="Об этом сказано в карточке матча заранее."
-    >
-      <Rows>
-        <Row nm="Матч до 3 побед в партиях" sub="партия до 11 очков, разница 2" pill={{ t: 'ПО ОЧКАМ', cls: 'reg' }} />
-      </Rows>
-    </Shot>
-  </States>
-);
 
 const Score9_3States = () => (
   <States>
@@ -916,10 +1001,14 @@ const Score9_3States = () => (
       title="Обрыв связи"
       text="Ввод продолжается локально, счётчик очереди растёт; после восстановления всё уходит на сервер."
     >
-      <Rows>
-        <Row nm="Связи нет" sub="ввод продолжается на планшете" val="7 событий в очереди" pill={{ t: 'ЛОКАЛЬНО', cls: 'wait' }} />
-      </Rows>
-      <Alert>Счёт вести можно: судья стола — источник правды по матчу.</Alert>
+      <Frag>
+        <Rows>
+          <Row nm="Связи нет" sub="ввод продолжается на планшете" val="7 событий в очереди" pill={{ t: 'ЛОКАЛЬНО', cls: 'wait' }} />
+        </Rows>
+        <div className="mt-3">
+          <Bar>Счёт вести можно: судья стола — источник правды по матчу.</Bar>
+        </div>
+      </Frag>
     </Shot>
 
     <Shot
@@ -927,16 +1016,20 @@ const Score9_3States = () => (
       title="Расхождение после синхронизации"
       text="Приоритет у судьи стола — он видит игру."
     >
-      <Rows>
-        <Row nm="На планшете" sub="11:9 · третья партия" pill={{ t: 'ПРИНЯТО', cls: 'live' }} />
-        <Row nm="На сервере" sub="11:8 · пришло с другого устройства" pill={{ t: 'ОТКЛОНЕНО', cls: 'done' }} />
-      </Rows>
+      <Frag>
+        <Rows>
+          <Row nm="На планшете" sub="11:9 · третья партия" pill={{ t: 'ПРИНЯТО', cls: 'live' }} />
+          <Row nm="На сервере" sub="11:8 · пришло с другого устройства" pill={{ t: 'ОТКЛОНЕНО', cls: 'done' }} />
+        </Rows>
+      </Frag>
     </Shot>
 
     <Shot tone="warning" title="Подтверждение при обрыве" text="Результат уйдёт после синхронизации ✳.">
-      <Rows>
-        <Row nm="Результат матча подтверждён" sub="уйдёт на сервер, когда появится связь" pill={{ t: 'В ОЧЕРЕДИ', cls: 'wait' }} />
-      </Rows>
+      <Frag>
+        <Rows>
+          <Row nm="Результат матча подтверждён" sub="уйдёт на сервер, когда появится связь" pill={{ t: 'В ОЧЕРЕДИ', cls: 'wait' }} />
+        </Rows>
+      </Frag>
     </Shot>
 
     {/* Режим по партиям — не запасной вид, а второй способ отсудить матч ✳
@@ -946,16 +1039,46 @@ const Score9_3States = () => (
     <Shot
       tone="info"
       title="Матч ведут по партиям ✳"
-      text="Кнопок очка нет вовсе: судья вносит итог партии."
+      text="Кнопок очка нет вовсе: на экране поля партий и предупреждение, что прямого эфира по этому столу не будет."
       wide
     >
-      <Rows>
-        <Row nm="Партия 3" sub="судья вносит итог степпером и записывает партию" val="11 : 7" pill={{ t: 'ЗАПИСАНА', cls: 'live' }} />
-        <Row nm="Прямого эфира по столу нет" sub="поочковой аналитики и наложения счёта на трансляцию — тоже" pill={{ t: 'БЕЗ ЭФИРА', cls: 'wait' }} />
-      </Rows>
-      <Alert tone="warning">
-        ⚠ Обязателен ли поочковый ввод на трансляционных столах — федерация не сказала (вопрос 17.2).
-      </Alert>
+      <Frag>
+        <Rows>
+          <Row nm="Партия 3" sub="судья вписывает итог числом и записывает партию" val="11 : 7" pill={{ t: 'ЗАПИСАНА', cls: 'live' }} />
+          <Row nm="Прямого эфира по столу нет" sub="поочковой аналитики и наложения счёта на трансляцию — тоже" pill={{ t: 'БЕЗ ЭФИРА', cls: 'wait' }} />
+        </Rows>
+        <div className="mt-3">
+          <Bar tone="warning">
+            ⚠ Обязателен ли поочковый ввод на трансляционных столах — федерация не сказала (вопрос 17.2).
+          </Bar>
+        </div>
+      </Frag>
+    </Shot>
+
+    {/* Третий путь — итог напрямую (TZ §6.1): полоса счёта подсвечена, партии
+        молчат, возврат к подробному вводу — той же строкой. */}
+    <Shot
+      tone="info"
+      title="Итог записан напрямую ✳"
+      text="Счёт по партиям подсвечен, партии не заполнялись: у матча есть результат и нет подробностей. Возврат к подробному вводу — строкой «считать по партиям»."
+      wide
+    >
+      <Frag>
+        <div className="flex items-center justify-center gap-6 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3">
+          <span className="w-24 text-center text-5xl font-bold tabular-nums tracking-tight">3</span>
+          <span className="flex flex-col items-center leading-tight">
+            <span className="text-[11px] font-semibold uppercase tracking-wider text-neutral-400">Счёт по партиям</span>
+            <span className="text-[11px] font-medium text-amber-700">итог задан вручную</span>
+          </span>
+          <span className="w-24 text-center text-5xl font-bold tabular-nums tracking-tight">1</span>
+        </div>
+        <div className="mt-2.5 flex flex-wrap items-center justify-center gap-2 text-xs">
+          <span className="rounded-md bg-neutral-100 px-2.5 py-1.5 text-neutral-500">
+            партии не заполнялись — записан итог матча
+          </span>
+          <span className="rounded-md px-2.5 py-1.5 font-medium text-blue-600">считать по партиям</span>
+        </div>
+      </Frag>
     </Shot>
 
     <Shot
@@ -963,26 +1086,96 @@ const Score9_3States = () => (
       title="У игрока жёлтая и потраченный тайм-аут ✳"
       text="Отметки стоят у имени и держатся до конца матча."
     >
-      <Rows>
-        <Row nm="Токаев Марат" sub="жёлтая карточка · 15:46" pill={{ t: 'ЖЁЛТАЯ', cls: 'wait' }} />
-        <Row nm="Смагулов Алан" sub="тайм-аут использован · второй за матч не берётся" pill={{ t: 'ТАЙМ-АУТ ВЗЯТ', cls: 'done' }} />
-      </Rows>
-      <Alert tone="warning">
-        ⚠ Штрафные очки по ступеням карточек система не считает: судья карточку фиксирует (вопрос 17.1).
-      </Alert>
+      <Frag>
+        {/* Тот же компонент отметок, что на табло, — в состоянии «уже есть»:
+            кадр показывает ровно то, что судья видит между именем и счётом. */}
+        <div className="flex flex-col gap-2.5 rounded-xl border border-neutral-200 bg-white p-4">
+          {([
+            { nm: 'Смагулов Алан', m: { to: true, y: 0, r: 0 } },
+            { nm: 'Токаев Марат', m: { to: false, y: 1, r: 0 } },
+          ] as const).map((p) => (
+            <div key={p.nm} className="flex items-center justify-between gap-3">
+              <span className="text-[13.5px] font-semibold">{p.nm}</span>
+              <Marks m={p.m} live={false} off onTo={() => {}} onCard={() => {}} onUndo={() => {}} />
+            </div>
+          ))}
+        </div>
+        <div className="mt-3">
+          <Bar tone="warning">
+            ⚠ Штрафные очки по ступеням карточек система не считает: судья карточку фиксирует (вопрос 17.1).
+          </Bar>
+        </div>
+      </Frag>
     </Shot>
   </States>
 );
 
+/* ── Э9.4 · История матча ────────────────────────────────────────── */
+
+/** Значок события: +1 · −1 · служебное; карточка нарисована карточкой, а
+    тайм-аут — часами: оба события ищут глазами, а не читают подряд. */
+const EvBadge = ({ tone }: { tone: Ev['tone'] }) => {
+  if (tone === 'y' || tone === 'r') {
+    return (
+      <span className={'flex h-7 w-7 shrink-0 items-center justify-center rounded-lg ' + (tone === 'y' ? 'bg-amber-100' : 'bg-red-100')}>
+        <CardIco c={tone} />
+      </span>
+    );
+  }
+  if (tone === 'to') {
+    return (
+      <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-blue-100 text-blue-700">
+        <Timer size={14} />
+      </span>
+    );
+  }
+  const cls =
+    tone === 'win'
+      ? 'bg-green-100 text-green-700'
+      : tone === 'loss'
+        ? 'bg-red-100 text-red-700'
+        : 'bg-neutral-100 text-neutral-400';
+  return (
+    <span className={'flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-xs font-bold ' + cls}>
+      {tone === 'win' ? '+1' : tone === 'loss' ? '−1' : '·'}
+    </span>
+  );
+};
+
+export function Log9_4() {
+  return (
+    <TabletApp
+      title="История матча"
+      sub="Стол 4 · Смагулов А. — Токаев М. · каждое действие с автором и временем"
+      badge="ИДЁТ"
+      back={{ label: 'Ввод счёта', to: 'Э9.3' }}
+    >
+      {/* Подписи «Лента событий по времени» нет: экран так и называется
+          историей матча, а лента — единственное, что на нём есть. Второй
+          строки под названием тоже нет ✳: событие названо целиком в первой, а
+          счёт после каждого розыгрыша пересказывал то, что и так видно на
+          экране ввода. Строка отзывается под пальцем: ленту читают сверху
+          вниз, и подсветка держит место. */}
+      <div className="divide-y divide-neutral-100 overflow-hidden rounded-xl border border-neutral-200 bg-white shadow-sm">
+        {EVENTS.map((e) => (
+          <div key={e.at + e.t} className="flex items-center gap-3 px-4 py-2.5 hover:bg-neutral-50">
+            <EvBadge tone={e.tone} />
+            <span className="flex-1 text-[13.5px] font-medium">{e.t}</span>
+            <span className="text-xs tabular-nums text-neutral-400">{e.at}</span>
+          </div>
+        ))}
+      </div>
+      <div className="text-xs text-neutral-500">
+        Только просмотр: исправление задним числом — через главного судью.
+      </div>
+    </TabletApp>
+  );
+}
+
 /* ── Э9.5 · Результат отправлен ──────────────────────────────────── */
 
-/** Тихая кнопка рядом с главной: та же, что `Ghost` в оболочке. Здесь своя,
-    потому что этим кнопкам нужен ещё и переход (`data-to`). */
-const QUIET = {
-  background: 'var(--c-panel-2)',
-  color: 'var(--c-ink)',
-  boxShadow: 'inset 0 1px 0 var(--c-glass-hi)',
-} as const;
+/** Партии подтверждённого матча — те же, что набрались на Э9.3. */
+const SENT_GAMES: [number, number][] = [[11, 9], [9, 11], [11, 7], [8, 11], [11, 6], [11, 4]];
 
 /** Что судья видит сразу после «Подтвердить результат».
 
@@ -996,65 +1189,61 @@ const QUIET = {
     (Э0.11). */
 export function Sent9_5() {
   return (
-    <RoleScreen
-      role={R09}
-      nav="Мой стол"
-      title="Результат отправлен"
-      sub="Стол 4 · Смагулов А. — Токаев М. · 1/8 финала"
-    >
-      <div className="card" style={{ padding: '26px 22px', display: 'grid', gap: 14, justifyItems: 'center', textAlign: 'center' }}>
-        <span className="pill live" style={{ margin: 0 }}>
-          <Check size={13} /> РЕЗУЛЬТАТ ПРИНЯТ
-        </span>
-        <div className="lvs" style={{ margin: 0 }}>
-          <span className="setscore">4</span>
-          <span className="vs">СМАГУЛОВ А. — ТОКАЕВ М.</span>
-          <span className="setscore">2</span>
+    <TabletApp title="Результат отправлен" sub="Стол 4 · Смагулов А. — Токаев М. · 1/8 финала" badge="ИДЁТ">
+      <div className="flex flex-col items-center gap-4 rounded-xl border border-neutral-200 bg-white px-6 py-8 text-center shadow-sm">
+        <Chip color="success" size="sm">
+          <Check size={13} className="mr-1" /> РЕЗУЛЬТАТ ПРИНЯТ
+        </Chip>
+        {/* Итог — тем же приёмом, что счёт партий на табло: цифра победителя
+            тёмная, проигравшего серая. */}
+        <div className="flex items-center gap-6">
+          <span className="text-7xl font-bold tabular-nums tracking-tight">4</span>
+          <span className="text-[11px] font-semibold uppercase tracking-wider text-neutral-400">
+            Смагулов А. — Токаев М.
+          </span>
+          <span className="text-7xl font-bold tabular-nums tracking-tight text-neutral-400">2</span>
         </div>
-        <div className="sets" style={{ justifyContent: 'center' }}>
-          <span className="setchip"><b>11</b>–9</span>
-          <span className="setchip">9–<b>11</b></span>
-          <span className="setchip"><b>11</b>–7</span>
-          <span className="setchip">8–<b>11</b></span>
-          <span className="setchip"><b>11</b>–6</span>
-          <span className="setchip"><b>11</b>–4</span>
-        </div>
+        {/* Партии показаны целиком не для красоты ✳: увидеть ошибку надо
+            сейчас — после подтверждения судья стола счёт уже не правит. */}
+        <GameCells games={SENT_GAMES} />
         {/* Что именно ушло ✳: не только счёт. Карточки и тайм-ауты уходят
             вместе с результатом (TZ §6.5), и судья должен видеть, что они
             отправлены, — спрашивать о них будут после матча. */}
-        <div className="dcount">
+        <div className="max-w-md text-xs leading-relaxed text-neutral-500">
           Ушло главному судье и в базу: счёт, партии, карточки и тайм-ауты · сетка продвинулась ·
           15:58, отправил Оралбай Е.
         </div>
       </div>
 
-      {/* Что дальше — прямо здесь: судья за столом не должен искать, куда
-          вернуться, между двумя матчами у него минуты. */}
-      {/* Акцент в полосе один ✳ — «К моему столу»: между матчами у судьи минуты,
-          и это единственное, что он делает каждый раз. «История матча» и
-          «Запросить правку» стоят рядом тихими: первая на просмотр, вторая
-          бывает раз на сотню матчей. Тремя одинаково яркими кнопками полоса
-          спрашивала, куда нажать, вместо того чтобы отвечать. */}
-      <ActionBar count="Следующая пара — 16:20 · вызов придёт от главного судьи">
-        <button className="dpickbtn" style={QUIET} data-to="Э9.4">
-          <History size={14} /> История матча
-        </button>
-        {/* «Запросить правку» стоит здесь, а не только в состояниях: ошибку
-            замечают на этом экране — на нём партии и показаны целиком. */}
-        <button className="dpickbtn" style={QUIET}>
-          <Undo2 size={14} /> Запросить правку
-        </button>
-        <button className="dsubmit" style={{ padding: '10px 14px' }} data-to="Э9.2">
-          <Radio size={15} /> К моему столу
-        </button>
-      </ActionBar>
+      {/* Что дальше — прямо здесь: между матчами у судьи минуты, искать дорогу
+          он не должен. Акцент один ✳ — «К моему столу»: это единственное, что
+          он делает каждый раз. «История матча» и «Запросить правку» стоят
+          рядом тихими: первая на просмотр, вторая бывает раз на сотню матчей.
+          «Запросить правку» стоит здесь, а не только в состояниях: ошибку
+          замечают на этом экране — на нём партии и показаны целиком. */}
+      <div className="flex flex-col gap-2">
+        <div className="text-center text-[12.5px] text-neutral-500">
+          Следующая пара — 16:20 · вызов придёт от главного судьи
+        </div>
+        <div className="flex items-center justify-center gap-2">
+          <Button variant="ghost" data-to="Э9.4">
+            <History size={15} /> История матча
+          </Button>
+          <Button variant="ghost">
+            <Undo2 size={15} /> Запросить правку
+          </Button>
+          <Button variant="primary" className="h-12" data-to="Э9.2">
+            <Radio size={15} /> К моему столу
+          </Button>
+        </div>
+      </div>
 
-      <Hint>
+      <Bar>
         Исправить счёт после подтверждения судья стола уже не может: правка идёт через главного
         судью, с лимитом времени и записью в журнал (TZ §6). Поэтому экран и показывает партии
         целиком — увидеть ошибку надо сейчас, а не после.
-      </Hint>
-    </RoleScreen>
+      </Bar>
+    </TabletApp>
   );
 }
 
@@ -1065,13 +1254,15 @@ const Sent9_5States = () => (
       title="Связи нет — результат в очереди ✳"
       text="Экран тот же, но сказано честно: результат уйдёт, когда появится сеть. Судья не ждёт у стола и не жмёт второй раз."
     >
-      <Rows>
-        <Row
-          nm="Результат матча подтверждён"
-          sub="4 : 2 · уйдёт на сервер, когда появится связь"
-          pill={{ t: 'В ОЧЕРЕДИ', cls: 'wait' }}
-        />
-      </Rows>
+      <Frag>
+        <Rows>
+          <Row
+            nm="Результат матча подтверждён"
+            sub="4 : 2 · уйдёт на сервер, когда появится связь"
+            pill={{ t: 'В ОЧЕРЕДИ', cls: 'wait' }}
+          />
+        </Rows>
+      </Frag>
     </Shot>
 
     <Shot
@@ -1079,7 +1270,9 @@ const Sent9_5States = () => (
       title="Стол свободен до следующего вызова"
       text="После отправки судья возвращается к столу: пары нет, пока главный судья не вызвал новую."
     >
-      <Empty title="Стол свободен" text="Следующая пара по расписанию — 16:20. Вызов придёт от главного судьи." />
+      <Frag>
+        <EmptyBox title="Стол свободен" text="Следующая пара по расписанию — 16:20. Вызов придёт от главного судьи." />
+      </Frag>
     </Shot>
 
     {/* Матч, записанный итогом (TZ §6.1): партий у него нет, и экран не делает
@@ -1090,10 +1283,12 @@ const Sent9_5States = () => (
       text="Судья вписал счёт по партиям, не заполняя партии: у матча есть результат и нет подробностей."
       wide
     >
-      <Rows>
-        <Row nm="Смагулов А. — Токаев М." sub="итог по партиям, записан судьёй стола" val="4 : 2" pill={{ t: 'ПРИНЯТ', cls: 'live' }} />
-        <Row nm="Партии не заполнялись" sub="ни счёта партий, ни розыгрышей — в протоколе матча печатать нечего ⚠ 17.5" pill={{ t: 'БЕЗ ПОДРОБНОСТЕЙ', cls: 'wait' }} />
-      </Rows>
+      <Frag>
+        <Rows>
+          <Row nm="Смагулов А. — Токаев М." sub="итог по партиям, записан судьёй стола" val="4 : 2" pill={{ t: 'ПРИНЯТ', cls: 'live' }} />
+          <Row nm="Партии не заполнялись" sub="ни счёта партий, ни розыгрышей — в протоколе матча печатать нечего ⚠ 17.5" pill={{ t: 'БЕЗ ПОДРОБНОСТЕЙ', cls: 'wait' }} />
+        </Rows>
+      </Frag>
     </Shot>
 
     <Shot
@@ -1101,10 +1296,12 @@ const Sent9_5States = () => (
       title="В матче были карточки ✳"
       text="Уходят главному судье вместе с результатом и остаются в истории матча."
     >
-      <Rows>
-        <Row nm="Токаев Марат · жёлтая" sub="15:46 · вынес судья стола" pill={{ t: 'ОТПРАВЛЕНА', cls: 'live' }} />
-        <Row nm="Дисциплинарный комитет" sub="⚠ заводит дело сам или карточка попадает туда автоматически — вопрос 15.4" pill={{ t: 'ОТКРЫТО', cls: 'wait' }} />
-      </Rows>
+      <Frag>
+        <Rows>
+          <Row nm="Токаев Марат · жёлтая" sub="15:46 · вынес судья стола" pill={{ t: 'ОТПРАВЛЕНА', cls: 'live' }} />
+          <Row nm="Дисциплинарный комитет" sub="⚠ заводит дело сам или карточка попадает туда автоматически — вопрос 15.4" pill={{ t: 'ОТКРЫТО', cls: 'wait' }} />
+        </Rows>
+      </Frag>
     </Shot>
 
     <Shot
@@ -1112,9 +1309,100 @@ const Sent9_5States = () => (
       title="Ошиблись в счёте — правит главный судья"
       text="Подтверждение необратимо для судьи стола (TZ §6): дальше только через главного, с записью в журнал."
     >
-      <Rows>
-        <Row nm="Запросить правку" sub="уходит главному судье с указанием, что именно исправить" action="Запросить" />
-      </Rows>
+      <Frag>
+        <Rows>
+          <Row nm="Запросить правку" sub="уходит главному судье с указанием, что именно исправить" action="Запросить" />
+        </Rows>
+      </Frag>
+    </Shot>
+  </States>
+);
+
+/* ── Э0.1 · Вход — полка состояний ───────────────────────────────── */
+
+/** Полка состояний входа — своя у борда роли ✳ (приёмка 30.08.2026): экран
+    общий (`role00`), но его полка оттуда не экспортируется, и без неё борд
+    показывал только удачный путь. Подписи кадров — из `data/role00.ts` (Э0.1):
+    три состояния и зона «Выбор контекста — если ролей несколько». */
+const Login0_1States9 = () => (
+  <States>
+    <Shot
+      tone="danger"
+      title="Неверный логин или пароль"
+      text="Ошибка под полем; поля не очищаются."
+    >
+      <Frag>
+        <FormGrid>
+          <TextInput label="Телефон или почта" value="+7 705 431 20 18" wide />
+          <TextInput label="Пароль" value="••••••" bad wide />
+        </FormGrid>
+        <div className="mt-1.5 text-xs text-red-600">
+          Неверный логин или пароль. Проверьте раскладку или восстановите пароль.
+        </div>
+        <div className="mt-3">
+          <DisabledAction>Войти</DisabledAction>
+        </div>
+      </Frag>
+    </Shot>
+
+    {/* Зона данных, а не состояние: список ролей с областью каждой — выбор
+        запоминается, переключатель остаётся в шапке. Пример области — из
+        данных («Судья · Кубок РК · до 12.10»). */}
+    <Shot
+      tone="info"
+      title="Выбор контекста — если ролей несколько ✳"
+      text="Список ролей с областью каждой; выбор запоминается, переключатель остаётся в шапке."
+    >
+      <Frag>
+        {/* Роль — в первой строке, область и срок — во второй ✳: в узком кадре
+            полки склеенное «Судья стола · Чемпионат Казахстана 2026» упиралось
+            в значок и резалось, а именно роль человек здесь и выбирает. */}
+        <Rows>
+          <Row
+            nm="Судья стола"
+            sub="Чемпионат Казахстана 2026 · стол 4 · до 16.03"
+            pill={{ t: 'ДЕЙСТВУЕТ', cls: 'live' }}
+          />
+          <Row nm="Судья" sub="Кубок РК · до 12.10" pill={{ t: 'ДЕЙСТВУЕТ', cls: 'live' }} />
+        </Rows>
+      </Frag>
+    </Shot>
+
+    <Shot
+      tone="warning"
+      title="Роль истекла"
+      text="Роли нет в списке контекстов, история действий человека сохраняется."
+    >
+      <Frag>
+        <Rows>
+          <Row
+            nm="Судья стола"
+            sub="Чемпионат Казахстана 2026 · до 16.03"
+            pill={{ t: 'ДЕЙСТВУЕТ', cls: 'live' }}
+          />
+          <Row
+            nm="Судья"
+            sub="Открытие сезона 2026 · срок вышел 21.01.2026"
+            pill={{ t: 'ИСТЕКЛА', cls: 'done' }}
+          />
+        </Rows>
+      </Frag>
+    </Shot>
+
+    <Shot
+      tone="warning"
+      title="Аккаунт не активирован ✳"
+      text="Приглашение отправлено, но пароль ещё не задан — стыкуется с Э1.10."
+    >
+      <Frag>
+        <Rows>
+          <Row
+            nm="Аккаунт ждёт активации"
+            sub="приглашение отправлено · пароль задаётся по ссылке из письма (Э1.10)"
+            pill={{ t: 'НЕ АКТИВИРОВАН', cls: 'wait' }}
+          />
+        </Rows>
+      </Frag>
     </Shot>
   </States>
 );
@@ -1126,7 +1414,12 @@ export const SCREENS: ScreenMap = {
      входа, и на карте она ветка входа, а не его корень. */
   'Э0.1': {
     cap: 'Вход',
-    view: () => <Login0_1 />,
+    view: () => (
+      <>
+        <Login0_1 />
+        <Login0_1States9 />
+      </>
+    ),
     next: '«Стать судьёй» на входе',
   },
   'Э0.7': {

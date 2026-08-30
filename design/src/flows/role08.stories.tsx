@@ -9,6 +9,7 @@ import { Role08Board, SCREENS } from '../mockups/role08';
 export default {
   title: 'Флоу/08 · Заместитель главного судьи',
   parameters: { layout: 'fullscreen' },
+  globals: { theme: 'daylight-fnt' },
 };
 
 /* Парный вид первым: под каждым узлом маршрута стоит его макет — требование и

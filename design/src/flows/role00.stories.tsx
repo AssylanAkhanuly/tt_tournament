@@ -9,6 +9,7 @@ import { Role00Board, SCREENS } from '../mockups/role00';
 export default {
   title: 'Флоу/00 · Сквозные экраны',
   parameters: { layout: 'fullscreen' },
+  globals: { theme: 'daylight-fnt' },
 };
 
 /* Парный вид первым: под каждым узлом маршрута стоит его макет — требование и

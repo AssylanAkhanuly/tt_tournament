@@ -9,6 +9,7 @@ import { Role01Board, SCREENS } from '../mockups/role01';
 export default {
   title: 'Флоу/01 · Администратор Федерации',
   parameters: { layout: 'fullscreen' },
+  globals: { theme: 'daylight-fnt' },
 };
 
 /* Парный вид первым: под каждым узлом маршрута стоит его макет — требование и

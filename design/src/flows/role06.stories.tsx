@@ -9,6 +9,7 @@ import { Role06Board, SCREENS } from '../mockups/role06';
 export default {
   title: 'Флоу/06 · Главный судья соревнований',
   parameters: { layout: 'fullscreen' },
+  globals: { theme: 'daylight-fnt' },
 };
 
 /* Парный вид первым: под каждым узлом маршрута стоит его макет — требование и

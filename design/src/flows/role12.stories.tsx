@@ -9,6 +9,7 @@ import { Role12Board, SCREENS } from '../mockups/role12';
 export default {
   title: 'Флоу/12 · Старший тренер региона',
   parameters: { layout: 'fullscreen' },
+  globals: { theme: 'daylight-fnt' },
 };
 
 /* Парный вид первым: под каждым узлом маршрута стоит его макет — требование и

@@ -9,6 +9,7 @@ import { Role10Board, SCREENS } from '../mockups/role10';
 export default {
   title: 'Флоу/10 · Инспектор / супервайзер',
   parameters: { layout: 'fullscreen' },
+  globals: { theme: 'daylight-fnt' },
 };
 
 /* Парный вид первым: под каждым узлом маршрута стоит его макет — требование и

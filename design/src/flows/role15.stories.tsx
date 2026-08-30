@@ -9,6 +9,7 @@ import { Role15Board, SCREENS } from '../mockups/role15';
 export default {
   title: 'Флоу/15 · Председатель судейской коллегии региона',
   parameters: { layout: 'fullscreen' },
+  globals: { theme: 'daylight-fnt' },
 };
 
 /* Парный вид первым: под каждым узлом маршрута стоит его макет — требование и

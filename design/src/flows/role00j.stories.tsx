@@ -9,6 +9,7 @@ import { Role00jBoard, SCREENS } from '../mockups/role00j';
 export default {
   title: 'Флоу/00 · Кабинет судьи — вне турнира',
   parameters: { layout: 'fullscreen' },
+  globals: { theme: 'daylight-fnt' },
 };
 
 /* Парный вид первым: под каждым узлом маршрута стоит его макет — требование и
