@@ -5,8 +5,20 @@
    (там же правила дизайн-системы). Типографика — токен `--font`, гарнитуру
    переключает тулбар (`src/fonts.ts`). */
 
-* { box-sizing: border-box; margin: 0; padding: 0; }
-svg { display: block; }
+/* Сброс не действует внутри `.hero-scope` — области компонентов HeroUI.
+
+   Иначе он их ломает: `padding: 0` написан вне слоёв, а отступы HeroUI лежат
+   в `@layer components`, и правило вне слоя сильнее любого правила внутри
+   слоя независимо от специфичности. Кнопки и чипы приезжали без боковых
+   полей — текст упирался в края, тогда как в документации библиотеки поля
+   есть.
+
+   `box-sizing` оставляем всем: он ничего не ломает и нужен обеим системам.
+   `:where()` не добавляет специфичности, поэтому для остальных экранов сброс
+   остаётся ровно таким же. */
+* { box-sizing: border-box; }
+*:not(:where(.hero-scope, .hero-scope *)) { margin: 0; padding: 0; }
+svg:not(:where(.hero-scope *)) { display: block; }
 
 /* ── подложка флоу-борда (светлая) ───────────────────────────── */
 .board { background: var(--c-board-bg); font-family: var(--font); padding: 40px 44px 48px; width: max-content; color: var(--c-board-ink); -webkit-font-smoothing: antialiased; }
