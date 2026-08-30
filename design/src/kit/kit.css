@@ -37,6 +37,225 @@
 }
 .k-note b { color: var(--k-ink); font-weight: 600; }
 
+/* ── Вкладки ────────────────────────────────────────────────────── */
+/* Активная вкладка отличается только подчёркиванием — ни заливки, ни рамки.
+   Полоса рисуется через `box-shadow: inset`, а не border: иначе неактивные
+   вкладки пришлось бы держать с прозрачной границей, чтобы подписи не прыгали
+   на пиксель при переключении. */
+.k-tabs { display: flex; gap: 24px; }
+.k-tabs button {
+  padding: 12px 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-size: 15px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.k-tabs.plain { border-bottom: 1px solid var(--k-line); }
+.k-tabs.plain button { color: var(--k-grey); }
+.k-tabs.plain button:hover { color: var(--k-ink); }
+.k-tabs.plain button.on {
+  color: var(--k-ink);
+  font-weight: 600;
+  box-shadow: inset 0 -3px 0 var(--k-blue);
+}
+
+/* На цветной шапке подчёркивание жёлтое: синее на синем не видно. */
+.k-tabs.header {
+  padding: 0 18px;
+  background: var(--k-head);
+  border-radius: var(--r-kit-card) var(--r-kit-card) 0 0;
+}
+.k-tabs.header button { color: color-mix(in srgb, var(--k-card) 66%, transparent); }
+.k-tabs.header button:hover { color: var(--k-card); }
+.k-tabs.header button.on {
+  color: var(--k-card);
+  font-weight: 700;
+  box-shadow: inset 0 -3px 0 var(--k-yellow);
+}
+
+/* ── Таблица группы ─────────────────────────────────────────────── */
+.k-group { padding: 14px; }
+/* Подпись группы плашкой во всю ширину — приём референса: она отделяет
+   таблицу от того, что стоит выше, и не требует заголовка. */
+.k-group-cap {
+  padding: 10px;
+  margin-bottom: 6px;
+  border-radius: var(--r-kit-chip);
+  background: var(--k-tab);
+  text-align: center;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--k-ink);
+}
+.k-group-head,
+.k-group-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 28px 28px 28px 56px 34px;
+  align-items: center;
+  gap: 4px;
+  padding: 9px 6px;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+}
+.k-group-head { padding-bottom: 4px; font-size: 11.5px; color: var(--k-grey); }
+.k-group-row { border-top: 1px solid var(--k-line); color: var(--k-ink); }
+.k-group-row .who {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-width: 0;
+  text-align: left;
+  font-size: 13.5px;
+}
+.k-group-row .who img {
+  width: 26px;
+  height: 26px;
+  flex: none;
+  border-radius: var(--r-kit-pill);
+  object-fit: cover;
+}
+.k-group-row .sets { color: var(--k-grey); }
+.k-group-row .pts { font-weight: 700; }
+
+.k-group-more {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  width: 100%;
+  margin-top: 6px;
+  padding: 12px 6px 4px;
+  border: 0;
+  border-top: 1px solid var(--k-line);
+  background: none;
+  font: inherit;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--k-blue);
+  cursor: pointer;
+}
+
+/* ── Матч группы ────────────────────────────────────────────────── */
+/* Карточка светлее поля, но без белого: в референсе матчи группы читаются как
+   продолжение таблицы, а не как отдельные объекты. */
+.k-gm {
+  padding: 12px 14px 6px;
+  border-radius: var(--r-kit-card);
+  background: var(--k-tab);
+}
+.k-gm-cap { text-align: center; font-size: 12px; color: var(--k-grey); }
+.k-gm-mid {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 10px;
+  margin-top: 10px;
+}
+.k-gm-mid .side {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-width: 0;
+  font-size: 14px;
+  color: var(--k-ink);
+}
+.k-gm-mid .side.l { justify-content: flex-end; }
+.k-gm-mid .side img {
+  width: 30px;
+  height: 30px;
+  flex: none;
+  border-radius: var(--r-kit-pill);
+  object-fit: cover;
+}
+/* Счёт плашкой: в списке из нескольких матчей глаз идёт по колонке счётов,
+   и плашка держит эту колонку. */
+.k-gm-mid .sc {
+  padding: 6px 14px;
+  border-radius: var(--r-kit-pill);
+  background: var(--k-card);
+  font-size: 15px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.k-gm-link {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  width: 100%;
+  padding: 10px 0 8px;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--k-blue);
+  cursor: pointer;
+}
+
+/* ── Кнопки ─────────────────────────────────────────────────────── */
+/* Четыре вида из кита. Общее у всех: скругление пилюлей, отсутствие теней и
+   градиентов, подпись без разрядки. Различает их только заливка — так в ките
+   и сделано. */
+.k-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 44px;
+  padding: 0 22px;
+  border: 1px solid transparent;
+  border-radius: var(--r-kit-pill);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.15s, border-color 0.15s, color 0.15s;
+}
+.k-btn.block { width: 100%; }
+.k-btn.sm { height: 32px; padding: 0 14px; font-size: 13px; }
+
+.k-btn.primary { background: var(--k-blue); color: var(--k-card); }
+.k-btn.primary:hover { background: color-mix(in srgb, var(--k-blue) 86%, var(--k-ink)); }
+
+.k-btn.grey { background: var(--k-grey); color: var(--k-card); }
+.k-btn.grey:hover { background: color-mix(in srgb, var(--k-grey) 86%, var(--k-ink)); }
+
+.k-btn.outline {
+  background: transparent;
+  border-color: var(--k-blue);
+  color: var(--k-blue);
+}
+.k-btn.outline:hover { background: color-mix(in srgb, var(--k-blue) 8%, transparent); }
+
+.k-btn.ghost { background: transparent; color: var(--k-ink); }
+.k-btn.ghost:hover { background: color-mix(in srgb, var(--k-ink) 6%, transparent); }
+
+/* Недоступная кнопка гасится прозрачностью, а не отдельным серым цветом:
+   иначе «серая» кнопка и «выключенная» становятся одним и тем же. */
+.k-btn:disabled { opacity: 0.45; cursor: default; }
+.k-btn:disabled:hover { background: inherit; }
+
+/* Кнопка-иконка рядом с полем поиска. */
+.k-icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  flex: none;
+  border: 1px solid transparent;
+  border-radius: var(--r-kit-pill);
+  cursor: pointer;
+}
+.k-icon-btn.primary { background: var(--k-blue); color: var(--k-card); }
+.k-icon-btn.grey { background: var(--k-tab); color: var(--k-ink); }
+.k-icon-btn.outline { background: transparent; border-color: var(--k-blue); color: var(--k-blue); }
+
 /* ── Заголовок «Идут матчи» со счётчиком ────────────────────────── */
 /* В референсе это строка над списком: красная иконка эфира, подпись и число в
    красной плашке. Иконка красная не для тревоги — красный в ките означает
@@ -120,6 +339,18 @@
 /* Там, где движение просили выключить, кольцо замирает — значок остаётся. */
 @media (prefers-reduced-motion: reduce) {
   .k-dot::after { animation: none; opacity: 0.5; transform: scale(1.1); }
+}
+
+/* Дата в том же верхнем слоте, что и язычок, — у неидущего матча. Плашки нет:
+   это не состояние, а факт, и спорить с язычком за внимание ей незачем. */
+.k-when {
+  position: absolute;
+  top: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 12px;
+  color: var(--k-grey);
+  white-space: nowrap;
 }
 
 /* ── Карточка кита ──────────────────────────────────────────────── */
