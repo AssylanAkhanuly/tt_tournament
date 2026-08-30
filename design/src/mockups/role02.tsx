@@ -14,15 +14,15 @@ import {
 } from 'lucide-react';
 import { Avatar, Button } from '@heroui/react';
 import {
-  A, AW, Attention, Bar, DataTable, DisabledAction, EmptyBox, Facts, FieldView,
-  FilterSeg, FormGrid, InlineDialog, KV, Panel, PickField, Pill, QuietAction, Row, Rows,
-  ScreenScope, SearchInput, StatTiles, TextInput, WebApp,
-  type AttnItem, type RoleUI,
+  A, AW, Bar, DataTable, DisabledAction, EmptyBox, Facts, FieldView,
+  FilterSeg, FormGrid, InlineDialog, KV, Panel, PhoneRoleApp, PickField, Pill, QuietAction, Row,
+  Rows, ScreenScope, SearchInput, TextInput, WebApp,
+  type RoleUI,
 } from '../kit/hero/app';
 /* Из старого слоя остаются только мета-компоненты борда: колонки, стрелки,
    полки состояний и «ещё один кадр». Сами экраны собраны новым слоем. */
 import { Also, Board, States, Shot, type ScreenMap } from './shell';
-import { Login0_1 } from './role00';
+import { Login0_1, LoginPhone0_1 } from './role00';
 
 /* ── Роль: сайдбар и подпись профиля ─────────────────────────────── */
 
@@ -49,6 +49,30 @@ const Frag = ({ w = 560, children }: { w?: number; children: ReactNode }) => (
   <ScreenScope>
     <div style={{ width: w }}>{children}</div>
   </ScreenScope>
+);
+
+/* ── Второй формат: те же экраны на телефоне ✳ (30.08.2026) ───────────
+   Решение владельца продукта — «все экраны в обоих». Экономист сверяет взносы с
+   десктопа, но «оплачен ли взнос у этого спортсмена» его спрашивают в зале и по
+   телефону, и ответ должен быть в кармане.
+
+   Данные во втором кадре те же (`FEES`, `FEE_PICKS`, тексты правил); меняется
+   раскладка: таблица становится строками, ряды фильтров встают друг под другом,
+   поля формы идут в одну колонку, диалог занимает ширину кадра. */
+
+/** Полоса срезов на телефоне: четыре кнопки в 392 px не помещаются и ломаются
+    на второй ряд. Прокручиваем вбок, вылезая за поля кадра.
+    ⚠ Дупликация с role01 — как `Who` с role05: когда таких мест станет три,
+    `Swipe` и `PhoneDialog` должны переехать в `kit/hero/app`. */
+const Swipe = ({ children }: { children: ReactNode }) => (
+  <div className="-mx-4 overflow-x-auto px-4 *:flex-nowrap!">{children}</div>
+);
+
+/** Диалог на телефоне: `InlineDialog` кита прибит к 520 (или 720) пикселям и в
+    кадре шириной 392 вылезает за края. Второго диалога не заводим — заголовок,
+    крестик, подвал и переходы у него те же; ширину правит обёртка. */
+const PhoneDialog = ({ children }: { children: ReactNode }) => (
+  <div className="[&>div]:p-3! [&>div>div]:w-full!">{children}</div>
 );
 
 /** Человек в строке таблицы: фото и две строки. ⚠ Дупликация с role05 — когда
@@ -100,40 +124,6 @@ const FEES: Fee[] = [
   { av: A(13), nm: 'Пак Сергей', reg: 'Павлодар', club: '«Иртыш»', born: '2005', st: 'paid', when: '22.02', how: 'вручную · Сериков Н.' },
 ];
 
-/** Полоса сверки: платежи, по которым банк не прислал подтверждение и система
-    добирает статус опросом. Тем же компонентом очереди, что у остальных ролей:
-    вопрос один — «что от меня ждут», в колонке решения — что делать. */
-const SVERKA: AttnItem[] = [
-  {
-    n: '7',
-    t: 'платежей без подтверждения банка',
-    rows: [
-      {
-        nm: 'Оралбай Ержан',
-        mt: 'Астана · карта списана 27.08, 19:30',
-        why: 'ждёт со вчерашнего дня',
-        who: 'проверить в банке — разовый запрос в ePay',
-        to: 'Э2.2',
-        cls: 'bad',
-      },
-      {
-        nm: 'Абишев Санжар',
-        mt: 'Актобе · карта списана 28.08, 14:02',
-        why: 'подтверждение не пришло 40 минут',
-        who: 'проверить в банке — разовый запрос в ePay',
-        to: 'Э2.2',
-      },
-      {
-        nm: 'Цой Виктор',
-        mt: 'Караганда · карта списана 28.08, 13:47',
-        why: 'подтверждение не пришло 55 минут',
-        who: 'проверить в банке — разовый запрос в ePay',
-        to: 'Э2.2',
-      },
-    ],
-  },
-];
-
 /* ── Э2.1 · Взносы за сезон ────────────────────────────────────── */
 
 /** Срез таблицы по состоянию взноса — фильтр из флоу. */
@@ -146,53 +136,69 @@ const FMAP: Record<string, FeeSt | undefined> = {
 
 const FEE_GRID = '1.5fr 0.8fr 0.9fr 122px 118px 1.1fr 138px';
 
-/** Взносы за сезон: сверка первой, счётчики года, фильтры и таблица.
+/** Правило экрана — одно на оба формата ✳: у веб-оболочки для него есть место
+    под заголовком (`hint`), у телефонной его нет — там оно стоит плашкой. */
+const FEE_HINT =
+  '⚠ Вопрос 6.2: взнос считается за календарный год или за сезон — не решено; пока показываем календарный год.';
+
+/** Факты рядом со срезами: сумма взноса и срок уплаты. */
+const FEE_FACTS: { k: string; v: string; hot?: boolean }[] = [
+  { k: 'взнос', v: '₸ 10 000' },
+  { k: 'срок уплаты до', v: '31.03', hot: true },
+];
+
+/** Срезы, кроме состояния: год, регион, клуб, год рождения. Выбор статичный
+    (PickField, без портала): живой список без данных под ним врал бы. */
+const FEE_PICKS: [string, string][] = [
+  ['Год взноса', '2026'],
+  ['Регион', 'Все регионы'],
+  ['Клуб', 'Все клубы'],
+  ['Год рождения', 'Все годы'],
+];
+
+/** Сколько строк показано: в реестре 526 спортсменов, в макете нарисованы
+    первые шесть. Подпись одна на оба формата. */
+const feeCount = (n: number) =>
+  n === FEES.length ? '526 спортсменов · взнос 2026' : `показано ${n} из 526`;
+
+/** Почему серый значок «не оплачен» всё-таки важен (TZ §9.2). Текст один на оба
+    формата: правило экрана не может звучать на телефоне иначе. */
+const FEE_NOTE =
+  'У «не оплачен» есть последствие: на турнирах с флагом взноса заявка такого спортсмена не пройдёт (TZ §9.2). Обычно спортсмен платит картой сам — экран нужен для сверки и исключений.';
+
+/** Сузить реестр срезом состояния и фамилией — одна выборка на оба формата:
+    двумя копиями этих двух строк список на телефоне и на десктопе разошёлся бы
+    по одному и тому же запросу. */
+const narrowFees = (f: string, q: string) => {
+  const t = q.trim().toLowerCase();
+  const want = FMAP[f];
+  return FEES.filter((r) => (!want || r.st === want) && (!t || r.nm.toLowerCase().includes(t)));
+};
+
+/** Взносы за сезон: фильтры, поиск и таблица — реестр и есть экран ✳
+    (30.08.2026). Очереди сверки и ряда счётчиков года над таблицей больше нет:
+    экран, главное содержимое которого — реестр, начинается с реестра, а не с
+    витрины над ним. Платежи без подтверждения банка видны там, где с ними и
+    работают, — в карточке взноса (второй кадр Э2.2).
 
     Проп `variant` старой адаптивной рамки сохранён ради истории «Адаптив»
     (`Fees2_1Tablet`): у нового слоя своей планшетной рамки веба пока нет. */
 export function Fees2_1(_props: { variant?: 'desktop' | 'land' } = {}) {
   const [f, setF] = useState(FSEG[0]);
   const [q, setQ] = useState('');
-  const t = q.trim().toLowerCase();
-  const want = FMAP[f];
-  const rows = FEES.filter(
-    (r) => (!want || r.st === want) && (!t || r.nm.toLowerCase().includes(t)),
-  );
+  const rows = narrowFees(f, q);
   return (
     <WebApp
       role={R02}
       nav="Взносы"
       title="Взносы за сезон"
       sub="2026 год · ₸ 10 000"
-      hint="⚠ Вопрос 6.2: взнос считается за календарный год или за сезон — не решено; пока показываем календарный год."
+      hint={FEE_HINT}
     >
-      {/* Сверка первой: единственное, что действительно ждёт бухгалтера.
-          Строка ведёт в карточку взноса — там кнопка «Проверить в банке». */}
-      <Attention items={SVERKA} />
-      <div className="-mt-2 mb-4 text-[12px] text-neutral-500">
-        Рабочее состояние, а не ошибка: сообщение банка могло потеряться в сети — система добирает
-        статус опросом.
-      </div>
-
-      <StatTiles
-        items={[
-          { v: '412 / 526', k: 'Оплатили взнос', tone: 'g' },
-          { v: '₸ 4,12 млн', k: 'Поступило за период · 78%' },
-          { v: '96', k: 'Не оплачено' },
-          /* Просрочка — единственное горящее число ряда. */
-          { v: '18', k: 'Просрочено', tone: 'b' },
-        ]}
-      />
-
       <div className="mb-3 flex items-center justify-between gap-4">
         <div className="flex items-center gap-4">
           <FilterSeg items={FSEG} active={f} onPick={setF} />
-          <Facts
-            items={[
-              { k: 'взнос', v: '₸ 10 000' },
-              { k: 'срок уплаты до', v: '31.03', hot: true },
-            ]}
-          />
+          <Facts items={FEE_FACTS} />
         </div>
         {/* Реестр оплат по текущему фильтру за период — файлом, в «Выгрузки». */}
         <Button variant="outline">
@@ -203,10 +209,9 @@ export function Fees2_1(_props: { variant?: 'desktop' | 'land' } = {}) {
       {/* Год и срезы — статичный выбор (PickField, без портала): живой список
           без данных под ним врал бы. Год первым — ⚠ 6.2: год или сезон. */}
       <div className="mb-3 grid grid-cols-[120px_1fr_1fr_1fr_1.4fr] items-end gap-3">
-        <PickField label="Год взноса" value="2026" />
-        <PickField label="Регион" value="Все регионы" />
-        <PickField label="Клуб" value="Все клубы" />
-        <PickField label="Год рождения" value="Все годы" />
+        {FEE_PICKS.map(([k, v]) => (
+          <PickField key={k} label={k} value={v} />
+        ))}
         <label className="flex flex-col gap-1">
           <span className="text-xs font-medium text-neutral-500">Поиск по ФИО</span>
           <SearchInput value={q} onChange={setQ} placeholder="Фамилия спортсмена" className="w-full" />
@@ -248,20 +253,100 @@ export function Fees2_1(_props: { variant?: 'desktop' | 'land' } = {}) {
         <EmptyBox title="Никого не нашлось" text="Проверьте написание фамилии или снимите фильтр." />
       )}
 
-      <div className="mt-3 text-[12.5px] text-neutral-500">
-        {rows.length === FEES.length ? '526 спортсменов · взнос 2026' : `показано ${rows.length} из 526`}
-      </div>
+      <div className="mt-3 text-[12.5px] text-neutral-500">{feeCount(rows.length)}</div>
 
       {/* Подсказка о допуске — почему серый бейдж всё-таки важен (TZ §9.2). */}
       <div className="mt-3">
-        <Bar>
-          У «не оплачен» есть последствие: на турнирах с флагом взноса заявка такого спортсмена не
-          пройдёт (TZ §9.2). Обычно спортсмен платит картой сам — экран нужен для сверки и исключений.
-        </Bar>
+        <Bar>{FEE_NOTE}</Bar>
       </div>
     </WebApp>
   );
 }
+
+/** Взносы за сезон на телефоне ✳.
+
+    Таблица становится строками: семь колонок в 392 px не читаются, а в реестр
+    взносов смотрят ради трёх вещей — кто это, оплачен ли взнос и когда. Регион,
+    клуб и год рождения уходят второй строкой подписью, дата и способ оплаты —
+    третьей, вместе с «Отметить вручную»: это исключение, и его место рядом с
+    тем, из-за чего оно понадобилось. */
+const Fees2_1Phone = () => {
+  const [f, setF] = useState(FSEG[0]);
+  const [q, setQ] = useState('');
+  const rows = narrowFees(f, q);
+  return (
+    <PhoneRoleApp role={R02} nav="Взносы" title="Взносы за сезон" sub="2026 год · ₸ 10 000">
+      {/* У телефонной оболочки нет места под заголовком для правила экрана —
+          оно стоит плашкой первым блоком. Текст тот же. */}
+      <Bar>{FEE_HINT}</Bar>
+      <div className="mb-2">
+        <Swipe>
+          <FilterSeg items={FSEG} active={f} onPick={setF} />
+        </Swipe>
+      </div>
+      <div className="mb-3">
+        <Facts items={FEE_FACTS} />
+      </div>
+      {/* Срезы и поиск — в одну колонку: пять полей в строку на телефоне не
+          встают, а «Год рождения» в пятой части ширины подписан не будет. */}
+      <div className="mb-3 grid gap-3">
+        {FEE_PICKS.map(([k, v]) => (
+          <PickField key={k} label={k} value={v} />
+        ))}
+        <label className="flex flex-col gap-1">
+          <span className="text-xs font-medium text-neutral-500">Поиск по ФИО</span>
+          <SearchInput value={q} onChange={setQ} placeholder="Фамилия спортсмена" className="w-full" />
+        </label>
+      </div>
+      <div className="mb-3">
+        <Button className="w-full" variant="outline">
+          <Download size={15} /> Выгрузить список
+        </Button>
+      </div>
+
+      {rows.length ? (
+        <Rows>
+          {rows.map((r) => (
+            <div key={r.nm} data-to="Э2.2" data-row className="cursor-pointer px-4 py-2.5">
+              <div className="flex items-center gap-3">
+                <Who av={r.av} nm={r.nm} sub={`${r.reg} · ${r.club} · ${r.born} г.р.`} />
+                <span className="ml-auto shrink-0">
+                  <Pill t={FST[r.st].t} color={FST[r.st].color} />
+                </span>
+              </div>
+              <div className="mt-1.5 flex items-center gap-2">
+                <span
+                  className={
+                    'text-xs ' + (r.st === 'late' ? 'font-medium text-red-600' : 'tabular-nums text-neutral-500')
+                  }
+                >
+                  {r.when === '—' ? 'оплаты нет' : r.when}
+                  {r.how !== '—' && ` · ${r.how}`}
+                </span>
+                {/* Исключение, а не обычный ход: отметить вручную можно только
+                    неоплаченный взнос, и диалог потребует основания. */}
+                {r.st !== 'paid' && (
+                  <span className="ml-auto">
+                    <Button size="sm" variant="outline" data-to="Э2.3">
+                      Отметить вручную
+                    </Button>
+                  </span>
+                )}
+              </div>
+            </div>
+          ))}
+        </Rows>
+      ) : (
+        <EmptyBox title="Никого не нашлось" text="Проверьте написание фамилии или снимите фильтр." />
+      )}
+
+      <div className="mt-3 text-[12.5px] text-neutral-500">{feeCount(rows.length)}</div>
+      <div className="mt-3">
+        <Bar>{FEE_NOTE}</Bar>
+      </div>
+    </PhoneRoleApp>
+  );
+};
 
 const Fees2_1States = () => (
   <States>
@@ -272,12 +357,8 @@ const Fees2_1States = () => (
       wide
     >
       <Frag w={620}>
-        <StatTiles
-          items={[
-            { v: '0 / 526', k: 'Оплатили взнос' },
-            { v: '₸ 0', k: 'Поступило за период' },
-          ]}
-        />
+        {/* Счётчиков года на экране нет ✳ — состояние читается по самим
+            строкам реестра и по подсказке о сроке уплаты. */}
         <Rows>
           <Row av={A(32)} nm="Смагулов Алан" sub="Алматы · «Алатау»" pill={{ t: 'НЕ ОПЛАЧЕН', cls: 'done' }} />
           <Row av={A(44)} nm="Ким Георгий" sub="Астана · СКА" pill={{ t: 'НЕ ОПЛАЧЕН', cls: 'done' }} />
@@ -313,16 +394,14 @@ const Fees2_1States = () => (
 
 /* ── Э2.2 · Карточка взноса ────────────────────────────────────── */
 
-export function Fee2_2() {
-  return (
-    <WebApp
-      role={R02}
-      nav="Взносы"
-      title="Карточка взноса"
-      sub="Пак Сергей · Павлодар · «Иртыш»"
-      back={{ label: 'Взносы за сезон', to: 'Э2.1' }}
-    >
-      <div className="grid grid-cols-2 items-start gap-4">
+/** Тело карточки взноса — одно на оба формата ✳: те же панели в том же порядке,
+    на телефоне только полосы «документ» и «снять отметку» встают этажами. */
+const Fee2_2Body = ({ phone }: { phone?: boolean } = {}) => (
+      /* Блоки идут один под другим во всю ширину ✳ (30.08.2026): в две колонки
+         узкие «Спортсмен» и «История» вжимались в правую половину, а строки
+         «как оплачен» слева переносились. Панель сама держит отступ снизу —
+         обёртка не нужна. */
+      <>
         <Panel title="Взнос за 2026 год" extra={<Pill t="ОПЛАЧЕН ВРУЧНУЮ" color="success" />}>
           <KV
             items={[
@@ -337,7 +416,12 @@ export function Fee2_2() {
 
           {/* Зона документа — заглушка намеренно: храним ли платёжку, не
               решено (QUESTIONS), и «Приложить документ» не проектируем. */}
-          <div className="mt-4 flex items-center justify-between gap-3 rounded-lg border border-dashed border-amber-300 bg-amber-50/60 px-4 py-3">
+          <div
+            className={
+              'mt-4 flex gap-3 rounded-lg border border-dashed border-amber-300 bg-amber-50/60 px-4 py-3 ' +
+              (phone ? 'flex-col items-start' : 'items-center justify-between')
+            }
+          >
             <span className="leading-tight">
               <span className="flex items-center gap-1.5 text-sm font-medium text-amber-800">
                 <FileWarning size={15} /> Платёжка не приложена
@@ -351,49 +435,74 @@ export function Fee2_2() {
             </Button>
           </div>
 
-          <div className="mt-4 flex items-center justify-between gap-3">
+          <div className={'mt-4 flex gap-3 ' + (phone ? 'flex-col' : 'items-center justify-between')}>
             <span className="text-xs text-neutral-500">Состояние видят спортсмен и его тренер</span>
             {/* Снять можно только ручную отметку — банковский платёж не снимается. */}
-            <Button variant="outline" data-to="Э2.4">
+            <Button className={phone ? 'w-full' : undefined} variant="outline" data-to="Э2.4">
               <Undo2 size={14} /> Снять отметку
             </Button>
           </div>
         </Panel>
 
-        <div>
-          <Panel title="Спортсмен" flush>
-            <Row
-              av={A(13)}
-              nm="Пак Сергей"
-              sub="Павлодар · «Иртыш» · 2005 г.р."
-              action="Открыть профиль"
-            />
-            <div className="border-t border-neutral-100 bg-neutral-50 px-4 py-1.5 text-[11px] text-neutral-400">
-              Профиль — только чтение: реестр правит администратор
-            </div>
-          </Panel>
+        <Panel title="Спортсмен" flush>
+          <Row
+            av={A(13)}
+            nm="Пак Сергей"
+            sub="Павлодар · «Иртыш» · 2005 г.р."
+            action="Открыть профиль"
+          />
+          <div className="border-t border-neutral-100 bg-neutral-50 px-4 py-1.5 text-[11px] text-neutral-400">
+            Профиль — только чтение: реестр правит администратор
+          </div>
+        </Panel>
 
-          <Panel title="История по взносу" flush>
-            <div className="divide-y divide-neutral-100">
-              <Row
-                nm="Отметил оплату вручную"
-                sub="Сериков Н. · 22.02.2026, 10:42 · квитанция № 4471"
-                pill={{ t: 'ОПЛАЧЕН', cls: 'live' }}
-              />
-              <Row nm="Взнос выставлен" sub="система · 01.01.2026" pill={{ t: 'НЕ ОПЛАЧЕН', cls: 'done' }} />
-            </div>
-            <div className="border-t border-neutral-100 bg-neutral-50 px-4 py-1.5 text-[11px] text-neutral-400">
-              Из журнала действий — отметки и снятия с причинами и авторами
-            </div>
-          </Panel>
-        </div>
-      </div>
+        <Panel title="История по взносу" flush>
+          <div className="divide-y divide-neutral-100">
+            <Row
+              nm="Отметил оплату вручную"
+              sub="Сериков Н. · 22.02.2026, 10:42 · квитанция № 4471"
+              pill={{ t: 'ОПЛАЧЕН', cls: 'live' }}
+            />
+            <Row nm="Взнос выставлен" sub="система · 01.01.2026" pill={{ t: 'НЕ ОПЛАЧЕН', cls: 'done' }} />
+          </div>
+          <div className="border-t border-neutral-100 bg-neutral-50 px-4 py-1.5 text-[11px] text-neutral-400">
+            Из журнала действий — отметки и снятия с причинами и авторами
+          </div>
+        </Panel>
+      </>
+);
+
+export function Fee2_2() {
+  return (
+    <WebApp
+      role={R02}
+      nav="Взносы"
+      title="Карточка взноса"
+      sub="Пак Сергей · Павлодар · «Иртыш»"
+      back={{ label: 'Взносы за сезон', to: 'Э2.1' }}
+    >
+      <Fee2_2Body />
     </WebApp>
   );
 }
 
+/** Карточка взноса на телефоне ✳. */
+const Fee2_2Phone = () => (
+  <PhoneRoleApp
+    role={R02}
+    nav="Взносы"
+    title="Карточка взноса"
+    sub="Пак Сергей · Павлодар · «Иртыш»"
+    back={{ label: 'Взносы за сезон', to: 'Э2.1' }}
+  >
+    <Fee2_2Body phone />
+  </PhoneRoleApp>
+);
+
 /** Та же карточка, когда платёж висит без подтверждения: не состояние из
-    данных роли, а второй кадр экрана — сюда ведёт полоса сверки с Э2.1. */
+    данных роли, а второй кадр экрана. Сверка живёт здесь, в карточке
+    конкретного платежа: очереди над реестром Э2.1 больше нет ✳ (30.08.2026),
+    и «Проверить в банке» стоит там же, где видно, что именно проверяют. */
 const Fee2_2Sverka = () => (
   <Also cap="Та же карточка при сверке: платёж без подтверждения банка">
     <Frag>
@@ -453,8 +562,76 @@ const Fee2_2States = () => (
     основание. Значения — из флоу, слово в слово. */
 const PROOFS = ['Квитанция', 'Перевод на счёт федерации', 'Оплата на месте'];
 
-export function Mark2_3() {
+/** Родительский экран под диалогом — карточка неоплаченного взноса: видно,
+    откуда диалог открыт и почему кнопка на нём называется так же. Одна на оба
+    формата: на телефоне кнопка растягивается на ширину кадра. */
+const Mark2_3Parent = ({ phone }: { phone?: boolean } = {}) => (
+  <Panel title="Взнос за 2026 год" extra={<Pill t="НЕ ОПЛАЧЕН" />}>
+    <KV
+      items={[
+        ['Год', '2026'],
+        ['Сумма', '₸ 10 000'],
+        ['Дата оплаты', '—'],
+      ]}
+    />
+    <div className={'mt-4 flex ' + (phone ? '' : 'items-center justify-end')}>
+      <Button className={phone ? 'w-full' : undefined} variant="primary">
+        <Banknote size={15} /> Отметить оплату вручную
+      </Button>
+    </div>
+  </Panel>
+);
+
+/** Диалог ручной отметки — один на оба формата ✳: содержание, поля и подписи те
+    же, на телефоне набор подтверждений прокручивается вбок, а поля идут в одну
+    колонку. */
+const MarkDialog = ({ phone }: { phone?: boolean } = {}) => {
   const [proof, setProof] = useState(PROOFS[0]);
+  const seg = <FilterSeg items={PROOFS} active={proof} onPick={setProof} />;
+  return (
+    <InlineDialog
+      title="Отметить оплату вручную"
+      sub="Жумабеков Расул · взнос 2026 · ₸ 10 000"
+      to="Э2.2"
+      wide
+      foot={
+        <>
+          {/* На телефоне подвал делят две кнопки, и третьей строке в нём места
+              нет: то же правило сказано плашкой внутри диалога. */}
+          {!phone && (
+            <span className="mr-auto text-xs text-neutral-500">
+              Отметка уйдёт в журнал с автором и временем
+            </span>
+          )}
+          <QuietAction to="Э2.2">Закрыть</QuietAction>
+          <Button variant="primary" data-to="Э2.2">
+            <Banknote size={15} /> Отметить оплачен
+          </Button>
+        </>
+      }
+    >
+      <div className="mb-3 flex flex-col gap-1">
+        <span className="text-xs font-medium text-neutral-500">Чем платёж подтверждается</span>
+        {phone ? <Swipe>{seg}</Swipe> : <div>{seg}</div>}
+      </div>
+      <FormGrid>
+        <TextInput label="Основание ✳" value="квитанция № 4471" wide={phone} />
+        {/* Дата — текстом в русском формате: нативный `input type="date"`
+            (DateInput кита) рисуется в локали браузера и на снимке выдавал
+            американское «02/22/2026» рядом с «22.02.2026» остального экрана. */}
+        <TextInput label="Дата платежа" value="22.02.2026" wide={phone} />
+      </FormGrid>
+      <div className="mt-3">
+        <Bar>
+          Обычно спортсмен платит картой, и строка становится «оплачен» сама (TZ §9.2). Ручная
+          отметка — исключение: платёж пришёл мимо системы. Состояние увидят спортсмен и его тренер.
+        </Bar>
+      </div>
+    </InlineDialog>
+  );
+};
+
+export function Mark2_3() {
   return (
     <WebApp
       role={R02}
@@ -463,63 +640,27 @@ export function Mark2_3() {
       sub="Жумабеков Расул · Караганда · «Шахтёр»"
       back={{ label: 'Взносы за сезон', to: 'Э2.1' }}
     >
-      {/* Родительский экран — карточка неоплаченного взноса: видно, откуда
-          диалог открыт и почему кнопка на нём называется так же. */}
-      <Panel title="Взнос за 2026 год" extra={<Pill t="НЕ ОПЛАЧЕН" />}>
-        <KV
-          items={[
-            ['Год', '2026'],
-            ['Сумма', '₸ 10 000'],
-            ['Дата оплаты', '—'],
-          ]}
-        />
-        <div className="mt-4 flex items-center justify-end">
-          <Button variant="primary">
-            <Banknote size={15} /> Отметить оплату вручную
-          </Button>
-        </div>
-      </Panel>
-
-      <InlineDialog
-        title="Отметить оплату вручную"
-        sub="Жумабеков Расул · взнос 2026 · ₸ 10 000"
-        to="Э2.2"
-        wide
-        foot={
-          <>
-            <span className="mr-auto text-xs text-neutral-500">
-              Отметка уйдёт в журнал с автором и временем
-            </span>
-            <QuietAction to="Э2.2">Закрыть</QuietAction>
-            <Button variant="primary" data-to="Э2.2">
-              <Banknote size={15} /> Отметить оплачен
-            </Button>
-          </>
-        }
-      >
-        <div className="mb-3 flex flex-col gap-1">
-          <span className="text-xs font-medium text-neutral-500">Чем платёж подтверждается</span>
-          <div>
-            <FilterSeg items={PROOFS} active={proof} onPick={setProof} />
-          </div>
-        </div>
-        <FormGrid>
-          <TextInput label="Основание ✳" value="квитанция № 4471" />
-          {/* Дата — текстом в русском формате: нативный `input type="date"`
-              (DateInput кита) рисуется в локали браузера и на снимке выдавал
-              американское «02/22/2026» рядом с «22.02.2026» остального экрана. */}
-          <TextInput label="Дата платежа" value="22.02.2026" />
-        </FormGrid>
-        <div className="mt-3">
-          <Bar>
-            Обычно спортсмен платит картой, и строка становится «оплачен» сама (TZ §9.2). Ручная
-            отметка — исключение: платёж пришёл мимо системы. Состояние увидят спортсмен и его тренер.
-          </Bar>
-        </div>
-      </InlineDialog>
+      <Mark2_3Parent />
+      <MarkDialog />
     </WebApp>
   );
 }
+
+/** Отметка оплаты вручную на телефоне ✳: диалог занимает ширину кадра. */
+const Mark2_3Phone = () => (
+  <PhoneRoleApp
+    role={R02}
+    nav="Взносы"
+    title="Карточка взноса"
+    sub="Жумабеков Расул · Караганда · «Шахтёр»"
+    back={{ label: 'Взносы за сезон', to: 'Э2.1' }}
+  >
+    <Mark2_3Parent phone />
+    <PhoneDialog>
+      <MarkDialog phone />
+    </PhoneDialog>
+  </PhoneRoleApp>
+);
 
 const Mark2_3States = () => (
   <States>
@@ -559,6 +700,56 @@ const Mark2_3States = () => (
 
 /* ── Э2.4 · Снятие отметки ─────────────────────────────────────── */
 
+/** Диалог снятия отметки — один на оба формата ✳. */
+const UnmarkDialog = ({ phone }: { phone?: boolean } = {}) => (
+  <InlineDialog
+    title="Снять отметку об оплате"
+    sub="Пак Сергей · взнос 2026 · отметил Сериков Н., 22.02.2026"
+    to="Э2.2"
+    foot={
+      <>
+        {/* На телефоне подвал делят две кнопки: то же правило сказано плашкой
+            внутри диалога, красной. */}
+        {!phone && (
+          <span className="mr-auto text-xs text-neutral-500">
+            Причина уйдёт в журнал и в историю по взносу
+          </span>
+        )}
+        <QuietAction to="Э2.2">Закрыть</QuietAction>
+        {/* Красная, а не синяя: действие отбирает у спортсмена допуск. */}
+        <Button variant="danger" data-to="Э2.2">
+          <Undo2 size={15} /> Снять отметку
+        </Button>
+      </>
+    }
+  >
+    {/* Что именно снимаем: решение видно до причины. */}
+    <FormGrid>
+      <FieldView label="Кто и когда отметил" value="Сериков Н. · 22.02.2026, 10:42" wide={phone} />
+      <FieldView label="Основание отметки" value="квитанция № 4471" wide={phone} />
+      <TextInput label="Причина ✳" value="квитанция не подтвердилась в банке" wide />
+    </FormGrid>
+    <div className="mt-3">
+      <Bar tone="danger">
+        После снятия состояние — «не оплачен»: заявки спортсмена на турниры с флагом взноса
+        перестанут проходить (TZ §9.2).
+      </Bar>
+    </div>
+  </InlineDialog>
+);
+
+/** Родительский экран под диалогом — карточка оплаченного вручную взноса. */
+const Unmark2_4Parent = () => (
+  <Panel title="Взнос за 2026 год" extra={<Pill t="ОПЛАЧЕН ВРУЧНУЮ" color="success" />}>
+    <KV
+      items={[
+        ['Как оплачен', 'отметка вручную · Сериков Н.'],
+        ['Основание', 'квитанция № 4471'],
+      ]}
+    />
+  </Panel>
+);
+
 export function Unmark2_4() {
   return (
     <WebApp
@@ -568,48 +759,27 @@ export function Unmark2_4() {
       sub="Пак Сергей · Павлодар · «Иртыш»"
       back={{ label: 'Взносы за сезон', to: 'Э2.1' }}
     >
-      <Panel title="Взнос за 2026 год" extra={<Pill t="ОПЛАЧЕН ВРУЧНУЮ" color="success" />}>
-        <KV
-          items={[
-            ['Как оплачен', 'отметка вручную · Сериков Н.'],
-            ['Основание', 'квитанция № 4471'],
-          ]}
-        />
-      </Panel>
-
-      <InlineDialog
-        title="Снять отметку об оплате"
-        sub="Пак Сергей · взнос 2026 · отметил Сериков Н., 22.02.2026"
-        to="Э2.2"
-        foot={
-          <>
-            <span className="mr-auto text-xs text-neutral-500">
-              Причина уйдёт в журнал и в историю по взносу
-            </span>
-            <QuietAction to="Э2.2">Закрыть</QuietAction>
-            {/* Красная, а не синяя: действие отбирает у спортсмена допуск. */}
-            <Button variant="danger" data-to="Э2.2">
-              <Undo2 size={15} /> Снять отметку
-            </Button>
-          </>
-        }
-      >
-        {/* Что именно снимаем: решение видно до причины. */}
-        <FormGrid>
-          <FieldView label="Кто и когда отметил" value="Сериков Н. · 22.02.2026, 10:42" />
-          <FieldView label="Основание отметки" value="квитанция № 4471" />
-          <TextInput label="Причина ✳" value="квитанция не подтвердилась в банке" wide />
-        </FormGrid>
-        <div className="mt-3">
-          <Bar tone="danger">
-            После снятия состояние — «не оплачен»: заявки спортсмена на турниры с флагом взноса
-            перестанут проходить (TZ §9.2).
-          </Bar>
-        </div>
-      </InlineDialog>
+      <Unmark2_4Parent />
+      <UnmarkDialog />
     </WebApp>
   );
 }
+
+/** Снятие отметки на телефоне ✳: диалог занимает ширину кадра. */
+const Unmark2_4Phone = () => (
+  <PhoneRoleApp
+    role={R02}
+    nav="Взносы"
+    title="Карточка взноса"
+    sub="Пак Сергей · Павлодар · «Иртыш»"
+    back={{ label: 'Взносы за сезон', to: 'Э2.1' }}
+  >
+    <Unmark2_4Parent />
+    <PhoneDialog>
+      <UnmarkDialog phone />
+    </PhoneDialog>
+  </PhoneRoleApp>
+);
 
 const Unmark2_4States = () => (
   <States>
@@ -661,11 +831,19 @@ export const Fees2_1Tablet = () => <Fees2_1 variant="land" />;
 
 /* ── Экраны роли ───────────────────────────────────────────────── */
 
-/** Экраны роли по кодам: из этой карты собираются и борд, и карта флоу. */
+/** Экраны роли по кодам: из этой карты собираются и борд, и карта флоу.
+
+    У каждого экрана есть `alt` — тот же экран во втором формате ✳ (30.08.2026):
+    основной формат роли десктопный, второй — телефон. Состояния во втором кадре
+    не повторяются: они разобраны под десктопным макетом, а `alt` показывает сам
+    экран. */
 export const SCREENS: ScreenMap = {
   'Э0.1': {
     cap: 'Вход',
     view: () => <Login0_1 />,
+    /* Вход сквозной, и телефонный кадр у него уже есть — тот самый, что рисует
+       role00: вход один на сайт и приложение, второго заводить нельзя. */
+    alt: () => <LoginPhone0_1 />,
     next: 'первый экран роли',
   },
   'Э2.1': {
@@ -676,6 +854,7 @@ export const SCREENS: ScreenMap = {
         <Fees2_1States />
       </>
     ),
+    alt: () => <Fees2_1Phone />,
     next: 'строка спортсмена',
   },
   'Э2.2': {
@@ -687,6 +866,7 @@ export const SCREENS: ScreenMap = {
         <Fee2_2States />
       </>
     ),
+    alt: () => <Fee2_2Phone />,
     next: '«Отметить оплату вручную»',
   },
   'Э2.3': {
@@ -697,6 +877,7 @@ export const SCREENS: ScreenMap = {
         <Mark2_3States />
       </>
     ),
+    alt: () => <Mark2_3Phone />,
     next: '«Снять отметку»',
   },
   'Э2.4': {
@@ -707,6 +888,7 @@ export const SCREENS: ScreenMap = {
         <Unmark2_4States />
       </>
     ),
+    alt: () => <Unmark2_4Phone />,
   },
 };
 

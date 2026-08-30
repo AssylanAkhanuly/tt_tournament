@@ -18,12 +18,14 @@
    наряд, он открывает турнир уже в своей роли — главного судьи, секретаря,
    заместителя или судьи стола. */
 
-import { useState, type ReactNode } from 'react';
-import { Clock, FileUp, LayoutDashboard, ListChecks, Scale, Send, Trophy, Undo2 } from 'lucide-react';
-import { Button } from '@heroui/react';
+import { useState, type ComponentProps, type ReactNode } from 'react';
 import {
-  A, Attention, Bar, EmptyBox, Facts, FieldView, FilterSeg, FormGrid, KV, Panel, Pill,
-  QuietAction, Row, Rows, ScreenScope, SearchInput, SeasonTable, StatTiles, WebApp,
+  ChevronDown, Clock, FileUp, LayoutDashboard, ListChecks, Scale, Send, Trophy, Undo2,
+} from 'lucide-react';
+import { Avatar, Button } from '@heroui/react';
+import {
+  A, Attention, Bar, EmptyBox, Facts, FieldView, FilterSeg, FormGrid, KV, Panel, PhoneRoleApp,
+  Pill, QuietAction, Row, Rows, ST, ScreenScope, SearchInput, SeasonTable, StatTiles, WebApp,
   type AttnItem, type RoleUI, type SeasonRow,
 } from '../kit/hero/app';
 /* Из старого слоя остаются только мета-компоненты борда: колонки, стрелки и
@@ -31,8 +33,11 @@ import {
 import { Board, States, Shot, type ScreenMap } from './shell';
 /* Рейтинг судьи — тот же фрагмент, что у судейских ролей: одно Положение, одна
    таблица баллов (TZ §7.2). Донор уже на новом слое. */
-import { JudgeCard, JudgeRankList, JudgeRating, type JudgeMe, type JudgeRank, type JudgeTour } from './judge';
-import { SignUpJudge0_7, SignUpJudge0_7States } from './role00';
+import {
+  JUDGE_DOCS, JudgeCard, JudgeRankList, JudgeRating, tourPoints,
+  type JudgeMe, type JudgeRank, type JudgeTour,
+} from './judge';
+import { SignUpJudge0_7, SignUpJudge0_7Phone, SignUpJudge0_7States } from './role00';
 
 /* ── Роль: сайдбар и подпись профиля ────────────────────────────── */
 
@@ -115,6 +120,34 @@ const ATTENTION0: AttnItem[] = [
   },
 ];
 
+/** Показатели кабинета — одни на оба формата: числа на двух кадрах одного
+    экрана обязаны сходиться. */
+const TILES0_8: ComponentProps<typeof StatTiles>['items'] = [
+  { v: 'В РЕЕСТРЕ', k: 'Категория подтверждена коллегией 20.08', tone: 'g' },
+  { v: '9,0', k: 'Рейтинг R за сезон', to: 'Э0.11' },
+  { v: '№24', k: 'Место в рейтинге', to: 'Э0.12' },
+  { v: '2', k: 'Турнира отсужено в сезоне', to: 'Э0.11' },
+];
+
+/** Пусто — это ответ, а не поломка: судья видит, что его никуда не поставили,
+    и тут же — куда можно заявиться. Текст один на оба формата. */
+const ASSIGN_EMPTY = {
+  title: 'Сейчас вы никуда не назначены',
+  text: 'Как только коллегия поставит вас в наряд, турнир появится здесь, и работа с ним пойдёт уже в вашей роли — судьи стола, секретаря или главного судьи.',
+};
+const ASSIGN_HINT = 'Открыт приём на три турнира — ближайший до 28.04';
+
+/** Карточка в реестре — на чтение: заполнять тут нечего, её ведёт коллегия. */
+const REG_KV: [string, ReactNode][] = [
+  ['Категория', 'Первая · подтверждена 20.08.2026'],
+  ['Регион постоянного учёта', 'Павлодар'],
+  ['В реестре с', '18.08.2026 · зарегистрировался сам'],
+  ['Кто подтвердил', 'Мукашев Б. · председатель ГСК'],
+];
+const REG_NOTE =
+  'Категорию по удостоверению проставляет коллегия — сам судья её не выбирает. Пока она не ' +
+  'подтверждена, в наряд не назначают и балл за категорию (S2) не начисляется.';
+
 /** Первый экран после входа, пока судья никуда не назначен.
 
     Главное на нём — не «пусто», а что делать дальше. Судья приходит сюда сразу
@@ -133,30 +166,20 @@ export function Cabinet0_8() {
           требует действия сегодня. Каждая строка ведёт прямо в дело. */}
       <Attention items={ATTENTION0} />
 
-      <StatTiles
-        items={[
-          { v: 'В РЕЕСТРЕ', k: 'Категория подтверждена коллегией 20.08', tone: 'g' },
-          { v: '9,0', k: 'Рейтинг R за сезон', to: 'Э0.11' },
-          { v: '№24', k: 'Место в рейтинге', to: 'Э0.12' },
-          { v: '2', k: 'Турнира отсужено в сезоне', to: 'Э0.11' },
-        ]}
-      />
+      <StatTiles items={TILES0_8} />
 
-      <div className="grid grid-cols-2 items-start gap-4">
+      {/* Блоки идут один под другим ✳ (30.08.2026): в две колонки пустой
+          список назначений и карточка в реестре делили ширину пополам, и
+          объяснение «почему пусто» уезжало под многоточие. Панель сама держит
+          отступ снизу, обёртка не нужна. */}
+      <>
         <Panel
           title="Мои назначения"
           extra={<span className="text-xs text-neutral-500">наряд собирает председатель ГСК</span>}
         >
-          {/* Пусто — это ответ, а не поломка: судья видит, что его никуда не
-              поставили, и тут же — куда можно заявиться. */}
-          <EmptyBox
-            title="Сейчас вы никуда не назначены"
-            text="Как только коллегия поставит вас в наряд, турнир появится здесь, и работа с ним пойдёт уже в вашей роли — судьи стола, секретаря или главного судьи."
-          />
+          <EmptyBox text={ASSIGN_EMPTY.text} title={ASSIGN_EMPTY.title} />
           <div className="mt-3 flex items-center justify-between gap-3">
-            <span className="text-[12.5px] text-neutral-500">
-              Открыт приём на три турнира — ближайший до 28.04
-            </span>
+            <span className="text-[12.5px] text-neutral-500">{ASSIGN_HINT}</span>
             <Button size="sm" variant="outline" data-to="Э0.9">
               <Clock size={14} /> Турниры и заявки
             </Button>
@@ -167,24 +190,12 @@ export function Cabinet0_8() {
           title="Моя карточка в реестре судей"
           extra={<Pill t="КАТЕГОРИЯ ПОДТВЕРЖДЕНА" color="success" />}
         >
-          {/* На чтение строками «подпись — значение»: заполнять тут нечего,
-              карточку ведёт коллегия. */}
-          <KV
-            items={[
-              ['Категория', 'Первая · подтверждена 20.08.2026'],
-              ['Регион постоянного учёта', 'Павлодар'],
-              ['В реестре с', '18.08.2026 · зарегистрировался сам'],
-              ['Кто подтвердил', 'Мукашев Б. · председатель ГСК'],
-            ]}
-          />
+          <KV items={REG_KV} />
           <div className="mt-4">
-            <Bar>
-              Категорию по удостоверению проставляет коллегия — сам судья её не выбирает. Пока она
-              не подтверждена, в наряд не назначают и балл за категорию (S2) не начисляется.
-            </Bar>
+            <Bar>{REG_NOTE}</Bar>
           </div>
         </Panel>
-      </div>
+      </>
     </WebApp>
   );
 }
@@ -303,6 +314,26 @@ const callRow = (c: Call): SeasonRow => ({
   wait: Boolean(c.open),
 });
 
+/** Значок состояния для строки реестра: словарь `ST` кита говорит цветом
+    HeroUI, а строка `Row` — тонами макетного словаря. Перевод в одном месте,
+    иначе одно и то же состояние в списке и в таблице покрасится по-разному. */
+const stPill = (st: keyof typeof ST): { t: string; cls: 'live' | 'wait' | 'bad' | 'reg' | 'done' } => {
+  const map = { success: 'live', warning: 'wait', danger: 'bad', accent: 'reg', default: 'done' } as const;
+  return { t: ST[st].t, cls: map[ST[st].color] };
+};
+
+/** Счётчики и правило приёма — одни на оба формата. */
+const FACTS0_9: { k: string; v: string; hot?: boolean }[] = [
+  { k: 'турниров сезона', v: '6' },
+  { k: 'ждут заявок', v: '3', hot: true },
+];
+const CALLS_HINT = 'строка открывает мою заявку';
+const CALLS_NOTE =
+  'Приём заявок открывает председатель ГСК, он же собирает наряд: главный судья, секретарь, ' +
+  'заместитель и судьи столов набираются одним конкурсом (TZ §4.5) — второго приёма на столы ' +
+  'нет. ⚠ Условия допуска к подаче — по категории, региону или уровню турнира — федерация не ' +
+  'определила (TZ §4.4, QUESTIONS 3).';
+
 export function Calls0_9() {
   return (
     <WebApp
@@ -313,22 +344,12 @@ export function Calls0_9() {
       back={{ label: 'Кабинет судьи', to: 'Э0.8' }}
     >
       <div className="mb-3 flex items-center justify-between gap-4">
-        <Facts
-          items={[
-            { k: 'турниров сезона', v: '6' },
-            { k: 'ждут заявок', v: '3', hot: true },
-          ]}
-        />
-        <span className="text-[12.5px] text-neutral-500">строка открывает мою заявку</span>
+        <Facts items={FACTS0_9} />
+        <span className="text-[12.5px] text-neutral-500">{CALLS_HINT}</span>
       </div>
       <SeasonTable rows={CALLS.map(callRow).sort((a, b) => a.m - b.m)} />
       <div className="mt-4">
-        <Bar>
-          Приём заявок открывает председатель ГСК, он же собирает наряд: главный судья, секретарь,
-          заместитель и судьи столов набираются одним конкурсом (TZ §4.5) — второго приёма на
-          столы нет. ⚠ Условия допуска к подаче — по категории, региону или уровню турнира —
-          федерация не определила (TZ §4.4, QUESTIONS 3).
-        </Bar>
+        <Bar>{CALLS_NOTE}</Bar>
       </div>
     </WebApp>
   );
@@ -399,6 +420,46 @@ const POSTS: { t: string; sub: string; on: boolean; need?: { t: string; cls: 'wa
 /** Сколько позиций отмечено — по-русски: подпись у кнопки подачи. */
 const POS_WORDS = ['одна позиция', 'две позиции', 'три позиции', 'четыре позиции'];
 
+/** Подпись у кнопки подачи — одна на оба формата: выбор позиции единственное,
+    что судья на этом экране решает, и формулировка расходиться не должна.
+    Список в подписи — в порядке наряда, а не в порядке кликов. */
+const pickedCap = (picked: string[]) => {
+  const names = POSTS.filter((p) => picked.includes(p.t)).map((p) => p.t.toLowerCase());
+  return picked.length === 0
+    ? 'Отметьте хотя бы одну позицию: безадресная заявка ничего не говорит коллегии'
+    : (picked.length === 1 ? 'Отмечена ' : 'Отмечены ') +
+      POS_WORDS[picked.length - 1] +
+      ': ' +
+      names.join(picked.length === 2 ? ' и ' : ', ') +
+      ' · председатель ставит на одно из отмеченных';
+};
+
+/** Показатели заявки и тексты её панелей — одни на оба формата. */
+const TILES0_10: ComponentProps<typeof StatTiles>['items'] = [
+  { v: 'до 28.04', k: 'Приём заявок', tone: 'a' },
+  { v: '10', k: 'Судей нужно в наряд' },
+  { v: '6', k: 'Заявок подано' },
+  { v: '3', k: 'Мои турниры за сезон' },
+];
+
+const POSTS_FOOT =
+  'Место в наряде у человека одно: главным судьёй и судьёй стола одновременно не бывают. ' +
+  '⚠ Ограничений по категории на позицию федерация не задала (TZ §4.4) — подсказку показываем, ' +
+  'но не запрещаем';
+
+/** Данные о судье — на чтение: они уже есть в реестре, и правка здесь означала
+    бы вторую карточку. */
+const CALL_KV: [string, ReactNode][] = [
+  ['Судья', 'Оралбай Ержан · первая категория'],
+  ['Регион учёта', 'Павлодар'],
+  ['Рейтинг R', '9,0 · №24 в сезоне'],
+  ['Турниров отсужено', '2 за сезон 2026'],
+];
+
+const CALL_NOTE =
+  'Заявка — это «готов судить» на отмеченных местах: остальное коллегия видит в реестре судей. ' +
+  'Решение придёт уведомлением. ⚠ 3.1 — нужны ли к заявке документы, федерация не ответила.';
+
 /** Одна заявка целиком: что за турнир, что от меня требуется и что решили.
 
     Форма короткая до неприличия — и это правда про процесс: подать заявку
@@ -412,15 +473,6 @@ export function Call0_10() {
   const [picked, setPicked] = useState<string[]>(POSTS.filter((p) => p.on).map((p) => p.t));
   const toggle = (t: string) =>
     setPicked(picked.includes(t) ? picked.filter((x) => x !== t) : [...picked, t]);
-  /* Список в подписи — в порядке наряда, а не в порядке кликов. */
-  const names = POSTS.filter((p) => picked.includes(p.t)).map((p) => p.t.toLowerCase());
-  const cap =
-    picked.length === 0
-      ? 'Отметьте хотя бы одну позицию: безадресная заявка ничего не говорит коллегии'
-      : (picked.length === 1 ? 'Отмечена ' : 'Отмечены ') +
-        POS_WORDS[picked.length - 1] +
-        ': ' + names.join(picked.length === 2 ? ' и ' : ', ') +
-        ' · председатель ставит на одно из отмеченных';
 
   return (
     <WebApp
@@ -430,16 +482,12 @@ export function Call0_10() {
       sub="Чемпионат РК среди ветеранов · г. Тараз · 15–17 мая 2026"
       back={{ label: 'Турниры и заявки', to: 'Э0.9' }}
     >
-      <StatTiles
-        items={[
-          { v: 'до 28.04', k: 'Приём заявок', tone: 'a' },
-          { v: '10', k: 'Судей нужно в наряд' },
-          { v: '6', k: 'Заявок подано' },
-          { v: '3', k: 'Мои турниры за сезон' },
-        ]}
-      />
+      <StatTiles items={TILES0_10} />
 
-      <div className="grid grid-cols-2 items-start gap-4">
+      {/* Блоки — вертикальным потоком ✳ (30.08.2026): в две колонки список
+          позиций терял подписи, а «что уходит в коллегию» висело рядом узкой
+          карточкой. Панель сама держит отступ снизу. */}
+      <>
         {/* На какую позицию — единственное, что судья действительно выбирает ✳,
             и потому стоит первым. Безадресная заявка («готов судить») ничего не
             говорит ни ему, ни председателю: судья с национальной категорией
@@ -466,36 +514,21 @@ export function Call0_10() {
             ))}
           </div>
           <div className="border-t border-neutral-100 px-4 py-2.5 text-xs leading-relaxed text-neutral-500">
-            Место в наряде у человека одно: главным судьёй и судьёй стола одновременно не бывают.
-            ⚠ Ограничений по категории на позицию федерация не задала (TZ §4.4) — подсказку
-            показываем, но не запрещаем
+            {POSTS_FOOT}
           </div>
         </Panel>
 
-        {/* Данные о судье — на чтение: они уже есть в реестре, и правка здесь
-            означала бы вторую карточку. */}
         <Panel title="Что уходит в коллегию" extra={<Pill t="НЕ ПОДАНА" color="accent" />}>
-          <KV
-            items={[
-              ['Судья', 'Оралбай Ержан · первая категория'],
-              ['Регион учёта', 'Павлодар'],
-              ['Рейтинг R', '9,0 · №24 в сезоне'],
-              ['Турниров отсужено', '2 за сезон 2026'],
-            ]}
-          />
+          <KV items={CALL_KV} />
           <div className="mt-4">
-            <Bar>
-              Заявка — это «готов судить» на отмеченных местах: остальное коллегия видит в реестре
-              судей. Решение придёт уведомлением. ⚠ 3.1 — нужны ли к заявке документы, федерация
-              не ответила.
-            </Bar>
+            <Bar>{CALL_NOTE}</Bar>
           </div>
         </Panel>
-      </div>
+      </>
 
       {/* Подача последней: сначала выбирают позицию, потом жмут. */}
       <div className="flex items-center justify-between gap-4">
-        <span className="text-[12.5px] text-neutral-500">{cap}</span>
+        <span className="text-[12.5px] text-neutral-500">{pickedCap(picked)}</span>
         <Button variant="primary" isDisabled={picked.length === 0}>
           <Send size={15} /> Подать заявку на судейство
         </Button>
@@ -751,19 +784,31 @@ const RANK_CATS = ['Все категории', 'Национальная', 'П�
     колонкам; своя строка при любой сортировке остаётся подсвеченной ✳. */
 const RANK_SORTS = ['По месту', 'По баллу S1', 'По отсужено'];
 
-export function Rank0_12() {
-  const [q, setQ] = useState('');
-  const [cat, setCat] = useState(RANK_CATS[0]);
-  const [sort, setSort] = useState(RANK_SORTS[0]);
+/** Отбор и сортировка листа — одни на оба формата: список, который на телефоне
+    отвечает иначе, чем в вебе, был бы вторым списком. */
+const rankRows = (q: string, cat: string, sort: string): JudgeRank[] => {
   const t = q.trim().toLowerCase();
   const found = RANK.filter((j) => {
     if (cat === 'Национальная' && !j.cat.toLowerCase().includes('национальная')) return false;
     if (cat === 'Первая' && !j.cat.includes('Первая')) return false;
     return !t || j.nm.toLowerCase().includes(t) || j.region.toLowerCase().includes(t);
   });
-  const rows = [...found].sort((a, b) =>
+  return [...found].sort((a, b) =>
     sort === 'По баллу S1' ? b.s1 - a.s1 : sort === 'По отсужено' ? b.tours - a.tours : a.pl - b.pl,
   );
+};
+
+/** Пусто по фильтрам — тоже ответ; текст один на оба формата. */
+const RANK_EMPTY = {
+  title: 'Никого не нашлось',
+  text: 'Проверьте написание или снимите фильтр категории.',
+};
+
+export function Rank0_12() {
+  const [q, setQ] = useState('');
+  const [cat, setCat] = useState(RANK_CATS[0]);
+  const [sort, setSort] = useState(RANK_SORTS[0]);
+  const rows = rankRows(q, cat, sort);
   return (
     <WebApp
       role={R}
@@ -792,7 +837,7 @@ export function Rank0_12() {
       {rows.length ? (
         <JudgeRankList rows={rows} period="сезон 2026" />
       ) : (
-        <EmptyBox title="Никого не нашлось" text="Проверьте написание или снимите фильтр категории." />
+        <EmptyBox text={RANK_EMPTY.text} title={RANK_EMPTY.title} />
       )}
     </WebApp>
   );
@@ -920,6 +965,601 @@ const Card0_13States = () => (
   </States>
 );
 
+/* ── Второй формат: те же экраны на телефоне ────────────────────── */
+
+/* Полный адаптив ✳ (30.08.2026, решение владельца «все экраны в обоих»).
+
+   Судья без наряда — самый «телефонный» человек в системе: он не сидит за
+   столом организатора, а ходит по залам. Заявку он подаёт из зала или из
+   дороги, «за что мне столько» смотрит там же, где об этом зашёл разговор, а
+   лист судей открывает, чтобы сравнить себя с коллегой, который стоит рядом.
+   Кабинет заводился как контур вне турнира — второе устройство ему нужно не
+   меньше первого.
+
+   Содержание то же и из тех же данных (`ATTENTION0`, `TILES0_8`, `CALLS`,
+   `POSTS`, `TILES0_10`, `ME`, `MY_TOURS`, `RANK`, `CARD_ME`, `CARD_TOURS`,
+   `JUDGE_DOCS`), меняется раскладка:
+
+   - оболочка `WebApp` → `PhoneRoleApp`: нижние вкладки она строит из тех же
+     `R.nav`, что рисуют сайдбар;
+   - `SeasonTable` и таблицы рейтинга → строки `Rows`/`Row`: имя, главное число
+     справа, остальное подписью;
+   - ряд «поиск + два фильтра + кнопки» → друг под другом, длинные фильтры с
+     прокруткой вбок;
+   - `StatTiles` → рядами по две плитки;
+   - очередь дел (`Attention`) → счётчики столбиком, разбор строками.
+
+   Состояния экрана во втором формате не повторяем: они показаны один раз, на
+   полке `States` под основным макетом. */
+
+/** Полоса фильтра, которая не влезает в 392 px: прокручивается вбок внутри
+    своих полей, а не режется и не переносится. `w-max` нужен потому, что сам
+    сегмент умеет переносить кнопки — в узком родителе он бы завернулся вместо
+    того, чтобы поехать. ⚠ Дупликация с role11/role12: помощник у каждой роли
+    свой, пока не переехал в кит. */
+const Slide = ({ children }: { children: ReactNode }) => (
+  <div className="-mx-4 overflow-x-auto px-4">
+    <div className="w-max">{children}</div>
+  </div>
+);
+
+/** Плитки показателей на телефоне: рядами, а не одной строкой.
+
+    `StatTiles` кита ставит все плитки в одну строку (`grid-flow-col`), и на
+    392 px четыре штуки сжимаются до 73 px — «до 28.04» и «В РЕЕСТРЕ» в такую
+    ширину не помещаются. Разбивку задаёт вызывающий: длинному значению
+    («Первая категория») мало и половины ряда, и оно едет строкой целиком. */
+const TileRows = ({ rows }: { rows: ComponentProps<typeof StatTiles>['items'][] }) => (
+  <>
+    {rows.map((r) => (
+      <StatTiles key={r[0].k} items={r} />
+    ))}
+  </>
+);
+
+/** Сноска под таблицей в панели `flush`: правило, из-за которого числа такие.
+    ⚠ Дупликация с judge.tsx: помощник там не экспортирован. */
+const Foot = ({ children }: { children: ReactNode }) => (
+  <div className="border-t border-neutral-100 px-4 py-2.5 text-xs leading-relaxed text-neutral-500">
+    {children}
+  </div>
+);
+
+/* Числа рейтинга по-русски и зачёт по Положению (§6.3.1). ⚠ Дупликация с
+   judge.tsx: там эти помощники не экспортированы, а телефонные кадры рейтинга
+   собираются здесь — общие компоненты (`JudgeRating`, `JudgeRankList`,
+   `JudgeCard`) переписывать нельзя, они принадлежат всем судейским ролям. */
+const num = (n: number) => String(Math.round(n * 10) / 10).replace('.', ',');
+const sign = (n: number) => (n < 0 ? num(n) : '+' + num(n));
+const rsum = (j: { s1: number; s2: number; s3: number; s4: number }) => j.s1 + j.s2 + j.s3 + j.s4;
+const scored = (j: { s1: number; s2: number; s3: number; s4: number }) =>
+  [j.s1, j.s2, j.s3, j.s4].filter((x) => x > 0).length >= 3 && j.s1 > 0 && j.s2 > 0;
+
+/** Четыре плитки судьи — те же, что считают `JudgeRating` и `JudgeCard`:
+    балл с разбором формулы, место, третья своя у каждого экрана и зачёт.
+    Формула одна (TZ §7.2), и числа на двух кадрах обязаны сходиться. */
+const judgeTiles = (
+  me: JudgeMe,
+  third: { v: string; k: string },
+): ComponentProps<typeof StatTiles>['items'] => [
+  {
+    v: num(rsum(me)),
+    k: `R = S1 ${num(me.s1)} + S2 ${num(me.s2)} + S3 ${num(me.s3)} + S4 ${num(me.s4)}`,
+  },
+  { v: '№' + me.pl, k: 'Место в рейтинге сезона' },
+  third,
+  {
+    v: scored(me) ? 'ЕСТЬ' : 'НЕТ',
+    k: 'Зачёт: баллы в трёх категориях из четырёх, S1 и S2 обязательны',
+    tone: scored(me) ? 'g' : 'a',
+  },
+];
+
+/** История судейства на телефоне: та же таблица строками.
+
+    `TourTable` в judge.tsx — пять однородных колонок; на 328 px в них выходит
+    по 65 px, и не помещается ни название соревнования, ни роль в наряде.
+    Начисленный балл остаётся числом справа — ради него в таблицу и смотрят, —
+    а статус соревнования, даты, роль и коэффициент уходят подписью. */
+const TourRowsPhone = ({ tours, committee }: { tours: JudgeTour[]; committee?: boolean }) => (
+  <div className="divide-y divide-neutral-100">
+    {tours.map((t) => (
+      <Row
+        key={t.nm + t.when}
+        nm={t.nm}
+        sub={
+          `${t.when} · ${t.city} · ${t.kind}, базовый балл ${num(t.base)} · ${t.post} · ` +
+          (t.miss
+            ? 'неявка по заявке'
+            : t.k === 1
+              ? 'без коэффициента'
+              : 'коэффициент × ' + num(t.k)) +
+          /* Работа в коллегии — не S1: членство в ГСК идёт в S4 (§7.2), и в
+             карточке такие строки помечены отдельно. */
+          (committee && t.post === 'Член ГСК' ? ' · идёт в S4, а не в S1' : '')
+        }
+        val={sign(tourPoints(t))}
+      />
+    ))}
+  </div>
+);
+
+/** Сноска о коэффициенте — под обеими таблицами истории судейства. */
+const K_FOOT =
+  'Коэффициент 1,5 — за роль в бригаде (главный судья, заместитель, секретарь) и за выезд на ' +
+  'республиканские из другого региона; неявка по заявке — минус балл без коэффициента (TZ §7.2)';
+
+/* ── Э0.8 · Кабинет судьи на телефоне ───────────────────────────── */
+
+/** Очередь дел на телефоне: те же счётчики, но разбор — строками.
+
+    `Attention` кита раскладывает дело в три колонки (что · кто снимает ·
+    почему); на 392 px колонка выходит по 98 px, и в неё не помещается ни
+    название турнира, ни причина. Данные те же (`ATTENTION0`), меняется
+    раскладка: счётчик — строка-кнопка, дело — карточка, причина и что делать —
+    подписями под названием. Красное остаётся красным: горящий срок — то
+    единственное, ради чего очередь и заведена. */
+function AttnPhone({ items }: { items: AttnItem[] }) {
+  const [open, setOpen] = useState<string | null>(items[0].t);
+  const cur = items.find((a) => a.t === open);
+  return (
+    <div className="mb-4">
+      <div className="mb-1.5 text-[11px] font-semibold uppercase tracking-wider text-neutral-400">
+        Требует внимания
+      </div>
+      <div className="flex flex-col gap-1.5">
+        {items.map((a) => (
+          <button
+            key={a.t}
+            type="button"
+            aria-expanded={a.t === open}
+            onClick={() => setOpen(a.t === open ? null : a.t)}
+            className={
+              'flex items-center gap-2 rounded-lg border px-3 py-2 text-left text-[13px] font-medium ' +
+              (a.t === open
+                ? 'border-blue-200 bg-blue-50 text-blue-800'
+                : 'border-neutral-200 bg-white text-neutral-700')
+            }
+          >
+            <b className="tabular-nums">{a.n}</b>
+            <span className="min-w-0 flex-1 leading-snug">{a.t}</span>
+            <ChevronDown size={14} className={a.t === open ? 'rotate-180' : undefined} />
+          </button>
+        ))}
+      </div>
+      {cur && (
+        <div className="mt-2 divide-y divide-neutral-100 overflow-hidden rounded-xl border border-neutral-200 bg-white shadow-sm">
+          {cur.rows.map((r) => (
+            <button
+              key={r.nm}
+              type="button"
+              data-to={r.to}
+              data-row
+              className="block w-full px-4 py-2.5 text-left hover:bg-neutral-50"
+            >
+              <span className="block text-[13.5px] font-medium">{r.nm}</span>
+              <span className="block text-xs text-neutral-500">{r.mt}</span>
+              <span
+                className={
+                  'mt-1 block text-xs ' + (r.cls === 'bad' ? 'text-red-600' : 'text-neutral-600')
+                }
+              >
+                {r.why}
+              </span>
+              <span className="block text-xs font-medium text-blue-600">{r.who}</span>
+            </button>
+          ))}
+        </div>
+      )}
+      <div className="mt-1.5 text-[11px] text-neutral-400">
+        Строка ведёт туда, где дело снимается
+      </div>
+    </div>
+  );
+}
+
+const Cabinet0_8Phone = () => (
+  <PhoneRoleApp
+    role={R}
+    nav="Кабинет"
+    title="Кабинет судьи"
+    sub="Оралбай Ержан · первая категория · Павлодар · сезон 2026"
+  >
+    <AttnPhone items={ATTENTION0} />
+
+    <TileRows rows={[TILES0_8.slice(0, 2), TILES0_8.slice(2)]} />
+
+    {/* Подписи из правого края заголовка («наряд собирает председатель ГСК»)
+        переехали под название панели: в 328 px они отжимали само название. */}
+    <Panel title="Мои назначения" sub="наряд собирает председатель ГСК">
+      <EmptyBox text={ASSIGN_EMPTY.text} title={ASSIGN_EMPTY.title} />
+      <div className="mt-3 flex flex-col gap-2">
+        <span className="text-[12.5px] leading-snug text-neutral-500">{ASSIGN_HINT}</span>
+        <Button className="w-full" size="sm" variant="outline" data-to="Э0.9">
+          <Clock size={14} /> Турниры и заявки
+        </Button>
+      </div>
+    </Panel>
+
+    <Panel title="Моя карточка в реестре судей">
+      {/* Значок «категория подтверждена» — первой строкой тела, а не в правом
+          краю заголовка: рядом с названием на 328 px он не помещается. */}
+      <div className="mb-3">
+        <Pill t="КАТЕГОРИЯ ПОДТВЕРЖДЕНА" color="success" />
+      </div>
+      <KV items={REG_KV} />
+      <div className="mt-4">
+        <Bar>{REG_NOTE}</Bar>
+      </div>
+    </Panel>
+  </PhoneRoleApp>
+);
+
+/* ── Э0.9 · Турниры и заявки на телефоне ────────────────────────── */
+
+/** Сезон судьи строками: у `SeasonTable` четыре колонки, и «Срок или итог» —
+    та, ради которой в таблицу смотрят, — на 392 px сжимается до 70 px. В
+    строке срок стоит в подписи целиком, а состояние заявки остаётся значком:
+    список отвечает не «что с турниром», а «что со мной на этом турнире». */
+const Calls0_9Phone = () => (
+  <PhoneRoleApp
+    role={R}
+    nav="Турниры"
+    title="Турниры и заявки на судейство"
+    sub="Где открыт приём, что я подал и куда меня поставили"
+    back={{ label: 'Кабинет судьи', to: 'Э0.8' }}
+  >
+    <div className="mb-3 flex flex-col gap-1">
+      <Facts items={FACTS0_9} />
+      <span className="text-[12px] text-neutral-500">{CALLS_HINT}</span>
+    </div>
+    <Rows>
+      {[...CALLS]
+        .sort((a, b) => a.m - b.m)
+        .map((c) => (
+          <Row
+            key={c.nm}
+            nm={c.nm}
+            pill={stPill(c.st)}
+            sub={`${c.kind} · ${c.when} · ${c.city} · ${c.val}`}
+            to="Э0.10"
+          />
+        ))}
+    </Rows>
+    <div className="mt-4">
+      <Bar>{CALLS_NOTE}</Bar>
+    </div>
+  </PhoneRoleApp>
+);
+
+/* ── Э0.10 · Заявка на судейство на телефоне ────────────────────── */
+
+/** Отметки живут в состоянии и здесь: «Отметить/Убрать» обязаны переключать, а
+    подпись у кнопки подачи — пересчитываться. Это единственное, что судья на
+    экране решает, и нарисованным оно быть не должно ни на одном формате. */
+function Call0_10Phone() {
+  const [picked, setPicked] = useState<string[]>(POSTS.filter((p) => p.on).map((p) => p.t));
+  const toggle = (t: string) =>
+    setPicked(picked.includes(t) ? picked.filter((x) => x !== t) : [...picked, t]);
+
+  return (
+    <PhoneRoleApp
+      role={R}
+      nav="Турниры"
+      title="Заявка на судейство"
+      sub="Чемпионат РК среди ветеранов · г. Тараз · 15–17 мая 2026"
+      back={{ label: 'Турниры и заявки', to: 'Э0.9' }}
+    >
+      <TileRows rows={[TILES0_10.slice(0, 2), TILES0_10.slice(2)]} />
+
+      <Panel title="На какую позицию" sub="можно отметить несколько" flush>
+        <div className="divide-y divide-neutral-100">
+          {POSTS.map((p) => (
+            <Row
+              key={p.t}
+              nm={p.t}
+              sub={p.sub}
+              on={picked.includes(p.t)}
+              action={picked.includes(p.t) ? 'Убрать' : 'Отметить'}
+              onAction={() => toggle(p.t)}
+              pill={p.need}
+            />
+          ))}
+        </div>
+        <Foot>{POSTS_FOOT}</Foot>
+      </Panel>
+
+      <Panel title="Что уходит в коллегию">
+        {/* Значок состояния — первой строкой тела: в правом краю заголовка на
+            328 px он отжимает само название панели. */}
+        <div className="mb-3">
+          <Pill t="НЕ ПОДАНА" color="accent" />
+        </div>
+        <KV items={CALL_KV} />
+        <div className="mt-4">
+          <Bar>{CALL_NOTE}</Bar>
+        </div>
+      </Panel>
+
+      {/* Подача последней и во всю ширину: сначала выбирают позицию, потом
+          жмут, — а кнопка у нижнего края попадает под большой палец. */}
+      <div className="flex flex-col gap-2">
+        <span className="text-[12.5px] leading-snug text-neutral-500">{pickedCap(picked)}</span>
+        <Button className="w-full" variant="primary" isDisabled={picked.length === 0}>
+          <Send size={15} /> Подать заявку на судейство
+        </Button>
+      </div>
+    </PhoneRoleApp>
+  );
+}
+
+/* ── Э0.11 · Мой рейтинг судьи на телефоне ──────────────────────── */
+
+/** Тот же разбор балла, но строками. `JudgeRating` — общий фрагмент судейских
+    ролей, и телефонную раскладку в него не втащить: обе его таблицы рассчитаны
+    на ширину десктопа. Данные те же (`ME`, `MY_TOURS`, `JUDGE_DOCS`). */
+const Rating0_11Phone = () => {
+  const tiles = judgeTiles(ME, { v: ME.cat, k: 'Категория · регион учёта ' + ME.region });
+  return (
+    <PhoneRoleApp
+      role={R}
+      nav="Мой рейтинг"
+      title="Мой рейтинг судьи"
+      sub="Оралбай Ержан · первая категория · сезон 2026"
+    >
+      {/* Категория едет своей строкой: «Первая категория» крупным кеглем в
+          половину ряда не помещается. */}
+      <TileRows rows={[[tiles[0], tiles[1]], [tiles[2]], [tiles[3]]]} />
+
+      <Panel
+        title={'История судейства в турнирах · ' + MY_TOURS.length + ' за сезон'}
+        sub="S1 система начисляет сама, по явке"
+        flush
+      >
+        <TourRowsPhone tours={MY_TOURS} />
+        <Foot>{K_FOOT}</Foot>
+      </Panel>
+
+      <Panel
+        title="Награды и документы · S3 и S4"
+        sub="то, что судья приносит сам: система о них не знает, пока не увидит документ"
+        flush
+      >
+        <div className="divide-y divide-neutral-100">
+          {JUDGE_DOCS.map((d) => (
+            <Row
+              key={d.t}
+              nm={d.t}
+              sub={d.sub}
+              pill={{ t: d.st, cls: d.cls }}
+              action={d.send ? 'Подать' : undefined}
+            />
+          ))}
+        </div>
+        <Foot>
+          Баллы по документам подсказывает Положение, подтверждает председатель ГСК (Э5.6). Смена
+          категории — тоже документ: он обновляет её в профиле, и дальше S2 идёт автоматически
+        </Foot>
+      </Panel>
+
+      <Button className="w-full" variant="outline">
+        <FileUp size={15} /> Добавить документ
+      </Button>
+    </PhoneRoleApp>
+  );
+};
+
+/* ── Э0.12 · Рейтинг судей на телефоне ──────────────────────────── */
+
+/** Лист судей строками, а не таблицей: у `JudgeRankList` десять колонок, и на
+    392 px под слагаемое остаётся 25 px. Слагаемые при этом никуда не деваются —
+    они в подписи строки: вопрос «почему он выше меня» решается именно ими.
+    Балл R остаётся числом справа, своя строка помечена подсветкой. */
+function Rank0_12Phone() {
+  const [q, setQ] = useState('');
+  const [cat, setCat] = useState(RANK_CATS[0]);
+  const [sort, setSort] = useState(RANK_SORTS[0]);
+  const rows = rankRows(q, cat, sort);
+  const mine = rows.find((r) => r.me);
+  return (
+    <PhoneRoleApp
+      role={R}
+      nav="Рейтинг судей"
+      title="Рейтинг судей"
+      sub="Сезон 2026 · текущие начисления, рейтинг ещё не опубликован"
+    >
+      <div className="mb-3 flex flex-col gap-2">
+        <SearchInput
+          className="w-full"
+          value={q}
+          onChange={setQ}
+          placeholder="Фамилия или регион"
+        />
+        <Slide>
+          <FilterSeg items={RANK_CATS} active={cat} onPick={setCat} />
+        </Slide>
+        <Slide>
+          <FilterSeg items={RANK_SORTS} active={sort} onPick={setSort} />
+        </Slide>
+        <div className="flex gap-2">
+          <Button
+            className="flex-1"
+            size="sm"
+            variant="outline"
+            onPress={() => {
+              setQ('');
+              setCat(RANK_CATS[0]);
+              setSort(RANK_SORTS[0]);
+            }}
+          >
+            Моя строка
+          </Button>
+          <QuietAction to="Э0.11">Мой рейтинг</QuietAction>
+        </div>
+      </div>
+
+      {rows.length ? (
+        <>
+          <div className="mb-2">
+            <Facts
+              items={[
+                { k: 'судей в листе', v: String(rows.length) },
+                { k: 'моё место', v: mine ? '№' + mine.pl : '—' },
+                { k: 'мой балл R', v: mine ? num(rsum(mine)) : '—' },
+              ]}
+            />
+          </div>
+          <Panel
+            title="Рейтинг судей · сезон 2026"
+            sub="слагаемые в подписи строки: видно, чем один судья выше другого"
+            flush
+          >
+            <div className="divide-y divide-neutral-100">
+              {rows.map((j) => (
+                <Row
+                  key={j.nm}
+                  av={j.av}
+                  nm={`${j.pl} · ${j.nm}`}
+                  on={j.me}
+                  pill={{ t: scored(j) ? 'ЕСТЬ' : 'НЕТ', cls: scored(j) ? 'live' : 'bad' }}
+                  sub={
+                    `${j.wait ? 'категория ждёт подтверждения' : j.cat} · ${j.region} · ` +
+                    /* Судья без подтверждённой категории стоит в листе без S2:
+                       видно, что балла нет не потому, что не работал. */
+                    `S1 ${num(j.s1)} · S2 ${j.s2 === 0 ? '—' : num(j.s2)} · S3 ${num(j.s3)} · ` +
+                    `S4 ${num(j.s4)} · отсужено ${j.tours}`
+                  }
+                  to="Э0.13"
+                  val={num(rsum(j))}
+                />
+              ))}
+            </div>
+            <Foot>
+              Своя строка помечена при любой сортировке: судья приходит сюда сравнить себя, а не
+              читать список. Рейтинг судьи считается за год (TZ §7.2)
+            </Foot>
+          </Panel>
+        </>
+      ) : (
+        <EmptyBox text={RANK_EMPTY.text} title={RANK_EMPTY.title} />
+      )}
+    </PhoneRoleApp>
+  );
+}
+
+/* ── Э0.13 · Карточка судьи на телефоне ─────────────────────────── */
+
+/** Компактный кадр той же карточки. `JudgeCard` — общий компонент судейских
+    ролей и переписыванию не подлежит; здесь из тех же данных (`CARD_ME`,
+    `CARD_TOURS`) собрана та же карточка в четырёх блоках: показатели, кто это,
+    из чего собрался балл и история судейства. */
+const Card0_13Phone = () => {
+  /* «Отсужено» считает наряд, а не всякое участие: работа в коллегии идёт в S4
+     (§7.2) и в счётчик соревнований не попадает. ⚠ Вопрос 17.4. */
+  const duty = CARD_TOURS.filter((x) => x.post !== 'Член ГСК');
+  const tiles = judgeTiles(CARD_ME, {
+    v: String(duty.length),
+    k: 'Соревнований отсужено за сезон',
+  });
+  return (
+    <PhoneRoleApp
+      role={R}
+      nav="Рейтинг судей"
+      title="Карточка судьи"
+      sub="Ибраев Қанат · национальная категория · Алматы"
+      back={{ label: 'Рейтинг судей', to: 'Э0.12' }}
+    >
+      <TileRows rows={[tiles.slice(0, 2), tiles.slice(2)]} />
+
+      <Panel>
+        <div className="mb-3 flex items-center gap-3 border-b border-neutral-100 pb-3">
+          <Avatar size="lg">
+            {CARD_ME.av && <Avatar.Image alt={CARD_ME.nm} src={CARD_ME.av} />}
+            <Avatar.Fallback>{CARD_ME.nm.slice(0, 1)}</Avatar.Fallback>
+          </Avatar>
+          <div className="min-w-0 flex-1 leading-tight">
+            <h3 className="text-[13.5px] font-semibold">{CARD_ME.nm}</h3>
+            <p className="mt-0.5 text-xs text-neutral-500">
+              {CARD_ME.cat} · регион учёта {CARD_ME.region}
+            </p>
+          </div>
+          <Pill t="ТОЛЬКО ПРОСМОТР" color="warning" />
+        </div>
+        <KV
+          items={[
+            ['Категория', CARD_ME.cat],
+            ['Подтвердил', 'Судейская коллегия ФНТ РК · 05.01.2026'],
+            ['Регион учёта', CARD_ME.region],
+            ['В реестре с', '14.09.2021'],
+          ]}
+        />
+
+        {/* Судья бывает игроком и наоборот ✳ (комментарий федерации, 09.2026):
+            один человек, две роли, рейтинги раздельные. */}
+        <div className="mt-3">
+          <Rows>
+            <Row
+              to="Э14.7"
+              nm="Ещё и спортсмен"
+              sub="«Алатау», Алматы · рейтинг игрока 2180 — считается отдельно от судейского"
+              pill={{ t: 'ОДИН ЧЕЛОВЕК', cls: 'reg' }}
+              action="Профиль"
+            />
+          </Rows>
+        </div>
+
+        <div className="mt-4">
+          <Bar>
+            Карточку никто не заполняет руками: она собирается из турниров, нарядов и
+            подтверждённых документов и обновляется сама после каждого закрытого протокола. В
+            чужой карточке видно только рейтинговое: контакты, файлы документов и взносы закрыты.
+          </Bar>
+        </div>
+      </Panel>
+
+      <Panel title="Из чего собрался балл" sub="TZ §7.2">
+        <Rows>
+          <Row
+            nm="S1 · судейство соревнований"
+            sub="начисляет система по явке, после закрытия протокола"
+            val={num(CARD_ME.s1)}
+            pill={{ t: 'АВТО', cls: 'live' }}
+          />
+          <Row
+            nm="S2 · квалификационная категория"
+            sub="опорный балл, пока категория действует"
+            val={num(CARD_ME.s2)}
+            pill={{ t: 'АВТО', cls: 'live' }}
+          />
+          <Row
+            nm="S3 · повышение квалификации"
+            sub="семинары, курсы, аттестации — по документам"
+            val={num(CARD_ME.s3)}
+            pill={{ t: 'ДОКУМЕНТ', cls: 'reg' }}
+          />
+          <Row
+            nm="S4 · иная деятельность"
+            sub="награды, работа в коллегии — по документам"
+            val={num(CARD_ME.s4)}
+            pill={{ t: 'ДОКУМЕНТ', cls: 'reg' }}
+          />
+        </Rows>
+      </Panel>
+
+      <Panel
+        title={'История судейства · ' + CARD_TOURS.length + ' записи за сезон'}
+        sub="кем был на старте и почему такой коэффициент"
+        flush
+      >
+        <TourRowsPhone committee tours={CARD_TOURS} />
+        <Foot>
+          {K_FOOT}. ⚠ Что считать «отсудил соревнование» — вопрос 17.4
+        </Foot>
+      </Panel>
+    </PhoneRoleApp>
+  );
+};
+
 /* ── Борд контура: экраны маршрута подряд ───────────────────────── */
 
 /** Экраны контура по кодам: из этой карты собираются и борд, и карта флоу.
@@ -934,6 +1574,9 @@ export const SCREENS: ScreenMap = {
         <SignUpJudge0_7States />
       </>
     ),
+    /* Форма судьи нарисована в сквозных экранах (role00): второй такой же
+       кадр здесь был бы копией — берём тот же. */
+    alt: () => <SignUpJudge0_7Phone />,
     next: 'вход и первый экран',
   },
   'Э0.8': {
@@ -944,6 +1587,7 @@ export const SCREENS: ScreenMap = {
         <Cabinet0_8States />
       </>
     ),
+    alt: () => <Cabinet0_8Phone />,
     next: 'турниры с открытым приёмом',
   },
   'Э0.9': {
@@ -954,6 +1598,7 @@ export const SCREENS: ScreenMap = {
         <Calls0_9States />
       </>
     ),
+    alt: () => <Calls0_9Phone />,
     next: 'строка моей заявки',
   },
   'Э0.10': {
@@ -964,6 +1609,7 @@ export const SCREENS: ScreenMap = {
         <Call0_10States />
       </>
     ),
+    alt: () => <Call0_10Phone />,
     next: 'пункт «Мой рейтинг»',
   },
   'Э0.11': {
@@ -974,6 +1620,7 @@ export const SCREENS: ScreenMap = {
         <Rating0_11States />
       </>
     ),
+    alt: () => <Rating0_11Phone />,
     next: 'весь лист судей',
   },
   'Э0.12': {
@@ -984,6 +1631,7 @@ export const SCREENS: ScreenMap = {
         <Rank0_12States />
       </>
     ),
+    alt: () => <Rank0_12Phone />,
     next: 'строка судьи',
   },
   'Э0.13': {
@@ -994,6 +1642,7 @@ export const SCREENS: ScreenMap = {
         <Card0_13States />
       </>
     ),
+    alt: () => <Card0_13Phone />,
   },
 };
 

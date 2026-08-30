@@ -14,18 +14,19 @@ import { useState, type ReactNode } from 'react';
 import {
   BarChart3, Bell, CalendarDays, ClipboardList, Download, LayoutDashboard, Printer, Users,
 } from 'lucide-react';
+import { Button } from '@heroui/react';
 import {
-  A, AW, Bar, DataTable, EmptyBox, FilterSeg, Panel, Pill, Row, Rows, ScreenScope, SearchInput,
-  StatTiles, WebApp, type RoleUI,
+  A, AW, Bar, DataTable, EmptyBox, FilterSeg, Panel, PhoneRoleApp, Pill, Row, Rows, ScreenScope,
+  SearchInput, StatTiles, WebApp, type RoleUI,
 } from '../kit/hero/app';
 /* Из старого слоя остаются только мета-компоненты борда: колонки, стрелки и
    полки состояний. Сами экраны собраны новым слоем. */
 import { Board, States, Shot, type ScreenMap } from './shell';
-import { Login0_1 } from './role00';
+import { Login0_1, LoginPhone0_1 } from './role00';
 /* Те же данные и строки, что у администратора Федерации (Э1.1, Э1.2) — здесь
    на чтение. Раньше список лежал здесь копией и разъехался с оригиналом: у
    ролей 3 и 4 «ближайшие старты» жили своей жизнью. Берём из role01. */
-import { Attention, Btn, KPI, TodayRows, TourRow, UPCOMING } from './role01';
+import { Attention, Btn, KPI, MONTHS_GEN, TodayRows, TourRow, UPCOMING } from './role01';
 
 /* ── Роль: сайдбар и подпись профиля ─────────────────────────────── */
 
@@ -71,6 +72,68 @@ const Frag = ({ w = 560, children }: { w?: number; children: ReactNode }) => (
   </ScreenScope>
 );
 
+/* ── Телефонный кадр: что меняется на 392 px ────────────────────── */
+
+/* Полный адаптив ✳ (решение владельца, 30.08.2026): у каждого экрана роли есть
+   второй формат. Наблюдатель — тот, кто смотрит на сезон не со своего рабочего
+   места: из зала, из машины, с трибуны, — и телефон ему нужен ровно за тем же,
+   зачем ноутбук. Права на узком экране те же: **ни одной кнопки, меняющей
+   данные**, — недоступное действие не появляется и здесь.
+
+   Обёртки ниже — переопределения кита под узкий кадр; сами компоненты кита
+   остаются как есть.
+   ⚠ Те же обёртки живут в role01, role05, role06 и role07 — когда телефонные
+   кадры будут у всех ролей, им место в `kit/hero/app`. */
+
+/** Плитки-счётчики на телефоне: тот же `StatTiles`, но в два столбца — четыре
+    плитки в один ряд на 392 px не встают. */
+const PhoneTiles = ({ children }: { children: ReactNode }) => (
+  <div className="[&>div]:grid-flow-row [&>div]:grid-cols-2 [&>div]:gap-2">{children}</div>
+);
+
+/** Полоса переключателей на телефоне: не переносится рядами, а уезжает вбок. */
+const Strip = ({ children }: { children: ReactNode }) => (
+  <div className="-mx-4 mb-3 overflow-x-auto px-4 **:data-seg:flex-nowrap">{children}</div>
+);
+
+/** Очередь «Требует внимания» на телефоне ✳: компонент и данные те же — они
+    живут у администратора Федерации (`role01`), — но три колонки строки встают
+    друг под другом: «что», «кто решает» и «почему» рядом в 392 px не читаются.
+    Правится только раскладка строки, поэтому обёртка, а не второй список. */
+const PhoneQueue = ({ children }: { children: ReactNode }) => (
+  <div className="**:data-row:grid-cols-1 **:data-row:gap-1 [&_[data-row]>span]:text-left">
+    {children}
+  </div>
+);
+
+/** Строка календаря на телефоне ✳: у десктопной (`TourRow` из role01) в ряд
+    стоят название, судья, заявки и состояние — в 392 px это четыре обрезка.
+    Данные те же (`UPCOMING`), но судья и заявки уходят второй строкой. */
+const TourRowPhone = ({ t }: { t: (typeof UPCOMING)[number] }) => (
+  <div data-to="Э1.3" data-row className="cursor-pointer px-4 py-2.5 leading-tight hover:bg-neutral-50">
+    <div className="flex items-start justify-between gap-2">
+      <span className="min-w-0">
+        <span className="block text-[13.5px] font-medium">{t.nm}</span>
+        <span className="block text-xs text-neutral-500">
+          {t.cat} · {t.city} · {t.d} {MONTHS_GEN[t.m]}
+        </span>
+      </span>
+      <span className="shrink-0"><Pill t={t.st} color={PC[t.cls]} /></span>
+    </div>
+    <div className="mt-1 flex items-baseline justify-between gap-2 text-xs">
+      {/* Судья не назначен — то же предупреждение, что в колонке на десктопе. */}
+      <span className={t.judge ? 'text-neutral-500' : 'font-medium text-amber-700'}>
+        {t.judge ? `судья ${t.judge}` : '— судьи нет'}
+      </span>
+      <span className="tabular-nums text-neutral-500">
+        {t.teams
+          ? `команд: муж ${t.teams.men[0]} · жен ${t.teams.women[0]}`
+          : `заявок ${t.apps}`}
+      </span>
+    </div>
+  </div>
+);
+
 /* ── Э3.1 · Обзорная панель ────────────────────────────────────── */
 
 /** Обзорная панель: те же зоны, что на Панели Федерации (Э1.1), но без кнопок
@@ -106,9 +169,11 @@ export function Dash3_1(_props: { variant?: 'desktop' | 'land' } = {}) {
         }
       />
 
-      {/* Тот же порядок панелей, что на Панели Федерации: «Сегодня идут» — в
-          широкой колонке, иначе строки переносятся и панель растёт вдвое. */}
-      <div className="grid grid-cols-[1.35fr_1fr] items-start gap-4">
+      {/* Блоки идут один под другим во всю ширину ✳ (30.08.2026): в две колонки
+          строки турнира переносились и обе панели росли вдвое. Порядок тот же,
+          что на Панели Федерации. Панель сама держит отступ снизу — обёртка не
+          нужна. */}
+      <>
         {/* TodayRows сам рисует рамку списка, поэтому панель с отступом,
             а не flush — иначе рамка в рамке. */}
         <Panel title="Сегодня идут">
@@ -123,10 +188,51 @@ export function Dash3_1(_props: { variant?: 'desktop' | 'land' } = {}) {
             <TourRow key={t.nm} t={t} />
           ))}
         </Panel>
-      </div>
+      </>
     </WebApp>
   );
 }
+
+/** Обзорная панель на телефоне: те же зоны и тот же порядок — счётчики сезона,
+    очередь и списки. Кнопок, меняющих данные, нет и здесь: единственная —
+    выгрузка сводки, и она стоит под очередью, а не в её ряду. */
+const Dash3_1Phone = () => (
+  <PhoneRoleApp
+    role={R0304}
+    nav="Обзор"
+    title="Обзорная панель"
+    sub="Сезон 2026 · только чтение"
+  >
+    {/* Плашка-правило вместо `hint` оболочки: у телефонной её нет, а само
+        правило от формата не зависит. */}
+    <Bar>
+      Кнопки «Завести соревнование» здесь нет: недоступное действие не показывается вовсе — не
+      серой кнопкой, а её отсутствием ✳.
+    </Bar>
+
+    <PhoneTiles><StatTiles items={KPI} to="Э3.2" /></PhoneTiles>
+
+    <PhoneQueue><Attention act={false} max={2} /></PhoneQueue>
+    <div className="mb-4">
+      <Btn>
+        <Download size={14} /> Выгрузить сводку
+      </Btn>
+    </div>
+
+    <Panel title="Сегодня идут">
+      <TodayRows act={false} one />
+    </Panel>
+    <Panel
+      title="Ближайшие старты"
+      extra={<span className="text-xs text-neutral-500">ещё {UPCOMING.length - 1} в календаре</span>}
+      flush
+    >
+      {UPCOMING.slice(0, 1).map((t) => (
+        <TourRowPhone key={t.nm} t={t} />
+      ))}
+    </Panel>
+  </PhoneRoleApp>
+);
 
 /* ── Э3.2 · Модули в режиме чтения ─────────────────────────────── */
 
@@ -150,18 +256,32 @@ const MODULES3_2: { nm: string; src: string; what: string }[] = [
   { nm: 'Заключения инспекции', src: 'Э10.4', what: 'готовые заключения' },
 ];
 
+/** Взносы на чтение — три строки из Э2.1. Вынесены из экрана ✳: телефонный
+    кадр показывает те же записи, а вторая копия с ними бы разъехалась. */
+const FEES3_2: { av: string; nm: string; sub: string; pill: { t: string; cls: Cls } }[] = [
+  { av: A(32), nm: 'Смагулов Алан', sub: 'Алматы · «Алатау»', pill: { t: 'ОПЛАЧЕН', cls: 'live' } },
+  { av: A(22), nm: 'Жумабеков Расул', sub: 'Караганда · «Шахтёр»', pill: { t: 'НЕ ОПЛАЧЕН', cls: 'wait' } },
+  { av: AW(21), nm: 'Тлеуова Аружан', sub: 'Шымкент · «Достык»', pill: { t: 'НЕ ОПЛАЧЕН', cls: 'wait' } },
+];
+
+/** Отбор строк календаря: категория плюс поиск. Общий на оба формата ✳ — по
+    одному и тому же фильтру телефон и ноутбук обязаны показывать одно. */
+const readPick = (cat: string, q: string) => {
+  const t = q.trim().toLowerCase();
+  return UPCOMING.filter(
+    (r) =>
+      (cat === CATS3_2[0] || r.cat === cat) &&
+      (!t || r.nm.toLowerCase().includes(t) || r.city.toLowerCase().includes(t)),
+  );
+};
+
 /** Модули на чтение — на примере календаря и взносов. Фильтр и поиск рабочие:
     у роли нет ни одной кнопки, меняющей данные, но отбирать строки она
     обязана уметь — иначе «полный доступ» превращается в листание. */
 export function Read3_2() {
   const [cat, setCat] = useState(CATS3_2[0]);
   const [q, setQ] = useState('');
-  const t = q.trim().toLowerCase();
-  const tours = UPCOMING.filter(
-    (r) =>
-      (cat === CATS3_2[0] || r.cat === cat) &&
-      (!t || r.nm.toLowerCase().includes(t) || r.city.toLowerCase().includes(t)),
-  );
+  const tours = readPick(cat, q);
   return (
     <WebApp
       role={R0304}
@@ -170,17 +290,11 @@ export function Read3_2() {
       sub="Экран-источник Э1.2 · все категории и состояния видны"
       hint="Ни одной кнопки, меняющей данные: право на чтение и право на запись проверяются раздельно (ARCHITECTURE.md). Доступны фильтр, поиск, открытие карточек и выгрузка с печатью ✳."
     >
-      {/* Счётчики — про сам режим чтения. Ноль кнопок записи — зелёный:
-          это норма роли, а не недостача (тона `b` в новом слое нет смысла —
-          он тревожный, а «11 модулей» не тревога). */}
-      <StatTiles
-        items={[
-          { v: '11', k: 'Модулей на чтение' },
-          { v: '0', k: 'Кнопок, меняющих данные', tone: 'g' },
-          { v: 'все', k: 'Категории и состояния видны' },
-          { v: '32', k: 'Соревнования сезона' },
-        ]}
-      />
+      {/* Ряда счётчиков про сам режим чтения здесь больше нет ✳ (30.08.2026):
+          главное содержимое экрана — списки, и он начинается со списков, а не
+          с витрины над ними. То, что счётчики проговаривали («11 модулей»,
+          «0 кнопок, меняющих данные»), сказано подсказкой экрана и описью
+          доступа внизу. */}
 
       {/* Полоса действий наблюдателя целиком: отбор строк и вынос на бумагу.
           Кнопок решений здесь не было и нет. */}
@@ -197,7 +311,10 @@ export function Read3_2() {
         </div>
       </div>
 
-      <div className="grid grid-cols-[1.4fr_1fr] items-start gap-4">
+      {/* Блоки идут один под другим во всю ширину ✳ (30.08.2026): рядом два
+          списка спорили, какой из них главный, а строки турниров переносились.
+          Панель сама держит отступ снизу — обёртка не нужна. */}
+      <>
         <Panel
           title="Календарь сезона · экран-источник Э1.2"
           extra={<span className="text-xs text-neutral-500">{tours.length} по фильтру</span>}
@@ -218,15 +335,15 @@ export function Read3_2() {
 
         <Panel title="Взносы · экран-источник Э2.1" flush>
           <div className="divide-y divide-neutral-100">
-            <Row av={A(32)} nm="Смагулов Алан" sub="Алматы · «Алатау»" pill={{ t: 'ОПЛАЧЕН', cls: 'live' }} />
-            <Row av={A(22)} nm="Жумабеков Расул" sub="Караганда · «Шахтёр»" pill={{ t: 'НЕ ОПЛАЧЕН', cls: 'wait' }} />
-            <Row av={AW(21)} nm="Тлеуова Аружан" sub="Шымкент · «Достык»" pill={{ t: 'НЕ ОПЛАЧЕН', cls: 'wait' }} />
+            {FEES3_2.map((f) => (
+              <Row key={f.nm} av={f.av} nm={f.nm} sub={f.sub} pill={f.pill} />
+            ))}
           </div>
           <div className="px-4 pb-3 pt-2 text-[11px] text-neutral-400">
             Отметки оплаты нет — её ставит экономист (Э2.1)
           </div>
         </Panel>
-      </div>
+      </>
 
       {/* Весь объём доступа одним списком: какие модули открыты и что в них
           видно (матрица ROLES.md). Строки никуда не ведут — переходов у роли
@@ -252,6 +369,90 @@ export function Read3_2() {
     </WebApp>
   );
 }
+
+/** Модули на чтение на телефоне: тот же отбор и те же списки. Полоса действий
+    наблюдателя встаёт в два ряда — фильтр отдельной строкой, поиск с выгрузкой
+    и печатью под ним; кнопок решений в ней по-прежнему нет.
+
+    Опись доступа (11 модулей) на телефоне идёт строками, а не таблицей из трёх
+    колонок: «что видно» в третьей колонке в 392 px превращалось бы в столбик
+    из отдельных слов. */
+const Read3_2Phone = () => {
+  const [cat, setCat] = useState(CATS3_2[0]);
+  const [q, setQ] = useState('');
+  const tours = readPick(cat, q);
+  return (
+    <PhoneRoleApp
+      role={R0304}
+      nav="Календарь"
+      title="Календарь сезона · чтение"
+      sub="Экран-источник Э1.2 · все категории и состояния видны"
+    >
+      <Bar>
+        Ни одной кнопки, меняющей данные: право на чтение и право на запись проверяются раздельно
+        (ARCHITECTURE.md). Доступны фильтр, поиск, открытие карточек и выгрузка с печатью ✳.
+      </Bar>
+
+      <Strip><FilterSeg items={CATS3_2} active={cat} onPick={setCat} /></Strip>
+      <div className="mb-4 flex items-center gap-2">
+        <SearchInput value={q} onChange={setQ} placeholder="Название или город" className="min-w-0 flex-1" />
+        <Btn>
+          <Download size={14} /> Выгрузить
+        </Btn>
+        <Btn>
+          <Printer size={14} /> Печать
+        </Btn>
+      </div>
+
+      <Panel
+        title="Календарь сезона · экран-источник Э1.2"
+        extra={<span className="text-xs text-neutral-500">{tours.length} по фильтру</span>}
+        flush
+      >
+        {tours.length ? (
+          <div className="divide-y divide-neutral-100">
+            {tours.slice(0, 4).map((r) => (
+              <TourRowPhone key={r.nm} t={r} />
+            ))}
+          </div>
+        ) : (
+          <div className="px-4 py-4 text-[12.5px] text-neutral-500">
+            По запросу «{q}» ничего нет — проверьте написание или снимите фильтр.
+          </div>
+        )}
+      </Panel>
+
+      <Panel title="Взносы · экран-источник Э2.1" flush>
+        <div className="divide-y divide-neutral-100">
+          {FEES3_2.map((f) => (
+            <Row key={f.nm} av={f.av} nm={f.nm} sub={f.sub} pill={f.pill} />
+          ))}
+        </div>
+        <div className="px-4 pb-3 pt-2 text-[11px] text-neutral-400">
+          Отметки оплаты нет — её ставит экономист (Э2.1)
+        </div>
+      </Panel>
+
+      <Panel
+        title="Доступно на чтение · 11 модулей"
+        sub="Состав каждого экрана описан у пишущей роли — здесь только чтение"
+        flush
+      >
+        <div className="divide-y divide-neutral-100">
+          {MODULES3_2.map((m) => (
+            <div key={m.nm} className="px-4 py-2.5 leading-tight">
+              <div className="flex items-baseline justify-between gap-2">
+                <span className="text-[13px] font-medium">{m.nm}</span>
+                <span className="shrink-0 text-xs tabular-nums text-neutral-500">{m.src}</span>
+              </div>
+              <div className="mt-0.5 text-xs text-neutral-500">{m.what}</div>
+            </div>
+          ))}
+        </div>
+      </Panel>
+    </PhoneRoleApp>
+  );
+};
 
 const Read3_2States = () => (
   <States>
@@ -312,6 +513,14 @@ const SUBS: Sub[] = [
   { nm: 'ОРТ «Шымкент Open»', st: 'ЧЕРНОВИК', cls: 'done', next: 'дата не назначена', on: false },
 ];
 
+/** Что даёт подписка — три вида уведомлений. Вынесены из экрана: список один
+    на оба формата. */
+const NOTES3_3 = [
+  { nm: 'Смена состояния', sub: 'публикация, начало игр, протокол' },
+  { nm: 'Итоговый протокол', sub: 'как только протокол закрыт' },
+  { nm: 'Отмена или перенос', sub: 'с причиной и новой датой' },
+];
+
 /** Подписки ✳ — наш экран, в документе федерации его нет. «Отписаться» —
     единственная кнопка роли, и она рабочая: меняет только собственные
     уведомления, а не турнир. */
@@ -336,7 +545,10 @@ export function Subs3_3() {
         </Btn>
       </div>
 
-      <div className="grid grid-cols-[1.35fr_1fr] items-start gap-4">
+      {/* Блоки идут один под другим во всю ширину ✳ (30.08.2026): названия
+          соревнований в узкой колонке переносились, а «какие уведомления
+          приходят» — приписка к списку, а не вторая колонка. */}
+      <>
         <Panel title="Отслеживаемые соревнования" flush>
           <div className="divide-y divide-neutral-100">
             {SUBS.map((s) => (
@@ -358,18 +570,73 @@ export function Subs3_3() {
           flush
         >
           <div className="divide-y divide-neutral-100">
-            <Row nm="Смена состояния" sub="публикация, начало игр, протокол" pill={{ t: 'ПРИХОДИТ', cls: 'live' }} />
-            <Row nm="Итоговый протокол" sub="как только протокол закрыт" pill={{ t: 'ПРИХОДИТ', cls: 'live' }} />
-            <Row nm="Отмена или перенос" sub="с причиной и новой датой" pill={{ t: 'ПРИХОДИТ', cls: 'live' }} />
+            {NOTES3_3.map((n2) => (
+              <Row key={n2.nm} nm={n2.nm} sub={n2.sub} pill={{ t: 'ПРИХОДИТ', cls: 'live' }} />
+            ))}
           </div>
           <div className="flex items-center gap-1.5 border-t border-neutral-100 px-4 py-2.5 text-[12.5px] text-neutral-500">
             <Bell size={13} /> Уведомления — всё, что даёт подписка
           </div>
         </Panel>
-      </div>
+      </>
     </WebApp>
   );
 }
+
+/** Подписки на телефоне: тот же список и та же единственная кнопка роли —
+    «Отписаться». Экран собран строками и на большом экране, поэтому меняется
+    только полоса над списком: счётчик и выгрузка встают друг под другом. */
+const Subs3_3Phone = () => {
+  const [on, setOn] = useState<Record<string, boolean>>(
+    Object.fromEntries(SUBS.map((s) => [s.nm, s.on])),
+  );
+  const n = Object.values(on).filter(Boolean).length;
+  return (
+    <PhoneRoleApp role={R0304} nav="Подписки" title="Мои подписки" sub="4 соревнования из 32">
+      <div className="mb-4 flex flex-col gap-2">
+        <span className="text-[12.5px] text-neutral-500">
+          Отслеживается {n} из 32 соревнований сезона
+        </span>
+        <div>
+          <Btn>
+            <Download size={14} /> Выгрузить список
+          </Btn>
+        </div>
+      </div>
+
+      <Panel title="Отслеживаемые соревнования" flush>
+        <div className="divide-y divide-neutral-100">
+          {SUBS.map((s) => (
+            /* Название, состояние и кнопка в 392 px в один ряд не встают:
+               значок и «Отписаться» уходят под название вместе с ближайшим
+               событием — тем, ради чего подписку и держат. */
+            <div key={s.nm} className="px-4 py-2.5 leading-tight">
+              <div className="text-[13.5px] font-medium">{s.nm}</div>
+              <div className="mt-0.5 text-xs text-neutral-500">ближайшее событие: {s.next}</div>
+              <div className="mt-2 flex items-center justify-between gap-2">
+                <Pill t={s.st} color={PC[s.cls]} />
+                <Button size="sm" variant="outline" onPress={() => setOn({ ...on, [s.nm]: !on[s.nm] })}>
+                  {on[s.nm] ? 'Отписаться' : 'Подписаться'}
+                </Button>
+              </div>
+            </div>
+          ))}
+        </div>
+      </Panel>
+
+      <Panel title="Уведомления · Кубок РК 2026" extra={<Pill t="ПОДПИСКА ВКЛ" color={PC.live} />} flush>
+        <div className="divide-y divide-neutral-100">
+          {NOTES3_3.map((n2) => (
+            <Row key={n2.nm} nm={n2.nm} sub={n2.sub} pill={{ t: 'ПРИХОДИТ', cls: 'live' }} />
+          ))}
+        </div>
+        <div className="flex items-center gap-1.5 border-t border-neutral-100 px-4 py-2.5 text-[12.5px] text-neutral-500">
+          <Bell size={13} /> Уведомления — всё, что даёт подписка
+        </div>
+      </Panel>
+    </PhoneRoleApp>
+  );
+};
 
 const Subs3_3States = () => (
   <States>
@@ -407,11 +674,15 @@ export const SCREENS: ScreenMap = {
   'Э0.1': {
     cap: 'Вход',
     view: () => <Login0_1 />,
+    /* Вход в приложении — тот же сценарий ИИН + код; кадр берётся из сквозных
+       экранов (role00), а не рисуется вторым. */
+    alt: () => <LoginPhone0_1 />,
     next: 'первый экран роли',
   },
   'Э3.1': {
     cap: 'Обзорная панель',
     view: () => <Dash3_1 />,
+    alt: () => <Dash3_1Phone />,
     next: 'пункт меню модуля',
   },
   'Э3.2': {
@@ -422,6 +693,7 @@ export const SCREENS: ScreenMap = {
         <Read3_2States />
       </>
     ),
+    alt: () => <Read3_2Phone />,
     next: '«Подписаться» в карточке',
   },
   'Э3.3': {
@@ -432,6 +704,7 @@ export const SCREENS: ScreenMap = {
         <Subs3_3States />
       </>
     ),
+    alt: () => <Subs3_3Phone />,
   },
 };
 

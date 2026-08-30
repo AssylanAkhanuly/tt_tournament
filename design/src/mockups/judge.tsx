@@ -16,7 +16,7 @@
 import type { ReactNode } from 'react';
 import { FileUp } from 'lucide-react';
 import { Avatar, Button } from '@heroui/react';
-import { Bar, KV, Panel, Pill, Row, Rows, StatTiles } from '../kit/hero/app';
+import { Bar, Facts, KV, Panel, Pill, Row, Rows, StatTiles } from '../kit/hero/app';
 
 /* ── Кто перед нами ─────────────────────────────────────────────── */
 
@@ -294,23 +294,20 @@ export function JudgeRankList({ rows, period }: { rows: JudgeRank[]; period: str
   const grid = '44px minmax(0,1.9fr) minmax(0,1fr) 44px 44px 44px 44px 52px 72px 80px';
   return (
     <>
-      <StatTiles
-        items={[
-          { v: String(rows.length), k: 'Судей в листе · ' + period },
-          /* Своё место не красим: в новом слое цвет плитки — это тревога
-             (amber/red), а «моё место» — не тревога; строка в листе и так
-             подсвечена. */
-          { v: mine ? '№' + mine.pl : '—', k: 'Моё место' },
-          { v: mine ? num(rsum(mine)) : '—', k: 'Мой балл R' },
-          {
-            /* Одно слово ✳: «НЕ ОПУБЛИКОВАН» в плитке ломалось на две строки и
-               перекашивало полосу — состояние договаривает подпись. */
-            v: 'ТЕКУЩИЙ',
-            k: 'Рейтинг за период не опубликован: апелляция откроется после публикации',
-            tone: 'a',
-          },
-        ]}
-      />
+      {/* Над листом — короткая строка фактов, а не полоса плиток ✳
+          (30.08.2026): главное на экране — сам список, и витрина над ним
+          отодвигала его вниз на целый экран. Своё место и свой балл остались
+          строкой; что рейтинг за период ещё не опубликован, сказано
+          подзаголовком экрана, а апелляция приходит уведомлением. */}
+      <div className="mb-3">
+        <Facts
+          items={[
+            { k: 'судей в листе', v: String(rows.length) },
+            { k: 'моё место', v: mine ? '№' + mine.pl : '—' },
+            { k: 'мой балл R', v: mine ? num(rsum(mine)) : '—' },
+          ]}
+        />
+      </div>
 
       <Panel
         title={'Рейтинг судей · ' + period}
@@ -424,7 +421,10 @@ export function JudgeCard({ me, tours, own, player }: {
         ]}
       />
 
-      <div className="grid grid-cols-2 items-start gap-4">
+      {/* Паспортная часть и разбор балла — блок под блоком ✳ (30.08.2026):
+          в две колонки «Из чего собрался балл» жался рядом с карточкой, а
+          строки слагаемых просят ширины. Панель сама держит отступ снизу. */}
+      <>
         <Panel>
           {/* Шапка начинается с фото — как строка листа (Э0.12): зона «Шапка
               карточки» в данных роли открывается словами «Фото, фамилия…».
@@ -488,7 +488,7 @@ export function JudgeCard({ me, tours, own, player }: {
             <Row nm="S4 · иная деятельность" sub="награды, работа в коллегии — по документам" val={num(me.s4)} pill={{ t: 'ДОКУМЕНТ', cls: 'reg' }} />
           </Rows>
         </Panel>
-      </div>
+      </>
 
       <Panel
         title={'История судейства · ' + tours.length + ' записи за сезон'}

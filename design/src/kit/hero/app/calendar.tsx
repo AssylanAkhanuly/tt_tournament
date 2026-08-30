@@ -20,7 +20,7 @@
    у всех. «Сегодня» задаётся снаружи (`today`) — макет не должен меняться от
    того, какой сегодня день у смотрящего. */
 
-import { useState, type ReactNode } from 'react';
+import { Fragment, useState, type ReactNode } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 
 /* ── Словарь и арифметика дат ───────────────────────────────────── */
@@ -614,6 +614,133 @@ export function Calendar({
           )}
         </div>
       </div>
+    </div>
+  );
+}
+
+/* ── Лента событий: дата слева, карточка справа ─────────────────── */
+
+/** Событие ленты. `till` — многодневное: в дате показывается период. */
+export type TimelineItem = {
+  id: string;
+  /** ГГГГ-ММ-ДД */
+  from: string;
+  till?: string;
+  nm: string;
+  sub?: string;
+  tone?: CalTone;
+  /** Правый край карточки: значок состояния, срок, кнопка. */
+  right?: ReactNode;
+  /** Что под названием: условия допуска, счёт, состав. */
+  children?: ReactNode;
+  to?: string;
+};
+
+const RAIL: Record<CalTone, string> = {
+  accent: 'bg-blue-500',
+  success: 'bg-green-500',
+  warning: 'bg-amber-500',
+  danger: 'bg-red-500',
+  neutral: 'bg-neutral-400',
+};
+
+/** Лента событий ✳ (30.08.2026): слева дата, справа карточка, даты нанизаны
+    на общую линию.
+
+    Зачем отдельно от `MonthGrid`. Сетка месяца отвечает на «где в календаре
+    дыра и что на что накладывается», но подпись в клетке короткая, и по ней
+    не решить, идти ли на турнир. Лента отвечает на другой вопрос — «что
+    дальше по порядку»: дата вынесена в свою колонку, а справа полноценная
+    карточка с условиями и действием. На телефоне это единственный читаемый
+    вид календаря: сетка в 392 px не разворачивается.
+
+    Линия рисуется отрезками в самой строке, а не абсолютной полосой на весь
+    список: у первой строки верхний отрезок и у последней нижний срезаны, и
+    лента не начинается и не кончается «оборванным проводом». */
+export function EventTimeline({
+  items,
+  today,
+  months = true,
+}: {
+  items: TimelineItem[];
+  today?: string;
+  /** Разделитель месяца между строками: в сезонном списке иначе теряется, где
+      кончился март. */
+  months?: boolean;
+}) {
+  let lastMonth = '';
+  return (
+    <div className="grid grid-cols-[56px_18px_1fr] gap-x-2">
+      {items.map((it, i) => {
+        const d = parse(it.from);
+        const monthKey = `${d.getUTCFullYear()}-${d.getUTCMonth()}`;
+        const newMonth = months && monthKey !== lastMonth;
+        lastMonth = monthKey;
+        const tone = it.tone ?? 'accent';
+        const isToday = sameDay(it.from, today);
+        return (
+          <Fragment key={it.id}>
+            {newMonth && (
+              <div className="col-span-3 pb-1.5 pt-2 text-[11px] font-semibold uppercase tracking-wider text-neutral-400">
+                {MONTHS[d.getUTCMonth()]} {d.getUTCFullYear()}
+              </div>
+            )}
+
+            {/* Дата: число крупно, под ним месяц и день недели — по числу глаз
+                и ведёт счёт, остальное подпись. */}
+            <div className="pt-2.5 text-right leading-tight">
+              <div className={'text-[17px] font-semibold tabular-nums ' + (isToday ? 'text-blue-600' : '')}>
+                {d.getUTCDate()}
+                {it.till && it.till !== it.from && (
+                  <span className="text-neutral-400">–{parse(it.till).getUTCDate()}</span>
+                )}
+              </div>
+              <div className="text-[11px] text-neutral-500">{MONTHS_GEN[d.getUTCMonth()]}</div>
+              <div className="text-[11px] text-neutral-400">{WEEKDAYS[(d.getUTCDay() + 6) % 7]}</div>
+            </div>
+
+            {/* Рельс: отрезок линии и точка события. */}
+            <div className="relative">
+              <span className={'absolute left-1/2 top-0 h-4 w-px -translate-x-1/2 ' + (i === 0 ? '' : 'bg-neutral-200')} />
+              <span
+                className={
+                  'absolute left-1/2 top-3.5 h-2.5 w-2.5 -translate-x-1/2 rounded-full ' +
+                  RAIL[tone] +
+                  (isToday ? ' ring-4 ring-blue-100' : '')
+                }
+              />
+              <span
+                className={
+                  'absolute left-1/2 bottom-0 top-6 w-px -translate-x-1/2 ' +
+                  (i === items.length - 1 ? '' : 'bg-neutral-200')
+                }
+              />
+            </div>
+
+            {/* Карточка события. */}
+            <div className="pb-3">
+              <div
+                data-to={it.to}
+                data-row
+                className={
+                  'rounded-xl border bg-white p-3 shadow-sm ' +
+                  (isToday ? 'border-blue-200' : 'border-neutral-200') +
+                  (it.to ? ' cursor-pointer hover:border-neutral-300' : '')
+                }
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0 leading-tight">
+                    <div className="text-[13.5px] font-semibold">{it.nm}</div>
+                    {it.sub && <div className="mt-0.5 text-xs text-neutral-500">{it.sub}</div>}
+                  </div>
+                  {it.right && <div className="shrink-0">{it.right}</div>}
+                </div>
+                {it.children && <div className="mt-2.5">{it.children}</div>}
+              </div>
+            </div>
+          </Fragment>
+        );
+      })}
     </div>
   );
 }

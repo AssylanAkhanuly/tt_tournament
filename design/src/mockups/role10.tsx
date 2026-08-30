@@ -7,19 +7,26 @@
    счёт», «Назначить судью». Там, где у главного судьи стоит кнопка вызова, у
    инспектора — серая подпись, а панели хода турнира и журнала помечены пилюлей
    «ТОЛЬКО ПРОСМОТР». Единственные кнопки на экранах — про собственные
-   материалы инспектора: отметить эпизод, выгрузить, отправить заключение. */
+   материалы инспектора: отметить эпизод, выгрузить, отправить заключение.
+
+   Полный адаптив ✳ (решение владельца, 30.08.2026: «все экраны в обоих»): у
+   каждого экрана есть второй формат — телефон, — врезкой под ноутбучным
+   кадром (`alt` в `SCREENS`). Инспектор ходит между столами, и эпизод он
+   отмечает там, где его увидел. Поведение у двух кадров общее (`useEpisodes10_2`,
+   `useJournal10_3`, `useReport10_4`), меняется подача: карта столов в две
+   колонки, таблицы судей и критериев — карточками. */
 
 import { useState, type ReactNode } from 'react';
 import { Bookmark, Download, Eye, FileText, Gavel, History, Paperclip, Send } from 'lucide-react';
 import { Button, Chip } from '@heroui/react';
 import {
-  A, Bar, EmptyBox, FieldView, FilterSeg, FormGrid, Panel, Pill, Row, Rows, ScreenScope,
-  SearchInput, StatTiles, WebApp, type RoleUI,
+  A, Bar, EmptyBox, FieldView, FilterSeg, FormGrid, Panel, PhoneRoleApp, Pill, Row, Rows,
+  ScreenScope, SearchInput, WebApp, type RoleUI,
 } from '../kit/hero/app';
 /* Из старого слоя остаются только мета-компоненты борда: колонки, стрелки и
    полки состояний. Сами экраны собраны новым слоем. */
 import { Board, States, Shot, type ScreenMap } from './shell';
-import { Login0_1 } from './role00';
+import { Login0_1, LoginPhone0_1 } from './role00';
 
 /* ── Роль: сайдбар и подпись профиля ─────────────────────────────── */
 
@@ -177,11 +184,19 @@ const ReadOnly = () => (
 
 /** Полоса действий: слева состояние («что выбрано», «сколько выгружено»),
     справа кнопки. Кнопка без ответа читается как сломанная — эта полоса и
-    есть место ответа. */
-const ActionRow = ({ count, children }: { count: ReactNode; children?: ReactNode }) => (
-  <div className="mb-3 flex items-center justify-between gap-4">
+    есть место ответа.
+
+    На телефоне ✳ (30.08.2026) ответ встаёт над кнопками, а кнопки идут в ряд с
+    переносом: в 392 px четыре кнопки рядом с фразой сжимают её до двух слов, а
+    именно она и говорит, что произошло. */
+const ActionRow = ({ count, phone, children }: { count: ReactNode; phone?: boolean; children?: ReactNode }) => (
+  <div className={'mb-3 gap-4 ' + (phone ? 'flex flex-col gap-2' : 'flex items-center justify-between')}>
     <span className="min-w-0 text-[12.5px] leading-snug text-neutral-500">{count}</span>
-    {children && <span className="flex shrink-0 items-center gap-2">{children}</span>}
+    {children && (
+      <span className={phone ? 'flex flex-wrap items-center gap-2' : 'flex shrink-0 items-center gap-2'}>
+        {children}
+      </span>
+    )}
   </div>
 );
 
@@ -195,24 +210,54 @@ const MarkBtn = ({ ready, onPress }: { ready: boolean; onPress: () => void }) =>
 );
 
 /** Строка события: время, стол и матч, было → стало, кто исправил, причина.
-    Рабочая там, где по ней отмечают эпизод. */
-function NoteRow({ n, on, marked, onSelect }: {
+    Рабочая там, где по ней отмечают эпизод.
+
+    `narrow` — телефонный кадр ✳: время и значки уходят в отдельный ряд над
+    текстом. В одну строку на 392 px значок вида события и «ЭПИЗОД» съедали всё
+    место, а в этой строке главное — что именно исправили и почему. */
+function NoteRow({ n, on, marked, narrow, onSelect }: {
   n: Note;
   on?: boolean;
   /** Уже отмечена эпизодом — попадёт в основания заключения. */
   marked?: boolean;
+  narrow?: boolean;
   onSelect?: () => void;
 }) {
+  const cls =
+    'w-full px-4 py-2.5 text-left ' +
+    (on ? 'bg-blue-50/60' : onSelect ? 'cursor-pointer hover:bg-neutral-50' : '');
+  if (narrow) {
+    return (
+      <div
+        data-row
+        role={onSelect ? 'button' : undefined}
+        tabIndex={onSelect ? 0 : undefined}
+        onClick={onSelect}
+        className={cls + ' flex flex-col gap-1.5'}
+      >
+        <span className="flex flex-wrap items-center gap-2">
+          <span className="text-[12.5px] font-medium tabular-nums text-neutral-500">{n.at}</span>
+          <P t={n.st} cls={n.cls} />
+          {marked && (
+            <Chip className="whitespace-nowrap" color="accent" size="sm" variant="primary">
+              <Bookmark size={11} className="mr-1" /> ЭПИЗОД
+            </Chip>
+          )}
+        </span>
+        <span className="leading-tight">
+          <span className="block text-[13.5px] font-medium">{n.nm}</span>
+          <span className="block text-xs text-neutral-500">{n.sub}</span>
+        </span>
+      </div>
+    );
+  }
   return (
     <div
       data-row
       role={onSelect ? 'button' : undefined}
       tabIndex={onSelect ? 0 : undefined}
       onClick={onSelect}
-      className={
-        'flex w-full items-center gap-3 px-4 py-2.5 text-left ' +
-        (on ? 'bg-blue-50/60' : onSelect ? 'cursor-pointer hover:bg-neutral-50' : '')
-      }
+      className={cls + ' flex items-center gap-3'}
     >
       <span className="w-11 shrink-0 text-[12.5px] font-medium tabular-nums text-neutral-500">{n.at}</span>
       <span className="min-w-0 flex-1 leading-tight">
@@ -244,6 +289,16 @@ const Sheet = ({ cols, grid, children }: { cols: ReactNode[]; grid: string; chil
   </div>
 );
 
+/** Полоса переключателя шире экрана ✳ (30.08.2026): на телефоне её прокручивают
+    вбок, а не переносят — перенесённый в два ряда переключатель перестаёт
+    читаться одним движением глаза. `w-max` обязателен: сам `FilterSeg` свёрстан
+    переносом и без него послушно свернулся бы в две строки. */
+const SegScroll = ({ children }: { children: ReactNode }) => (
+  <div className="-mx-4 overflow-x-auto px-4">
+    <div className="w-max">{children}</div>
+  </div>
+);
+
 /** Подзаголовок раздела внутри панели (материалы заключения). */
 const Sec = ({ children }: { children: ReactNode }) => (
   <div className="mb-2 mt-4 text-[11px] font-semibold uppercase tracking-wider text-neutral-400 first:mt-0">
@@ -261,6 +316,37 @@ const Frag = ({ w = 560, children }: { w?: number; children: ReactNode }) => (
 
 /* ── Э10.1 · Соревнования на контроле ────────────────────────────── */
 
+/** Строка старта на телефоне ✳: название с состоянием сверху, срок заключения
+    и кнопка — рядом снизу. В один ряд на 392 px не помещаются четыре вещи
+    сразу: название, подпись с городом и судьёй, значок и кнопка. Оба перехода
+    сохранены — сама строка ведёт в «работу судей», кнопка в заключение. */
+const TourRowPhone = ({ t }: { t: (typeof TOURS)[number] }) => (
+  <div data-to="Э10.2" data-row className="flex cursor-pointer flex-col gap-2 px-4 py-3">
+    <div className="flex items-start justify-between gap-2">
+      <span className="min-w-0 leading-tight">
+        <span className="block text-[13.5px] font-medium">{t.nm}</span>
+        <span className="block text-xs text-neutral-500">{t.sub}</span>
+      </span>
+      <P t={t.st} cls={t.cls} />
+    </div>
+    <div className="flex items-center justify-between gap-2">
+      <span className="text-xs text-neutral-500">{t.val}</span>
+      <Button size="sm" variant="outline" data-to="Э10.4">
+        Заключение
+      </Button>
+    </div>
+  </div>
+);
+
+/** Пояснение под списком — одно на оба формата. */
+const Tours10_1Bar = () => (
+  <Bar>
+    Строка открывает старт: дальше он живёт разделами меню — работа судей, журнал правок и
+    заключение. «На контроле» возвращает к этому списку. Назначает инспектора на соревнование,
+    вероятно, председатель ГСК — подтвердить ✳.
+  </Bar>
+);
+
 /** Список стартов, назначенных инспектору. Проп `variant` старой адаптивной
     рамки сохранён ради истории «Адаптив»: у нового слоя своей планшетной
     рамки веба пока нет. */
@@ -275,15 +361,14 @@ export function Tours10_1(_props: { variant?: 'desktop' | 'land' } = {}) {
       title="Соревнования на контроле"
       sub="Сезон 2026 · назначения от председателя ГСК"
     >
-      <StatTiles
-        items={[
-          { v: '5', k: 'На контроле' },
-          { v: '1', k: 'Черновик заключения', tone: 'a' },
-          { v: '3', k: 'Отправлено', tone: 'g' },
-          { v: '9', k: 'Отмечено эпизодов' },
-        ]}
-      />
-      <ActionRow count={saved ?? '5 соревнований · сезон 2026 · всё только просмотр'}>
+      {/* Плиток-счётчиков над списком больше нет ✳ (30.08.2026): экран — реестр,
+          и его содержание — сам список. Четыре плитки пересказывали то, что и
+          так стоит в строках («черновик», «отправлено»), а список отжимали
+          вниз. По данным роли (`flows/data/role10.ts`, Э10.1) у экрана одна
+          зона — список стартов; числа остались короткой строкой фактов. */}
+      <ActionRow
+        count={saved ?? '5 соревнований · сезон 2026 · 1 черновик · 3 отправлено · всё только просмотр'}
+      >
         <Button
           size="sm"
           variant="outline"
@@ -311,13 +396,43 @@ export function Tours10_1(_props: { variant?: 'desktop' | 'land' } = {}) {
         ))}
       </Rows>
       <div className="mt-4">
-        <Bar>
-          Строка открывает старт: дальше он живёт разделами в меню слева — работа судей, журнал
-          правок и заключение. «На контроле» возвращает к этому списку. Назначает инспектора на
-          соревнование, вероятно, председатель ГСК — подтвердить ✳.
-        </Bar>
+        <Tours10_1Bar />
       </div>
     </WebApp>
+  );
+}
+
+/** Э10.1 на телефоне ✳ (30.08.2026, «все экраны в обоих»): инспектор смотрит
+    соревнования и в зале, и по дороге — реестр из пяти строк переносится
+    целиком, меняется только строка. */
+function Tours10_1Phone() {
+  const [saved, setSaved] = useState<string | null>(null);
+  return (
+    <PhoneRoleApp
+      role={R10}
+      nav="На контроле"
+      title="Соревнования на контроле"
+      sub="Сезон 2026 · назначения от председателя ГСК"
+    >
+      <ActionRow
+        phone
+        count={saved ?? '5 соревнований · 1 черновик · 3 отправлено · всё только просмотр'}
+      >
+        <Button
+          size="sm"
+          variant="outline"
+          onPress={() => setSaved(`Выгружено ${TOURS.length} соревнований · сезон 2026 · CSV`)}
+        >
+          <Download size={14} /> Выгрузить список
+        </Button>
+      </ActionRow>
+      <Rows>
+        {TOURS.map((t) => <TourRowPhone key={t.nm} t={t} />)}
+      </Rows>
+      <div className="mt-4">
+        <Tours10_1Bar />
+      </div>
+    </PhoneRoleApp>
   );
 }
 
@@ -380,9 +495,13 @@ const DUTY: Duty[] = [
 ];
 
 /** Карта столов по судьям. ⚠ Похожа на `TableMap` роли 6, но там в клетке
-    счёт — предмет другой, общего компонента из них не собрать. */
-const DutyMap = () => (
-  <div className="mb-4 grid grid-cols-5 gap-2">
+    счёт — предмет другой, общего компонента из них не собрать.
+
+    `narrow` — телефонный кадр ✳: двадцать столов в пять колонок на 392 px дают
+    клетку в шестьдесят пикселей, где фамилия судьи не помещается вовсе. В две
+    колонки карта становится длиннее, но остаётся картой. */
+const DutyMap = ({ narrow }: { narrow?: boolean }) => (
+  <div className={'mb-4 grid gap-2 ' + (narrow ? 'grid-cols-2' : 'grid-cols-5')}>
     {DUTY.map((d, i) => {
       const head = (dot: string, dim?: boolean) => (
         <div className={'flex items-center justify-between text-[11px] font-semibold ' + (dim ? 'text-neutral-400' : 'text-neutral-500')}>
@@ -464,22 +583,92 @@ const Num = ({ bad, children }: { bad?: boolean; children: ReactNode }) => (
   <span className={'tabular-nums ' + (bad ? 'font-semibold text-red-600' : 'text-neutral-700')}>{children}</span>
 );
 
-export function Live10_2() {
+/** Ключ записи журнала: время и матч — ими событие и опознают. */
+const noteKey = (n: Note) => n.at + n.nm;
+
+/** Что инспектор выбрал и что уже отметил эпизодом.
+
+    Один хук на оба кадра экрана ✳ (30.08.2026): выбор строки и отметка эпизода
+    — это поведение экрана, а не устройства, и две копии одного состояния
+    разошлись бы на первой правке. */
+function useEpisodes10_2() {
   /* Что выбрано для эпизода: строка судьи или замечание по технической части.
      Одна и та же кнопка отмечает и то, и другое — эпизод это «судья, стол,
      время», а не отдельный вид записи. */
   const [pick, setPick] = useState<{ k: string; label: string } | null>(null);
   const [marked, setMarked] = useState<string[]>([]);
   const [saved, setSaved] = useState<string | null>(null);
-  const key = (n: Note) => n.at + n.nm;
-  const mark = () => {
-    if (!pick || marked.includes(pick.k)) return;
-    setMarked([...marked, pick.k]);
+  return {
+    pick,
+    marked,
+    setSaved,
+    mark: () => {
+      if (!pick || marked.includes(pick.k)) return;
+      setMarked([...marked, pick.k]);
+    },
+    sel: (k: string, label: string) => {
+      setPick(pick?.k === k ? null : { k, label });
+      setSaved(null);
+    },
+    /** Что написано в полосе действий: ответ на последнее действие или, если
+        его не было, счётчики дня. */
+    count: (fallback: string) =>
+      saved ??
+      (pick
+        ? marked.includes(pick.k)
+          ? `Отмечено эпизодом: ${pick.label}`
+          : `Выбрано: ${pick.label} — «Отметить эпизод» положит это в основания заключения`
+        : fallback),
   };
-  const sel = (k: string, label: string) => {
-    setPick(pick?.k === k ? null : { k, label });
-    setSaved(null);
-  };
+}
+
+/** Судья за день на телефоне ✳: таблица из восьми колонок в 328 px не живёт —
+    те же цифры идут подписями под фамилией, и «14 мин» так же краснеет. */
+const JudgeCardPhone = ({ j, on, marked, onSelect }: {
+  j: JudgeDay;
+  on?: boolean;
+  marked?: boolean;
+  onSelect: () => void;
+}) => (
+  <div
+    data-row
+    role="button"
+    tabIndex={0}
+    onClick={onSelect}
+    className={
+      'flex cursor-pointer flex-col gap-1.5 px-4 py-3 ' + (on ? 'bg-blue-50/60' : 'hover:bg-neutral-50')
+    }
+  >
+    <div className="flex items-start justify-between gap-2">
+      <span className="min-w-0 leading-tight">
+        <span className="block text-[13.5px] font-medium">{j.nm}</span>
+        <span className="block text-xs text-neutral-500">{j.tables} · матчей {j.m}</span>
+      </span>
+      {(j.flag || marked) && <P t={`${(j.flag ?? 0) + (marked ? 1 : 0)} ОТМЕЧЕНО`} cls="wait" />}
+    </div>
+    <div className="flex flex-wrap gap-x-3 gap-y-0.5 text-[11.5px] text-neutral-500">
+      <span>вызов → старт <Num bad={j.wait >= 10}>{j.wait} мин</Num></span>
+      <span>правок <Num bad={j.fix > 0}>{j.fix}</Num></span>
+      <span>расхождений <Num bad={j.sync > 0}>{j.sync}</Num></span>
+      <span>карточек <Num>{j.cards}</Num></span>
+      <span>подтверждение <Num bad={j.sign >= 3}>{j.sign} мин</Num></span>
+    </div>
+  </div>
+);
+
+/** Что система не измеряет — сказано словами, а не пустой клеткой. Одна
+    подпись на оба формата. */
+const EyesOnly10_2 = () => (
+  <div className="px-4 py-2.5 text-[12px] text-neutral-500">
+    Работа с игроками, поведение в бригаде и внешний вид (критерии 6 и 8) система не измеряет —
+    их инспектор проверяет глазами и ставит оценку в заключении
+  </div>
+);
+
+export function Live10_2() {
+  const ep = useEpisodes10_2();
+  const { marked, pick, sel, mark, setSaved } = ep;
+  const key = noteKey;
   return (
     <WebApp
       role={R10}
@@ -493,14 +682,9 @@ export function Live10_2() {
           идти, сказано на самом экране: отметил эпизод — он лёг в основания,
           дальше либо разбирать журнал, либо ставить оценки. */}
       <ActionRow
-        count={
-          saved ??
-          (pick
-            ? marked.includes(pick.k)
-              ? `Отмечено эпизодом: ${pick.label}`
-              : `Выбрано: ${pick.label} — «Отметить эпизод» положит это в основания заключения`
-            : `13 судей · 1 стол без судьи · 4 правки · 4 задержки · отмечено эпизодов: ${marked.length}`)
-        }
+        count={ep.count(
+          `13 судей · 1 стол без судьи · 4 правки · 4 задержки · отмечено эпизодов: ${marked.length}`,
+        )}
       >
         <Button
           size="sm"
@@ -573,10 +757,7 @@ export function Live10_2() {
             </div>
           ))}
         </Sheet>
-        <div className="px-4 py-2.5 text-[12px] text-neutral-500">
-          Работа с игроками, поведение в бригаде и внешний вид (критерии 6 и 8) система не измеряет —
-          их инспектор проверяет глазами и ставит оценку в заключении
-        </div>
+        <EyesOnly10_2 />
       </Panel>
 
       {/* Счёт матча — только там, где к технической части есть вопрос ✳.
@@ -601,6 +782,79 @@ export function Live10_2() {
         </div>
       </Panel>
     </WebApp>
+  );
+}
+
+/** Э10.2 на телефоне ✳ (30.08.2026, «все экраны в обоих»).
+
+    Инспектор работает в зале и ходит между столами: отметить эпизод он должен
+    там, где его увидел, а не вернувшись к ноутбуку. Поведение то же (тот же
+    хук), меняется подача: карта столов в две колонки, таблица судей —
+    карточками, строки журнала — в два ряда. */
+function Live10_2Phone() {
+  const ep = useEpisodes10_2();
+  const { marked, pick, sel, mark, setSaved } = ep;
+  return (
+    <PhoneRoleApp
+      role={R10}
+      nav="Работа судей"
+      title="Работа судей на столах"
+      sub="Чемпионат Казахстана 2026 · день 2, 13 марта"
+      back={{ label: 'На контроле', to: 'Э10.1' }}
+    >
+      <ActionRow
+        phone
+        count={ep.count(`13 судей · 1 стол без судьи · 4 правки · 4 задержки · эпизодов: ${marked.length}`)}
+      >
+        <Button size="sm" variant="outline" onPress={() => setSaved('Выгружено: судьи и замечания дня 2 · CSV')}>
+          <Download size={14} /> Выгрузить
+        </Button>
+        <Button size="sm" variant="outline" data-to="Э10.3">
+          <History size={14} /> Журнал правок
+        </Button>
+        <Button size="sm" variant="outline" data-to="Э10.4">
+          <FileText size={14} /> К заключению
+        </Button>
+        <MarkBtn ready={!!pick && !marked.includes(pick.k)} onPress={mark} />
+      </ActionRow>
+
+      <DutyMap narrow />
+
+      <Panel
+        title="Судьи на столах · день 2"
+        sub="цифры, которые система измерила сама — критерии 1–5 и 7 (TZ §7.3)"
+        extra={<ReadOnly />}
+        flush
+      >
+        <div className="divide-y divide-neutral-100">
+          {JUDGES.map((j) => (
+            <JudgeCardPhone
+              key={j.nm}
+              j={j}
+              on={pick?.k === j.nm}
+              marked={marked.includes(j.nm)}
+              onSelect={() => sel(j.nm, `${j.nm} · ${j.tables}`)}
+            />
+          ))}
+        </div>
+        <EyesOnly10_2 />
+      </Panel>
+
+      <Panel title="Замечания по технической части" sub="здесь счёт нужен — и показан" extra={<ReadOnly />} flush>
+        <div className="divide-y divide-neutral-100">
+          {NOTES.map((n) => (
+            <NoteRow
+              key={noteKey(n)}
+              n={n}
+              narrow
+              on={pick?.k === noteKey(n)}
+              marked={marked.includes(noteKey(n))}
+              onSelect={() => sel(noteKey(n), n.nm)}
+            />
+          ))}
+        </div>
+      </Panel>
+    </PhoneRoleApp>
   );
 }
 
@@ -636,15 +890,15 @@ const KIND_ST: Record<string, string> = {
   Задержки: 'ЗАДЕРЖКА',
 };
 
-export function Journal10_3() {
+/** Состояние журнала: срез, поиск, выбранная строка и отметки. Один хук на оба
+    кадра экрана ✳ (30.08.2026) — фильтр и отметка работают одинаково, где бы
+    инспектор ни смотрел. */
+function useJournal10_3() {
   const [kind, setKind] = useState(KINDS10_3[0]);
   /* Поиск закрывает фильтры «по столу» и «по судье»: стол и фамилии стоят в
      самой записи, отдельные выпадающие списки были бы вторым способом сделать
      то же самое. */
   const [q, setQ] = useState('');
-  const t = q.trim().toLowerCase();
-  const rows = (kind === KINDS10_3[0] ? JOURNAL : JOURNAL.filter((n) => n.st === KIND_ST[kind]))
-    .filter((n) => !t || n.nm.toLowerCase().includes(t) || n.sub.toLowerCase().includes(t));
   /* Что выбрано и что уже отмечено эпизодом. Ключ строки — время и матч:
      событие в журнале ими и опознаётся. */
   const [pick, setPick] = useState<string | null>(null);
@@ -652,11 +906,84 @@ export function Journal10_3() {
   /* Выгрузка в макете не отдаёт файл, но и молчать ей нельзя ✳: отвечает
      строкой в полосе — сколько записей ушло и в каком срезе. */
   const [saved, setSaved] = useState<string | null>(null);
-  const key = (n: Note) => n.at + n.nm;
-  const mark = () => {
-    if (!pick || marked.includes(pick)) return;
-    setMarked([...marked, pick]);
+  const t = q.trim().toLowerCase();
+  const rows = (kind === KINDS10_3[0] ? JOURNAL : JOURNAL.filter((n) => n.st === KIND_ST[kind]))
+    .filter((n) => !t || n.nm.toLowerCase().includes(t) || n.sub.toLowerCase().includes(t));
+  return {
+    kind,
+    q,
+    rows,
+    pick,
+    marked,
+    setQ,
+    setSaved,
+    pickKind: (v: string) => { setKind(v); setSaved(null); },
+    toggle: (k: string) => { setPick(pick === k ? null : k); setSaved(null); },
+    mark: () => {
+      if (!pick || marked.includes(pick)) return;
+      setMarked([...marked, pick]);
+    },
+    count: () =>
+      saved ??
+      (pick
+        ? marked.includes(pick)
+          ? 'Строка уже отмечена эпизодом — она в основаниях заключения'
+          : 'Строка выбрана — «Отметить эпизод» положит её в основания заключения'
+        : `${rows.length} записей на экране · фильтр: ${kind.toLowerCase()} · отмечено эпизодов: ${marked.length}`),
   };
+}
+
+/** Кнопки полосы действий журнала — одни на оба формата. */
+const Journal10_3Acts = ({ j }: { j: ReturnType<typeof useJournal10_3> }) => (
+  <>
+    <Button
+      size="sm"
+      variant="outline"
+      onPress={() => j.setSaved(`Выгружено ${j.rows.length} записей · срез «${j.kind.toLowerCase()}» · CSV`)}
+    >
+      <Download size={14} /> Выгрузить
+    </Button>
+    <Button size="sm" variant="outline" data-to="Э10.4">
+      <FileText size={14} /> К заключению
+    </Button>
+    {/* Без выбранной строки кнопке нечего отмечать: она гаснет и говорит
+        об этом в полосе, а не молчит в ответ на нажатие. */}
+    <MarkBtn ready={!!j.pick && !j.marked.includes(j.pick)} onPress={j.mark} />
+  </>
+);
+
+/** Пояснение под журналом — одно на оба формата. */
+const Journal10_3Bar = () => (
+  <Bar>
+    Отмеченный эпизод уходит в основания заключения (Э10.4): оценка ниже «соответствует»
+    без основания не отправляется — TZ §7.3.
+  </Bar>
+);
+
+/** Список журнала. `narrow` — телефонный кадр: строка в два ряда. */
+const Journal10_3List = ({ j, narrow }: { j: ReturnType<typeof useJournal10_3>; narrow?: boolean }) => (
+  <Rows>
+    {j.rows.length ? (
+      j.rows.map((n) => (
+        <NoteRow
+          key={noteKey(n)}
+          n={n}
+          narrow={narrow}
+          on={j.pick === noteKey(n)}
+          marked={j.marked.includes(noteKey(n))}
+          onSelect={() => j.toggle(noteKey(n))}
+        />
+      ))
+    ) : (
+      <div className="px-4 py-4 text-[12.5px] text-neutral-500">
+        По запросу «{j.q}» в срезе «{j.kind.toLowerCase()}» записей нет.
+      </div>
+    )}
+  </Rows>
+);
+
+export function Journal10_3() {
+  const j = useJournal10_3();
   return (
     <WebApp
       role={R10}
@@ -665,65 +992,60 @@ export function Journal10_3() {
       sub="Чемпионат Казахстана 2026 · день 2, 13 марта · было → стало, кто исправил, причина"
       back={{ label: 'На контроле', to: 'Э10.1' }}
     >
-      <ActionRow
-        count={
-          saved
-            ? saved
-            : pick
-              ? marked.includes(pick)
-                ? 'Строка уже отмечена эпизодом — она в основаниях заключения'
-                : 'Строка выбрана — «Отметить эпизод» положит её в основания заключения'
-              : `${rows.length} записей на экране · фильтр: ${kind.toLowerCase()} · отмечено эпизодов: ${marked.length}`
-        }
-      >
-        <Button
-          size="sm"
-          variant="outline"
-          onPress={() => setSaved(`Выгружено ${rows.length} записей · срез «${kind.toLowerCase()}» · CSV`)}
-        >
-          <Download size={14} /> Выгрузить
-        </Button>
-        <Button size="sm" variant="outline" data-to="Э10.4">
-          <FileText size={14} /> К заключению
-        </Button>
-        {/* Без выбранной строки кнопке нечего отмечать: она гаснет и говорит
-            об этом в полосе, а не молчит в ответ на нажатие. */}
-        <MarkBtn ready={!!pick && !marked.includes(pick)} onPress={mark} />
+      <ActionRow count={j.count()}>
+        <Journal10_3Acts j={j} />
       </ActionRow>
 
       {/* Фильтр рабочий: инспектор смотрит журнал по типу события — правки
           счёта и неявки разбираются по-разному. */}
       <div className="mb-3 flex flex-wrap items-center gap-3">
-        <FilterSeg items={KINDS10_3} active={kind} onPick={(v) => { setKind(v); setSaved(null); }} />
-        <SearchInput value={q} onChange={setQ} placeholder="Стол, судья или матч" className="w-64" />
+        <FilterSeg items={KINDS10_3} active={j.kind} onPick={j.pickKind} />
+        <SearchInput value={j.q} onChange={j.setQ} placeholder="Стол, судья или матч" className="w-64" />
         <ReadOnly />
       </div>
 
-      <Rows>
-        {rows.length ? (
-          rows.map((n) => (
-            <NoteRow
-              key={key(n)}
-              n={n}
-              on={pick === key(n)}
-              marked={marked.includes(key(n))}
-              onSelect={() => { setPick(pick === key(n) ? null : key(n)); setSaved(null); }}
-            />
-          ))
-        ) : (
-          <div className="px-4 py-4 text-[12.5px] text-neutral-500">
-            По запросу «{q}» в срезе «{kind.toLowerCase()}» записей нет.
-          </div>
-        )}
-      </Rows>
+      <Journal10_3List j={j} />
 
       <div className="mt-4">
-        <Bar>
-          Отмеченный эпизод уходит в основания заключения (Э10.4): оценка ниже «соответствует»
-          без основания не отправляется — TZ §7.3.
-        </Bar>
+        <Journal10_3Bar />
       </div>
     </WebApp>
+  );
+}
+
+/** Э10.3 на телефоне ✳: журнал инспектор открывает прямо у стола, когда спор
+    ещё идёт. Фильтр из четырёх срезов в 360 px в строку не встаёт — он едет
+    вбок в своей полосе, а поиск и значок «только просмотр» уходят под него. */
+function Journal10_3Phone() {
+  const j = useJournal10_3();
+  return (
+    <PhoneRoleApp
+      role={R10}
+      nav="Журнал правок"
+      title="Журнал правок"
+      sub="Чемпионат Казахстана 2026 · день 2 · было → стало, кто исправил"
+      back={{ label: 'На контроле', to: 'Э10.1' }}
+    >
+      <ActionRow phone count={j.count()}>
+        <Journal10_3Acts j={j} />
+      </ActionRow>
+
+      <div className="mb-3 flex flex-col gap-2">
+        <SegScroll>
+          <FilterSeg items={KINDS10_3} active={j.kind} onPick={j.pickKind} />
+        </SegScroll>
+        <div className="flex items-center gap-2">
+          <SearchInput value={j.q} onChange={j.setQ} placeholder="Стол, судья или матч" className="min-w-0 flex-1" />
+          <ReadOnly />
+        </div>
+      </div>
+
+      <Journal10_3List j={j} narrow />
+
+      <div className="mt-4">
+        <Journal10_3Bar />
+      </div>
+    </PhoneRoleApp>
   );
 }
 
@@ -764,7 +1086,18 @@ const CRIT_GRID = '1.4fr 1.15fr 236px 1.2fr';
     судье — они уходят разным адресатам. */
 const KIND4 = ['По соревнованию', 'По конкретному судье'];
 
-export function Report10_4() {
+/** Итог заключения — из худшей оценки по критериям. */
+const TOTAL: Record<Grade, { t: string; cls: Cls }> = {
+  ok: { t: 'БЕЗ ЗАМЕЧАНИЙ', cls: 'live' },
+  note: { t: 'С ЗАМЕЧАНИЯМИ', cls: 'wait' },
+  bad: { t: 'НАРУШЕНИЯ', cls: 'bad' },
+};
+
+/** Состояние заключения: вид, оценки по критериям и основания под ними.
+
+    Один хук на оба кадра экрана ✳ (30.08.2026): «замечание без основания не
+    отправляется» — правило заключения, а не свойство ноутбука. */
+function useReport10_4() {
   const [kind, setKind] = useState(KIND4[1]);
   /* Оценки по критериям и основания под ними. Замечание без основания
      отправить нельзя (§7.3) — макет показывает оба случая сразу: у критерия 3
@@ -782,14 +1115,174 @@ export function Report10_4() {
     : Object.values(grade).includes('note')
       ? 'note'
       : 'ok';
-  const TOTAL: Record<Grade, { t: string; cls: Cls }> = {
-    ok: { t: 'БЕЗ ЗАМЕЧАНИЙ', cls: 'live' },
-    note: { t: 'С ЗАМЕЧАНИЯМИ', cls: 'wait' },
-    bad: { t: 'НАРУШЕНИЯ', cls: 'bad' },
+  return {
+    kind,
+    setKind,
+    grade,
+    basis,
+    worst,
+    set: (n: number, g: Grade) => setGrade({ ...grade, [n]: g }),
+    /* Чего не хватает для отправки: замечание без основания. */
+    unbased: CRITERIA.filter((c) => grade[c.n] !== 'ok' && !basis[c.n]),
   };
-  /* Чего не хватает для отправки: замечание без основания. */
-  const unbased = CRITERIA.filter((c) => grade[c.n] !== 'ok' && !basis[c.n]);
+}
 
+/** Ступени оценки одной кнопкой-полосой. На телефоне те же три ступени, но
+    выше ростом: по ним попадают пальцем. */
+const GradeSeg = ({ cur, tall, onPick }: { cur: Grade; tall?: boolean; onPick: (g: Grade) => void }) => (
+  <span className="flex overflow-hidden rounded-lg border border-neutral-200 bg-white">
+    {GRADES.map((g, i) => (
+      <button
+        type="button"
+        key={g.k}
+        onClick={() => onPick(g.k)}
+        className={
+          'flex-1 px-1.5 text-[11px] font-medium ' +
+          (tall ? 'py-2 ' : 'py-1 ') +
+          (cur === g.k ? GRADE_ON[g.k] : 'text-neutral-500 hover:bg-neutral-100') +
+          (i > 0 ? ' border-l border-neutral-200' : '')
+        }
+      >
+        {g.t}
+      </button>
+    ))}
+  </span>
+);
+
+/** Основание под оценкой: эпизод, требование эпизода или прочерк.
+    Замечание и нарушение требуют основания — оценка без причины в споре не
+    стоит ничего. */
+const Basis10_4 = ({ grade, basis }: { grade: Grade; basis?: string }) =>
+  grade === 'ok' ? (
+    <span className="text-neutral-400">—</span>
+  ) : basis ? (
+    <span className="flex items-start gap-1.5 font-medium text-green-700">
+      <Bookmark size={13} className="mt-px shrink-0" /> {basis}
+    </span>
+  ) : (
+    <span className="font-medium text-red-600">нужно основание — эпизод или комментарий</span>
+  );
+
+/** Шапка заключения: вид, поля и правило про итог. Одна на оба формата —
+    поля на телефоне идут в одну колонку (`wide`). */
+const Report10_4Head = ({ r, phone }: { r: ReturnType<typeof useReport10_4>; phone?: boolean }) => (
+  <Panel title="Заключение" extra={<P t="ЧЕРНОВИК" cls="wait" />}>
+    {/* Вид переключается, и от него меняется шапка формы: по судье —
+        судья и его столы, по соревнованию — бригада целиком. */}
+    {phone ? (
+      <div className="mb-4">
+        <SegScroll>
+          <FilterSeg items={KIND4} active={r.kind} onPick={r.setKind} />
+        </SegScroll>
+      </div>
+    ) : (
+      <div className="mb-4">
+        <FilterSeg items={KIND4} active={r.kind} onPick={r.setKind} />
+      </div>
+    )}
+    <FormGrid>
+      <FieldView label="Соревнование" value="Чемпионат Казахстана 2026" wide={phone} />
+      <FieldView label="Период проверки" value="12–16 марта 2026" wide={phone} />
+      {r.kind === KIND4[1] ? (
+        <>
+          <FieldView label="Судья" value="Оралбай Ержан · первая категория" wide={phone} />
+          <FieldView label="Столы" value="4, 9 · 11 матчей" wide={phone} />
+        </>
+      ) : (
+        <>
+          <FieldView label="Судей в наряде" value="13 · столов 20" wide={phone} />
+          <FieldView label="Отмечено эпизодов" value="9" wide={phone} />
+        </>
+      )}
+    </FormGrid>
+    <div className="mt-4">
+      <Bar>
+        Итог считается из худшей оценки и руками не задаётся: «с замечаниями» стоит потому,
+        что замечание есть по критерию 3. На рейтинг судьи (TZ §7.2) заключение
+        автоматически не влияет — что оно меняет, федерация не определила ⚠ 12.7.
+      </Bar>
+    </div>
+  </Panel>
+);
+
+/** Материалы заключения: отмеченные эпизоды и приложенные файлы. Строки
+    вертикальные по устройству и на 392 px не ломаются. */
+const Report10_4Files = ({ phone }: { phone?: boolean }) => (
+  <Panel title="Материалы" extra={<P t="4 ЭПИЗОДА · 3 ФАЙЛА" cls="reg" />}>
+    {/* Кнопка стоит в теле, а не в шапке: в шапке она спорила бы за место
+        с заголовком и бейджем. Полоса действий тут же говорит, когда
+        прикладывать можно. */}
+    <ActionRow phone={phone} count="Приложить можно, пока заключение — черновик">
+      <Button size="sm" variant="outline">
+        <Paperclip size={13} /> Приложить материалы
+      </Button>
+    </ActionRow>
+    <Sec>Отмеченные эпизоды из хода турнира</Sec>
+    <Rows>
+      {EPISODES.slice(0, 2).map((e) => (
+        <div key={e.nm} className="flex items-center gap-3 px-4 py-2.5">
+          <Bookmark size={16} className="shrink-0 text-blue-600" />
+          <span className="min-w-0 leading-tight">
+            <span className="block text-[13.5px] font-medium">{e.nm}</span>
+            <span className="block text-xs text-neutral-500">{e.sub}</span>
+          </span>
+        </div>
+      ))}
+    </Rows>
+    <div className="mt-1.5 text-[11.5px] text-neutral-400">ещё 2 эпизода — все в основаниях</div>
+    <Sec>Приложенные файлы</Sec>
+    <Rows>
+      {FILES.slice(0, 2).map((f) => (
+        <div key={f.nm} className="flex items-center gap-3 px-4 py-2.5">
+          <FileText size={16} className="shrink-0 text-neutral-400" />
+          <span className="min-w-0 flex-1 leading-tight">
+            <span className="block text-[13.5px] font-medium">{f.nm}</span>
+            <span className="block text-xs text-neutral-500">{f.sub}</span>
+          </span>
+          <Paperclip size={15} className="text-neutral-400" />
+        </div>
+      ))}
+    </Rows>
+    <div className="mt-1.5 text-[11.5px] text-neutral-400">ещё 1 файл</div>
+  </Panel>
+);
+
+/** Полоса отправки: чего не хватает и сама кнопка. На телефоне кнопка встаёт
+    под фразой во всю ширину — рядом с ней фраза о недостающем основании
+    сжималась до двух слов. */
+const Report10_4Send = ({ unbased, phone }: { unbased: typeof CRITERIA; phone?: boolean }) => (
+  <div
+    className={
+      'gap-4 border-t border-neutral-100 bg-neutral-50 px-4 py-3 ' +
+      (phone ? 'flex flex-col gap-2' : 'flex items-center justify-between')
+    }
+  >
+    <span className="text-[12.5px] text-neutral-500">
+      {unbased.length
+        ? `Отправить нельзя: у ${unbased.length} ${unbased.length === 1 ? 'замечания' : 'замечаний'} нет основания (критерий ${unbased.map((c) => c.n).join(', ')})`
+        : 'Все замечания обоснованы — заключение можно отправлять'}
+    </span>
+    <Button className={phone ? 'w-full' : undefined} variant="primary" isDisabled={unbased.length > 0}>
+      <Send size={15} /> Отправить заключение
+    </Button>
+  </div>
+);
+
+/** Заголовок панели критериев. На телефоне остаётся один значок итога:
+    пояснение «итог из худшей оценки» стоит в плашке выше и в шапке на 392 px
+    только отжимало название панели. */
+const CritExtra = ({ worst, phone }: { worst: Grade; phone?: boolean }) => (
+  <span className="flex items-center gap-2">
+    {!phone && <span className="text-xs text-neutral-500">итог из худшей оценки</span>}
+    <P t={TOTAL[worst].t} cls={TOTAL[worst].cls} />
+  </span>
+);
+
+/** Фон строки критерия по её оценке — один на оба формата. */
+const critTone = (g: Grade) => (g === 'bad' ? 'bg-red-50/50' : g === 'note' ? 'bg-amber-50/50' : '');
+
+export function Report10_4() {
+  const r = useReport10_4();
   return (
     <WebApp
       role={R10}
@@ -798,96 +1291,23 @@ export function Report10_4() {
       sub="Чемпионат Казахстана 2026 · Оралбай Ержан · черновик от 14.03.2026"
       back={{ label: 'На контроле', to: 'Э10.1' }}
     >
-      {/* Колонки грида сжимаются до нуля (`minmax(0,1fr)`), а панель внутри —
-          нет: у неё своя `min-width: auto`, и несжимаемая шапка растягивала
-          карточку шире колонки — правый борт уезжал за край экрана. Обёртка
-          с `min-w-0` держит обе панели в своих колонках. */}
-      <div className="grid grid-cols-2 items-start gap-4">
-        <div className="min-w-0">
-          <Panel title="Заключение" extra={<P t="ЧЕРНОВИК" cls="wait" />}>
-            {/* Вид переключается, и от него меняется шапка формы: по судье —
-                судья и его столы, по соревнованию — бригада целиком. */}
-            <div className="mb-4">
-              <FilterSeg items={KIND4} active={kind} onPick={setKind} />
-            </div>
-            <FormGrid>
-              <FieldView label="Соревнование" value="Чемпионат Казахстана 2026" />
-              <FieldView label="Период проверки" value="12–16 марта 2026" />
-              {kind === KIND4[1] ? (
-                <>
-                  <FieldView label="Судья" value="Оралбай Ержан · первая категория" />
-                  <FieldView label="Столы" value="4, 9 · 11 матчей" />
-                </>
-              ) : (
-                <>
-                  <FieldView label="Судей в наряде" value="13 · столов 20" />
-                  <FieldView label="Отмечено эпизодов" value="9" />
-                </>
-              )}
-            </FormGrid>
-            <div className="mt-4">
-              <Bar>
-                Итог считается из худшей оценки и руками не задаётся: «с замечаниями» стоит потому,
-                что замечание есть по критерию 3. На рейтинг судьи (TZ §7.2) заключение
-                автоматически не влияет — что оно меняет, федерация не определила ⚠ 12.7.
-              </Bar>
-            </div>
-          </Panel>
-        </div>
-
-        <div className="min-w-0">
-          <Panel title="Материалы" extra={<P t="4 ЭПИЗОДА · 3 ФАЙЛА" cls="reg" />}>
-            {/* Кнопка стоит в теле, а не в шапке: рядом с заголовком и бейджем
-                она в полуколонку не влезала и вылезала за борт карточки.
-                Полоса действий тут же говорит, когда прикладывать можно. */}
-            <ActionRow count="Приложить можно, пока заключение — черновик">
-              <Button size="sm" variant="outline">
-                <Paperclip size={13} /> Приложить материалы
-              </Button>
-            </ActionRow>
-            <Sec>Отмеченные эпизоды из хода турнира</Sec>
-            <Rows>
-              {EPISODES.slice(0, 2).map((e) => (
-                <div key={e.nm} className="flex items-center gap-3 px-4 py-2.5">
-                  <Bookmark size={16} className="shrink-0 text-blue-600" />
-                  <span className="min-w-0 leading-tight">
-                    <span className="block text-[13.5px] font-medium">{e.nm}</span>
-                    <span className="block text-xs text-neutral-500">{e.sub}</span>
-                  </span>
-                </div>
-              ))}
-            </Rows>
-            <div className="mt-1.5 text-[11.5px] text-neutral-400">ещё 2 эпизода — все в основаниях</div>
-            <Sec>Приложенные файлы</Sec>
-            <Rows>
-              {FILES.slice(0, 2).map((f) => (
-                <div key={f.nm} className="flex items-center gap-3 px-4 py-2.5">
-                  <FileText size={16} className="shrink-0 text-neutral-400" />
-                  <span className="min-w-0 flex-1 leading-tight">
-                    <span className="block text-[13.5px] font-medium">{f.nm}</span>
-                    <span className="block text-xs text-neutral-500">{f.sub}</span>
-                  </span>
-                  <Paperclip size={15} className="text-neutral-400" />
-                </div>
-              ))}
-            </Rows>
-            <div className="mt-1.5 text-[11.5px] text-neutral-400">ещё 1 файл</div>
-          </Panel>
-        </div>
-      </div>
+      {/* Блоки идут один под другим во всю ширину ✳ (30.08.2026): в две колонки
+          «Заключение» и «Материалы» стояли в полуколонках — шапку панели туда
+          не удавалось вписать без обёртки `min-w-0`, а списки эпизодов и файлов
+          жались в узкую полосу. Панель сама держит отступ снизу, обёртка не
+          нужна. */}
+      <>
+        <Report10_4Head r={r} />
+        <Report10_4Files />
+      </>
 
       {/* Форма — сами критерии, а не свободный текст ✳. Рядом с каждым стоит
           то, что система измерила сама: инспектор ставит ступень, глядя на
           цифру, а не вспоминая её. */}
       <Panel
         title="Оценка по критериям · TZ §7.3"
-        sub={kind === KIND4[1] ? 'Оралбай Ержан · столы 4, 9' : 'бригада целиком · 13 судей'}
-        extra={
-          <span className="flex items-center gap-2">
-            <span className="text-xs text-neutral-500">итог из худшей оценки</span>
-            <P t={TOTAL[worst].t} cls={TOTAL[worst].cls} />
-          </span>
-        }
+        sub={r.kind === KIND4[1] ? 'Оралбай Ержан · столы 4, 9' : 'бригада целиком · 13 судей'}
+        extra={<CritExtra worst={r.worst} />}
         flush
       >
         <Sheet
@@ -897,10 +1317,7 @@ export function Report10_4() {
           {CRITERIA.map((c) => (
             <div
               key={c.n}
-              className={
-                'grid items-center gap-3 px-4 py-2.5 text-[13px] ' +
-                (grade[c.n] === 'bad' ? 'bg-red-50/50' : grade[c.n] === 'note' ? 'bg-amber-50/50' : '')
-              }
+              className={'grid items-center gap-3 px-4 py-2.5 text-[13px] ' + critTone(r.grade[c.n])}
               style={{ gridTemplateColumns: CRIT_GRID }}
             >
               <span className="min-w-0 leading-tight">
@@ -912,51 +1329,66 @@ export function Report10_4() {
               <span className={'text-xs ' + (c.fact ? 'text-neutral-600' : 'italic text-neutral-400')}>
                 {c.fact ?? 'только наблюдение'}
               </span>
-              <span className="flex overflow-hidden rounded-lg border border-neutral-200 bg-white">
-                {GRADES.map((g, i) => (
-                  <button
-                    type="button"
-                    key={g.k}
-                    onClick={() => setGrade({ ...grade, [c.n]: g.k })}
-                    className={
-                      'flex-1 px-1.5 py-1 text-[11px] font-medium ' +
-                      (grade[c.n] === g.k ? GRADE_ON[g.k] : 'text-neutral-500 hover:bg-neutral-100') +
-                      (i > 0 ? ' border-l border-neutral-200' : '')
-                    }
-                  >
-                    {g.t}
-                  </button>
-                ))}
-              </span>
-              {/* Замечание и нарушение требуют основания: эпизод или
-                  комментарий. Оценка без причины в споре не стоит ничего. */}
+              <GradeSeg cur={r.grade[c.n]} onPick={(g) => r.set(c.n, g)} />
               <span className="min-w-0 text-xs leading-snug">
-                {grade[c.n] === 'ok' ? (
-                  <span className="text-neutral-400">—</span>
-                ) : basis[c.n] ? (
-                  <span className="flex items-start gap-1.5 font-medium text-green-700">
-                    <Bookmark size={13} className="mt-px shrink-0" /> {basis[c.n]}
-                  </span>
-                ) : (
-                  <span className="font-medium text-red-600">нужно основание — эпизод или комментарий</span>
-                )}
+                <Basis10_4 grade={r.grade[c.n]} basis={r.basis[c.n]} />
               </span>
             </div>
           ))}
         </Sheet>
 
-        <div className="flex items-center justify-between gap-4 border-t border-neutral-100 bg-neutral-50 px-4 py-3">
-          <span className="text-[12.5px] text-neutral-500">
-            {unbased.length
-              ? `Отправить нельзя: у ${unbased.length} ${unbased.length === 1 ? 'замечания' : 'замечаний'} нет основания (критерий ${unbased.map((c) => c.n).join(', ')})`
-              : 'Все замечания обоснованы — заключение можно отправлять'}
-          </span>
-          <Button variant="primary" isDisabled={unbased.length > 0}>
-            <Send size={15} /> Отправить заключение
-          </Button>
-        </div>
+        <Report10_4Send unbased={r.unbased} />
       </Panel>
     </WebApp>
+  );
+}
+
+/** Э10.4 на телефоне ✳ (30.08.2026, «все экраны в обоих»).
+
+    Заключение пишут не в зале, а после — но правят его и с телефона: инспектор
+    возвращается к черновику много раз. Таблица из четырёх колонок на 392 px не
+    живёт, поэтому каждый критерий стал карточкой: название и что система
+    измерила — сверху, ступени оценки — полосой во всю ширину, основание —
+    строкой под ними. Порядок и правило те же: без основания не отправляется. */
+function Report10_4Phone() {
+  const r = useReport10_4();
+  return (
+    <PhoneRoleApp
+      role={R10}
+      nav="Заключение"
+      title="Заключение по судье"
+      sub="Оралбай Ержан · черновик от 14.03.2026"
+      back={{ label: 'На контроле', to: 'Э10.1' }}
+    >
+      <Report10_4Head r={r} phone />
+      <Report10_4Files phone />
+
+      <Panel
+        title="Оценка по критериям · §7.3"
+        sub={r.kind === KIND4[1] ? 'Оралбай Ержан · столы 4, 9' : 'бригада целиком · 13 судей'}
+        extra={<CritExtra worst={r.worst} phone />}
+        flush
+      >
+        <div className="divide-y divide-neutral-100">
+          {CRITERIA.map((c) => (
+            <div key={c.n} className={'flex flex-col gap-2 px-4 py-3 ' + critTone(r.grade[c.n])}>
+              <span className="leading-tight">
+                <span className="block text-[13.5px] font-medium">{c.n}. {c.t}</span>
+                <span className="block text-xs text-neutral-500">{c.what}</span>
+              </span>
+              <span className={'text-xs ' + (c.fact ? 'text-neutral-600' : 'italic text-neutral-400')}>
+                {c.fact ?? 'только наблюдение'}
+              </span>
+              <GradeSeg cur={r.grade[c.n]} tall onPick={(g) => r.set(c.n, g)} />
+              <span className="text-xs leading-snug">
+                <Basis10_4 grade={r.grade[c.n]} basis={r.basis[c.n]} />
+              </span>
+            </div>
+          ))}
+        </div>
+        <Report10_4Send unbased={r.unbased} phone />
+      </Panel>
+    </PhoneRoleApp>
   );
 }
 
@@ -1031,6 +1463,9 @@ export const SCREENS: ScreenMap = {
   'Э0.1': {
     cap: 'Вход',
     view: () => <Login0_1 />,
+    /* Вход в телефоне уже нарисован у сквозных экранов — берём его, а не
+       рисуем второй: вход один на сайт и приложение. */
+    alt: () => <LoginPhone0_1 />,
     next: 'первый экран роли',
   },
   'Э10.1': {
@@ -1041,6 +1476,9 @@ export const SCREENS: ScreenMap = {
         <Tours10_1States />
       </>
     ),
+    /* Состояния во втором формате не повторяются: они про поведение экрана, а
+       не про устройство. */
+    alt: () => <Tours10_1Phone />,
     next: 'строка турнира',
   },
   'Э10.2': {
@@ -1051,11 +1489,13 @@ export const SCREENS: ScreenMap = {
         <Live10_2States />
       </>
     ),
+    alt: () => <Live10_2Phone />,
     next: 'вкладка «журнал правок»',
   },
   'Э10.3': {
     cap: 'Журнал правок и спорных ситуаций',
     view: () => <Journal10_3 />,
+    alt: () => <Journal10_3Phone />,
     next: 'эпизоды в заключение',
   },
   'Э10.4': {
@@ -1066,6 +1506,7 @@ export const SCREENS: ScreenMap = {
         <Report10_4States />
       </>
     ),
+    alt: () => <Report10_4Phone />,
   },
 };
 

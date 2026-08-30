@@ -708,7 +708,16 @@ export function InlineDialog({
 }) {
   return (
     <div className="absolute inset-0 z-40 flex items-center justify-center bg-neutral-900/40 p-8">
-      <div className={'flex max-h-full flex-col overflow-hidden rounded-2xl bg-white shadow-2xl ' + (wide ? 'w-[720px]' : 'w-[520px]')}>
+      {/* Ширина «не больше N, но и не шире кадра» ✳ (30.08.2026): тот же
+          диалог показывается и на ноутбуке, и на телефоне, а прибитые 520 px
+          в 392 px вылезали за корпус. Роли заводили под это свои обёртки —
+          теперь не нужно. */}
+      <div
+        className={
+          'flex max-h-full w-full flex-col overflow-hidden rounded-2xl bg-white shadow-2xl ' +
+          (wide ? 'max-w-[720px]' : 'max-w-[520px]')
+        }
+      >
         <div className="flex items-start justify-between gap-4 px-5 pb-3 pt-4">
           <div className="leading-tight">
             <div className="text-[15px] font-semibold">{title}</div>

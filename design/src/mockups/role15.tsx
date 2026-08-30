@@ -7,24 +7,35 @@
    работали они, дать им доступ на уровне их регионов, при этом доступ к их
    региону был и у ПГСК». Отсюда главная особенность макетов: везде видно, что
    это **свой регион**, а не вся страна, — счётчики региона, таблица только
-   своих судей, ссылка в общий рейтинг отдельной строкой. */
+   своих судей, ссылка в общий рейтинг отдельной строкой.
+
+   Второй формат ✳ (30.08.2026, решение владельца продукта «все экраны в
+   обоих»): у каждого экрана есть телефонный кадр (`*Ph`), и на борде он стоит
+   врезкой под десктопным. Председатель работает с ноутбука, но наряд
+   досбирывают в зале, а «кто из моих где» спрашивают по дороге. Данные у
+   форматов общие: таблицы и строки читают один и тот же массив, а правила
+   (допуск судьи, балл за старт) считаются одним выражением — иначе два кадра
+   одного экрана разъедутся. */
 
 import { useState, type ReactNode } from 'react';
-import { CalendarDays, ClipboardList, Gavel, GraduationCap, ListChecks, Scale, Send, Undo2, UserPlus } from 'lucide-react';
+import {
+  CalendarDays, ClipboardList, Gavel, GraduationCap, ListChecks, Scale, Send, Undo2, UserPlus, X,
+} from 'lucide-react';
 import { Avatar, Button, Meter } from '@heroui/react';
 import {
-  A, AW, Bar, EmptyBox, FileDrop, FormGrid, InlineDialog, PickField, Pill, Panel, Row, Rows,
-  ScreenScope, TextInput, WebApp,
-  StatTiles,
+  A, AW, Bar, EmptyBox, FileDrop, FormGrid, InlineDialog, PhoneRoleApp, PickField, Pill, Panel,
+  Row, Rows, ScreenScope, TextInput, WebApp,
   type RoleUI,
 } from '../kit/hero/app';
 /* Из старого слоя остаются только мета-компоненты борда: колонки, стрелки и
    полки состояний. Сами экраны собраны новым слоем. */
 import { Board, States, Shot, type ScreenMap } from './shell';
 /* Карточка судьи — общая с ролями 5, 9 и рейтингом судей: она одна на всю
-   систему (Э0.13), второй карточки на того же человека быть не должно. */
-import { JudgeCard, type JudgeMe, type JudgeTour } from './judge';
-import { Login0_1 } from './role00';
+   систему (Э0.13), второй карточки на того же человека быть не должно.
+   `tourPoints` — оттуда же: балл за старт считается в одном месте, и
+   телефонный кадр карточки считает его тем же способом, что широкий. */
+import { JudgeCard, tourPoints, type JudgeMe, type JudgeTour } from './judge';
+import { Login0_1, LoginPhone0_1 } from './role00';
 
 /* ── Роль: сайдбар и подпись профиля ─────────────────────────────── */
 
@@ -97,6 +108,86 @@ const Frag = ({ w = 560, children }: { w?: number; children: ReactNode }) => (
 
 const num = (n: number) => String(Math.round(n * 10) / 10).replace('.', ',');
 
+/* ── Второй формат роли: тот же экран на телефоне ────────────────── */
+
+/** Оболочка того же экрана в телефоне ✳ (30.08.2026, решение владельца
+    продукта: «все экраны в обоих»).
+
+    Председатель работает с ноутбука, но не всегда за столом: наряд досбирывают
+    в зале, а «кто из моих где» спрашивают по дороге. Разделы — те же три и
+    теми же словами (`R15.nav`): вкладки строит сама оболочка, и подписи
+    вкладки со строкой сайдбара обязаны совпадать — по ним карта флоу находит
+    переходы.
+
+    Что меняется на 392 px: таблицы становятся строками (имя + главное значение
+    + состояние, остальное подписью), ряды «фильтр + поиск + кнопка» встают друг
+    под другом, поля формы идут в одну колонку. Что не меняется: содержание и
+    все переходы. */
+const Ph15 = ({
+  nav,
+  title,
+  sub,
+  back,
+  children,
+}: {
+  nav: string;
+  title: string;
+  sub?: string;
+  back?: { label: string; to?: string };
+  children: ReactNode;
+}) => (
+  <PhoneRoleApp role={R15} nav={nav} title={title} sub={sub} back={back}>
+    {children}
+  </PhoneRoleApp>
+);
+
+/** Диалог на телефоне — во всю ширину, снизу ✳ (30.08.2026).
+
+    ⚠ Дупликация с role16.tsx (и повод поднять в `kit/hero/app`, когда таких
+    экранов наберётся больше): `InlineDialog` нового слоя прибит к 520 точкам —
+    это ширина ноутбука, и в 392 px он не помещается вовсе. На телефоне диалог
+    занимает всю ширину и приходит снизу: там его и ждут, и оттуда до него
+    достаёт большой палец. */
+const PhoneDialog = ({
+  title,
+  sub,
+  to,
+  foot,
+  onClose,
+  children,
+}: {
+  title: string;
+  sub?: string;
+  /** Экран позади диалога — туда ведёт крестик. */
+  to?: string;
+  foot?: ReactNode;
+  onClose?: () => void;
+  children: ReactNode;
+}) => (
+  <div className="absolute inset-0 z-40 flex flex-col justify-end bg-neutral-900/40">
+    <div className="flex max-h-[88%] flex-col overflow-hidden rounded-t-2xl bg-white shadow-2xl">
+      <div className="flex items-start justify-between gap-3 px-4 pb-2 pt-3.5">
+        <div className="leading-tight">
+          <div className="text-[15px] font-semibold">{title}</div>
+          {sub && <div className="mt-0.5 text-xs text-neutral-500">{sub}</div>}
+        </div>
+        <button
+          type="button"
+          data-to={to}
+          onClick={onClose}
+          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-neutral-400"
+        >
+          <X size={16} />
+        </button>
+      </div>
+      <div className="min-h-0 flex-1 overflow-auto px-4 pb-3">{children}</div>
+      {foot && (
+        <div className="flex flex-col gap-2 border-t border-neutral-100 bg-neutral-50 px-4 py-3">{foot}</div>
+      )}
+    </div>
+  </div>
+);
+
 /* ── Судьи региона: данные ──────────────────────────────────────── */
 
 type Reg = {
@@ -128,6 +219,60 @@ const REGION: Reg[] = [
 
 const REG_GRID = 'minmax(0,1.9fr) minmax(0,1.5fr) minmax(0,1.3fr) 48px 56px 128px';
 
+/** Допуск судьи одним выражением — одно на оба формата: просроченная
+    аттестация, истекающая и неподтверждённая категория считаются в одном месте,
+    иначе таблица и список строк разойдутся на первой же правке правила. */
+const access15 = (j: Reg) => {
+  const over = j.left !== null && j.left < 0;
+  const soon = j.left !== null && j.left >= 0 && j.left <= 30;
+  const wait = j.att === null;
+  return {
+    over,
+    soon,
+    wait,
+    pill: {
+      t: wait ? 'ЖДЁТ КАТЕГОРИИ' : over ? 'НЕ ДОПУЩЕН' : 'ДОПУЩЕН',
+      cls: (wait ? 'wait' : over ? 'bad' : 'live') as Cls,
+    },
+    /** Срок словами: на телефоне колонки «Аттестация до» нет, и срок уходит
+        в подпись строки — но остаётся тем же сроком. */
+    att: wait
+      ? 'категория не подтверждена'
+      : over
+        ? `аттестация просрочена ${-(j.left as number)} дн. назад`
+        : soon
+          ? `аттестация до ${j.att} — осталось ${j.left} дн.`
+          : `аттестация до ${j.att}`,
+  };
+};
+
+/** Сноска реестра: экран показывает свой срез. Текст один на оба формата — на
+    десктопе он стоит подвалом таблицы, на телефоне плашкой под списком. */
+const Foot15_1 = () => (
+  <>
+    Экран показывает свой срез, а не весь реестр: судей в стране больше, и они — в общем
+    рейтинге судей (Э0.12)
+  </>
+);
+
+/** Бланк приглашения — один на оба формата: на десктопе он лежит в
+    `InlineDialog`, на телефоне в нижнем листе, а поля и правило одни и те же. */
+const InviteForm15_1 = ({ wide }: { wide?: boolean }) => (
+  <>
+    <FormGrid>
+      <TextInput label="Фамилия и имя" value="Есенов Алишер" wide />
+      <TextInput label="Телефон" value="+7 705 481-22-14" wide={wide} />
+      <PickField label="Город" value="Павлодар" wide={wide} />
+    </FormGrid>
+    <div className="mt-3">
+      <Bar>
+        Категорию приглашение не даёт ✳: её по-прежнему проставляет судейская коллегия по
+        удостоверению. До подтверждения судья числится «ждёт категории» и в наряд не ставится.
+      </Bar>
+    </div>
+  </>
+);
+
 export function Judges15_1() {
   const [invite, setInvite] = useState(false);
   return (
@@ -137,14 +282,10 @@ export function Judges15_1() {
       title="Судьи региона"
       sub="Павлодарская область · сезон 2026"
     >
-      <StatTiles
-        items={[
-          { v: String(REGION.length), k: 'Судей в реестре региона' },
-          { v: '5', k: 'С действующей категорией' },
-          { v: '2', k: 'Аттестация истекает или истекла', tone: 'a' },
-          { v: '2', k: 'В наряде сейчас', tone: 'g' },
-        ]}
-      />
+      {/* Плиток-счётчиков над таблицей больше нет ✳ (30.08.2026): экран — реестр
+          судей региона, и четыре плитки повторяли то, что и так стоит в самих
+          строках, — категорию, срок аттестации, наряд. Просроченная аттестация
+          видна подсветкой строки, а не числом «2» над таблицей. */}
 
       {/* Акцент полосы один — приглашение: то, ради чего председатель сюда и
           заходит. Общий рейтинг он смотрит редко — тихой кнопкой. */}
@@ -182,9 +323,7 @@ export function Judges15_1() {
             /* Просроченная аттестация подкрашена ✳: такого судью в наряд не
                ставят, и видно это должно быть до того, как его туда поставили,
                а не после. Истекающая — жёлтым: ещё можно успеть. */
-            const over = j.left !== null && j.left < 0;
-            const soon = j.left !== null && j.left >= 0 && j.left <= 30;
-            const wait = j.att === null;
+            const { over, soon, wait, pill } = access15(j);
             return (
               <button
                 key={j.nm}
@@ -219,10 +358,7 @@ export function Judges15_1() {
                 <span className="text-right font-semibold tabular-nums">{j.r ? num(j.r) : '—'}</span>
                 <span className="text-right tabular-nums text-neutral-600">{j.pl ? '№' + j.pl : '—'}</span>
                 <span>
-                  <P
-                    t={wait ? 'ЖДЁТ КАТЕГОРИИ' : over ? 'НЕ ДОПУЩЕН' : 'ДОПУЩЕН'}
-                    cls={wait ? 'wait' : over ? 'bad' : 'live'}
-                  />
+                  <P t={pill.t} cls={pill.cls} />
                 </span>
               </button>
             );
@@ -231,10 +367,7 @@ export function Judges15_1() {
         {/* Чужой регион — отдельной строкой ✳: так видно, что экран показывает
             свой срез, а не весь реестр. Иначе председатель считает, что судей
             в стране столько же, сколько у него. */}
-        <Foot>
-          Экран показывает свой срез, а не весь реестр: судей в стране больше, и они — в общем
-          рейтинге судей (Э0.12)
-        </Foot>
+        <Foot><Foot15_1 /></Foot>
       </Panel>
 
       {invite && (
@@ -250,20 +383,76 @@ export function Judges15_1() {
             </>
           }
         >
-          <FormGrid>
-            <TextInput label="Фамилия и имя" value="Есенов Алишер" wide />
-            <TextInput label="Телефон" value="+7 705 481-22-14" />
-            <PickField label="Город" value="Павлодар" />
-          </FormGrid>
-          <div className="mt-3">
-            <Bar>
-              Категорию приглашение не даёт ✳: её по-прежнему проставляет судейская коллегия по
-              удостоверению. До подтверждения судья числится «ждёт категории» и в наряд не ставится.
-            </Bar>
-          </div>
+          <InviteForm15_1 />
         </InlineDialog>
       )}
     </WebApp>
+  );
+}
+
+/** Тот же реестр на телефоне ✳ (30.08.2026).
+
+    Таблица из шести колонок в 392 px не живёт: категорию с тем, кто её
+    подтвердил, срок аттестации, R, место и допуск одновременно показать нечем.
+    Строка отвечает на тот же вопрос иначе: имя, главное число (R) и состояние
+    допуска — в строке, всё остальное подписью под именем. Срок аттестации при
+    этом не пропадает и не перестаёт гореть: он считается тем же `access15`,
+    что и колонка на десктопе.
+
+    Ряд «рейтинг судей + пригласить» разъехался в две кнопки друг под другом —
+    в одну строку они на телефоне не встают, а приглашение остаётся главным
+    действием и стоит первым. */
+export function Judges15_1Ph() {
+  const [invite, setInvite] = useState(false);
+  return (
+    <Ph15 nav="Судьи региона" title="Судьи региона" sub="Павлодарская область · сезон 2026">
+      <div className="mb-3 flex flex-col gap-2">
+        <Button variant="primary" className="w-full" onPress={() => setInvite(true)}>
+          <UserPlus size={15} /> Пригласить судью
+        </Button>
+        <Button variant="ghost" className="w-full" data-to="Э0.12">
+          <ListChecks size={14} /> Рейтинг судей
+        </Button>
+      </div>
+
+      <div className="mb-4">
+        <Rows>
+          {REGION.map((j) => {
+            const a = access15(j);
+            return (
+              <Row
+                key={j.nm}
+                av={j.av}
+                to="Э15.2"
+                nm={j.nm}
+                sub={`${j.cat} · ${a.att} · ${j.duty}`}
+                val={j.r ? num(j.r) : '—'}
+                pill={a.pill}
+              />
+            );
+          })}
+        </Rows>
+      </div>
+
+      <Bar><Foot15_1 /></Bar>
+
+      {invite && (
+        <PhoneDialog
+          title="Пригласить судью"
+          sub="Приглашение уйдёт по СМС и добавит человека в реестр региона"
+          to="Э15.1"
+          onClose={() => setInvite(false)}
+          foot={
+            <>
+              <Button variant="primary" className="w-full" onPress={() => setInvite(false)}>Пригласить</Button>
+              <Button variant="ghost" className="w-full" onPress={() => setInvite(false)}>Закрыть</Button>
+            </>
+          }
+        >
+          <InviteForm15_1 wide />
+        </PhoneDialog>
+      )}
+    </Ph15>
   );
 }
 
@@ -341,6 +530,100 @@ export function Card15_2() {
   );
 }
 
+/** Та же карточка на телефоне ✳ (30.08.2026).
+
+    Общую `JudgeCard` (Э0.13) здесь не переписываем и не ужимаем: она одна на
+    всю систему, и телефонная её копия разъехалась бы с широкой на первой же
+    правке Положения. Вместо этого из тех же данных (`CARD`, `CARD_TOURS`)
+    собран компактный кадр: кто это, балл и его слагаемые, история судейства с
+    тем же `tourPoints`.
+
+    Второй формат тут честно показывает меньше: паспортная часть карточки
+    (кто подтвердил категорию, с какого года в реестре), пояснения к S1–S4 и
+    зачёт по Положению остаются в полной карточке — на 392 px они вытеснили бы
+    то, за чем на карточку и приходят с телефона: балл и наряд. Об этом сказано
+    плашкой, а не умолчанием. */
+export function Card15_2Ph() {
+  const r = CARD.s1 + CARD.s2 + CARD.s3 + CARD.s4;
+  return (
+    <Ph15
+      nav="Судьи региона"
+      title="Карточка судьи региона"
+      sub="Дәулет Жасұлан · национальная категория · Павлодар"
+      back={{ label: 'Судьи региона', to: 'Э15.1' }}
+    >
+      {/* Действия региона — первым: с телефона на карточку заходят, чтобы
+          поставить судью в наряд, а не читать её. Акцент один. */}
+      <div className="mb-3 flex flex-col gap-2">
+        <Button variant="primary" className="w-full" data-to="Э15.3">
+          <CalendarDays size={15} /> Поставить в наряд
+        </Button>
+        <Button variant="ghost" className="w-full" data-to="Э15.4">
+          <Send size={14} /> Внести документ на S3 / S4
+        </Button>
+        <Button variant="ghost" className="w-full">
+          <GraduationCap size={14} /> Отправить на аттестацию
+        </Button>
+      </div>
+
+      <div className="mb-4 overflow-hidden rounded-xl border border-neutral-200 bg-white shadow-sm">
+        <div className="flex items-center gap-3 px-4 py-3">
+          <Avatar size="lg">
+            <Avatar.Fallback>{CARD.nm.slice(0, 1)}</Avatar.Fallback>
+          </Avatar>
+          <span className="min-w-0 flex-1 leading-tight">
+            <span className="block truncate text-[15px] font-semibold">{CARD.nm}</span>
+            <span className="block text-xs text-neutral-500">{CARD.cat} · регион учёта {CARD.region}</span>
+          </span>
+        </div>
+        <div className="flex items-baseline gap-3 border-t border-neutral-100 px-4 py-3">
+          <span className="text-3xl font-bold tabular-nums tracking-tight">{num(r)}</span>
+          <span className="text-xs leading-tight text-neutral-500">
+            балл R за сезон · №{CARD.pl} в рейтинге судей
+          </span>
+        </div>
+      </div>
+
+      {/* Слагаемые — четырьмя числами: подписи к ним («что такое S3») живут в
+          полной карточке, а здесь важно, чего не хватает. */}
+      <Panel title="Из чего собрался балл" sub="разбор с пояснениями — в полной карточке" flush>
+        <div className="grid grid-cols-4 divide-x divide-neutral-100">
+          {([['S1', CARD.s1], ['S2', CARD.s2], ['S3', CARD.s3], ['S4', CARD.s4]] as const).map(([k, v]) => (
+            <div key={k} className="px-2 py-2.5 text-center">
+              <div className={'text-[17px] font-semibold tabular-nums ' + (v === 0 ? 'text-neutral-400' : '')}>
+                {num(v)}
+              </div>
+              <div className="mt-0.5 text-[11px] text-neutral-500">{k}</div>
+            </div>
+          ))}
+        </div>
+      </Panel>
+
+      <Panel title={'История судейства · ' + CARD_TOURS.length} sub="кем был на старте и какой коэффициент" flush>
+        <div className="divide-y divide-neutral-100">
+          {CARD_TOURS.map((t) => {
+            const pts = tourPoints(t);
+            return (
+              <Row
+                key={t.nm + t.when}
+                nm={t.nm}
+                sub={`${t.when} · ${t.city} · ${t.post} · ${t.k === 1 ? 'без коэффициента' : '× ' + num(t.k)}`}
+                val={(pts < 0 ? '' : '+') + num(pts)}
+              />
+            );
+          })}
+        </div>
+      </Panel>
+
+      <Bar>
+        Карточку никто не заполняет руками: она собирается из турниров, нарядов и подтверждённых
+        документов. На телефоне показано главное — балл, слагаемые и история судейства; паспортная
+        часть и зачёт по Положению остаются в полной карточке.
+      </Bar>
+    </Ph15>
+  );
+}
+
 const Card15_2States = () => (
   <States>
     <Shot
@@ -411,6 +694,23 @@ const CREWS: Record<string, Slot[]> = {
     { post: 'Судьи столов · ещё 3 места' },
   ],
 };
+
+/** Сноска наряда: столы распределяет главный судья, а не регион. Один текст на
+    оба формата. */
+const Foot15_3 = () => (
+  <>
+    Столы между судьями распределяет главный судья на этапе системы проведения — здесь
+    только состав бригады
+  </>
+);
+
+/** Правило экрана: республиканский наряд собирает председатель ГСК. */
+const Rule15_3 = () => (
+  <Bar>
+    Республиканский наряд собирает председатель ГСК — здесь он только виден: от выезда судьи
+    зависит коэффициент 1,5 в его рейтинге (TZ §7.2).
+  </Bar>
+);
 
 export function Duty15_3() {
   const [pick, setPick] = useState<string | null>(STARTS[2].nm);
@@ -509,18 +809,88 @@ export function Duty15_3() {
               </div>
             ))}
           </div>
-          <Foot>
-            Столы между судьями распределяет главный судья на этапе системы проведения — здесь
-            только состав бригады
-          </Foot>
+          <Foot><Foot15_3 /></Foot>
         </Panel>
       )}
 
-      <Bar>
-        Республиканский наряд собирает председатель ГСК — здесь он только виден: от выезда судьи
-        зависит коэффициент 1,5 в его рейтинге (TZ §7.2).
-      </Bar>
+      <Rule15_3 />
     </WebApp>
+  );
+}
+
+/** Те же наряды на телефоне ✳ (30.08.2026).
+
+    Наряд досбирывают не за столом: судья отказался утром, и место закрывают из
+    зала. Поэтому экран на телефоне тот же и с теми же действиями — старт
+    выбирается строкой, состав бригады раскрывается под ним.
+
+    Таблица стартов становится строками: название и даты — в строке, «сколько из
+    скольких» главным значением, состояние значком. Уровень закрытых мест
+    остаётся тем же `Meter`, но встаёт в тело панели во всю ширину: в заголовке
+    на 392 px ему места нет. */
+export function Duty15_3Ph() {
+  const [pick, setPick] = useState<string | null>(STARTS[2].nm);
+  const cur = STARTS.find((t) => t.nm === pick);
+  return (
+    <Ph15 nav="Наряды региона" title="Наряды региона" sub="Павлодарская область · сезон 2026">
+      <div className="mb-3">
+        <Button variant="primary" className="w-full" data-to="Э15.1">
+          <UserPlus size={15} /> Добавить судью в наряд
+        </Button>
+      </div>
+
+      <Panel title="Старты сезона" sub="республиканские — на чтение" flush>
+        <div className="divide-y divide-neutral-100">
+          {STARTS.map((t) => (
+            <Row
+              key={t.nm}
+              nm={t.nm}
+              sub={`${t.when} · ${t.city} · ${t.who}`}
+              val={t.reg ? `${t.got} / ${t.need}` : undefined}
+              pill={{
+                t: t.reg ? (t.got >= t.need ? 'НАРЯД СОБРАН' : 'НЕ СОБРАН') : 'РЕСПУБЛИКАНСКИЙ',
+                cls: t.reg ? (t.got >= t.need ? 'live' : 'bad') : 'done',
+              }}
+              on={pick === t.nm}
+              onSelect={t.reg ? () => setPick(pick === t.nm ? null : t.nm) : undefined}
+            />
+          ))}
+        </div>
+      </Panel>
+
+      {cur && (
+        <Panel title={'Наряд: ' + cur.nm} sub={`${cur.when} · ${cur.city}`} flush>
+          <div className="border-b border-neutral-100 px-4 py-2.5">
+            <Meter aria-label="Мест закрыто" maxValue={cur.need} value={cur.got} className="flex w-full flex-col gap-1">
+              <Meter.Track>
+                <Meter.Fill />
+              </Meter.Track>
+              <Meter.Output>{cur.got} из {cur.need} мест закрыто</Meter.Output>
+            </Meter>
+          </div>
+          <div className="divide-y divide-neutral-100">
+            {(CREWS[cur.nm] ?? []).map((s) => (
+              <div key={s.post} className="flex items-center gap-3 px-4 py-2.5">
+                <span className="min-w-0 flex-1 leading-tight">
+                  <span className="block text-xs text-neutral-500">{s.post}</span>
+                  <span className={'block truncate text-[13.5px] font-medium ' + (s.nm ? '' : 'text-amber-700')}>
+                    {s.nm ?? 'не назначен'}
+                  </span>
+                </span>
+                {s.nm && (
+                  <Button size="sm" variant="ghost">
+                    <Undo2 size={14} /> Снять
+                  </Button>
+                )}
+              </div>
+            ))}
+          </div>
+          <Foot><Foot15_3 /></Foot>
+        </Panel>
+      )}
+
+      <Rule15_3 />
+    </Ph15>
   );
 }
 
@@ -575,6 +945,26 @@ const DOCS15: Doc15[] = [
 
 const DOC_GRID = 'minmax(0,1.9fr) minmax(0,1fr) 44px 48px 116px 208px';
 
+/** Сноска начислений: начисляет не регион. Один текст на оба формата. */
+const Foot15_4 = () => (
+  <>
+    Начисляет не регион, а рейтинговая комиссия: регион подаёт документ, подтверждает
+    председатель ГСК (TZ §7.2). Иначе балл судьи зависел бы от того, в каком регионе он
+    состоит
+  </>
+);
+
+/** Бланк подачи документа — один на оба формата: на десктопе он в
+    `InlineDialog`, на телефоне в нижнем листе, поля те же. */
+const DocForm15_4 = ({ wide }: { wide?: boolean }) => (
+  <FormGrid>
+    <PickField label="Судья" value="Дәулет Жасұлан" wide={wide} />
+    <PickField label="Категория начисления" value="S3 · повышение квалификации" wide={wide} />
+    <TextInput label="Документ" value="Сертификат семинара судей области" wide />
+    <FileDrop label="Скан документа" hint="PDF или JPG · до 10 МБ" />
+  </FormGrid>
+);
+
 export function Points15_4() {
   const [submit, setSubmit] = useState(false);
   return (
@@ -627,11 +1017,7 @@ export function Points15_4() {
             </div>
           ))}
         </Sheet>
-        <Foot>
-          Начисляет не регион, а рейтинговая комиссия: регион подаёт документ, подтверждает
-          председатель ГСК (TZ §7.2). Иначе балл судьи зависел бы от того, в каком регионе он
-          состоит
-        </Foot>
+        <Foot><Foot15_4 /></Foot>
       </Panel>
 
       {submit && (
@@ -647,15 +1033,67 @@ export function Points15_4() {
             </>
           }
         >
-          <FormGrid>
-            <PickField label="Судья" value="Дәулет Жасұлан" />
-            <PickField label="Категория начисления" value="S3 · повышение квалификации" />
-            <TextInput label="Документ" value="Сертификат семинара судей области" wide />
-            <FileDrop label="Скан документа" hint="PDF или JPG · до 10 МБ" />
-          </FormGrid>
+          <DocForm15_4 />
         </InlineDialog>
       )}
     </WebApp>
+  );
+}
+
+/** Те же начисления на телефоне ✳ (30.08.2026).
+
+    Таблица из шести колонок становится строками: документ и судья — в строке,
+    балл главным значением, состояние значком, категория начисления (S3 или S4)
+    уходит в подпись. Скан документа с телефона и подают: там его и снимают
+    камерой, поэтому бланк на телефоне не урезан — те же четыре поля.
+
+    Второй формат показывает меньше в одном месте: у черновика остаётся кнопка
+    «Подать», а «Отозвать черновик» — нет. В строке телефона помещается одно
+    действие, и это должно быть то, ради которого черновик заводили; отзыв
+    остаётся на широком экране. */
+export function Points15_4Ph() {
+  const [submit, setSubmit] = useState(false);
+  return (
+    <Ph15 nav="Начисления" title="Начисления региона" sub="Павлодарская область · S3 и S4 по своим судьям">
+      <div className="mb-3">
+        <Button variant="primary" className="w-full" onPress={() => setSubmit(true)}>
+          <Send size={15} /> Подать документ
+        </Button>
+      </div>
+
+      <Panel title="Документы региона" sub="S1 и S2 система считает сама" flush>
+        <div className="divide-y divide-neutral-100">
+          {DOCS15.map((d) => (
+            <Row
+              key={d.doc}
+              nm={d.doc}
+              sub={`${d.who} · ${d.cat} · ${d.sub}`}
+              val={d.pts}
+              pill={{ t: d.st, cls: d.cls }}
+              action={d.draft ? 'Подать' : undefined}
+            />
+          ))}
+        </div>
+        <Foot><Foot15_4 /></Foot>
+      </Panel>
+
+      {submit && (
+        <PhoneDialog
+          title="Подать документ"
+          sub="Уйдёт рейтинговой комиссии — балл подсказывает Положение"
+          to="Э15.4"
+          onClose={() => setSubmit(false)}
+          foot={
+            <>
+              <Button variant="primary" className="w-full" onPress={() => setSubmit(false)}>Подать</Button>
+              <Button variant="ghost" className="w-full" onPress={() => setSubmit(false)}>Закрыть</Button>
+            </>
+          }
+        >
+          <DocForm15_4 wide />
+        </PhoneDialog>
+      )}
+    </Ph15>
   );
 }
 
@@ -687,27 +1125,41 @@ const Points15_4States = () => (
 
 /** Экраны роли по кодам: из этой карты собираются и борд, и карта флоу.
     Коды, подписи и порядок — те же, что были: по ним сходятся flows/, данные
-    роли и Storybook. */
+    роли и Storybook.
+
+    У каждого экрана есть `alt` — тот же экран во втором формате ✳ (30.08.2026,
+    решение владельца продукта «все экраны в обоих»): роль десктопная, второй
+    кадр телефонный. Состояния (`States`) во втором формате не повторяются:
+    состояние экрана — про ситуацию, а не про устройство. */
 export const SCREENS: ScreenMap = {
-  'Э0.1': { cap: 'Вход', view: () => <Login0_1 />, next: 'судьи своего региона' },
+  'Э0.1': {
+    cap: 'Вход',
+    view: () => <Login0_1 />,
+    alt: () => <LoginPhone0_1 />,
+    next: 'судьи своего региона',
+  },
   'Э15.1': {
     cap: 'Судьи региона',
     view: () => (<><Judges15_1 /><Judges15_1States /></>),
+    alt: () => <Judges15_1Ph />,
     next: 'строка судьи',
   },
   'Э15.2': {
     cap: 'Карточка судьи региона',
     view: () => (<><Card15_2 /><Card15_2States /></>),
+    alt: () => <Card15_2Ph />,
     next: 'поставить в наряд',
   },
   'Э15.3': {
     cap: 'Наряды региона',
     view: () => (<><Duty15_3 /><Duty15_3States /></>),
+    alt: () => <Duty15_3Ph />,
     next: 'документы на баллы',
   },
   'Э15.4': {
     cap: 'Начисления региона',
     view: () => (<><Points15_4 /><Points15_4States /></>),
+    alt: () => <Points15_4Ph />,
   },
 };
 

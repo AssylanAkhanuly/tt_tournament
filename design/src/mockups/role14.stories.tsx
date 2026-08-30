@@ -1,5 +1,5 @@
 import { Board as RespBoard, Col } from '../respShell';
-import { Home14_1, Role14Board } from './role14';
+import { Calendar14_2, Role14Board } from './role14';
 import { Role14AppBoard } from './role14app';
 
 /* Тема прибита к светлой, как в разделе «Дизайн»: роль проектируется и
@@ -13,14 +13,16 @@ export default {
   globals: { theme: 'daylight-fnt' },
 };
 
-export const Flow = { name: 'Макеты по флоу · 16 экранов', render: () => <Role14Board /> };
+export const Flow = { name: 'Макеты по флоу · 15 экранов', render: () => <Role14Board /> };
 
+/* Главной (Э14.1) в роли больше нет ✳ (30.08.2026), и первым экраном стоит
+   объединённая вкладка «Турниры» — на планшете показываем её. */
 export const Tablet = {
   name: 'Адаптив · планшет',
   render: () => (
     <RespBoard title="14 · СПОРТСМЕН — ПЛАНШЕТ" tag="веб · планшет · тот же экран, раскладка плотнее">
-      <Col cap="Э14.1 · Главная">
-        <Home14_1 variant="land" />
+      <Col cap="Э14.2 · Турниры">
+        <Calendar14_2 variant="land" />
       </Col>
     </RespBoard>
   ),

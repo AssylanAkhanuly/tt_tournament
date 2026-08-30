@@ -15,6 +15,7 @@ import {
   Calendar,
   DataTable,
   DayList,
+  EventTimeline,
   MiniMonth,
   TimeGrid,
   DateInput,
@@ -33,6 +34,7 @@ import {
   Panel,
   PhoneApp,
   PickField,
+  Pill,
   PrimaryAction,
   QuietAction,
   Row,
@@ -389,6 +391,74 @@ export const CalendarMonth = {
             </div>
           }
         />
+      </WebApp>
+    </div>
+  ),
+};
+
+/* Лента событий: дата слева, карточка справа, даты нанизаны на линию.
+   Отвечает на «что дальше по порядку» — в отличие от сетки месяца, которая
+   отвечает на «что на что накладывается». */
+export const CalendarTimeline = {
+  name: 'Календарь · лента событий',
+  render: () => (
+    <div className="p-8">
+      <WebApp
+        role={DEMO_ROLE}
+        nav="Соревнования"
+        title="Что впереди"
+        sub="Сезон 2026 · ближайшие события"
+      >
+        <Panel>
+          <EventTimeline
+            today="2026-03-18"
+            items={[
+              {
+                id: 'e1',
+                from: '2026-03-12',
+                till: '2026-03-15',
+                nm: 'Кубок Алматы 2026',
+                sub: 'Алматы · открытый республиканский · 96 участников',
+                tone: 'accent',
+                to: 'Э5.10',
+                right: <StatusChip tst="live" />,
+                children: (
+                  <Facts items={[{ k: 'судей в наряде', v: '6 из 7', hot: true }, { k: 'столов', v: '12' }]} />
+                ),
+              },
+              {
+                id: 'e2',
+                from: '2026-03-19',
+                nm: 'Семинар судей',
+                sub: 'Караганда · повышение категории',
+                tone: 'success',
+                to: 'Э5.13',
+                right: <Pill t="ЗАПИСЬ ОТКРЫТА" color="success" />,
+              },
+              {
+                id: 'e3',
+                from: '2026-03-20',
+                till: '2026-03-22',
+                nm: 'Первенство Астаны',
+                sub: 'Астана · главный старт',
+                tone: 'warning',
+                to: 'Э5.10',
+                right: <StatusChip tst="judges" />,
+                children: <Bar tone="warning">Судья не назначен, а до старта два дня.</Bar>,
+              },
+              {
+                id: 'e4',
+                from: '2026-04-01',
+                till: '2026-04-05',
+                nm: 'Евразийская лига · тур 2',
+                sub: 'Шымкент · командный',
+                tone: 'danger',
+                to: 'Э5.10',
+                right: <StatusChip tst="draft" />,
+              },
+            ]}
+          />
+        </Panel>
       </WebApp>
     </div>
   ),

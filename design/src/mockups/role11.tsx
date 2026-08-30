@@ -15,8 +15,8 @@ import {
 } from 'lucide-react';
 import { Avatar, Button } from '@heroui/react';
 import {
-  A, Bar, DataTable, FilterSeg, KV, Panel, Pill, Row, Rows, ScreenScope, Separator,
-  StatTiles, WebApp, type RoleUI,
+  A, Bar, DataTable, FilterSeg, KV, Panel, PhoneRoleApp, Pill, Row, Rows, ScreenScope, Separator,
+  WebApp, type RoleUI,
 } from '../kit/hero/app';
 /* Из старого слоя остаются только мета-компоненты борда: колонки, стрелки и
    полки состояний. Сами экраны собраны новым слоем. */
@@ -24,7 +24,7 @@ import { Board, States, Shot, type ScreenMap } from './shell';
 /* График — настоящий Chart.js, как у спортсмена (роль 14): нарисованная ломаная
    не ответила бы, что было в январе. Цвета — токенами через getComputedStyle. */
 import { ChartBox, soft, token } from './chart';
-import { Login0_1 } from './role00';
+import { Login0_1, LoginPhone0_1 } from './role00';
 
 /* ── Роль: сайдбар и подпись профиля ─────────────────────────────── */
 
@@ -246,6 +246,27 @@ const REGIONS11 = ['Все регионы', 'Астана', 'Алматы'];
 const AGES11 = ['Взрослые', 'До 19 лет', 'До 15 лет'];
 const CAND_GRID = '36px 1.9fr 1.1fr 76px 90px 36px';
 
+/** Кто остаётся в списке после фильтров. Выборка одна на оба формата: если бы
+    десктоп и телефон считали её каждый по-своему, по одним и тем же фильтрам они
+    показали бы разных кандидатов. */
+const filterCands = (sex: string, age: string, region: string) =>
+  CANDS.filter((c) => {
+    /* Женского списка в рабочей гипотезе нет: фильтр честно показывает пусто,
+       а не делает вид, что переключился. */
+    if (sex === 'Женщины') return false;
+    const byAge = age === AGES11[0] ? true : age === AGES11[1] ? c.born >= 2007 : c.born >= 2011;
+    return byAge && (region === REGIONS11[0] || c.region === region);
+  });
+
+/** Охват списка — открытый вопрос из флоу, и он сказан на самом экране (в обоих
+    форматах одним текстом: два пересказа одного допущения разъедутся). */
+const SCOPE_WARN11 = (
+  <>
+    ⚠ Видит ли роль всех спортсменов страны или только кандидатский список — не решено
+    (вопрос 12.1). Пока показываем всех, как чтение реестра; данных экран не меняет.
+  </>
+);
+
 type SortKey = 'pl' | 'nm' | 'r' | 'd';
 const COLS11: { k: SortKey; t: string }[] = [
   { k: 'pl', t: '№' },
@@ -276,13 +297,7 @@ export function Cands11_1(_props: { variant?: 'desktop' | 'land' } = {}) {
     setStars(next);
   };
 
-  const found = CANDS.filter((c) => {
-    /* Женского списка в рабочей гипотезе нет: фильтр честно показывает пусто,
-       а не делает вид, что переключился. */
-    if (sex === 'Женщины') return false;
-    const byAge = age === AGES11[0] ? true : age === AGES11[1] ? c.born >= 2007 : c.born >= 2011;
-    return byAge && (region === REGIONS11[0] || c.region === region);
-  });
+  const found = filterCands(sex, age, region);
   const rows = [...found].sort((a, b) => {
     const x = sort.k === 'nm' ? a.nm.localeCompare(b.nm, 'ru') : a[sort.k] - b[sort.k];
     return sort.up ? x : -x;
@@ -296,13 +311,11 @@ export function Cands11_1(_props: { variant?: 'desktop' | 'land' } = {}) {
       title="Кандидаты в сборную"
       sub="Реестр спортсменов · рейтинг и динамика за сезон 2026"
     >
-      <StatTiles
-        items={[
-          { v: '214', k: 'Спортсменов в отборе' },
-          { v: String(stars.size), k: 'В моём списке — отмечены для сравнения', tone: 'g' },
-          { v: '8', k: 'Главных стартов сезона' },
-        ]}
-      />
+      {/* Плиток-счётчиков над таблицей больше нет ✳ (30.08.2026): экран — реестр
+          кандидатов, и витрина «214 в отборе · 8 стартов» отодвигала работу вниз,
+          ничего не решая. Сколько отмечено — написано на самой кнопке «Сравнить
+          отмеченных», сколько строк на экране — в строке под фильтрами. В данных
+          роли зоны счётчиков и нет: там фильтры, таблица и охват списка. */}
 
       {/* Фильтры из флоу: пол · возрастная группа · регион · период. */}
       <div className="mb-3 flex flex-wrap gap-2">
@@ -394,10 +407,7 @@ export function Cands11_1(_props: { variant?: 'desktop' | 'land' } = {}) {
 
       {/* Охват списка — открытый вопрос из флоу, и он сказан на самом экране. */}
       <div className="mt-4">
-        <Bar tone="warning">
-          ⚠ Видит ли роль всех спортсменов страны или только кандидатский список — не решено
-          (вопрос 12.1). Пока показываем всех, как чтение реестра; данных экран не меняет.
-        </Bar>
+        <Bar tone="warning">{SCOPE_WARN11}</Bar>
       </div>
     </WebApp>
   );
@@ -498,7 +508,43 @@ const RatingChart11 = () => (
   />
 );
 
-/** Карточка на чтение: слева кто это и куда идёт рейтинг, справа — чем это
+/** Профиль по зонам флоу: клуб · тренер · разряд — отдельными строками, а не
+    склейкой в подпись. Один список на оба формата. */
+const PROFILE11: [string, ReactNode][] = [
+  ['Клуб', '«СКА» · Астана'],
+  ['Тренер', 'Ахметов Дамир'],
+  ['Разряд', 'Мастер спорта РК'],
+  ['Год рождения', '2003 · 22 года'],
+  ['Матчей за сезон', '46 · побед 38 (83%)'],
+  ['Динамика за сезон', <span key="d" className="text-green-700">+38 (было 2418)</span>],
+];
+
+/** Последние матчи: победа-поражение кружком, счёт справа. Список один на оба
+    формата — на телефоне он и так строчный, ужимать нечего. */
+const Matches11 = () => (
+  <div className="divide-y divide-neutral-100">
+    {MATCHES.map((m) => (
+      <div key={m.nm + m.dt} className="flex items-center gap-3 px-4 py-2.5">
+        <span
+          className={
+            'flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[11px] font-bold ' +
+            (m.st === 'win' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-600')
+          }
+        >
+          {m.st === 'win' ? 'П' : 'О'}
+        </span>
+        <span className="min-w-0 flex-1 leading-tight">
+          <span className="block truncate text-[13.5px] font-medium">{m.nm}</span>
+          <span className="block truncate text-xs text-neutral-500">{m.sub}</span>
+        </span>
+        <span className="text-[13.5px] font-bold tabular-nums">{m.sc}</span>
+        <span className="w-10 text-right text-xs tabular-nums text-neutral-400">{m.dt}</span>
+      </div>
+    ))}
+  </div>
+);
+
+/** Карточка на чтение: сперва кто это и куда идёт рейтинг, ниже — чем это
     подтверждено (матчи, личные встречи, главные старты). Правок на экране нет
     вовсе — только просмотр, и об этом сказано на каждой панели. */
 export function Card11_2() {
@@ -510,96 +556,67 @@ export function Card11_2() {
       sub="2003 г.р. · Астана · клуб «СКА» · 1 место в рейтинге"
       back={{ label: 'Кандидаты в сборную', to: 'Э11.1' }}
     >
-      <div className="grid grid-cols-2 items-start gap-4">
-        <div>
-          <Panel title="Профиль и рейтинг" extra={<ReadOnly />}>
-            <div className="flex items-center gap-3.5">
-              <Avatar size="lg">
-                <Avatar.Image alt="Ким Георгий" src={A(44)} />
-                <Avatar.Fallback>К</Avatar.Fallback>
-              </Avatar>
-              <div className="min-w-0 flex-1 leading-tight">
-                <div className="text-[15px] font-semibold">Ким Георгий</div>
-                <div className="mt-0.5 text-xs text-neutral-500">1 место в рейтинге · сезон 2026</div>
-              </div>
-              <div className="text-right leading-tight">
-                <div className="text-2xl font-bold tabular-nums tracking-tight">2456</div>
-                <div className="text-[11px] text-neutral-400">рейтинг</div>
-              </div>
+      {/* Блоки идут один под другим во всю ширину ✳ (30.08.2026): в две колонки
+          график истории рейтинга сжимался вдвое, а таблица главных стартов и
+          строки матчей теряли колонки. Порядок — как читают карточку: кто это,
+          куда идёт рейтинг, чем это подтверждено. Панель сама держит отступ
+          снизу, обёртка не нужна. */}
+      <>
+        <Panel title="Профиль и рейтинг" extra={<ReadOnly />}>
+          <div className="flex items-center gap-3.5">
+            <Avatar size="lg">
+              <Avatar.Image alt="Ким Георгий" src={A(44)} />
+              <Avatar.Fallback>К</Avatar.Fallback>
+            </Avatar>
+            <div className="min-w-0 flex-1 leading-tight">
+              <div className="text-[15px] font-semibold">Ким Георгий</div>
+              <div className="mt-0.5 text-xs text-neutral-500">1 место в рейтинге · сезон 2026</div>
             </div>
-            <Separator className="my-3" />
-            {/* Профиль по зонам флоу: клуб · тренер · разряд — отдельными
-                строками, а не склейкой в подпись. */}
-            <KV
-              items={[
-                ['Клуб', '«СКА» · Астана'],
-                ['Тренер', 'Ахметов Дамир'],
-                ['Разряд', 'Мастер спорта РК'],
-                ['Год рождения', '2003 · 22 года'],
-                ['Матчей за сезон', '46 · побед 38 (83%)'],
-                ['Динамика за сезон', <span key="d" className="text-green-700">+38 (было 2418)</span>],
-              ]}
-            />
-          </Panel>
-
-          <Panel
-            title="История рейтинга"
-            sub="август 2025 — март 2026 · по месяцам"
-            extra={<Pill t="+38 ЗА СЕЗОН" color="success" />}
-          >
-            <RatingChart11 />
-          </Panel>
-        </div>
-
-        <div>
-          <Panel title="Последние матчи" extra={<ReadOnly />} flush>
-            <div className="divide-y divide-neutral-100">
-              {MATCHES.map((m) => (
-                <div key={m.nm + m.dt} className="flex items-center gap-3 px-4 py-2.5">
-                  <span
-                    className={
-                      'flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[11px] font-bold ' +
-                      (m.st === 'win' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-600')
-                    }
-                  >
-                    {m.st === 'win' ? 'П' : 'О'}
-                  </span>
-                  <span className="min-w-0 flex-1 leading-tight">
-                    <span className="block truncate text-[13.5px] font-medium">{m.nm}</span>
-                    <span className="block truncate text-xs text-neutral-500">{m.sub}</span>
-                  </span>
-                  <span className="text-[13.5px] font-bold tabular-nums">{m.sc}</span>
-                  <span className="w-10 text-right text-xs tabular-nums text-neutral-400">{m.dt}</span>
-                </div>
-              ))}
+            <div className="text-right leading-tight">
+              <div className="text-2xl font-bold tabular-nums tracking-tight">2456</div>
+              <div className="text-[11px] text-neutral-400">рейтинг</div>
             </div>
-          </Panel>
+          </div>
+          <Separator className="my-3" />
+          <KV items={PROFILE11} />
+        </Panel>
 
-          <Panel title="Личные встречи с соперниками" flush>
-            <div className="divide-y divide-neutral-100">
-              {H2H.map(([nm, sc, sub]) => (
-                <Row key={nm} nm={nm} sub={sub} val={sc} />
-              ))}
-            </div>
-          </Panel>
+        <Panel
+          title="История рейтинга"
+          sub="август 2025 — март 2026 · по месяцам"
+          extra={<Pill t="+38 ЗА СЕЗОН" color="success" />}
+        >
+          <RatingChart11 />
+        </Panel>
 
-          <Panel title="Главные старты по сезонам" flush>
-            <DataTable
-              cols={['Сезон', 'Чемпионат РК', 'Кубок РК', 'Спартакиада']}
-              grid="64px 1fr 1fr 1fr"
-              rows={SEASONS.map((s) => ({
-                key: s.y,
-                cells: [
-                  <b key="y" className="tabular-nums">{s.y}</b>,
-                  <span key="c">{s.ch}</span>,
-                  <span key="k">{s.cup}</span>,
-                  <span key="s">{s.sp}</span>,
-                ],
-              }))}
-            />
-          </Panel>
-        </div>
-      </div>
+        <Panel title="Последние матчи" extra={<ReadOnly />} flush>
+          <Matches11 />
+        </Panel>
+
+        <Panel title="Личные встречи с соперниками" flush>
+          <div className="divide-y divide-neutral-100">
+            {H2H.map(([nm, sc, sub]) => (
+              <Row key={nm} nm={nm} sub={sub} val={sc} />
+            ))}
+          </div>
+        </Panel>
+
+        <Panel title="Главные старты по сезонам" flush>
+          <DataTable
+            cols={['Сезон', 'Чемпионат РК', 'Кубок РК', 'Спартакиада']}
+            grid="64px 1fr 1fr 1fr"
+            rows={SEASONS.map((s) => ({
+              key: s.y,
+              cells: [
+                <b key="y" className="tabular-nums">{s.y}</b>,
+                <span key="c">{s.ch}</span>,
+                <span key="k">{s.cup}</span>,
+                <span key="s">{s.sp}</span>,
+              ],
+            }))}
+          />
+        </Panel>
+      </>
     </WebApp>
   );
 }
@@ -609,6 +626,22 @@ export function Card11_2() {
 const CMP_GRID = '200px repeat(3, 1fr)';
 const cellK = 'border-t border-neutral-100 px-3 py-2.5 text-xs font-medium text-neutral-500';
 const cellV = 'border-t border-neutral-100 px-3 py-2.5 text-[13px] font-semibold tabular-nums';
+
+/** Все строки сравнения одним списком: признак и три значения в порядке
+    колонок `THREE`. Один источник на оба формата — на десктопе из него
+    складывается матрица, на телефоне блоки по признакам: 200-пиксельная
+    колонка подписей и три колонки значений в 392 px не помещаются вовсе. */
+const CMP_ALL: [string, ReactNode[]][] = [
+  ...CMP.map(([k, a, b, c]): [string, ReactNode[]] => [k, [a, b, c]]),
+  /* Динамика — из тех же чисел, что список Э11.1: стрелка и дельта. */
+  ['Динамика за сезон', THREE.map((c) => <span key={c.nm} className="inline-flex"><Delta d={c.d} /></span>)],
+  [
+    'Личные встречи между собой',
+    CMP_H2H.map((v, i) => (
+      <span key={THREE[i].nm} className="whitespace-pre-line leading-relaxed">{v}</span>
+    )),
+  ],
+];
 
 /** Трое отмеченных колонками: по строкам — то, по чему выбирают в сборную.
     Экран на чтение; единственное действие — выгрузка. */
@@ -648,32 +681,252 @@ export function Compare11_3() {
             </div>
           ))}
 
-          {CMP.map(([k, a, b, c]) => (
+          {CMP_ALL.map(([k, vals]) => (
             <Fragment key={k}>
               <div className={cellK}>{k}</div>
-              <div className={cellV}>{a}</div>
-              <div className={cellV}>{b}</div>
-              <div className={cellV}>{c}</div>
+              {vals.map((v, i) => (
+                <div key={THREE[i].nm} className={cellV}>{v}</div>
+              ))}
             </Fragment>
-          ))}
-
-          {/* Динамика — из тех же чисел, что список Э11.1: стрелка и дельта. */}
-          <div className={cellK}>Динамика за сезон</div>
-          {THREE.map((c) => (
-            <div key={c.nm} className={cellV}>
-              <span className="inline-flex"><Delta d={c.d} /></span>
-            </div>
-          ))}
-
-          <div className={cellK}>Личные встречи между собой</div>
-          {CMP_H2H.map((v, i) => (
-            <div key={i} className={cellV + ' whitespace-pre-line leading-relaxed'}>{v}</div>
           ))}
         </div>
       </Panel>
     </WebApp>
   );
 }
+
+/* ── Второй формат: те же экраны на телефоне ────────────────────── */
+
+/* Полный адаптив ✳ (30.08.2026, решение владельца «все экраны в обоих»).
+
+   Тренер сборной сидит за столом не всегда: список отбора и карточку он
+   открывает в зале, между матчами, — телефон для этой роли не «на всякий
+   случай», а второе рабочее место. Содержание то же и из тех же данных
+   (`CANDS`, `MATCHES`, `CMP_ALL`), меняется раскладка:
+
+   - оболочка `WebApp` → `PhoneRoleApp`: вкладки нижней панели она строит из
+     тех же `R.nav`, что рисует сайдбар;
+   - таблица кандидатов (`Sheet`) → строки `Rows`/`Row`: фото, фамилия,
+     рейтинг справа, остальное подписью;
+   - ряд из четырёх фильтров → друг под другом, длинные — с прокруткой вбок;
+   - матрица сравнения (подпись + три колонки) → блоки по признакам.
+
+   Состояния экрана во втором формате не повторяем: они показаны один раз, на
+   полке `States` под основным макетом. */
+
+/** Полоса фильтра, которая не влезает в 392 px: прокручивается вбок в своей
+    полосе, а не режется и не переносится. `w-max` нужен потому, что сам
+    сегмент умеет переносить кнопки — в узком родителе он бы завернулся вместо
+    того, чтобы поехать. */
+const Slide = ({ children }: { children: ReactNode }) => (
+  <div className="-mx-4 overflow-x-auto px-4">
+    <div className="w-max">{children}</div>
+  </div>
+);
+
+/** Э11.1 на телефоне: те же фильтры, те же кандидаты, та же звёздочка. */
+function Cands11_1Phone() {
+  const [sex, setSex] = useState('Мужчины');
+  const [age, setAge] = useState(AGES11[0]);
+  const [region, setRegion] = useState(REGIONS11[0]);
+  const [period, setPeriod] = useState('Сезон 2026');
+  const [stars, setStars] = useState<ReadonlySet<string>>(new Set(THREE.map((c) => c.nm)));
+  const toggle = (nm: string) => {
+    const next = new Set(stars);
+    if (!next.delete(nm)) next.add(nm);
+    setStars(next);
+  };
+  /* Сортировки на телефоне нет: её место — шапки колонок, а колонок здесь нет
+     вовсе. Список идёт по месту в рейтинге, как открывается и на десктопе. */
+  const rows = filterCands(sex, age, region);
+  const canCmp = stars.size >= 2 && stars.size <= 3;
+
+  return (
+    <PhoneRoleApp
+      role={R}
+      nav="Кандидаты"
+      title="Кандидаты в сборную"
+      sub="Реестр спортсменов · рейтинг и динамика за сезон 2026"
+    >
+      <div className="mb-3 flex flex-col gap-2">
+        {/* Пол и период коротки и стоят в одной строке; возраст и регион — по
+            своей полосе: резать выбор нельзя, отбор и есть работа роли. */}
+        <div className="flex flex-wrap gap-2">
+          <FilterSeg items={['Мужчины', 'Женщины']} active={sex} onPick={setSex} />
+          <FilterSeg items={['Сезон 2026', 'Год']} active={period} onPick={setPeriod} />
+        </div>
+        <Slide><FilterSeg items={AGES11} active={age} onPick={setAge} /></Slide>
+        <Slide><FilterSeg items={REGIONS11} active={region} onPick={setRegion} /></Slide>
+      </div>
+
+      <div className="mb-3 flex flex-col gap-2">
+        <span className="text-[12px] leading-snug text-neutral-500">
+          {rows.length} из {CANDS.length} на экране · {sex.toLowerCase()}, {age.toLowerCase()},{' '}
+          {region.toLowerCase()} · период: {period.toLowerCase()}
+        </span>
+        {/* Оба действия роли — в ряд во всю ширину: на телефоне кнопка у края
+            экрана попадает под большой палец, а не ищется глазами. */}
+        <div className="flex gap-2">
+          <Button size="sm" variant="outline" className="flex-1">
+            <Download size={14} /> Выгрузить
+          </Button>
+          <Button size="sm" variant="primary" className="flex-1" data-to="Э11.3" isDisabled={!canCmp}>
+            Сравнить ({stars.size})
+          </Button>
+        </div>
+      </div>
+
+      {rows.length ? (
+        <Rows>
+          {rows.map((c) => {
+            const on = stars.has(c.nm);
+            return (
+              <Row
+                key={c.nm}
+                av={c.av}
+                nm={c.nm}
+                /* Всё, что на десктопе стоит колонками — место, год, регион,
+                   клуб, динамика, — здесь подписью: она переносится, и ничего
+                   из таблицы не пропадает. Главные старты остаются числом в
+                   строке: «ЧК 1 · Кубок 2 · Спарт. 1». */
+                sub={
+                  `${c.pl} место · ${c.born} г.р. · ${c.region} · ${c.club} · ` +
+                  `${c.res.map(([k, v]) => `${k} ${v}`).join(' · ')} · ${fmtD(c.d)} за сезон`
+                }
+                val={String(c.r)}
+                to="Э11.2"
+                /* Звёздочка словом: значок в 15 px рядом с фамилией на телефоне
+                   не нажать. `actionTo` — свой же экран: кнопка помечает в мой
+                   список и никуда не уводит, в отличие от самой строки. */
+                action={on ? 'В списке' : 'Отметить'}
+                actionTo="Э11.1"
+                onAction={() => toggle(c.nm)}
+              />
+            );
+          })}
+        </Rows>
+      ) : (
+        <div className="rounded-xl border border-neutral-200 bg-white px-4 py-4 text-[12.5px] text-neutral-500">
+          По этим фильтрам в отборе никого нет — женский список появится с данными федерации.
+        </div>
+      )}
+
+      <div className="mt-4">
+        <Bar tone="warning">{SCOPE_WARN11}</Bar>
+      </div>
+    </PhoneRoleApp>
+  );
+}
+
+/** Э11.2 на телефоне: те же панели одна под другой. График — тот же холст
+    Chart.js: он и на десктопе тянется по ширине панели, на 392 px читается. */
+const Card11_2Phone = () => (
+  <PhoneRoleApp
+    role={R}
+    nav="Карточка"
+    title="Ким Георгий"
+    sub="2003 г.р. · Астана · клуб «СКА» · 1 место в рейтинге"
+    back={{ label: 'Кандидаты в сборную', to: 'Э11.1' }}
+  >
+    <Panel title="Профиль и рейтинг" extra={<ReadOnly />}>
+      <div className="flex items-center gap-3">
+        <Avatar size="lg">
+          <Avatar.Image alt="Ким Георгий" src={A(44)} />
+          <Avatar.Fallback>К</Avatar.Fallback>
+        </Avatar>
+        <div className="min-w-0 flex-1 leading-tight">
+          <div className="text-[14px] font-semibold">Ким Георгий</div>
+          <div className="mt-0.5 text-[11.5px] text-neutral-500">1 место в рейтинге · сезон 2026</div>
+        </div>
+        <div className="text-right leading-tight">
+          <div className="text-xl font-bold tabular-nums tracking-tight">2456</div>
+          <div className="text-[11px] text-neutral-400">рейтинг</div>
+        </div>
+      </div>
+      <Separator className="my-3" />
+      <KV items={PROFILE11} />
+    </Panel>
+
+    <Panel
+      title="История рейтинга"
+      sub="август 2025 — март 2026 · по месяцам"
+      extra={<Pill t="+38 ЗА СЕЗОН" color="success" />}
+    >
+      <RatingChart11 />
+    </Panel>
+
+    <Panel title="Последние матчи" extra={<ReadOnly />} flush>
+      <Matches11 />
+    </Panel>
+
+    <Panel title="Личные встречи с соперниками" flush>
+      <div className="divide-y divide-neutral-100">
+        {H2H.map(([nm, sc, sub]) => (
+          <Row key={nm} nm={nm} sub={sub} val={sc} />
+        ))}
+      </div>
+    </Panel>
+
+    {/* Таблица главных стартов — четыре колонки, и на 392 px они сжимаются до
+        нечитаемых. Тот же сезон строкой: год слева, три результата подписью. */}
+    <Panel title="Главные старты по сезонам" flush>
+      <div className="divide-y divide-neutral-100">
+        {SEASONS.map((s) => (
+          <Row
+            key={s.y}
+            nm={`Сезон ${s.y}`}
+            sub={`Чемпионат РК — ${s.ch} · Кубок РК — ${s.cup} · Спартакиада — ${s.sp}`}
+          />
+        ))}
+      </div>
+    </Panel>
+  </PhoneRoleApp>
+);
+
+/** Э11.3 на телефоне: сначала кого сравниваем, дальше признак за признаком.
+    Матрица разворачивается «по строкам»: подпись признака — заголовком блока,
+    три значения — тремя строками с фамилиями. Колонок рядом на телефоне не
+    бывает, а вопрос «кто из троих» остаётся тем же. */
+const Compare11_3Phone = () => (
+  <PhoneRoleApp
+    role={R}
+    nav="Сравнение"
+    title="Сравнение кандидатов"
+    sub="Трое отмеченных из списка · сезон 2026 · только просмотр"
+    back={{ label: 'Кандидаты в сборную', to: 'Э11.1' }}
+  >
+    <div className="mb-3">
+      <Rows>
+        {THREE.map((c) => (
+          <Row
+            key={c.nm}
+            av={c.av}
+            nm={c.nm}
+            sub={`${c.pl} место в рейтинге · ${c.region}`}
+            val={String(c.r)}
+          />
+        ))}
+      </Rows>
+    </div>
+
+    <Panel title="Чем отличаются" extra={<ReadOnly />} flush>
+      <div className="divide-y divide-neutral-100">
+        {CMP_ALL.map(([k, vals]) => (
+          <div key={k} className="px-4 py-2.5">
+            <div className="text-[11px] font-semibold uppercase tracking-wider text-neutral-400">{k}</div>
+            <div className="mt-0.5">
+              <KV items={THREE.map((c, i): [string, ReactNode] => [c.nm, vals[i]])} />
+            </div>
+          </div>
+        ))}
+      </div>
+    </Panel>
+
+    <Button variant="outline" className="w-full">
+      <Download size={14} /> Выгрузить сравнение
+    </Button>
+  </PhoneRoleApp>
+);
 
 /* ── Борд роли: экраны маршрута подряд ──────────────────────────── */
 
@@ -684,6 +937,9 @@ export const SCREENS: ScreenMap = {
   'Э0.1': {
     cap: 'Вход',
     view: () => <Login0_1 />,
+    /* Вход в приложении уже нарисован (role00): второй такой же экран здесь
+       был бы копией — берём тот же. */
+    alt: () => <LoginPhone0_1 />,
     next: 'первый экран роли',
   },
   'Э11.1': {
@@ -694,16 +950,19 @@ export const SCREENS: ScreenMap = {
         <Cands11_1States />
       </>
     ),
+    alt: () => <Cands11_1Phone />,
     next: 'строка спортсмена',
   },
   'Э11.2': {
     cap: 'Карточка спортсмена — чтение',
     view: () => <Card11_2 />,
+    alt: () => <Card11_2Phone />,
     next: 'отмечены трое · сравнить',
   },
   'Э11.3': {
     cap: 'Сравнение кандидатов',
     view: () => <Compare11_3 />,
+    alt: () => <Compare11_3Phone />,
   },
 };
 

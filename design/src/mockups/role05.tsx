@@ -16,11 +16,11 @@ import {
 } from 'lucide-react';
 import { Avatar, Button } from '@heroui/react';
 import {
-  A, AW, Attention, Bar, DataTable, DisabledAction, EmptyBox, Facts, FieldView,
-  FilterSeg, FormGrid, InlineDialog, KV, MONTHS, MonthGrid, PageTabs, Pager, Panel, PickField,
-  Pill, PrimaryAction, QuietAction, Row, Rows, ScreenScope, SearchInput, SeasonTable, StatTiles,
-  TextInput, TimeGrid, WebApp,
-  type AttnItem, type CalEvent, type RoleUI, type SeasonRow, type SlotEvent,
+  A, AW, Attention, Bar, DataTable, DisabledAction, EmptyBox, EventTimeline, Facts, FieldView,
+  FilterSeg, FormGrid, InlineDialog, KV, MONTHS, MiniMonth, MonthGrid, PageTabs, Pager, Panel,
+  PhoneRoleApp, PickField, Pill, PrimaryAction, QuietAction, Row, Rows, ScreenScope, SearchInput,
+  SeasonTable, StatTiles, StatusChip, TextInput, TimeGrid, WebApp,
+  type AttnItem, type CalEvent, type RoleUI, type SeasonRow, type SlotEvent, type TimelineItem,
 } from '../kit/hero/app';
 /* Из старого слоя остаются только мета-компоненты борда: колонки, стрелки и
    полки состояний. Сами экраны собраны новым слоем. */
@@ -29,7 +29,7 @@ import { Also, Board, States, Shot, type ScreenMap } from './shell';
    нарисованная сетка разошлась бы с той, что увидят в продукте. */
 import { BracketFlow } from '@/widgets/bracket/BracketFlow';
 import { myBracket } from './myBracket';
-import { Context0_1, Login0_1 } from './role00';
+import { Context0_1, Login0_1, LoginPhone0_1 } from './role00';
 
 /* ── Роль: сайдбар и подпись профиля ─────────────────────────────── */
 
@@ -164,23 +164,102 @@ const DialogFrag = ({ h, children }: { h: number; children: ReactNode }) => (
   </div>
 );
 
+/* ── Телефонный формат экранов роли ✳ (30.08.2026) ──────────────── */
+
+/* Полный адаптив: у каждого экрана роли есть кадр в 392 px. Председатель ГСК
+   решает не только за столом — назначение судьи и утверждение протокола ждать
+   ноутбука не могут. Данные, константы и логика отбора берутся те же: меняется
+   раскладка, а не содержание. Что на телефоне показано короче, сказано плашкой
+   на самом кадре. */
+
+/* Обёртки ниже — переопределения кита под узкий кадр: сами компоненты кита
+   остаются как есть, их зовут полтора десятка десктопных экранов.
+   ⚠ Те же обёртки живут в role01, role06 и role07 — когда телефонные кадры
+   будут у всех ролей, им место в `kit/hero/app`. */
+
+/** Плитки-счётчики на телефоне: тот же `StatTiles`, но в два столбца — пять
+    плиток в один ряд на 392 px не встают. */
+const PhoneTiles = ({ children }: { children: ReactNode }) => (
+  <div className="[&>div]:grid-flow-row [&>div]:grid-cols-2 [&>div]:gap-2">{children}</div>
+);
+
+/** Полоса переключателей на телефоне: не переносится рядами, а уезжает вбок.
+    Подписи вроде «Заявки на судейство · 9» встают в 392 px в три ряда и
+    съедают экран раньше, чем начинается содержимое. */
+const Strip = ({ children }: { children: ReactNode }) => (
+  <div className="-mx-4 mb-3 overflow-x-auto px-4 **:data-seg:flex-nowrap">{children}</div>
+);
+
+/** Диалог во всю ширину кадра: у кита ширина прибита под десктоп (520 и
+    720 px), и в 392 px от него виден был бы левый край. Сам диалог тот же —
+    меняются только поля. */
+const PhoneDialog = ({ children }: { children: ReactNode }) => (
+  <div className="[&>div>div]:w-full [&>div]:p-4">{children}</div>
+);
+
+/** Плитки экрана: один набор чисел на оба формата. Тип берём у `StatTiles` —
+    разъедется он, и набор перестанет собираться. */
+type Tiles = Parameters<typeof StatTiles>[0]['items'];
+
+/** Очередь решений на телефоне: те же дела, но строкой вместо трёх колонок —
+    «что», «кто решает» и «почему» рядом в 392 px не читаются. Счётчики здесь
+    не переключатели, а заголовки: списки короткие и видны оба сразу. */
+const AttnPhone = ({ items }: { items: AttnItem[] }) => (
+  <>
+    {items.map((a) => (
+      <Panel key={a.t} title={`${a.n} · ${a.t}`} flush>
+        <div className="divide-y divide-neutral-100">
+          {a.rows.map((r) => (
+            <div key={r.nm} data-to={r.to} data-row className="cursor-pointer px-4 py-2.5 leading-tight">
+              <div className="text-[13.5px] font-medium">{r.nm}</div>
+              <div className="mt-0.5 text-xs text-neutral-500">{r.mt}</div>
+              <div className={'mt-1 text-xs font-medium ' + (r.cls ? 'text-red-600' : 'text-neutral-600')}>
+                {r.why}
+              </div>
+              <div className="mt-0.5 text-xs text-neutral-500">{r.who}</div>
+            </div>
+          ))}
+        </div>
+      </Panel>
+    ))}
+  </>
+);
+
 /* ── Э0.1 · Вход: состояния на борде роли ───────────────────────── */
 
 /** Состояния входа — по данным сквозных экранов (`data/role00.ts`, Э0.1).
     Сам экран общий и импортируется из role00; его полка States там не
-    экспортируется, поэтому кадры собраны здесь тем же содержанием. */
+    экспортируется, поэтому кадры собраны здесь тем же содержанием.
+
+    Переписаны под вход по ИИН и одноразовому коду ✳ (30.08.2026): пароля в
+    системе нет. Полный набор состояний — на борде сквозных экранов. */
 const Login0_1States5 = () => (
   <States>
-    <Shot tone="danger" title="Неверный логин или пароль" text="Ошибка под полем; поля не очищаются.">
+    <Shot
+      tone="danger"
+      title="Код подтверждения не подошёл ✳"
+      text="ИИН уже принят — заново его не вводят; ошибка стоит под полем кода."
+    >
       <Frag w={420}>
-        <FormGrid>
-          <TextInput label="Телефон или почта" value="+7 707 118 42 55" wide />
-          <TextInput label="Пароль" value="••••••" bad wide />
-          <span className="col-span-2 -mt-1 text-xs font-medium text-red-600">
-            Неверный логин или пароль. Проверьте раскладку или восстановите пароль
-          </span>
-        </FormGrid>
-        <div className="mt-3"><DisabledAction>Войти</DisabledAction></div>
+        <Rows>
+          <Row
+            nm="ИИН принят"
+            sub="•••• •••• 4255 · Smart Bridge узнал человека"
+            pill={{ t: 'ПРОВЕРЕН', cls: 'live' }}
+          />
+          <Row
+            nm="Код из SMS не совпал"
+            sub="код одноразовый: из прежней SMS он уже не работает"
+            pill={{ t: 'ОШИБКА', cls: 'bad' }}
+          />
+        </Rows>
+        <div className="mt-3">
+          <Bar>
+            Остальные состояния входа — на борде сквозных экранов (Э0.1): ИИН не найден, срок кода
+            вышел, слишком много попыток, Smart Bridge не отвечает.
+          </Bar>
+          <DisabledAction>Войти</DisabledAction>
+        </div>
       </Frag>
     </Shot>
 
@@ -213,17 +292,17 @@ const Login0_1States5 = () => (
 
     <Shot
       tone="warning"
-      title="Аккаунт не активирован ✳"
-      text="Приглашение отправлено, но пароль ещё не задан — стыкуется с Э1.10."
+      title="Приглашение ещё не принято ✳"
+      text="Ссылка выпущена, но человек не подтвердил себя ИИН и кодом — учётной записи ещё нет (Э0.6)."
       wide
     >
       <Frag>
         <Bar>
-          На этот адрес отправлено приглашение 15.04.2026. Пароль задаётся по ссылке из письма — до
-          этого вход не работает.
+          Ссылку выпустили 15.04.2026 (Э1.10). Аккаунт появится в тот момент, когда человек
+          откроет её и подтвердит себя ИИН и кодом из SMS, — до этого войти не под чем.
         </Bar>
         <div className="flex items-center gap-2">
-          <QuietAction>Отправить приглашение ещё раз</QuietAction>
+          <QuietAction>Выпустить ссылку заново</QuietAction>
           <DisabledAction>Войти</DisabledAction>
         </div>
       </Frag>
@@ -288,6 +367,35 @@ const ATTENTION5: AttnItem[] = [
   },
 ];
 
+/** Чем меряется сезон — плитки панели. Вынесены из экрана ✳: телефонный кадр
+    показывает те же четыре числа, а второй набор с ними бы разъехался. */
+const TILES5_1: Tiles = [
+  { v: '8', k: 'Официальных стартов' },
+  { v: '41', k: 'Заявок судей подано', tone: 'g' },
+  { v: '12', k: 'Протоколов утверждено' },
+  { v: '86', k: 'Судей в рейтинге' },
+];
+
+/** Ближайшие старты — обзор, а не очередь: решения они не ждут, но по ним видно,
+    что впереди. Строки те же в обоих форматах. */
+const NEAR5: { nm: string; sub: string; pill: { t: string; cls: Cls } }[] = [
+  {
+    nm: 'Открытый турнир «Тараз Опен»',
+    sub: 'Тараз · 16–17.08 · подано 3 заявки судей',
+    pill: { t: 'ЗАЯВКИ СУДЕЙ', cls: 'wait' },
+  },
+  {
+    nm: 'Первенство РК до 19 лет',
+    sub: 'Шымкент · 24–27.08 · подано 6 заявок судей',
+    pill: { t: 'ЗАЯВКИ СУДЕЙ', cls: 'wait' },
+  },
+  {
+    nm: 'Кубок вызова, 1-й тур',
+    sub: 'Актобе · 03–05.10 · приём заявок судей ещё не открыт',
+    pill: { t: 'ЧЕРНОВИК', cls: 'done' },
+  },
+];
+
 /** Панель ГСК: как идёт сезон и что решить сегодня.
 
     Экран навигационный ✳: он не место работы, а вход в неё. Календарь целиком
@@ -305,47 +413,51 @@ export function Queues5_1(_props: { variant?: 'desktop' | 'land' } = {}) {
       {/* Очередь первой: главный акцент экрана — «что от меня ждут». */}
       <Attention items={ATTENTION5} />
 
-      <StatTiles
-        items={[
-          { v: '8', k: 'Официальных стартов' },
-          { v: '41', k: 'Заявок судей подано', tone: 'g' },
-          { v: '12', k: 'Протоколов утверждено' },
-          { v: '86', k: 'Судей в рейтинге' },
-        ]}
-      />
+      <StatTiles items={TILES5_1} />
 
-      {/* Ближайшие старты — обзор, а не очередь: решения они не ждут, но по ним
-          видно, что впереди. Строка ведёт в карточку турнира, весь календарь —
-          своим разделом: панель не должна быть вторым календарём. */}
+      {/* Строка ведёт в карточку турнира, весь календарь — своим разделом:
+          панель не должна быть вторым календарём. */}
       <Panel
         title="Ближайшие старты"
         extra={<Button size="sm" variant="outline" data-to="Э5.3">Все соревнования сезона</Button>}
         flush
       >
         <div className="divide-y divide-neutral-100">
-          <Row
-            nm="Открытый турнир «Тараз Опен»"
-            sub="Тараз · 16–17.08 · подано 3 заявки судей"
-            pill={{ t: 'ЗАЯВКИ СУДЕЙ', cls: 'wait' }}
-            to="Э5.10"
-          />
-          <Row
-            nm="Первенство РК до 19 лет"
-            sub="Шымкент · 24–27.08 · подано 6 заявок судей"
-            pill={{ t: 'ЗАЯВКИ СУДЕЙ', cls: 'wait' }}
-            to="Э5.10"
-          />
-          <Row
-            nm="Кубок вызова, 1-й тур"
-            sub="Актобе · 03–05.10 · приём заявок судей ещё не открыт"
-            pill={{ t: 'ЧЕРНОВИК', cls: 'done' }}
-            to="Э5.10"
-          />
+          {NEAR5.map((t) => (
+            <Row key={t.nm} nm={t.nm} sub={t.sub} pill={t.pill} to="Э5.10" />
+          ))}
         </div>
       </Panel>
     </WebApp>
   );
 }
+
+/** Панель ГСК на телефоне: тот же порядок — сначала что решить, потом как идёт
+    сезон, потом что впереди. Очередь развёрнута обоими счётчиками сразу: на
+    телефоне лишний клик по счётчику дороже, чем прокрутка. */
+const Queues5_1Phone = () => (
+  <PhoneRoleApp
+    role={R05}
+    nav="Панель"
+    title="Панель ГСК"
+    sub="Сезон 2026 · назначения, протоколы и рейтинг судей"
+  >
+    <AttnPhone items={ATTENTION5} />
+    <PhoneTiles><StatTiles items={TILES5_1} /></PhoneTiles>
+    <Panel title="Ближайшие старты" flush>
+      <div className="divide-y divide-neutral-100">
+        {NEAR5.map((t) => (
+          <Row key={t.nm} nm={t.nm} sub={t.sub} pill={t.pill} to="Э5.10" />
+        ))}
+      </div>
+      {/* Кнопка под списком, а не в заголовке: в 392 px она вытеснила бы
+          название панели. Подпись та же. */}
+      <div className="px-4 pb-3 pt-2">
+        <Button size="sm" variant="outline" data-to="Э5.3">Все соревнования сезона</Button>
+      </div>
+    </Panel>
+  </PhoneRoleApp>
+);
 
 const Queues5_1States = () => (
   <States>
@@ -489,18 +601,25 @@ const SeasonCalendar5 = ({ rows }: { rows: SeasonRow[] }) => {
   );
 };
 
-export function Season5_3() {
-  const [f, setF] = useState(SEASON_FILTER[0]);
-  const [view, setView] = useState(SEASON_VIEWS[0]);
-  const [q, setQ] = useState('');
+/** Отбор строк сезона: срез по состоянию плюс поиск. Общий на оба формата ✳ —
+    двумя реализациями телефон и ноутбук показывали бы по одному фильтру разные
+    выборки. */
+const seasonPick = (f: string, q: string) => {
   const t = q.trim().toLowerCase();
-  const rows = SEASON5.filter((r) => {
+  return SEASON5.filter((r) => {
     const waiting = r.tst === 'protocol' || (r.tst === 'judges' && r.wait);
     if (f === 'Ждут решения' && !waiting) return false;
     if (f === 'Идут и впереди' && (r.tst === 'done' || r.tst === 'protocol')) return false;
     if (f === 'Завершены' && r.tst !== 'done') return false;
     return !t || r.nm.toLowerCase().includes(t) || r.sub.toLowerCase().includes(t) || r.when.toLowerCase().includes(t);
   });
+};
+
+export function Season5_3() {
+  const [f, setF] = useState(SEASON_FILTER[0]);
+  const [view, setView] = useState(SEASON_VIEWS[0]);
+  const [q, setQ] = useState('');
+  const rows = seasonPick(f, q);
   return (
     <WebApp
       role={R05}
@@ -540,6 +659,111 @@ export function Season5_3() {
     </WebApp>
   );
 }
+
+/** Строка сезона на телефоне: четыре колонки таблицы — название, когда и где,
+    срок и состояние — встают в две строки. Переход тот же, что у таблицы. */
+const SeasonRowsPhone = ({ rows }: { rows: SeasonRow[] }) => (
+  <Rows>
+    {rows.map((r) => (
+      <div
+        key={r.key}
+        data-to={r.to}
+        data-row
+        className="cursor-pointer px-4 py-2.5 leading-tight hover:bg-neutral-50"
+      >
+        <div className="flex items-start justify-between gap-2">
+          <span className="min-w-0">
+            <span className="block text-[13.5px] font-medium">{r.nm}</span>
+            <span className="block text-xs text-neutral-500">{r.sub}</span>
+          </span>
+          <span className="shrink-0">{r.tst ? <StatusChip tst={r.tst} /> : <StatusChip st={r.st} />}</span>
+        </div>
+        <div className="mt-1.5 flex items-baseline justify-between gap-2 text-xs">
+          <span className="text-neutral-500">{r.when}</span>
+          <span className={r.wait ? 'font-medium text-amber-700' : 'text-neutral-500'}>{r.val}</span>
+        </div>
+      </div>
+    ))}
+  </Rows>
+);
+
+/** Календарный вид сезона на телефоне ✳: сетка месяца в 392 px нечитаема —
+    клетка шириной в палец вмещает число и точку, а не название турнира.
+
+    Тот же вопрос — «как сезон стоит по времени» — на телефоне отвечает лента:
+    дата слева, карточка справа, порядок событий виден сразу. Мини-месяц над
+    лентой оставляет то, ради чего смотрели сетку: плотность дней и наложение
+    стартов. Чего лента не показывает — длину турнира полосой поперёк недели;
+    за этим приходят с ноутбука. */
+const SeasonCalendarPhone = ({ rows }: { rows: SeasonRow[] }) => {
+  const events = seasonEvents(rows);
+  const month = seasonMonth(events);
+  const items: TimelineItem[] = [...rows]
+    .sort((a, b) => SEASON_DAYS[a.key].from.localeCompare(SEASON_DAYS[b.key].from))
+    .map((r) => ({
+      id: r.key,
+      from: SEASON_DAYS[r.key].from,
+      till: SEASON_DAYS[r.key].till,
+      nm: r.nm,
+      sub: `${r.when} · ${r.val}`,
+      tone: seasonTone(r),
+      to: r.to,
+      right: r.tst ? <StatusChip tst={r.tst} /> : <StatusChip st={r.st} />,
+    }));
+  return (
+    <>
+      <div className="mb-3 flex justify-center rounded-xl border border-neutral-200 bg-white p-3 shadow-sm">
+        <MiniMonth month={month} events={events} today={TODAY5} />
+      </div>
+      <EventTimeline items={items} today={TODAY5} />
+      <Bar>
+        В мини-месяце — {monthWords(month)}: точка под числом значит, что в этот день идёт
+        соревнование. Лента ниже показывает весь сезон по порядку, а не один месяц.
+      </Bar>
+    </>
+  );
+};
+
+/** Соревнования сезона на телефоне: те же два вида и тот же отбор. Фильтр,
+    поиск и переключатель вида идут друг под другом — в 392 px в одну строку
+    они не встают. */
+const Season5_3Phone = () => {
+  const [f, setF] = useState(SEASON_FILTER[0]);
+  const [view, setView] = useState(SEASON_VIEWS[0]);
+  const [q, setQ] = useState('');
+  const rows = seasonPick(f, q);
+  return (
+    <PhoneRoleApp
+      role={R05}
+      nav="Соревнования"
+      title="Соревнования сезона"
+      sub="Официальные старты календаря ФНТ РК · строка открывает карточку турнира"
+    >
+      <Strip><FilterSeg items={SEASON_FILTER} active={f} onPick={setF} /></Strip>
+      <div className="mb-3">
+        <SearchInput value={q} onChange={setQ} placeholder="Название, категория или город" className="w-full" />
+      </div>
+      <div className="mb-3 flex items-center justify-between gap-2">
+        <FilterSeg items={SEASON_VIEWS} active={view} onPick={setView} />
+        <Button size="sm" variant="primary" data-to="Э5.11">
+          <Plus size={15} /> Завести соревнование
+        </Button>
+      </div>
+
+      {rows.length ? (
+        view === 'Календарь' ? <SeasonCalendarPhone rows={rows} /> : <SeasonRowsPhone rows={rows} />
+      ) : (
+        <EmptyBox title="Ничего не нашлось" text="Проверьте написание или снимите фильтр." />
+      )}
+
+      <div className="mt-3 text-[12.5px] text-neutral-500">
+        {rows.length === SEASON5.length
+          ? `${SEASON5.length} стартов в сезоне`
+          : `показано ${rows.length} из ${SEASON5.length}`}
+      </div>
+    </PhoneRoleApp>
+  );
+};
 
 /** Тот же экран, открытый календарным видом ✳. На борде экран снят в состоянии
     по умолчанию — списком, — и второй вид, ради которого календарь и встраивали,
@@ -604,8 +828,8 @@ const CATS5 = ['Главный старт', 'Евразийская лига', '
 /** Дата по-русски ✳: нативный `input[type=date]` рисует значение локалью
     браузера — в en-US выходит MM/DD/YYYY, и «10/03/2026» читается как
     10 марта. Значение показываем сами, ДД.ММ.ГГГГ, независимо от локали. */
-const RuDate = ({ label, value }: { label: string; value: string }) => (
-  <div className="flex flex-col gap-1">
+const RuDate = ({ label, value, wide }: { label: string; value: string; wide?: boolean }) => (
+  <div className={'flex flex-col gap-1 ' + (wide ? 'col-span-2' : '')}>
     <span className="text-xs font-medium text-neutral-500">{label}</span>
     <span className="flex w-full items-center justify-between gap-2 rounded-lg border border-neutral-300 bg-white px-3 py-1.5 text-sm tabular-nums">
       {value}
@@ -656,6 +880,50 @@ export function NewTour5_11() {
     </WebApp>
   );
 }
+
+/** Заведение соревнования на телефоне: те же пять полей, но в одну колонку —
+    парой в 392 px не встают ни название с категорией, ни две даты окна.
+    Категория остаётся полосой выбора, только едет вбок. */
+const NewTour5_11Phone = () => {
+  const [cat, setCat] = useState(CATS5[1]);
+  return (
+    <PhoneRoleApp
+      role={R05}
+      nav="Соревнования"
+      title="Завести соревнование"
+      back={{ label: 'Соревнования сезона', to: 'Э5.3' }}
+      sub="Только то, что известно сегодня — остальное дозаполняется в карточке"
+    >
+      <Panel title="Новое соревнование">
+        <FormGrid>
+          <TextInput label="Название" value="Кубок вызова, 2-й тур" wide />
+          <div className="col-span-2 flex flex-col gap-1">
+            <span className="text-xs font-medium text-neutral-500">Категория календаря</span>
+            <div className="-mx-4 overflow-x-auto px-4">
+              <FilterSeg items={CATS5} active={cat} onPick={setCat} />
+            </div>
+          </div>
+          <TextInput label="Город" value="Актобе" wide />
+          <RuDate label="Окно дат · начало" value="03.10.2026" wide />
+          <RuDate label="Окно дат · окончание" value="05.10.2026" wide />
+        </FormGrid>
+        <div className="mt-4">
+          <Bar>
+            Столы, формат и возрастная граница здесь не спрашиваются: на момент заведения их не
+            знают. Они дозаполняются в карточке турнира, пока он в черновике, а систему проведения
+            строит главный судья по собранному составу.
+          </Bar>
+        </div>
+        <div className="flex flex-col gap-2">
+          <span className="text-[12.5px] text-neutral-500">
+            Турнир появится в календаре черновиком — публично не виден
+          </span>
+          <div><PrimaryAction>Создать</PrimaryAction></div>
+        </div>
+      </Panel>
+    </PhoneRoleApp>
+  );
+};
 
 const NewTour5_11States = () => (
   <States>
@@ -712,7 +980,9 @@ const APPOINTER: Record<string, string> = {
 /** Регламент на чтение. Пустые поля — не ошибка: столов и формата на момент
     заведения не знают, они появляются позже. */
 const Rules5_10 = () => (
-  <div className="grid grid-cols-2 items-start gap-4">
+  /* Блоки один под другим во всю ширину ✳ (30.08.2026): в две колонки «Что
+     можно сделать» жалось справа, а строки действий резались по словам. */
+  <>
     <Panel title="Регламент" extra={<P t="ЗАПОЛНЕН НЕ ДО КОНЦА" cls="wait" />}>
       <KV
         items={[
@@ -759,7 +1029,7 @@ const Rules5_10 = () => (
         <Bar>Публикует турнир и открывает приём заявок игроков администратор Федерации (Э1.3).</Bar>
       </div>
     </Panel>
-  </div>
+  </>
 );
 
 /* Состав участников в старом слое брался из Э14.5 тем же компонентом. Его
@@ -784,8 +1054,11 @@ const ROSTER5 = Array.from({ length: 128 }, (_, i) => {
 
 /** Вкладка «Участники»: таблица состава с поиском и страницами по 30 — на
     главном старте 128 человек, глазами в таком списке не ищут. Сеяные —
-    первые шестнадцать по рейтингу — помечены. */
-const Players5_10 = () => {
+    первые шестнадцать по рейтингу — помечены.
+
+    `phone` меняет только подачу состава: те же поиск, отбор и страницы, но
+    строкой вместо пяти колонок. */
+const Players5_10 = ({ phone }: { phone?: boolean }) => {
   const [q, setQ] = useState('');
   const [page, setPage] = useState(0);
   const t = q.trim().toLowerCase();
@@ -795,41 +1068,75 @@ const Players5_10 = () => {
   const pages = Math.max(1, Math.ceil(found.length / 30));
   const cur = Math.min(page, pages - 1);
   const shown = found.slice(cur * 30, cur * 30 + 30);
+  const facts = (
+    <Facts
+      items={[
+        { k: found.length === ROSTER5.length ? 'участников' : 'найдено', v: found.length === ROSTER5.length ? '128' : `${found.length} из 128`, },
+        { k: 'сеяных', v: '16' },
+      ]}
+    />
+  );
+  const search = (
+    <SearchInput
+      value={q}
+      onChange={(v) => { setQ(v); setPage(0); }}
+      placeholder="Фамилия, клуб или регион"
+      className={phone ? 'w-full' : 'w-80'}
+    />
+  );
   return (
     <>
-      <div className="mb-3 flex items-center justify-between gap-4">
-        <SearchInput
-          value={q}
-          onChange={(v) => { setQ(v); setPage(0); }}
-          placeholder="Фамилия, клуб или регион"
-          className="w-80"
-        />
-        <Facts
-          items={[
-            { k: found.length === ROSTER5.length ? 'участников' : 'найдено', v: found.length === ROSTER5.length ? '128' : `${found.length} из 128`, },
-            { k: 'сеяных', v: '16' },
-          ]}
-        />
-      </div>
+      {phone ? (
+        <div className="mb-3 flex flex-col gap-2">{search}{facts}</div>
+      ) : (
+        <div className="mb-3 flex items-center justify-between gap-4">{search}{facts}</div>
+      )}
       {shown.length ? (
-        <DataTable
-          cols={['№ посева', 'Участник', 'Регион и клуб', 'Рейтинг', '']}
-          grid="86px 1.6fr 1.4fr 90px 110px"
-          rows={shown.map((p) => ({
-            key: String(p.s),
-            cells: [
-              <b key="s" className="tabular-nums">{p.s}</b>,
-              <span key="n" className="font-medium">{p.nm}</span>,
-              <span key="c" className="text-neutral-500">{p.city} · {p.club}</span>,
-              <span key="r" className="tabular-nums">{p.r}</span>,
-              p.s <= 16 ? <P key="p" t="СЕЯНЫЙ" cls="reg" /> : <span key="p" />,
-            ],
-          }))}
-        />
+        phone ? (
+          /* Номер посева и рейтинг остаются числами по краям строки, регион с
+             клубом уходят второй строкой: пять колонок в 392 px нечитаемы. */
+          <Rows>
+            {shown.map((p) => (
+              <div key={p.s} className="flex items-center gap-3 px-4 py-2 text-[13px]">
+                <b className="w-6 shrink-0 text-right tabular-nums text-neutral-400">{p.s}</b>
+                <span className="min-w-0 flex-1 leading-tight">
+                  <span className="block truncate font-medium">{p.nm}</span>
+                  <span className="block truncate text-xs text-neutral-500">{p.city} · {p.club}</span>
+                </span>
+                {p.s <= 16 && <P t="СЕЯНЫЙ" cls="reg" />}
+                <span className="shrink-0 tabular-nums text-neutral-600">{p.r}</span>
+              </div>
+            ))}
+          </Rows>
+        ) : (
+          <DataTable
+            cols={['№ посева', 'Участник', 'Регион и клуб', 'Рейтинг', '']}
+            grid="86px 1.6fr 1.4fr 90px 110px"
+            rows={shown.map((p) => ({
+              key: String(p.s),
+              cells: [
+                <b key="s" className="tabular-nums">{p.s}</b>,
+                <span key="n" className="font-medium">{p.nm}</span>,
+                <span key="c" className="text-neutral-500">{p.city} · {p.club}</span>,
+                <span key="r" className="tabular-nums">{p.r}</span>,
+                p.s <= 16 ? <P key="p" t="СЕЯНЫЙ" cls="reg" /> : <span key="p" />,
+              ],
+            }))}
+          />
+        )
       ) : (
         <EmptyBox title="Никого не нашлось" text={`По запросу «${q}» никого нет — проверьте написание фамилии.`} />
       )}
-      {pages > 1 && <Pager page={cur} pages={pages} onPick={setPage} />}
+      {pages > 1 &&
+        (phone ? (
+          /* Пять страниц и две кнопки в 392 px в строку не встают — полоса
+             едет вбок, а не переносится на два ряда. */
+          <div className="-mx-4 overflow-x-auto px-4">
+            <Pager page={cur} pages={pages} onPick={setPage} />
+          </div>
+        ) : (
+          <Pager page={cur} pages={pages} onPick={setPage} />
+        ))}
     </>
   );
 };
@@ -842,6 +1149,53 @@ const Bracket5_10 = () => (
       <BracketFlow bracket={myBracket} minZoom={0.15} fitPadding={0.06} tone="light" />
     </div>
   </div>
+);
+
+/** Круги сетки по-русски: от 32 участников их пять. Подписи здесь, а не в
+    данных: `myBracket` знает только номер круга. */
+const ROUNDS5_10 = ['1/16 финала', '1/8 финала', '1/4 финала', '1/2 финала', 'Финал'];
+
+/** Вкладка «Сетка» на телефоне ✳: холст сетки в 392 px нечитаем — в кадр
+    попадает одна пара из тридцати одной, а связи кругов, ради которой на сетку
+    и смотрят, не видно вовсе.
+
+    Тот же турнир списком: круг за кругом, в паре — фамилии, счёт по партиям и
+    состояние. Чего список не даёт — пути одного спортсмена от круга к кругу:
+    за ним приходят на большой экран. Данные те же (`myBracket`), второй
+    нарисованной сетке разойтись не с чем. */
+const BracketList5_10 = () => (
+  <>
+    {ROUNDS5_10.map((t, r) => {
+      const ms = myBracket.matches.filter((m) => m.round === r);
+      return (
+        <Panel key={t} title={t} extra={<span className="text-xs text-neutral-500">{ms.length} пар</span>} flush>
+          <div className="divide-y divide-neutral-100">
+            {ms.map((m) => (
+              <div key={m.id} className="flex items-center gap-3 px-4 py-2 text-[13px]">
+                <span className="min-w-0 flex-1 leading-tight">
+                  <span className={'block truncate ' + (m.winner === 'a' ? 'font-semibold' : 'text-neutral-600')}>
+                    {m.a?.name ?? '—'}
+                  </span>
+                  <span className={'block truncate ' + (m.winner === 'b' ? 'font-semibold' : 'text-neutral-600')}>
+                    {m.b?.name ?? '—'}
+                  </span>
+                </span>
+                {m.status === 'live' && <P t="ИДЁТ" cls="live" />}
+                {m.status === 'pending' ? (
+                  <span className="shrink-0 text-xs text-neutral-400">пара не определилась</span>
+                ) : (
+                  <span className="shrink-0 text-right leading-tight tabular-nums">
+                    <span className="block">{m.scoreA}</span>
+                    <span className="block">{m.scoreB}</span>
+                  </span>
+                )}
+              </div>
+            ))}
+          </div>
+        </Panel>
+      );
+    })}
+  </>
 );
 
 /* Расписание в старом слое бралось из карточки турнира федерации (Э1.3); его
@@ -935,6 +1289,32 @@ const Schedule5_10 = () => {
   );
 };
 
+/** Вкладка «Расписание» на телефоне ✳: шкала «столы × часы» в 392 px не
+    читается — шестнадцать колонок по двадцать пикселей.
+
+    Тот же игровой день списком кругов: во сколько круг, сколько столов под ним
+    занято и сколько в нём матчей — те же числа, что стоят под сеткой. Чего
+    список не показывает — как зал простаивает между кругами: это видно только
+    пустотой в шкале, и за этим смотрят с ноутбука. */
+const Schedule5_10Phone = () => {
+  const [day, setDay] = useState(SCHED_DAYS[2].t);
+  const cur = SCHED_DAYS.find((x) => x.t === day) ?? SCHED_DAYS[0];
+  const rounds = SCHED5.filter((r) => r.day === cur.d);
+  return (
+    <Panel title="Расписание" sub="4 дня · 16 столов · 175 матчей">
+      <Strip><FilterSeg items={SCHED_DAYS.map((x) => x.t)} active={day} onPick={setDay} /></Strip>
+      <Rows>
+        {rounds.map((r) => (
+          <Row key={r.key} nm={r.round} sub={`${r.from}–${r.till} · столов ${r.tables}`} val={r.n} />
+        ))}
+      </Rows>
+      <div className="mt-3">
+        <Bar>Расписание считается по сетке и строит его главный судья — здесь оно на чтение.</Bar>
+      </div>
+    </Panel>
+  );
+};
+
 /** Расписание врезкой ✳: карточка турнира снята на первой вкладке
     («Регламент»), и шкала со столами — то, ради чего вкладка заводилась, — в
     кадр борда не попадала. Компонент тот же, что во вкладке: второй нарисованной
@@ -950,9 +1330,9 @@ const Schedule5_10Also = () => (
 /** Вкладка «Судьи»: весь наряд этого старта и управление им — тем же
     компонентом, что и в разборе очереди (Э5.2): двумя реализациями наряд в
     карточке и в очереди разъехался бы. */
-const Crew5_10 = () => (
+const Crew5_10 = ({ phone }: { phone?: boolean }) => (
   <>
-    <JudgeCrew cur={OPEN_TOURS[2]} />
+    <JudgeCrew cur={OPEN_TOURS[2]} phone={phone} />
     <div className="mt-4">
       <Bar>
         Пока на каждый стол нет судьи, главный судья не запустит игру: столы распределяет он сам
@@ -966,7 +1346,9 @@ const Crew5_10 = () => (
 /** Вкладка «Протокол»: то же решение, что в очереди (Э5.4), но на месте —
     когда председатель пришёл смотреть турнир целиком, а не разбирать очередь. */
 const Protocol5_10 = () => (
-  <div className="grid grid-cols-2 items-start gap-4">
+  /* Блок под блоком ✳: решение по протоколу и верх итоговой таблицы читают
+     подряд, а не глазами вправо-влево. */
+  <>
     <Panel title="Итоговый протокол" extra={<P t="ЖДЁТ РЕШЕНИЯ" cls="wait" />}>
       <Rows>
         <Row nm="Сформирован" sub="главный судья Оспанов Т. · 15.09, 19:40" pill={{ t: 'ВВОД ЗАКРЫТ', cls: 'reg' }} />
@@ -991,8 +1373,19 @@ const Protocol5_10 = () => (
         <Bar>Итоговая таблица целиком — в самом протоколе; здесь только верх, чтобы узнать турнир.</Bar>
       </div>
     </Panel>
-  </div>
+  </>
 );
+
+/** Чем турнир меряется ✳ (комментарий федерации, 09.2026): председатель
+    приходит в карточку за размером турнира — от него зависит и бригада, и
+    расписание. Числа одни на оба формата. */
+const TILES5_10: Tiles = [
+  { v: '128', k: 'Участников' },
+  { v: '14', k: 'Регионов' },
+  { v: '2', k: 'Разряда · одиночный, парный' },
+  { v: '10', k: 'Судей в наряде' },
+  { v: '16', k: 'Столов в зале' },
+];
 
 export function Tour5_10() {
   return (
@@ -1003,18 +1396,8 @@ export function Tour5_10() {
       back={{ label: 'Соревнования сезона', to: 'Э5.3' }}
       sub="Главный старт · Караганда · 12–15 сентября · судья назначен"
     >
-      {/* Чем турнир меряется — до вкладок ✳ (комментарий федерации, 09.2026):
-          председатель приходит в карточку за размером турнира — от него зависит
-          и бригада, и расписание, а вкладки отвечают уже на «что с ним делать». */}
-      <StatTiles
-        items={[
-          { v: '128', k: 'Участников' },
-          { v: '14', k: 'Регионов' },
-          { v: '2', k: 'Разряда · одиночный, парный' },
-          { v: '10', k: 'Судей в наряде' },
-          { v: '16', k: 'Столов в зале' },
-        ]}
-      />
+      {/* Показатели до вкладок: вкладки отвечают уже на «что с ним делать». */}
+      <StatTiles items={TILES5_10} />
       <PageTabs
         items={[
           { t: TOUR_TABS5[0], view: <Rules5_10 /> },
@@ -1028,6 +1411,33 @@ export function Tour5_10() {
     </WebApp>
   );
 }
+
+/** Карточка турнира на телефоне: те же шесть вкладок и тот же порядок. Четыре
+    вкладки из шести показываются теми же компонентами — регламент, наряд,
+    протокол и «что можно сделать» и на узком экране остаются списками. Своими
+    остаются три: состав, сетка и расписание — таблица, холст и шкала времени в
+    392 px не читаются (см. комментарии у самих кадров). */
+const Tour5_10Phone = () => (
+  <PhoneRoleApp
+    role={R05}
+    nav="Соревнования"
+    title="Кубок Республики Казахстан 2026"
+    back={{ label: 'Соревнования сезона', to: 'Э5.3' }}
+    sub="Главный старт · Караганда · 12–15 сентября · судья назначен"
+  >
+    <PhoneTiles><StatTiles items={TILES5_10} /></PhoneTiles>
+    <PageTabs
+      items={[
+        { t: TOUR_TABS5[0], view: <Rules5_10 /> },
+        { t: TOUR_TABS5[1], view: <Crew5_10 phone /> },
+        { t: TOUR_TABS5[2], view: <Players5_10 phone /> },
+        { t: TOUR_TABS5[3], view: <BracketList5_10 /> },
+        { t: TOUR_TABS5[4], view: <Schedule5_10Phone /> },
+        { t: TOUR_TABS5[5], view: <Protocol5_10 /> },
+      ]}
+    />
+  </PhoneRoleApp>
+);
 
 const Tour5_10States = () => (
   <States>
@@ -1169,8 +1579,10 @@ const num = (n: number) => String(n).replace('.', ',');
 
 /** Наряд полосой над таблицей: итог решений, а не второй список — расходиться
     нечему. Пустое место написано словами «не назначен» и подсвечено. */
-const CrewBar = ({ items }: { items: { k: string; v: string; free?: boolean }[] }) => (
-  <div className="mb-4 grid grid-cols-4 gap-3">
+const CrewBar = ({ items, cols = 4 }: { items: { k: string; v: string; free?: boolean }[]; cols?: 2 | 4 }) => (
+  /* На телефоне те же четыре места встают в два ряда по два: четыре карточки
+     по 90 px не читаются — фамилия в них не помещается. */
+  <div className={'mb-4 grid gap-3 ' + (cols === 2 ? 'grid-cols-2' : 'grid-cols-4')}>
     {items.map((d) => (
       <div
         key={d.k}
@@ -1195,8 +1607,12 @@ const CREW_GRID = '2.3fr 1fr 0.9fr 0.7fr 238px';
 
     Компонент отдельный, потому что мест у него два ✳: вкладка «Судьи» карточки
     турнира (Э5.10) и экран разбора заявок (Э5.2). Содержание одно, и двумя
-    реализациями оно бы разъехалось. */
-export function JudgeCrew({ cur }: { cur: (typeof OPEN_TOURS)[number] }) {
+    реализациями оно бы разъехалось.
+
+    `phone` — тот же наряд в 392 px ✳ (30.08.2026): решения, отбор и состояния
+    те же, меняется раскладка. Отдельного телефонного наряда нет намеренно: он
+    и есть то место, где разъезжаются два списка. */
+export function JudgeCrew({ cur, phone }: { cur: (typeof OPEN_TOURS)[number]; phone?: boolean }) {
   const tour = cur.nm;
   /* Два списка вкладками, а не список и диалог поверх него ✳: заявки и реестр
      отвечают на разные вопросы — «кто сам вызвался» и «кто вообще есть», — а
@@ -1253,12 +1669,142 @@ export function JudgeCrew({ cur }: { cur: (typeof OPEN_TOURS)[number] }) {
     return sort.up ? x : -x;
   });
 
+  /* Поиск, факты и добор — одни и те же элементы в обоих форматах; отличается
+     только то, стоят они в строку или столбиком. */
+  const search = (
+    <SearchInput
+      value={q}
+      onChange={setQ}
+      placeholder="Фамилия, регион или категория"
+      className={phone ? 'w-full' : 'w-72'}
+    />
+  );
+  const facts =
+    src === 'apps' ? (
+      <Facts
+        items={[
+          { k: 'даты', v: cur.d },
+          { k: 'приём до', v: cur.till },
+          { k: 'до старта', v: cur.left.replace('до старта ', ''), hot: cur.cls === 'bad' },
+        ]}
+      />
+    ) : (
+      <span className="text-[12.5px] text-neutral-500">предлагаются только с подтверждённой категорией</span>
+    );
+  /* Добор из реестра (18.08.2026): судья заводит себя сам (Э0.7), реестр
+     живой, и когда заявок меньше, чем мест, есть из кого добрать. */
+  const add = (
+    <Button size="sm" variant="outline" data-to="Э5.8">
+      <UserPlus size={14} /> Добавить из реестра
+    </Button>
+  );
+
+  const list = rows.map((c) => {
+    const post = postOf(c.nm);
+    const out = crew.out.includes(c.nm);
+    /* Пока решения нет, под фамилией то, по чему решают: заявленные места
+       и последний турнир (в реестре — опыт и занятость). Как только место
+       дано, важнее само решение — строка говорит о нём. */
+    const sub = post ? (
+      <span className="font-medium text-green-700">{POSTS.find((p) => p.k === post)!.full}</span>
+    ) : out ? (
+      <span className="text-red-600">Заявка отклонена</span>
+    ) : src === 'reg' ? (
+      <>{c.want} · {c.last}{c.busy ? ` · ${c.busy}` : ''}</>
+    ) : (
+      <>заявился: {c.want} · {c.last}</>
+    );
+    const tone = post ? 'bg-green-50/60' : out ? 'opacity-55' : 'hover:bg-neutral-50';
+    /* Решение по строке: место в наряде выбирают из четырёх, пока человека в
+       наряде нет — одна кнопка «Добавить», и она ставит судьёй стола. */
+    const decide = (
+      <>
+        {post ? (
+          <span className="flex overflow-hidden rounded-lg border border-neutral-200">
+            {POSTS.map((p, i) => (
+              <button
+                key={p.k}
+                type="button"
+                onClick={() => pick(c.nm, p.k)}
+                className={
+                  'px-2 py-1 text-[11px] font-medium ' +
+                  (post === p.k ? 'bg-blue-600 text-white' : 'text-neutral-500 hover:bg-neutral-100') +
+                  (i > 0 ? ' border-l border-neutral-200' : '')
+                }
+              >
+                {p.t}
+              </button>
+            ))}
+          </span>
+        ) : (
+          /* Пока судья не в наряде — одна кнопка «Добавить» ✳: четыре кнопки в
+             каждой строке — тридцать шесть кнопок на экране, из которых
+             нажимают четыре. */
+          <Button size="sm" variant="outline" onPress={() => pick(c.nm, 'judge')}>
+            <UserPlus size={14} /> Добавить
+          </Button>
+        )}
+        {/* Отклоняют заявку, а не человека: в реестре отклонять нечего —
+            там просто не назначают. */}
+        {src === 'apps' && (
+          <button
+            type="button"
+            title="Отклонить заявку с причиной"
+            data-to="Э5.9"
+            onClick={() => reject(c.nm)}
+            className={
+              'flex h-7 w-7 items-center justify-center rounded-md ' +
+              (out ? 'bg-red-100 text-red-700' : 'text-neutral-400 hover:bg-red-50 hover:text-red-600')
+            }
+          >
+            <X size={15} />
+          </button>
+        )}
+      </>
+    );
+    /* Имя и фото открывают карточку судьи (Э5.12): решают по человеку, а в
+       строке помещаются три факта из тридцати. */
+    return phone ? (
+      /* На телефоне пять колонок таблицы становятся тремя строками карточки:
+         кто, чем меряется (категория, регион, R) и что с ним делать. */
+      <div key={c.nm} className={'px-4 py-2.5 text-[13px] ' + tone}>
+        <Who av={c.av} nm={c.nm} sub={sub} to="Э5.12" />
+        <div className="mt-1.5 flex items-baseline justify-between gap-2">
+          <span className="text-xs text-neutral-500">{c.cat} · {c.reg}</span>
+          <span className="font-semibold tabular-nums">{num(c.r)}</span>
+        </div>
+        <div className="mt-2 flex items-center justify-end gap-1.5">{decide}</div>
+      </div>
+    ) : (
+      <div
+        key={c.nm}
+        className={'grid items-center gap-3 px-4 py-2.5 text-[13px] ' + tone}
+        style={{ gridTemplateColumns: CREW_GRID }}
+      >
+        <Who av={c.av} nm={c.nm} sub={sub} to="Э5.12" />
+        <span className="text-neutral-600">{c.cat}</span>
+        <span className="text-neutral-600">{c.reg}</span>
+        <span className="font-semibold tabular-nums">{num(c.r)}</span>
+        <span className="flex items-center justify-end gap-1.5">{decide}</span>
+      </div>
+    );
+  });
+
+  const empty = rows.length === 0 && (
+    <NoRows>
+      {q
+        ? `По запросу «${q}» никого нет — проверьте написание фамилии.`
+        : 'Заявок на этот старт пока нет — бригаду собирают из реестра, вкладка рядом.'}
+    </NoRows>
+  );
+
   return (
     <>
       {/* Наряд — итог решений внизу: какие места ещё пустые, читается отсюда,
           не открывая ничего. У судей — сколько набрано из скольких нужно по
           числу столов: «не назначен» о четырёх местах сразу ничего не говорит. */}
       <CrewBar
+        cols={phone ? 2 : 4}
         items={POSTS.map((p) => {
           const many = p.k === 'judge';
           const who = many ? `${crew.judges.length} из ${cur.crew}` : crew[p.k];
@@ -1268,139 +1814,67 @@ export function JudgeCrew({ cur }: { cur: (typeof OPEN_TOURS)[number] }) {
       />
 
       {/* Заявки и реестр — вкладки со счётчиками: хватает ли заявок на бригаду,
-          видно до нажатия. */}
-      <div className="mb-3">
-        <FilterSeg
-          items={[`Заявки на судейство · ${cur.n}`, `Реестр судей · ${REGISTRY.length} из 214`]}
-          active={src === 'apps' ? `Заявки на судейство · ${cur.n}` : `Реестр судей · ${REGISTRY.length} из 214`}
-          onPick={(v) => setSrc(v.startsWith('Заявки') ? 'apps' : 'reg')}
-        />
-      </div>
+          видно до нажатия. На телефоне полоса едет вбок: подписи со счётчиками
+          длинные, и резать их нельзя — счётчик и есть ответ. */}
+      {phone ? (
+        <Strip>
+          <FilterSeg
+            items={[`Заявки на судейство · ${cur.n}`, `Реестр судей · ${REGISTRY.length} из 214`]}
+            active={src === 'apps' ? `Заявки на судейство · ${cur.n}` : `Реестр судей · ${REGISTRY.length} из 214`}
+            onPick={(v) => setSrc(v.startsWith('Заявки') ? 'apps' : 'reg')}
+          />
+        </Strip>
+      ) : (
+        <div className="mb-3">
+          <FilterSeg
+            items={[`Заявки на судейство · ${cur.n}`, `Реестр судей · ${REGISTRY.length} из 214`]}
+            active={src === 'apps' ? `Заявки на судейство · ${cur.n}` : `Реестр судей · ${REGISTRY.length} из 214`}
+            onPick={(v) => setSrc(v.startsWith('Заявки') ? 'apps' : 'reg')}
+          />
+        </div>
+      )}
 
       {/* Плиток над таблицей нет ✳: заявок в них было бы столько же, сколько
           строк ниже. Даты и срок приёма — фактами рядом с поиском; срочность
           близкого старта остаётся цветной. */}
-      <div className="mb-3 flex items-center justify-between gap-4">
-        <SearchInput value={q} onChange={setQ} placeholder="Фамилия, регион или категория" className="w-72" />
-        {src === 'apps' ? (
-          <Facts
-            items={[
-              { k: 'даты', v: cur.d },
-              { k: 'приём до', v: cur.till },
-              { k: 'до старта', v: cur.left.replace('до старта ', ''), hot: cur.cls === 'bad' },
-            ]}
-          />
-        ) : (
-          <span className="text-[12.5px] text-neutral-500">предлагаются только с подтверждённой категорией</span>
-        )}
-        {/* Добор из реестра (18.08.2026): судья заводит себя сам (Э0.7), реестр
-            живой, и когда заявок меньше, чем мест, есть из кого добрать. */}
-        <Button size="sm" variant="outline" data-to="Э5.8">
-          <UserPlus size={14} /> Добавить из реестра
-        </Button>
-      </div>
+      {phone ? (
+        <div className="mb-3 flex flex-col gap-2">
+          {search}
+          {facts}
+          <div>{add}</div>
+        </div>
+      ) : (
+        <div className="mb-3 flex items-center justify-between gap-4">
+          {search}
+          {facts}
+          {add}
+        </div>
+      )}
 
-      <Sheet
-        grid={CREW_GRID}
-        cols={[
-          ...COLS5.map((c) => (
-            <Th
-              key={c.k}
-              t={c.t}
-              on={sort.k === c.k}
-              onClick={() => setSort({ k: c.k, up: sort.k === c.k ? !sort.up : c.k === 'nm' })}
-            />
-          )),
-          <span key="place" className="text-right">Место в наряде</span>,
-        ]}
-      >
-        {rows.map((c) => {
-          const post = postOf(c.nm);
-          const out = crew.out.includes(c.nm);
-          /* Пока решения нет, под фамилией то, по чему решают: заявленные места
-             и последний турнир (в реестре — опыт и занятость). Как только место
-             дано, важнее само решение — строка говорит о нём. */
-          const sub = post ? (
-            <span className="font-medium text-green-700">{POSTS.find((p) => p.k === post)!.full}</span>
-          ) : out ? (
-            <span className="text-red-600">Заявка отклонена</span>
-          ) : src === 'reg' ? (
-            <>{c.want} · {c.last}{c.busy ? ` · ${c.busy}` : ''}</>
-          ) : (
-            <>заявился: {c.want} · {c.last}</>
-          );
-          return (
-            <div
-              key={c.nm}
-              className={
-                'grid items-center gap-3 px-4 py-2.5 text-[13px] ' +
-                (post ? 'bg-green-50/60' : out ? 'opacity-55' : 'hover:bg-neutral-50')
-              }
-              style={{ gridTemplateColumns: CREW_GRID }}
-            >
-              {/* Имя и фото открывают карточку судьи (Э5.12): решают по
-                  человеку, а в строке помещаются три факта из тридцати. */}
-              <Who av={c.av} nm={c.nm} sub={sub} to="Э5.12" />
-              <span className="text-neutral-600">{c.cat}</span>
-              <span className="text-neutral-600">{c.reg}</span>
-              <span className="font-semibold tabular-nums">{num(c.r)}</span>
-              <span className="flex items-center justify-end gap-1.5">
-                {post ? (
-                  /* Человек в наряде — место у него одно, и менять его — это
-                     выбирать из четырёх, а не добавлять. */
-                  <span className="flex overflow-hidden rounded-lg border border-neutral-200">
-                    {POSTS.map((p, i) => (
-                      <button
-                        key={p.k}
-                        type="button"
-                        onClick={() => pick(c.nm, p.k)}
-                        className={
-                          'px-2 py-1 text-[11px] font-medium ' +
-                          (post === p.k ? 'bg-blue-600 text-white' : 'text-neutral-500 hover:bg-neutral-100') +
-                          (i > 0 ? ' border-l border-neutral-200' : '')
-                        }
-                      >
-                        {p.t}
-                      </button>
-                    ))}
-                  </span>
-                ) : (
-                  /* Пока судья не в наряде — одна кнопка «Добавить» ✳, и она
-                     ставит его судьёй стола: в девяти строках из девяти нужен
-                     именно стол. Четыре кнопки в каждой строке — тридцать шесть
-                     кнопок на экране, из которых нажимают четыре. */
-                  <Button size="sm" variant="outline" onPress={() => pick(c.nm, 'judge')}>
-                    <UserPlus size={14} /> Добавить
-                  </Button>
-                )}
-                {/* Отклоняют заявку, а не человека: в реестре отклонять нечего —
-                    там просто не назначают. */}
-                {src === 'apps' && (
-                  <button
-                    type="button"
-                    title="Отклонить заявку с причиной"
-                    data-to="Э5.9"
-                    onClick={() => reject(c.nm)}
-                    className={
-                      'flex h-7 w-7 items-center justify-center rounded-md ' +
-                      (out ? 'bg-red-100 text-red-700' : 'text-neutral-400 hover:bg-red-50 hover:text-red-600')
-                    }
-                  >
-                    <X size={15} />
-                  </button>
-                )}
-              </span>
-            </div>
-          );
-        })}
-        {rows.length === 0 && (
-          <NoRows>
-            {q
-              ? `По запросу «${q}» никого нет — проверьте написание фамилии.`
-              : 'Заявок на этот старт пока нет — бригаду собирают из реестра, вкладка рядом.'}
-          </NoRows>
-        )}
-      </Sheet>
+      {/* На телефоне шапки колонок нет, а с ней нет и сортировки по ним:
+          список идёт по рейтингу R, как открывается таблица по умолчанию.
+          Сравнивать судей по категории и региону приходят с ноутбука. */}
+      {phone ? (
+        <Rows>{list}{empty}</Rows>
+      ) : (
+        <Sheet
+          grid={CREW_GRID}
+          cols={[
+            ...COLS5.map((c) => (
+              <Th
+                key={c.k}
+                t={c.t}
+                on={sort.k === c.k}
+                onClick={() => setSort({ k: c.k, up: sort.k === c.k ? !sort.up : c.k === 'nm' })}
+              />
+            )),
+            <span key="place" className="text-right">Место в наряде</span>,
+          ]}
+        >
+          {list}
+          {empty}
+        </Sheet>
+      )}
     </>
   );
 }
@@ -1422,6 +1896,21 @@ export function Applications5_2() {
     </WebApp>
   );
 }
+
+/** Разбор заявок на телефоне: тот же наряд и те же решения — назначить,
+    поменять место, отклонить. Экран роли, ради которого адаптив и делали:
+    судью назначают за четыре дня до старта, и ждать ноутбука это не может. */
+const Applications5_2Phone = () => (
+  <PhoneRoleApp
+    role={R05}
+    nav="Соревнования"
+    title="Судьи на турнир"
+    sub={`${OPEN_TOURS[2].nm} · ${OPEN_TOURS[2].d} · приём заявок до ${OPEN_TOURS[2].till}`}
+    back={{ label: 'Карточка турнира', to: 'Э5.10' }}
+  >
+    <JudgeCrew cur={OPEN_TOURS[2]} phone />
+  </PhoneRoleApp>
+);
 
 const Applications5_2States = () => (
   <States>
@@ -1526,7 +2015,12 @@ const RESULTS: Res[] = [
     на исправление. Решение видно в шапке протокола, а не только по кнопке. */
 type PVerdict = '' | 'ok' | 'back';
 
-export function Protocol5_4() {
+/** Документ и решение по нему. Тело экрана вынесено из оболочки ✳: тот же
+    протокол читают и утверждают с ноутбука и с телефона, а два экземпляра
+    решения («утвердить», «вернуть с причиной») разъехались бы первым же
+    правилом. `phone` меняет раскладку — таблицу мест на строки, зону сверки на
+    два столбца, диалог на всю ширину кадра. */
+const Protocol5_4Body = ({ phone }: { phone?: boolean }) => {
   const [v, setV] = useState<PVerdict>('');
   /* Возврат идёт через тот же диалог отказа с причиной, что и отклонение заявки
      (Э5.9): причина обязательна, она уходит главному судье и в журнал. */
@@ -1536,14 +2030,38 @@ export function Protocol5_4() {
     ok: { t: 'УТВЕРЖДЁН', cls: 'live' },
     back: { t: 'ВОЗВРАЩЁН НА ИСПРАВЛЕНИЕ', cls: 'bad' },
   };
-  return (
-    <WebApp
-      role={R05}
-      nav="Соревнования"
-      title="Протокол на утверждении"
-      back={{ label: 'Карточка турнира', to: 'Э5.10' }}
+  const dialog = ask && (
+    <InlineDialog
+      title="Вернуть протокол с причиной"
+      sub="«Алатау Опен» 2026 · главному судье Оспанову Т."
+      to="Э5.4"
+      foot={
+        <>
+          <span className="mr-auto text-xs text-neutral-500">
+            Причина уйдёт главному судье и останется в журнале
+          </span>
+          <QuietAction onPress={() => setAsk(false)}>Закрыть</QuietAction>
+          <Button variant="primary" onPress={() => { setV('back'); setAsk(false); }}>
+            Вернуть
+          </Button>
+        </>
+      }
     >
-      <div className="grid grid-cols-[1.5fr_1fr] items-start gap-4">
+      <FormGrid>
+        <FieldView label="Что возвращается" value="Итоговый протокол · «Алатау Опен» 2026" wide />
+        <TextInput label="Причина" value="в 1/4 техпобеда без основания в журнале матча" wide />
+      </FormGrid>
+      <div className="mt-3">
+        <Bar>Ввод результатов откроется снова — это сказано в уведомлении главному судье.</Bar>
+      </div>
+    </InlineDialog>
+  );
+  return (
+    <>
+      {/* Документ и зона сверки — один под другим ✳ (30.08.2026): протокол
+          читают сверху вниз, а решение принимают, дочитав его до подписей;
+          рядом узкая колонка сверки резала таблицу мест. */}
+      <>
         {/* Протокол — документ, а не список «кто с кем сыграл» ✳ (комментарий
             федерации, 09.2026): бумага уходит в архив, и на её основании
             считается рейтинг — на экране всё, что в ней есть: шапка турнира,
@@ -1573,19 +2091,38 @@ export function Protocol5_4() {
           <Sec>Итоговые места</Sec>
           {/* Строки волосяной линией, а не каждая в своей рамке: протокол
               читают сверху вниз одним взглядом. */}
-          <DataTable
-            cols={['Место', 'Спортсмен', 'Результат', '']}
-            grid="60px 1.8fr 0.9fr 1.3fr"
-            rows={RESULTS.map((r) => ({
-              key: String(r.pl),
-              cells: [
-                <b key="p" className="text-[14px] tabular-nums">{r.pl}</b>,
-                <Who key="w" av={r.av} nm={r.nm} sub={r.club} />,
-                <span key="s" className="tabular-nums text-neutral-600">{r.sc}</span>,
-                r.pill ? <span key="m" className="flex justify-end"><P t={r.pill.t} cls={r.pill.cls} /></span> : <span key="m" />,
-              ],
-            }))}
-          />
+          {phone ? (
+            /* На телефоне место и фамилия остаются в строке, результат и особый
+               случай уходят под них: четыре колонки в 392 px режут фамилию. */
+            <Rows>
+              {RESULTS.map((r) => (
+                <div key={r.pl} className="flex items-center gap-3 px-4 py-2 text-[13px]">
+                  <b className="w-5 shrink-0 text-[14px] tabular-nums">{r.pl}</b>
+                  <span className="min-w-0 flex-1">
+                    <Who av={r.av} nm={r.nm} sub={r.club} />
+                  </span>
+                  <span className="shrink-0 text-right leading-tight">
+                    <span className="block tabular-nums text-neutral-600">{r.sc}</span>
+                    {r.pill && <span className="mt-1 block"><P t={r.pill.t} cls={r.pill.cls} /></span>}
+                  </span>
+                </div>
+              ))}
+            </Rows>
+          ) : (
+            <DataTable
+              cols={['Место', 'Спортсмен', 'Результат', '']}
+              grid="60px 1.8fr 0.9fr 1.3fr"
+              rows={RESULTS.map((r) => ({
+                key: String(r.pl),
+                cells: [
+                  <b key="p" className="text-[14px] tabular-nums">{r.pl}</b>,
+                  <Who key="w" av={r.av} nm={r.nm} sub={r.club} />,
+                  <span key="s" className="tabular-nums text-neutral-600">{r.sc}</span>,
+                  r.pill ? <span key="m" className="flex justify-end"><P t={r.pill.t} cls={r.pill.cls} /></span> : <span key="m" />,
+                ],
+              }))}
+            />
+          )}
 
           <Sec>Особые случаи</Sec>
           <Rows>
@@ -1612,7 +2149,11 @@ export function Protocol5_4() {
         </Panel>
 
         <Panel title="Зона сверки" extra={<P t="3 ПРАВКИ СЧЁТА" cls="bad" />}>
+          {/* Четыре числа в строку: панель теперь во всю ширину, и в две
+              колонки плитки растягивались бы на полэкрана каждая. На телефоне
+              наоборот — в один ряд четыре числа не встают. */}
           <Cells
+            cols={phone ? 2 : 4}
             items={[
               { v: '63 / 64', k: 'Матчей сыграно', tone: 'b' },
               { v: '2', k: 'Технические победы' },
@@ -1633,14 +2174,16 @@ export function Protocol5_4() {
               кнопок — что именно произошло. */}
           <div className="mt-4 flex flex-col gap-2">
             {v === '' && (
-              <>
+              /* Кнопки в строку, а не столбиком ✳: панель во всю ширину, и
+                 растянутая на неё «Утвердить» читалась бы полосой. */
+              <div className="flex flex-wrap items-center gap-2">
                 <Button variant="primary" onPress={() => setV('ok')}>
                   <Check size={15} /> Утвердить протокол
                 </Button>
                 <Button variant="outline" onPress={() => setAsk(true)}>
                   <Undo2 size={15} /> Вернуть с причиной
                 </Button>
-              </>
+              </div>
             )}
             {v === 'ok' && (
               <Bar tone="success">
@@ -1660,43 +2203,47 @@ export function Protocol5_4() {
                 все, а до публикации рейтинга откатить ещё можно. Кнопка тихая,
                 не вровень с «Утвердить»; каждая отмена идёт в журнал (§12). */}
             {v !== '' && (
-              <QuietAction onPress={() => setV('')}>
-                <Undo2 size={15} /> {v === 'ok' ? 'Отменить утверждение' : 'Отменить возврат'}
-              </QuietAction>
+              <div className="flex">
+                <QuietAction onPress={() => setV('')}>
+                  <Undo2 size={15} /> {v === 'ok' ? 'Отменить утверждение' : 'Отменить возврат'}
+                </QuietAction>
+              </div>
             )}
           </div>
         </Panel>
-      </div>
+      </>
 
-      {ask && (
-        <InlineDialog
-          title="Вернуть протокол с причиной"
-          sub="«Алатау Опен» 2026 · главному судье Оспанову Т."
-          to="Э5.4"
-          foot={
-            <>
-              <span className="mr-auto text-xs text-neutral-500">
-                Причина уйдёт главному судье и останется в журнале
-              </span>
-              <QuietAction onPress={() => setAsk(false)}>Закрыть</QuietAction>
-              <Button variant="primary" onPress={() => { setV('back'); setAsk(false); }}>
-                Вернуть
-              </Button>
-            </>
-          }
-        >
-          <FormGrid>
-            <FieldView label="Что возвращается" value="Итоговый протокол · «Алатау Опен» 2026" wide />
-            <TextInput label="Причина" value="в 1/4 техпобеда без основания в журнале матча" wide />
-          </FormGrid>
-          <div className="mt-3">
-            <Bar>Ввод результатов откроется снова — это сказано в уведомлении главному судье.</Bar>
-          </div>
-        </InlineDialog>
-      )}
+      {phone ? <PhoneDialog>{dialog}</PhoneDialog> : dialog}
+    </>
+  );
+};
+
+export function Protocol5_4() {
+  return (
+    <WebApp
+      role={R05}
+      nav="Соревнования"
+      title="Протокол на утверждении"
+      back={{ label: 'Карточка турнира', to: 'Э5.10' }}
+    >
+      <Protocol5_4Body />
     </WebApp>
   );
 }
+
+/** Протокол на телефоне: тот же документ целиком — шапка, коллегия, места,
+    особые случаи, подписи и зона сверки — и то же решение. Сокращать документ
+    нельзя: утверждение и есть подпись под ним, а подписывают прочитанное. */
+const Protocol5_4Phone = () => (
+  <PhoneRoleApp
+    role={R05}
+    nav="Соревнования"
+    title="Протокол на утверждении"
+    back={{ label: 'Карточка турнира', to: 'Э5.10' }}
+  >
+    <Protocol5_4Body phone />
+  </PhoneRoleApp>
+);
 
 const Protocol5_4States = () => (
   <States>
@@ -1751,7 +2298,10 @@ const PICK = [
   { av: A(64), nm: 'Сериков Нурлан', reg: 'Астана', sub: 'вторая категория · 12 турниров', r: 'R 14,2 · №9', busy: false },
 ];
 
-export function PickJudge5_8() {
+/** Добор судьи в наряд — тело экрана, общее для обоих форматов ✳: выбор,
+    занятость и выдача роли «судья» одни и те же, меняется только раскладка
+    диалога и наряда за ним. */
+const PickJudge5_8Body = ({ phone }: { phone?: boolean }) => {
   /* Выбор и добавление — два шага, а не один: судью сверяют по категории,
      рейтингу и занятости, а нажатие «Выбрать» рядом с фамилией слишком дёшево,
      чтобы сразу ставить человека в наряд. */
@@ -1766,18 +2316,86 @@ export function PickJudge5_8() {
   );
   const cur = PICK.find((j) => j.nm === pick);
 
-  return (
-    <WebApp
-      role={R05}
-      nav="Соревнования"
-      title="Кубок Республики Казахстан 2026"
-      sub="Судьи · добор из реестра в наряд этого турнира"
-      back={{ label: 'Карточка турнира', to: 'Э5.10' }}
+  const dialog = open && (
+    <InlineDialog
+      wide
+      title="Добавить судью в наряд"
+      sub="Кубок Республики Казахстан 2026 · 18–20 мая · Астана"
+      to="Э5.10"
+      foot={
+        <>
+          <span className="mr-auto text-xs text-neutral-500">
+            {cur
+              ? `Выбран ${cur.nm} · вместе с добавлением выдаётся роль «судья» на этот турнир`
+              : 'Вместе с добавлением выдаётся роль «судья» на этот турнир'}
+          </span>
+          <QuietAction onPress={() => { setOpen(false); setPick(null); }}>Закрыть</QuietAction>
+          {/* Пока никто не выбран, добавлять нечего — кнопки нет, а не
+              серая: недоступное действие мы не показываем. */}
+          {cur && (
+            <Button variant="primary" onPress={() => { setDep(cur.nm); setOpen(false); setPick(null); }}>
+              Добавить
+            </Button>
+          )}
+        </>
+      }
     >
+      <Bar>
+        214 судей в реестре с подтверждённой категорией · 2 новых записи ждут подтверждения и
+        здесь не предлагаются
+      </Bar>
+      {/* Поиск и фильтры — зона «Поиск по реестру судей» ✳: в реестре 214
+          человек, и без них диалог отвечал бы только на «кто первый в
+          списке». Поиск живой; категория и регион — статичный выбор
+          (PickField, без портала: порталы на борде накрывают чужие
+          колонки). На телефоне три поля встают друг под другом. */}
+      <div className={'mb-3 items-end gap-3 ' + (phone ? 'flex flex-col' : 'grid grid-cols-[1.3fr_1fr_1fr]')}>
+        <label className="flex w-full flex-col gap-1">
+          <span className="text-xs font-medium text-neutral-500">Поиск по ФИО</span>
+          <SearchInput value={q} onChange={setQ} placeholder="Фамилия судьи" className="w-full" />
+        </label>
+        <PickField label="Категория" value="Все категории" />
+        <PickField label="Регион" value="Все регионы" />
+      </div>
+      {list.length ? (
+        <Rows>
+          {list.map((j) => (
+            <Row
+              key={j.nm}
+              av={j.av}
+              nm={j.nm}
+              sub={`${j.sub} · ${j.reg}${j.busy ? ' · занят 18–20 мая на «Кубке Иртыша»' : ''}`}
+              val={j.r}
+              pill={
+                pick === j.nm
+                  ? { t: 'ВЫБРАН', cls: 'live' }
+                  : j.busy
+                    ? { t: 'ЗАНЯТ', cls: 'wait' }
+                    : undefined
+              }
+              /* Занятого выбрать можно: два наряда на одни даты — решение
+                 председателя, система только показывает пересечение. */
+              action={pick === j.nm ? 'Снять выбор' : 'Выбрать'}
+              onAction={() => setPick(pick === j.nm ? null : j.nm)}
+            />
+          ))}
+        </Rows>
+      ) : (
+        <EmptyBox
+          title="Судей не нашлось"
+          text={`По запросу «${q}» никого нет — проверьте написание фамилии или снимите фильтр.`}
+        />
+      )}
+    </InlineDialog>
+  );
+
+  return (
+    <>
       {/* Позади диалога — наряд этого турнира: добор нужен ровно там, где
           видно, что место в бригаде пустое. Экран живёт в «Соревнованиях» ✳:
           добор относится к одному старту. */}
       <CrewBar
+        cols={phone ? 2 : 4}
         items={[
           { k: 'Главный судья', v: 'Оспанов Тимур' },
           { k: 'Главный секретарь', v: 'Ким Лариса' },
@@ -1787,7 +2405,7 @@ export function PickJudge5_8() {
       />
 
       {!open && (
-        <div className="flex items-center justify-between gap-3">
+        <div className={'gap-3 ' + (phone ? 'flex flex-col items-start' : 'flex items-center justify-between')}>
           {dep ? (
             <P t={`${dep} — добавлен в наряд`} cls="live" />
           ) : (
@@ -1799,81 +2417,39 @@ export function PickJudge5_8() {
         </div>
       )}
 
-      {open && (
-        <InlineDialog
-          wide
-          title="Добавить судью в наряд"
-          sub="Кубок Республики Казахстан 2026 · 18–20 мая · Астана"
-          to="Э5.10"
-          foot={
-            <>
-              <span className="mr-auto text-xs text-neutral-500">
-                {cur
-                  ? `Выбран ${cur.nm} · вместе с добавлением выдаётся роль «судья» на этот турнир`
-                  : 'Вместе с добавлением выдаётся роль «судья» на этот турнир'}
-              </span>
-              <QuietAction onPress={() => { setOpen(false); setPick(null); }}>Закрыть</QuietAction>
-              {/* Пока никто не выбран, добавлять нечего — кнопки нет, а не
-                  серая: недоступное действие мы не показываем. */}
-              {cur && (
-                <Button variant="primary" onPress={() => { setDep(cur.nm); setOpen(false); setPick(null); }}>
-                  Добавить
-                </Button>
-              )}
-            </>
-          }
-        >
-          <Bar>
-            214 судей в реестре с подтверждённой категорией · 2 новых записи ждут подтверждения и
-            здесь не предлагаются
-          </Bar>
-          {/* Поиск и фильтры — зона «Поиск по реестру судей» ✳: в реестре 214
-              человек, и без них диалог отвечал бы только на «кто первый в
-              списке». Поиск живой; категория и регион — статичный выбор
-              (PickField, без портала: порталы на борде накрывают чужие
-              колонки). */}
-          <div className="mb-3 grid grid-cols-[1.3fr_1fr_1fr] items-end gap-3">
-            <label className="flex flex-col gap-1">
-              <span className="text-xs font-medium text-neutral-500">Поиск по ФИО</span>
-              <SearchInput value={q} onChange={setQ} placeholder="Фамилия судьи" className="w-full" />
-            </label>
-            <PickField label="Категория" value="Все категории" />
-            <PickField label="Регион" value="Все регионы" />
-          </div>
-          {list.length ? (
-            <Rows>
-              {list.map((j) => (
-                <Row
-                  key={j.nm}
-                  av={j.av}
-                  nm={j.nm}
-                  sub={`${j.sub} · ${j.reg}${j.busy ? ' · занят 18–20 мая на «Кубке Иртыша»' : ''}`}
-                  val={j.r}
-                  pill={
-                    pick === j.nm
-                      ? { t: 'ВЫБРАН', cls: 'live' }
-                      : j.busy
-                        ? { t: 'ЗАНЯТ', cls: 'wait' }
-                        : undefined
-                  }
-                  /* Занятого выбрать можно: два наряда на одни даты — решение
-                     председателя, система только показывает пересечение. */
-                  action={pick === j.nm ? 'Снять выбор' : 'Выбрать'}
-                  onAction={() => setPick(pick === j.nm ? null : j.nm)}
-                />
-              ))}
-            </Rows>
-          ) : (
-            <EmptyBox
-              title="Судей не нашлось"
-              text={`По запросу «${q}» никого нет — проверьте написание фамилии или снимите фильтр.`}
-            />
-          )}
-        </InlineDialog>
-      )}
+      {phone ? <PhoneDialog>{dialog}</PhoneDialog> : dialog}
+    </>
+  );
+};
+
+export function PickJudge5_8() {
+  return (
+    <WebApp
+      role={R05}
+      nav="Соревнования"
+      title="Кубок Республики Казахстан 2026"
+      sub="Судьи · добор из реестра в наряд этого турнира"
+      back={{ label: 'Карточка турнира', to: 'Э5.10' }}
+    >
+      <PickJudge5_8Body />
     </WebApp>
   );
 }
+
+/** Добор из реестра на телефоне: диалог во всю ширину кадра — при прибитых
+    720 px от него в 392 px виден был бы левый край. Список тот же, и занятость
+    на эти даты в нём так же подписана: решение остаётся за председателем. */
+const PickJudge5_8Phone = () => (
+  <PhoneRoleApp
+    role={R05}
+    nav="Соревнования"
+    title="Кубок Республики Казахстан 2026"
+    sub="Судьи · добор из реестра в наряд этого турнира"
+    back={{ label: 'Карточка турнира', to: 'Э5.10' }}
+  >
+    <PickJudge5_8Body phone />
+  </PhoneRoleApp>
+);
 
 const PickJudge5_8States = () => (
   <States>
@@ -1944,20 +2520,45 @@ const WAITING = [
   { av: A(64), nm: 'Сериков Нурлан', sub: 'вторая категория · R 14,2' },
 ];
 
-export function Reject5_9() {
+/** Отказ с причиной — тело экрана, общее для обоих форматов: причина
+    обязательна и там, и там. */
+const Reject5_9Body = ({ phone }: { phone?: boolean }) => {
   const [left, setLeft] = useState(WAITING);
   /* Кого отклоняем. `null` — диалог закрыт: тем же состоянием работает и
      «Закрыть» внизу диалога. */
   const [who, setWho] = useState<string | null>('Сериков Нурлан');
   const cur = left.find((j) => j.nm === who);
-  return (
-    <WebApp
-      role={R05}
-      nav="Соревнования"
-      title="Кубок Республики Казахстан 2026"
-      sub="Судьи · заявки без решения"
-      back={{ label: 'Карточка турнира', to: 'Э5.10' }}
+  const dialog = cur && (
+    <InlineDialog
+      title="Отклонить заявку с причиной"
+      sub={`${cur.nm} · заявка на судейство Кубка РК`}
+      to="Э5.10"
+      foot={
+        <>
+          <span className="mr-auto text-xs text-neutral-500">
+            Причина уйдёт судье в уведомление и останется в журнале
+          </span>
+          <QuietAction onPress={() => setWho(null)}>Закрыть</QuietAction>
+          <Button
+            variant="danger"
+            onPress={() => { setLeft(left.filter((j) => j.nm !== cur.nm)); setWho(null); }}
+          >
+            Отклонить
+          </Button>
+        </>
+      }
     >
+      <FormGrid>
+        <FieldView label="Что отклоняется" value={`Заявка на судейство · ${cur.nm}`} wide />
+        <TextInput label="Причина" value="на главный старт нужна первая или национальная категория" wide />
+      </FormGrid>
+      <div className="mt-3">
+        <Bar>Приём заявок открыт до 18.04 — судья может подать снова, и это сказано в уведомлении.</Bar>
+      </div>
+    </InlineDialog>
+  );
+  return (
+    <>
       {left.length ? (
         <Rows>
           {left.map((j) => (
@@ -1976,38 +2577,38 @@ export function Reject5_9() {
         <EmptyBox title="Решений не ждёт ничего" text="Все заявки на судейство этого турнира разобраны." />
       )}
 
-      {cur && (
-        <InlineDialog
-          title="Отклонить заявку с причиной"
-          sub={`${cur.nm} · заявка на судейство Кубка РК`}
-          to="Э5.10"
-          foot={
-            <>
-              <span className="mr-auto text-xs text-neutral-500">
-                Причина уйдёт судье в уведомление и останется в журнале
-              </span>
-              <QuietAction onPress={() => setWho(null)}>Закрыть</QuietAction>
-              <Button
-                variant="danger"
-                onPress={() => { setLeft(left.filter((j) => j.nm !== cur.nm)); setWho(null); }}
-              >
-                Отклонить
-              </Button>
-            </>
-          }
-        >
-          <FormGrid>
-            <FieldView label="Что отклоняется" value={`Заявка на судейство · ${cur.nm}`} wide />
-            <TextInput label="Причина" value="на главный старт нужна первая или национальная категория" wide />
-          </FormGrid>
-          <div className="mt-3">
-            <Bar>Приём заявок открыт до 18.04 — судья может подать снова, и это сказано в уведомлении.</Bar>
-          </div>
-        </InlineDialog>
-      )}
+      {phone ? <PhoneDialog>{dialog}</PhoneDialog> : dialog}
+    </>
+  );
+};
+
+export function Reject5_9() {
+  return (
+    <WebApp
+      role={R05}
+      nav="Соревнования"
+      title="Кубок Республики Казахстан 2026"
+      sub="Судьи · заявки без решения"
+      back={{ label: 'Карточка турнира', to: 'Э5.10' }}
+    >
+      <Reject5_9Body />
     </WebApp>
   );
 }
+
+/** Отказ с причиной на телефоне: то же поле причины во всю ширину кадра —
+    причину пишут словами, и обрезанное поле здесь дороже всего. */
+const Reject5_9Phone = () => (
+  <PhoneRoleApp
+    role={R05}
+    nav="Соревнования"
+    title="Кубок Республики Казахстан 2026"
+    sub="Судьи · заявки без решения"
+    back={{ label: 'Карточка турнира', to: 'Э5.10' }}
+  >
+    <Reject5_9Body phone />
+  </PhoneRoleApp>
+);
 
 const Reject5_9States = () => (
   <States>
@@ -2099,7 +2700,9 @@ const JOURNAL = [
 
 const RANK_GRID = '2.4fr 0.8fr 1.6fr';
 
-export function Rating5_5() {
+/** Реестр судей — тело экрана, общее для обоих форматов: срезы, поиск и журнал
+    начислений те же, меняется подача таблицы. */
+const Rating5_5Body = ({ phone }: { phone?: boolean }) => {
   const [f, setF] = useState(F55[0]);
   const [q, setQ] = useState('');
   const [sort, setSort] = useState<{ k: (typeof COLS55)[number]['k']; up: boolean }>({ k: 'r', up: false });
@@ -2123,82 +2726,137 @@ export function Rating5_5() {
     return sort.up ? x : -x;
   });
 
-  return (
-    <WebApp
-      role={R05}
-      nav="Судьи"
-      title="Реестр судей · сезон 2026"
-      sub="Кто есть в реестре, кого ещё не допустили и какой у каждого рейтинг"
+  /* Строка реестра: кто, итог R и признак зачёта. На телефоне те же три вещи,
+     но R и значок уходят под фамилию — колонкой они там не встают. */
+  const list = rows.map((j) => {
+    /* Строка открывает журнал начислений этого судьи. Новая запись ведёт
+       не в журнал — его ещё нет, — а в проверку документа (Э5.6): там
+       решается, пускать ли судью в реестр и с какой категорией. */
+    const who = (
+      <Who
+        av={j.av}
+        nm={j.nm}
+        sub={
+          j.fresh
+            ? /* Без рода в подписи: в реестре и судьи, и судьи-женщины. */
+              `сам, регистрация ${j.fresh.when} · ${j.fresh.doc}`
+            : `${j.cat} · №${j.pl}`
+        }
+      />
+    );
+    const mark = j.fresh ? (
+      <P t="ЖДЁТ ПОДТВЕРЖДЕНИЯ" cls="wait" />
+    ) : (
+      <P t={j.ok ? 'В ЗАЧЁТЕ' : 'БЕЗ ЗАЧЁТА'} cls={j.ok ? 'live' : 'bad'} />
+    );
+    const to = j.fresh ? 'Э5.6' : undefined;
+    const openJournal = j.fresh ? undefined : () => setOpen(j.nm);
+    return phone ? (
+      <div
+        key={j.nm}
+        role="button"
+        tabIndex={0}
+        data-row
+        data-to={to}
+        onClick={openJournal}
+        className={'cursor-pointer px-4 py-2.5 ' + (open === j.nm ? 'bg-blue-50/60' : 'hover:bg-neutral-50')}
+      >
+        {who}
+        <div className="mt-1.5 flex items-center justify-between gap-2">
+          <span className="text-[14px] font-semibold tabular-nums">{j.fresh ? '—' : num(j.r)}</span>
+          {mark}
+        </div>
+      </div>
+    ) : (
+      <div
+        key={j.nm}
+        role="button"
+        tabIndex={0}
+        data-row
+        data-to={to}
+        onClick={openJournal}
+        className={
+          'grid cursor-pointer items-center gap-3 px-4 py-2.5 text-[13px] ' +
+          (open === j.nm ? 'bg-blue-50/60' : 'hover:bg-neutral-50')
+        }
+        style={{ gridTemplateColumns: RANK_GRID }}
+      >
+        {who}
+        <span className="text-[14px] font-semibold tabular-nums">{j.fresh ? '—' : num(j.r)}</span>
+        <span className="flex justify-end">{mark}</span>
+      </div>
+    );
+  });
+
+  const empty = rows.length === 0 && (
+    <NoRows>
+      {q ? `По запросу «${q}» никого нет — проверьте написание фамилии.` : 'По этому срезу никого нет.'}
+    </NoRows>
+  );
+
+  const dialog = cur && (
+    <InlineDialog
+      title={`Журнал начислений · ${cur.nm}`}
+      sub={`${cur.cat} · R ${num(cur.r)} · №${cur.pl} · сезон 2026`}
+      to="Э5.5"
+      foot={<QuietAction onPress={() => setOpen(null)}>Закрыть</QuietAction>}
     >
+      {/* Пояснения про зачёт здесь нет: сам журнал и есть ответ — строк за
+          семинары и коллегию в нём просто не будет. */}
+      <Rows>
+        {JOURNAL.map((l) => (
+          <Row key={l.what} nm={l.what} sub={l.when} val={l.pts} />
+        ))}
+      </Rows>
+    </InlineDialog>
+  );
+
+  return (
+    <>
       {/* Фильтр сверху, поиск под ним ✳: сначала сужают круг, потом ищут
           внутри — в одной строке два приёма мешали друг другу. Счётчиков рядом
           нет: они пересчитываются по той же таблице, что стоит ниже. */}
-      <div className="mb-3"><FilterSeg items={F55} active={f} onPick={setF} /></div>
+      {phone ? (
+        <Strip><FilterSeg items={F55} active={f} onPick={setF} /></Strip>
+      ) : (
+        <div className="mb-3"><FilterSeg items={F55} active={f} onPick={setF} /></div>
+      )}
       <div className="mb-3">
-        <SearchInput value={q} onChange={setQ} placeholder="Фамилия или категория" className="w-80" />
+        <SearchInput
+          value={q}
+          onChange={setQ}
+          placeholder="Фамилия или категория"
+          className={phone ? 'w-full' : 'w-80'}
+        />
       </div>
 
-      <Sheet
-        grid={RANK_GRID}
-        cols={[
-          ...COLS55.map((c) => (
-            <Th
-              key={c.k}
-              t={c.t}
-              on={sort.k === c.k}
-              onClick={() => setSort({ k: c.k, up: sort.k === c.k ? !sort.up : c.k === 'nm' })}
-            />
-          )),
-          <span key="ok">Зачёт</span>,
-        ]}
-      >
-        {rows.map((j) => (
-          /* Строка открывает журнал начислений этого судьи. Новая запись ведёт
-             не в журнал — его ещё нет, — а в проверку документа (Э5.6): там
-             решается, пускать ли судью в реестр и с какой категорией. */
-          <div
-            key={j.nm}
-            role="button"
-            tabIndex={0}
-            data-row
-            data-to={j.fresh ? 'Э5.6' : undefined}
-            onClick={j.fresh ? undefined : () => setOpen(j.nm)}
-            className={
-              'grid cursor-pointer items-center gap-3 px-4 py-2.5 text-[13px] ' +
-              (open === j.nm ? 'bg-blue-50/60' : 'hover:bg-neutral-50')
-            }
-            style={{ gridTemplateColumns: RANK_GRID }}
-          >
-            <Who
-              av={j.av}
-              nm={j.nm}
-              sub={
-                j.fresh
-                  ? /* Без рода в подписи: в реестре и судьи, и судьи-женщины. */
-                    `сам, регистрация ${j.fresh.when} · ${j.fresh.doc}`
-                  : `${j.cat} · №${j.pl}`
-              }
-            />
-            <span className="text-[14px] font-semibold tabular-nums">{j.fresh ? '—' : num(j.r)}</span>
-            <span className="flex justify-end">
-              {j.fresh ? (
-                <P t="ЖДЁТ ПОДТВЕРЖДЕНИЯ" cls="wait" />
-              ) : (
-                <P t={j.ok ? 'В ЗАЧЁТЕ' : 'БЕЗ ЗАЧЁТА'} cls={j.ok ? 'live' : 'bad'} />
-              )}
-            </span>
-          </div>
-        ))}
-        {rows.length === 0 && (
-          <NoRows>
-            {q ? `По запросу «${q}» никого нет — проверьте написание фамилии.` : 'По этому срезу никого нет.'}
-          </NoRows>
-        )}
-      </Sheet>
+      {/* На телефоне шапки колонок нет: сортировку по фамилии заменяет поиск,
+          а порядок остаётся рейтинговым — за этим в реестр и приходят. */}
+      {phone ? (
+        <Rows>{list}{empty}</Rows>
+      ) : (
+        <Sheet
+          grid={RANK_GRID}
+          cols={[
+            ...COLS55.map((c) => (
+              <Th
+                key={c.k}
+                t={c.t}
+                on={sort.k === c.k}
+                onClick={() => setSort({ k: c.k, up: sort.k === c.k ? !sort.up : c.k === 'nm' })}
+              />
+            )),
+            <span key="ok">Зачёт</span>,
+          ]}
+        >
+          {list}
+          {empty}
+        </Sheet>
+      )}
 
       {/* Что дальше с записями обоих видов — одной строкой под таблицей.
           Реестр стал входом в наряд: раньше добор судьи (Э5.8) висел без входа. */}
-      <div className="mt-3 flex items-center justify-between gap-3">
+      <div className={'mt-3 gap-3 ' + (phone ? 'flex flex-col' : 'flex items-center justify-between')}>
         <span className="text-[12.5px] text-neutral-500">
           {RANK.length} судей в реестре · {RANK.filter((j) => j.fresh).length} ждут подтверждения категории
         </span>
@@ -2220,25 +2878,36 @@ export function Rating5_5() {
         </Bar>
       </div>
 
-      {cur && (
-        <InlineDialog
-          title={`Журнал начислений · ${cur.nm}`}
-          sub={`${cur.cat} · R ${num(cur.r)} · №${cur.pl} · сезон 2026`}
-          to="Э5.5"
-          foot={<QuietAction onPress={() => setOpen(null)}>Закрыть</QuietAction>}
-        >
-          {/* Пояснения про зачёт здесь нет: сам журнал и есть ответ — строк за
-              семинары и коллегию в нём просто не будет. */}
-          <Rows>
-            {JOURNAL.map((l) => (
-              <Row key={l.what} nm={l.what} sub={l.when} val={l.pts} />
-            ))}
-          </Rows>
-        </InlineDialog>
-      )}
+      {phone ? <PhoneDialog>{dialog}</PhoneDialog> : dialog}
+    </>
+  );
+};
+
+export function Rating5_5() {
+  return (
+    <WebApp
+      role={R05}
+      nav="Судьи"
+      title="Реестр судей · сезон 2026"
+      sub="Кто есть в реестре, кого ещё не допустили и какой у каждого рейтинг"
+    >
+      <Rating5_5Body />
     </WebApp>
   );
 }
+
+/** Реестр судей на телефоне: те же четыре среза и тот же журнал начислений
+    окном по строке. */
+const Rating5_5Phone = () => (
+  <PhoneRoleApp
+    role={R05}
+    nav="Судьи"
+    title="Реестр судей · сезон 2026"
+    sub="Кто есть в реестре, кого ещё не допустили и какой у каждого рейтинг"
+  >
+    <Rating5_5Body phone />
+  </PhoneRoleApp>
+);
 
 /** Журнал начислений — как он открывается по строке реестра ✳ (зона данных
     «Журнал начислений — отдельным окном по судье»). На самом экране окно по
@@ -2331,6 +3000,109 @@ const JUDGE_TOURS = [
   { nm: 'Открытие сезона 2026', sub: 'Астана · 17–19.01', role: 'Главный секретарь', cls: 'reg' as Cls },
 ];
 
+/** Слагаемые рейтинга судьи по Положению (§7.2): R = S1 + S2 + S3 + S4. Числа
+    одни на оба формата. */
+const JUDGE_CELLS: { v: string; k: string; tone?: keyof typeof CELL_TONE }[] = [
+  { v: '16,5', k: 'S1 · турниры', tone: 'b' },
+  { v: '4', k: 'S2 · категория' },
+  { v: '5', k: 'S3 · семинары' },
+  { v: '2', k: 'S4 · коллегия' },
+];
+
+/** Карточка судьи — тело экрана, общее для обоих форматов: те же четыре блока
+    в том же порядке, как решают по человеку. */
+const Judge5_12Body = ({ phone }: { phone?: boolean }) => (
+  /* Четыре блока один под другим во всю ширину ✳ (30.08.2026): в две колонки
+     «Где судил» и «Рейтинг» кончались на разной высоте, и низ левой колонки
+     висел пустым. Порядок — как решают по человеку: кто он, сколько у него,
+     где судил, что с ним сделать. */
+  <>
+    <Panel title="Судья" extra={<P t="ДОПУЩЕН" cls="live" />}>
+      <div className="mb-4 flex items-center gap-3.5">
+        <Avatar size="lg">
+          <Avatar.Image alt="Оспанов Тимур" src={A(76)} />
+          <Avatar.Fallback>О</Avatar.Fallback>
+        </Avatar>
+        <div className="leading-tight">
+          <div className="text-[15px] font-semibold">Оспанов Тимур</div>
+          <div className="mt-0.5 text-xs text-neutral-500">
+            Национальная категория · Астана · в реестре с 2019 года
+          </div>
+        </div>
+      </div>
+      <KV
+        items={[
+          ['Категория', 'национальная'],
+          ['Чем подтверждена', 'удостоверение №41-Н, принято 12.01.2026'],
+          ['Регион', 'Астана'],
+          ['Турниров за сезон', '6 · из них 2 выездных'],
+        ]}
+      />
+    </Panel>
+
+    {/* Рейтинг по Положению (§7.2): R = S1 + S2 + S3 + S4. Слагаемые здесь на
+        месте — в реестре их намеренно нет: там отвечают «сколько», а «почему»
+        разбирают у человека. */}
+    <Panel title="Рейтинг судьи" extra={<P t="R 27,5 · №1" cls="reg" />}>
+      {/* Четыре слагаемых в один ряд на телефоне не встают: два на два. */}
+      <Cells cols={phone ? 2 : 4} items={JUDGE_CELLS} />
+      <div className="mt-3">
+        <Rows>
+          {JOURNAL.slice(0, 3).map((j) => (
+            <Row key={j.what} nm={j.what} sub={j.when} val={j.pts} />
+          ))}
+        </Rows>
+      </div>
+      <div className="mt-3 flex items-center justify-between gap-3">
+        <span className="text-xs text-neutral-500">Журнал начислений целиком — в реестре судей</span>
+        <QuietAction to="Э5.5">Открыть журнал</QuietAction>
+      </div>
+    </Panel>
+
+    <Panel title="Где судил" extra={<span className="text-xs text-neutral-500">сезон 2026</span>}>
+      <Rows>
+        {JUDGE_TOURS.map((t) => (
+          <Row key={t.nm} nm={t.nm} sub={t.sub} pill={{ t: t.role.toUpperCase(), cls: t.cls }} />
+        ))}
+      </Rows>
+      <div className="mt-3">
+        <Bar>
+          Наряд по прошлым стартам — то, по чему и решают, потянет ли судья главного на главном
+          старте: по одной строке рейтинга этого не видно.
+        </Bar>
+      </div>
+    </Panel>
+
+    <Panel title="Что можно сделать">
+      <Rows>
+        {/* Даты свободного окна — в подписи, а не в значке ✳: значок
+            «СВОБОДЕН 12–15.09» вместе с кнопкой съедал колонку, и заголовок
+            действия резался до «Поставить в…». */}
+        <Row
+          nm="Поставить в наряд"
+          sub="на турнир с открытым приёмом заявок · свободен 12–15.09"
+          pill={{ t: 'СВОБОДЕН', cls: 'live' }}
+          action="Выбрать турнир"
+          to="Э5.8"
+        />
+        <Row
+          nm="Документы"
+          sub="удостоверение принято 12.01.2026 · новых нет"
+          pill={{ t: 'В ПОРЯДКЕ', cls: 'done' }}
+          action="Проверка"
+          to="Э5.6"
+        />
+      </Rows>
+      <div className="mt-3">
+        <Bar>
+          Рейтинг и история здесь не правятся: R считается по Положению (§7.2), а наряд — решение
+          по конкретному турниру, и принимают его в самом турнире.
+        </Bar>
+      </div>
+    </Panel>
+  </>
+);
+
 export function Judge5_12() {
   return (
     <WebApp
@@ -2340,105 +3112,25 @@ export function Judge5_12() {
       sub="Национальная категория · Астана · рейтинг R 27,5 · 1-е место в сезоне"
       back={{ label: 'Реестр судей', to: 'Э5.5' }}
     >
-      <div className="grid grid-cols-2 items-start gap-4">
-        <div>
-          <Panel title="Судья" extra={<P t="ДОПУЩЕН" cls="live" />}>
-            <div className="mb-4 flex items-center gap-3.5">
-              <Avatar size="lg">
-                <Avatar.Image alt="Оспанов Тимур" src={A(76)} />
-                <Avatar.Fallback>О</Avatar.Fallback>
-              </Avatar>
-              <div className="leading-tight">
-                <div className="text-[15px] font-semibold">Оспанов Тимур</div>
-                <div className="mt-0.5 text-xs text-neutral-500">
-                  Национальная категория · Астана · в реестре с 2019 года
-                </div>
-              </div>
-            </div>
-            <KV
-              items={[
-                ['Категория', 'национальная'],
-                ['Чем подтверждена', 'удостоверение №41-Н, принято 12.01.2026'],
-                ['Регион', 'Астана'],
-                ['Турниров за сезон', '6 · из них 2 выездных'],
-              ]}
-            />
-          </Panel>
-
-          <Panel title="Где судил" extra={<span className="text-xs text-neutral-500">сезон 2026</span>}>
-            <Rows>
-              {JUDGE_TOURS.map((t) => (
-                <Row key={t.nm} nm={t.nm} sub={t.sub} pill={{ t: t.role.toUpperCase(), cls: t.cls }} />
-              ))}
-            </Rows>
-            <div className="mt-3">
-              <Bar>
-                Наряд по прошлым стартам — то, по чему и решают, потянет ли судья главного на
-                главном старте: по одной строке рейтинга этого не видно.
-              </Bar>
-            </div>
-          </Panel>
-        </div>
-
-        <div>
-          {/* Рейтинг по Положению (§7.2): R = S1 + S2 + S3 + S4. Слагаемые
-              здесь на месте — в реестре их намеренно нет: там отвечают
-              «сколько», а «почему» разбирают у человека. */}
-          <Panel title="Рейтинг судьи" extra={<P t="R 27,5 · №1" cls="reg" />}>
-            <Cells
-              cols={4}
-              items={[
-                { v: '16,5', k: 'S1 · турниры', tone: 'b' },
-                { v: '4', k: 'S2 · категория' },
-                { v: '5', k: 'S3 · семинары' },
-                { v: '2', k: 'S4 · коллегия' },
-              ]}
-            />
-            <div className="mt-3">
-              <Rows>
-                {JOURNAL.slice(0, 3).map((j) => (
-                  <Row key={j.what} nm={j.what} sub={j.when} val={j.pts} />
-                ))}
-              </Rows>
-            </div>
-            <div className="mt-3 flex items-center justify-between gap-3">
-              <span className="text-xs text-neutral-500">Журнал начислений целиком — в реестре судей</span>
-              <QuietAction to="Э5.5">Открыть журнал</QuietAction>
-            </div>
-          </Panel>
-
-          <Panel title="Что можно сделать">
-            <Rows>
-              {/* Даты свободного окна — в подписи, а не в значке ✳: значок
-                  «СВОБОДЕН 12–15.09» вместе с кнопкой съедал колонку, и
-                  заголовок действия резался до «Поставить в…». */}
-              <Row
-                nm="Поставить в наряд"
-                sub="на турнир с открытым приёмом заявок · свободен 12–15.09"
-                pill={{ t: 'СВОБОДЕН', cls: 'live' }}
-                action="Выбрать турнир"
-                to="Э5.8"
-              />
-              <Row
-                nm="Документы"
-                sub="удостоверение принято 12.01.2026 · новых нет"
-                pill={{ t: 'В ПОРЯДКЕ', cls: 'done' }}
-                action="Проверка"
-                to="Э5.6"
-              />
-            </Rows>
-            <div className="mt-3">
-              <Bar>
-                Рейтинг и история здесь не правятся: R считается по Положению (§7.2), а наряд —
-                решение по конкретному турниру, и принимают его в самом турнире.
-              </Bar>
-            </div>
-          </Panel>
-        </div>
-      </div>
+      <Judge5_12Body />
     </WebApp>
   );
 }
+
+/** Карточка судьи на телефоне: те же блоки и оба решения — поставить в наряд и
+    проверить документ. Экран и так собран списками, поэтому меняется только
+    ряд слагаемых рейтинга. */
+const Judge5_12Phone = () => (
+  <PhoneRoleApp
+    role={R05}
+    nav="Судьи"
+    title="Оспанов Тимур"
+    sub="Национальная категория · Астана · рейтинг R 27,5 · 1-е место в сезоне"
+    back={{ label: 'Реестр судей', to: 'Э5.5' }}
+  >
+    <Judge5_12Body phone />
+  </PhoneRoleApp>
+);
 
 const Judge5_12States = () => (
   <States>
@@ -2541,8 +3233,9 @@ const QBANK = [
 const ATT_GRID = '2fr 1fr 0.9fr 0.8fr 1.5fr';
 const attDue = ATTEST.filter((a) => a.left <= 30);
 
-/** Вкладка «Сроки и допуск»: у кого аттестация действует и до какого числа. */
-const AttDue5_13 = () => {
+/** Вкладка «Сроки и допуск»: у кого аттестация действует и до какого числа.
+    `phone` — те же строки без колонок: срок и балл уходят под фамилию. */
+const AttDue5_13 = ({ phone }: { phone?: boolean }) => {
   const [q, setQ] = useState('');
   const [sort, setSort] = useState<{ k: (typeof COLS513)[number]['k']; up: boolean }>({ k: 'till', up: true });
   /* Кому уже отправили напоминание: уведомление уходит списком — срок подходит
@@ -2561,67 +3254,110 @@ const AttDue5_13 = () => {
     return sort.up ? v : -v;
   });
 
+  const search = (
+    <SearchInput
+      value={q}
+      onChange={setQ}
+      placeholder="Фамилия или категория"
+      className={phone ? 'w-full' : 'w-72'}
+    />
+  );
+  const remind = (
+    <Button size="sm" variant="outline" onPress={() => setTold(attDue.map((a) => a.nm))}>
+      <Bell size={14} /> Напомнить всем, у кого истекает
+    </Button>
+  );
+
+  const list = rows.map((a) => {
+    const st = attState(a);
+    const who = (
+      <Who
+        av={a.av}
+        nm={a.nm}
+        sub={
+          told.includes(a.nm) ? (
+            <span className="font-medium text-green-700">напоминание отправлено</span>
+          ) : a.left < 0 ? (
+            /* Без рода: в реестре и судьи, и судьи-женщины — «не
+               допущен» под фамилией Абдрахмановой читался ошибкой. */
+            <span className="text-red-600">допуска нет · срок вышел</span>
+          ) : (
+            `до ${a.till}`
+          )
+        }
+      />
+    );
+    return phone ? (
+      /* Категория, дата и балл — одной подписью под фамилией: пять колонок в
+         392 px режут и фамилию, и значок допуска. */
+      <div
+        key={a.nm}
+        data-to="Э5.12"
+        data-row
+        className={'cursor-pointer px-4 py-2.5 hover:bg-neutral-50' + (a.left < 0 ? ' opacity-60' : '')}
+      >
+        {who}
+        <div className="mt-1.5 flex items-center justify-between gap-2">
+          <span className="text-xs text-neutral-500">
+            {a.cat} · до {a.till} · балл {a.score ?? '—'}
+          </span>
+          <P t={st.t} cls={st.cls} />
+        </div>
+      </div>
+    ) : (
+      <div
+        key={a.nm}
+        data-to="Э5.12"
+        data-row
+        className={
+          'grid cursor-pointer items-center gap-3 px-4 py-2.5 text-[13px] hover:bg-neutral-50' +
+          (a.left < 0 ? ' opacity-60' : '')
+        }
+        style={{ gridTemplateColumns: ATT_GRID }}
+      >
+        {who}
+        <span className="text-neutral-600">{a.cat}</span>
+        <span className="tabular-nums text-neutral-600">{a.till}</span>
+        <span className="tabular-nums">{a.score ?? '—'}</span>
+        <span className="flex justify-end"><P t={st.t} cls={st.cls} /></span>
+      </div>
+    );
+  });
+
+  const empty = rows.length === 0 && (
+    <NoRows>По запросу «{q}» никого нет — проверьте написание фамилии.</NoRows>
+  );
+
   return (
     <>
-      <div className="mb-3 flex items-center justify-between gap-4">
-        <SearchInput value={q} onChange={setQ} placeholder="Фамилия или категория" className="w-72" />
-        <Button size="sm" variant="outline" onPress={() => setTold(attDue.map((a) => a.nm))}>
-          <Bell size={14} /> Напомнить всем, у кого истекает
-        </Button>
-      </div>
+      {phone ? (
+        <div className="mb-3 flex flex-col gap-2">{search}<div>{remind}</div></div>
+      ) : (
+        <div className="mb-3 flex items-center justify-between gap-4">{search}{remind}</div>
+      )}
 
-      <Sheet
-        grid={ATT_GRID}
-        cols={[
-          ...COLS513.map((c) => (
-            <Th
-              key={c.k}
-              t={c.t}
-              on={sort.k === c.k}
-              onClick={() => setSort({ k: c.k, up: sort.k === c.k ? !sort.up : true })}
-            />
-          )),
-          <span key="sc">Балл</span>,
-          <span key="ok" className="text-right">Допуск</span>,
-        ]}
-      >
-        {rows.map((a) => {
-          const st = attState(a);
-          return (
-            <div
-              key={a.nm}
-              data-to="Э5.12"
-              data-row
-              className={
-                'grid cursor-pointer items-center gap-3 px-4 py-2.5 text-[13px] hover:bg-neutral-50' +
-                (a.left < 0 ? ' opacity-60' : '')
-              }
-              style={{ gridTemplateColumns: ATT_GRID }}
-            >
-              <Who
-                av={a.av}
-                nm={a.nm}
-                sub={
-                  told.includes(a.nm) ? (
-                    <span className="font-medium text-green-700">напоминание отправлено</span>
-                  ) : a.left < 0 ? (
-                    /* Без рода: в реестре и судьи, и судьи-женщины — «не
-                       допущен» под фамилией Абдрахмановой читался ошибкой. */
-                    <span className="text-red-600">допуска нет · срок вышел</span>
-                  ) : (
-                    `до ${a.till}`
-                  )
-                }
+      {phone ? (
+        <Rows>{list}{empty}</Rows>
+      ) : (
+        <Sheet
+          grid={ATT_GRID}
+          cols={[
+            ...COLS513.map((c) => (
+              <Th
+                key={c.k}
+                t={c.t}
+                on={sort.k === c.k}
+                onClick={() => setSort({ k: c.k, up: sort.k === c.k ? !sort.up : true })}
               />
-              <span className="text-neutral-600">{a.cat}</span>
-              <span className="tabular-nums text-neutral-600">{a.till}</span>
-              <span className="tabular-nums">{a.score ?? '—'}</span>
-              <span className="flex justify-end"><P t={st.t} cls={st.cls} /></span>
-            </div>
-          );
-        })}
-        {rows.length === 0 && <NoRows>По запросу «{q}» никого нет — проверьте написание фамилии.</NoRows>}
-      </Sheet>
+            )),
+            <span key="sc">Балл</span>,
+            <span key="ok" className="text-right">Допуск</span>,
+          ]}
+        >
+          {list}
+          {empty}
+        </Sheet>
+      )}
 
       <div className="mt-3">
         <Bar>
@@ -2636,7 +3372,9 @@ const AttDue5_13 = () => {
 
 /** Вкладка «Комиссия»: состав и порядок аттестации. */
 const AttBoard5_13 = () => (
-  <div className="grid grid-cols-2 items-start gap-4">
+  /* Состав и порядок — один под другим ✳: в две колонки список людей и таблица
+     открытых вопросов кончались на разной высоте. */
+  <>
     <Panel title="Аттестационная комиссия" extra={<P t="НАЗНАЧЕНА НА СЕЗОН" cls="live" />}>
       <Rows>
         <Row av={A(83)} nm="Мукашев Б." sub="председатель ГСК · председатель комиссии" pill={{ t: 'ПРЕДСЕДАТЕЛЬ', cls: 'reg' }} />
@@ -2671,7 +3409,7 @@ const AttBoard5_13 = () => (
         </Bar>
       </div>
     </Panel>
-  </div>
+  </>
 );
 
 /** Вкладка «База вопросов». */
@@ -2707,18 +3445,12 @@ const AttBank5_13 = () => (
 );
 
 export function Attest5_13() {
-  const gone = ATTEST.filter((a) => a.left < 0);
   return (
+    /* Плиток над вкладками нет ✳ (30.08.2026): все четыре числа считались по
+       той же таблице, что стоит ниже, — «сколько действует» и «сколько
+       просрочено» читаются по колонке допуска. Экран про сроки, а не про
+       витрину. */
     <WebApp role={R05} nav="Аттестация" title="Аттестация судей">
-      <StatTiles
-        items={[
-          { v: String(ATTEST.length), k: 'Судей в реестре' },
-          { v: String(ATTEST.length - attDue.length), k: 'Аттестация действует', tone: 'g' },
-          { v: String(attDue.length - gone.length), k: 'Истекает в 30 дней', tone: 'a' },
-          /* Просрочка — красным, а не жёлтым: эти судьи уже не допущены. */
-          { v: String(gone.length), k: 'Просрочена — к работе не допущены', tone: 'b' },
-        ]}
-      />
       <PageTabs
         items={[
           { t: ATT_TABS[0], view: <AttDue5_13 /> },
@@ -2729,6 +3461,21 @@ export function Attest5_13() {
     </WebApp>
   );
 }
+
+/** Аттестация на телефоне: те же три вкладки. Комиссия и база вопросов
+    показываются теми же компонентами — они и на ноутбуке списки; своя только
+    первая вкладка, где была таблица из пяти колонок. */
+const Attest5_13Phone = () => (
+  <PhoneRoleApp role={R05} nav="Аттестация" title="Аттестация судей">
+    <PageTabs
+      items={[
+        { t: ATT_TABS[0], view: <AttDue5_13 phone /> },
+        { t: ATT_TABS[1], view: <AttBoard5_13 /> },
+        { t: ATT_TABS[2], view: <AttBank5_13 /> },
+      ]}
+    />
+  </PhoneRoleApp>
+);
 
 const Attest5_13States = () => (
   <States>
@@ -2802,7 +3549,9 @@ const F56 = ['Все документы', 'Семинары', 'Награды и
 
 const DOCS_GRID = '2.2fr 0.8fr 1.1fr 0.9fr 96px';
 
-export function Docs5_6() {
+/** Документы на проверке — тело экрана, общее для обоих форматов: те же срезы,
+    те же два решения по строке и та же пометка «позже срока». */
+const Docs5_6Body = ({ phone }: { phone?: boolean }) => {
   const [f, setF] = useState(F56[0]);
   const [q, setQ] = useState('');
   const [sort, setSort] = useState<{ k: (typeof COLS56)[number]['k']; up: boolean }>({ k: 'when', up: false });
@@ -2826,95 +3575,149 @@ export function Docs5_6() {
     return sort.up ? x : -x;
   });
 
+  const list = rows.map((d) => {
+    /* Пока решения нет, под фамилией сам документ — по нему и решают;
+       после решения строка говорит о решении. */
+    const who = (
+      <Who
+        av={d.av}
+        nm={d.nm}
+        sub={
+          v[d.nm] === 1 ? (
+            <span className="font-medium text-green-700">Принят с баллами</span>
+          ) : v[d.nm] === -1 ? (
+            <span className="text-red-600">Отклонён с причиной</span>
+          ) : (
+            d.what
+          )
+        }
+      />
+    );
+    /* Срок подачи — 10 дней. ⚠ Последствие пропуска в Положении не указано,
+       поэтому не отклоняем сами, а помечаем. */
+    const when = (
+      <span className={d.late ? 'font-medium text-amber-700' : 'text-neutral-600'}>
+        {d.when}
+        {d.late && ' · позже срока'}
+      </span>
+    );
+    const decide = (
+      <>
+        <button
+          type="button"
+          title="Принять с баллами"
+          onClick={() => set(d.nm, 1)}
+          className={
+            'flex h-7 w-7 items-center justify-center rounded-md ' +
+            (v[d.nm] === 1 ? 'bg-green-100 text-green-700' : 'text-neutral-400 hover:bg-green-50 hover:text-green-700')
+          }
+        >
+          <BadgeCheck size={15} />
+        </button>
+        <button
+          type="button"
+          title="Отклонить с причиной"
+          data-to="Э5.9"
+          onClick={() => set(d.nm, -1)}
+          className={
+            'flex h-7 w-7 items-center justify-center rounded-md ' +
+            (v[d.nm] === -1 ? 'bg-red-100 text-red-700' : 'text-neutral-400 hover:bg-red-50 hover:text-red-600')
+          }
+        >
+          <Ban size={15} />
+        </button>
+      </>
+    );
+    const tone = v[d.nm] === 1 ? 'bg-green-50/60' : v[d.nm] === -1 ? 'opacity-55' : 'hover:bg-neutral-50';
+    return phone ? (
+      /* Вид документа, дата и балл — одной строкой под фамилией; оба решения
+         остаются рядом справа, как и на большом экране. */
+      <div key={d.nm} className={'px-4 py-2.5 text-[13px] ' + tone}>
+        {who}
+        <div className="mt-1.5 flex items-center justify-between gap-2">
+          <span className="min-w-0 text-xs text-neutral-500">
+            {d.kind} · {when} · к начислению <b className="tabular-nums" title={d.file}>{d.pts}</b>
+          </span>
+          <span className="flex shrink-0 gap-1.5">{decide}</span>
+        </div>
+      </div>
+    ) : (
+      <div
+        key={d.nm}
+        className={'grid items-center gap-3 px-4 py-2.5 text-[13px] ' + tone}
+        style={{ gridTemplateColumns: DOCS_GRID }}
+      >
+        {who}
+        <span className="text-neutral-600">{d.kind}</span>
+        {when}
+        <b className="tabular-nums" title={d.file}>{d.pts}</b>
+        <span className="flex justify-end gap-1.5">{decide}</span>
+      </div>
+    );
+  });
+
+  const empty = rows.length === 0 && <NoRows>По запросу «{q}» ничего нет — проверьте написание.</NoRows>;
+
   return (
-    <WebApp role={R05} nav="Документы" title="Документы на проверке">
+    <>
       {/* Тот же приём, что на экране судей: фильтр, поиск, таблица с решением в
           строке. Плиток нет — «сколько в очереди» и «сколько какого вида»
           считаются по той же таблице, что стоит ниже. */}
-      <div className="mb-3"><FilterSeg items={F56} active={f} onPick={setF} /></div>
+      {phone ? (
+        <Strip><FilterSeg items={F56} active={f} onPick={setF} /></Strip>
+      ) : (
+        <div className="mb-3"><FilterSeg items={F56} active={f} onPick={setF} /></div>
+      )}
       <div className="mb-3">
-        <SearchInput value={q} onChange={setQ} placeholder="Фамилия или документ" className="w-80" />
+        <SearchInput
+          value={q}
+          onChange={setQ}
+          placeholder="Фамилия или документ"
+          className={phone ? 'w-full' : 'w-80'}
+        />
       </div>
 
-      <Sheet
-        grid={DOCS_GRID}
-        cols={[
-          ...COLS56.map((c) => (
-            <Th
-              key={c.k}
-              t={c.t}
-              on={sort.k === c.k}
-              onClick={() => setSort({ k: c.k, up: sort.k === c.k ? !sort.up : true })}
-            />
-          )),
-          <span key="pts">К начислению</span>,
-          <span key="v" className="text-right">Решение</span>,
-        ]}
-      >
-        {rows.map((d) => (
-          <div
-            key={d.nm}
-            className={
-              'grid items-center gap-3 px-4 py-2.5 text-[13px] ' +
-              (v[d.nm] === 1 ? 'bg-green-50/60' : v[d.nm] === -1 ? 'opacity-55' : 'hover:bg-neutral-50')
-            }
-            style={{ gridTemplateColumns: DOCS_GRID }}
-          >
-            {/* Пока решения нет, под фамилией сам документ — по нему и решают;
-                после решения строка говорит о решении. */}
-            <Who
-              av={d.av}
-              nm={d.nm}
-              sub={
-                v[d.nm] === 1 ? (
-                  <span className="font-medium text-green-700">Принят с баллами</span>
-                ) : v[d.nm] === -1 ? (
-                  <span className="text-red-600">Отклонён с причиной</span>
-                ) : (
-                  d.what
-                )
-              }
-            />
-            <span className="text-neutral-600">{d.kind}</span>
-            {/* Срок подачи — 10 дней. ⚠ Последствие пропуска в Положении не
-                указано, поэтому не отклоняем сами, а помечаем. */}
-            <span className={d.late ? 'font-medium text-amber-700' : 'text-neutral-600'}>
-              {d.when}
-              {d.late && ' · позже срока'}
-            </span>
-            <b className="tabular-nums" title={d.file}>{d.pts}</b>
-            <span className="flex justify-end gap-1.5">
-              <button
-                type="button"
-                title="Принять с баллами"
-                onClick={() => set(d.nm, 1)}
-                className={
-                  'flex h-7 w-7 items-center justify-center rounded-md ' +
-                  (v[d.nm] === 1 ? 'bg-green-100 text-green-700' : 'text-neutral-400 hover:bg-green-50 hover:text-green-700')
-                }
-              >
-                <BadgeCheck size={15} />
-              </button>
-              <button
-                type="button"
-                title="Отклонить с причиной"
-                data-to="Э5.9"
-                onClick={() => set(d.nm, -1)}
-                className={
-                  'flex h-7 w-7 items-center justify-center rounded-md ' +
-                  (v[d.nm] === -1 ? 'bg-red-100 text-red-700' : 'text-neutral-400 hover:bg-red-50 hover:text-red-600')
-                }
-              >
-                <Ban size={15} />
-              </button>
-            </span>
-          </div>
-        ))}
-        {rows.length === 0 && <NoRows>По запросу «{q}» ничего нет — проверьте написание.</NoRows>}
-      </Sheet>
+      {phone ? (
+        <Rows>{list}{empty}</Rows>
+      ) : (
+        <Sheet
+          grid={DOCS_GRID}
+          cols={[
+            ...COLS56.map((c) => (
+              <Th
+                key={c.k}
+                t={c.t}
+                on={sort.k === c.k}
+                onClick={() => setSort({ k: c.k, up: sort.k === c.k ? !sort.up : true })}
+              />
+            )),
+            <span key="pts">К начислению</span>,
+            <span key="v" className="text-right">Решение</span>,
+          ]}
+        >
+          {list}
+          {empty}
+        </Sheet>
+      )}
+    </>
+  );
+};
+
+export function Docs5_6() {
+  return (
+    <WebApp role={R05} nav="Документы" title="Документы на проверке">
+      <Docs5_6Body />
     </WebApp>
   );
 }
+
+/** Документы на телефоне: те же два решения по строке — принять с баллами или
+    отклонить с причиной. Порядок в списке остаётся по дате подачи. */
+const Docs5_6Phone = () => (
+  <PhoneRoleApp role={R05} nav="Документы" title="Документы на проверке">
+    <Docs5_6Body phone />
+  </PhoneRoleApp>
+);
 
 const Docs5_6States = () => (
   <States>
@@ -2960,7 +3763,9 @@ const F57 = ['Все апелляции', 'Ждут решения', 'Решён
 
 const APP_GRID = '2.6fr 0.9fr 1.4fr';
 
-export function Publish5_7() {
+/** Публикация рейтинга и апелляции — тело экрана, общее для обоих форматов:
+    та же публикация, тот же разбор окном по строке. */
+const Publish5_7Body = ({ phone }: { phone?: boolean }) => {
   const [f, setF] = useState(F57[0]);
   const [q, setQ] = useState('');
   const [sort, setSort] = useState<{ k: (typeof COLS57)[number]['k']; up: boolean }>({ k: 'when', up: false });
@@ -2989,106 +3794,167 @@ export function Publish5_7() {
     return sort.up ? x : -x;
   });
 
+  /* Публикация — главное действие экрана. На телефоне она стоит первой
+     строкой, над фильтром: главное действие не прячут в правый край. */
+  const publish = pub ? (
+    <span className="flex items-center gap-2">
+      <span className="flex items-center gap-1.5 rounded-lg bg-green-100 px-3 py-2 text-[13px] font-semibold text-green-800">
+        <BadgeCheck size={15} /> Рейтинг опубликован
+      </span>
+      <QuietAction onPress={() => setPub(false)}>
+        <Undo2 size={15} /> Отозвать публикацию
+      </QuietAction>
+    </span>
+  ) : (
+    <Button variant="primary" onPress={() => setPub(true)}>
+      <Megaphone size={15} /> Опубликовать рейтинг
+    </Button>
+  );
+
+  const list = rows.map((a) => {
+    const mark = (
+      <P
+        t={v[a.nm] === 1 ? 'УДОВЛЕТВОРЕНА' : v[a.nm] === -1 ? 'ОТКЛОНЕНА' : 'ЖДЁТ РЕШЕНИЯ'}
+        cls={v[a.nm] === 1 ? 'live' : v[a.nm] === -1 ? 'bad' : 'wait'}
+      />
+    );
+    return phone ? (
+      <div
+        key={a.nm}
+        role="button"
+        tabIndex={0}
+        data-row
+        onClick={() => setOpen(a.nm)}
+        className={'cursor-pointer px-4 py-2.5 ' + (open === a.nm ? 'bg-blue-50/60' : 'hover:bg-neutral-50')}
+      >
+        <Who av={a.av} nm={a.nm} sub={a.what} />
+        <div className="mt-1.5 flex items-center justify-between gap-2">
+          <span className="text-xs tabular-nums text-neutral-500">подана {a.when}</span>
+          {mark}
+        </div>
+      </div>
+    ) : (
+      <div
+        key={a.nm}
+        role="button"
+        tabIndex={0}
+        data-row
+        onClick={() => setOpen(a.nm)}
+        className={
+          'grid cursor-pointer items-center gap-3 px-4 py-2.5 text-[13px] ' +
+          (open === a.nm ? 'bg-blue-50/60' : 'hover:bg-neutral-50')
+        }
+        style={{ gridTemplateColumns: APP_GRID }}
+      >
+        <Who av={a.av} nm={a.nm} sub={a.what} />
+        <span className="tabular-nums text-neutral-600">{a.when}</span>
+        <span className="flex justify-end">{mark}</span>
+      </div>
+    );
+  });
+
+  const empty = rows.length === 0 && <NoRows>По запросу «{q}» ничего нет — проверьте написание.</NoRows>;
+
+  const dialog = cur && (
+    <InlineDialog
+      title={`Апелляция · ${cur.nm}`}
+      sub={`подана ${cur.when} · рассмотреть за 10 рабочих дней · решение окончательное`}
+      to="Э5.7"
+      foot={
+        <>
+          <span className="mr-auto"><QuietAction onPress={() => setOpen(null)}>Закрыть</QuietAction></span>
+          <Button variant="outline" onPress={() => { setV({ ...v, [cur.nm]: -1 }); setOpen(null); }}>
+            <Ban size={15} /> Отклонить
+          </Button>
+          <Button variant="primary" onPress={() => { setV({ ...v, [cur.nm]: 1 }); setOpen(null); }}>
+            <BadgeCheck size={15} /> Удовлетворить
+          </Button>
+        </>
+      }
+    >
+      <FormGrid>
+        <FieldView label="Что оспаривается" value={cur.what} wide />
+        <FieldView label="Подана" value={`${cur.when} · в окне 10 дней`} wide={phone} />
+        <FieldView label="Рейтинг на момент публикации" value="R 18 · 3 место" wide={phone} />
+      </FormGrid>
+      <div className="mt-3">
+        <Bar>
+          Удовлетворение — пересчёт: исправление попадает в журнал начислений, рейтинг
+          обновляется, судье уходит уведомление.
+        </Bar>
+      </div>
+    </InlineDialog>
+  );
+
   return (
-    <WebApp role={R05} nav="Публикация" title="Публикация рейтинга и апелляции">
+    <>
       {/* Публикация — главное действие экрана, поэтому стоит в одной строке с
           фильтром, а не панелью справа. Подписи под заголовком нет и сроков
           рядом тоже: до нажатия публиковать нечего было объяснять, а после —
           состояние написано на самой кнопке. */}
-      <div className="mb-3 flex items-center justify-between gap-4">
-        <FilterSeg items={F57} active={f} onPick={setF} />
-        {pub ? (
-          <span className="flex items-center gap-2">
-            <span className="flex items-center gap-1.5 rounded-lg bg-green-100 px-3 py-2 text-[13px] font-semibold text-green-800">
-              <BadgeCheck size={15} /> Рейтинг опубликован
-            </span>
-            <QuietAction onPress={() => setPub(false)}>
-              <Undo2 size={15} /> Отозвать публикацию
-            </QuietAction>
-          </span>
-        ) : (
-          <Button variant="primary" onPress={() => setPub(true)}>
-            <Megaphone size={15} /> Опубликовать рейтинг
-          </Button>
-        )}
-      </div>
-      <div className="mb-3">
-        <SearchInput value={q} onChange={setQ} placeholder="Фамилия или предмет апелляции" className="w-80" />
-      </div>
-
-      <Sheet
-        grid={APP_GRID}
-        cols={[
-          ...COLS57.map((c) => (
-            <Th
-              key={c.k}
-              t={c.t}
-              on={sort.k === c.k}
-              onClick={() => setSort({ k: c.k, up: sort.k === c.k ? !sort.up : true })}
-            />
-          )),
-          <span key="v" className="text-right">Решение</span>,
-        ]}
-      >
-        {rows.map((a) => (
-          <div
-            key={a.nm}
-            role="button"
-            tabIndex={0}
-            data-row
-            onClick={() => setOpen(a.nm)}
-            className={
-              'grid cursor-pointer items-center gap-3 px-4 py-2.5 text-[13px] ' +
-              (open === a.nm ? 'bg-blue-50/60' : 'hover:bg-neutral-50')
-            }
-            style={{ gridTemplateColumns: APP_GRID }}
-          >
-            <Who av={a.av} nm={a.nm} sub={a.what} />
-            <span className="tabular-nums text-neutral-600">{a.when}</span>
-            <span className="flex justify-end">
-              <P
-                t={v[a.nm] === 1 ? 'УДОВЛЕТВОРЕНА' : v[a.nm] === -1 ? 'ОТКЛОНЕНА' : 'ЖДЁТ РЕШЕНИЯ'}
-                cls={v[a.nm] === 1 ? 'live' : v[a.nm] === -1 ? 'bad' : 'wait'}
-              />
-            </span>
-          </div>
-        ))}
-        {rows.length === 0 && <NoRows>По запросу «{q}» ничего нет — проверьте написание.</NoRows>}
-      </Sheet>
-
-      {cur && (
-        <InlineDialog
-          title={`Апелляция · ${cur.nm}`}
-          sub={`подана ${cur.when} · рассмотреть за 10 рабочих дней · решение окончательное`}
-          to="Э5.7"
-          foot={
-            <>
-              <span className="mr-auto"><QuietAction onPress={() => setOpen(null)}>Закрыть</QuietAction></span>
-              <Button variant="outline" onPress={() => { setV({ ...v, [cur.nm]: -1 }); setOpen(null); }}>
-                <Ban size={15} /> Отклонить
-              </Button>
-              <Button variant="primary" onPress={() => { setV({ ...v, [cur.nm]: 1 }); setOpen(null); }}>
-                <BadgeCheck size={15} /> Удовлетворить
-              </Button>
-            </>
-          }
-        >
-          <FormGrid>
-            <FieldView label="Что оспаривается" value={cur.what} wide />
-            <FieldView label="Подана" value={`${cur.when} · в окне 10 дней`} />
-            <FieldView label="Рейтинг на момент публикации" value="R 18 · 3 место" />
-          </FormGrid>
-          <div className="mt-3">
-            <Bar>
-              Удовлетворение — пересчёт: исправление попадает в журнал начислений, рейтинг
-              обновляется, судье уходит уведомление.
-            </Bar>
-          </div>
-        </InlineDialog>
+      {phone ? (
+        <>
+          <div className="mb-3">{publish}</div>
+          <Strip><FilterSeg items={F57} active={f} onPick={setF} /></Strip>
+        </>
+      ) : (
+        <div className="mb-3 flex items-center justify-between gap-4">
+          <FilterSeg items={F57} active={f} onPick={setF} />
+          {publish}
+        </div>
       )}
+      <div className="mb-3">
+        <SearchInput
+          value={q}
+          onChange={setQ}
+          placeholder="Фамилия или предмет апелляции"
+          className={phone ? 'w-full' : 'w-80'}
+        />
+      </div>
+
+      {phone ? (
+        <Rows>{list}{empty}</Rows>
+      ) : (
+        <Sheet
+          grid={APP_GRID}
+          cols={[
+            ...COLS57.map((c) => (
+              <Th
+                key={c.k}
+                t={c.t}
+                on={sort.k === c.k}
+                onClick={() => setSort({ k: c.k, up: sort.k === c.k ? !sort.up : true })}
+              />
+            )),
+            <span key="v" className="text-right">Решение</span>,
+          ]}
+        >
+          {list}
+          {empty}
+        </Sheet>
+      )}
+
+      {phone ? <PhoneDialog>{dialog}</PhoneDialog> : dialog}
+    </>
+  );
+};
+
+export function Publish5_7() {
+  return (
+    <WebApp role={R05} nav="Публикация" title="Публикация рейтинга и апелляции">
+      <Publish5_7Body />
     </WebApp>
   );
 }
+
+/** Публикация на телефоне: кнопка «Опубликовать рейтинг» стоит первой строкой —
+    в 392 px правого края, куда её ставит ноутбук, просто нет. Разбор апелляции
+    открывается тем же окном, поля в нём в одну колонку. */
+const Publish5_7Phone = () => (
+  <PhoneRoleApp role={R05} nav="Публикация" title="Публикация рейтинга и апелляции">
+    <Publish5_7Body phone />
+  </PhoneRoleApp>
+);
 
 /** Разбор апелляции — как он открывается по строке ✳ (зона данных «Разбор —
     окном по строке»). На самом экране диалог по умолчанию закрыт, и ни то, что
@@ -3180,6 +4046,9 @@ export const SCREENS: ScreenMap = {
         <Login0_1States5 />
       </>
     ),
+    /* Вход в приложении — тот же сценарий ИИН + код; кадр берётся из сквозных
+       экранов (role00), а не рисуется вторым. */
+    alt: () => <LoginPhone0_1 />,
     next: 'первый экран роли',
   },
   'Э5.1': {
@@ -3190,6 +4059,7 @@ export const SCREENS: ScreenMap = {
         <Queues5_1States />
       </>
     ),
+    alt: () => <Queues5_1Phone />,
     next: 'пункт меню «Соревнования»',
   },
   'Э5.3': {
@@ -3201,6 +4071,7 @@ export const SCREENS: ScreenMap = {
         <Season5_3States />
       </>
     ),
+    alt: () => <Season5_3Phone />,
     next: '«Завести соревнование»',
   },
   'Э5.11': {
@@ -3211,6 +4082,7 @@ export const SCREENS: ScreenMap = {
         <NewTour5_11States />
       </>
     ),
+    alt: () => <NewTour5_11Phone />,
     next: 'строка соревнования',
   },
   'Э5.10': {
@@ -3222,6 +4094,7 @@ export const SCREENS: ScreenMap = {
         <Tour5_10States />
       </>
     ),
+    alt: () => <Tour5_10Phone />,
     next: 'вкладка «Судьи»',
   },
   'Э5.2': {
@@ -3232,6 +4105,7 @@ export const SCREENS: ScreenMap = {
         <Applications5_2States />
       </>
     ),
+    alt: () => <Applications5_2Phone />,
     next: 'меню «Протоколы»',
   },
   'Э5.8': {
@@ -3242,6 +4116,7 @@ export const SCREENS: ScreenMap = {
         <PickJudge5_8States />
       </>
     ),
+    alt: () => <PickJudge5_8Phone />,
     next: 'турнир сыгран · вторая очередь',
   },
   'Э5.4': {
@@ -3252,6 +4127,7 @@ export const SCREENS: ScreenMap = {
         <Protocol5_4States />
       </>
     ),
+    alt: () => <Protocol5_4Phone />,
     next: 'меню «Документы»',
   },
   'Э5.5': {
@@ -3263,6 +4139,7 @@ export const SCREENS: ScreenMap = {
         <Rating5_5States />
       </>
     ),
+    alt: () => <Rating5_5Phone />,
     next: 'строка судьи',
   },
   'Э5.13': {
@@ -3273,6 +4150,7 @@ export const SCREENS: ScreenMap = {
         <Attest5_13States />
       </>
     ),
+    alt: () => <Attest5_13Phone />,
     next: 'карточка судьи',
   },
   'Э5.12': {
@@ -3283,6 +4161,7 @@ export const SCREENS: ScreenMap = {
         <Judge5_12States />
       </>
     ),
+    alt: () => <Judge5_12Phone />,
     next: 'меню «Документы»',
   },
   'Э5.6': {
@@ -3293,6 +4172,7 @@ export const SCREENS: ScreenMap = {
         <Docs5_6States />
       </>
     ),
+    alt: () => <Docs5_6Phone />,
     next: 'публикация рейтинга',
   },
   'Э5.7': {
@@ -3304,6 +4184,7 @@ export const SCREENS: ScreenMap = {
         <Publish5_7States />
       </>
     ),
+    alt: () => <Publish5_7Phone />,
   },
   'Э5.9': {
     cap: 'Отказ с причиной',
@@ -3313,6 +4194,7 @@ export const SCREENS: ScreenMap = {
         <Reject5_9States />
       </>
     ),
+    alt: () => <Reject5_9Phone />,
   },
 };
 

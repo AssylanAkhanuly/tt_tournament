@@ -16,10 +16,10 @@ import {
 } from 'lucide-react';
 import { Avatar, Button } from '@heroui/react';
 import {
-  A, AW, Attention, Bar, Calendar, DataTable, DayList, EmptyBox, FieldView, FilterSeg,
-  FormGrid, MiniMonth, PageTabs, Panel, Pill, PrimaryAction, QuietAction, Row, Rows,
-  ScreenScope, SearchInput, SeasonTable, StatTiles, TextInput, WebApp,
-  type AttnItem, type CalEvent, type CalTone, type RoleUI, type SeasonRow, type St,
+  A, AW, Bar, Calendar, DataTable, DayList, EmptyBox, EventTimeline, Facts, FieldView, FilterSeg,
+  FormGrid, MiniMonth, PageTabs, Panel, PhoneRoleApp, Pill, PrimaryAction, QuietAction, Row, Rows,
+  ScreenScope, SearchInput, SeasonTable, StatusChip, TextInput, WebApp,
+  type CalEvent, type CalTone, type RoleUI, type SeasonRow, type St, type TimelineItem,
 } from '../kit/hero/app';
 /* Из старого слоя остаются только мета-компоненты борда: колонки, стрелки,
    полки состояний и врезки. Сами экраны собраны новым слоем. */
@@ -27,9 +27,10 @@ import { Also, Board, States, Shot, type ScreenMap } from './shell';
 /* Сетка, список участников и разбор «кто приехал» — те же, что у спортсмена
    (Э14.5): один турнир — один состав, разный только срез. */
 import { BracketFlow } from '@/widgets/bracket/BracketFlow';
+import { roundTitle, type Bracket, type Match } from '@/entities/bracket/model';
 import { myBracket } from './myBracket';
-import { Players14_5, Squads14_5 } from './role14';
-import { Login0_1 } from './role00';
+import { PLAYERS, Players14_5, Squads14_5, type Ply14 } from './role14';
+import { Login0_1, LoginPhone0_1 } from './role00';
 /* Месяцы — из календаря федерации (Э1.2): сезон в макетах один. */
 import { MONTHS_GEN } from './role01';
 
@@ -115,75 +116,7 @@ const CANDS: Cand[] = [
   { av: A(64), nm: 'Мұқанов Тимур', sub: '2013 г.р. · «Барыс» · 2 разряд', rt: '1502', fee: PAID },
 ];
 
-/* ── Э12.1 · Мой регион: реестр и очередь дел ───────────────────── */
-
-/** Очередь дел тренера — те же четыре счётчика, что были строкой `Queue`
-    старого слоя, но в каждый теперь можно провалиться и увидеть, что именно
-    в нём лежит: счётчик «42 без взноса» сам по себе — только тревога. */
-const ATTENTION12: AttnItem[] = [
-  {
-    n: '2',
-    t: 'заявки ждут действий',
-    rows: [
-      {
-        nm: 'Чемпионат РК · 2007 г.р. и моложе',
-        mt: 'Караганда · 12–16.05',
-        why: 'заявка на старт не подана · приём до 28.04',
-        who: 'собрать состав и подать',
-        to: 'Э12.3',
-        cls: 'bad',
-      },
-      {
-        nm: 'Молодёжный чемпионат РК · до 21 года',
-        mt: 'Шымкент · 14–18.03',
-        why: 'заявка отклонена · исправить до 31.03',
-        who: 'исправить состав и подать снова',
-        to: 'Э12.3',
-        cls: 'bad',
-      },
-    ],
-  },
-  {
-    n: '42',
-    t: 'без годового взноса',
-    rows: [
-      {
-        nm: 'Оралбек Диас',
-        mt: '2009 г.р. · СДЮСШОР №3 · КМС',
-        why: 'взнос за сезон 2026 не оплачен',
-        who: 'заявка может не пройти допуск (§9.2)',
-        to: 'Э12.1',
-      },
-      {
-        nm: 'Сейтжан Аяулым',
-        mt: '2010 г.р. · «Достык» · 1 разряд',
-        why: 'взнос за сезон 2026 не оплачен',
-        who: 'заявка может не пройти допуск (§9.2)',
-        to: 'Э12.1',
-      },
-    ],
-  },
-  {
-    n: '2',
-    t: 'приглашения ждут ответа',
-    rows: [
-      {
-        nm: 'Сейтжан Аяулым',
-        mt: '№ 14-2010-0512 · приглашена 15.04',
-        why: 'ждёт ответа',
-        who: 'решает спортсмен',
-        to: 'Э12.7',
-      },
-      {
-        nm: 'Оралбек Диас',
-        mt: '№ 14-2009-0331 · приглашён 14.04',
-        why: 'ждёт ответа',
-        who: 'решает спортсмен',
-        to: 'Э12.7',
-      },
-    ],
-  },
-];
+/* ── Э12.1 · Мой регион: реестр спортсменов ─────────────────────── */
 
 /** Фильтр по взносу — единственный работающий: он решает судьбу заявки (§9.2).
     Год рождения, пол и клуб — статичные селекторы `PickChip`. */
@@ -210,26 +143,22 @@ export function Region12_1(_props: { variant?: 'desktop' | 'land' } = {}) {
       title="Спортсмены региона"
       sub="Алматы · 184 спортсмена · сезон 2026"
     >
-      {/* Очередь первой: главный акцент экрана — «что от меня ждут». Тренер не
-          заводит аккаунт за человека — он приглашает: пароль спортсмен задаёт
-          себе сам по ссылке (Э0.6). */}
-      <Attention
-        items={ATTENTION12}
-        action={
+      {/* Экран — реестр, а не панель ✳ (30.08.2026): очередь «Требует внимания»
+          и ряд плиток (184 / 142 / 42 / 9) убраны. Витрина занимала верх экрана
+          и повторяла то, что таблица показывает точнее: «42 без взноса» — это
+          фильтр «Без взноса», а число клубов — колонка «Клуб». По данным роли у
+          Э12.1 три зоны: шапка, таблица и фильтры — очереди среди них нет.
+          Осталось главное действие: тренер не заводит аккаунт за человека, а
+          приглашает — по ссылке человек подтверждает себя ИИН и кодом (Э0.6). */}
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+        <Facts items={[{ k: 'Без годового взноса', v: '42 из 184', hot: true }]} />
+        <span className="flex items-center gap-2">
+          <QuietAction to="Э12.7">Приглашения региона · 2 ждут ответа</QuietAction>
           <Button variant="primary" data-to="Э12.6">
             <UserPlus size={15} /> Пригласить спортсмена
           </Button>
-        }
-      />
-
-      <StatTiles
-        items={[
-          { v: '184', k: 'Спортсменов региона' },
-          { v: '142', k: 'Взнос оплачен', tone: 'g' },
-          { v: '42', k: 'Без годового взноса', tone: 'a' },
-          { v: '9', k: 'Клубов региона' },
-        ]}
-      />
+        </span>
+      </div>
 
       {/* Фильтры зоны «Фильтры и поиск»: год рождения, пол, клуб, взнос, поиск.
           Взнос работает по-настоящему, остальное — статичный выбор. */}
@@ -641,8 +570,8 @@ const Starts12_2States = () => (
 
 /* Сверху про старт, затем кандидаты, внизу подача.
 
-   Экран читается сверху вниз, как подача состава у клуба (Э13.4): счётчики про
-   старт, один список кандидатов с кнопкой в строке, и последним — «Подать
+   Экран читается сверху вниз, как подача состава у клуба (Э13.4): строка фактов
+   про старт, один список кандидатов с кнопкой в строке, и последним — «Подать
    заявку». Двух колонок («кандидаты» слева, «состав заявки» справа) не стало
    18.08.2026: один и тот же человек стоял в обеих сразу, с кнопкой в каждой.
 
@@ -666,14 +595,18 @@ export function Squad12_3() {
       sub="Главный старт · г. Караганда · 12–16 мая 2026"
       back={{ label: 'Соревнования региона', to: 'Э12.2' }}
     >
-      <StatTiles
-        items={[
-          { v: '12–16.05', k: 'Даты старта' },
-          { v: 'до 28.04', k: 'Приём заявок', tone: 'a' },
-          { v: `${CANDS.length}`, k: 'Проходят по возрасту' },
-          { v: `${team.length}`, k: 'В заявке', tone: 'g' },
-        ]}
-      />
+      {/* Вместо ряда плиток — строка фактов ✳ (30.08.2026): главное на экране —
+          список кандидатов, а даты старта и так стоят в шапке экрана. Горит
+          только срок приёма: он один решает, можно ли ещё подать. */}
+      <div className="mb-3">
+        <Facts
+          items={[
+            { k: 'Приём заявок', v: 'до 28.04', hot: true },
+            { k: 'Проходят по возрасту', v: `${CANDS.length}` },
+            { k: 'В заявке', v: `${team.length}` },
+          ]}
+        />
+      </div>
 
       <Panel
         title={`Кандидаты от региона · ${CANDS.length}`}
@@ -872,8 +805,11 @@ const OUR_GROUPS12_5 = [
   { nm: 'Группа F · Жақсылық Аружан', sub: '1 победа из 3 · партии 3:7', val: '3-е место', pill: { t: 'НЕ ВЫХОДИТ', cls: 'done' as const } },
 ];
 
+/* Блоки идут один под другим во всю ширину ✳ (30.08.2026): в две колонки
+   короткая справка о формате висела в пустоте рядом со сжатой таблицей групп.
+   Панель сама держит отступ снизу, обёртка не нужна. */
 const OurGroups12_5 = () => (
-  <div className="grid grid-cols-2 items-start gap-4">
+  <>
     <Panel title="Наши в группах" extra={<P t="ВЫХОДЯТ ДВОЕ" cls="reg" />} flush>
       <div className="divide-y divide-neutral-100">
         {OUR_GROUPS12_5.map((g) => (
@@ -891,7 +827,7 @@ const OurGroups12_5 = () => (
         Полные таблицы всех групп — на публичной странице турнира и у судьи
       </div>
     </Panel>
-  </div>
+  </>
 );
 
 /** Сетка — тот же холст, что у спортсмена и на фронте, а не картинка. Светлый
@@ -1011,7 +947,10 @@ export function Invite12_6() {
       sub="Алматы · поиск по номеру в реестре ФНТ РК"
       back={{ label: 'Приглашения региона', to: 'Э12.7' }}
     >
-      <div className="grid grid-cols-2 items-start gap-4">
+      {/* Блоки один под другим во всю ширину ✳ (30.08.2026): в две колонки
+          карточка найденного человека была вдвое уже, чем нужно, а поиск по
+          номеру — одно поле — занимал целую колонку. Панель держит отступ сама. */}
+      <>
         <Panel title="Найти в реестре">
           <div className="flex items-end gap-2">
             <div className="min-w-0 flex-1">
@@ -1058,7 +997,7 @@ export function Invite12_6() {
             <QuietAction to="Э12.7">Приглашения региона</QuietAction>
           </div>
         </Panel>
-      </div>
+      </>
     </WebApp>
   );
 }
@@ -1081,11 +1020,11 @@ const Invite12_6States = () => (
     <Shot
       tone="warning"
       title="Номера в реестре нет"
-      text="Человек не заведён: тогда приглашение ссылкой, пароль он задаёт себе сам (Э0.6)."
+      text="Человек не заведён: тогда приглашение ссылкой — себя он подтверждает ИИН и кодом (Э0.6)."
     >
       <Frag>
         {/* Тупика нет: действие «Пригласить по контакту» из данных роли —
-            одноразовая ссылка, пароль человек задаёт себе сам (Э0.6). */}
+            одноразовая ссылка, себя человек подтверждает ИИН и кодом (Э0.6). */}
         <EmptyBox
           title="По номеру 14-2010-9999 никого не нашли"
           text="Проверьте номер в профиле спортсмена. Если его нет в реестре вовсе — отправьте приглашение ссылкой на телефон или почту."
@@ -1162,7 +1101,7 @@ export function Invites12_7() {
         <Bar>
           Приглашение — предложение, а не запись в реестр: пока спортсмен не принял, он остаётся в
           прежнем регионе. Кого в реестре нет вовсе, тем уходит одноразовая ссылка на 7 дней —
-          пароль по ней человек задаёт себе сам.
+          открыв её, человек подтверждает себя ИИН и кодом из SMS.
         </Bar>
       </div>
     </WebApp>
@@ -1198,11 +1137,582 @@ const Invites12_7States = () => (
   </States>
 );
 
+/* ── Второй формат: те же экраны на телефоне ────────────────────── */
+
+/* Полный адаптив ✳ (30.08.2026, решение владельца «все экраны в обоих»).
+
+   Старший тренер региона половину сезона проводит в зале: состав на старт он
+   набирает не за столом, а между матчами, и «кто из наших как сыграл» смотрит
+   там же. Телефон для этой роли — второе рабочее место, а не аварийный вариант.
+
+   Содержание то же и из тех же данных (`REGION`, `CANDS`, `STARTS`,
+   `OURS12_5`, `PLAYERS`), меняется раскладка:
+
+   - оболочка `WebApp` → `PhoneRoleApp`: нижние вкладки она строит из тех же
+     `R12.nav`, что рисуют сайдбар;
+   - таблицы (`DataTable`) → строки `Rows`/`Row`: фото, фамилия, главное число
+     справа, остальное подписью;
+   - календарь сезона (`Calendar`) → мини-месяц и лента событий: сетка месяца
+     в 392 px не разворачивается;
+   - сетка плей-офф (`BracketFlow`) → список пар по кругам;
+   - ряды «фильтр + поиск + кнопка» → друг под другом.
+
+   Состояния экрана во втором формате не повторяем: они показаны один раз, на
+   полке `States` под основным макетом. */
+
+/** Полоса фильтра, которая не влезает в 392 px: прокручивается вбок в своей
+    полосе, а не режется и не переносится. `w-max` нужен потому, что сам
+    сегмент умеет переносить кнопки — в узком родителе он бы завернулся вместо
+    того, чтобы поехать. */
+const Slide = ({ children }: { children: ReactNode }) => (
+  <div className="-mx-4 overflow-x-auto px-4">
+    <div className="w-max">{children}</div>
+  </div>
+);
+
+/** «1 участник», «4 участника», «16 участников» — счётчик стоит в тексте, и
+    «16 участник» в рабочей системе читается как опечатка. */
+const players = (n: number) => {
+  const t10 = n % 10;
+  const t100 = n % 100;
+  if (t10 === 1 && t100 !== 11) return `${n} участник`;
+  if (t10 >= 2 && t10 <= 4 && (t100 < 12 || t100 > 14)) return `${n} участника`;
+  return `${n} участников`;
+};
+
+/** «1 пара», «2 пары», «16 пар» — то же для кругов сетки. */
+const pairs = (n: number) => {
+  const t10 = n % 10;
+  const t100 = n % 100;
+  if (t10 === 1 && t100 !== 11) return `${n} пара`;
+  if (t10 >= 2 && t10 <= 4 && (t100 < 12 || t100 > 14)) return `${n} пары`;
+  return `${n} пар`;
+};
+
+/** Сетка списком: то же содержание холста, но парами по кругам.
+
+    Холст `BracketFlow` рассчитан на панораму — круги колонками, между ними
+    локти связей, — и в 392 px из тридцати одного узла помещается один.
+    Вписать её в экран нельзя: фамилия в узле набрана мелким кеглем и при
+    масштабировании превращается в штрих. Поэтому на телефоне та же сетка идёт
+    списком: круг — панель, пара — строка, счёт справа, идущий матч помечен.
+    Порядок пар в круге тот же (`slot`), и картинка сетки по списку
+    восстанавливается — а «кто с кем играет» наконец читается.
+
+    Компонент общий на две роли (Э12.5 и Э13.9): сетка турнира одна, и второй
+    её список разъехался бы с первым. */
+export function BracketList({ bracket }: { bracket: Bracket }) {
+  const rounds: Match[][] = [];
+  for (const m of bracket.matches) (rounds[m.round] ??= []).push(m);
+  for (const r of rounds) r.sort((a, b) => a.slot - b.slot);
+
+  return (
+    <>
+      {rounds.map((round, r) => (
+        <Panel
+          key={roundTitle(r, rounds.length)}
+          title={roundTitle(r, rounds.length)}
+          extra={<span className="text-xs text-neutral-500">{pairs(round.length)}</span>}
+          flush
+        >
+          <div className="divide-y divide-neutral-100">
+            {round.map((m) => {
+              const known = m.a != null && m.b != null;
+              return (
+                <div key={m.id} className="flex items-center gap-3 px-4 py-2">
+                  <span className="w-5 shrink-0 text-[11px] tabular-nums text-neutral-400">
+                    {m.slot + 1}
+                  </span>
+                  <span className="min-w-0 flex-1 leading-snug">
+                    {/* Победитель — полужирным: на холсте его показывает линия,
+                        уходящая в следующий круг, а в списке линий нет. */}
+                    <span className={'block truncate text-[13px] ' + (m.winner === 'a' ? 'font-semibold' : '')}>
+                      {m.a?.name ?? '—'}
+                    </span>
+                    <span className={'block truncate text-[13px] ' + (m.winner === 'b' ? 'font-semibold' : '')}>
+                      {m.b?.name ?? '—'}
+                    </span>
+                  </span>
+                  {known && m.status !== 'pending' && (
+                    <span className="shrink-0 text-right text-[13px] font-semibold leading-snug tabular-nums">
+                      <span className="block">{m.scoreA}</span>
+                      <span className="block">{m.scoreB}</span>
+                    </span>
+                  )}
+                  {m.status === 'live' && <P t="ИДЁТ" cls="live" />}
+                  {!known && (
+                    <span className="shrink-0 text-[11.5px] text-neutral-400">соперники не определены</span>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </Panel>
+      ))}
+    </>
+  );
+}
+
+/** Вкладка «Регионы»/«Клубы» на телефоне: тот же состав турнира (`PLAYERS`),
+    что у `Squads14_5`, но без раскрывающихся групп — на 392 px аккордеон из
+    восьми групп по шестнадцать человек прокручивается вслепую. Свои показаны
+    строками сразу, чужие остаются счётчиком: региону и клубу от чужой группы
+    нужно одно — сколько их приехало.
+
+    Компонент общий на Э12.5 и Э13.9: состав турнира один на все роли. */
+export function SquadsPhone({
+  by,
+  our,
+  ours,
+  title,
+}: {
+  /** По чему собираем: клуб или регион участника. */
+  by: 'club' | 'city';
+  our: string;
+  /** Свои — с тем же состоянием, что на соседней вкладке «Наши». */
+  ours: { key: string; av?: string; nm: string; sub: string; pill?: { t: string; cls: Cls } }[];
+  title: string;
+}) {
+  const counts = PLAYERS.reduce<Record<string, number>>((acc, p) => {
+    acc[p[by]] = (acc[p[by]] ?? 0) + 1;
+    return acc;
+  }, {});
+  const rest = Object.entries(counts)
+    .filter(([k]) => k !== our)
+    .sort((a, b) => b[1] - a[1]);
+
+  return (
+    <>
+      <Panel title={`Наши · ${our}`} extra={<P t={players(ours.length).toUpperCase()} cls="reg" />} flush>
+        <div className="divide-y divide-neutral-100">
+          {ours.map((o) => (
+            <Row key={o.key} av={o.av} nm={o.nm} sub={o.sub} pill={o.pill} />
+          ))}
+        </div>
+      </Panel>
+
+      <Panel title={title} extra={<span className="text-xs text-neutral-500">кроме нашего</span>} flush>
+        <div className="divide-y divide-neutral-100">
+          {rest.map(([k, n]) => (
+            <Row key={k} nm={k} sub={players(n)} />
+          ))}
+        </div>
+      </Panel>
+    </>
+  );
+}
+
+/** Вкладка «Участники» на телефоне: тот же состав, что у `Players14_5`, но
+    строками и одной порцией. Сортировки нет — за неё отвечают шапки колонок,
+    а колонок здесь не осталось; страниц тоже нет — конкретного человека с
+    телефона всё равно ищут поиском, а не листанием тридцаток. */
+export function PlayersPhone({
+  mark,
+  list = PLAYERS,
+}: {
+  mark?: (p: Ply14) => { t: string; cls: Cls } | undefined;
+  list?: Ply14[];
+}) {
+  const [q, setQ] = useState('');
+  const t = q.trim().toLowerCase();
+  const found = list.filter(
+    (p) =>
+      !t ||
+      p.nm.toLowerCase().includes(t) ||
+      p.club.toLowerCase().includes(t) ||
+      p.city.toLowerCase().includes(t),
+  );
+  const shown = found.slice(0, 20);
+
+  return (
+    <Panel
+      title={`Участники · ${list.length}`}
+      extra={<SearchInput value={q} onChange={setQ} placeholder="Фамилия" className="w-36" />}
+      flush
+    >
+      {shown.length ? (
+        <div className="divide-y divide-neutral-100">
+          {shown.map((p) => (
+            <Row
+              key={p.s}
+              nm={p.nm}
+              sub={`посев ${p.s} · ${p.city} · ${p.club}`}
+              val={String(p.r)}
+              pill={mark?.(p)}
+            />
+          ))}
+        </div>
+      ) : (
+        <div className="p-4">
+          <EmptyBox title="Никого не нашли" text="Проверьте написание фамилии, региона или клуба." />
+        </div>
+      )}
+      <div className="border-t border-neutral-100 px-4 py-2 text-[11.5px] text-neutral-500">
+        Показаны {shown.length} из {found.length}
+        {t ? ' по поиску' : ''} · весь состав таблицей — на большом экране
+      </div>
+    </Panel>
+  );
+}
+
+/** Э12.1 на телефоне: тот же реестр региона строками. */
+function Region12_1Phone() {
+  const [fee, setFee] = useState(FEE_FILTER[0]);
+  const [q, setQ] = useState('');
+  const t = q.trim().toLowerCase();
+  const rows = REGION.filter((a) => {
+    if (fee === 'Взнос оплачен' && a.fee !== PAID) return false;
+    if (fee === 'Без взноса' && a.fee !== UNPAID) return false;
+    return !t || a.nm.toLowerCase().includes(t) || a.club.toLowerCase().includes(t);
+  });
+
+  return (
+    <PhoneRoleApp
+      role={R12}
+      nav="Мой регион"
+      title="Спортсмены региона"
+      sub="Алматы · 184 спортсмена · сезон 2026"
+    >
+      <div className="mb-3 flex flex-col gap-2">
+        <Facts items={[{ k: 'Без годового взноса', v: '42 из 184', hot: true }]} />
+        <Button variant="primary" className="w-full" data-to="Э12.6">
+          <UserPlus size={15} /> Пригласить спортсмена
+        </Button>
+        <QuietAction to="Э12.7">Приглашения региона · 2 ждут ответа</QuietAction>
+      </div>
+
+      {/* Поиск и фильтр по взносу — друг под другом: в строку они не встают, а
+          селекторы года, пола и клуба на телефоне живут в самом поиске. */}
+      <div className="mb-3 flex flex-col gap-2">
+        <SearchInput value={q} onChange={setQ} placeholder="Фамилия или клуб" className="w-full" />
+        <Slide><FilterSeg items={FEE_FILTER} active={fee} onPick={setFee} /></Slide>
+      </div>
+
+      {rows.length ? (
+        <Rows>
+          {rows.map((a) => (
+            <Row
+              key={a.nm}
+              av={a.av}
+              nm={a.nm}
+              /* Колонки таблицы — подписью: год, пол, клуб, разряд и рейтинг.
+                 Справа остаётся то, ради чего в реестр и заходят перед
+                 заявкой, — годовой взнос (§9.2). */
+              sub={`${a.y} г.р. · ${a.sex} · ${a.club} · ${a.rank} · рейтинг ${a.rt}`}
+              pill={a.fee}
+            />
+          ))}
+        </Rows>
+      ) : (
+        <EmptyBox title="Никого не нашлось" text="Проверьте написание фамилии или снимите фильтр по взносу." />
+      )}
+
+      <div className="mt-3 text-[12px] text-neutral-500">
+        {rows.length === REGION.length
+          ? 'первые 6 из 184 · дальше — прокруткой'
+          : `показано ${rows.length} · всего в регионе 184`}
+      </div>
+    </PhoneRoleApp>
+  );
+}
+
+/** Сезон лентой: тот же массив событий, что на сетке месяца (`CAL_EVENTS`),
+    только по порядку — дата слева, карточка справа. Значок состояния стоит у
+    самих стартов; у сроков его нет, потому что дата и есть их содержание.
+
+    Значок идёт под названием (`children`), а не справа от него (`right`):
+    карточка в ленте на телефоне около 240 px, и «СОСТАВ ПОДТВЕРЖДЁН» справа
+    оставил бы названию старта колонку в одно слово. */
+const SEASON12_PHONE: TimelineItem[] = [...CAL_EVENTS]
+  .sort((a, b) => a.from.localeCompare(b.from))
+  .map((e) => {
+    const start = STARTS.find((s) => s.nm === e.id);
+    return { ...e, children: start ? <StatusChip st={start.st} /> : undefined };
+  });
+
+/** Э12.2 на телефоне: сезон одной лентой, над ней мини-месяц.
+
+    Переключателя «Список / Календарь» здесь нет, и это не потеря: на десктопе
+    он разводил два вопроса — «что от нас ждут» (таблица) и «что на что
+    накладывается» (сетка месяца). Лента отвечает на оба сразу: строки идут по
+    датам, и наложение старта на срок соседней заявки видно порядком, а не
+    вычитанием чисел из двух колонок. Сетка месяца при этом остаётся —
+    мини-месяцем: по точкам под числами видно, где в апреле густо. */
+const Starts12_2Phone = () => (
+  <PhoneRoleApp
+    role={R12}
+    nav="Соревнования"
+    title="Соревнования региона"
+    sub="Сезон 2026 · восемь главных стартов календаря ФНТ РК"
+  >
+    <Panel title="Апрель 2026" sub="точка под числом — старт или срок заявки">
+      <div className="flex justify-center">
+        <MiniMonth month={CAL_MONTH} today={CAL_TODAY} events={CAL_EVENTS} />
+      </div>
+    </Panel>
+
+    <Panel title="Весь сезон по датам" extra={<span className="text-xs text-neutral-500">8 стартов</span>}>
+      <EventTimeline items={SEASON12_PHONE} today={CAL_TODAY} />
+    </Panel>
+
+    <Bar>
+      На главный старт состав подаёт только старший тренер региона, одной заявкой на весь
+      список (TZ §8.2). На открытый республиканский турнир заявляется сам спортсмен, в
+      Евразийскую лигу — клуб; их в этом списке нет.
+    </Bar>
+  </PhoneRoleApp>
+);
+
+/** Э12.3 на телефоне: тот же список кандидатов, но человек ставится в заявку
+    нажатием на строку, а не кнопкой в ней. Кнопка «Добавить» рядом со значком
+    взноса и фамилией не оставляет от фамилии ничего — а взнос убирать нельзя,
+    он решает судьбу заявки (§9.2). */
+function Squad12_3Phone() {
+  const [picked, setPicked] = useState<string[]>(['Нургалиев Санжар', 'Оралбек Диас']);
+  const [q, setQ] = useState('');
+  const toggle = (nm: string) =>
+    setPicked((p) => (p.includes(nm) ? p.filter((x) => x !== nm) : [...p, nm]));
+  const found = CANDS.filter((c) => c.nm.toLowerCase().includes(q.trim().toLowerCase()));
+  const team = CANDS.filter((c) => picked.includes(c.nm));
+  const noFee = team.filter((c) => c.fee === UNPAID);
+
+  return (
+    <PhoneRoleApp
+      role={R12}
+      nav="Соревнования"
+      title="Заявка на чемпионат РК"
+      sub="2007 г.р. и моложе · г. Караганда · 12–16 мая 2026"
+      back={{ label: 'Соревнования региона', to: 'Э12.2' }}
+    >
+      <div className="mb-3">
+        <Facts
+          items={[
+            { k: 'Приём заявок', v: 'до 28.04', hot: true },
+            { k: 'Проходят по возрасту', v: `${CANDS.length}` },
+            { k: 'В заявке', v: `${team.length}` },
+          ]}
+        />
+      </div>
+
+      <Panel title={`Кандидаты от региона · ${CANDS.length}`} extra={<P t="2007 Г.Р. И МОЛОЖЕ" cls="reg" />}>
+        <div className="mb-3">
+          <SearchInput value={q} onChange={setQ} placeholder="Фамилия" className="w-full" />
+        </div>
+        {found.length ? (
+          <>
+            <Rows>
+              {found.map((a) => {
+                const on = picked.includes(a.nm);
+                return (
+                  <Row
+                    key={a.nm}
+                    av={a.av}
+                    nm={a.nm}
+                    sub={`${a.sub} · рейтинг ${a.rt}${on ? ' · в заявке' : ''}`}
+                    on={on}
+                    onSelect={() => toggle(a.nm)}
+                    pill={a.fee}
+                  />
+                );
+              })}
+            </Rows>
+            <div className="mt-2 text-[11.5px] text-neutral-500">
+              Нажатие на строку ставит человека в заявку и убирает из неё
+            </div>
+          </>
+        ) : (
+          <EmptyBox
+            title="Никого не нашли"
+            text="По возрастной границе этого старта такой фамилии среди кандидатов нет: старше границы система не предлагает вовсе."
+          />
+        )}
+      </Panel>
+
+      {noFee.length > 0 && (
+        <Bar tone="warning">
+          {noFee.map((a) => a.nm).join(', ')} — годовой взнос за сезон не оплачен. ⚠ 6.1 —
+          блокирует ли это заявку, федерация не ответила; заявку подать можно, но допуск на месте
+          может не пройти (§9.2).
+        </Bar>
+      )}
+
+      <div className="flex flex-col gap-2">
+        <span className="text-[12px] leading-snug text-neutral-500">
+          В заявке {team.length} из {CANDS.length} · одна заявка на весь список: решение главного
+          судьи приходит по ней целиком (TZ §8.2)
+        </span>
+        <PrimaryAction>
+          <ClipboardCheck size={15} /> Подать заявку
+        </PrimaryAction>
+        <QuietAction>
+          <Paperclip size={14} /> Приложить документы · 2 файла
+        </QuietAction>
+      </div>
+    </PhoneRoleApp>
+  );
+}
+
+/** Э12.5 на телефоне: те же пять вкладок. «Регионы» и «Участники» собраны из
+    того же состава турнира строками, «Сетка» — списком пар по кругам. */
+const Mine12_5Phone = ({ tab }: { tab?: string } = {}) => (
+  <PhoneRoleApp
+    role={R12}
+    nav="Соревнования"
+    title="Кубок Республики Казахстан"
+    sub="г. Алматы · 24–28 марта · 128 участников · наших 6"
+    back={{ label: 'Соревнования региона', to: 'Э12.2' }}
+  >
+    <PageTabs
+      active={tab}
+      items={[
+        {
+          t: 'Наши',
+          view: (
+            <Panel
+              title={`Наши на турнире · ${OURS12_5.length}`}
+              extra={<P t="ТОЛЬКО ЧТЕНИЕ" cls="done" />}
+              flush
+            >
+              <div className="divide-y divide-neutral-100">
+                {OURS12_5.map((o) => (
+                  <Row key={o.key} av={o.av} nm={o.nm} sub={o.sub} pill={o.pill} />
+                ))}
+              </div>
+              <div className="border-t border-neutral-100 px-4 py-2 text-[11.5px] text-neutral-500">
+                Счёт ведёт судья стола — регион его не вводит
+              </div>
+            </Panel>
+          ),
+        },
+        {
+          t: 'Регионы',
+          view: <SquadsPhone by="city" our={OUR_REGION} title="Регионы на турнире" ours={OURS12_5} />,
+        },
+        {
+          t: 'Участники',
+          view: <PlayersPhone mark={(p) => (p.city === OUR_REGION ? { t: 'НАШ', cls: 'reg' } : undefined)} />,
+        },
+        {
+          t: 'Группы',
+          view: (
+            <Panel title="Наши в группах" extra={<P t="ВЫХОДЯТ ДВОЕ" cls="reg" />} flush>
+              <div className="divide-y divide-neutral-100">
+                {OUR_GROUPS12_5.map((g) => {
+                  /* На десктопе в имени строки стоит «Группа A · Фамилия»: там
+                     хватает ширины. На телефоне вперёд выходит человек, а
+                     группа уезжает в подпись — фамилию резать нельзя. */
+                  const [grp, who] = g.nm.split(' · ');
+                  return (
+                    <Row key={g.nm} nm={who} sub={`${grp} · ${g.sub}`} val={g.val} pill={g.pill} />
+                  );
+                })}
+              </div>
+              <div className="border-t border-neutral-100 px-4 py-2 text-[11.5px] text-neutral-500">
+                16 групп по 8 человек, выходят двое · плей-офф — соседняя вкладка
+              </div>
+            </Panel>
+          ),
+        },
+        { t: 'Сетка', view: <BracketList bracket={myBracket} /> },
+      ]}
+    />
+  </PhoneRoleApp>
+);
+
+/** Э12.6 на телефоне: поле поиска и найденная карточка — в одну колонку. */
+const Invite12_6Phone = () => (
+  <PhoneRoleApp
+    role={R12}
+    nav="Приглашения"
+    title="Пригласить спортсмена"
+    sub="Регион Алматы · поиск по номеру в реестре ФНТ РК"
+    back={{ label: 'Приглашения региона', to: 'Э12.7' }}
+  >
+    <Panel title="Найти в реестре">
+      <TextInput label="Номер в реестре ФНТ РК" value="14-2010-0512" placeholder="00-0000-0000" wide />
+      <div className="mt-3">
+        <Button variant="outline" className="w-full">
+          <SearchIcon size={14} /> Найти
+        </Button>
+      </div>
+      <div className="mt-3">
+        <Bar>
+          Номер человек видит у себя в профиле и в квитанции о взносе. Ищем по номеру, а не по
+          фамилии: однофамильцев в реестре много, а номер один.
+        </Bar>
+      </div>
+    </Panel>
+
+    <Panel title="Нашли в реестре" extra={<P t="ВЗНОС НЕ ОПЛАЧЕН" cls="wait" />}>
+      <div className="mb-3 flex items-center gap-3">
+        <Avatar size="lg">
+          <Avatar.Image alt="Сейтжан Аяулым" src={AW(26)} />
+          <Avatar.Fallback>С</Avatar.Fallback>
+        </Avatar>
+        <div className="min-w-0 leading-tight">
+          <div className="text-[14px] font-semibold">Сейтжан Аяулым</div>
+          <div className="mt-0.5 text-[11.5px] leading-snug text-neutral-500">
+            № 14-2010-0512 · 2010 г.р. · 1 разряд · рейтинг 1904
+          </div>
+        </div>
+      </div>
+      {/* Поля формы в одну колонку: `wide` растягивает их на всю сетку. */}
+      <FormGrid>
+        <FieldView label="Регион сейчас" value="г. Шымкент" wide />
+        <FieldView label="Клуб" value="«Достык» · клуб отдельно от региона" wide />
+      </FormGrid>
+      <div className="mt-4 flex flex-col gap-2">
+        <PrimaryAction>Пригласить в регион Алматы</PrimaryAction>
+        <span className="text-[12px] text-neutral-500">
+          Решение за спортсменом: приглашение придёт ему в профиль
+        </span>
+      </div>
+    </Panel>
+  </PhoneRoleApp>
+);
+
+/** Э12.7 на телефоне: тот же список приглашений. */
+const Invites12_7Phone = () => (
+  <PhoneRoleApp
+    role={R12}
+    nav="Приглашения"
+    title="Приглашения региона"
+    sub="Кого позвали, кто открыл ссылку и кто уже в реестре региона"
+    back={{ label: 'Мой регион', to: 'Э12.1' }}
+  >
+    <div className="mb-3 flex flex-col gap-2">
+      <span className="text-[12px] text-neutral-500">
+        4 приглашения · 2 ждут ответа, 1 принято, 1 отклонено
+      </span>
+      <Button variant="primary" className="w-full" data-to="Э12.6">
+        <UserPlus size={15} /> Пригласить спортсмена
+      </Button>
+    </div>
+
+    <Rows>
+      {INVITES12.map((i) => (
+        <Row key={i.nm} av={i.av} nm={i.nm} sub={i.sub} val={i.val} action={i.action} />
+      ))}
+    </Rows>
+
+    <div className="mt-4">
+      <Bar>
+        Приглашение — предложение, а не запись в реестр: пока спортсмен не принял, он остаётся в
+        прежнем регионе. Кого в реестре нет вовсе, тем уходит одноразовая ссылка на 7 дней —
+        открыв её, человек подтверждает себя ИИН и кодом из SMS.
+      </Bar>
+    </div>
+  </PhoneRoleApp>
+);
+
 /** Экраны роли по кодам: из этой карты собираются и борд, и карта флоу. */
 export const SCREENS: ScreenMap = {
   'Э0.1': {
     cap: 'Вход',
     view: () => <Login0_1 />,
+    /* Вход в приложении уже нарисован (role00): второй такой же экран здесь
+       был бы копией — берём тот же. */
+    alt: () => <LoginPhone0_1 />,
     next: 'первый экран роли',
   },
   'Э12.1': {
@@ -1213,6 +1723,7 @@ export const SCREENS: ScreenMap = {
         <Region12_1States />
       </>
     ),
+    alt: () => <Region12_1Phone />,
     next: '«пригласить спортсмена»',
   },
   'Э12.6': {
@@ -1223,6 +1734,7 @@ export const SCREENS: ScreenMap = {
         <Invite12_6States />
       </>
     ),
+    alt: () => <Invite12_6Phone />,
     next: 'список приглашений',
   },
   'Э12.7': {
@@ -1233,6 +1745,7 @@ export const SCREENS: ScreenMap = {
         <Invites12_7States />
       </>
     ),
+    alt: () => <Invites12_7Phone />,
     next: 'раздел «Соревнования»',
   },
   'Э12.2': {
@@ -1244,6 +1757,7 @@ export const SCREENS: ScreenMap = {
         <Starts12_2States />
       </>
     ),
+    alt: () => <Starts12_2Phone />,
     next: 'строка, где ждут заявку',
   },
   'Э12.3': {
@@ -1254,6 +1768,7 @@ export const SCREENS: ScreenMap = {
         <Squad12_3States />
       </>
     ),
+    alt: () => <Squad12_3Phone />,
     next: 'заявку приняли',
   },
   'Э12.5': {
@@ -1264,6 +1779,7 @@ export const SCREENS: ScreenMap = {
         <Mine12_5States />
       </>
     ),
+    alt: () => <Mine12_5Phone />,
     /* Узел вкладки на карте открывает экран сразу на ней: вкладок пять, и без
        этого «Регионы» и «Группы» пришлось бы искать кликами. */
     tabView: (tab) => <Mine12_5 tab={tab} />,

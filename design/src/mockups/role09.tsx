@@ -15,18 +15,28 @@
    2. расписание живёт у главного судьи: у стола вопрос один — «пара пришла —
       начинаем?», очереди стола на экране нет;
    3. подтверждение результата — единственное необратимое действие судьи за
-      столом: дальше правит только главный судья (TZ §6). */
+      столом: дальше правит только главный судья (TZ §6).
+
+   Полный адаптив ✳ (решение владельца, 30.08.2026: «все экраны в обоих»): у
+   каждого экрана роли есть второй формат — телефон, — и он стоит врезкой под
+   планшетным кадром (`alt` в `SCREENS`). Для судьи стола это не запасной вид:
+   планшетов у федерации нет, а телефон есть у каждого. Поэтому на 392 px
+   кнопки счёта остаются крупными (56 px высотой, счёт кеглем 56), а половины
+   табло встают друг под другом — судья бьёт по ним не глядя, стоя у стола.
+   Состояние у обоих кадров общее: `ScoreBody` держит его один раз. */
 
 import { useState, type ReactNode } from 'react';
 import {
-  Check, History, Pause, Radio, RefreshCw, Table2, Timer, Trophy, Undo2,
+  ArrowRight, Check, Gavel, History, Pause, Radio, RefreshCw, Table2, Timer, Trophy, Undo2,
 } from 'lucide-react';
-import { Avatar, Button, Chip } from '@heroui/react';
+import { Avatar, Button, Chip, InputOTP, REGEXP_ONLY_DIGITS } from '@heroui/react';
 import {
-  A, Bar, DataTable, DisabledAction, EmptyBox, FormGrid, GameCells, Pill, Row, Rows,
-  ScreenScope, TabletApp, TextInput,
+  A, Bar, DataTable, DisabledAction, EmptyBox, FieldView, FormGrid, GameCells, Phone,
+  PhoneRoleApp, PickField, Pill, Row, Rows, ScreenScope, TabletApp, TextInput,
   type RoleUI,
 } from '../kit/hero/app';
+/* Бренд — общий примитив: тот же знак, что в шапке оболочек нового слоя. */
+import { Brand } from '../ui';
 /* Из старого слоя остаются только мета-компоненты борда: колонки, стрелки и
    полки состояний. Сами экраны собраны новым слоем. */
 import { Board, States, Shot, type ScreenMap } from './shell';
@@ -37,7 +47,7 @@ import { tourPoints, type JudgeTour } from './judge';
 /* Маршрут судейской роли начинается раньше входа: судья заводит себя сам
    (Э0.7), а роль в наряде ему выдают уже потом. Без этой колонки борд и карта
    начинались с «Вход», и откуда взялся человек, из них было не видно. */
-import { Login0_1, SignUpJudge0_7, SignUpJudge0_7States } from './role00';
+import { Login0_1, LoginPhone0_1, SignUpJudge0_7, SignUpJudge0_7States } from './role00';
 
 /* ── Роль: разделы и подпись профиля ─────────────────────────────── */
 
@@ -56,6 +66,22 @@ const R09: RoleUI = {
   brandSub: 'Одиночный · олимпийская · г. Астана',
   badge: 'ИДЁТ',
   nav: NAV9,
+};
+
+/** Та же роль для телефонного кадра ✳ (30.08.2026, «все экраны в обоих»).
+
+    Планшетов у федерации нет (комментарий 09.2026), и второй формат судьи —
+    не «уменьшенный планшет», а его настоящее рабочее место: телефон в руке у
+    стола. Оболочка `PhoneRoleApp` строит нижние вкладки из `nav`, а у
+    планшетной оболочки навигации нет вовсе — поэтому здесь свой набор
+    разделов: к двум словам планшетного переключателя добавлена «История»,
+    отдельным экраном которой на планшете была кнопка над счётом (Э9.4).
+
+    Данные человека и турнира берутся из `R09`, а не переписываются: роль одна,
+    и разъезжаться двум её карточкам нечем. */
+const R09P: RoleUI = {
+  ...R09,
+  nav: [...NAV9, [<History size={15} key="h" />, 'История']],
 };
 
 /* ── Мелочи, общие для экранов роли ─────────────────────────────── */
@@ -162,17 +188,16 @@ const num9 = (n: number) => (n < 0 ? '' : '+') + String(Math.round(n * 10) / 10)
 
 /* ── Э9.1 · Мои турниры ──────────────────────────────────────────── */
 
-export function Tours9_1() {
+/** Содержимое «Моих турниров» — одно на оба формата: назначения, строка баллов
+    и переход в кабинет судьи. На планшете над ним стоит переключатель
+    разделов, на телефоне разделы живут в нижних вкладках оболочки. */
+const Tours9_1Body = () => {
   /* Баллы считаются формулой кабинета (`tourPoints`), а не второй копией:
      сумма под списком — та же, что увидит судья в Э0.11. */
   const s1 = JUDGE_TOURS9.reduce((s, t) => s + tourPoints(t), 0);
   const played = JUDGE_TOURS9.filter((t) => !t.miss).length;
   return (
-    /* Значка «ИДЁТ» в шапке нет ✳: экран про сезон целиком, а не про идущий
-       турнир — значок стоит на экранах матча (Э9.2–Э9.5). */
-    <TabletApp title="Мои турниры" sub="Оралбай Ержан · судья · сезон 2026">
-      <SectionNav active="Мои турниры" />
-
+    <>
       {/* Назначения — списком с волосяными линиями: карточками с просветом
           пять назначений занимали весь экран. Строка ведёт на мой стол. */}
       <SecT>Мои назначения</SecT>
@@ -200,9 +225,38 @@ export function Tours9_1() {
           to="Э0.9"
         />
       </Rows>
+    </>
+  );
+};
+
+export function Tours9_1() {
+  return (
+    /* Значка «ИДЁТ» в шапке нет ✳: экран про сезон целиком, а не про идущий
+       турнир — значок стоит на экранах матча (Э9.2–Э9.5). */
+    <TabletApp title="Мои турниры" sub="Оралбай Ержан · судья · сезон 2026">
+      <SectionNav active="Мои турниры" />
+      <Tours9_1Body />
     </TabletApp>
   );
 }
+
+/** Э9.1 на телефоне ✳: список назначений и так вертикальный — раскладка не
+    меняется, меняется оболочка. Переключатель разделов из планшетного кадра
+    здесь не нужен: те же слова стоят нижними вкладками. */
+const Tours9_1Phone = () => (
+  /* Значка «ИДЁТ» нет и здесь: экран про сезон целиком, а не про идущий матч —
+     то же правило, что на планшетном кадре. */
+  <PhoneRoleApp
+    role={{ ...R09P, badge: false }}
+    nav="Мои турниры"
+    title="Мои турниры"
+    sub="Оралбай Ержан · судья · сезон 2026"
+  >
+    <div className="flex flex-col gap-3.5 pb-2">
+      <Tours9_1Body />
+    </div>
+  </PhoneRoleApp>
+);
 
 const Tours9_1States = () => (
   <States>
@@ -232,6 +286,63 @@ const Tours9_1States = () => (
 
 /* ── Э9.2 · Мой стол ─────────────────────────────────────────────── */
 
+/** Пара на столе — те же двое, что на вводе счёта и в итоге. `phone` меняет
+    только раскладку карточки: на 392 px две колонки с фотографиями по краям
+    зажимают фамилии до многоточия, и игроки встают друг под другом. */
+const Table9_2Card = ({ phone }: { phone?: boolean }) => (
+  <div className={'rounded-xl border border-neutral-200 bg-white shadow-sm ' + (phone ? 'p-4' : 'p-6')}>
+    <div
+      className={
+        phone
+          ? 'flex flex-col gap-2.5'
+          : 'grid grid-cols-[1fr_auto_1fr] items-center gap-4'
+      }
+    >
+      {([
+        { av: A(32), nm: 'Смагулов Алан', sub: 'Алматы · клуб «Алатау»' },
+        { av: A(51), nm: 'Токаев Марат', sub: 'Астана · клуб «Барыс»' },
+      ] as const).map((p, i) =>
+        phone ? (
+          <div key={p.nm} className="flex items-center gap-3">
+            <Avatar size="md">
+              <Avatar.Image alt={p.nm} src={p.av} />
+              <Avatar.Fallback>{p.nm.slice(0, 1)}</Avatar.Fallback>
+            </Avatar>
+            <div className="min-w-0 leading-tight">
+              <div className="text-[17px] font-bold tracking-tight">{p.nm}</div>
+              <div className="text-xs text-neutral-500">{p.sub}</div>
+            </div>
+          </div>
+        ) : (
+          <div key={p.nm} className={'flex flex-col items-center gap-1.5 text-center' + (i === 1 ? ' order-3' : '')}>
+            <Avatar size="lg">
+              <Avatar.Image alt={p.nm} src={p.av} />
+              <Avatar.Fallback>{p.nm.slice(0, 1)}</Avatar.Fallback>
+            </Avatar>
+            <div className="text-lg font-bold tracking-tight">{p.nm}</div>
+            <div className="text-xs text-neutral-500">{p.sub}</div>
+          </div>
+        ),
+      )}
+      <span
+        className={
+          phone
+            ? 'order-1 self-start text-xs font-semibold tracking-widest text-neutral-300'
+            : 'order-2 text-sm font-semibold tracking-widest text-neutral-300'
+        }
+      >
+        VS
+      </span>
+    </div>
+    {/* Регламент — тот же, что на вводе счёта (Э9.3) и в итоге (Э9.5):
+        три экрана одного матча не должны рассказывать про разные матчи.
+        Режим по очкам назван заранее — его включил главный судья. */}
+    <div className={'rounded-lg bg-neutral-50 px-4 py-2.5 text-center text-[12.5px] text-neutral-500 ' + (phone ? 'mt-3.5' : 'mt-5')}>
+      1/8 финала · до {WIN} побед в партиях · режим ввода — по очкам
+    </div>
+  </div>
+);
+
 export function Table9_2() {
   return (
     <TabletApp title="Мой стол 4" sub="Чемпионат Казахстана 2026 · день 2 · 13 марта" badge="ИДЁТ">
@@ -242,30 +353,7 @@ export function Table9_2() {
           место занимало больше, чем сам матч. За столом вопрос один: пара
           пришла — начинаем? Подписи «вызвана пара» тоже нет: на экране одна
           карточка и одна кнопка. */}
-      <div className="rounded-xl border border-neutral-200 bg-white p-6 shadow-sm">
-        <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-4">
-          {([
-            { av: A(32), nm: 'Смагулов Алан', sub: 'Алматы · клуб «Алатау»' },
-            { av: A(51), nm: 'Токаев Марат', sub: 'Астана · клуб «Барыс»' },
-          ] as const).map((p, i) => (
-            <div key={p.nm} className={'flex flex-col items-center gap-1.5 text-center' + (i === 1 ? ' order-3' : '')}>
-              <Avatar size="lg">
-                <Avatar.Image alt={p.nm} src={p.av} />
-                <Avatar.Fallback>{p.nm.slice(0, 1)}</Avatar.Fallback>
-              </Avatar>
-              <div className="text-lg font-bold tracking-tight">{p.nm}</div>
-              <div className="text-xs text-neutral-500">{p.sub}</div>
-            </div>
-          ))}
-          <span className="order-2 text-sm font-semibold tracking-widest text-neutral-300">VS</span>
-        </div>
-        {/* Регламент — тот же, что на вводе счёта (Э9.3) и в итоге (Э9.5):
-            три экрана одного матча не должны рассказывать про разные матчи.
-            Режим по очкам назван заранее — его включил главный судья. */}
-        <div className="mt-5 rounded-lg bg-neutral-50 px-4 py-2.5 text-center text-[12.5px] text-neutral-500">
-          1/8 финала · до 4 побед в партиях · режим ввода — по очкам
-        </div>
-      </div>
+      <Table9_2Card />
 
       {/* Одна кнопка ✳ — и размером в ладонь: за столом решение одно.
           Неявка бывает реже и не должна стоять рядом с главным действием: её
@@ -276,6 +364,25 @@ export function Table9_2() {
     </TabletApp>
   );
 }
+
+/** Э9.2 на телефоне ✳: экран и на планшете состоит из одной карточки и одной
+    кнопки, поэтому переносится почти как есть. Кнопка старта остаётся ростом в
+    ладонь (64 px) — по ней бьют пальцем, стоя у стола. */
+const Table9_2Phone = () => (
+  <PhoneRoleApp
+    role={R09P}
+    nav="Мой стол"
+    title="Мой стол 4"
+    sub="Чемпионат Казахстана 2026 · день 2 · 13 марта"
+  >
+    <div className="flex flex-col gap-3.5 pb-2">
+      <Table9_2Card phone />
+      <Button variant="primary" className="h-16 w-full text-lg" data-to="Э9.3">
+        <Radio size={18} /> Старт матча
+      </Button>
+    </div>
+  </PhoneRoleApp>
+);
 
 const Table9_2States = () => (
   <States>
@@ -440,7 +547,7 @@ function Marks({ m, live, off, onTo, onCard, onUndo }: {
     экране это была строка мелким шрифтом под именем — прочитать её с
     расстояния всё равно нельзя. Половины равны и цветом ничего не выделяется:
     единственное, что должно бросаться в глаза, — сами числа. */
-function Half({ av, nm, city, pts, onPoint, off, marks }: {
+function Half({ av, nm, city, pts, onPoint, off, marks, phone }: {
   av: string;
   nm: string;
   city: string;
@@ -450,7 +557,43 @@ function Half({ av, nm, city, pts, onPoint, off, marks }: {
   off?: boolean;
   /** Ряд отметок под именем: тайм-аут и карточки. */
   marks: ReactNode;
+  /** Телефонный кадр ✳: половины стоят одна под другой, поэтому фамилия и
+      счёт живут в одну строку — вертикальный столбик на две половины не
+      помещается. Кнопка очка при этом остаётся во всю ширину и той же высоты:
+      по ней бьют не глядя. */
+  phone?: boolean;
 }) {
+  const point = (
+    <Button
+      variant={off ? 'outline' : 'primary'}
+      isDisabled={off}
+      className="h-14 w-full text-lg"
+      onPress={onPoint}
+    >
+      +1 очко
+    </Button>
+  );
+  if (phone) {
+    return (
+      <div className="flex flex-col gap-2.5 rounded-xl border border-neutral-200 bg-white p-3 shadow-sm">
+        <div className="flex items-center gap-3">
+          <Avatar size="sm">
+            <Avatar.Image alt={nm} src={av} />
+            <Avatar.Fallback>{nm.slice(0, 1)}</Avatar.Fallback>
+          </Avatar>
+          <span className="min-w-0 flex-1 leading-tight">
+            <span className="block truncate text-[15px] font-bold tracking-tight">{nm}</span>
+            <span className="block truncate text-[11px] text-neutral-500">{city}</span>
+          </span>
+          {/* Счёт всё равно крупный: с полуметра от стола его читают цифрой, а
+              не подписью — 56 px против 88 на планшете. */}
+          <span className="text-[56px] font-bold leading-none tracking-tighter tabular-nums">{pts}</span>
+        </div>
+        {marks}
+        {point}
+      </div>
+    );
+  }
   return (
     <div className="flex flex-col items-center gap-2 rounded-xl border border-neutral-200 bg-white p-4 shadow-sm">
       <Avatar size="md">
@@ -464,14 +607,7 @@ function Half({ av, nm, city, pts, onPoint, off, marks }: {
           тайм-аут и карточки видно, не отводя глаз от счёта. */}
       {marks}
       <div className="text-[88px] font-bold leading-none tracking-tighter tabular-nums">{pts}</div>
-      <Button
-        variant={off ? 'outline' : 'primary'}
-        isDisabled={off}
-        className="h-14 w-full text-lg"
-        onPress={onPoint}
-      >
-        +1 очко
-      </Button>
+      {point}
     </div>
   );
 }
@@ -516,7 +652,7 @@ function ScoreInput({ v, big, onSet }: {
 /** Ввод по очкам (TZ §6.2): каждое очко отдельной кнопкой, счёт видно с
     расстояния, последнее действие отменяется. Режим открывает на турнире
     главный судья соревнований. */
-function ByPoints9_3({ pts, sets, swap, paused, off, done, ready, over, marks, hand, won, onSet, onDropHand, onPoint, onUndo, onSwap, onPause, onKeep, onDone }: {
+function ByPoints9_3({ pts, sets, swap, paused, off, done, ready, over, marks, hand, won, phone, onSet, onDropHand, onPoint, onUndo, onSwap, onPause, onKeep, onDone }: {
   pts: [number, number];
   sets: [number, number][];
   swap: boolean;
@@ -532,6 +668,9 @@ function ByPoints9_3({ pts, sets, swap, paused, off, done, ready, over, marks, h
   /** Итог по партиям задан руками, а не набран из сыгранных партий. */
   hand: boolean;
   won: (i: 0 | 1) => number;
+  /** Телефонный кадр ✳: половины табло идут друг под другом, полоса управления
+      встаёт в два ряда. Всё остальное — то же самое. */
+  phone?: boolean;
   onSet: (i: 0 | 1, n: number) => void;
   onDropHand: () => void;
   onPoint: (i: 0 | 1) => void;
@@ -547,7 +686,9 @@ function ByPoints9_3({ pts, sets, swap, paused, off, done, ready, over, marks, h
   const order: [0 | 1, 0 | 1] = swap ? [1, 0] : [0, 1];
   return (
     <div className="flex flex-col gap-3.5">
-      <div className="grid grid-cols-2 gap-3.5">
+      {/* Порядок половин сохраняется и на телефоне: «левый» игрок — верхний,
+          и смена сторон так же меняет их местами. */}
+      <div className={phone ? 'flex flex-col gap-3' : 'grid grid-cols-2 gap-3.5'}>
         {order.map((i) => (
           <Half
             key={PL[i].nm}
@@ -555,6 +696,7 @@ function ByPoints9_3({ pts, sets, swap, paused, off, done, ready, over, marks, h
             pts={pts[i]}
             off={off || ready}
             marks={marks(i)}
+            phone={phone}
             onPoint={() => onPoint(i)}
           />
         ))}
@@ -566,7 +708,8 @@ function ByPoints9_3({ pts, sets, swap, paused, off, done, ready, over, marks, h
           ни счёт каждой партии, а ставит 3 : 1 и подтверждает. */}
       <div
         className={
-          'flex items-center justify-center gap-6 rounded-xl border px-4 py-3 ' +
+          'flex items-center justify-center rounded-xl border px-4 py-3 ' +
+          (phone ? 'gap-3 ' : 'gap-6 ') +
           (hand ? 'border-amber-300 bg-amber-50' : 'border-neutral-200 bg-white')
         }
       >
@@ -614,14 +757,21 @@ function ByPoints9_3({ pts, sets, swap, paused, off, done, ready, over, marks, h
           пауза — про сам розыгрыш. На вкладке «По партиям» их нет, а после
           подтверждения матча нет вовсе: счёт стал итогом. */}
       {!done && (
-        <div className="flex gap-2">
-          <Button variant="outline" className="h-12 flex-1" onPress={onUndo}>
-            <Undo2 size={15} /> Отменить последнее
+        /* На телефоне три кнопки в ряд ужимаются до неподписанных значков —
+            «Отменить последнее» в 110 px не помещается. Поэтому две в ряд,
+            пауза во всю ширину: высота 48 px у всех остаётся. */
+        <div className={phone ? 'grid grid-cols-2 gap-2' : 'flex gap-2'}>
+          <Button variant="outline" className={phone ? 'h-12' : 'h-12 flex-1'} onPress={onUndo}>
+            <Undo2 size={15} /> {phone ? 'Отменить' : 'Отменить последнее'}
           </Button>
-          <Button variant="outline" className="h-12 flex-1" onPress={onSwap}>
+          <Button variant="outline" className={phone ? 'h-12' : 'h-12 flex-1'} onPress={onSwap}>
             <RefreshCw size={15} /> Смена сторон
           </Button>
-          <Button variant={paused ? 'primary' : 'outline'} className="h-12 flex-1" onPress={onPause}>
+          <Button
+            variant={paused ? 'primary' : 'outline'}
+            className={phone ? 'col-span-2 h-12' : 'h-12 flex-1'}
+            onPress={onPause}
+          >
             <Pause size={15} /> {paused ? 'Продолжить' : 'Пауза'}
           </Button>
         </div>
@@ -666,7 +816,7 @@ function ByPoints9_3({ pts, sets, swap, paused, off, done, ready, over, marks, h
     Состояние общее с вводом по очкам: закрытые партии — из `sets`, идущая — из
     текущего счёта. Переключиться можно посреди матча, и ничего не теряется —
     иначе выбор пришлось бы делать до первого розыгрыша, вслепую. */
-function BySets9_3({ sets, pts, done, over, marks, won, onSet, onKeep, onDone }: {
+function BySets9_3({ sets, pts, done, over, marks, won, phone, onSet, onKeep, onDone }: {
   sets: [number, number][];
   pts: [number, number];
   done: boolean;
@@ -675,6 +825,9 @@ function BySets9_3({ sets, pts, done, over, marks, won, onSet, onKeep, onDone }:
   marks: (i: 0 | 1) => ReactNode;
   /** Партий выиграно — общий счётчик: из партий или из введённого руками итога. */
   won: (i: 0 | 1) => number;
+  /** Телефонный кадр ✳: поля партий друг под другом, а таблица закрытых партий
+      — строками реестра: четыре колонки в 328 px не умещаются. */
+  phone?: boolean;
   onSet: (i: 0 | 1, n: number) => void;
   onKeep: () => void;
   onDone: () => void;
@@ -691,7 +844,7 @@ function BySets9_3({ sets, pts, done, over, marks, won, onSet, onKeep, onDone }:
 
       {/* Счёт партии вписывают числом ✳: степпер требовал одиннадцати нажатий
           на партию — это тот же поочковый подсчёт, только медленнее. */}
-      <div className="grid grid-cols-2 gap-3.5">
+      <div className={phone ? 'flex flex-col gap-3' : 'grid grid-cols-2 gap-3.5'}>
         {([0, 1] as const).map((i) => (
           <div key={PL[i].nm} className="flex flex-col items-center gap-2.5 rounded-xl border border-neutral-200 bg-white p-4 shadow-sm">
             <div className="flex w-full items-center gap-2.5">
@@ -715,47 +868,81 @@ function BySets9_3({ sets, pts, done, over, marks, won, onSet, onKeep, onDone }:
 
       {/* Закрытые партии таблицей: идущая строка внизу читается из тех же
           чисел, что стоят в полях выше. Победитель партии выделен — по
-          колонке сразу видно, кто как шёл. */}
-      <DataTable
-        cols={['Партия', PL[0].nm.split(' ')[0], PL[1].nm.split(' ')[0], 'Состояние']}
-        grid="1fr 100px 100px 130px"
-        rows={[
-          ...sets.map(([a, b], i) => ({
-            key: 'p' + i,
-            cells: [
-              <span key="n" className="font-medium">Партия {i + 1}</span>,
-              <span key="a" className={'tabular-nums ' + (a > b ? 'font-semibold' : 'text-neutral-400')}>{a}</span>,
-              <span key="b" className={'tabular-nums ' + (b > a ? 'font-semibold' : 'text-neutral-400')}>{b}</span>,
-              <P key="s" t="СЫГРАНА" cls="live" />,
-            ],
-          })),
-          ...(!done
-            ? [{
-              key: 'cur',
+          колонке сразу видно, кто как шёл.
+
+          На телефоне те же партии идут строками реестра: четыре колонки с
+          двумя фамилиями в 328 px не помещаются, а счёт партии «11 : 7» одной
+          строкой читается так же. */}
+      {phone ? (
+        <Rows>
+          {sets.map(([a, b], i) => (
+            <Row
+              key={'p' + i}
+              nm={`Партия ${i + 1}`}
+              sub={`${(a > b ? PL[0] : PL[1]).nm.split(' ')[0]} — партия за ним`}
+              val={`${a} : ${b}`}
+              pill={{ t: 'СЫГРАНА', cls: 'live' }}
+            />
+          ))}
+          {!done && (
+            <Row
+              nm={`Партия ${sets.length + 1}`}
+              sub="счёт вписывают в полях выше"
+              val={`${pts[0]} : ${pts[1]}`}
+              pill={{ t: 'ИДЁТ', cls: 'wait' }}
+            />
+          )}
+        </Rows>
+      ) : (
+        <DataTable
+          cols={['Партия', PL[0].nm.split(' ')[0], PL[1].nm.split(' ')[0], 'Состояние']}
+          grid="1fr 100px 100px 130px"
+          rows={[
+            ...sets.map(([a, b], i) => ({
+              key: 'p' + i,
               cells: [
-                <span key="n" className="font-medium">Партия {sets.length + 1}</span>,
-                <span key="a" className="tabular-nums">{pts[0]}</span>,
-                <span key="b" className="tabular-nums">{pts[1]}</span>,
-                <P key="s" t="ИДЁТ" cls="wait" />,
+                <span key="n" className="font-medium">Партия {i + 1}</span>,
+                <span key="a" className={'tabular-nums ' + (a > b ? 'font-semibold' : 'text-neutral-400')}>{a}</span>,
+                <span key="b" className={'tabular-nums ' + (b > a ? 'font-semibold' : 'text-neutral-400')}>{b}</span>,
+                <P key="s" t="СЫГРАНА" cls="live" />,
               ],
-            }]
-            : []),
-        ]}
-      />
+            })),
+            ...(!done
+              ? [{
+                key: 'cur',
+                cells: [
+                  <span key="n" className="font-medium">Партия {sets.length + 1}</span>,
+                  <span key="a" className="tabular-nums">{pts[0]}</span>,
+                  <span key="b" className="tabular-nums">{pts[1]}</span>,
+                  <P key="s" t="ИДЁТ" cls="wait" />,
+                ],
+              }]
+              : []),
+          ]}
+        />
+      )}
 
       {!done && (
-        <div className="flex items-center gap-2">
-          <Button variant="outline" className="h-12 flex-1" onPress={onKeep}>
+        /* На телефоне решения идут друг под другом во всю ширину: два «Записать
+            партию» и «Подтвердить результат» в один ряд ужимаются до огрызков
+            текста, а нажимают их пальцем. */
+        <div className={phone ? 'flex flex-col gap-2' : 'flex items-center gap-2'}>
+          <Button variant="outline" className={phone ? 'h-12 w-full' : 'h-12 flex-1'} onPress={onKeep}>
             <Check size={15} /> Записать партию {sets.length + 1} · {pts[0]} : {pts[1]}
           </Button>
           {/* Результат подтверждают у доигранного матча ✳ — тот же порог, что
               и в режиме по очкам: экран один, регламент один. */}
           {over ? (
-            <Button variant="primary" className="h-12 flex-1" data-to="Э9.5" onPress={onDone}>
+            <Button
+              variant="primary"
+              className={phone ? 'h-14 w-full' : 'h-12 flex-1'}
+              data-to="Э9.5"
+              onPress={onDone}
+            >
               <Check size={15} /> Подтвердить результат · {won(0)} : {won(1)}
             </Button>
           ) : (
-            <div className="flex-1 text-center text-[13px] text-neutral-500">
+            <div className={'text-center text-[13px] text-neutral-500 ' + (phone ? 'py-1' : 'flex-1')}>
               До {WIN} побед в партиях · сейчас {won(0)} : {won(1)}
             </div>
           )}
@@ -765,7 +952,13 @@ function BySets9_3({ sets, pts, done, over, marks, won, onSet, onKeep, onDone }:
   );
 }
 
-export function Score9_3({ tab }: { tab?: string }) {
+/** Рабочая часть ввода счёта: состояние матча и оба режима ввода.
+
+    Вынесена из оболочки ✳ (30.08.2026): экран нужен и на планшете, и на
+    телефоне — планшетов у федерации нет, а телефон у судьи стола есть всегда.
+    Состояние живёт здесь, поэтому оба кадра ведут себя одинаково, а не
+    «похоже»: две копии одного счётчика разошлись бы на первой правке. */
+function ScoreBody({ tab, phone }: { tab?: string; phone?: boolean }) {
   /* Матч показан у развязки ✳: 3 : 2 по партиям и подача в шестой. Раньше на
      экране стояло 1 : 1, и «Подтвердить результат» уводило на Э9.5, где счёт
      4 : 2 и шесть партий, — два экрана одного матча показывали разные матчи.
@@ -892,11 +1085,7 @@ export function Score9_3({ tab }: { tab?: string }) {
   );
 
   return (
-    <TabletApp
-      title="Ввод счёта"
-      sub={`Стол 4 · Смагулов А. — Токаев М. · 1/8 финала · до ${WIN} побед в партиях`}
-      badge="ИДЁТ"
-    >
+    <>
       {/* В полосе над вкладками осталась одна «История матча» — справа, как
           второстепенное действие. Подтверждение результата уехало вниз, к
           счёту: подтверждают то, на что смотрят, а не то, что стоит в шапке.
@@ -937,6 +1126,7 @@ export function Score9_3({ tab }: { tab?: string }) {
             marks={marks}
             hand={hand !== null}
             won={won}
+            phone={phone}
             onSet={setWon}
             onDropHand={() => setHand(null)}
             onPoint={point}
@@ -955,15 +1145,50 @@ export function Score9_3({ tab }: { tab?: string }) {
             over={over}
             marks={marks}
             won={won}
+            phone={phone}
             onSet={setPoint}
             onKeep={keep}
             onDone={() => setDone(true)}
           />
         }
       />
+    </>
+  );
+}
+
+/** Подпись матча — одна на все три экрана матча: стол, пара, круг, регламент. */
+const MATCH_SUB = `Стол 4 · Смагулов А. — Токаев М. · 1/8 финала · до ${WIN} побед в партиях`;
+
+export function Score9_3({ tab }: { tab?: string }) {
+  return (
+    <TabletApp title="Ввод счёта" sub={MATCH_SUB} badge="ИДЁТ">
+      <ScoreBody tab={tab} />
     </TabletApp>
   );
 }
+
+/** Э9.3 на телефоне ✳ (30.08.2026, «все экраны в обоих») — главный кадр всего
+    адаптива роли.
+
+    Планшетов у федерации нет (комментарий 09.2026), а телефон есть у каждого
+    судьи стола: этот экран на 392 px и есть настоящее рабочее место. Поэтому
+    он ничего не «ужимает» из важного — половины табло встают друг под другом,
+    но кнопка очка у каждой остаётся во всю ширину и высотой 56 px, а счёт —
+    цифрой в 56 px: судья бьёт по ней не глядя, стоя у стола. Уехало только то,
+    что читают глазами: две колонки табло и таблица партий. */
+const Score9_3Phone = () => (
+  <PhoneRoleApp
+    role={R09P}
+    nav="Мой стол"
+    title="Ввод счёта"
+    sub={MATCH_SUB}
+    back={{ label: 'Мой стол', to: 'Э9.2' }}
+  >
+    <div className="flex flex-col gap-3.5 pb-2">
+      <ScoreBody phone />
+    </div>
+  </PhoneRoleApp>
+);
 
 /** Вкладки режима ввода — касабельные, на всю ширину: у готового PageTabs
     кнопки под курсор, а здесь по ним попадают пальцем, не глядя. */
@@ -1142,6 +1367,31 @@ const EvBadge = ({ tone }: { tone: Ev['tone'] }) => {
   );
 };
 
+/** Лента событий матча — одна на оба формата: строка узкая по устройству, но
+    состоит из значка, названия события и времени, и на 392 px не ломается. */
+const Log9_4Body = () => (
+  <>
+    {/* Подписи «Лента событий по времени» нет: экран так и называется
+        историей матча, а лента — единственное, что на нём есть. Второй
+        строки под названием тоже нет ✳: событие названо целиком в первой, а
+        счёт после каждого розыгрыша пересказывал то, что и так видно на
+        экране ввода. Строка отзывается под пальцем: ленту читают сверху
+        вниз, и подсветка держит место. */}
+    <div className="divide-y divide-neutral-100 overflow-hidden rounded-xl border border-neutral-200 bg-white shadow-sm">
+      {EVENTS.map((e) => (
+        <div key={e.at + e.t} className="flex items-center gap-3 px-4 py-2.5 hover:bg-neutral-50">
+          <EvBadge tone={e.tone} />
+          <span className="min-w-0 flex-1 text-[13.5px] font-medium leading-snug">{e.t}</span>
+          <span className="shrink-0 text-xs tabular-nums text-neutral-400">{e.at}</span>
+        </div>
+      ))}
+    </div>
+    <div className="text-xs text-neutral-500">
+      Только просмотр: исправление задним числом — через главного судью.
+    </div>
+  </>
+);
+
 export function Log9_4() {
   return (
     <TabletApp
@@ -1150,27 +1400,27 @@ export function Log9_4() {
       badge="ИДЁТ"
       back={{ label: 'Ввод счёта', to: 'Э9.3' }}
     >
-      {/* Подписи «Лента событий по времени» нет: экран так и называется
-          историей матча, а лента — единственное, что на нём есть. Второй
-          строки под названием тоже нет ✳: событие названо целиком в первой, а
-          счёт после каждого розыгрыша пересказывал то, что и так видно на
-          экране ввода. Строка отзывается под пальцем: ленту читают сверху
-          вниз, и подсветка держит место. */}
-      <div className="divide-y divide-neutral-100 overflow-hidden rounded-xl border border-neutral-200 bg-white shadow-sm">
-        {EVENTS.map((e) => (
-          <div key={e.at + e.t} className="flex items-center gap-3 px-4 py-2.5 hover:bg-neutral-50">
-            <EvBadge tone={e.tone} />
-            <span className="flex-1 text-[13.5px] font-medium">{e.t}</span>
-            <span className="text-xs tabular-nums text-neutral-400">{e.at}</span>
-          </div>
-        ))}
-      </div>
-      <div className="text-xs text-neutral-500">
-        Только просмотр: исправление задним числом — через главного судью.
-      </div>
+      <Log9_4Body />
     </TabletApp>
   );
 }
+
+/** Э9.4 на телефоне ✳: у телефонной оболочки история — свой раздел в нижних
+    вкладках, поэтому сюда приходят и от кнопки над счётом, и снизу. Возврат на
+    ввод счёта остаётся: судья открывает ленту посреди матча. */
+const Log9_4Phone = () => (
+  <PhoneRoleApp
+    role={R09P}
+    nav="История"
+    title="История матча"
+    sub="Стол 4 · Смагулов А. — Токаев М. · с автором и временем"
+    back={{ label: 'Ввод счёта', to: 'Э9.3' }}
+  >
+    <div className="flex flex-col gap-3.5 pb-2">
+      <Log9_4Body />
+    </div>
+  </PhoneRoleApp>
+);
 
 /* ── Э9.5 · Результат отправлен ──────────────────────────────────── */
 
@@ -1187,15 +1437,29 @@ const SENT_GAMES: [number, number][] = [[11, 9], [9, 11], [11, 7], [8, 11], [11,
 
     Код Э9.5 освободился: на нём стоял «мой рейтинг судьи», уехавший в кабинет
     (Э0.11). */
-export function Sent9_5() {
-  return (
-    <TabletApp title="Результат отправлен" sub="Стол 4 · Смагулов А. — Токаев М. · 1/8 финала" badge="ИДЁТ">
-      <div className="flex flex-col items-center gap-4 rounded-xl border border-neutral-200 bg-white px-6 py-8 text-center shadow-sm">
-        <Chip color="success" size="sm">
-          <Check size={13} className="mr-1" /> РЕЗУЛЬТАТ ПРИНЯТ
-        </Chip>
-        {/* Итог — тем же приёмом, что счёт партий на табло: цифра победителя
-            тёмная, проигравшего серая. */}
+/** Итог отправленного матча — один на оба формата. `phone` разводит счёт и
+    подпись пары на две строки: три элемента в ряд на 392 px оставляют цифрам
+    по сорок пикселей, а цифра здесь и есть содержание экрана. */
+const Sent9_5Body = ({ phone }: { phone?: boolean }) => (
+  <>
+    <div className={'flex flex-col items-center gap-4 rounded-xl border border-neutral-200 bg-white text-center shadow-sm ' + (phone ? 'px-4 py-6' : 'px-6 py-8')}>
+      <Chip color="success" size="sm">
+        <Check size={13} className="mr-1" /> РЕЗУЛЬТАТ ПРИНЯТ
+      </Chip>
+      {/* Итог — тем же приёмом, что счёт партий на табло: цифра победителя
+          тёмная, проигравшего серая. */}
+      {phone ? (
+        <div className="flex flex-col items-center gap-1">
+          <span className="text-[11px] font-semibold uppercase tracking-wider text-neutral-400">
+            Смагулов А. — Токаев М.
+          </span>
+          <span className="flex items-baseline gap-4">
+            <span className="text-7xl font-bold tabular-nums tracking-tight">4</span>
+            <span className="text-3xl font-bold text-neutral-300">:</span>
+            <span className="text-7xl font-bold tabular-nums tracking-tight text-neutral-400">2</span>
+          </span>
+        </div>
+      ) : (
         <div className="flex items-center gap-6">
           <span className="text-7xl font-bold tabular-nums tracking-tight">4</span>
           <span className="text-[11px] font-semibold uppercase tracking-wider text-neutral-400">
@@ -1203,28 +1467,46 @@ export function Sent9_5() {
           </span>
           <span className="text-7xl font-bold tabular-nums tracking-tight text-neutral-400">2</span>
         </div>
-        {/* Партии показаны целиком не для красоты ✳: увидеть ошибку надо
-            сейчас — после подтверждения судья стола счёт уже не правит. */}
-        <GameCells games={SENT_GAMES} />
-        {/* Что именно ушло ✳: не только счёт. Карточки и тайм-ауты уходят
-            вместе с результатом (TZ §6.5), и судья должен видеть, что они
-            отправлены, — спрашивать о них будут после матча. */}
-        <div className="max-w-md text-xs leading-relaxed text-neutral-500">
-          Ушло главному судье и в базу: счёт, партии, карточки и тайм-ауты · сетка продвинулась ·
-          15:58, отправил Оралбай Е.
-        </div>
+      )}
+      {/* Партии показаны целиком не для красоты ✳: увидеть ошибку надо
+          сейчас — после подтверждения судья стола счёт уже не правит. */}
+      <GameCells games={SENT_GAMES} />
+      {/* Что именно ушло ✳: не только счёт. Карточки и тайм-ауты уходят
+          вместе с результатом (TZ §6.5), и судья должен видеть, что они
+          отправлены, — спрашивать о них будут после матча. */}
+      <div className="max-w-md text-xs leading-relaxed text-neutral-500">
+        Ушло главному судье и в базу: счёт, партии, карточки и тайм-ауты · сетка продвинулась ·
+        15:58, отправил Оралбай Е.
       </div>
+    </div>
 
-      {/* Что дальше — прямо здесь: между матчами у судьи минуты, искать дорогу
-          он не должен. Акцент один ✳ — «К моему столу»: это единственное, что
-          он делает каждый раз. «История матча» и «Запросить правку» стоят
-          рядом тихими: первая на просмотр, вторая бывает раз на сотню матчей.
-          «Запросить правку» стоит здесь, а не только в состояниях: ошибку
-          замечают на этом экране — на нём партии и показаны целиком. */}
-      <div className="flex flex-col gap-2">
-        <div className="text-center text-[12.5px] text-neutral-500">
-          Следующая пара — 16:20 · вызов придёт от главного судьи
+    {/* Что дальше — прямо здесь: между матчами у судьи минуты, искать дорогу
+        он не должен. Акцент один ✳ — «К моему столу»: это единственное, что
+        он делает каждый раз. «История матча» и «Запросить правку» стоят
+        рядом тихими: первая на просмотр, вторая бывает раз на сотню матчей.
+        «Запросить правку» стоит здесь, а не только в состояниях: ошибку
+        замечают на этом экране — на нём партии и показаны целиком. */}
+    <div className="flex flex-col gap-2">
+      <div className="text-center text-[12.5px] text-neutral-500">
+        Следующая пара — 16:20 · вызов придёт от главного судьи
+      </div>
+      {phone ? (
+        /* На телефоне главное действие — во всю ширину и первым по месту под
+           пальцем; тихие кнопки уходят под него в один ряд. */
+        <div className="flex flex-col gap-2">
+          <Button variant="primary" className="h-14 w-full" data-to="Э9.2">
+            <Radio size={15} /> К моему столу
+          </Button>
+          <div className="flex items-center justify-center gap-2">
+            <Button variant="ghost" data-to="Э9.4">
+              <History size={15} /> История
+            </Button>
+            <Button variant="ghost">
+              <Undo2 size={15} /> Запросить правку
+            </Button>
+          </div>
         </div>
+      ) : (
         <div className="flex items-center justify-center gap-2">
           <Button variant="ghost" data-to="Э9.4">
             <History size={15} /> История матча
@@ -1236,16 +1518,39 @@ export function Sent9_5() {
             <Radio size={15} /> К моему столу
           </Button>
         </div>
-      </div>
+      )}
+    </div>
 
-      <Bar>
-        Исправить счёт после подтверждения судья стола уже не может: правка идёт через главного
-        судью, с лимитом времени и записью в журнал (TZ §6). Поэтому экран и показывает партии
-        целиком — увидеть ошибку надо сейчас, а не после.
-      </Bar>
+    <Bar>
+      Исправить счёт после подтверждения судья стола уже не может: правка идёт через главного
+      судью, с лимитом времени и записью в журнал (TZ §6). Поэтому экран и показывает партии
+      целиком — увидеть ошибку надо сейчас, а не после.
+    </Bar>
+  </>
+);
+
+export function Sent9_5() {
+  return (
+    <TabletApp title="Результат отправлен" sub="Стол 4 · Смагулов А. — Токаев М. · 1/8 финала" badge="ИДЁТ">
+      <Sent9_5Body />
     </TabletApp>
   );
 }
+
+/** Э9.5 на телефоне ✳: экран-подтверждение, и на 392 px он остаётся тем же —
+    крупный итог, все партии целиком и одна дорога дальше. */
+const Sent9_5Phone = () => (
+  <PhoneRoleApp
+    role={R09P}
+    nav="Мой стол"
+    title="Результат отправлен"
+    sub="Стол 4 · Смагулов А. — Токаев М. · 1/8 финала"
+  >
+    <div className="flex flex-col gap-3.5 pb-2">
+      <Sent9_5Body phone />
+    </div>
+  </PhoneRoleApp>
+);
 
 const Sent9_5States = () => (
   <States>
@@ -1324,21 +1629,28 @@ const Sent9_5States = () => (
     общий (`role00`), но его полка оттуда не экспортируется, и без неё борд
     показывал только удачный путь. Подписи кадров — из `data/role00.ts` (Э0.1):
     три состояния и зона «Выбор контекста — если ролей несколько». */
+/* Полка переписана под вход по ИИН и одноразовому коду ✳ (30.08.2026): пароля
+   в системе нет. Полный набор состояний — на борде сквозных экранов (Э0.1). */
 const Login0_1States9 = () => (
   <States>
     <Shot
       tone="danger"
-      title="Неверный логин или пароль"
-      text="Ошибка под полем; поля не очищаются."
+      title="Код подтверждения не подошёл ✳"
+      text="ИИН уже принят — заново его не вводят; ошибка стоит под полем кода."
     >
       <Frag>
-        <FormGrid>
-          <TextInput label="Телефон или почта" value="+7 705 431 20 18" wide />
-          <TextInput label="Пароль" value="••••••" bad wide />
-        </FormGrid>
-        <div className="mt-1.5 text-xs text-red-600">
-          Неверный логин или пароль. Проверьте раскладку или восстановите пароль.
-        </div>
+        <Rows>
+          <Row
+            nm="ИИН принят"
+            sub="•••• •••• 0123 · Smart Bridge узнал человека"
+            pill={{ t: 'ПРОВЕРЕН', cls: 'live' }}
+          />
+          <Row
+            nm="Код из SMS не совпал"
+            sub="код одноразовый: из прежней SMS он уже не работает"
+            pill={{ t: 'ОШИБКА', cls: 'bad' }}
+          />
+        </Rows>
         <div className="mt-3">
           <DisabledAction>Войти</DisabledAction>
         </div>
@@ -1391,21 +1703,188 @@ const Login0_1States9 = () => (
 
     <Shot
       tone="warning"
-      title="Аккаунт не активирован ✳"
-      text="Приглашение отправлено, но пароль ещё не задан — стыкуется с Э1.10."
+      title="Приглашение ещё не принято ✳"
+      text="Ссылка выпущена, но человек не подтвердил себя ИИН и кодом — учётной записи ещё нет (Э0.6)."
     >
       <Frag>
         <Rows>
           <Row
-            nm="Аккаунт ждёт активации"
-            sub="приглашение отправлено · пароль задаётся по ссылке из письма (Э1.10)"
-            pill={{ t: 'НЕ АКТИВИРОВАН', cls: 'wait' }}
+            nm="Аккаунта ещё нет"
+            sub="ссылка выпущена (Э1.10) · подтвердить себя ИИН и кодом человек не успел"
+            pill={{ t: 'ЖДЁМ', cls: 'wait' }}
           />
         </Rows>
       </Frag>
     </Shot>
   </States>
 );
+
+/* ── Э0.7 · Регистрация судьи на телефоне ✳ ─────────────────────── */
+
+/** ИИН судьи — тот же, что на веб-кадре Э0.7 (`role00.tsx`): один человек,
+    Оралбай Ержан, 03.11.1988. Он же стоит в назначениях и истории судейства. */
+const IIN_JUDGE9 = '881103300417';
+
+/** Номер, на который уходит код: привязан к ИИН и до входа показывается только
+    маской — как и на веб-кадре. */
+const OTP_JUDGE9 = '+7 7•• ••• 45 90';
+
+/** Шкала шагов телефонного кадра: три коротких слова полосой. */
+const PhoneSteps = ({ at, steps }: { at: number; steps: readonly string[] }) => (
+  <div className="flex items-start gap-1.5">
+    {steps.map((t, i) => (
+      <span
+        key={t}
+        className={
+          'flex-1 border-t-2 pt-1.5 text-[10px] font-semibold uppercase tracking-wider ' +
+          (i + 1 <= at ? 'border-blue-600 text-blue-700' : 'border-neutral-200 text-neutral-400')
+        }
+      >
+        {t}
+      </span>
+    ))}
+  </div>
+);
+
+/** Тот же экран регистрации судьи, что на сайте (Э0.7), но в телефоне ✳
+    (30.08.2026, «все экраны в обоих»).
+
+    Судья заводит себя сам — и делает это чаще всего с телефона: код из SMS
+    приходит на то же устройство, с которого регистрируются. Шаги те же три
+    (ИИН → код → анкета) и правила те же: ФИО, дату рождения и пол система
+    берёт из государственной базы по ИИН, а категорию не спрашивает вовсе — её
+    проставляет коллегия по удостоверению (TZ §7.2).
+
+    Экспортируется, потому что этот же экран стоит на борде роли 8: путь в
+    систему у заместителя главного судьи тот же, и второй копии у него быть не
+    должно.
+
+    Второй формат показывает меньше в одном месте ✳: длинные пояснения сжаты до
+    одной фразы каждое, а полные формулировки и полка состояний остаются на
+    ноутбучном кадре — читать их с телефона всё равно не будут. */
+export function SignUpJudgePhone0_7() {
+  const [step, setStep] = useState<1 | 2 | 3>(1);
+  const [iin, setIin] = useState(IIN_JUDGE9);
+  return (
+    <Phone>
+      <div className="flex min-h-0 flex-1 flex-col gap-3.5 overflow-auto px-5 pb-6 pt-2">
+        <div className="flex flex-col items-center gap-2.5 text-center">
+          <Brand size="lg" />
+          {/* Своя окраска формы судьи ✳: формы спортсмена и судьи похожи как
+              две капли, а заголовок читают уже после того, как начали
+              заполнять. */}
+          <Chip color="warning" size="sm" variant="soft">
+            <Gavel size={12} className="mr-1 inline" /> СУДЕЙСКАЯ КОЛЛЕГИЯ
+          </Chip>
+          <div className="text-xl font-semibold tracking-tight">Регистрация судьи</div>
+          <div className="text-[12px] leading-snug text-neutral-500">
+            Аккаунт вы заводите сами · категорию проставляет коллегия
+          </div>
+        </div>
+
+        <PhoneSteps at={step} steps={['ИИН', 'Код', 'Анкета']} />
+
+        {step === 1 && (
+          <>
+            {/* Поле ИИН крупное и по центру: номер набирают вслепую, сверяясь
+                с удостоверением, а не читая с экрана. */}
+            <label className="flex flex-col gap-1.5">
+              <span className="flex items-baseline justify-between">
+                <span className="text-xs font-medium text-neutral-500">ИИН</span>
+                <span className="text-[11px] tabular-nums text-neutral-400">{iin.length} из 12</span>
+              </span>
+              <input
+                aria-label="ИИН — индивидуальный идентификационный номер"
+                inputMode="numeric"
+                maxLength={12}
+                placeholder="000000000000"
+                className="w-full rounded-lg border border-neutral-300 bg-white px-3 py-3 text-center font-mono text-lg tracking-[0.18em] outline-none placeholder:text-neutral-300 focus:border-blue-500"
+                value={iin}
+                onChange={(e) => setIin(e.target.value.replace(/\D/g, '').slice(0, 12))}
+              />
+            </label>
+            <Bar>
+              По ИИН система спросит государственную базу и заполнит фамилию, имя, отчество и дату
+              рождения. Пароля в системе нет.
+            </Bar>
+            <Button
+              className="h-12 w-full"
+              isDisabled={iin.length !== 12}
+              variant="primary"
+              onPress={() => setStep(2)}
+            >
+              Продолжить <ArrowRight size={15} />
+            </Button>
+          </>
+        )}
+
+        {step === 2 && (
+          <div className="flex flex-col items-center gap-3.5">
+            <div className="rounded-lg bg-neutral-100 px-3.5 py-2 text-center text-[12px] text-neutral-700">
+              Код отправлен SMS на <b className="font-semibold tabular-nums">{OTP_JUDGE9}</b>
+            </div>
+            {/* Поле кода — то же `InputOTP`, что на сайте: не портал, и на
+                борде ничего не накрывает. */}
+            <InputOTP aria-label="Код подтверждения из SMS" defaultValue="482913" maxLength={6} pattern={REGEXP_ONLY_DIGITS}>
+              <InputOTP.Group>
+                <InputOTP.Slot index={0} />
+                <InputOTP.Slot index={1} />
+                <InputOTP.Slot index={2} />
+              </InputOTP.Group>
+              <InputOTP.Separator />
+              <InputOTP.Group>
+                <InputOTP.Slot index={3} />
+                <InputOTP.Slot index={4} />
+                <InputOTP.Slot index={5} />
+              </InputOTP.Group>
+            </InputOTP>
+            <span className="text-[12px] text-neutral-500">
+              Отправить код снова — через <b className="font-semibold tabular-nums text-neutral-700">0:47</b>
+            </span>
+            <Button className="h-12 w-full" variant="primary" onPress={() => setStep(3)}>
+              Подтвердить <ArrowRight size={15} />
+            </Button>
+          </div>
+        )}
+
+        {step === 3 && (
+          <>
+            {/* Пришедшее из государственной базы — на чтение и в одну колонку:
+                на 392 px пара полей в ряд режет отчество. */}
+            <div className="rounded-xl border border-neutral-200 bg-white p-3 shadow-sm">
+              <div className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-neutral-400">
+                Из государственной базы по ИИН
+              </div>
+              <FormGrid>
+                <FieldView label="Фамилия, имя, отчество" value="Оралбай Ержан Маратович" wide />
+                <FieldView label="Дата рождения" value="03.11.1988" wide />
+                <FieldView label="ИИН" value={IIN_JUDGE9} wide />
+              </FormGrid>
+            </div>
+            <FormGrid>
+              <TextInput label="Телефон" placeholder="+7 ___ ___ __ __" wide />
+              <TextInput label="Почта" placeholder="имя@домен" wide />
+              <PickField label="Регион — от него коэффициент за выезд (§7.2)" value="Павлодарская область" wide />
+            </FormGrid>
+            <Button className="h-12 w-full" variant="primary">
+              <Gavel size={15} /> Зарегистрироваться судьёй
+            </Button>
+            <Bar tone="warning">
+              Категории в форме нет: её проставит коллегия по удостоверению, а сам документ судья
+              загружает потом в кабинете. До подтверждения S2 не начисляется и в наряд не назначают.
+            </Bar>
+          </>
+        )}
+
+        <div className="flex justify-center">
+          <button type="button" data-to="Э0.1" className="text-[12.5px] font-semibold text-blue-600">
+            Уже есть аккаунт — войти
+          </button>
+        </div>
+      </div>
+    </Phone>
+  );
+}
 
 /** Экраны роли по кодам: из этой карты собираются и борд, и карта флоу. */
 export const SCREENS: ScreenMap = {
@@ -1420,6 +1899,9 @@ export const SCREENS: ScreenMap = {
         <Login0_1States9 />
       </>
     ),
+    /* Вход в телефоне уже нарисован у сквозных экранов — берём его, а не
+       рисуем второй: вход один на сайт и приложение. */
+    alt: () => <LoginPhone0_1 />,
     next: '«Стать судьёй» на входе',
   },
   'Э0.7': {
@@ -1430,6 +1912,7 @@ export const SCREENS: ScreenMap = {
         <SignUpJudge0_7States />
       </>
     ),
+    alt: () => <SignUpJudgePhone0_7 />,
     next: 'вход под своей ролью',
   },
   'Э9.1': {
@@ -1440,6 +1923,9 @@ export const SCREENS: ScreenMap = {
         <Tours9_1States />
       </>
     ),
+    /* Состояния во втором формате не повторяются: они про поведение экрана, а
+       не про устройство. */
+    alt: () => <Tours9_1Phone />,
     next: 'строка назначения',
   },
   'Э9.2': {
@@ -1450,6 +1936,7 @@ export const SCREENS: ScreenMap = {
         <Table9_2States />
       </>
     ),
+    alt: () => <Table9_2Phone />,
     next: 'принять вызов пары',
   },
   'Э9.3': {
@@ -1460,6 +1947,7 @@ export const SCREENS: ScreenMap = {
         <Score9_3States />
       </>
     ),
+    alt: () => <Score9_3Phone />,
     next: 'кнопка «история»',
   },
   'Э9.5': {
@@ -1470,11 +1958,13 @@ export const SCREENS: ScreenMap = {
         <Sent9_5States />
       </>
     ),
+    alt: () => <Sent9_5Phone />,
     next: 'лента событий матча',
   },
   'Э9.4': {
     cap: 'История матча',
     view: () => <Log9_4 />,
+    alt: () => <Log9_4Phone />,
     next: 'кабинет судьи — заявки и рейтинг',
   },
 };

@@ -16,14 +16,15 @@
 
 import { useState, type ReactNode } from 'react';
 import {
-  BarChart3, Bell, CalendarDays, Check, CheckCheck, ChevronDown, Gavel, History, KeyRound,
-  LayoutDashboard, LogIn, LogOut, Newspaper, Play, Radio, Scroll, Trophy, UserCog, UserPlus,
+  ArrowRight, BarChart3, Bell, CalendarDays, Check, CheckCheck, ChevronDown, Gavel, History,
+  LayoutDashboard, LogIn, LogOut, Newspaper, Play, Radio, RefreshCw, Scroll, ServerOff,
+  ShieldCheck, Smartphone, Trophy, UserCog, UserPlus,
 } from 'lucide-react';
-import { Avatar, Button, Chip } from '@heroui/react';
+import { Avatar, Button, Chip, InputOTP, REGEXP_ONLY_DIGITS } from '@heroui/react';
 import {
   A, AW, BackLink, Bar, DataTable, DisabledAction, EmptyBox, Facts, FieldView, FormGrid,
-  GameCells, Laptop, MatchCard, PageTabs, Panel, Phone, PickField, Pill, QuietAction, Row, Rows,
-  ScreenScope, Separator, TextInput, WebApp,
+  GameCells, Laptop, MatchCard, PageTabs, Panel, Phone, PhoneRoleApp, PickField, Pill, QuietAction,
+  Row, Rows, ScreenScope, Separator, TextInput, WebApp,
   type RoleUI,
 } from '../kit/hero/app';
 /* Из старого слоя остаются только мета-компоненты борда: колонки, стрелки и
@@ -105,53 +106,219 @@ const ALink = ({ to, muted, children }: { to?: string; muted?: boolean; children
   </button>
 );
 
-/** Пароль со «показать»: доменного поля с суффиксом в ките нет, поэтому поле
-    собрано нативным вводом — тем же приёмом, что DateInput нового слоя. */
-function PassInput({
-  label = 'Пароль',
-  value = '••••••••••',
-  error,
-}: {
-  label?: string;
-  value?: string;
-  /** Текст ошибки под полем: поле краснеет, введённое не очищается. */
-  error?: string;
-}) {
-  const [v, setV] = useState(value);
-  return (
-    <label className="col-span-2 flex flex-col gap-1">
-      <span className="text-xs font-medium text-neutral-500">{label}</span>
+/* ── Вход по ИИН и одноразовому коду ✳ (30.08.2026) ─────────────
+   Решение владельца продукта: аутентификация идёт через **Smart Bridge** —
+   человек вводит ИИН, подтверждает вход одноразовым кодом из SMS. Пароля в
+   системе нет вовсе: его нечего задавать, менять, забывать и подбирать.
+   Отсюда и весь набор ниже — поле ИИН, поле кода и шкала шагов. */
+
+/** Номер, на который уходит код, — всегда в маске: он привязан к ИИН и
+    приходит вместе с ним, показывать его целиком до входа нельзя. */
+const OTP_PHONE = '+7 7•• ••• 45 90';
+
+/** ИИН для макетов: 12 цифр, первые шесть — дата рождения (Абаева Д.,
+    14.03.1987). Числа на всех кадрах сходятся — это тот же человек, что в
+    шапке и в профиле (Э0.2). */
+const IIN_DEMO = '870314400123';
+
+/** Шкала шагов: у входа их два (ИИН → код), у регистрации три (ещё анкета).
+    Без неё второй экран выглядит так, будто вход не закончился ошибкой. */
+const StepBar = ({ at, steps }: { at: number; steps: readonly string[] }) => (
+  <div className="mb-5 flex items-start gap-1.5">
+    {steps.map((t, i) => (
       <span
+        key={t}
         className={
-          'flex items-center rounded-lg border bg-white focus-within:border-blue-500 ' +
-          (error ? 'border-red-400' : 'border-neutral-300')
+          'flex flex-1 items-center gap-1.5 border-t-2 pt-2 text-[11px] font-semibold uppercase tracking-wider ' +
+          (i + 1 <= at ? 'border-blue-600 text-blue-700' : 'border-neutral-200 text-neutral-400')
         }
       >
-        <KeyRound size={14} className="ml-3 shrink-0 text-neutral-400" />
-        <input
-          aria-label={label}
-          className="min-w-0 flex-1 bg-transparent px-2.5 py-1.5 text-sm outline-none placeholder:text-neutral-400"
-          value={v}
-          onChange={(e) => setV(e.target.value)}
-        />
-        <button type="button" className="px-3 text-xs font-medium text-blue-600">
-          показать
-        </button>
+        <span
+          className={
+            'grid size-4 shrink-0 place-items-center rounded-full text-[9px] ' +
+            (i + 1 <= at ? 'bg-blue-600 text-white' : 'bg-neutral-200 text-neutral-500')
+          }
+        >
+          {i + 1}
+        </span>
+        {t}
       </span>
-      {error && <span className="text-xs leading-snug text-red-600">{error}</span>}
+    ))}
+  </div>
+);
+
+/** Поле ИИН — двенадцать цифр, набранных с документа.
+
+    Не `TextInput` кита: ИИН набирают вслепую, сверяясь с удостоверением, и
+    поэтому здесь крупный моноширинный кегль с разрядкой, счётчик «сколько из
+    двенадцати» и подпись, что это за номер. Всё, кроме цифр, поле отбрасывает
+    на вводе — пробелы и дефисы из скопированной строки не должны ронять форму.
+
+    Поле управляемое, когда сверху передан `onChange` (так работает вход: по
+    длине включается «Продолжить»), и живёт своим состоянием на полках
+    состояний, где кадр статичен. */
+function IinField({
+  value = '',
+  onChange,
+  bad,
+  note,
+}: {
+  value?: string;
+  onChange?: (v: string) => void;
+  /** Поле не проходит проверку: 12 цифр не набраны или ИИН не найден. */
+  bad?: boolean;
+  /** Подпись под полем: подсказка или текст ошибки. */
+  note?: string;
+}) {
+  const [own, setOwn] = useState(value);
+  const v = onChange ? value : own;
+  const set = (next: string) => {
+    const digits = next.replace(/\D/g, '').slice(0, 12);
+    if (onChange) onChange(digits);
+    else setOwn(digits);
+  };
+  return (
+    <label className="flex flex-col gap-1.5">
+      <span className="flex items-baseline justify-between">
+        <span className="text-xs font-medium text-neutral-500">ИИН</span>
+        <span className={'text-[11px] tabular-nums ' + (bad ? 'text-red-600' : 'text-neutral-400')}>
+          {v.length} из 12
+        </span>
+      </span>
+      <input
+        aria-label="ИИН — индивидуальный идентификационный номер"
+        inputMode="numeric"
+        maxLength={12}
+        placeholder="000000000000"
+        className={
+          'w-full rounded-lg border bg-white px-3 py-2.5 text-center font-mono text-lg tracking-[0.28em] outline-none placeholder:text-neutral-300 focus:border-blue-500 ' +
+          (bad ? 'border-red-400' : 'border-neutral-300')
+        }
+        value={v}
+        onChange={(e) => set(e.target.value)}
+      />
+      <span className={'text-xs leading-snug ' + (bad ? 'text-red-600' : 'text-neutral-500')}>
+        {note ?? 'Индивидуальный идентификационный номер — 12 цифр, как в удостоверении личности'}
+      </span>
     </label>
   );
 }
 
-/** Согласие на обработку персональных данных — обязательная отметка отдельной
-    строкой, а не мелким текстом (решение из флоу Э0.5). Checkbox из
-    @heroui/react в макетах не разрешён — нативная отметка с акцентом токеном
-    Tailwind. */
-const Consent = ({ off, sub }: { off?: boolean; sub?: string }) => (
+/** Шаг «код»: шесть цифр из SMS.
+
+    Поле — `InputOTP` из HeroUI (композиционный: Group + Slot + Separator): он
+    не портал, и на борде, где стоит полтора десятка экранов разом, ничего не
+    накрывает.
+
+    Обратный отсчёт нарисован числом, а не тикает: борд снимается скриншотом, и
+    живой таймер давал бы каждый раз другой кадр. Состояние «отсчёт кончился,
+    кнопка ожила» показано отдельным кадром на полке состояний. */
+function CodeStep({
+  value = '482913',
+  bad,
+  err,
+  resend,
+}: {
+  value?: string;
+  /** Код введён неверно: ячейки краснеют, набранное не стирается. */
+  bad?: boolean;
+  err?: string;
+  /** Отсчёт кончился — «отправить снова» стало кнопкой. */
+  resend?: boolean;
+}) {
+  return (
+    <div className="flex flex-col items-center gap-3.5">
+      <div className="flex items-center gap-2 rounded-lg bg-neutral-100 px-3.5 py-2 text-[12.5px] text-neutral-700">
+        <Smartphone size={14} className="shrink-0 text-neutral-500" />
+        Код отправлен SMS на <b className="font-semibold tabular-nums">{OTP_PHONE}</b>
+      </div>
+      <InputOTP
+        aria-label="Код подтверждения из SMS"
+        /* Пустое поле выражается отсутствием значения, а не пустой строкой —
+           так же, как в справочнике HeroUI (история «02 · Ввод»). */
+        defaultValue={value || undefined}
+        isInvalid={bad}
+        maxLength={6}
+        pattern={REGEXP_ONLY_DIGITS}
+      >
+        <InputOTP.Group>
+          <InputOTP.Slot index={0} />
+          <InputOTP.Slot index={1} />
+          <InputOTP.Slot index={2} />
+        </InputOTP.Group>
+        <InputOTP.Separator />
+        <InputOTP.Group>
+          <InputOTP.Slot index={3} />
+          <InputOTP.Slot index={4} />
+          <InputOTP.Slot index={5} />
+        </InputOTP.Group>
+      </InputOTP>
+      {err && <div className="text-center text-xs leading-snug text-red-600">{err}</div>}
+      {resend ? (
+        <button type="button" className="text-[12.5px] font-semibold text-blue-600 hover:underline">
+          <RefreshCw size={13} className="mr-1 inline" /> Отправить код снова
+        </button>
+      ) : (
+        <span className="text-[12.5px] text-neutral-500">
+          Отправить код снова — через{' '}
+          <b className="font-semibold tabular-nums text-neutral-700">0:47</b>
+        </span>
+      )}
+    </div>
+  );
+}
+
+/** Блок «из государственной базы»: ФИО, дата рождения и пол пришли по ИИН
+    через Smart Bridge и здесь не правятся — в этом весь смысл интеграции.
+    Показаны `FieldView`, потому что это значения, а не поля ввода. */
+const FromState = ({
+  fio,
+  born,
+  sex,
+  iin = IIN_DEMO,
+  one,
+}: {
+  fio: string;
+  born: string;
+  sex: string;
+  iin?: string;
+  /** Телефон ✳ (30.08.2026): поля в одну колонку и подпись панели короче. На
+      392 px две колонки дают по 150 px — ни ФИО, ни дата в них не помещаются,
+      а длинная подпись уезжает в три строки и отжимает значок Smart Bridge. */
+  one?: boolean;
+}) => (
+  <Panel
+    title="Из государственной базы по ИИН"
+    sub={
+      one
+        ? 'Пришли через Smart Bridge — здесь не правятся'
+        : 'ФИО, дата рождения и пол пришли через Smart Bridge — здесь они не правятся'
+    }
+    extra={
+      <Chip color="success" size="sm" variant="soft">
+        <ShieldCheck size={12} className="mr-1 inline" /> SMART BRIDGE
+      </Chip>
+    }
+  >
+    <FormGrid>
+      <FieldView label="Фамилия, имя, отчество" value={fio} wide />
+      <FieldView label="Дата рождения" value={born} wide={one} />
+      <FieldView label="Пол" value={sex} wide={one} />
+      <FieldView label="ИИН" value={iin} wide />
+    </FormGrid>
+  </Panel>
+);
+
+/** Согласие — обязательная отметка отдельной строкой, а не мелким текстом
+    (решение из флоу Э0.5). Их теперь два ✳ (30.08.2026): к обработке данных
+    добавилось согласие на запрос сведений из государственной базы — система
+    тянет ФИО и дату рождения по чужому номеру, и спросить об этом обязана.
+    Checkbox из @heroui/react в макетах не разрешён — нативная отметка. */
+const Consent = ({ t, off, sub }: { t?: string; off?: boolean; sub?: string }) => (
   <label className="col-span-2 mt-1 flex items-start gap-2.5">
     <input type="checkbox" defaultChecked={!off} className="mt-0.5 size-4 shrink-0 accent-blue-600" />
     <span className="text-[12.5px] leading-snug text-neutral-700">
-      Согласие на обработку персональных данных ✳
+      {t ?? 'Согласие на обработку персональных данных'} ✳
       {sub && <span className="block text-xs text-neutral-500">{sub}</span>}
     </span>
   </label>
@@ -166,6 +333,9 @@ const SecCap = ({ children }: { children: ReactNode }) => (
 );
 
 /* ── Оболочка страниц без входа ─────────────────────────────────── */
+
+/** Подпись в подвале титульных страниц — одна на оба формата. */
+const AUTH_FOOT = 'Федерация настольного тенниса Республики Казахстан · цифровая платформа турниров';
 
 /** Титульная страница: до входа ни сайдбара, ни профиля — карточка по центру
     на фирменном синем. Синий — цвет знака ФНТ; кольца на фоне — намёк на мяч,
@@ -196,41 +366,75 @@ const AuthPage = ({
           {children}
         </div>
       </div>
-      <div className="relative shrink-0 pb-5 text-center text-xs text-blue-200/80">
-        Федерация настольного тенниса Республики Казахстан · цифровая платформа турниров
-      </div>
+      <div className="relative shrink-0 pb-5 text-center text-xs text-blue-200/80">{AUTH_FOOT}</div>
     </div>
   </Laptop>
 );
 
 /* ── Э0.1 · Вход ───────────────────────────────────────────────── */
 
+/** Вход — два шага на одном экране ✳ (30.08.2026): ИИН → одноразовый код.
+
+    Шаги переключаются по-настоящему, внутренним состоянием: это один экран в
+    двух состояниях, а не два макета рядом. Пока не набраны все двенадцать
+    цифр, «Продолжить» не нажимается — по ИИН система идёт в Smart Bridge, и
+    ходить туда с недобранным номером незачем.
+
+    «Забыли пароль» с экрана убрана: пароля в системе нет, восстанавливать
+    нечего. Вместе с ней ушли и все состояния про подбор пароля. */
 export function Login0_1() {
+  const [step, setStep] = useState<1 | 2>(1);
+  const [iin, setIin] = useState(IIN_DEMO);
+  const ready = iin.length === 12;
   return (
     <AuthPage>
-      <div className="mb-6 flex flex-col items-center gap-4 text-center">
+      <div className="mb-5 flex flex-col items-center gap-4 text-center">
         <Brand size="lg" />
         <div>
           <div className="text-xl font-semibold tracking-tight">Вход в систему</div>
           <div className="mt-1 text-[12.5px] text-neutral-500">
-            Один аккаунт на все роли — сайт и приложение
+            {step === 1
+              ? 'По ИИН через Smart Bridge · пароля в системе нет'
+              : 'Подтвердите вход кодом из SMS'}
           </div>
         </div>
       </div>
 
-      <FormGrid>
-        <TextInput label="Телефон или почта" value="+7 705 431 20 18" wide />
-        <PassInput />
-      </FormGrid>
+      <StepBar at={step} steps={['ИИН', 'Код из SMS']} />
 
-      <div className="mt-3 flex items-center justify-between">
-        <ALink>Забыли пароль</ALink>
+      {step === 1 ? (
+        <>
+          <IinField value={iin} onChange={setIin} />
+          <Button
+            className="mt-4 w-full"
+            isDisabled={!ready}
+            variant="primary"
+            onPress={() => setStep(2)}
+          >
+            Продолжить <ArrowRight size={15} />
+          </Button>
+        </>
+      ) : (
+        <>
+          <CodeStep />
+          <Button className="mt-4 w-full" variant="primary">
+            <LogIn size={15} /> Войти
+          </Button>
+          <div className="mt-2 flex justify-center">
+            <button
+              type="button"
+              className="text-[12.5px] font-semibold text-neutral-500 hover:underline"
+              onClick={() => setStep(1)}
+            >
+              Ввести другой ИИН
+            </button>
+          </div>
+        </>
+      )}
+
+      <div className="mt-4 flex justify-center">
         <Langs />
       </div>
-
-      <Button variant="primary" className="mt-4 w-full">
-        <LogIn size={15} /> Войти
-      </Button>
 
       {/* Два пути завести себя самому: спортсмен и судья (⚠ 9.2 — про судью
           федерация не ответила, экран стоит на нашем предположении). */}
@@ -361,82 +565,196 @@ const ProfileMenu0_1 = () => (
   </Frag>
 );
 
-/** Тот же вход в приложении: спортсмен — единственная роль с ним (TZ §10). */
+/** Тот же вход в приложении: спортсмен — единственная роль с ним (TZ §10).
+
+    Шаги те же и переключаются так же — вход один на сайт и приложение, и
+    расходиться им нельзя. На телефоне у сценария есть даже преимущество: SMS
+    с кодом приходит на то же устройство, с которого входят. */
 export function LoginPhone0_1() {
+  const [step, setStep] = useState<1 | 2>(1);
+  const [iin, setIin] = useState(IIN_DEMO);
   return (
     <Phone>
-      <div className="flex min-h-0 flex-1 flex-col justify-center gap-3.5 px-6 pb-6">
+      <div className="flex min-h-0 flex-1 flex-col justify-center gap-4 px-6 pb-6">
         <div className="mb-1 flex justify-center">
           <Brand size="lg" />
         </div>
         <div className="text-center text-xl font-bold tracking-tight">Вход</div>
         <p className="text-center text-[12.5px] leading-relaxed text-neutral-500">
-          Тот же логин, что на сайте: приложение и сайт — одна учётная запись
+          {step === 1
+            ? 'По ИИН через Smart Bridge — тот же вход, что на сайте'
+            : 'Код из SMS · приложение и сайт — одна учётная запись'}
         </p>
-        <FormGrid>
-          <TextInput label="Телефон" value="+7 705 431 20 18" wide />
-          <PassInput value="••••••••" />
-        </FormGrid>
-        <Button variant="primary" className="mt-1 w-full">
-          <LogIn size={15} /> Войти
-        </Button>
-        <div className="text-center">
-          <ALink>Забыли пароль</ALink>
-        </div>
+
+        <StepBar at={step} steps={['ИИН', 'Код']} />
+
+        {step === 1 ? (
+          <>
+            <IinField note="12 цифр из удостоверения личности" value={iin} onChange={setIin} />
+            <Button
+              className="mt-1 w-full"
+              isDisabled={iin.length !== 12}
+              variant="primary"
+              onPress={() => setStep(2)}
+            >
+              Продолжить <ArrowRight size={15} />
+            </Button>
+          </>
+        ) : (
+          <>
+            <CodeStep />
+            <Button className="mt-1 w-full" variant="primary">
+              <LogIn size={15} /> Войти
+            </Button>
+            <div className="text-center">
+              <button
+                type="button"
+                className="text-[12.5px] font-semibold text-neutral-500 hover:underline"
+                onClick={() => setStep(1)}
+              >
+                Ввести другой ИИН
+              </button>
+            </div>
+          </>
+        )}
       </div>
     </Phone>
   );
 }
 
+/** Состояния входа переписаны под ИИН и код ✳ (30.08.2026).
+
+    Старых парольных состояний здесь больше нет: «неверный логин или пароль»,
+    «много неудачных попыток подряд» и «аккаунт не активирован» описывали
+    схему, которой нет. Вместо них — то, что действительно может пойти не так
+    на двух шагах: ИИН не набран или не найден, код не пришёл или неверен,
+    срок кода вышел, попыток слишком много, Smart Bridge не отвечает. */
 const Login0_1States = () => (
   <States>
-    {/* Счётчика попыток до блокировки здесь больше нет ✳ (замечание федерации,
-        09.2026): блокировка аккаунта усложняет вход и заводит администратора в
-        цикл — кто-то должен следить за блокировками и разблокировать людей.
-        Защита от перебора осталась, но снимается сама: растёт задержка между
-        попытками, при серии владельцу уходит письмо. Человеку на экране
-        сообщают то, что ему нужно знать, — что пароль неверный. */}
     <Shot
       tone="danger"
-      title="Неверный логин или пароль"
-      text="Ошибка под полем; поля не очищаются, счётчика попыток нет ✳."
+      title="ИИН набран не полностью"
+      text="«Продолжить» не нажимается: с недобранным номером в Smart Bridge ходить незачем."
     >
       <Frag w={420}>
-        <FormGrid>
-          <TextInput label="Телефон или почта" value="+7 705 431 20 18" wide />
-          <PassInput
-            value="••••••"
-            error="Неверный логин или пароль. Проверьте раскладку или восстановите пароль"
-          />
-        </FormGrid>
+        <IinField bad note="Нужны все 12 цифр — набрано 9" value="870314400" />
         <div className="mt-3">
-          <DisabledAction>Войти</DisabledAction>
+          <DisabledAction>Продолжить</DisabledAction>
         </div>
       </Frag>
     </Shot>
 
     <Shot
-      tone="info"
-      title="Много неудачных попыток подряд ✳"
-      text="Аккаунт не блокируется: растёт задержка между попытками и снимается сама — администратор не нужен."
+      tone="danger"
+      title="ИИН не найден"
+      text="Smart Bridge ответил, что такого номера нет: цифры набраны, но не те."
+    >
+      <Frag w={420}>
+        <IinField
+          bad
+          note="Такого ИИН в государственной базе нет. Проверьте цифры по удостоверению личности"
+          value="870314400124"
+        />
+        <div className="mt-3">
+          <DisabledAction>Продолжить</DisabledAction>
+        </div>
+      </Frag>
+    </Shot>
+
+    <Shot
+      tone="danger"
+      title="Код неверный или не пришёл"
+      text="Ячейки краснеют, набранное не стирается; рядом — «отправить снова», отсчёт уже кончился."
+    >
+      <Frag w={420}>
+        <CodeStep
+          bad
+          resend
+          err="Код не совпал. Проверьте последнюю SMS: коды из старых сообщений уже не работают"
+          value="482910"
+        />
+        <div className="mt-3">
+          <Bar>
+            SMS не пришла — код отправляют заново на тот же номер. Другого номера у входа нет: он
+            привязан к ИИН, а не выбирается на экране.
+          </Bar>
+        </div>
+      </Frag>
+    </Shot>
+
+    <Shot
+      tone="warning"
+      title="Срок кода вышел"
+      text="Код одноразовый и живёт недолго; поле пустеет, вход начинается с нового кода."
+    >
+      <Frag w={420}>
+        <CodeStep resend err="Срок кода вышел — запросите новый" value="" />
+        <div className="mt-3">
+          <Bar tone="warning">
+            ⚠ Сколько именно живёт код — не решено: числа задаёт федерация вместе с оператором
+            Smart Bridge, мы их не придумываем.
+          </Bar>
+        </div>
+      </Frag>
+    </Shot>
+
+    <Shot
+      tone="warning"
+      title="Слишком много попыток"
+      text="Ввод кода закрывается на время; аккаунт при этом не блокируется — разблокировать некому."
+      wide
     >
       <Frag>
         <Rows>
           <Row
-            nm="Вход не закрыт"
-            sub="следующая попытка через несколько секунд · разблокировка не требуется"
+            nm="Ввод кода закрыт ненадолго"
+            sub="следующая попытка позже · администратор не нужен, ограничение снимается само"
             pill={{ t: 'ЖДЁМ', cls: 'wait' }}
           />
           <Row
-            nm="Владельцу ушло письмо"
-            sub="кто-то подбирает пароль — можно сменить его или включить вход по ссылке"
+            nm="Владельцу номера ушло уведомление"
+            sub="кодом пробуют войти в чужой аккаунт — человек узнаёт об этом первым"
             pill={{ t: 'УВЕДОМЛЕН', cls: 'reg' }}
           />
         </Rows>
         <div className="mt-3">
           <Bar tone="warning">
-            ⚠ Числа — с какой попытки растёт задержка и до скольких секунд — наш проект (TZ §12):
-            сама схема «без ручной разблокировки» задана федерацией.
+            ⚠ Сколько попыток и сколько ждать — не решено. Схема «без ручной разблокировки» задана
+            федерацией (замечание 09.2026) и остаётся в силе: она не зависела от пароля.
+          </Bar>
+        </div>
+      </Frag>
+    </Shot>
+
+    <Shot
+      tone="danger"
+      title="Smart Bridge не отвечает"
+      text="Вход невозможен целиком: своей проверки у системы нет, и подменить её нечем."
+      wide
+    >
+      <Frag>
+        <div className="flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3.5">
+          <ServerOff size={20} className="mt-0.5 shrink-0 text-red-600" />
+          <div className="leading-snug">
+            <div className="text-sm font-semibold text-red-900">
+              Государственный сервис Smart Bridge временно недоступен
+            </div>
+            <div className="mt-1 text-[12.5px] text-red-900">
+              Войти сейчас нельзя — ни по ИИН, ни как-то ещё: пароля в системе нет. Попробуйте
+              через несколько минут. Публичная часть (Э0.4) при этом работает: результаты, счёт и
+              расписание видны без входа.
+            </div>
+          </div>
+        </div>
+        <div className="mt-3 flex items-center gap-2">
+          <QuietAction to="Э0.4">Смотреть без входа</QuietAction>
+          <DisabledAction>Продолжить</DisabledAction>
+        </div>
+        <div className="mt-3">
+          <Bar tone="warning">
+            Это цена решения: единственный вход завязан на чужой сервис. Судье за столом в этот
+            момент нужен уже открытый сеанс — счёт он ведёт и без сети (TZ §6), но войти заново не
+            сможет.
           </Bar>
         </div>
       </Frag>
@@ -464,28 +782,61 @@ const Login0_1States = () => (
         </div>
       </Frag>
     </Shot>
-
-    <Shot
-      tone="warning"
-      title="Аккаунт не активирован ✳"
-      text="Приглашение отправлено, но пароль ещё не задан — стыкуется с Э1.10."
-      wide
-    >
-      <Frag>
-        <Bar>
-          На этот адрес отправлено приглашение 15.04.2026. Пароль задаётся по ссылке из письма — до
-          этого вход не работает.
-        </Bar>
-        <div className="flex items-center gap-2">
-          <QuietAction>Отправить приглашение ещё раз</QuietAction>
-          <DisabledAction>Войти</DisabledAction>
-        </div>
-      </Frag>
-    </Shot>
   </States>
 );
 
 /* ── Э0.2 · Свой профиль ───────────────────────────────────────── */
+
+/** Шапка профиля: фото, ФИО и роль, в которой человек сейчас работает.
+    Общая на веб и телефон ✳ (30.08.2026): два кадра одного экрана не имеют
+    права показывать разного человека. */
+const ProfileHead0_2 = () => (
+  <div className="flex items-center gap-3.5">
+    <Avatar size="lg">
+      <Avatar.Image alt="Абаева Динара Ерлановна" src={AW(44)} />
+      <Avatar.Fallback>А</Avatar.Fallback>
+    </Avatar>
+    <div className="min-w-0 leading-tight">
+      <div className="text-[15px] font-semibold">Абаева Динара Ерлановна</div>
+      {/* Какая роль сейчас — подписью под именем; переключается она в
+          меню профиля в шапке, там же, где написана. */}
+      <div className="mt-0.5 text-xs text-neutral-500">
+        Администратор Федерации · система · бессрочно
+      </div>
+    </div>
+  </div>
+);
+
+/** Строки панели «Вход»: чем человек входит, куда придёт код и как закрыть
+    чужой сеанс. Данные общие на оба формата — список один. */
+const LOGIN_ROWS0_2: {
+  nm: string;
+  sub: string;
+  pill?: { t: string; cls: 'done' | 'reg' };
+  action?: string;
+}[] = [
+  {
+    nm: 'ИИН · •••• •••• 0123',
+    sub: 'вход через Smart Bridge — государственный сервис проверяет, что это вы',
+    pill: { t: 'НЕ МЕНЯЕТСЯ', cls: 'done' },
+  },
+  {
+    nm: `Номер для кода · ${OTP_PHONE}`,
+    sub: 'сюда приходит одноразовый код при каждом входе · номер привязан к ИИН, а не к профилю',
+    pill: { t: 'ИЗ БАЗЫ', cls: 'reg' },
+  },
+  {
+    nm: 'Выйти на всех устройствах',
+    sub: 'закрывает все сеансы, кроме текущего: телефон остался в зале — вход по нему больше не работает',
+    action: 'Выйти везде',
+  },
+];
+
+/** Открытый вопрос про номер — текст один на оба формата. */
+const PROFILE_WARN0_2 =
+  '⚠ Совпадает ли номер для кода с контактным телефоном выше и что делать, если человек сменил ' +
+  'сим-карту, — не решено: номер живёт в государственной базе, а не у нас, и менять его в профиле ' +
+  'мы не можем.';
 
 export function Profile0_2() {
   return (
@@ -493,7 +844,7 @@ export function Profile0_2() {
       role={R00}
       nav="Профиль"
       title="Мой профиль"
-      sub="Контакты, язык интерфейса и пароль"
+      sub="Контакты, язык интерфейса и вход"
       /* Возврат к работе ✳: на профиль и уведомления приходят из шапки, а не
          из меню, — и обратно из них не вело ничего. Пункта в сайдбаре у них
          нет по устройству (входы в шапке), так что выйти можно было только
@@ -501,21 +852,13 @@ export function Profile0_2() {
          которой человек работает; в макете это панель Федерации. */
       back={{ label: 'К работе', to: 'Э1.1' }}
     >
-      <div className="grid grid-cols-[1.6fr_1fr] items-start gap-4">
+      {/* Блоки идут один под другим во всю ширину ✳ (30.08.2026): в две
+          колонки узкая нижняя панель висела в пустоте рядом со сжатым
+          «Профилем». Панель сама держит отступ снизу, обёртка не нужна. */}
+      <>
         <Panel title="Профиль">
-          <div className="mb-4 flex items-center gap-3.5">
-            <Avatar size="lg">
-              <Avatar.Image alt="Абаева Динара Ерлановна" src={AW(44)} />
-              <Avatar.Fallback>А</Avatar.Fallback>
-            </Avatar>
-            <div className="leading-tight">
-              <div className="text-[15px] font-semibold">Абаева Динара Ерлановна</div>
-              {/* Какая роль сейчас — подписью под именем; переключается она в
-                  меню профиля в шапке, там же, где написана. */}
-              <div className="mt-0.5 text-xs text-neutral-500">
-                Администратор Федерации · система · бессрочно
-              </div>
-            </div>
+          <div className="mb-4">
+            <ProfileHead0_2 />
           </div>
           <FormGrid>
             <TextInput label="Телефон" value="+7 701 220 45 90" />
@@ -542,10 +885,35 @@ export function Profile0_2() {
             Списка своих ролей тоже нет: он был на чтение и ничего не решал. Кто
             роль выдал и до какого срока — в карточке пользователя у
             администратора Федерации (Э1.5). */}
-        <Panel title="Безопасность" flush>
-          <Row nm="Пароль" sub="изменён 02.02.2026" action="Сменить пароль" />
+
+        {/* Панель «Безопасность» со «Сменить пароль» здесь стояла до 30.08.2026
+            и больше смысла не имеет: пароля в системе нет — менять нечего.
+
+            Что встало вместо неё. Панель отвечает на три вопроса, которые у
+            человека действительно есть: чем я вхожу, куда придёт код и как
+            закрыть чужой сеанс.
+            - **ИИН** — маскированный, последние четыре цифры. Он не меняется и
+              не редактируется: это идентификатор в государственной базе, а не
+              наше поле. Показан, чтобы человек видел, под каким номером он в
+              системе, — с двумя ИИН в семье это не праздный вопрос.
+            - **Номер для кода** — тоже на чтение и тоже в маске: он привязан к
+              ИИН на стороне государства, и «сменить номер» здесь было бы
+              обманом — мы этого не умеем.
+            - **«Выйти на всех устройствах»** — единственное настоящее действие
+              панели и замена «сменить пароль» по смыслу: раньше человек менял
+              пароль, чтобы выгнать чужого, теперь — закрывает сеансы. Стоит
+              последней строкой, ниже двух неизменяемых: остальное здесь читают,
+              а нажимают только это. */}
+        <Panel title="Вход" sub="Пароля в системе нет: вход по ИИН и одноразовому коду ✳" flush>
+          <div className="divide-y divide-neutral-100">
+            {LOGIN_ROWS0_2.map((r) => (
+              <Row key={r.nm} action={r.action} nm={r.nm} pill={r.pill} sub={r.sub} />
+            ))}
+          </div>
         </Panel>
-      </div>
+
+        <Bar tone="warning">{PROFILE_WARN0_2}</Bar>
+      </>
     </WebApp>
   );
 }
@@ -583,21 +951,33 @@ const Profile0_2States = () => (
 
 /* ── Э0.3 · Уведомления ────────────────────────────────────────── */
 
-/** Строка ленты: значок типа вместо аватара — уведомление не про человека. */
+/** Строка ленты: значок типа вместо аватара — уведомление не про человека.
+
+    `one` — телефон ✳ (30.08.2026): время и значок «НОВОЕ» уходят под текст.
+    В строку на 392 px они не помещаются вместе с самим уведомлением: на текст
+    оставалось 165 px, и от «Вы назначены главным судьёй» доезжало «Вы назна…».
+    Заодно снимается обрезка — текст переносится целиком. */
 const NRow = ({
   ic,
   t,
   s,
   when,
   unread,
+  one,
 }: {
   ic: ReactNode;
   t: string;
   s: string;
   when: string;
   unread?: boolean;
+  one?: boolean;
 }) => (
-  <div data-row className="flex w-full items-center gap-3 px-4 py-2.5 hover:bg-neutral-50">
+  <div
+    data-row
+    className={
+      'flex w-full gap-3 px-4 py-2.5 hover:bg-neutral-50 ' + (one ? 'items-start' : 'items-center')
+    }
+  >
     <span
       className={
         'grid size-9 shrink-0 place-items-center rounded-lg ' +
@@ -607,13 +987,62 @@ const NRow = ({
       {ic}
     </span>
     <span className="min-w-0 flex-1 leading-tight">
-      <span className="block truncate text-[13.5px] font-medium">{t}</span>
-      <span className="block truncate text-xs text-neutral-500">{s}</span>
+      <span className={'block text-[13.5px] font-medium ' + (one ? '' : 'truncate')}>{t}</span>
+      <span className={'block text-xs text-neutral-500 ' + (one ? '' : 'truncate')}>{s}</span>
+      {one && (
+        <span className="mt-1.5 flex items-center gap-2">
+          <span className="text-xs text-neutral-400">{when}</span>
+          {unread && <Pill t="НОВОЕ" color="accent" />}
+        </span>
+      )}
     </span>
-    <span className="shrink-0 text-xs text-neutral-400">{when}</span>
-    {unread && <Pill t="НОВОЕ" color="accent" />}
+    {!one && <span className="shrink-0 text-xs text-neutral-400">{when}</span>}
+    {!one && unread && <Pill t="НОВОЕ" color="accent" />}
   </div>
 );
+
+/** Лента уведомлений: один список на оба формата — числа в шапке («3
+    непрочитанных из 42») считаны по нему, и разойтись кадрам нельзя. */
+const NOTES0_3: { ic: ReactNode; t: string; s: string; when: string; unread?: boolean }[] = [
+  {
+    ic: <Gavel size={17} />,
+    t: 'Вы назначены главным судьёй',
+    s: 'Кубок Республики Казахстан 2026 · решение председателя ГСК',
+    when: 'сегодня, 09:20',
+    unread: true,
+  },
+  {
+    ic: <Radio size={17} />,
+    t: 'Пара вызвана на стол 4',
+    s: 'Смагулов А. — Ким Г. · Евразийская лига, 2-й тур',
+    when: 'сегодня, 08:55',
+    unread: true,
+  },
+  {
+    ic: <Trophy size={17} />,
+    t: 'Турнир перенесён',
+    s: 'ОРТ «Кубок Иртыша» · 25 апреля → 16 мая · зал занят',
+    when: 'вчера, 17:40',
+    unread: true,
+  },
+  {
+    ic: <Scroll size={17} />,
+    t: 'Протокол утверждён',
+    s: 'Открытие сезона 2026 · рейтинг пересчитан',
+    when: '21.01.2026',
+  },
+  {
+    ic: <BarChart3 size={17} />,
+    t: 'Заявка принята',
+    s: 'Первенство РК · 2010 г.р. и моложе',
+    when: '19.01.2026',
+  },
+];
+
+/** Требование зоны: уведомление не тупик — строка ведёт на свой экран. */
+const NOTE_FOOT0_3 =
+  'Строка ведёт на экран, о котором уведомление: заявка — в заявку, вызов — в матч, ' +
+  'протокол — в протокол';
 
 export function Notif0_3() {
   return (
@@ -639,44 +1068,11 @@ export function Notif0_3() {
         </Button>
       </div>
       <Rows>
-        <NRow
-          unread
-          ic={<Gavel size={17} />}
-          t="Вы назначены главным судьёй"
-          s="Кубок Республики Казахстан 2026 · решение председателя ГСК"
-          when="сегодня, 09:20"
-        />
-        <NRow
-          unread
-          ic={<Radio size={17} />}
-          t="Пара вызвана на стол 4"
-          s="Смагулов А. — Ким Г. · Евразийская лига, 2-й тур"
-          when="сегодня, 08:55"
-        />
-        <NRow
-          unread
-          ic={<Trophy size={17} />}
-          t="Турнир перенесён"
-          s="ОРТ «Кубок Иртыша» · 25 апреля → 16 мая · зал занят"
-          when="вчера, 17:40"
-        />
-        <NRow
-          ic={<Scroll size={17} />}
-          t="Протокол утверждён"
-          s="Открытие сезона 2026 · рейтинг пересчитан"
-          when="21.01.2026"
-        />
-        <NRow
-          ic={<BarChart3 size={17} />}
-          t="Заявка принята"
-          s="Первенство РК · 2010 г.р. и моложе"
-          when="19.01.2026"
-        />
+        {NOTES0_3.map((n) => (
+          <NRow key={n.t} {...n} />
+        ))}
       </Rows>
-      {/* Требование зоны: уведомление не тупик — строка ведёт на свой экран. */}
-      <div className="mt-2 text-[11px] text-neutral-400">
-        Строка ведёт на экран, о котором уведомление: заявка — в заявку, вызов — в матч, протокол — в протокол
-      </div>
+      <div className="mt-2 text-[11px] text-neutral-400">{NOTE_FOOT0_3}</div>
     </WebApp>
   );
 }
@@ -773,34 +1169,62 @@ const Notif0_3States = () => (
 
 /* ── Э0.4 · Публичные страницы ─────────────────────────────────── */
 
+/** Разделы публичного сайта — один список на оба формата. */
+const SITE_NAV = ['Главная', 'Календарь', 'Рейтинги', 'Новости'];
+
+const SiteLink = ({ t, on }: { t: string; on: boolean }) => (
+  <button
+    type="button"
+    aria-current={on || undefined}
+    className={
+      'shrink-0 rounded-lg px-2.5 py-1.5 ' +
+      (on ? 'bg-blue-50 text-blue-700' : 'text-neutral-600 hover:bg-neutral-50')
+    }
+  >
+    {t}
+  </button>
+);
+
 /** Шапка сайта: одна на главную и на страницу турнира — разделы, язык и
     «Войти». Общая нарочно: публичная часть — один сайт, и шапка не должна
-    разъезжаться между двумя кадрами. */
-const SiteHead = ({ active }: { active: string }) => (
-  <div className="flex h-14 shrink-0 items-center gap-6 border-b border-neutral-200 bg-white px-6">
-    <Brand />
-    <nav className="flex items-center gap-1 text-[13px] font-medium">
-      {['Главная', 'Календарь', 'Рейтинги', 'Новости'].map((t) => (
-        <button
-          key={t}
-          type="button"
-          aria-current={t === active || undefined}
-          className={
-            'rounded-lg px-2.5 py-1.5 ' +
-            (t === active ? 'bg-blue-50 text-blue-700' : 'text-neutral-600 hover:bg-neutral-50')
-          }
-        >
-          {t}
-        </button>
-      ))}
-    </nav>
-    <div className="flex-1" />
-    <Langs />
-    <Button size="sm" variant="primary" data-to="Э0.1">
-      <LogIn size={14} /> Войти
-    </Button>
-  </div>
-);
+    разъезжаться между двумя кадрами.
+
+    `one` — телефон ✳ (30.08.2026): знак, язык и «Войти» первой строкой,
+    разделы — второй, с прокруткой вбок. Нижней панели вкладок у публичной
+    части нет и не будет: это сайт, а не приложение, и человек в него не
+    входил. */
+const SiteHead = ({ active, one }: { active: string; one?: boolean }) =>
+  one ? (
+    <div className="shrink-0 border-b border-neutral-200 bg-white">
+      <div className="flex items-center gap-2 px-4 py-2">
+        <Brand size="sm" />
+        <div className="flex-1" />
+        <Langs />
+        <Button size="sm" variant="primary" data-to="Э0.1">
+          <LogIn size={14} /> Войти
+        </Button>
+      </div>
+      <nav className="flex gap-1 overflow-x-auto px-3 pb-1.5 text-[13px] font-medium">
+        {SITE_NAV.map((t) => (
+          <SiteLink key={t} on={t === active} t={t} />
+        ))}
+      </nav>
+    </div>
+  ) : (
+    <div className="flex h-14 shrink-0 items-center gap-6 border-b border-neutral-200 bg-white px-6">
+      <Brand />
+      <nav className="flex items-center gap-1 text-[13px] font-medium">
+        {SITE_NAV.map((t) => (
+          <SiteLink key={t} on={t === active} t={t} />
+        ))}
+      </nav>
+      <div className="flex-1" />
+      <Langs />
+      <Button size="sm" variant="primary" data-to="Э0.1">
+        <LogIn size={14} /> Войти
+      </Button>
+    </div>
+  );
 
 type LiveMatch = {
   tour: string;
@@ -835,6 +1259,29 @@ const LIVE: LiveMatch[] = [
   },
 ];
 
+/** «Ближайшие и текущие» — так зона и записана в данных: идущий турнир из
+    блока живого счёта должен быть и в списке, иначе на его страницу с главной
+    не попасть. Список общий на оба формата. */
+const STARTS0_4: { nm: string; sub: string; pill: { t: string; cls: 'live' | 'reg' } }[] = [
+  { nm: 'Евразийская лига 2026', sub: 'Командный турнир · Астана · 12–20 мая', pill: { t: 'ИДЁТ', cls: 'live' } },
+  { nm: 'Кубок Республики Казахстан 2026', sub: 'Главный старт · Астана · 18–20 мая', pill: { t: 'ЗАЯВКИ ОТКРЫТЫ', cls: 'reg' } },
+  { nm: 'ОРТ «Кубок Иртыша»', sub: 'ОРТ · Павлодар · 25 апреля', pill: { t: 'ЗАЯВКИ ОТКРЫТЫ', cls: 'reg' } },
+  { nm: 'Первенство РК · 2010 г.р. и моложе', sub: 'Главный старт · Алматы · 3–5 июня', pill: { t: 'ЗАЯВКИ ОТКРЫТЫ', cls: 'reg' } },
+];
+
+/** Лидеры рейтинга: те же трое, что играют в блоке живого счёта. */
+const LEADERS0_4: { av: string; nm: string; sub: string; val: string }[] = [
+  { av: A(32), nm: '1 · Смагулов Алан', sub: 'Алматы · «Алатау»', val: '2456' },
+  { av: A(44), nm: '2 · Ким Георгий', sub: 'Астана · СКА', val: '2401' },
+  { av: A(13), nm: '3 · Пак Сергей', sub: 'Павлодар · «Иртыш»', val: '2312' },
+];
+
+/** Новости — на трёх языках (TZ §3.1): у материала видно, на каких он вышел. */
+const NEWS0_4: { nm: string; sub: string }[] = [
+  { nm: 'Кубок Республики: приём заявок открыт', sub: '12.04.2026 · RU · KZ' },
+  { nm: 'Итоги открытия сезона 2026', sub: '21.01.2026 · RU · KZ · EN' },
+];
+
 /** Публичная часть — не система, а сайт: своя шапка с разделами и «Войти»,
     без сайдбара и профиля. Роли нет — это отсутствие роли (TZ §3). */
 export function Public0_4() {
@@ -849,38 +1296,23 @@ export function Public0_4() {
           <h2 className="text-[15px] font-semibold tracking-tight">Идут сейчас</h2>
           <Pill t="В РЕАЛЬНОМ ВРЕМЕНИ" color="success" />
         </div>
-        <div className="mb-4 grid grid-cols-2 gap-3">
+        {/* Карточки табло идут одна под другой ✳ (30.08.2026): в две колонки
+            счёт по партиям сжимался вдвое, а ради него сюда и приходят.
+            Внутри карточки игроки по-прежнему стоят по краям от счёта. */}
+        <div className="mb-4 flex flex-col gap-3">
           {LIVE.map((m) => (
             <MatchCard key={m.tour} {...m} live />
           ))}
         </div>
 
-        <div className="grid grid-cols-2 items-start gap-4">
-          {/* «Ближайшие и текущие» — так зона и записана в данных: идущий
-              турнир из блока выше должен быть и в списке, иначе на его
-              страницу с главной не попасть. */}
+        {/* Блоки — вертикальным потоком ✳ (30.08.2026), как в профиле (Э0.2):
+            панель сама держит отступ снизу, обёртка-сетка не нужна. */}
+        <>
           <Panel title="Ближайшие и текущие старты" flush>
             <div className="divide-y divide-neutral-100">
-              <Row
-                nm="Евразийская лига 2026"
-                sub="Командный турнир · Астана · 12–20 мая"
-                pill={{ t: 'ИДЁТ', cls: 'live' }}
-              />
-              <Row
-                nm="Кубок Республики Казахстан 2026"
-                sub="Главный старт · Астана · 18–20 мая"
-                pill={{ t: 'ЗАЯВКИ ОТКРЫТЫ', cls: 'reg' }}
-              />
-              <Row
-                nm="ОРТ «Кубок Иртыша»"
-                sub="ОРТ · Павлодар · 25 апреля"
-                pill={{ t: 'ЗАЯВКИ ОТКРЫТЫ', cls: 'reg' }}
-              />
-              <Row
-                nm="Первенство РК · 2010 г.р. и моложе"
-                sub="Главный старт · Алматы · 3–5 июня"
-                pill={{ t: 'ЗАЯВКИ ОТКРЫТЫ', cls: 'reg' }}
-              />
+              {STARTS0_4.map((s) => (
+                <Row key={s.nm} nm={s.nm} pill={s.pill} sub={s.sub} />
+              ))}
             </div>
           </Panel>
 
@@ -892,17 +1324,18 @@ export function Public0_4() {
             flush
           >
             <div className="divide-y divide-neutral-100">
-              <Row av={A(32)} nm="1 · Смагулов Алан" sub="Алматы · «Алатау»" val="2456" />
-              <Row av={A(44)} nm="2 · Ким Георгий" sub="Астана · СКА" val="2401" />
-              <Row av={A(13)} nm="3 · Пак Сергей" sub="Павлодар · «Иртыш»" val="2312" />
+              {LEADERS0_4.map((l) => (
+                <Row key={l.nm} av={l.av} nm={l.nm} sub={l.sub} val={l.val} />
+              ))}
             </div>
           </Panel>
-        </div>
+        </>
 
         <Panel title="Новости" extra={<span className="text-xs text-neutral-500">на трёх языках</span>} flush>
           <div className="divide-y divide-neutral-100">
-            <Row nm="Кубок Республики: приём заявок открыт" sub="12.04.2026 · RU · KZ" />
-            <Row nm="Итоги открытия сезона 2026" sub="21.01.2026 · RU · KZ · EN" />
+            {NEWS0_4.map((n) => (
+              <Row key={n.nm} nm={n.nm} sub={n.sub} />
+            ))}
           </div>
         </Panel>
       </div>
@@ -983,7 +1416,10 @@ export function Tournament0_4() {
           <Pill t="ИДЁТ" color="success" />
         </div>
 
-        <div className="grid grid-cols-[1fr_340px] items-start gap-4">
+        {/* Счёт и трансляция — блок под блоком ✳ (30.08.2026): узкая колонка
+            трансляции резала табло, а вертикальным потоком оба блока читаются
+            во всю ширину. */}
+        <>
           <Panel title="Счёт в реальном времени" sub="обновляется сам — страницу перезагружать не нужно">
             <div className="flex flex-col gap-3">
               {LIVE.map((m) => (
@@ -993,7 +1429,9 @@ export function Tournament0_4() {
           </Panel>
 
           <Panel title="Трансляция" sub="смотреть можно без входа">
-            <div className="relative grid aspect-video place-items-center rounded-lg bg-neutral-900">
+            {/* Окно трансляции ограничено по ширине: во всю ширину панели
+                видео заняло бы половину экрана и утопило бы вкладки ниже. */}
+            <div className="relative grid aspect-video max-w-xl place-items-center rounded-lg bg-neutral-900">
               <span className="grid size-12 place-items-center rounded-full bg-white/90 text-neutral-900">
                 <Play size={20} />
               </span>
@@ -1004,7 +1442,7 @@ export function Tournament0_4() {
             <div className="mt-3 text-[13px] font-medium">Смагулов Алан — Ким Георгий</div>
             <div className="mt-0.5 text-xs text-neutral-500">2-й тур · «Алатау» — СКА · стол 1</div>
           </Panel>
-        </div>
+        </>
 
         <PageTabs
           items={[
@@ -1155,48 +1593,123 @@ const Public0_4States = () => (
 
 /* ── Э0.5 · Регистрация спортсмена ─────────────────────────────── */
 
+/** ИИН спортсмена для макетов: Оралбек Диас, 12.07.2009 — тот же человек, что
+    в состояниях экрана и в реестре клуба «Алатау». */
+const IIN_ATHLETE = '090712500318';
+
+/** Регистрация спортсмена — три шага ✳ (30.08.2026): ИИН → код → анкета.
+
+    Смысл интеграции виден именно здесь. Раньше человек набирал руками фамилию,
+    имя, отчество, дату рождения и пол — то есть ровно те данные, по которым
+    система потом искала совпадение с уже заведённой записью и всё равно не
+    была уверена. Теперь их отдаёт государственная база по ИИН, и они не
+    правятся: спорить с документом на форме регистрации незачем.
+
+    Руками остаётся только то, чего в базе нет: контакты, город, клуб, разряд и
+    согласия. Прежний довод «форма должна быть короткой, поэтому регион и клуб
+    спросим потом» ✳ (он стоял здесь до 30.08.2026) больше не работает: блок
+    «кто вы» теперь не стоит человеку ни одного поля, и место под спортивные
+    вопросы освободилось. Клуб при этом остаётся заявкой, а не фактом:
+    принадлежность по-прежнему подтверждает сам клуб (Э13.2). */
 export function SignUp0_5() {
+  const [step, setStep] = useState<1 | 2 | 3>(1);
+  const [iin, setIin] = useState(IIN_ATHLETE);
   return (
     <AuthPage wide>
       <div className="mb-5 flex flex-col items-center gap-4 text-center">
         <Brand size="lg" />
         <div>
           <div className="text-xl font-semibold tracking-tight">Регистрация спортсмена</div>
-          {/* Региона и клуба в форме нет ✳: и то и другое указывается в профиле
-              (Э14.7), принадлежность подтверждает сам клуб (Э13.2). */}
           <div className="mt-1 text-[12.5px] text-neutral-500">
-            Форма короткая нарочно: регион и клуб укажете потом в профиле
+            {step === 3
+              ? 'ФИО, дата рождения и пол пришли из государственной базы — руками только то, чего в ней нет'
+              : 'По ИИН через Smart Bridge · пароль придумывать не нужно, его в системе нет'}
           </div>
         </div>
       </div>
 
-      <FormGrid>
-        {/* По этим полям система ищет совпадение с уже заведённой записью. */}
-        <SecCap>Кто вы</SecCap>
-        <TextInput label="Фамилия" placeholder="Оралбек" />
-        <TextInput label="Имя, отчество" placeholder="Диас Ерланович" />
-        {/* Дата — поле с форматтером дд.мм.гггг ✳, а не календарь браузера:
-            свою дату рождения набирают, а не ищут по месяцам. */}
-        <TextInput label="Дата рождения" placeholder="дд.мм.гггг" />
-        <PickField label="Пол" value="мужской" />
-        <SecCap>Контакты и вход</SecCap>
-        <TextInput label="Телефон" placeholder="+7 ___ ___ __ __" />
-        <TextInput label="Почта" placeholder="имя@домен" />
-        <TextInput label="Пароль" placeholder="не короче 8 знаков" wide />
-        <Consent />
-      </FormGrid>
+      <StepBar at={step} steps={['ИИН', 'Код из SMS', 'Анкета']} />
 
-      <Button variant="primary" className="mt-4 w-full">
-        <UserPlus size={15} /> Зарегистрироваться
-      </Button>
+      {step === 1 && (
+        <>
+          <IinField value={iin} onChange={setIin} />
+          <div className="mt-3">
+            <Bar>
+              По ИИН система спросит государственную базу и заполнит за вас фамилию, имя, отчество,
+              дату рождения и пол. Заново набирать их не придётся.
+            </Bar>
+          </div>
+          <Button
+            className="w-full"
+            isDisabled={iin.length !== 12}
+            variant="primary"
+            onPress={() => setStep(2)}
+          >
+            Продолжить <ArrowRight size={15} />
+          </Button>
+        </>
+      )}
 
-      {/* Что будет дальше — сказано до кнопки, а не в письме после (TZ §9.2). */}
-      <div className="mt-4">
-        <Bar>
-          Профиль откроется сразу. До оплаты годового взноса заявки на турниры со взносом не
-          проходят (TZ §9.2) — оплата в своём кабинете.
-        </Bar>
-      </div>
+      {step === 2 && (
+        <>
+          <CodeStep />
+          <Button className="mt-4 w-full" variant="primary" onPress={() => setStep(3)}>
+            Подтвердить <ArrowRight size={15} />
+          </Button>
+          <div className="mt-2 flex justify-center">
+            <button
+              type="button"
+              className="text-[12.5px] font-semibold text-neutral-500 hover:underline"
+              onClick={() => setStep(1)}
+            >
+              Ввести другой ИИН
+            </button>
+          </div>
+        </>
+      )}
+
+      {step === 3 && (
+        <>
+          <FromState
+            born="12.07.2009"
+            fio="Оралбек Диас Ерланович"
+            iin={IIN_ATHLETE}
+            sex="мужской"
+          />
+
+          <FormGrid>
+            <SecCap>Контакты</SecCap>
+            <TextInput label="Телефон" placeholder="+7 ___ ___ __ __" />
+            <TextInput label="Почта" placeholder="имя@домен" />
+            {/* Спортивная часть — то, чего в государственной базе нет и быть не
+                может: где человек живёт по спорту, в каком клубе играет и какой
+                у него разряд. */}
+            <SecCap>Спорт</SecCap>
+            <PickField label="Город" value="Алматы" />
+            <PickField label="Разряд" value="2 разряд" />
+            <PickField label="Клуб — заявка, подтверждает сам клуб (Э13.2)" value="«Алатау» · Алматы" wide />
+            <Consent sub="без него регистрация не проходит" />
+            <Consent
+              sub="без него ФИО и дату рождения по ИИН не запросить"
+              t="Согласие на запрос сведений из государственной базы через Smart Bridge"
+            />
+          </FormGrid>
+
+          {/* Что будет дальше — сказано на самом экране, а не в письме после
+              (TZ §9.2), и до кнопки: человек читает это, пока решает жать. */}
+          <div className="mt-4">
+            <Bar>
+              Профиль откроется сразу. До оплаты годового взноса заявки на турниры со взносом не
+              проходят (TZ §9.2) — оплата в своём кабинете.
+            </Bar>
+          </div>
+
+          <Button className="w-full" variant="primary">
+            <UserPlus size={15} /> Зарегистрироваться
+          </Button>
+        </>
+      )}
+
       <div className="flex justify-center">
         <ALink to="Э0.1">Уже есть аккаунт — войти</ALink>
       </div>
@@ -1207,29 +1720,65 @@ export function SignUp0_5() {
 export const SignUp0_5States = () => (
   <States>
     <Shot
+      tone="danger"
+      title="ИИН уже зарегистрирован"
+      text="Аккаунт по этому ИИН есть: второго не заводим, человек идёт на вход."
+    >
+      <Frag>
+        <Rows>
+          <Row
+            nm="Оралбек Диас Ерланович"
+            sub="аккаунт создан 03.02.2026 · вход по этому же ИИН"
+            pill={{ t: 'УЖЕ В СИСТЕМЕ', cls: 'done' }}
+          />
+        </Rows>
+        <div className="mt-3">
+          <Bar>
+            ИИН один на человека, поэтому и аккаунт один: спорить не о чем. Забыть его нельзя — он
+            в удостоверении личности, а пароля, который забывают, в системе нет.
+          </Bar>
+          <Button data-to="Э0.1" variant="primary">
+            <LogIn size={15} /> Войти
+          </Button>
+        </div>
+      </Frag>
+    </Shot>
+
+    {/* Прежнее состояние «найден похожий человек» ✳ переписано (30.08.2026):
+        похожесть искали по ФИО и году рождения, и решение оставляли человеку.
+        По ИИН совпадение точное — это тот же человек, а не похожий, и
+        связывание перестало быть догадкой. */}
+    <Shot
       tone="warning"
-      title="Найден похожий человек ✳"
-      text="Предложение связать с существующей записью, а не заводить второго."
+      title="Запись уже завёл клуб — связываем по ИИН ✳"
+      text="Совпадение точное, а не «похожий человек»: ИИН один. Рейтинг и история достаются человеку."
     >
       <Frag>
         <Rows>
           <Row
             nm="Оралбек Диас · 2009 · Алматы"
-            sub="завёл клуб «Алатау», 03.02.2026 · рейтинг 2042"
-            pill={{ t: 'СОВПАДЕНИЕ', cls: 'wait' }}
+            sub="завёл клуб «Алатау», 03.02.2026 · рейтинг 2042 · без входа в систему"
+            pill={{ t: 'СОВПАЛ ИИН', cls: 'live' }}
           />
         </Rows>
-        <div className="mt-3 flex items-center gap-2">
-          <Button variant="outline">Связать с этой записью</Button>
-          <QuietAction>Это не я</QuietAction>
+        <div className="mt-3">
+          <Bar tone="success">
+            Карточка была, входа не было. Регистрация не создаёт вторую запись, а даёт человеку
+            вход в свою: рейтинг 2042 и история матчей остаются на месте.
+          </Bar>
         </div>
       </Frag>
     </Shot>
 
-    <Shot tone="danger" title="Согласие не отмечено" text="Кнопка неактивна.">
+    <Shot tone="danger" title="Согласия не отмечены" text="Их два, и обе отметки обязательны: кнопка неактивна.">
       <Frag w={420}>
         <FormGrid>
           <Consent off sub="без него регистрация не проходит" />
+          <Consent
+            off
+            sub="без него ФИО и дату рождения по ИИН не запросить"
+            t="Согласие на запрос сведений из государственной базы через Smart Bridge"
+          />
         </FormGrid>
         <div className="mt-3">
           <DisabledAction>Зарегистрироваться</DisabledAction>
@@ -1239,14 +1788,44 @@ export const SignUp0_5States = () => (
 
     <Shot
       tone="warning"
+      title="⚠ Кому нечем войти"
+      text="Два случая, которые новый вход не покрывает. Ответов у нас нет — вопрос к федерации."
+      wide
+    >
+      <Frag>
+        <Rows>
+          <Row
+            nm="Иностранец без ИИН"
+            sub="легионер клуба, гость международного турнира, тренер сборной — в государственной базе РК их нет"
+            pill={{ t: 'ВОПРОС', cls: 'bad' }}
+          />
+          <Row
+            nm="Ребёнок младше 14 лет"
+            sub="ИИН у него есть с рождения, а телефона для кода может не быть — кто входит за него"
+            pill={{ t: 'ВОПРОС', cls: 'bad' }}
+          />
+        </Rows>
+        <div className="mt-3">
+          <Bar tone="warning">
+            Первенство РК «2010 г.р. и моложе» — турнир для тех, кому и двенадцати нет. Пока
+            вопрос открыт, мы не рисуем ни «вход за ребёнка родителем», ни «регистрацию по
+            паспорту»: и то и другое — отдельное решение федерации, а не наша догадка.
+          </Bar>
+        </div>
+      </Frag>
+    </Shot>
+
+    <Shot
+      tone="warning"
       title="⚠ 12.10 — чья запись, если человека уже завели"
-      text="Как самостоятельная регистрация сходится с записью клуба или федерации — не решено."
+      text="ИИН сделал сверку точной, но чья запись — по-прежнему не решено."
       wide
     >
       <Frag>
         <Bar>
-          Три пути в реестр: человек сам, клуб, федерация. Кто «владелец» записи и что происходит с
-          рейтингом и историей при связывании — вопрос к федерации. Дубль молча не создаём.
+          Три пути в реестр: человек сам, клуб, федерация. Кого считать владельцем записи и что
+          происходит с рейтингом и историей при связывании — вопрос к федерации. Дубль молча не
+          создаём; теперь его и создать труднее — ИИН совпадёт.
         </Bar>
       </Frag>
     </Shot>
@@ -1255,18 +1834,32 @@ export const SignUp0_5States = () => (
 
 /* ── Э0.6 · Принятие приглашения ───────────────────────────────── */
 
+/** ИИН приглашённого: Нұрланұлы Алихан, 14.05.2011 — тот же, кого клуб
+    «Алатау» завёл у себя в составе (Э13.2). */
+const IIN_INVITED = '110514500742';
+
 /** Вторая половина приглашения: то, что видит человек, открыв ссылку.
 
     Аккаунт за человека не заводит никто — ни клуб (Э13.2), ни федерация
-    (Э1.10). Они выпускают одноразовую ссылку, а пароль человек задаёт себе
-    здесь: система его не знает и не хранит, и пересылать его в мессенджере
-    некому. До этого шага учётной записи нет — есть только карточка со
-    значком «приглашён».
+    (Э1.10). Они выпускают одноразовую ссылку, а человек подтверждает себя по
+    ней сам. До этого шага учётной записи нет — есть только карточка со значком
+    «приглашён».
 
-    Данные показаны на чтение, а не полями: их заполнил тот, кто приглашает, и
-    правка тут превратила бы приглашение во вторую форму регистрации. Если
-    данные чужие — «это не я», и ссылка гаснет. */
+    Пароля здесь больше не задают ✳ (30.08.2026). Раньше пароль был
+    единственным полем ввода и заодно единственным доказательством, что ссылку
+    открыл тот, кому её послали: кто угодно, получив пересланную ссылку, заводил
+    себе чужую карточку. Теперь человек подтверждает себя ИИН и кодом — то есть
+    ровно так же, как входит потом. Приглашение перестало быть отдельным
+    способом попасть в систему и стало тем, чем оно и было: приглашением.
+
+    Отсюда и третий шаг: данные клуба показываются рядом с данными
+    государственной базы. Клубные — по-прежнему на чтение (их заполнил
+    приглашающий, и правка превратила бы приглашение во вторую форму
+    регистрации), а расхождение ФИО — отдельное состояние: значит, ссылку
+    открыл не тот человек либо клуб ошибся в карточке. */
 export function Accept0_6() {
+  const [step, setStep] = useState<1 | 2 | 3>(1);
+  const [iin, setIin] = useState(IIN_INVITED);
   return (
     <AuthPage wide>
       <div className="mb-5 flex flex-col items-center gap-4 text-center">
@@ -1281,25 +1874,71 @@ export function Accept0_6() {
         </div>
       </div>
 
-      <Panel title="Что о вас указал клуб">
-        <FormGrid>
-          <FieldView label="Фамилия, имя" value="Нұрланұлы Алихан" />
-          <FieldView label="Дата рождения" value="14.05.2011" />
-          <FieldView label="Разряд" value="2 разряд" />
-          <FieldView label="Клуб" value="«Алатау» · г. Алматы" />
-        </FormGrid>
-      </Panel>
+      <StepBar at={step} steps={['ИИН', 'Код из SMS', 'Проверка данных']} />
 
-      {/* Пароль — единственное поле ввода на экране: всё остальное уже
-          заполнено за человека, и придумывать себе он должен только доступ. */}
-      <FormGrid>
-        <TextInput label="Придумайте пароль" placeholder="не короче 8 знаков" wide />
-        <Consent />
-      </FormGrid>
+      {step === 1 && (
+        <>
+          <IinField value={iin} onChange={setIin} />
+          <div className="mt-3">
+            <Bar>
+              Ссылку могли переслать кому угодно, поэтому она сама по себе никого не пускает:
+              подтвердите, что вы — тот, кого приглашали. Пароль придумывать не нужно, его в
+              системе нет.
+            </Bar>
+          </div>
+          <Button
+            className="w-full"
+            isDisabled={iin.length !== 12}
+            variant="primary"
+            onPress={() => setStep(2)}
+          >
+            Продолжить <ArrowRight size={15} />
+          </Button>
+        </>
+      )}
 
-      <Button variant="primary" className="mt-4 w-full">
-        <LogIn size={15} /> Принять приглашение и войти
-      </Button>
+      {step === 2 && (
+        <>
+          <CodeStep />
+          <Button className="mt-4 w-full" variant="primary" onPress={() => setStep(3)}>
+            Подтвердить <ArrowRight size={15} />
+          </Button>
+        </>
+      )}
+
+      {step === 3 && (
+        <>
+          <FromState
+            born="14.05.2011"
+            fio="Нұрланұлы Алихан"
+            iin={IIN_INVITED}
+            sex="мужской"
+          />
+
+          <Panel title="Что о вас указал клуб" sub="На чтение: это заполнил приглашающий, а не вы">
+            <FormGrid>
+              <FieldView label="Фамилия, имя" value="Нұрланұлы Алихан" />
+              <FieldView label="Дата рождения" value="14.05.2011" />
+              <FieldView label="Разряд" value="2 разряд" />
+              <FieldView label="Клуб" value="«Алатау» · г. Алматы" />
+            </FormGrid>
+            <div className="mt-3 flex items-center gap-2 text-[12.5px] text-green-700">
+              <Check size={14} /> ФИО и дата рождения сошлись с государственной базой
+            </div>
+          </Panel>
+
+          <FormGrid>
+            <Consent />
+            <Consent
+              t="Согласие на запрос сведений из государственной базы через Smart Bridge"
+            />
+          </FormGrid>
+
+          <Button className="mt-4 w-full" variant="primary">
+            <LogIn size={15} /> Принять приглашение и войти
+          </Button>
+        </>
+      )}
 
       <div className="mt-4 flex items-center justify-between">
         <span className="text-xs text-neutral-500">Ссылка одноразовая и действует до 22.04.2026</span>
@@ -1316,12 +1955,55 @@ export const Accept0_6States = () => (
         <Rows>
           <Row
             nm="Нұрланұлы Алихан"
-            sub="принял приглашение 16.04 · пароль задан им самим"
+            sub="принял приглашение 16.04 · подтвердил себя ИИН и кодом"
             pill={{ t: 'В КЛУБЕ', cls: 'live' }}
           />
         </Rows>
         <div className="mt-3">
-          <Bar tone="success">Клуб видит только факт принятия. Пароля он не знает и сменить его не может.</Bar>
+          <Bar tone="success">
+            Клуб видит только факт принятия. Входа в чужой аккаунт у него нет и быть не может: код
+            уходит на номер человека, а не клубу.
+          </Bar>
+        </div>
+      </Frag>
+    </Shot>
+
+    {/* Новое состояние ✳ (30.08.2026): раньше сверять было не с чем — клуб
+        писал ФИО от руки, и никто не знал, верно ли. Теперь рядом лежат две
+        записи, и расхождение видно сразу. */}
+    <Shot
+      tone="danger"
+      title="ФИО из базы расходится с тем, что указал клуб ✳"
+      text="Дальше не идём: либо ссылку открыл не тот человек, либо клуб ошибся в карточке."
+      wide
+    >
+      <Frag>
+        <div className="grid grid-cols-2 gap-3">
+          <div className="rounded-lg border border-neutral-200 bg-white p-3">
+            <div className="text-[11px] font-semibold uppercase tracking-wider text-neutral-400">
+              Указал клуб
+            </div>
+            <div className="mt-1 text-sm font-semibold">Нұрланұлы Алихан</div>
+            <div className="text-xs text-neutral-500">14.05.2011</div>
+          </div>
+          <div className="rounded-lg border border-red-200 bg-red-50 p-3">
+            <div className="text-[11px] font-semibold uppercase tracking-wider text-red-700">
+              Государственная база по вашему ИИН
+            </div>
+            <div className="mt-1 text-sm font-semibold text-red-900">Нұрланұлы Ерасыл</div>
+            <div className="text-xs text-red-800">03.09.2010</div>
+          </div>
+        </div>
+        <div className="mt-3">
+          <Bar tone="danger">
+            Приглашение не принимается. Два пути: это чужая ссылка — «это не я», она гаснет и
+            пригласившему уходит уведомление; либо клуб ошибся в имени — он правит карточку и
+            выпускает ссылку заново.
+          </Bar>
+          <div className="flex items-center gap-2">
+            <Button variant="outline">Это не я</Button>
+            <DisabledAction>Принять приглашение и войти</DisabledAction>
+          </div>
         </div>
       </Frag>
     </Shot>
@@ -1341,7 +2023,7 @@ export const Accept0_6States = () => (
         <Rows>
           <Row
             nm="Приглашение принято 12.04"
-            sub="дальше — обычный вход по телефону или почте"
+            sub="дальше — обычный вход по ИИН и коду"
             pill={{ t: 'ИСПОЛЬЗОВАНА', cls: 'done' }}
           />
         </Rows>
@@ -1375,6 +2057,10 @@ export const Accept0_6States = () => (
 
 /* ── Э0.7 · Регистрация судьи ✳ ────────────────────────────────── */
 
+/** ИИН судьи для макетов: Оралбай Ержан, 03.11.1988 — тот же человек, что в
+    состояниях экрана и в реестре судей. */
+const IIN_JUDGE = '881103300417';
+
 /** Судья заводит себя сам — как спортсмен (Э0.5), но категорию себе не ставит.
 
     Так записано в нашем предположении о том, как люди попадают в систему
@@ -1384,19 +2070,20 @@ export const Accept0_6States = () => (
     вручную — а председателю ГСК некого было назначать, кроме тех, кого успели
     завести.
 
-    Форма — только то, без чего аккаунта не завести: имя, дата рождения,
-    контакты и пароль. Ровно как у спортсмена (Э0.5), и по той же причине: на
-    входе человек заполняет минимум, остальное система узнаёт позже.
+    Шаги те же три, что у спортсмена ✳ (30.08.2026): ИИН → код → анкета. ФИО,
+    дата рождения и пол приходят из государственной базы и не правятся; руками
+    судья вводит контакты и регион.
 
     - **Категории в форме нет вовсе.** Ни селектора, ни загрузки удостоверения:
       селектор отдал бы «высшую национальную» любому, кто её выбрал, а файл на
       входе — лишний шаг, когда документа может не быть под рукой. Категорию
       проставляет коллегия по документу, а сам документ судья загружает у себя в
       кабинете — там же, где документы на S3 и S4 (Э6.10, Э9.5), и по тому же
-      правилу (TZ §7.2).
-    - **Региона в форме тоже нет.** Он нужен для коэффициента 1,5 за выезд
-      (§7.2), но выясняется не на входе: как и у спортсмена, регион указывается
-      в профиле — до первого судейства время есть.
+      правилу (TZ §7.2). Smart Bridge здесь не помогает и помочь не может:
+      судейская категория — документ федерации, а не государства.
+    - **Регион в форме теперь есть** ✳. Раньше его не спрашивали, потому что
+      форму берегли от лишних полей; блок «кто вы» освободил четыре поля, и
+      регион встал на их место — он нужен для коэффициента 1,5 за выезд (§7.2).
 
     Окраска своя (янтарная полоса и значок): формы спортсмена и судьи похожи
     как две капли, а заголовок читают уже после того, как начали заполнять.
@@ -1405,6 +2092,8 @@ export const Accept0_6States = () => (
     ⚠ 9.2 — сам ли регистрируется судья, федерация не ответила. Экран стоит на
     нашем предположении, и это написано прямо на нём. */
 export function SignUpJudge0_7() {
+  const [step, setStep] = useState<1 | 2 | 3>(1);
+  const [iin, setIin] = useState(IIN_JUDGE);
   return (
     <AuthPage wide judge>
       <div className="mb-5 flex flex-col items-center gap-4 text-center">
@@ -1420,31 +2109,77 @@ export function SignUpJudge0_7() {
         </div>
       </div>
 
-      <FormGrid>
-        <SecCap>Кто вы</SecCap>
-        <TextInput label="Фамилия" placeholder="Оралбай" />
-        <TextInput label="Имя, отчество" placeholder="Ержан Маратович" />
-        <TextInput label="Дата рождения" placeholder="дд.мм.гггг" />
-        <SecCap>Контакты и вход</SecCap>
-        <TextInput label="Телефон" placeholder="+7 ___ ___ __ __" />
-        <TextInput label="Почта" placeholder="имя@домен" />
-        <TextInput label="Пароль" placeholder="не короче 8 знаков" wide />
-        <Consent />
-      </FormGrid>
+      <StepBar at={step} steps={['ИИН', 'Код из SMS', 'Анкета']} />
 
-      <Button variant="primary" className="mt-4 w-full">
-        <Gavel size={15} /> Зарегистрироваться судьёй
-      </Button>
+      {step === 1 && (
+        <>
+          <IinField value={iin} onChange={setIin} />
+          <div className="mt-3">
+            <Bar>
+              По ИИН система спросит государственную базу и заполнит за вас фамилию, имя, отчество
+              и дату рождения. Пароль придумывать не нужно — его в системе нет.
+            </Bar>
+          </div>
+          <Button
+            className="w-full"
+            isDisabled={iin.length !== 12}
+            variant="primary"
+            onPress={() => setStep(2)}
+          >
+            Продолжить <ArrowRight size={15} />
+          </Button>
+        </>
+      )}
 
-      {/* Чего в форме нет и что дальше — сказано на самой форме: судья не
-          должен искать, почему у него не спросили категорию. */}
-      <div className="mt-4">
-        <Bar tone="warning">
-          Категории и региона в форме нет: категорию проставит коллегия по удостоверению (Э5.6) —
-          документ загрузите потом в своём кабинете, регион — в профиле. До подтверждения запись в
-          реестре стоит с пометкой «ждёт подтверждения»: S2 не начисляется, в наряд не назначают.
-        </Bar>
-      </div>
+      {step === 2 && (
+        <>
+          <CodeStep />
+          <Button className="mt-4 w-full" variant="primary" onPress={() => setStep(3)}>
+            Подтвердить <ArrowRight size={15} />
+          </Button>
+        </>
+      )}
+
+      {step === 3 && (
+        <>
+          <FromState
+            born="03.11.1988"
+            fio="Оралбай Ержан Маратович"
+            iin={IIN_JUDGE}
+            sex="мужской"
+          />
+
+          <FormGrid>
+            <SecCap>Контакты</SecCap>
+            <TextInput label="Телефон" placeholder="+7 ___ ___ __ __" />
+            <TextInput label="Почта" placeholder="имя@домен" />
+            <SecCap>Где судите</SecCap>
+            <PickField label="Регион — от него зависит коэффициент за выезд (§7.2)" value="Павлодарская область" wide />
+            <Consent />
+            <Consent
+              t="Согласие на запрос сведений из государственной базы через Smart Bridge"
+            />
+          </FormGrid>
+
+          {/* Чего в форме нет и что дальше — сказано на самой форме и до
+              кнопки: судья не должен искать, почему у него не спросили
+              категорию, уже нажав «зарегистрироваться». */}
+          <div className="mt-4">
+            <Bar tone="warning">
+              Категории в форме нет и не будет: её проставит коллегия по удостоверению (Э5.6) —
+              документ загрузите потом в своём кабинете. Государственная база тут не поможет:
+              категория судьи — документ федерации, а не государства. До подтверждения запись в
+              реестре стоит с пометкой «ждёт подтверждения»: S2 не начисляется, в наряд не
+              назначают.
+            </Bar>
+          </div>
+
+          <Button className="w-full" variant="primary">
+            <Gavel size={15} /> Зарегистрироваться судьёй
+          </Button>
+        </>
+      )}
+
       <div className="flex justify-center">
         <ALink to="Э0.1">Уже есть аккаунт — войти</ALink>
       </div>
@@ -1479,39 +2214,51 @@ export const SignUpJudge0_7States = () => (
       </Frag>
     </Shot>
 
-    <Shot
-      tone="warning"
-      title="Найден похожий человек ✳"
-      text="То же правило, что при регистрации спортсмена: связываем с существующей записью, а не заводим вторую."
-    >
-      <Frag>
-        <Rows>
-          <Row
-            nm="Оралбай Ержан · 1988 · Павлодар"
-            sub="в реестре судей с 12.01.2024 · судья первой категории"
-            pill={{ t: 'СОВПАДЕНИЕ', cls: 'wait' }}
-          />
-        </Rows>
-        <div className="mt-3 flex items-center gap-2">
-          <Button variant="outline">Связать с этой записью</Button>
-          <QuietAction>Это не я</QuietAction>
-        </div>
-      </Frag>
-    </Shot>
-
+    {/* Прежнее «найден похожий человек» ✳ отсюда убрано (30.08.2026): судью
+        искали по ФИО и году рождения, и человеку предлагали решить, он это или
+        не он. По ИИН вопрос не стоит — совпадение точное, связывание
+        происходит само и объявляется, а не спрашивается. */}
     <Shot
       tone="info"
-      title="Он уже в системе спортсменом ✳"
+      title="Этот ИИН уже в системе — спортсменом ✳"
       text="Один человек — один аккаунт (QUESTIONS 9.5): судейская роль добавляется к существующему, второй регистрации нет."
     >
       <Frag>
         <Rows>
           <Row
             nm="Байжанов Ерасыл"
-            sub="спортсмен клуба «Алатау» · просит роль судьи"
+            sub="спортсмен клуба «Алатау» · тот же ИИН · просит роль судьи"
             pill={{ t: 'РОЛЬ ДОБАВЛЯЕТСЯ', cls: 'reg' }}
           />
         </Rows>
+        <div className="mt-3">
+          <Bar tone="success">
+            Раньше здесь спрашивали «это вы?» и надеялись на честный ответ. ИИН отвечает сам:
+            второй карточки не появляется, вход остаётся один, в шапке добавляется вторая роль.
+          </Bar>
+        </div>
+      </Frag>
+    </Shot>
+
+    <Shot
+      tone="warning"
+      title="Судья уже в реестре, но входа у него не было ✳"
+      text="Коллегия завела карточку с категорией; регистрация даёт человеку вход в неё, а не вторую запись."
+    >
+      <Frag>
+        <Rows>
+          <Row
+            nm="Оралбай Ержан · 1988 · Павлодар"
+            sub="в реестре судей с 12.01.2024 · первая категория · совпал ИИН"
+            pill={{ t: 'СОВПАЛ ИИН', cls: 'live' }}
+          />
+        </Rows>
+        <div className="mt-3">
+          <Bar>
+            Категория и оценка сохраняются: их ставила коллегия, и регистрация их не трогает.
+            Человек получает вход в свою запись — «ждёт подтверждения» ему не выставляют.
+          </Bar>
+        </div>
       </Frag>
     </Shot>
 
@@ -1533,6 +2280,639 @@ export const SignUpJudge0_7States = () => (
   </States>
 );
 
+/* ── Второй формат: те же экраны на телефоне ────────────────────── */
+
+/* Полный адаптив ✳ (30.08.2026, решение владельца «все экраны в обоих»).
+
+   Сквозные экраны — самый очевидный случай: вход, регистрация и публичный сайт
+   с телефона открывают чаще, чем с ноутбука. Спортсмен заводит себя стоя в
+   зале, приглашённый открывает ссылку из мессенджера на том же телефоне, куда
+   придёт код, а результаты смотрят с трибуны. Профиль и уведомления — обычные
+   экраны роли: их видит любая из четырнадцати ролей, и телефон у них такой же
+   общий, как сам экран.
+
+   Содержание то же и из тех же данных (`LIVE`, `STARTS0_4`, `LEADERS0_4`,
+   `NEWS0_4`, `NOTES0_3`, `LOGIN_ROWS0_2`, `CLUBS`, `SCHED`, `RESULTS`,
+   `PLAYOFF`), меняется раскладка:
+
+   - экраны роли (Э0.2, Э0.3): `WebApp` → `PhoneRoleApp` — нижние вкладки она
+     строит из тех же `R00.nav`, что рисуют сайдбар;
+   - титульные страницы (Э0.5, Э0.6, Э0.7): `AuthPage` → `AuthPhone` — рамка
+     `Phone` без нижних вкладок: человек ещё не вошёл, разделов у него нет;
+   - публичный сайт (Э0.4): рамка `Phone` со своей шапкой сайта, тоже без
+     вкладок — это сайт, а не приложение;
+   - формы: `FormGrid` в одну колонку (`wide` каждому полю);
+   - таблицы (`DataTable`) → строки `Rows`/`Row`;
+   - карточка табло (`MatchCard`) → то же табло сверху вниз (`LiveRowPhone`).
+
+   Шесть ячеек `InputOTP` на 392 px помещаются без правки: слоты в нём
+   `flex-1`, и два блока по три с разделителем занимают около 290 px из 350
+   доступных — уменьшать ячейку не пришлось.
+
+   Состояния экрана во втором формате не повторяем: они показаны один раз, на
+   полке `States` под основным макетом. */
+
+/** Титульная страница на телефоне: та же карточка, что в вебе, но во весь
+    экран.
+
+    Синего фона знака ФНТ здесь нет: на 392 px карточка занимает экран целиком,
+    и «фон» превратился бы в четыре синих полоски по краям — фирменным остаётся
+    знак в шапке. `judge` — та же янтарная отбивка, что у формы судьи в вебе:
+    формы спортсмена и судьи похожи как две капли, а заголовок читают уже
+    после того, как начали заполнять. */
+const AuthPhone = ({ judge, children }: { judge?: boolean; children: ReactNode }) => (
+  <Phone>
+    {judge && <div className="h-1 shrink-0 bg-amber-500" />}
+    <div className="min-h-0 flex-1 overflow-auto px-5 pb-4 pt-3">{children}</div>
+    <div className="shrink-0 px-5 text-center text-[11px] leading-snug text-neutral-400">
+      {AUTH_FOOT}
+    </div>
+  </Phone>
+);
+
+/** Шапка титульной страницы на телефоне: знак, заголовок и пояснение. */
+const AuthPhoneHead = ({ chip, title, sub }: { chip?: ReactNode; title: string; sub: string }) => (
+  <div className="mb-4 flex flex-col items-center gap-2 text-center">
+    <Brand size="lg" />
+    {chip}
+    <div>
+      <div className="text-lg font-semibold leading-tight tracking-tight">{title}</div>
+      <div className="mt-1 text-[12.5px] leading-snug text-neutral-500">{sub}</div>
+    </div>
+  </div>
+);
+
+/** Шаг «код» на телефоне вместе с кнопкой и возвратом к вводу ИИН: он одинаков
+    во всех трёх формах, и три копии разъехались бы на первой же правке. */
+const CodeStepPhone = ({ label, onBack }: { label: string; onBack: () => void }) => (
+  <>
+    <CodeStep />
+    <Button className="mt-4 w-full" variant="primary">
+      {label}
+      <ArrowRight size={15} />
+    </Button>
+    <div className="mt-2 text-center">
+      <button
+        type="button"
+        className="text-[12.5px] font-semibold text-neutral-500 hover:underline"
+        onClick={onBack}
+      >
+        Ввести другой ИИН
+      </button>
+    </div>
+  </>
+);
+
+/* ── Э0.5 · Регистрация спортсмена на телефоне ──────────────────── */
+
+/** Те же три шага, что в вебе: ИИН → код → анкета. На телефоне у сценария есть
+    преимущество — SMS приходит на то же устройство, с которого регистрируются.
+    Подпись шага короче («Код» вместо «Кода из SMS»): три подписи делят 350 px,
+    и длинная встаёт в две строки. */
+export function SignUp0_5Phone() {
+  const [step, setStep] = useState<1 | 2 | 3>(1);
+  const [iin, setIin] = useState(IIN_ATHLETE);
+  return (
+    <AuthPhone>
+      <AuthPhoneHead
+        sub={
+          step === 3
+            ? 'ФИО, дата рождения и пол пришли из государственной базы — руками только то, чего в ней нет'
+            : 'По ИИН через Smart Bridge · пароль придумывать не нужно, его в системе нет'
+        }
+        title="Регистрация спортсмена"
+      />
+
+      <StepBar at={step} steps={['ИИН', 'Код', 'Анкета']} />
+
+      {step === 1 && (
+        <>
+          <IinField value={iin} onChange={setIin} />
+          <div className="mt-3">
+            <Bar>
+              По ИИН система спросит государственную базу и заполнит за вас фамилию, имя, отчество,
+              дату рождения и пол. Заново набирать их не придётся.
+            </Bar>
+          </div>
+          <Button
+            className="w-full"
+            isDisabled={iin.length !== 12}
+            variant="primary"
+            onPress={() => setStep(2)}
+          >
+            Продолжить <ArrowRight size={15} />
+          </Button>
+        </>
+      )}
+
+      {step === 2 && <CodeStepPhone label="Подтвердить" onBack={() => setStep(1)} />}
+
+      {step === 3 && (
+        <>
+          <FromState one born="12.07.2009" fio="Оралбек Диас Ерланович" iin={IIN_ATHLETE} sex="мужской" />
+
+          <FormGrid>
+            <SecCap>Контакты</SecCap>
+            <TextInput wide label="Телефон" placeholder="+7 ___ ___ __ __" />
+            <TextInput wide label="Почта" placeholder="имя@домен" />
+            <SecCap>Спорт</SecCap>
+            <PickField wide label="Город" value="Алматы" />
+            <PickField wide label="Разряд" value="2 разряд" />
+            <PickField wide label="Клуб — заявка, подтверждает сам клуб (Э13.2)" value="«Алатау» · Алматы" />
+            <Consent sub="без него регистрация не проходит" />
+            <Consent
+              sub="без него ФИО и дату рождения по ИИН не запросить"
+              t="Согласие на запрос сведений из государственной базы через Smart Bridge"
+            />
+          </FormGrid>
+
+          <div className="mt-4">
+            <Bar>
+              Профиль откроется сразу. До оплаты годового взноса заявки на турниры со взносом не
+              проходят (TZ §9.2) — оплата в своём кабинете.
+            </Bar>
+          </div>
+
+          <Button className="w-full" variant="primary">
+            <UserPlus size={15} /> Зарегистрироваться
+          </Button>
+        </>
+      )}
+
+      <div className="mt-4 flex justify-center">
+        <ALink to="Э0.1">Уже есть аккаунт — войти</ALink>
+      </div>
+    </AuthPhone>
+  );
+}
+
+/* ── Э0.6 · Принятие приглашения на телефоне ────────────────────── */
+
+/** Самый частый способ открыть приглашение — ссылка из мессенджера, то есть
+    как раз телефон. Три шага те же: ИИН → код → сверка данных клуба с
+    государственной базой. */
+export function Accept0_6Phone() {
+  const [step, setStep] = useState<1 | 2 | 3>(1);
+  const [iin, setIin] = useState(IIN_INVITED);
+  return (
+    <AuthPhone>
+      <AuthPhoneHead
+        sub="Пригласил Досжан Мади · администратор клуба"
+        title="Клуб «Алатау» приглашает вас в систему ФНТ РК"
+      />
+
+      <StepBar at={step} steps={['ИИН', 'Код', 'Проверка']} />
+
+      {step === 1 && (
+        <>
+          <IinField value={iin} onChange={setIin} />
+          <div className="mt-3">
+            <Bar>
+              Ссылку могли переслать кому угодно, поэтому она сама по себе никого не пускает:
+              подтвердите, что вы — тот, кого приглашали. Пароль придумывать не нужно, его в
+              системе нет.
+            </Bar>
+          </div>
+          <Button
+            className="w-full"
+            isDisabled={iin.length !== 12}
+            variant="primary"
+            onPress={() => setStep(2)}
+          >
+            Продолжить <ArrowRight size={15} />
+          </Button>
+        </>
+      )}
+
+      {step === 2 && <CodeStepPhone label="Подтвердить" onBack={() => setStep(1)} />}
+
+      {step === 3 && (
+        <>
+          <FromState one born="14.05.2011" fio="Нұрланұлы Алихан" iin={IIN_INVITED} sex="мужской" />
+
+          <Panel title="Что о вас указал клуб" sub="На чтение: это заполнил приглашающий, а не вы">
+            <FormGrid>
+              <FieldView wide label="Фамилия, имя" value="Нұрланұлы Алихан" />
+              <FieldView wide label="Дата рождения" value="14.05.2011" />
+              <FieldView wide label="Разряд" value="2 разряд" />
+              <FieldView wide label="Клуб" value="«Алатау» · г. Алматы" />
+            </FormGrid>
+            <div className="mt-3 flex items-start gap-2 text-[12.5px] leading-snug text-green-700">
+              <Check size={14} className="mt-0.5 shrink-0" /> ФИО и дата рождения сошлись с
+              государственной базой
+            </div>
+          </Panel>
+
+          <FormGrid>
+            <Consent />
+            <Consent t="Согласие на запрос сведений из государственной базы через Smart Bridge" />
+          </FormGrid>
+
+          <Button className="mt-4 w-full" variant="primary">
+            <LogIn size={15} /> Принять приглашение и войти
+          </Button>
+        </>
+      )}
+
+      <div className="mt-4 flex flex-col items-center gap-1 text-center">
+        <span className="text-xs text-neutral-500">Ссылка одноразовая и действует до 22.04.2026</span>
+        <ALink muted>Это не я</ALink>
+      </div>
+    </AuthPhone>
+  );
+}
+
+/* ── Э0.7 · Регистрация судьи на телефоне ───────────────────────── */
+
+/** Судья заводит себя сам — категорию по-прежнему проставляет коллегия, и в
+    форме её нет ни на одном формате. Экспортируется: кабинет судьи (role00j)
+    открывается этим же экраном и ставит его вторым форматом своей колонки. */
+export function SignUpJudge0_7Phone() {
+  const [step, setStep] = useState<1 | 2 | 3>(1);
+  const [iin, setIin] = useState(IIN_JUDGE);
+  return (
+    <AuthPhone judge>
+      <AuthPhoneHead
+        chip={
+          <Chip color="warning" size="sm" variant="soft">
+            <Gavel size={12} className="mr-1 inline" /> СУДЕЙСКАЯ КОЛЛЕГИЯ
+          </Chip>
+        }
+        sub="Аккаунт вы заводите сами · категорию проставляет коллегия по удостоверению"
+        title="Регистрация судьи"
+      />
+
+      <StepBar at={step} steps={['ИИН', 'Код', 'Анкета']} />
+
+      {step === 1 && (
+        <>
+          <IinField value={iin} onChange={setIin} />
+          <div className="mt-3">
+            <Bar>
+              По ИИН система спросит государственную базу и заполнит за вас фамилию, имя, отчество
+              и дату рождения. Пароль придумывать не нужно — его в системе нет.
+            </Bar>
+          </div>
+          <Button
+            className="w-full"
+            isDisabled={iin.length !== 12}
+            variant="primary"
+            onPress={() => setStep(2)}
+          >
+            Продолжить <ArrowRight size={15} />
+          </Button>
+        </>
+      )}
+
+      {step === 2 && <CodeStepPhone label="Подтвердить" onBack={() => setStep(1)} />}
+
+      {step === 3 && (
+        <>
+          <FromState one born="03.11.1988" fio="Оралбай Ержан Маратович" iin={IIN_JUDGE} sex="мужской" />
+
+          <FormGrid>
+            <SecCap>Контакты</SecCap>
+            <TextInput wide label="Телефон" placeholder="+7 ___ ___ __ __" />
+            <TextInput wide label="Почта" placeholder="имя@домен" />
+            <SecCap>Где судите</SecCap>
+            <PickField
+              wide
+              label="Регион — от него зависит коэффициент за выезд (§7.2)"
+              value="Павлодарская область"
+            />
+            <Consent />
+            <Consent t="Согласие на запрос сведений из государственной базы через Smart Bridge" />
+          </FormGrid>
+
+          <div className="mt-4">
+            <Bar tone="warning">
+              Категории в форме нет и не будет: её проставит коллегия по удостоверению (Э5.6) —
+              документ загрузите потом в своём кабинете. Государственная база тут не поможет:
+              категория судьи — документ федерации, а не государства. До подтверждения запись в
+              реестре стоит с пометкой «ждёт подтверждения»: S2 не начисляется, в наряд не
+              назначают.
+            </Bar>
+          </div>
+
+          <Button className="w-full" variant="primary">
+            <Gavel size={15} /> Зарегистрироваться судьёй
+          </Button>
+        </>
+      )}
+
+      <div className="mt-4 flex justify-center">
+        <ALink to="Э0.1">Уже есть аккаунт — войти</ALink>
+      </div>
+    </AuthPhone>
+  );
+}
+
+/* ── Э0.2 · Свой профиль на телефоне ────────────────────────────── */
+
+/** Обычный экран роли: оболочка `PhoneRoleApp` со вкладками из `R00.nav`.
+    Активного раздела в них нет — как и в сайдбаре веба: на профиль приходят из
+    шапки, а не из меню, и подсвечивать нечего. Возврат «К работе» поэтому и
+    здесь остаётся единственным выходом. */
+const Profile0_2Phone = () => (
+  <PhoneRoleApp
+    role={R00}
+    nav="Профиль"
+    title="Мой профиль"
+    sub="Контакты, язык интерфейса и вход"
+    back={{ label: 'К работе', to: 'Э1.1' }}
+  >
+    <Panel title="Профиль">
+      <div className="mb-4">
+        <ProfileHead0_2 />
+      </div>
+      <FormGrid>
+        <TextInput wide label="Телефон" value="+7 701 220 45 90" />
+        <TextInput wide label="Почта" value="d.abaeva@ttfrk.kz" />
+      </FormGrid>
+      {/* Язык и «Сохранить» — друг под другом: в строку они помещаются только
+          на десктопе, а кнопка во всю ширину на телефоне ещё и попадает под
+          большой палец. */}
+      <div className="mt-4">
+        <div className="text-xs font-medium text-neutral-500">Язык интерфейса</div>
+        <div className="mt-1"><Langs /></div>
+        <div className="mt-1.5 text-xs leading-snug text-neutral-500">
+          Письма и уведомления приходят на нём же
+        </div>
+        <Button className="mt-3 w-full" size="sm" variant="primary">Сохранить</Button>
+      </div>
+    </Panel>
+
+    <Panel title="Вход" sub="Пароля в системе нет: вход по ИИН и одноразовому коду ✳" flush>
+      <div className="divide-y divide-neutral-100">
+        {LOGIN_ROWS0_2.map((r) => (
+          <Row key={r.nm} action={r.action} nm={r.nm} pill={r.pill} sub={r.sub} />
+        ))}
+      </div>
+    </Panel>
+
+    <Bar tone="warning">{PROFILE_WARN0_2}</Bar>
+  </PhoneRoleApp>
+);
+
+/* ── Э0.3 · Уведомления на телефоне ─────────────────────────────── */
+
+/** Тот же список и те же числа. Полоса «факты + кнопка» разведена по строкам:
+    «Отметить все прочитанными» рядом с тремя счётчиками на 392 px не встаёт. */
+const Notif0_3Phone = () => (
+  <PhoneRoleApp
+    role={R00}
+    nav="Уведомления"
+    title="Уведомления"
+    sub="3 непрочитанных из 42"
+    back={{ label: 'К работе', to: 'Э1.1' }}
+  >
+    <div className="mb-3 flex flex-col gap-2">
+      <Facts
+        items={[
+          { k: 'непрочитанных', v: '3', hot: true },
+          { k: 'всего', v: '42' },
+          { k: 'период', v: '7 дней' },
+        ]}
+      />
+      <Button className="w-full" size="sm" variant="outline">
+        <CheckCheck size={14} /> Отметить все прочитанными
+      </Button>
+    </div>
+    <Rows>
+      {NOTES0_3.map((n) => (
+        <NRow key={n.t} {...n} one />
+      ))}
+    </Rows>
+    <div className="mt-2 text-[11px] leading-snug text-neutral-400">{NOTE_FOOT0_3}</div>
+  </PhoneRoleApp>
+);
+
+/* ── Э0.4 · Публичные страницы на телефоне ──────────────────────── */
+
+/** Матч в реальном времени на телефоне: то же табло, но сверху вниз.
+
+    `MatchCard` кита ставит игроков по краям от крупного счёта — двум фамилиям
+    с фото и счёту в одну строку нужно около 380 px, а в кадре их 330, и
+    карточка уезжает за край. Данные те же (`LIVE`), меняется раскладка: игрок —
+    строка со своим числом, партии и примечание под обоими. Счёт «2 : 1»
+    разобран по игрокам: два числа у двух фамилий читаются быстрее, чем одно
+    выражение посередине. */
+const LiveRowPhone = ({ m }: { m: LiveMatch }) => {
+  const [a, b] = m.score.split(':').map((s) => s.trim());
+  const sides = [
+    { p: m.home, v: a },
+    { p: m.away, v: b },
+  ];
+  return (
+    <div data-row className="rounded-xl border border-green-200 bg-white p-3.5 shadow-sm">
+      <div className="mb-2 flex items-start justify-between gap-2">
+        <span className="min-w-0 text-xs leading-snug text-neutral-500">{m.tour}</span>
+        <Chip color="success" size="sm">
+          <span className="mr-1 inline-block h-1.5 w-1.5 rounded-full bg-green-600" /> ИДЁТ
+        </Chip>
+      </div>
+      {sides.map(({ p, v }) => (
+        <div key={p.nm} className="flex items-center gap-2.5 py-1">
+          <Avatar size="sm">
+            <Avatar.Image alt={p.nm} src={p.av} />
+            <Avatar.Fallback>{p.nm.slice(0, 1)}</Avatar.Fallback>
+          </Avatar>
+          <span className="min-w-0 flex-1 leading-tight">
+            <span className="block truncate text-[13.5px] font-semibold">{p.nm}</span>
+            <span className="block truncate text-xs text-neutral-500">{p.sub}</span>
+          </span>
+          <span className="text-xl font-bold tabular-nums">{v}</span>
+        </div>
+      ))}
+      <div className="mt-2.5 flex items-center justify-between gap-2">
+        <GameCells games={m.games} />
+        <span className="text-right text-xs leading-snug text-neutral-500">{m.note}</span>
+      </div>
+    </div>
+  );
+};
+
+/** Главная сайта на телефоне: те же четыре блока одной колонкой. */
+const Public0_4Phone = () => (
+  <Phone>
+    <SiteHead one active="Главная" />
+    <div className="min-h-0 flex-1 overflow-auto bg-neutral-50 px-4 pb-4 pt-3">
+      <div className="mb-2 flex items-center justify-between gap-2">
+        <h2 className="text-[15px] font-semibold tracking-tight">Идут сейчас</h2>
+        <Pill t="В РЕАЛЬНОМ ВРЕМЕНИ" color="success" />
+      </div>
+      <div className="mb-4 flex flex-col gap-3">
+        {LIVE.map((m) => (
+          <LiveRowPhone key={m.tour} m={m} />
+        ))}
+      </div>
+
+      <Panel title="Ближайшие и текущие старты" flush>
+        <div className="divide-y divide-neutral-100">
+          {STARTS0_4.map((s) => (
+            <Row key={s.nm} nm={s.nm} pill={s.pill} sub={s.sub} />
+          ))}
+        </div>
+      </Panel>
+
+      {/* Подпись «весь рейтинг — игроки и судьи» переехала из правого края
+          заголовка под название: в 328 px она отжимала само название панели. */}
+      <Panel title="Лидеры рейтинга" sub="весь рейтинг — игроки и судьи" flush>
+        <div className="divide-y divide-neutral-100">
+          {LEADERS0_4.map((l) => (
+            <Row key={l.nm} av={l.av} nm={l.nm} sub={l.sub} val={l.val} />
+          ))}
+        </div>
+      </Panel>
+
+      <Panel title="Новости" sub="на трёх языках" flush>
+        <div className="divide-y divide-neutral-100">
+          {NEWS0_4.map((n) => (
+            <Row key={n.nm} nm={n.nm} sub={n.sub} />
+          ))}
+        </div>
+      </Panel>
+    </div>
+  </Phone>
+);
+
+/** Страница турнира на телефоне — вторая половина публичной части.
+
+    Порядок тот же, что в вебе: счёт и трансляция выше вкладок, потому что на
+    страницу идущего турнира приходят ради того, что происходит прямо сейчас.
+    Вкладки те же четыре; таблицы расписания и результатов развёрнуты строками —
+    четыре колонки на 328 px сжимаются до нечитаемых. */
+const Tournament0_4Phone = () => (
+  <Phone>
+    <SiteHead one active="Календарь" />
+    <div className="min-h-0 flex-1 overflow-auto bg-neutral-50 px-4 pb-4 pt-3">
+      <BackLink label="Календарь ФНТ РК" to="Э0.4" />
+      <div className="mb-3 mt-1 flex items-start justify-between gap-2">
+        <div className="min-w-0">
+          <h1 className="text-[17px] font-semibold leading-tight tracking-tight">
+            Евразийская лига 2026
+          </h1>
+          <p className="mt-0.5 text-xs leading-snug text-neutral-500">
+            Командный турнир · 4 клуба · Астана · 12–20 мая · круговой этап, 2-й тур из трёх
+          </p>
+        </div>
+        <Pill t="ИДЁТ" color="success" />
+      </div>
+
+      <Panel title="Счёт в реальном времени" sub="обновляется сам — страницу перезагружать не нужно">
+        <div className="flex flex-col gap-3">
+          {LIVE.map((m) => (
+            <LiveRowPhone key={m.tour} m={m} />
+          ))}
+        </div>
+      </Panel>
+
+      <Panel title="Трансляция" sub="смотреть можно без входа">
+        {/* Ширину окну здесь не ограничиваем: на телефоне видео и так узкое, а
+            `max-w-xl` веба оставил бы поля по краям. */}
+        <div className="relative grid aspect-video place-items-center rounded-lg bg-neutral-900">
+          <span className="grid size-12 place-items-center rounded-full bg-white/90 text-neutral-900">
+            <Play size={20} />
+          </span>
+          <span className="absolute left-3 top-3">
+            <Pill t="В ЭФИРЕ" color="danger" />
+          </span>
+        </div>
+        <div className="mt-3 text-[13px] font-medium">Смагулов Алан — Ким Георгий</div>
+        <div className="mt-0.5 text-xs text-neutral-500">2-й тур · «Алатау» — СКА · стол 1</div>
+      </Panel>
+
+      <PageTabs
+        items={[
+          {
+            t: 'Состав',
+            view: (
+              <Panel title="Состав · 4 клуба, 24 игрока" flush>
+                <div className="divide-y divide-neutral-100">
+                  {CLUBS.map((c) => (
+                    <Row key={c.nm} nm={c.nm} sub={c.sub} val="6 игроков" />
+                  ))}
+                </div>
+              </Panel>
+            ),
+          },
+          {
+            t: 'Сетка',
+            view: (
+              <Panel
+                title="Сетка плей-офф"
+                sub="пары закрепятся после третьего тура: первый играет с четвёртым, второй с третьим"
+                flush
+              >
+                {/* Круги друг под другом, а не колонками: две колонки на 328 px
+                    дают по 150 px, и название клуба в паре не помещается. */}
+                {PLAYOFF.map((col) => (
+                  <div key={col.round} className="border-t border-neutral-100 px-4 py-3 first:border-t-0">
+                    <div className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-neutral-400">
+                      {col.round}
+                    </div>
+                    <div className="flex flex-col gap-2">
+                      {col.pairs.map((p) => (
+                        <div key={p.key} className="overflow-hidden rounded-lg border border-neutral-200 bg-white">
+                          <div className="border-b border-neutral-100 px-3 py-2 text-[13px] font-medium">
+                            {p.a}
+                          </div>
+                          <div className="px-3 py-2 text-[13px] font-medium">{p.b}</div>
+                          <div className="border-t border-neutral-100 bg-neutral-50 px-3 py-1.5 text-[11px] text-neutral-500">
+                            {p.note}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </Panel>
+            ),
+          },
+          {
+            t: 'Расписание',
+            view: (
+              <Panel title="Расписание" sub="время и столы; встречи второго тура идут прямо сейчас" flush>
+                <div className="divide-y divide-neutral-100">
+                  {SCHED.map((s) => (
+                    <Row
+                      key={s.key}
+                      nm={s.pair}
+                      pill={s.live ? { t: 'ИДЁТ', cls: 'live' } : undefined}
+                      sub={`${s.when} · ${s.tables} · ${s.round}`}
+                    />
+                  ))}
+                </div>
+              </Panel>
+            ),
+          },
+          {
+            t: 'Результаты',
+            view: (
+              <Panel title="Результаты · первый тур сыгран" sub="показаны две личные встречи из шести" flush>
+                <div className="divide-y divide-neutral-100">
+                  {RESULTS.map((r) => (
+                    <div key={r.key} className="px-4 py-2.5">
+                      <div className="flex items-baseline justify-between gap-3">
+                        <span className="min-w-0 text-[13.5px] font-medium">{r.pair}</span>
+                        <span className="shrink-0 text-[15px] font-semibold tabular-nums">{r.score}</span>
+                      </div>
+                      <div className="mt-0.5 text-xs text-neutral-500">1-й тур</div>
+                      <div className="mt-2">
+                        <GameCells games={r.games} />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </Panel>
+            ),
+          },
+        ]}
+      />
+    </div>
+  </Phone>
+);
+
 /* ── Борд сквозных экранов ─────────────────────────────────────── */
 
 /** Экраны роли по кодам: из этой карты собираются и борд, и карта флоу. */
@@ -1551,6 +2931,11 @@ export const SCREENS: ScreenMap = {
         <Login0_1States />
       </>
     ),
+    /* Телефонный вход стоял в файле экспортом, но на борде не показывался
+       ✳ (30.08.2026). Со сценарием ИИН + код это важнее прежнего: SMS приходит
+       на то же устройство, с которого входят. Шаги те же два — экран один на
+       сайт и приложение, и расходиться им нельзя. */
+    alt: () => <LoginPhone0_1 />,
     next: 'имя и фото в шапке',
   },
   'Э0.5': {
@@ -1561,6 +2946,7 @@ export const SCREENS: ScreenMap = {
         <SignUp0_5States />
       </>
     ),
+    alt: () => <SignUp0_5Phone />,
     next: 'регистрация судьи ✳',
   },
   'Э0.7': {
@@ -1571,6 +2957,7 @@ export const SCREENS: ScreenMap = {
         <SignUpJudge0_7States />
       </>
     ),
+    alt: () => <SignUpJudge0_7Phone />,
     next: 'ссылка приглашения',
   },
   'Э0.6': {
@@ -1581,6 +2968,7 @@ export const SCREENS: ScreenMap = {
         <Accept0_6States />
       </>
     ),
+    alt: () => <Accept0_6Phone />,
     next: 'свой профиль',
   },
   'Э0.2': {
@@ -1591,6 +2979,7 @@ export const SCREENS: ScreenMap = {
         <Profile0_2States />
       </>
     ),
+    alt: () => <Profile0_2Phone />,
     next: 'счётчик в шапке',
   },
   'Э0.3': {
@@ -1604,6 +2993,7 @@ export const SCREENS: ScreenMap = {
         <Notif0_3States />
       </>
     ),
+    alt: () => <Notif0_3Phone />,
     next: 'выход — обратно на сайт',
   },
   'Э0.4': {
@@ -1616,6 +3006,16 @@ export const SCREENS: ScreenMap = {
         </Also>
         <Public0_4States />
       </>
+    ),
+    /* Публичная часть — это две страницы одного экрана, и во втором формате
+       они тоже идут парой: главная и страница турнира. Показать на телефоне
+       только главную значило бы потерять счёт, трансляцию и вкладки — то, ради
+       чего с трибуны и открывают сайт. */
+    alt: () => (
+      <div className="flex flex-wrap items-start justify-center gap-6">
+        <Public0_4Phone />
+        <Tournament0_4Phone />
+      </div>
     ),
   },
 };

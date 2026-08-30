@@ -12,7 +12,7 @@
    - возврат «← …» над заголовком несёт `data-to` экрана-родителя. */
 
 import { useState, type ReactNode } from 'react';
-import { ArrowLeft, Bell, Check, ChevronDown, LogOut, User } from 'lucide-react';
+import { ArrowLeft, Bell, Check, ChevronDown, LogOut, MoreHorizontal, User } from 'lucide-react';
 import { Avatar, Chip, Separator } from '@heroui/react';
 import { Brand } from '../../../ui';
 import { Laptop, Phone, Tablet } from './frame';
@@ -187,6 +187,7 @@ export function WebApp({
   sub,
   back,
   hint,
+  aside,
   children,
 }: {
   role: RoleUI;
@@ -197,6 +198,12 @@ export function WebApp({
   back?: { label: string; to?: string };
   /** Плашка-правило под заголовком: почему экран устроен так. */
   hint?: string;
+  /** Правая колонка экрана ✳ (30.08.2026): то, за чем следят, пока работают в
+      основной области — идущие матчи и очередь пар на «ходе турнира». Такое
+      блоком в общем потоке не годится: за ним надо смотреть постоянно, а не
+      доскроллив до низа. Это единственное исключение из правила «блоки идут
+      один под другим»: правая колонка — не второй блок, а наблюдение. */
+  aside?: ReactNode;
   children: ReactNode;
 }) {
   return (
@@ -261,6 +268,15 @@ export function WebApp({
             {children}
           </div>
         </div>
+
+        {/* Правая колонка наблюдения: свой скролл, чтобы очередь не уезжала
+            вместе с рабочей областью. Холст тот же серый — колонка отбита
+            линией, а не другим фоном: это часть экрана, а не чужая панель. */}
+        {aside && (
+          <aside className="min-h-0 w-[324px] shrink-0 overflow-auto border-l border-neutral-200 bg-neutral-50 px-4 pb-6 pt-5">
+            {aside}
+          </aside>
+        )}
       </div>
     </Laptop>
   );
@@ -302,6 +318,100 @@ export function TabletApp({
         {children}
       </div>
     </Tablet>
+  );
+}
+
+/** Телефонная оболочка роли ✳ (30.08.2026): тот же экран, что на десктопе, но
+    в телефоне.
+
+    Вкладки строятся из разделов роли (`role.nav`), а не пишутся руками: иначе
+    у семнадцати ролей появится семнадцать разных нижних панелей. Больше пяти
+    вкладок на 392 px не помещается — лишние сворачиваются в «Ещё», а активный
+    раздел, если он попал под свёртку, показывается вместо четвёртой вкладки:
+    человек должен видеть, где он находится. */
+export function PhoneRoleApp({
+  role,
+  nav,
+  title,
+  sub,
+  back,
+  hint,
+  children,
+}: {
+  role: RoleUI;
+  nav: string;
+  title: string;
+  sub?: string;
+  back?: { label: string; to?: string };
+  /** Плашка-правило под заголовком — та же, что у `WebApp`: у экрана одно
+      объяснение на оба формата, и на телефоне оно не должно пропадать. */
+  hint?: string;
+  children: ReactNode;
+}) {
+  const items = role.nav;
+  let shown = items.slice(0, 4);
+  const rest = items.slice(4);
+  if (rest.length && !shown.some(([, l]) => l === nav)) {
+    const cur = items.find(([, l]) => l === nav);
+    if (cur) shown = [...shown.slice(0, 3), cur];
+  }
+  const tabs: [ReactNode, string][] = rest.length
+    ? [...shown, [<MoreHorizontal size={17} key="more" />, 'Ещё']]
+    : shown;
+
+  return (
+    <Phone>
+      <div className="flex shrink-0 items-center justify-between gap-2 px-4 py-2">
+        <Brand size="sm" sub={role.brandName} />
+        <div className="flex items-center gap-1">
+          {role.badge !== false && (
+            <Chip color="success" size="sm">
+              <span className="mr-1 inline-block h-1.5 w-1.5 rounded-full bg-green-600" />
+              {role.badge ?? 'ИДЁТ'}
+            </Chip>
+          )}
+          <button
+            type="button"
+            className="relative flex h-9 w-9 items-center justify-center rounded-full text-neutral-600"
+          >
+            <Bell size={17} />
+            <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-red-500 ring-2 ring-white" />
+          </button>
+        </div>
+      </div>
+
+      <div className="min-h-0 flex-1 overflow-auto px-4 pb-3">
+        <div className="pb-3 pt-1">
+          {back && <BackLink label={back.label} to={back.to} />}
+          <h1 className="text-[19px] font-semibold leading-tight tracking-tight">{title}</h1>
+          {sub && <p className="mt-0.5 text-[12.5px] leading-snug text-neutral-500">{sub}</p>}
+        </div>
+        {hint && (
+          <div className="mb-3 rounded-lg border border-blue-100 bg-blue-50 px-3 py-2 text-[12px] leading-relaxed text-blue-900">
+            {hint}
+          </div>
+        )}
+        {children}
+      </div>
+
+      <div className="flex shrink-0 items-stretch justify-around border-t border-neutral-200 bg-white px-1 pt-1">
+        {tabs.map(([icon, label]) => (
+          <button
+            key={label}
+            type="button"
+            data-nav
+            aria-current={label === nav || undefined}
+            className={
+              'flex flex-1 flex-col items-center gap-0.5 rounded-lg py-1.5 text-[10px] font-medium ' +
+              (label === nav ? 'text-blue-600' : 'text-neutral-400')
+            }
+          >
+            {icon}
+            <span className="max-w-full truncate px-0.5">{label}</span>
+          </button>
+        ))}
+      </div>
+    </Phone>
   );
 }
 
