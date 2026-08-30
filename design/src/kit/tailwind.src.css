@@ -16,10 +16,16 @@
 
    `@source` нужен, потому что классы HeroUI лежат в его собранной теме, а не в
    нашем коде: без этой строки Tailwind их не увидит и не сгенерирует. */
-@layer theme, base, components, utilities;
+@layer theme, base, components;
 
 @import 'tailwindcss/theme.css' layer(theme);
-@import 'tailwindcss/utilities.css' layer(utilities);
+/* Утилиты подключаются БЕЗ слоя — намеренно. В `gen/frame.css` есть глобальный
+   сброс `* { margin: 0; padding: 0 }`, и он вне слоёв. По правилам каскада
+   любое правило вне слоя сильнее любого правила внутри слоя, независимо от
+   специфичности: утилиты в `@layer utilities` этот сброс перебить не могли, и
+   `p-7` считался нулём, а `gap-8` работал (сброс про gap ничего не говорит).
+   Без слоя утилиты соревнуются по специфичности и класс сброс обходит. */
+@import 'tailwindcss/utilities.css';
 
 @plugin './hero.ts';
 @source '../../node_modules/@heroui/theme/dist/**/*.{js,mjs}';

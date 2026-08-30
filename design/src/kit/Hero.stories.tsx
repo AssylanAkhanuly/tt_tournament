@@ -26,6 +26,35 @@
 import {
   Accordion,
   AccordionItem,
+  Alert,
+  BreadcrumbItem,
+  Breadcrumbs,
+  ButtonGroup,
+  Calendar,
+  CheckboxGroup,
+  CircularProgress,
+  Code,
+  DateRangePicker,
+  Dropdown,
+  DropdownItem,
+  DropdownMenu,
+  DropdownTrigger,
+  Image,
+  InputOtp,
+  Kbd,
+  Link,
+  Listbox,
+  ListboxItem,
+  NumberInput,
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+  RangeCalendar,
+  ScrollShadow,
+  Skeleton,
+  Snippet,
+  Spinner,
+  TimeInput,
   Autocomplete,
   AutocompleteItem,
   Avatar,
@@ -70,9 +99,13 @@ export default {
 };
 
 /** Обёртка витрины: провайдер HeroUI обязателен — без него часть компонентов
-    (модалки, выпадающие списки, подсказки) не находит контекст. */
+    (модалки, выпадающие списки, подсказки) не находит контекст.
+
+    `locale="ru-RU"` обязателен тоже: по умолчанию HeroUI берёт локаль браузера,
+    и календарь приходит английским с датой в порядке «месяц/день/год». Для
+    федерации это прямая ошибка: 06.14 и 14.06 читаются по-разному. */
 const Shell = ({ children }: { children: React.ReactNode }) => (
-  <HeroUIProvider>
+  <HeroUIProvider locale="ru-RU">
     {/* `hero-scope` включает локальный сброс браузерных стилей: preflight
         Tailwind выключен глобально, а HeroUI на него рассчитывает. */}
     <div className="hero-scope min-h-screen bg-white p-7 text-foreground">
@@ -303,6 +336,141 @@ export const Navigation = {
 
       <Block title="Страницы">
         <Pagination total={8} initialPage={1} color="primary" />
+      </Block>
+    </Shell>
+  ),
+};
+
+/* ── Обратная связь и наложения ─────────────────────────────────── */
+export const Feedback = {
+  name: 'Обратная связь · сообщения, ожидание',
+  render: () => (
+    <Shell>
+      <Block title="Сообщения" note="Четыре тона: тот же набор, что у наших Notice.">
+        <div className="flex w-full flex-col gap-3">
+          <Alert color="success" title="Заявка принята" description="Решение главного судьи — 14 апреля." />
+          <Alert color="warning" title="Взнос не оплачен" description="Без него заявка на ОРТ не пройдёт." />
+          <Alert color="danger" title="Оплата не прошла" description="Банк: недостаточно средств." />
+          <Alert color="primary" title="Рейтинг пересчитан" description="+8 после Кубка Алматы." />
+        </div>
+      </Block>
+
+      <Block title="Ожидание">
+        <Spinner label="Загружаем" />
+        <CircularProgress value={70} showValueLabel aria-label="Готовность" />
+        <Progress value={40} className="max-w-xs" aria-label="Партии" />
+        <div className="flex w-52 flex-col gap-2">
+          <Skeleton className="h-3 w-4/5 rounded-lg" />
+          <Skeleton className="h-3 w-full rounded-lg" />
+          <Skeleton className="h-3 w-2/3 rounded-lg" />
+        </div>
+      </Block>
+
+      <Block title="Наложения" note="Открываются по нажатию — на статичном снимке видны только кнопки.">
+        <Popover placement="bottom">
+          <PopoverTrigger>
+            <Button variant="bordered">Всплывающее окно</Button>
+          </PopoverTrigger>
+          <PopoverContent>
+            <div className="px-1 py-2 text-sm">Взнос за 2026 год: ₸ 10 000, срок до 31 марта.</div>
+          </PopoverContent>
+        </Popover>
+
+        <Dropdown>
+          <DropdownTrigger>
+            <Button variant="bordered">Меню</Button>
+          </DropdownTrigger>
+          <DropdownMenu aria-label="Действия с заявкой">
+            <DropdownItem key="open">Открыть заявку</DropdownItem>
+            <DropdownItem key="pay">Оплатить взнос</DropdownItem>
+            <DropdownItem key="drop" className="text-danger" color="danger">
+              Снять заявку
+            </DropdownItem>
+          </DropdownMenu>
+        </Dropdown>
+
+        <Tooltip content="Рейтинг пересчитан после турнира">
+          <Button variant="light">Подсказка</Button>
+        </Tooltip>
+      </Block>
+    </Shell>
+  ),
+};
+
+/* ── Даты ───────────────────────────────────────────────────────── */
+export const Dates = {
+  name: 'Даты · календарь, период, время',
+  render: () => (
+    <Shell>
+      <Block
+        title="Календарь"
+        note="Локаль ru-RU: неделя начинается с понедельника, месяцы и дни по-русски. По умолчанию HeroUI берёт локаль браузера и показывает месяц/день/год — для федерации это прямая ошибка."
+      >
+        <Calendar aria-label="Дата турнира" />
+        <RangeCalendar aria-label="Даты турнира" />
+      </Block>
+
+      <Block title="Поля дат">
+        <DatePicker label="Дата рождения" className="max-w-xs" />
+        <DateRangePicker label="Сроки турнира" className="max-w-sm" />
+        <TimeInput label="Начало матча" className="max-w-xs" />
+      </Block>
+    </Shell>
+  ),
+};
+
+/* ── Остальное ──────────────────────────────────────────────────── */
+export const Misc = {
+  name: 'Остальное · навигация, списки, мелочи',
+  render: () => (
+    <Shell>
+      <Block title="Хлебные крошки и ссылки">
+        <Breadcrumbs>
+          <BreadcrumbItem>Календарь</BreadcrumbItem>
+          <BreadcrumbItem>Кубок Алматы 2026</BreadcrumbItem>
+          <BreadcrumbItem>Моя заявка</BreadcrumbItem>
+        </Breadcrumbs>
+        <Link href="#">Положение о соревнованиях</Link>
+      </Block>
+
+      <Block title="Группа кнопок и списки">
+        <ButtonGroup>
+          <Button>Все</Button>
+          <Button color="primary">Идут</Button>
+          <Button>Завершены</Button>
+        </ButtonGroup>
+        <Listbox aria-label="Соперники" className="max-w-xs rounded-medium border border-default-200">
+          <ListboxItem key="1">Оспанов Р.</ListboxItem>
+          <ListboxItem key="2">Ли Сергей</ListboxItem>
+          <ListboxItem key="3">Ахметов Д.</ListboxItem>
+        </Listbox>
+      </Block>
+
+      <Block title="Числа, код, клавиши">
+        <NumberInput label="Партий до победы" defaultValue={3} className="max-w-40" />
+        <InputOtp length={4} />
+        <Code>Э14.7</Code>
+        <Kbd keys={['command']}>K</Kbd>
+        <Snippet symbol="">fnt.kz/tournaments/2026</Snippet>
+      </Block>
+
+      <Block title="Изображение и прокрутка">
+        <Image src={A(44)} width={120} alt="Ким Георгий" className="rounded-large" />
+        <ScrollShadow className="h-28 max-w-xs text-sm">
+          <p className="pr-3">
+            Календарь сезона 2026 собран целиком: восемь главных стартов, четыре тура Евразийской
+            лиги и двадцать открытых республиканских турниров. У каждого турнира указаны город,
+            зал, разряды и срок приёма заявок. Заявки на открытые турниры подаются самостоятельно.
+          </p>
+        </ScrollShadow>
+      </Block>
+
+      <Block title="Группа флажков">
+        <CheckboxGroup label="Разряды" orientation="horizontal" defaultValue={['single']}>
+          <Checkbox value="single">Одиночный</Checkbox>
+          <Checkbox value="double">Парный</Checkbox>
+          <Checkbox value="mixed">Микст</Checkbox>
+        </CheckboxGroup>
       </Block>
     </Shell>
   ),
