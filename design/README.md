@@ -551,10 +551,18 @@ background: var(--fx-pattern) 0 0 / var(--fx-pattern-size) repeat, var(--c-scree
 | `nav.tsx` | Tabs, Nav/NavItem, Breadcrumbs, Pagination, Steps |
 | `data.tsx` | Table, RowItem, KeyValue, EmptyState, Progress, Skeleton, Spinner, Divider, Timeline, Tooltip |
 | `feedback.tsx` | Notice (4 тона), Toast, Modal |
-| `domain.tsx` | турнирные: MatchRow, TableTile, RatingDelta, SeedBadge, ScoreInput, RankRow |
+| `domain.tsx` | турнирные: LiveBadge, MatchRow, TableTile, RatingDelta, SeedBadge, ScoreInput, RankRow |
 
 Точка входа одна — `src/ui` (`index.ts` реэкспортирует всё). У каждого раздела
 свой CSS рядом (`forms.css`, `nav.css`, …), цвет и форма — только токены.
+
+**UI-кит присланного спортивного приложения** ✳ (30.08.2026). Пользователь
+прислал референс вместе с палитрой: `#0f1721` поле, `#161f2a` карточка,
+`#1298ff` главный, `#e3303f` эфир, `#bfff2b` выигрышное значение, `#646e7c`
+приглушённый текст. Она заведена в `src/theme/tokens.css` как `--k-*` — рядом
+с палитрами `--p1…--p4`, чтобы сырых значений в макетах не было. По ней
+собираются отдельные компоненты; первый — `LiveBadge`, значок идущего матча.
+Решения «перевести на неё роль или систему целиком» пока нет.
 
 Два принципа, из-за которых библиотека не разъезжается с макетами:
 
