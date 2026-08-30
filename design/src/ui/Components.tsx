@@ -28,6 +28,7 @@ import {
   IconButton,
   Input,
   KeyValue,
+  LiveBadge,
   MatchRow,
   Modal,
   Nav,
@@ -473,8 +474,29 @@ export function GalleryDomain() {
   return (
     <Page
       title="Турнирные"
-      lead="То, чего нет в обычных библиотеках: строка матча, плитка стола, дельта рейтинга, номер посева, ввод счёта судьёй и строка рейтинга."
+      lead="То, чего нет в обычных библиотеках: значок идущего матча, строка матча, плитка стола, дельта рейтинга, номер посева, ввод счёта судьёй и строка рейтинга."
     >
+      <Block
+        title="Идущий матч · LiveBadge"
+        note="Значок эфира по присланному UI-киту: пульсирующая точка и подпись. Красный здесь означает «идёт сейчас», а не ошибку — зелёный в системе занят статусами. Формы: сам по себе, со счётчиком идущих матчей и язычком на верхней грани карточки. Пульсация гаснет при prefers-reduced-motion."
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+          <LiveBadge />
+          <LiveBadge count={14} />
+          <LiveBadge label="В эфире" />
+        </div>
+        <div style={{ position: 'relative', marginTop: 22 }}>
+          <LiveBadge notch />
+          <Card>
+            <div style={{ textAlign: 'center', padding: '10px 0 2px' }}>
+              <div style={{ fontSize: 12, color: 'var(--c-muted)' }}>Кубок Алматы 2026 · 1/8 финала</div>
+              <div style={{ fontSize: 30, fontWeight: 800, marginTop: 6 }}>1 : 2</div>
+              <div style={{ fontSize: 11, color: 'var(--c-dim)', marginTop: 4 }}>3-я партия · стол 5</div>
+            </div>
+          </Card>
+        </div>
+      </Block>
+
       <Block title="Строка матча · MatchRow" note="Двое, счёт по партиям и подпись под ним. Победитель выделен, живой матч — акцентной границей.">
         <div style={{ display: 'grid', gap: 8 }}>
           <MatchRow home={{ name: 'Смагулов Алан', avatar: A(32) }} away={{ name: 'Токаев Мурат', avatar: A(12) }} score="2 : 1" note="идёт · стол 3" winner="home" live />
