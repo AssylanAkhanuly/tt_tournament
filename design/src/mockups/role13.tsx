@@ -29,6 +29,7 @@ import {
   SeasonTable, StatTiles, StatusChip, TextInput, WebApp,
   type AttnItem, type CalEvent, type CalTone, type RoleUI, type SeasonRow, type St,
   type TimelineItem,
+  GameCells,
 } from '../kit/hero/app';
 /* Из старого слоя остаются только мета-компоненты борда: колонки, стрелки и
    полки состояний. Сами экраны собраны новым слоем. */
@@ -2733,6 +2734,150 @@ export const Fees13_10Phone = () => (
 );
 
 
+
+/* ── Э13.11 · Командная встреча ✳ (01.09.2026) ──────────────────────
+   Из чего сложился счёт 3 : 1. Экран появился, когда правила Лиги были заданы
+   допущениями (TZ §4.10): пять личных встреч до трёх побед, состав из троих,
+   порядок A–X, B–Y, C–Z, A–Y, B–X. До этого его не рисовали намеренно —
+   «придумаем не то», — и ветка Лиги стояла целиком.
+
+   Буква у игрока — место в схеме, а не сила: по ней читается, кто с кем
+   играет. Досрочно законченные встречи помечены: как только одна команда взяла
+   три победы, оставшиеся не играются, и пустая строка без пометки читалась бы
+   как «результат потеряли». */
+
+type Rubber = {
+  /** Пара мест по схеме: A–X, B–Y и так далее. */
+  slot: string;
+  us: string;
+  them: string;
+  games?: ReadonlyArray<readonly [number, number]>;
+  /** Счёт встречи после этой личной игры. */
+  after?: string;
+  /** Не игралась: счёт встречи закрылся раньше. */
+  skipped?: boolean;
+};
+
+const TIE: Rubber[] = [
+  { slot: 'A–X', us: 'Ким Георгий', them: 'Ибраев Қанат', games: [[11, 7], [9, 11], [11, 6], [11, 8]], after: '1 : 0' },
+  { slot: 'B–Y', us: 'Токаев Марат', them: 'Пак Сергей', games: [[8, 11], [11, 13], [9, 11]], after: '1 : 1' },
+  { slot: 'C–Z', us: 'Байжанов Асхат', them: 'Мұқанов Талғат', games: [[11, 9], [11, 5], [12, 10]], after: '2 : 1' },
+  { slot: 'A–Y', us: 'Ким Георгий', them: 'Пак Сергей', games: [[11, 6], [11, 9], [11, 7]], after: '3 : 1' },
+  { slot: 'B–X', us: 'Токаев Марат', them: 'Ибраев Қанат', skipped: true },
+];
+
+const TIE_GRID = '58px minmax(0,1.3fr) minmax(0,1.3fr) minmax(0,1fr) 78px';
+
+export function Tie13_11() {
+  return (
+    <WebApp
+      role={R13}
+      nav="Соревнования"
+      back={{ label: 'Тур 2 · Караганда', to: 'Э13.7' }}
+      title="«Алатау» — «Барыс» · 3 : 1"
+      sub="Евразийская лига · Суперлига · тур 2 · 15 мая, зал «Юность», столы 3–4"
+    >
+      <StatTiles
+        items={[
+          { v: '3 : 1', k: 'Счёт встречи · до 3 побед', tone: 'g' },
+          { v: '4 из 5', k: 'Личных встреч сыграно' },
+          { v: '2', k: 'Очка в таблицу дивизиона' },
+          { v: '№2', k: 'Место после встречи' },
+        ]}
+      />
+
+      <Panel
+        title="Составы на встречу"
+        sub="Буква — место в схеме, а не сила игрока: по ней видно, кто с кем играет"
+      >
+        <div className="grid gap-4 md:grid-cols-2">
+          <div>
+            <div className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-neutral-400">
+              «Алатау» — наши
+            </div>
+            <Rows>
+              <Row nm="A · Ким Георгий" sub="рейтинг 2456 · капитан" />
+              <Row nm="B · Токаев Марат" sub="рейтинг 2350" />
+              <Row nm="C · Байжанов Асхат" sub="рейтинг 2180" />
+            </Rows>
+          </div>
+          <div>
+            <div className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-neutral-400">
+              «Барыс» — соперник
+            </div>
+            <Rows>
+              <Row nm="X · Ибраев Қанат" sub="рейтинг 2401" />
+              <Row nm="Y · Пак Сергей" sub="рейтинг 2312" />
+              <Row nm="Z · Мұқанов Талғат" sub="рейтинг 2104" />
+            </Rows>
+          </div>
+        </div>
+      </Panel>
+
+      <Panel
+        title="Личные встречи · порядок A–X, B–Y, C–Z, A–Y, B–X"
+        sub="Строка открывает протокол матча"
+        flush
+      >
+        <Sheet grid={TIE_GRID} cols={['Пара', 'Наш', 'Соперник', 'Партии', 'Счёт']}>
+          {TIE.map((r) => (
+            <div
+              key={r.slot}
+              data-row
+              className={
+                'grid w-full items-center gap-3 px-4 py-2.5 text-left text-[13px] ' +
+                (r.skipped ? 'opacity-55' : '')
+              }
+              style={{ gridTemplateColumns: TIE_GRID }}
+            >
+              <span className="font-semibold tabular-nums text-neutral-500">{r.slot}</span>
+              <span className="truncate font-medium">{r.us}</span>
+              <span className="truncate text-neutral-600">{r.them}</span>
+              <span>
+                {r.skipped ? (
+                  <span className="text-xs text-neutral-500">не игралась — счёт закрылся</span>
+                ) : (
+                  <GameCells games={r.games ?? []} />
+                )}
+              </span>
+              <span className="text-right font-semibold tabular-nums">{r.after ?? '—'}</span>
+            </div>
+          ))}
+        </Sheet>
+      </Panel>
+
+      <Bar>
+        Встреча идёт до трёх побед: как только счёт стал 3 : 1, пятая личная встреча не игралась.
+        Счёт клуб не вводит — его ведёт судья стола, как на любом другом соревновании. Личные
+        встречи внутри командной идут в личный рейтинг игрока (TZ §4.10).
+      </Bar>
+    </WebApp>
+  );
+}
+
+export const Tie13_11Phone = () => (
+  <PhoneRoleApp
+    role={R13}
+    nav="Соревнования"
+    back={{ label: 'Тур 2', to: 'Э13.7' }}
+    title="«Алатау» — «Барыс»"
+    sub="Суперлига · тур 2 · 15 мая"
+  >
+    <Panel title="3 : 1 · встреча выиграна" sub="4 из 5 личных встреч · 2 очка в таблицу" flush>
+      <Rows>
+        {TIE.map((r) => (
+          <Row
+            key={r.slot}
+            nm={`${r.slot} · ${r.us}`}
+            sub={r.skipped ? 'не игралась — счёт закрылся' : `против ${r.them}`}
+            val={r.after ?? '—'}
+          />
+        ))}
+      </Rows>
+    </Panel>
+  </PhoneRoleApp>
+);
+
 export const SCREENS: ScreenMap = {
   'Э0.1': {
     cap: 'Вход',
@@ -2827,6 +2972,11 @@ export const SCREENS: ScreenMap = {
     frames: [
       { t: 'После оплаты — состояние проставилось каждому', view: () => <Fees13_10 done /> },
     ],
+  },
+  'Э13.11': {
+    cap: 'Командная встреча',
+    view: () => <Tie13_11 />,
+    alt: () => <Tie13_11Phone />,
   },
   'Э13.9': {
     cap: 'Турнир: наши, клубы, участники, сетка',
