@@ -22,6 +22,7 @@ import { Button, Chip } from '@heroui/react';
 import {
   A, Bar, EmptyBox, FieldView, FilterSeg, FormGrid, Panel, PhoneRoleApp, Pill, Row, Rows,
   ScreenScope, SearchInput, WebApp, type RoleUI,
+  Sheet,
 } from '../kit/hero/app';
 /* Из старого слоя остаются только мета-компоненты борда: колонки, стрелки и
    полки состояний. Сами экраны собраны новым слоем. */
@@ -48,6 +49,10 @@ const R10: RoleUI = {
     [<History size={16} key="h" />, 'Журнал правок'],
     [<FileText size={16} key="r" />, 'Заключение'],
   ],
+  /* Должность в наряде держит человек с судейской квалификацией ✳: срок
+     аттестации и рейтинг у него живут в кабинете судьи, и попадать туда он
+     должен отсюда, а не вторым входом. */
+  roles: ['Инспектор / супервайзер', { t: 'Судья · вне турнира', to: 'Э0.8' }],
 };
 
 /* ── данные экранов (перенесены из старого слоя как есть) ─────────── */
@@ -274,20 +279,6 @@ function NoteRow({ n, on, marked, narrow, onSelect }: {
   );
 }
 
-/** Таблица с «живыми» строками: шапка колонок и строки, которые собирает сам
-    экран (выбор строки, подсветка оценок). ⚠ Дупликация: тот же приём у роли 5
-    (`Sheet` в role05.tsx), но там компонент не экспортируется. */
-const Sheet = ({ cols, grid, children }: { cols: ReactNode[]; grid: string; children: ReactNode }) => (
-  <div className="overflow-hidden rounded-xl border border-neutral-200 bg-white shadow-sm">
-    <div
-      className="grid items-center gap-3 border-b border-neutral-200 bg-neutral-50 px-4 py-2 text-[11px] font-semibold uppercase tracking-wider text-neutral-400"
-      style={{ gridTemplateColumns: grid }}
-    >
-      {cols.map((c, i) => <span key={i} className="min-w-0">{c}</span>)}
-    </div>
-    <div className="divide-y divide-neutral-100">{children}</div>
-  </div>
-);
 
 /** Полоса переключателя шире экрана ✳ (30.08.2026): на телефоне её прокручивают
     вбок, а не переносят — перенесённый в два ряда переключатель перестаёт
@@ -731,10 +722,8 @@ export function Live10_2() {
               role="button"
               tabIndex={0}
               onClick={() => sel(j.nm, `${j.nm} · ${j.tables}`)}
-              className={
-                'grid cursor-pointer items-center gap-3 px-4 py-2.5 text-[13px] ' +
-                (pick?.k === j.nm ? 'bg-blue-50/60' : 'hover:bg-neutral-50')
-              }
+              data-on={pick?.k === j.nm ? '' : undefined}
+              className="grid cursor-pointer items-center gap-3 px-4 py-2.5 text-[13px]"
               style={{ gridTemplateColumns: JDAY_GRID }}
             >
               <span className="min-w-0 leading-tight">

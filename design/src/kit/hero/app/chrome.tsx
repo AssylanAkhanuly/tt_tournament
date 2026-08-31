@@ -12,7 +12,7 @@
    - возврат «← …» над заголовком несёт `data-to` экрана-родителя. */
 
 import { useState, type ReactNode } from 'react';
-import { ArrowLeft, Bell, Check, ChevronDown, LogOut, MoreHorizontal, User } from 'lucide-react';
+import { ArrowLeft, Bell, Check, ChevronDown, ChevronsUpDown, LogOut, MoreHorizontal, User } from 'lucide-react';
 import { Avatar, Chip, Separator } from '@heroui/react';
 import { Brand } from '../../../ui';
 import { Laptop, Phone } from './frame';
@@ -33,7 +33,15 @@ export type RoleUI = {
   brandSub?: string;
   /** Значок состояния в шапке; `false` — роль вне турнира, значка нет. */
   badge?: string | false;
-  roles?: string[];
+  /** Другие роли этого же человека ✳ (31.08.2026). Один человек — один аккаунт
+      (QUESTIONS 9.5): судейская роль добавляется к существующей, второй записи
+      не заводится. Значит в шапке нужен не только «кто я», но и «в какой роли
+      я сейчас работаю» и переход в другую — иначе человек с двумя ролями
+      вынужден выходить и входить заново.
+
+      Строкой — название роли; парой `{ t, to }` — ещё и экран, на который
+      роль открывается (кабинет судьи, главная спортсмена). */
+  roles?: (string | { t: string; to?: string })[];
 };
 
 /* Лента последних уведомлений в шапке (перечень — TZ §10.1). Набор общий на
@@ -92,78 +100,127 @@ const BellMenu = () => {
   );
 };
 
-/* Меню профиля. Выход живёт здесь, а не отдельной кнопкой: система именная,
-   каждое действие пишется в журнал с автором (TZ §12), поэтому «кто я» и
-   «выйти» — одно место. Роли переключаются тут же. */
-const ProfileMenu = ({ person, roles }: { person: Person; roles?: string[] }) => {
+
+/* ── Боковое меню: карточка роли сверху, карточка человека снизу ──────
+   Решение от 31.08.2026. Раньше и то и другое жило одной кнопкой в шапке
+   справа: имя, фото, роль и переключение ролей — всё в выпадающем меню, куда
+   надо было догадаться зайти. У человека с двумя ролями (QUESTIONS 9.5: один
+   человек — один аккаунт) это значило, что смена рабочего места спрятана за
+   кликом по своему фото.
+
+   Теперь так же, как в рабочих системах: сверху бокового меню — в какой роли
+   работаешь (и переключение), снизу — кто ты (профиль и выход). Между ними
+   разделы. Шапка остаётся про турнир и уведомления. */
+
+/** Верхняя карточка бокового меню: роль, в которой человек сейчас работает.
+    Стрелки вверх-вниз — обещание переключения; у человека с одной ролью
+    карточка не кликается и стрелок нет. */
+const SideRole = ({ role }: { role: RoleUI }) => {
   const [open, setOpen] = useState(false);
-  const [cur, setCur] = useState(person.rl);
+  const [cur, setCur] = useState(role.title);
+  const list = (role.roles ?? []).map((r) => (typeof r === 'string' ? { t: r, to: undefined } : r));
+  const many = list.length > 1;
   return (
     <div className="relative">
       <button
         type="button"
-        aria-expanded={open}
-        className="flex items-center gap-2.5 rounded-full py-1 pl-1 pr-2.5 hover:bg-neutral-100"
-        onClick={() => setOpen(!open)}
+        aria-expanded={many ? open : undefined}
+        onClick={many ? () => setOpen(!open) : undefined}
+        className={
+          'flex w-full items-center gap-2.5 rounded-xl border border-neutral-200 bg-white px-2.5 py-2 text-left ' +
+          (many ? 'hover:bg-neutral-50' : 'cursor-default')
+        }
       >
-        <Avatar size="sm">
-          <Avatar.Image alt={person.nm} src={person.av} />
-          <Avatar.Fallback>{person.nm.slice(0, 1)}</Avatar.Fallback>
-        </Avatar>
-        <span className="text-left leading-tight">
-          <span className="block text-[13px] font-semibold">{person.nm}</span>
-          <span className="block text-[11px] text-neutral-500">{cur}</span>
+        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-blue-600 text-[12px] font-bold text-white">
+          {role.num}
         </span>
-        <ChevronDown size={14} className="text-neutral-400" />
+        <span className="min-w-0 flex-1 leading-tight">
+          <span className="block truncate text-[12.5px] font-semibold">{cur}</span>
+          <span className="block truncate text-[11px] text-neutral-500">
+            {many ? `и ещё ${list.length - 1} роль` : 'единственная роль'}
+          </span>
+        </span>
+        {many && <ChevronsUpDown size={14} className="shrink-0 text-neutral-400" />}
       </button>
       {open && (
-        <div className="absolute right-0 top-12 z-30 w-64 rounded-xl border border-neutral-200 bg-white p-1.5 shadow-xl">
-          {/* «Вы вошли как» — первым: система именная, и человек должен видеть,
-              под каким аккаунтом работает, до того как что-то нажмёт (TZ §12). */}
-          <div className="px-2.5 pb-2 pt-2 leading-tight">
-            <div className="text-[11px] uppercase tracking-wider text-neutral-400">Вы вошли как</div>
-            <div className="mt-0.5 text-[13px] font-semibold">{person.nm}</div>
-            {person.email && <div className="text-[11.5px] text-neutral-500">{person.email}</div>}
+        <div className="absolute left-0 right-0 top-[52px] z-30 rounded-xl border border-neutral-200 bg-white p-1.5 shadow-xl">
+          <div className="px-2 pb-1 pt-1 text-[11px] font-semibold uppercase tracking-wider text-neutral-400">
+            Работать как
           </div>
+          {list.map((r) => (
+            <button
+              key={r.t}
+              type="button"
+              data-to={r.t === cur ? undefined : r.to}
+              className={
+                'flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-[12.5px] ' +
+                (r.t === cur ? 'font-medium text-neutral-900' : 'text-neutral-700 hover:bg-neutral-50')
+              }
+              onClick={() => {
+                setCur(r.t);
+                setOpen(false);
+              }}
+            >
+              <span className="w-4">{r.t === cur && <Check size={14} className="text-blue-600" />}</span>
+              <span className="min-w-0 flex-1 truncate">{r.t}</span>
+              {r.t !== cur && <span className="text-[11px] text-neutral-400">перейти</span>}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+
+/** Нижняя карточка бокового меню: кто вошёл. Профиль и выход — здесь же:
+    выход отбит линией и красный, случайный выход посреди турнира стоит
+    дороже лишнего клика. */
+const SidePerson = ({ person }: { person: Person }) => {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="relative">
+      {open && (
+        <div className="absolute bottom-[52px] left-0 right-0 z-30 rounded-xl border border-neutral-200 bg-white p-1.5 shadow-xl">
+          <div className="px-2 pb-1 pt-1 text-[11px] uppercase tracking-wider text-neutral-400">Вы вошли как</div>
+          <div className="truncate px-2 pb-1.5 text-[12.5px] font-semibold">{person.nm}</div>
           <Separator className="my-1" />
-          {roles && roles.length > 1 && (
-            <>
-              <div className="px-2.5 pb-1 pt-1 text-[11px] font-semibold uppercase tracking-wider text-neutral-400">
-                Мои роли
-              </div>
-              {roles.map((r) => (
-                <button
-                  key={r}
-                  type="button"
-                  className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-sm hover:bg-neutral-50"
-                  onClick={() => setCur(r)}
-                >
-                  <span className="w-4">{r === cur && <Check size={14} className="text-blue-600" />}</span>
-                  {r}
-                </button>
-              ))}
-              <Separator className="my-1" />
-            </>
-          )}
           <button
             type="button"
             data-to="Э0.2"
-            className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-sm text-neutral-700 hover:bg-neutral-50"
+            className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-[12.5px] text-neutral-700 hover:bg-neutral-50"
           >
             <User size={14} /> Мой профиль
           </button>
-          {/* Выход отбит линией и красный: случайный выход посреди турнира
-              стоит дороже лишнего клика, и на него нельзя попасть по инерции. */}
           <Separator className="my-1" />
           <button
             type="button"
             data-to="Э0.1"
-            className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-sm text-red-600 hover:bg-red-50"
+            className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-[12.5px] text-red-600 hover:bg-red-50"
           >
             <LogOut size={14} /> Выйти
           </button>
         </div>
       )}
+      <button
+        type="button"
+        aria-expanded={open}
+        onClick={() => setOpen(!open)}
+        className="flex w-full items-center gap-2.5 rounded-xl border border-neutral-200 bg-white px-2.5 py-2 text-left hover:bg-neutral-50"
+      >
+        <Avatar size="sm">
+          <Avatar.Image alt={person.nm} src={person.av} />
+          <Avatar.Fallback>{person.nm.slice(0, 1)}</Avatar.Fallback>
+        </Avatar>
+        <span className="min-w-0 flex-1 leading-tight">
+          <span className="block truncate text-[12.5px] font-semibold">{person.nm}</span>
+          {/* Роль под именем не повторяем: она уже стоит карточкой сверху. Здесь
+              ответ на «кто я», а не «в какой я роли». */}
+          <span className="block truncate text-[11px] text-neutral-500">
+            {person.email ?? 'профиль и выход'}
+          </span>
+        </span>
+        <ChevronsUpDown size={14} className="shrink-0 text-neutral-400" />
+      </button>
     </div>
   );
 };
@@ -224,14 +281,15 @@ export function WebApp({
         )}
         <div className="flex-1" />
         <BellMenu />
-        <ProfileMenu person={role.person} roles={role.roles} />
       </div>
 
       <div className="flex min-h-0 flex-1">
-        {/* Сайдбар: разделы роли. `data-nav` — крючок карты флоу. */}
-        <div className="flex w-[212px] shrink-0 flex-col gap-0.5 border-r border-neutral-200 bg-white px-3 py-4">
-          <div className="px-2 pb-2 text-[11px] font-semibold uppercase tracking-wider text-neutral-400">
-            {role.title}
+        {/* Сайдбар: роль сверху, разделы, человек снизу. `data-nav` — крючок
+            карты флоу. */}
+        <div className="flex w-[240px] shrink-0 flex-col border-r border-neutral-200 bg-white px-3 py-3">
+          <SideRole role={role} />
+          <div className="px-2 pb-1.5 pt-4 text-[11px] font-semibold uppercase tracking-wider text-neutral-400">
+            Разделы
           </div>
           {role.nav.map(([icon, label]) => (
             <button
@@ -250,6 +308,11 @@ export function WebApp({
               {label}
             </button>
           ))}
+          {/* Карточка человека прижата к низу: она не пункт меню, а ответ на
+              «под кем я работаю», и место у неё постоянное. */}
+          <div className="mt-auto pt-3">
+            <SidePerson person={role.person} />
+          </div>
         </div>
 
         {/* Рабочая область: заголовок и содержимое на сером холсте. */}

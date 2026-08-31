@@ -17,6 +17,7 @@ import { Avatar, Button } from '@heroui/react';
 import {
   A, Bar, DataTable, FilterSeg, KV, Panel, PhoneRoleApp, Pill, Row, Rows, ScreenScope, Separator,
   WebApp, type RoleUI,
+  Sheet,
 } from '../kit/hero/app';
 /* Из старого слоя остаются только мета-компоненты борда: колонки, стрелки и
    полки состояний. Сами экраны собраны новым слоем. */
@@ -169,20 +170,6 @@ const ReadOnly = () => (
   </span>
 );
 
-/** Таблица с «живыми» строками (⚠ дупликация из role05: компонент старого
-    файла чужой роли импортировать нельзя, а DataTable не даёт строкам своих
-    ячеек-кнопок — звёздочки и сортировки). */
-const Sheet = ({ cols, grid, children }: { cols: ReactNode[]; grid: string; children: ReactNode }) => (
-  <div className="overflow-hidden rounded-xl border border-neutral-200 bg-white shadow-sm">
-    <div
-      className="grid items-center gap-3 border-b border-neutral-200 bg-neutral-50 px-4 py-2 text-[11px] font-semibold uppercase tracking-wider text-neutral-400"
-      style={{ gridTemplateColumns: grid }}
-    >
-      {cols.map((c, i) => <span key={i} className="min-w-0">{c}</span>)}
-    </div>
-    <div className="divide-y divide-neutral-100">{children}</div>
-  </div>
-);
 
 /** Заголовок сортируемого столбца (⚠ дупликация из role05). */
 const Th = ({ t, on, onClick }: { t: string; on: boolean; onClick: () => void }) => (

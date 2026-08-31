@@ -47,6 +47,7 @@ import {
   Phone, PhoneApp, PickField, Pill, PrimaryAction, QuietAction, Row, Rows, ScreenScope,
   SearchInput, TextInput, WebApp,
   type RoleUI, type TimelineItem,
+  Sheet,
 } from '../kit/hero/app';
 /* Из старого слоя остаются только мета-компоненты борда: колонки, стрелки и
    полки состояний. Сами экраны собраны новым слоем. */
@@ -208,19 +209,6 @@ const Steps = ({ items }: { items: Step[] }) => (
   </div>
 );
 
-/** Таблица с «живыми» строками — как в role05. ⚠ Временная дупликация Sheet/Th:
-    когда общих экранов наберётся больше, поднять в kit/hero/app. */
-const Sheet = ({ cols, grid, children }: { cols: ReactNode[]; grid: string; children: ReactNode }) => (
-  <div className="overflow-hidden rounded-xl border border-neutral-200 bg-white shadow-sm">
-    <div
-      className="grid items-center gap-2 border-b border-neutral-200 bg-neutral-50 px-3 py-2 text-[10px] font-semibold uppercase tracking-wider text-neutral-400"
-      style={{ gridTemplateColumns: grid }}
-    >
-      {cols.map((c, i) => <span key={i} className="min-w-0">{c}</span>)}
-    </div>
-    <div className="divide-y divide-neutral-100">{children}</div>
-  </div>
-);
 
 /** Заголовок сортируемого столбца: в составе на 128 человек сортируют. */
 const Th = ({ t, on, onClick }: { t: string; on: boolean; onClick: () => void }) => (
@@ -994,10 +982,8 @@ export function Players14_5({
             <div
               key={p.s}
               data-row
-              className={
-                'grid items-center gap-2 px-3 py-2 text-[13px] ' +
-                (hit(p) ? 'bg-blue-50/60' : 'hover:bg-neutral-50')
-              }
+              data-on={hit(p) ? '' : undefined}
+              className="grid items-center gap-2 px-3 py-2 text-[13px]"
               style={{ gridTemplateColumns: PL_GRID }}
             >
               <span className="tabular-nums text-neutral-500">{p.s}</span>

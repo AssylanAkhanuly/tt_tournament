@@ -9,3 +9,4 @@ export * from './domain';
 export * from './calendar';
 export * from './quiz';
 export * from './exam';
+export * from './charts';

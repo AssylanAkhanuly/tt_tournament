@@ -13,7 +13,7 @@
    переключатели — `data-seg` на обёртке. */
 
 import { useState, type ReactNode } from 'react';
-import { ArrowRight, ChevronDown, ChevronRight, Search as SearchIcon, X } from 'lucide-react';
+import { ArrowRight, Check, ChevronDown, ChevronRight, Search as SearchIcon, X } from 'lucide-react';
 import { Avatar, Button, Chip, Input, InputGroup, Separator } from '@heroui/react';
 
 /* ── Словари состояний ───────────────────────────────────────────────
@@ -388,17 +388,89 @@ export function PageTabs({ items, active }: { items: TabItem[]; active?: string 
   );
 }
 
-/** Фильтр списка: выбор сужает список, а не меняет экран. */
+/** Фильтр списка ✳ (31.08.2026): выбор сужает список, а не меняет экран.
+
+    Был сегментом — тем же переключателем, что и вкладки, — и это оказалось
+    неверно дважды. По смыслу: вкладка меняет экран, фильтр отбирает строки, а
+    выглядели они одинаково. По вёрстке: сегмент со значениями вроде «Все
+    категории · Национальная · Первая» в строку не влезал и переносился в
+    столбик — на экране получался не контрол, а список слов, из которого
+    непонятно, что выбрано.
+
+    Теперь это выпадающий отбор: закрытый показывает, что именно выбрано, и
+    занимает одну строку при любом числе значений. Когда фильтр не сброшен,
+    кнопка окрашена — иначе «список пуст» читается как ошибка, а не как
+    следствие отбора. Первое значение считается сбросом («Все …»). */
 export function FilterSeg({
   items,
   active,
   onPick,
+  label,
 }: {
   items: string[];
   active: string;
   onPick: (v: string) => void;
+  /** Что отбираем: «Категория», «Регион». Без подписи в кнопке стоит само
+      значение — так у большинства списков и написано («Все категории»). */
+  label?: string;
 }) {
-  return <Seg items={items} cur={active} onPick={onPick} />;
+  const [open, setOpen] = useState(false);
+  const on = active !== items[0];
+  return (
+    <div className="relative" data-filter>
+      <button
+        type="button"
+        aria-expanded={open}
+        onClick={() => setOpen(!open)}
+        className={
+          'inline-flex h-9 items-center gap-1.5 rounded-lg border px-3 text-[13px] font-medium ' +
+          (on
+            ? 'border-blue-200 bg-blue-50 text-blue-700'
+            : 'border-neutral-200 bg-white text-neutral-700 hover:bg-neutral-50')
+        }
+      >
+        {label && <span className={on ? 'text-blue-500' : 'text-neutral-400'}>{label}</span>}
+        <span className="max-w-[164px] truncate">{active}</span>
+        <ChevronDown size={14} className={on ? 'text-blue-500' : 'text-neutral-400'} />
+      </button>
+      {open && (
+        <div className="absolute left-0 top-[38px] z-20 min-w-[188px] rounded-lg border border-neutral-200 bg-white p-1 shadow-lg">
+          {items.map((t) => (
+            <button
+              key={t}
+              type="button"
+              onClick={() => {
+                onPick(t);
+                setOpen(false);
+              }}
+              className={
+                'flex w-full items-center justify-between gap-3 rounded-md px-2.5 py-1.5 text-left text-[13px] ' +
+                (t === active ? 'bg-blue-50 font-medium text-blue-700' : 'text-neutral-700 hover:bg-neutral-50')
+              }
+            >
+              <span className="truncate">{t}</span>
+              {t === active && <Check size={14} className="shrink-0" />}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/** Полоса отбора над списком: поиск, фильтры, справа — действия над списком.
+
+    Заведена, чтобы у всех реестров она была одна: до этого каждый экран
+    складывал поиск и фильтры своим `flex`, и одинаковые по смыслу полосы
+    отличались отступами и порядком. Переносится по строкам — на узком кадре
+    фильтры уезжают вниз, а не сжимают поиск до иконки. */
+export function FilterBar({ children, right }: { children: ReactNode; right?: ReactNode }) {
+  return (
+    <div className="mb-3 flex flex-wrap items-center gap-2">
+      {children}
+      {right && <span className="ml-auto flex items-center gap-2">{right}</span>}
+    </div>
+  );
 }
 
 /** Поиск по списку — управляется снаружи: от значения зависит, что показано. */
@@ -831,6 +903,52 @@ export function MatchCard({
 
 /** Простая таблица данных: шапка колонок и строки-кнопки с переходом.
     Для реестров и протоколов, где строки однородны; ширины — grid-шаблоном. */
+/* Полосы строк ✳ (31.08.2026). В плотном реестре на десять колонок одна линия
+   между строками глаз не держит: взгляд идёт по числам вправо и съезжает на
+   соседнюю строку. Поэтому чётные строки залиты — «какая строка моя» видно без
+   линейки.
+
+   Про специфичность: `[&>*:nth-child(even)]` и подсветка выбранной строки — оба
+   селектора одного веса, и кто победит, решал бы порядок в собранном CSS.
+   Поэтому у подсветки и у наведения селектор удвоен (`[data-on][data-on]`,
+   `:hover:hover`) — он тяжелее полосы намеренно, а не случайно. */
+export const ROWS =
+  '[&>*:nth-child(even)]:bg-neutral-50/70 ' +
+  '[&>*:hover:hover]:bg-neutral-100/70 ' +
+  '[&>*[data-on][data-on]]:bg-blue-50';
+
+/** Шапка и тело реестра: строки рисует вызывающий — колонки у каждого реестра
+    свои. Раньше эта же разметка лежала копией в девяти файлах ролей и уже
+    начала расходиться (у одних карточка вокруг, у других нет).
+
+    `flush` — таблица стоит внутри `Panel flush`, и своя рамка ей не нужна. */
+export function Sheet({
+  cols,
+  grid,
+  flush,
+  children,
+}: {
+  cols: ReactNode[];
+  /** grid-template-columns, например '2fr 1fr 1fr 90px'. */
+  grid: string;
+  flush?: boolean;
+  children: ReactNode;
+}) {
+  return (
+    <div className={flush ? undefined : 'overflow-hidden rounded-xl border border-neutral-200 bg-white shadow-sm'}>
+      <div
+        className="grid items-center gap-3 border-b border-neutral-200 bg-neutral-100/70 px-4 py-2 text-[11px] font-semibold uppercase tracking-wider text-neutral-500"
+        style={{ gridTemplateColumns: grid }}
+      >
+        {cols.map((c, i) => (
+          <span key={i} className="min-w-0">{c}</span>
+        ))}
+      </div>
+      <div className={'divide-y divide-neutral-100 ' + ROWS}>{children}</div>
+    </div>
+  );
+}
+
 export function DataTable({
   cols,
   grid,
@@ -842,25 +960,14 @@ export function DataTable({
   rows: { key: string; to?: string; on?: boolean; cells: ReactNode[] }[];
 }) {
   return (
-    <div className="overflow-hidden rounded-xl border border-neutral-200 bg-white shadow-sm">
-      <div
-        className="grid gap-3 border-b border-neutral-200 bg-neutral-50 px-4 py-2 text-[11px] font-semibold uppercase tracking-wider text-neutral-400"
-        style={{ gridTemplateColumns: grid }}
-      >
-        {cols.map((c) => (
-          <span key={c}>{c}</span>
-        ))}
-      </div>
-      {rows.map((r, i) => (
+    <Sheet cols={cols} grid={grid}>
+      {rows.map((r) => (
         <div
           key={r.key}
           data-to={r.to}
           data-row
-          className={
-            'grid w-full items-center gap-3 px-4 py-2.5 text-left text-[13px] ' +
-            (r.on ? 'bg-blue-50/60 ' : 'hover:bg-neutral-50 ') +
-            (i > 0 ? 'border-t border-neutral-100' : '')
-          }
+          data-on={r.on ? '' : undefined}
+          className="grid w-full items-center gap-3 px-4 py-2.5 text-left text-[13px]"
           style={{ gridTemplateColumns: grid }}
         >
           {r.cells.map((c, j) => (
@@ -868,7 +975,7 @@ export function DataTable({
           ))}
         </div>
       ))}
-    </div>
+    </Sheet>
   );
 }
 

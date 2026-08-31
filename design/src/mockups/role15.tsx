@@ -26,6 +26,7 @@ import {
   A, AW, Bar, EmptyBox, FileDrop, FormGrid, InlineDialog, PhoneRoleApp, PickField, Pill, Panel,
   Row, Rows, ScreenScope, TextInput, WebApp,
   type RoleUI,
+  Sheet,
 } from '../kit/hero/app';
 /* Из старого слоя остаются только мета-компоненты борда: колонки, стрелки и
    полки состояний. Сами экраны собраны новым слоем. */
@@ -55,6 +56,10 @@ const R15: RoleUI = {
     [<ClipboardList size={16} key="n" />, 'Наряды региона'],
     [<Scale size={16} key="p" />, 'Начисления'],
   ],
+  /* Должность в наряде держит человек с судейской квалификацией ✳: срок
+     аттестации и рейтинг у него живут в кабинете судьи, и попадать туда он
+     должен отсюда, а не вторым входом. */
+  roles: ['Председатель СК региона', { t: 'Судья · вне турнира', to: 'Э0.8' }],
 };
 
 /* ── Мелочи, общие для экранов роли ─────────────────────────────── */
@@ -67,20 +72,6 @@ const PC: Record<Cls, 'success' | 'warning' | 'danger' | 'accent' | 'default'> =
 };
 const P = ({ t, cls }: { t: string; cls: Cls }) => <Pill t={t} color={PC[cls]} />;
 
-/** Таблица с «живыми» строками: готовый DataTable рисует однородные строки, а
-    у реестра судей строка красится состоянием допуска, и числовым колонкам
-    нужен правый край. ⚠ Дупликация с role05.tsx / judge.tsx. */
-const Sheet = ({ cols, grid, children }: { cols: ReactNode[]; grid: string; children: ReactNode }) => (
-  <div>
-    <div
-      className="grid items-center gap-3 border-b border-neutral-200 bg-neutral-50 px-4 py-2 text-[11px] font-semibold uppercase tracking-wider text-neutral-400"
-      style={{ gridTemplateColumns: grid }}
-    >
-      {cols.map((c, i) => <span key={i} className="min-w-0">{c}</span>)}
-    </div>
-    <div className="divide-y divide-neutral-100">{children}</div>
-  </div>
-);
 
 /** Заголовок числовой колонки — по правому краю, как и сами числа. */
 const Th = ({ children }: { children: ReactNode }) => <span className="block text-right">{children}</span>;
@@ -743,10 +734,11 @@ export function Duty15_3() {
               key={t.nm}
               type="button"
               data-row
+              data-on={pick === t.nm ? '' : undefined}
               onClick={t.reg ? () => setPick(pick === t.nm ? null : t.nm) : undefined}
               className={
                 'grid w-full grid-cols-[minmax(0,2.2fr)_minmax(0,1.6fr)_64px_150px] items-center gap-3 px-4 py-2.5 text-left ' +
-                (!t.reg ? 'cursor-default opacity-60' : pick === t.nm ? 'bg-blue-50/60' : 'hover:bg-neutral-50')
+                (!t.reg ? 'cursor-default opacity-60' : '')
               }
             >
               <span className="min-w-0 leading-tight">

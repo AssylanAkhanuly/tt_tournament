@@ -530,12 +530,15 @@ const ProfileMenu0_1 = () => (
         <div className="px-2.5 pb-1 pt-1 text-[11px] font-semibold uppercase tracking-wider text-neutral-400">
           Мои роли
         </div>
-        {(R00.roles ?? []).map((r, i) => (
-          <div key={r} className="flex items-center gap-2 rounded-lg px-2.5 py-2 text-sm">
-            <span className="w-4">{i === 0 && <Check size={14} className="text-blue-600" />}</span>
-            {r}
-          </div>
-        ))}
+        {(R00.roles ?? []).map((r, i) => {
+          const t = typeof r === 'string' ? r : r.t;
+          return (
+            <div key={t} className="flex items-center gap-2 rounded-lg px-2.5 py-2 text-sm">
+              <span className="w-4">{i === 0 && <Check size={14} className="text-blue-600" />}</span>
+              {t}
+            </div>
+          );
+        })}
         <Separator className="my-1" />
         <button
           type="button"

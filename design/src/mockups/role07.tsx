@@ -16,6 +16,7 @@ import { Avatar, Button } from '@heroui/react';
 import {
   A, AW, AreaInput, Bar, FieldView, FilterSeg, FormGrid, KV, Panel, PhoneRoleApp, Pill, Row, Rows,
   ScreenScope, SearchInput, StatTiles, TextInput, WebApp, type RoleUI,
+  Sheet,
 } from '../kit/hero/app';
 /* Из старого слоя остаются только мета-компоненты борда: колонки, стрелки и
    полки состояний. Сами экраны собраны новым слоем. */
@@ -51,6 +52,10 @@ const R07: RoleUI = {
     [<CalendarDays size={16} key="s" />, 'Расписание'],
     [<Scroll size={16} key="p" />, 'Протоколы'],
   ],
+  /* Должность в наряде держит человек с судейской квалификацией ✳: срок
+     аттестации и рейтинг у него живут в кабинете судьи, и попадать туда он
+     должен отсюда, а не вторым входом. */
+  roles: ['Главный секретарь соревнований', { t: 'Судья · вне турнира', to: 'Э0.8' }],
 };
 
 /** Значок состояния в шапке: на каждом экране турнир в своём состоянии (§4.3) —
@@ -76,21 +81,6 @@ const Frag = ({ w = 560, children }: { w?: number; children: ReactNode }) => (
   </ScreenScope>
 );
 
-/** Таблица с «живыми» строками: шапка колонок задана, строки собирает экран —
-    у жребия строка меняет слот от броска, в расписании горит конфликтом.
-    ⚠ Временная дупликация с той же таблицей в role05/role06 — когда роли
-    доедут до нового слоя, таблице место в `kit/hero/app`. */
-const Sheet = ({ cols, grid, children }: { cols: ReactNode[]; grid: string; children: ReactNode }) => (
-  <div className="overflow-hidden rounded-xl border border-neutral-200 bg-white shadow-sm">
-    <div
-      className="grid items-center gap-3 border-b border-neutral-200 bg-neutral-50 px-4 py-2 text-[11px] font-semibold uppercase tracking-wider text-neutral-400"
-      style={{ gridTemplateColumns: grid }}
-    >
-      {cols.map((c, i) => <span key={i} className="min-w-0">{c}</span>)}
-    </div>
-    <div className="divide-y divide-neutral-100">{children}</div>
-  </div>
-);
 
 /** Заголовок сортируемого столбца: слоты сравнивают по номеру, людей — по
     фамилии и рейтингу. ⚠ Дупликация с role05 — до общего компонента. */

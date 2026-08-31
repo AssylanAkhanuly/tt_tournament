@@ -35,6 +35,7 @@ import {
   MonthGrid, Pager, Panel, PhoneRoleApp, PickField, Pill, QuietAction, Row, Rows, ScreenScope,
   SearchInput, TextInput, TimeGrid, StatTiles, WebApp,
   type AttnItem, type CalEvent, type CalTone, type RoleUI, type SlotEvent, type TimelineItem,
+  Sheet,
 } from '../kit/hero/app';
 /* Из старого слоя остаются только мета-компоненты борда: колонки, стрелки,
    полки состояний и врезки. Сами экраны собраны новым слоем. */
@@ -137,18 +138,6 @@ const PhoneDialog = ({ children }: { children: ReactNode }) => (
    слоя, но общего дома у них пока нет, а импортировать их из чужого roleNN
    нельзя. Когда мелочи переедут в kit/hero — заменить на общие. */
 
-/** Таблица с «живыми» строками: шапка колонок задана, строки собирает экран. */
-const Sheet = ({ cols, grid, children }: { cols: ReactNode[]; grid: string; children: ReactNode }) => (
-  <div className="overflow-hidden rounded-xl border border-neutral-200 bg-white shadow-sm">
-    <div
-      className="grid items-center gap-3 border-b border-neutral-200 bg-neutral-50 px-4 py-2 text-[11px] font-semibold uppercase tracking-wider text-neutral-400"
-      style={{ gridTemplateColumns: grid }}
-    >
-      {cols.map((c, i) => <span key={i} className="min-w-0">{c}</span>)}
-    </div>
-    <div className="divide-y divide-neutral-100">{children}</div>
-  </div>
-);
 
 /** Заголовок сортируемого столбца. */
 const Th = ({ t, on, onClick }: { t: string; on: boolean; onClick: () => void }) => (

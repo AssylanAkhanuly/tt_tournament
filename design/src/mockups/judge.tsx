@@ -18,7 +18,7 @@ import {
   FileUp, GraduationCap, History, LayoutDashboard, ListChecks, Scale, Table2, Trophy,
 } from 'lucide-react';
 import { Avatar, Button } from '@heroui/react';
-import { Bar, Facts, KV, Panel, Pill, Row, Rows, StatTiles } from '../kit/hero/app';
+import { Bar, Bars, ChartRow, Donut, Facts, KV, Panel, Pill, Row, Rows, Sheet, StatTiles } from '../kit/hero/app';
 
 /* ── Разделы судьи: одна навигация на оба контура ────────────────── */
 
@@ -139,23 +139,6 @@ export const JUDGE_DOCS = [
 
 /* ── Местные кирпичи нового слоя ────────────────────────────────── */
 
-/* ⚠ Временная дупликация с role05.tsx (локальный Sheet): готовый DataTable
-   не умеет заголовки-ReactNode, а у таблиц рейтинга числовые колонки без
-   выравнивания по правому краю не читаются. Этот Sheet — без своей рамки:
-   он живёт в Panel flush и рамку берёт у панели. */
-const Sheet = ({ cols, grid, children }: { cols: ReactNode[]; grid: string; children: ReactNode }) => (
-  <div>
-    <div
-      className="grid items-center gap-3 border-b border-neutral-200 bg-neutral-50 px-4 py-2 text-[11px] font-semibold uppercase tracking-wider text-neutral-400"
-      style={{ gridTemplateColumns: grid }}
-    >
-      {cols.map((c, i) => (
-        <span key={i} className="min-w-0">{c}</span>
-      ))}
-    </div>
-    <div className="divide-y divide-neutral-100">{children}</div>
-  </div>
-);
 
 /** Заголовок числовой колонки — по правому краю, как и сами числа. */
 const Th = ({ children }: { children: ReactNode }) => <span className="block text-right">{children}</span>;
@@ -185,7 +168,7 @@ function TourTable({
 }) {
   const grid = 'minmax(0,1.9fr) minmax(0,1.1fr) minmax(0,1.4fr) minmax(0,1fr) 72px';
   return (
-    <Sheet cols={[cols[0], 'Когда и где', cols[1], 'Коэффициент', <Th key="p">{cols[2]}</Th>]} grid={grid}>
+    <Sheet flush cols={[cols[0], 'Когда и где', cols[1], 'Коэффициент', <Th key="p">{cols[2]}</Th>]} grid={grid}>
       {tours.map((t) => {
         const pts = tourPoints(t);
         return (
@@ -262,6 +245,32 @@ export function JudgeRating({ me, tours }: { me: JudgeMe; tours: JudgeTour[] }) 
           },
         ]}
       />
+
+      {/* Из чего сложился балл и как он набирался ✳ (31.08.2026). Формула под
+          числом отвечает «сколько», но не отвечает «чего не хватает»: у судьи
+          с R = 9 весь балл может быть из одной категории, а зачёт требует трёх
+          из четырёх. Кольцо показывает это одним взглядом, столбики — из каких
+          турниров пришёл S1. */}
+      <Panel title="Из чего сложился мой балл" extra={<Cap>Зачёт — баллы не меньше чем в трёх категориях из четырёх</Cap>}>
+        <ChartRow>
+          <Donut
+            label={'Слагаемые рейтинга: S1 ' + num(me.s1) + ', S2 ' + num(me.s2) + ', S3 ' + num(me.s3) + ', S4 ' + num(me.s4)}
+            total={num(r)}
+            totalNote="балл R"
+            parts={[
+              { t: 'S1 · работа на турнирах', v: me.s1, note: 'по явке' },
+              { t: 'S2 · категория', v: me.s2 },
+              { t: 'S3 · награды и звания', v: me.s3 },
+              { t: 'S4 · семинары и коллегия', v: me.s4 },
+            ]}
+          />
+          <Bars
+            label="Баллы S1 по турнирам сезона"
+            suffix="баллов S1 за турнир"
+            items={tours.map((t) => ({ t: t.nm.split(' ')[0], v: tourPoints(t) }))}
+          />
+        </ChartRow>
+      </Panel>
 
       <Panel
         title={'История судейства в турнирах · ' + tours.length + ' за сезон'}
@@ -366,6 +375,7 @@ export function JudgeRankList({ rows, period }: { rows: JudgeRank[]; period: str
         flush
       >
         <Sheet
+          flush
           grid={grid}
           cols={[
             'Место',
@@ -388,10 +398,11 @@ export function JudgeRankList({ rows, period }: { rows: JudgeRank[]; period: str
               type="button"
               data-to="Э0.13"
               data-row
-              className={
-                'grid w-full items-center gap-3 px-4 py-2.5 text-left text-[13px] tabular-nums ' +
-                (j.me ? 'bg-blue-50/60' : 'hover:bg-neutral-50')
-              }
+              /* Своя строка выделена атрибутом, а не классом: полосы реестра
+                 (`ROWS`) и подсветка — селекторы одного веса, и правило с
+                 `data-on` намеренно тяжелее полосы. */
+              data-on={j.me ? '' : undefined}
+              className="grid w-full items-center gap-3 px-4 py-2.5 text-left text-[13px] tabular-nums"
               style={{ gridTemplateColumns: grid }}
             >
               <span className="text-neutral-600">{j.pl}</span>

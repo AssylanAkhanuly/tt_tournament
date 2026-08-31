@@ -55,7 +55,7 @@ export function Desk({
   role: { nm: string; rl: string; av: string };
   /** Роли этого человека, если их несколько: переключаются здесь же, в меню
       профиля. Одна роль — раздела нет, выбирать не из чего. */
-  roles?: string[];
+  roles?: (string | { t: string; to?: string })[];
   hint?: string;
   children: ReactNode;
 }) {
@@ -140,17 +140,21 @@ export function Desk({
               {roles && roles.length > 1 && (
                 <div className="dmenu-roles">
                   <div className="dmenu-sec">Работать как</div>
-                  {roles.map((r) => (
+                  {roles.map((raw) => {
+                    const r = typeof raw === 'string' ? { t: raw, to: undefined } : raw;
+                    return (
                     <button
-                      key={r}
+                      key={r.t}
                       type="button"
-                      className={'dmenu-role' + (r === cur ? ' on' : '')}
-                      onClick={() => setCur(r)}
+                      data-to={r.t === cur ? undefined : r.to}
+                      className={'dmenu-role' + (r.t === cur ? ' on' : '')}
+                      onClick={() => setCur(r.t)}
                     >
                       <span className="d" />
-                      {r}
+                      {r.t}
                     </button>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
               {/* В свой профиль (Э0.2) попадают «по имени и фото в шапке» —

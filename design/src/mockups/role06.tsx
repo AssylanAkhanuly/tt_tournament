@@ -22,6 +22,7 @@ import {
   A, AW, Bar, DataTable, DisabledAction, EmptyBox, FieldView, FilterSeg, FormGrid, GameCells,
   InlineDialog, MatchCard, PageTabs, Panel, PhoneRoleApp, Pill, PrimaryAction, QuietAction, Row,
   Rows, ScreenScope, StatTiles, TextInput, TimeGrid, WebApp, type RoleUI, type SlotEvent,
+  Sheet,
 } from '../kit/hero/app';
 /* Из старого слоя остаются только мета-компоненты борда: колонки, стрелки и
    полки состояний. Сами экраны собраны новым слоем. */
@@ -57,6 +58,10 @@ const R06: RoleUI = {
     [<Timer size={16} key="l" />, 'Ход турнира'],
     [<Scroll size={16} key="p" />, 'Протокол'],
   ],
+  /* Должность в наряде держит человек с судейской квалификацией ✳: срок
+     аттестации и рейтинг у него живут в кабинете судьи, и попадать туда он
+     должен отсюда, а не вторым входом. */
+  roles: ['Главный судья соревнований', { t: 'Судья · вне турнира', to: 'Э0.8' }],
 };
 
 /** Значок состояния в шапке: на каждом экране турнир в своём состоянии (§4.3). */
@@ -96,20 +101,6 @@ const Sec = ({ children }: { children: ReactNode }) => (
   </div>
 );
 
-/** Таблица с «живыми» строками: шапка колонок задана, строки собирает экран.
-    ⚠ Временная дупликация с той же таблицей в role05 — когда обе роли
-    устаканятся на новом слое, вынести в kit/hero/app. */
-const Sheet = ({ cols, grid, children }: { cols: ReactNode[]; grid: string; children: ReactNode }) => (
-  <div className="overflow-hidden rounded-xl border border-neutral-200 bg-white shadow-sm">
-    <div
-      className="grid items-center gap-3 border-b border-neutral-200 bg-neutral-50 px-4 py-2 text-[11px] font-semibold uppercase tracking-wider text-neutral-400"
-      style={{ gridTemplateColumns: grid }}
-    >
-      {cols.map((c, i) => <span key={i} className="min-w-0">{c}</span>)}
-    </div>
-    <div className="divide-y divide-neutral-100">{children}</div>
-  </div>
-);
 
 /* ── Телефонный кадр: что меняется на 392 px ────────────────────── */
 
@@ -797,9 +788,9 @@ const Waiting6_2 = () => {
                 role="button"
                 tabIndex={0}
                 onClick={() => setPick(pl.nm === pick ? null : pl.nm)}
+                data-on={pl.nm === pick ? '' : undefined}
                 className={
                   'grid cursor-pointer items-center gap-3 px-4 py-2.5 text-[13px] ' +
-                  (pl.nm === pick ? 'bg-blue-50/60 ' : 'hover:bg-neutral-50 ') +
                   (pl.auto || excluded ? 'opacity-55' : '')
                 }
                 style={{ gridTemplateColumns: SQUAD_GRID }}

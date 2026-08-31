@@ -22,6 +22,8 @@ import {
   SearchInput, SeasonTable, StatTiles, StatusChip, TextInput, TimeGrid, WebApp,
   type Answer, type AttnItem, type CalEvent, type Question, type RoleUI, type SeasonRow,
   type SlotEvent, type TimelineItem,
+  Sheet,
+  FilterBar,
 } from '../kit/hero/app';
 /* Из старого слоя остаются только мета-компоненты борда: колонки, стрелки и
    полки состояний. Сами экраны собраны новым слоем. */
@@ -60,6 +62,10 @@ const R05: RoleUI = {
     [<GraduationCap size={16} key="a" />, 'Аттестация'],
     [<Megaphone size={16} key="pu" />, 'Публикация'],
   ],
+  /* Должность в наряде держит человек с судейской квалификацией ✳: срок
+     аттестации и рейтинг у него живут в кабинете судьи, и попадать туда он
+     должен отсюда, а не вторым входом. */
+  roles: ['Председатель ГСК', { t: 'Судья · вне турнира', to: 'Э0.8' }],
 };
 
 /* ── Мелочи, общие для экранов роли ─────────────────────────────── */
@@ -72,20 +78,6 @@ const PC: Record<Cls, 'success' | 'warning' | 'danger' | 'accent' | 'default'> =
 };
 const P = ({ t, cls }: { t: string; cls: Cls }) => <Pill t={t} color={PC[cls]} />;
 
-/** Таблица с «живыми» строками. Готовый DataTable рисует однородные строки, а
-    здесь строка меняет и подпись, и тон от принятого решения — шапка та же,
-    строки собирает сам экран. */
-const Sheet = ({ cols, grid, children }: { cols: ReactNode[]; grid: string; children: ReactNode }) => (
-  <div className="overflow-hidden rounded-xl border border-neutral-200 bg-white shadow-sm">
-    <div
-      className="grid items-center gap-3 border-b border-neutral-200 bg-neutral-50 px-4 py-2 text-[11px] font-semibold uppercase tracking-wider text-neutral-400"
-      style={{ gridTemplateColumns: grid }}
-    >
-      {cols.map((c, i) => <span key={i} className="min-w-0">{c}</span>)}
-    </div>
-    <div className="divide-y divide-neutral-100">{children}</div>
-  </div>
-);
 
 /** Заголовок сортируемого столбца: список судей сравнивают по разным полям. */
 const Th = ({ t, on, onClick }: { t: string; on: boolean; onClick: () => void }) => (
@@ -2775,11 +2767,9 @@ const Rating5_5Body = ({ phone }: { phone?: boolean }) => {
         tabIndex={0}
         data-row
         data-to={to}
+        data-on={open === j.nm ? '' : undefined}
         onClick={openJournal}
-        className={
-          'grid cursor-pointer items-center gap-3 px-4 py-2.5 text-[13px] ' +
-          (open === j.nm ? 'bg-blue-50/60' : 'hover:bg-neutral-50')
-        }
+        className="grid cursor-pointer items-center gap-3 px-4 py-2.5 text-[13px]"
         style={{ gridTemplateColumns: RANK_GRID }}
       >
         {who}
@@ -2814,22 +2804,24 @@ const Rating5_5Body = ({ phone }: { phone?: boolean }) => {
 
   return (
     <>
-      {/* Фильтр сверху, поиск под ним ✳: сначала сужают круг, потом ищут
-          внутри — в одной строке два приёма мешали друг другу. Счётчиков рядом
-          нет: они пересчитываются по той же таблице, что стоит ниже. */}
+      {/* Поиск и отбор — одной полосой ✳ (31.08.2026). Стояли друг под другом,
+          потому что фильтр был сегментом во всю ширину и рядом с поиском не
+          помещался; выпадающий отбор занимает одну кнопку, и разводить их по
+          строкам больше незачем. Счётчиков рядом нет: они пересчитываются по
+          той же таблице, что стоит ниже. */}
       {phone ? (
-        <Strip><FilterSeg items={F55} active={f} onPick={setF} /></Strip>
+        <>
+          <Strip><FilterSeg items={F55} active={f} onPick={setF} /></Strip>
+          <div className="mb-3">
+            <SearchInput value={q} onChange={setQ} placeholder="Фамилия или категория" className="w-full" />
+          </div>
+        </>
       ) : (
-        <div className="mb-3"><FilterSeg items={F55} active={f} onPick={setF} /></div>
+        <FilterBar>
+          <SearchInput value={q} onChange={setQ} placeholder="Фамилия или категория" className="w-80" />
+          <FilterSeg items={F55} active={f} onPick={setF} />
+        </FilterBar>
       )}
-      <div className="mb-3">
-        <SearchInput
-          value={q}
-          onChange={setQ}
-          placeholder="Фамилия или категория"
-          className={phone ? 'w-full' : 'w-80'}
-        />
-      </div>
 
       {/* На телефоне шапки колонок нет: сортировку по фамилии заменяет поиск,
           а порядок остаётся рейтинговым — за этим в реестр и приходят. */}
@@ -4566,11 +4558,9 @@ const Publish5_7Body = ({ phone }: { phone?: boolean }) => {
         role="button"
         tabIndex={0}
         data-row
+        data-on={open === a.nm ? '' : undefined}
         onClick={() => setOpen(a.nm)}
-        className={
-          'grid cursor-pointer items-center gap-3 px-4 py-2.5 text-[13px] ' +
-          (open === a.nm ? 'bg-blue-50/60' : 'hover:bg-neutral-50')
-        }
+        className="grid cursor-pointer items-center gap-3 px-4 py-2.5 text-[13px]"
         style={{ gridTemplateColumns: APP_GRID }}
       >
         <Who av={a.av} nm={a.nm} sub={a.what} />
