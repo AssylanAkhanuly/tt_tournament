@@ -36,16 +36,10 @@ export const Laptop = ({ children }: { children: ReactNode }) => (
   </ScreenScope>
 );
 
-/** Планшет портретом: рабочее место судьи за столом (TZ §6). */
-export const Tablet = ({ children }: { children: ReactNode }) => (
-  <ScreenScope>
-    <div className="rounded-[2.2rem] bg-neutral-900 p-3 shadow-xl">
-      <div className="relative flex h-[1000px] w-[780px] flex-col overflow-hidden rounded-[1.6rem] bg-white">
-        {children}
-      </div>
-    </div>
-  </ScreenScope>
-);
+/* Планшетного корпуса в наборе нет ✳ (31.08.2026): в системе два формата —
+   десктоп и телефон. Планшет убран по решению владельца продукта, и это
+   сходится с комментарием самой федерации (09.2026): планшетов у неё нет —
+   именно поэтому у судьи есть режим ввода «по партиям» (TZ §6.1). */
 
 /** Телефон: приложение спортсмена (TZ §10). */
 export const Phone = ({ children }: { children: ReactNode }) => (

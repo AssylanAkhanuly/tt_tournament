@@ -8,6 +8,4 @@ export default {
 
 export const Flow = { name: 'Макеты по флоу · 14 экранов', render: () => <Role01Board /> };
 
-export const Tablet = { name: 'Адаптив · планшет', render: () => <Role01TabletBoard /> };
-
 export const Phone = { name: 'Адаптив · телефон', render: () => <Role01PhoneBoard /> };

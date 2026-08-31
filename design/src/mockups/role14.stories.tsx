@@ -1,4 +1,3 @@
-import { Board as RespBoard, Col } from '../respShell';
 import { Calendar14_2, Role14Board } from './role14';
 import { Role14AppBoard } from './role14app';
 
@@ -17,16 +16,6 @@ export const Flow = { name: 'Макеты по флоу · 15 экранов', r
 
 /* Главной (Э14.1) в роли больше нет ✳ (30.08.2026), и первым экраном стоит
    объединённая вкладка «Турниры» — на планшете показываем её. */
-export const Tablet = {
-  name: 'Адаптив · планшет',
-  render: () => (
-    <RespBoard title="14 · СПОРТСМЕН — ПЛАНШЕТ" tag="веб · планшет · тот же экран, раскладка плотнее">
-      <Col cap="Э14.2 · Турниры">
-        <Calendar14_2 variant="land" />
-      </Col>
-    </RespBoard>
-  ),
-};
 
 /* Приложение проектируем после веба (TZ §10) — экраны нарисованы впрок. */
 export const App = { name: 'Приложение · позже', render: () => <Role14AppBoard /> };

@@ -15,7 +15,7 @@ import { useState, type ReactNode } from 'react';
 import { ArrowLeft, Bell, Check, ChevronDown, LogOut, MoreHorizontal, User } from 'lucide-react';
 import { Avatar, Chip, Separator } from '@heroui/react';
 import { Brand } from '../../../ui';
-import { Laptop, Phone, Tablet } from './frame';
+import { Laptop, Phone } from './frame';
 
 /** Кто «сидит» за экраном роли — подпись профиля в шапке.
     `email` показывается в меню профиля строкой «Вы вошли как»: у ролей, где
@@ -279,45 +279,6 @@ export function WebApp({
         )}
       </div>
     </Laptop>
-  );
-}
-
-/** Планшетная оболочка: судья за столом. Сайдбара нет — только шапка. */
-export function TabletApp({
-  title,
-  sub,
-  badge,
-  back,
-  center,
-  children,
-}: {
-  title: string;
-  sub?: string;
-  badge?: string;
-  back?: { label: string; to?: string };
-  center?: boolean;
-  children: ReactNode;
-}) {
-  return (
-    <Tablet>
-      <div className="flex shrink-0 items-center gap-3 border-b border-neutral-200 px-5 py-3.5">
-        <Brand size="sm" />
-        <div className="min-w-0 flex-1 leading-tight">
-          <div className="truncate text-[15px] font-semibold">{title}</div>
-          {sub && <div className="truncate text-xs text-neutral-500">{sub}</div>}
-        </div>
-        {badge && (
-          <Chip color="success" size="sm">
-            <span className="mr-1 inline-block h-1.5 w-1.5 rounded-full bg-green-600" />
-            {badge}
-          </Chip>
-        )}
-      </div>
-      <div className={'flex min-h-0 flex-1 flex-col gap-4 overflow-auto p-5' + (center ? ' justify-center' : '')}>
-        {back && <BackLink label={back.label} to={back.to} />}
-        {children}
-      </div>
-    </Tablet>
   );
 }
 

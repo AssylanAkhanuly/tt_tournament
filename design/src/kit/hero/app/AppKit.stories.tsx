@@ -43,7 +43,6 @@ import {
   SeasonTable,
   StatTiles,
   StatusChip,
-  TabletApp,
   TextInput,
   WebApp,
   type RoleUI,
@@ -280,28 +279,13 @@ export const CardAndTabs = {
   ),
 };
 
-/* ── Планшет и телефон ──────────────────────────────────────────── */
+/* ── Телефон ─────────────────────────────────────────────────────
+   Планшета в наборе нет ✳ (31.08.2026): форматов два — десктоп и телефон.
+   Табло судьи, которое стояло здесь планшетом, живёт на своих экранах роли 9. */
 export const Devices = {
-  name: 'Планшет и телефон',
+  name: 'Телефон',
   render: () => (
     <div className="flex items-start gap-10 p-8">
-      <TabletApp title="Стол 5 · Кубок Алматы 2026" sub="1/8 финала · до 3 побед" badge="ИДЁТ">
-        <MatchCard
-          live
-          home={{ nm: 'Ким Георгий', av: A(44), sub: 'подаёт' }}
-          away={{ nm: 'Тлеу Алишер', av: A(52) }}
-          score="1:1"
-          games={[[11, 7], [9, 11]]}
-          note="3-я партия · 6:4"
-        />
-        <div className="grid grid-cols-2 gap-3">
-          <Button variant="primary" className="h-16 w-full text-lg">Очко слева</Button>
-          <Button variant="primary" className="h-16 w-full text-lg">Очко справа</Button>
-          <Button variant="outline" className="w-full">Отменить очко</Button>
-          <Button variant="outline" className="w-full">Завершить партию</Button>
-        </div>
-      </TabletApp>
-
       <PhoneApp
         tabs={[
           [<Landmark size={17} key="h" />, 'Главная'],
