@@ -46,6 +46,10 @@ export const TST = {
   live: { t: 'ИДЁТ', color: 'success' as ChipColor, dot: true },
   protocol: { t: 'ИТОГОВЫЙ ПРОТОКОЛ', color: 'warning' as ChipColor },
   done: { t: 'ЗАВЕРШЁН', color: 'default' as ChipColor },
+  /* Девятое состояние ✳ (01.09.2026): отмена перестала быть действием без
+     состояния. Отменённый турнир остаётся в календаре с причиной, а сыгранные
+     до отмены матчи — в истории игрока, но вне рейтинга (TZ §4.3). */
+  cancelled: { t: 'ОТМЕНЁН', color: 'danger' as ChipColor },
 } satisfies Record<string, StDef>;
 export type TSt = keyof typeof TST;
 
