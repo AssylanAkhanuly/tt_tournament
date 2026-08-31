@@ -1436,12 +1436,43 @@ const TEAMS13: { av: string; nm: string; sub: string; val: string; pill: { t: st
 
 /** Таблица дивизиона — копится по всем четырём турам. Данные вынесены из
     разметки: на десктопе из них собирается таблица, на телефоне строки. */
-const DIVISION13: { p: number; nm: string; city: string; tours: string; pts: number; my?: boolean }[] = [
-  { p: 1, nm: '«Астана»', city: 'г. Астана', tours: '1 тур сыгран', pts: 6 },
-  { p: 2, nm: '«Иртыш»', city: 'г. Павлодар', tours: '1 тур сыгран', pts: 5 },
-  { p: 3, nm: '«Алатау»', city: 'г. Алматы', tours: '1 тур сыгран', pts: 4, my: true },
-  { p: 4, nm: '«Шахтёр»', city: 'г. Караганда', tours: '1 тур сыгран', pts: 2 },
+/** Строка таблицы дивизиона: то, из чего складывается место. Разницы личных
+    встреч и партий стоят колонками, потому что именно по ним расходятся
+    команды с равными очками — порядок тай-брейков написан под таблицей. */
+type DivRow = {
+  p: number;
+  nm: string;
+  city: string;
+  /** Сыграно · выиграно · проиграно командных встреч. */
+  g: number;
+  w: number;
+  l: number;
+  /** Личные встречи: выиграно : проиграно. */
+  rub: [number, number];
+  /** Партии: выиграно : проиграно. */
+  sets: [number, number];
+  pts: number;
+  my?: boolean;
+};
+
+const DIVISION13: DivRow[] = [
+  { p: 1, nm: '«Астана»', city: 'г. Астана', g: 3, w: 3, l: 0, rub: [11, 4], sets: [36, 21], pts: 6 },
+  { p: 2, nm: '«Иртыш»', city: 'г. Павлодар', g: 3, w: 2, l: 1, rub: [9, 6], sets: [32, 26], pts: 5 },
+  { p: 3, nm: '«Алатау»', city: 'г. Алматы', g: 3, w: 2, l: 1, rub: [9, 7], sets: [31, 28], pts: 5, my: true },
+  { p: 4, nm: '«Барыс»', city: 'г. Астана', g: 3, w: 1, l: 2, rub: [7, 9], sets: [27, 30], pts: 4 },
+  { p: 5, nm: '«Ertis»', city: 'г. Семей', g: 3, w: 1, l: 2, rub: [6, 10], sets: [24, 33], pts: 4 },
+  { p: 6, nm: '«Шахтёр»', city: 'г. Караганда', g: 3, w: 0, l: 3, rub: [3, 12], sets: [18, 36], pts: 3 },
 ];
+
+/** Сколько команд уходит вниз: две последние строки отбиты линией. */
+const DOWN13 = 2;
+
+/** Колонки таблицы дивизиона: узкие числовые — по правому краю, как сами числа. */
+const DIV_GRID = '56px minmax(0,1.7fr) 44px 44px 44px 92px 92px 62px';
+const Th13 = ({ children }: { children: ReactNode }) => (
+  <span className="block text-right">{children}</span>
+);
+
 
 /** Второй экран раздела «Соревнования», вглубь из списка: не даты, а команда —
     её заявка в дивизион, состояние этой заявки, состав на сезон, место и
@@ -1481,28 +1512,69 @@ export function League13_3() {
         </div>
       </Panel>
 
-      {/* Таблица дивизиона — копится по всем четырём турам; здесь она таблицей,
-          а не строками с очками в подписи: места сравнивают сверху вниз. */}
-      <Panel title="Таблица дивизиона" extra={<P t="МУЖСКАЯ СУПЕРЛИГА" cls="reg" />} flush>
-        <DataTable
-          cols={['Место', 'Клуб', 'Туры', 'Очки', '']}
-          grid="56px 1.6fr 1fr 70px 130px"
-          rows={DIVISION13.map((d) => ({
-            key: String(d.p),
-            on: d.my,
-            cells: [
-              <b key="p" className="tabular-nums">{d.p}</b>,
-              <span key="n" className="font-medium">{d.nm}</span>,
-              <span key="t" className="text-neutral-500">{d.city} · {d.tours}</span>,
-              <b key="v" className="tabular-nums">{d.pts}</b>,
-              <span key="m" className="flex justify-end">{d.my && <P t="МОЯ КОМАНДА" cls="reg" />}</span>,
-            ],
-          }))}
-        />
-        <div className="px-4 pb-1 pt-3">
+      {/* Настоящая турнирная таблица ✳ (01.09.2026): место, встречи, разницы и
+          очки. Раньше здесь стояли четыре колонки — место, клуб, «1 тур
+          сыгран», очки, — и на вопрос «почему он выше меня» таблица отвечала
+          молчанием: у «Иртыша» и «Алатау» одинаковые пять очков, а место
+          разное. Теперь видно, чем именно они разошлись. */}
+      <Panel
+        title="Таблица дивизиона"
+        sub="Копится по всем четырём турам сезона"
+        extra={<P t="МУЖСКАЯ СУПЕРЛИГА" cls="reg" />}
+        flush
+      >
+        <Sheet
+          flush
+          grid={DIV_GRID}
+          cols={[
+            'Место',
+            'Клуб',
+            <Th13 key="g">И</Th13>,
+            <Th13 key="w">В</Th13>,
+            <Th13 key="l">П</Th13>,
+            <Th13 key="r">Встречи</Th13>,
+            <Th13 key="s">Партии</Th13>,
+            <Th13 key="p">Очки</Th13>,
+          ]}
+        >
+          {DIVISION13.map((d, i) => (
+            <div
+              key={d.p}
+              data-row
+              data-on={d.my ? '' : undefined}
+              className={
+                'grid w-full items-center gap-3 px-4 py-2.5 text-left text-[13px] tabular-nums ' +
+                /* Черта отбивает зону вылета: две последние команды уходят в
+                   лигу ниже, и это видно в самой таблице, а не подписью. */
+                (i === DIVISION13.length - DOWN13 ? 'border-t-2 border-red-200 ' : '')
+              }
+              style={{ gridTemplateColumns: DIV_GRID }}
+            >
+              <span className="font-semibold text-neutral-500">{d.p}</span>
+              <span className="flex min-w-0 items-center gap-2">
+                <span className="truncate font-medium">{d.nm}</span>
+                <span className="truncate text-xs text-neutral-500">{d.city}</span>
+                {d.my && <Pill t="МОЯ" color="accent" />}
+              </span>
+              <span className="text-right text-neutral-600">{d.g}</span>
+              <span className="text-right text-neutral-600">{d.w}</span>
+              <span className="text-right text-neutral-600">{d.l}</span>
+              <span className="text-right text-neutral-600">{d.rub[0]} : {d.rub[1]}</span>
+              <span className="text-right text-neutral-600">{d.sets[0]} : {d.sets[1]}</span>
+              <span className="text-right text-[15px] font-bold">{d.pts}</span>
+            </div>
+          ))}
+        </Sheet>
+        <div className="space-y-2 px-4 pb-1 pt-3">
           <Bar>
-            Командные встречи с результатами — на карточке тура (Э13.7); список соревнований —
-            отдельным видом раздела (Э13.6).
+            Очки: <b>2</b> за победу во встрече, <b>1</b> за поражение, <b>0</b> за неявку. При
+            равенстве очков выше тот, кто выиграл личную встречу команд; дальше — разница личных
+            встреч, партий, очков. Две последние команды уходят в лигу ниже (черта в таблице).
+          </Bar>
+          <Bar tone="warning">
+            ✳ Числа — наше допущение по международной практике (TZ §4.10): схему федерация не
+            присылала. Очки, тай-брейки и число вылетающих лежат настройкой и меняются без правки
+            экранов.
           </Bar>
         </div>
       </Panel>
@@ -2391,7 +2463,7 @@ const League13_3Phone = () => (
           <Row
             key={d.p}
             nm={`${d.p}. ${d.nm}`}
-            sub={`${d.city} · ${d.tours}`}
+            sub={`${d.city} · ${d.w} побед · встречи ${d.rub[0]} : ${d.rub[1]}`}
             val={`${d.pts} очк.`}
             pill={d.my ? { t: 'МОЯ', cls: 'reg' } : undefined}
           />

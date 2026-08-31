@@ -1,9 +1,0 @@
-import { Role0304Board, Dash3_1 } from './role0304';
-
-export default {
-  title: 'Макеты/03–04 · Менеджеры-наблюдатели',
-  parameters: { layout: 'fullscreen' },
-};
-
-export const Flow = { name: 'Макеты по флоу · 4 экрана', render: () => <Role0304Board /> };
-
