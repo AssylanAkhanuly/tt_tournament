@@ -558,7 +558,7 @@ function Marks({ m, live, off, onTo, onCard, onUndo }: {
     экране это была строка мелким шрифтом под именем — прочитать её с
     расстояния всё равно нельзя. Половины равны и цветом ничего не выделяется:
     единственное, что должно бросаться в глаза, — сами числа. */
-function Half({ av, nm, city, pts, onPoint, off, marks, phone }: {
+function Half({ av, nm, city, pts, onPoint, off, marks, serve, phone }: {
   av: string;
   nm: string;
   city: string;
@@ -568,6 +568,10 @@ function Half({ av, nm, city, pts, onPoint, off, marks, phone }: {
   off?: boolean;
   /** Ряд отметок под именем: тайм-аут и карточки. */
   marks: ReactNode;
+  /** Подача у этого игрока ✳ (31.08.2026): первый вопрос за столом — «кто
+      подаёт», и отвечать на него должно табло, а не память судьи. Половина
+      обведена акцентом, у имени стоит слово. */
+  serve?: boolean;
   /** Телефонный кадр ✳: половины стоят одна под другой, поэтому фамилия и
       счёт живут в одну строку — вертикальный столбик на две половины не
       помещается. Кнопка очка при этом остаётся во всю ширину и той же высоты:
@@ -589,7 +593,12 @@ function Half({ av, nm, city, pts, onPoint, off, marks, phone }: {
   );
   if (phone) {
     return (
-      <div className="flex flex-col gap-2.5 rounded-xl border border-neutral-200 bg-white p-3 shadow-sm">
+      <div
+        className={
+          'flex flex-col gap-2.5 rounded-xl bg-white p-3 shadow-sm ' +
+          (serve ? 'border-2 border-blue-500' : 'border border-neutral-200')
+        }
+      >
         <div className="flex items-center gap-3">
           <Avatar size="sm">
             <Avatar.Image alt={nm} src={av} />
@@ -597,7 +606,9 @@ function Half({ av, nm, city, pts, onPoint, off, marks, phone }: {
           </Avatar>
           <span className="min-w-0 flex-1 leading-tight">
             <span className="block truncate text-[15px] font-bold tracking-tight">{nm}</span>
-            <span className="block truncate text-[11px] text-neutral-500">{city}</span>
+            <span className="block truncate text-[11px] text-neutral-500">
+              {serve ? <b className="text-blue-600">подача</b> : city}
+            </span>
           </span>
           {/* Счёт всё равно крупный: с полуметра от стола его читают цифрой, а
               не подписью — 56 px против 96 на десктопе. */}
@@ -609,7 +620,15 @@ function Half({ av, nm, city, pts, onPoint, off, marks, phone }: {
     );
   }
   return (
-    <div className="flex flex-col items-center gap-2 rounded-xl border border-neutral-200 bg-white p-4 shadow-sm">
+    /* Половина табло остаётся светлой ✳ (31.08.2026, решение владельца
+       продукта): тёмное поле пробовали — не берём. Читаемость держим размером
+       цифры (96 px) и обводкой подачи, а не инверсией. */
+    <div
+      className={
+        'flex flex-col items-center gap-2 rounded-xl bg-white p-4 shadow-sm ' +
+        (serve ? 'border-2 border-blue-500' : 'border border-neutral-200')
+      }
+    >
       {/* Фамилия рядом с фотографией, а не столбиком под ней ✳ (31.08.2026):
           рабочая область десктопа шире, чем высока, и вертикальная шапка
           половины съедала те восемьдесят пикселей, которые нужны самому числу. */}
@@ -623,6 +642,17 @@ function Half({ av, nm, city, pts, onPoint, off, marks, phone }: {
           <span className="block text-xs text-neutral-500">{city}</span>
         </span>
       </div>
+      {/* «Подача» — отдельной строкой, а не рядом с фамилией ✳: в строке она
+          отбирала ширину у имени, и «Токаев Марат» ломался на два ряда. */}
+      {/* Место под отметку занято всегда: без него половины разной высоты, и
+          кнопки очка перестают стоять в одну линию — а по ним бьют не глядя. */}
+      {serve ? (
+        <span className="flex items-center gap-1.5 rounded-full bg-blue-50 px-2.5 py-1 text-[11px] font-bold uppercase tracking-wider text-blue-700">
+          <span className="h-2 w-2 rounded-full bg-blue-600" /> подача
+        </span>
+      ) : (
+        <span className="h-[26px]" />
+      )}
       {/* Ряд отметок встал между именем и счётом ✳: цифру он потеснил, и это
           правильный размен — число всё ещё читается с другого конца стола, а
           тайм-аут и карточки видно, не отводя глаз от счёта. */}
@@ -708,6 +738,15 @@ function ByPoints9_3({ pts, sets, swap, paused, off, done, ready, over, marks, h
      где видит. Счёт при этом остаётся своим. */
   const order: [0 | 1, 0 | 1] = swap ? [1, 0] : [0, 1];
 
+  /* Чья подача ✳ (31.08.2026): считается из счёта, а не задаётся руками —
+     подача переходит каждые два очка, а при 10 : 10 каждое. Судья за столом
+     этот счёт и так ведёт в уме; табло просто перестаёт заставлять его это
+     делать. Значение приблизительное, как и всё в макете: в движке правило
+     живёт целиком (ENGINE.md). */
+  const rally = pts[0] + pts[1];
+  const deuce = pts[0] >= 10 && pts[1] >= 10;
+  const server: 0 | 1 = ((deuce ? rally : Math.floor(rally / 2)) % 2 === 0 ? 0 : 1);
+
   /** Половина табло по игроку — одна и та же на оба формата. */
   const half = (i: 0 | 1) => (
     <Half
@@ -716,6 +755,7 @@ function ByPoints9_3({ pts, sets, swap, paused, off, done, ready, over, marks, h
       pts={pts[i]}
       off={off || ready}
       marks={marks(i)}
+      serve={!done && !paused && server === i}
       phone={phone}
       onPoint={() => onPoint(i)}
     />
@@ -1193,6 +1233,7 @@ function ScoreBody({ tab, phone }: { tab?: string; phone?: boolean }) {
           отступом веб-раздела, а здесь вкладки должны быть под палец. */}
       <ScoreTabs
         active={tab}
+        phone={phone}
         points={
           <ByPoints9_3
             pts={pts}
@@ -1275,29 +1316,48 @@ const Score9_3Phone = () => (
   </PhoneRoleApp>
 );
 
-/** Вкладки режима ввода — касабельные, на всю ширину: у готового PageTabs
-    кнопки под курсор, а здесь по ним попадают пальцем, не глядя. */
-function ScoreTabs({ active, points, bySets }: { active?: string; points: ReactNode; bySets: ReactNode }) {
+/** Вкладки режима ввода — касабельные, но не во всю ширину ✳ (31.08.2026).
+
+    Были растянуты на всю рабочую область и оказывались самым громким на
+    экране: полоса в 1200 px спорила со счётом, ради которого экран и открыт.
+    Режим выбирают раз за матч, счёт ведут весь матч — и размер должен это
+    отражать. На телефоне полоса остаётся во всю ширину: там по ней бьют
+    пальцем, и 392 px никого не перекрикивают. */
+function ScoreTabs({ active, points, bySets, phone }: {
+  active?: string;
+  points: ReactNode;
+  bySets: ReactNode;
+  phone?: boolean;
+}) {
   const items: [string, ReactNode][] = [['По очкам', points], ['По партиям', bySets]];
   const [cur, setCur] = useState(active ?? items[0][0]);
   const hit = items.find(([t]) => t === cur) ?? items[0];
   return (
     <>
-      <div data-seg className="grid grid-cols-2 gap-1 rounded-lg bg-neutral-100 p-1">
-        {items.map(([t]) => (
-          <button
-            key={t}
-            type="button"
-            aria-selected={t === cur}
-            className={
-              'rounded-md py-2.5 text-sm font-medium ' +
-              (t === cur ? 'on bg-white text-neutral-900 shadow-sm' : 'text-neutral-500 hover:text-neutral-800')
-            }
-            onClick={() => setCur(t)}
-          >
-            {t}
-          </button>
-        ))}
+      <div className={phone ? undefined : 'flex justify-end'}>
+        <div
+          data-seg
+          className={
+            'gap-1 rounded-lg bg-neutral-100 p-1 ' +
+            (phone ? 'grid grid-cols-2' : 'inline-flex')
+          }
+        >
+          {items.map(([t]) => (
+            <button
+              key={t}
+              type="button"
+              aria-selected={t === cur}
+              className={
+                'rounded-md text-sm font-medium ' +
+                (phone ? 'py-2.5' : 'px-4 py-2') +
+                (t === cur ? ' on bg-white text-neutral-900 shadow-sm' : ' text-neutral-500 hover:text-neutral-800')
+              }
+              onClick={() => setCur(t)}
+            >
+              {t}
+            </button>
+          ))}
+        </div>
       </div>
       {hit[1]}
     </>

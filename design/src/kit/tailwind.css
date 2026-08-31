@@ -465,6 +465,9 @@
 .h-110 {
   height: calc(var(--spacing) * 110);
 }
+.h-\[26px\] {
+  height: 26px;
+}
 .h-\[430px\] {
   height: 430px;
 }
@@ -985,6 +988,10 @@
   border-style: var(--tw-border-style);
   border-width: 1px;
 }
+.border-2 {
+  border-style: var(--tw-border-style);
+  border-width: 2px;
+}
 .border-\[30px\] {
   border-style: var(--tw-border-style);
   border-width: 30px;
@@ -1038,6 +1045,9 @@
 }
 .border-blue-400 {
   border-color: var(--color-blue-400);
+}
+.border-blue-500 {
+  border-color: var(--color-blue-500);
 }
 .border-blue-600 {
   border-color: var(--color-blue-600);
@@ -1913,6 +1923,9 @@
 .outline-none {
   --tw-outline-style: none;
   outline-style: none;
+}
+.\!paused {
+  animation-play-state: paused !important;
 }
 .paused {
   animation-play-state: paused;
