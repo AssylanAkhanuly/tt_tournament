@@ -83,6 +83,9 @@
   cursor: pointer;
 }
 .fmt.opt { border-style: dashed; }
+/* Кадр экрана — не вкладка: подсвечен слева, чтобы на карте было видно, что
+   это то же место системы в другом положении, а не соседний раздел. */
+.fmt-frame { border-left: 3px solid var(--c-board-accent); }
 .fmt.on { border-color: var(--c-board-accent); }
 .fmt-title { font-size: 12px; font-weight: 700; }
 .fmt-title sup { margin-left: 3px; color: var(--c-board-accent); }

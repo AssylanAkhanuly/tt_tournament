@@ -114,7 +114,38 @@ function TabNode({ data }: NodeProps) {
   );
 }
 
-const nodeTypes = { screen: ScreenNode, tab: TabNode };
+/** Узел кадра ✳ (31.08.2026): положение того же экрана со своим обликом — у
+    аттестации это «тест идёт» (экзаменационный режим со своей оболочкой) и
+    «итог с разбором». На карте они стоят листьями под экраном, как вкладки:
+    иначе экзамен на карте не виден вовсе — узел говорит «Аттестация», и
+    догадаться, что за ним спрятан отдельный режим, неоткуда.
+
+    Кадры берутся из карты экранов роли (`frames` в `ScreenEntry`) — той же, из
+    которой собирается борд: второго списка кадров, который разъедется с
+    макетами, карта не заводит. */
+function FrameNode({ data }: NodeProps) {
+  const { frame, selected } = data as unknown as { frame: FrameRef; selected: boolean };
+  return (
+    <div className={'fmt fmt-frame' + (selected ? ' on' : '')}>
+      <Handle type="target" position={Position.Left} />
+      <div className="fmt-title">{frame.t}</div>
+      {frame.what && <div className="fmt-what">{frame.what}</div>}
+      <Handle type="source" position={Position.Right} />
+    </div>
+  );
+}
+
+const nodeTypes = { screen: ScreenNode, tab: TabNode, frame: FrameNode };
+
+/** Кадр на карте: название узла и пояснение под ним. Подпись кадра в макетах —
+    одна строка через тире («Тест идёт — экзаменационный режим: слева вопросы,
+    справа время»), и делится она здесь: до тире название, после — пояснение. */
+export type FrameRef = { code: string; full: string; t: string; what: string };
+
+export const splitFrame = (code: string, full: string): FrameRef => {
+  const [t, ...rest] = full.split(/\s+—\s+/);
+  return { code, full, t, what: rest.join(' — ') };
+};
 
 /* ── Раскладка ──────────────────────────────────────────────────── */
 
@@ -142,7 +173,7 @@ const nodeTypes = { screen: ScreenNode, tab: TabNode };
     чужие стрелки и подписи, и дерево маршрута перестало читаться. Их читают
     списком — под макетом стоит полоса «Переходы с этого экрана» с адресом
     каждого, и в самом макете они подсвечены. */
-function build(flow: RoleFlow, screens: ScreenMap, selected: string) {
+function build(flow: RoleFlow, screens: ScreenMap, selected: string, selectedFrame: string | null) {
   const known = new Set(flow.screens.map((s) => s.id));
   const commons = new Map(role00.screens.map((s) => [s.id, s]));
   const codes = [...Object.keys(screens), ...fromHeader(screens).map((h) => h.code)];
@@ -228,6 +259,22 @@ function build(flow: RoleFlow, screens: ScreenMap, selected: string) {
     kids.set(code, [...ids, ...(kids.get(code) ?? [])]);
   });
 
+  /* Кадры — такие же листья ✳: положение экрана со своим обликом должно быть
+     видно на самой карте, а не только кнопкой в панели справа. Список берём из
+     макетов роли (`frames`), а не из данных: второй такой список разъехался бы
+     с тем, что нарисовано. */
+  const frameOf = new Map<string, FrameRef>();
+  codes.forEach((code) => {
+    const fr = screens[code]?.frames;
+    if (!fr?.length) return;
+    const ids = fr.map((f) => {
+      const id = `${code}@${f.t}`;
+      frameOf.set(id, splitFrame(code, f.t));
+      return id;
+    });
+    kids.set(code, [...(kids.get(code) ?? []), ...ids]);
+  });
+
   /* Раскладка «в строку на ветку»: глубина даёт колонку, а строку получает
      каждый лист; родитель встаёт по центру своих детей.
 
@@ -240,6 +287,8 @@ function build(flow: RoleFlow, screens: ScreenMap, selected: string) {
        переносится) и строка-счётчик; узел вкладки — название и пояснение.
        Ширина узлов задана в `map.css` (200 и 178 px), отсюда и число знаков
        в строке. */
+    const f = frameOf.get(id);
+    if (f) return 40 + Math.ceil(f.t.length / 22) * 16 + Math.ceil(f.what.length / 28) * 15;
     if (!t) return 62 + Math.ceil((byId.get(id)?.title.length ?? 10) / 24) * 18;
     return 40 + Math.ceil(t.tab.t.length / 22) * 16 + Math.ceil(t.tab.what.length / 28) * 15;
   };
@@ -315,6 +364,19 @@ function build(flow: RoleFlow, screens: ScreenMap, selected: string) {
     });
   });
 
+  /* Экран → его кадр: связь без подписи, кадр не переход, а то же место
+     системы в другом положении. */
+  frameOf.forEach((f, id) => {
+    edges.push({
+      ...edgeBase,
+      id: `${f.code}->${id}`,
+      source: f.code,
+      target: id,
+      type: 'smoothstep',
+      style: { stroke: 'var(--c-board-line)' },
+    });
+  });
+
   /* Переходов выбранного экрана, которых нет в дереве (возвраты и связи веток),
      на карте нет намеренно.
 
@@ -342,7 +404,17 @@ function build(flow: RoleFlow, screens: ScreenMap, selected: string) {
     });
   });
 
-  return { nodes, edges, byId, tabOf };
+  frameOf.forEach((frame, id) => {
+    nodes.push({
+      id,
+      type: 'frame',
+      position: { x: (depth.get(id) ?? 1) * COL, y: top.get(id) ?? 0 },
+      data: { frame, selected: id === selectedFrame },
+      draggable: false,
+    });
+  });
+
+  return { nodes, edges, byId, tabOf, frameOf };
 }
 
 /* ── Карта ──────────────────────────────────────────────────────── */
@@ -373,10 +445,13 @@ export function FlowMap({ flow, screens: own }: { flow: RoleFlow; screens: Scree
   /* Какая вкладка выбранного экрана открыта: карта нажимает переключатель в
      самом макете — он рабочий, и второго источника правды заводить не нужно. */
   const [tab, setTab] = useState<string | null>(null);
+  /* Какой кадр экрана выбран узлом карты: `null` — основной. Переключатель
+     кадров есть и в шапке панели справа, узел карты просто нажимает его. */
+  const [frame, setFrame] = useState<string | null>(null);
   const [fit, setFit] = useState(true);
-  const { nodes, edges, byId, tabOf } = useMemo(
-    () => build(flow, screens, selected),
-    [flow, screens, selected],
+  const { nodes, edges, byId, tabOf, frameOf } = useMemo(
+    () => build(flow, screens, selected, frame),
+    [flow, screens, selected, frame],
   );
 
   const spec = byId.get(selected);
@@ -390,8 +465,10 @@ export function FlowMap({ flow, screens: own }: { flow: RoleFlow; screens: Scree
           nodeTypes={nodeTypes}
           onNodeClick={(_, n) => {
             const t = tabOf.get(n.id);
-            setSelected(t ? t.code : n.id);
+            const f = frameOf.get(n.id);
+            setSelected(f ? f.code : t ? t.code : n.id);
             setTab(t ? t.tab.t : null);
+            setFrame(f ? n.id : null);
           }}
           fitView
           /* Не ужимаем до нечитаемого: ветка календаря уходит на пять шагов
@@ -422,8 +499,13 @@ export function FlowMap({ flow, screens: own }: { flow: RoleFlow; screens: Scree
       <ScreenPane
         screens={reachable}
         selected={selected}
-        onSelect={setSelected}
+        onSelect={(code) => {
+          setSelected(code);
+          setFrame(null);
+        }}
         tab={tab}
+        frame={frame}
+        onFrame={setFrame}
         spec={spec}
         byId={byId}
       />

@@ -24,6 +24,8 @@ export function ScreenPane({
   selected,
   onSelect,
   tab,
+  frame,
+  onFrame,
   spec,
   byId,
 }: {
@@ -34,6 +36,12 @@ export function ScreenPane({
   onSelect: (code: string) => void;
   /** Открытая вкладка выбранного экрана; `null` — экран как есть. */
   tab: string | null;
+  /** Выбранный кадр экрана, идентификатором узла карты («Э0.14@Тест идёт — …»);
+      `null` — основной кадр. Передаёт карта маршрута: кадры стоят на ней
+      узлами, и узел с кнопкой в шапке панели должны выбирать одно и то же.
+      Карта хода турнира кадрами не пользуется — там панель хранит выбор сама. */
+  frame?: string | null;
+  onFrame?: (id: string | null) => void;
   /** Требование к экрану из данных роли. */
   spec?: Screen;
   /** Экраны по кодам: по ним размечаются пункты сайдбара внутри макета. */
@@ -48,17 +56,25 @@ export function ScreenPane({
   const entry = screens[selected];
   const frames = useMemo(
     () => [
-      { t: 'Основной', view: () => (tab && entry?.tabView?.(tab)) || entry?.view() },
-      ...(entry?.alt ? [{ t: 'Второй формат', view: entry.alt }] : []),
-      ...(entry?.frames ?? []),
+      { id: null as string | null, t: 'Основной', view: () => (tab && entry?.tabView?.(tab)) || entry?.view() },
+      ...(entry?.alt ? [{ id: `${selected}@alt`, t: 'Второй формат', view: entry.alt }] : []),
+      ...(entry?.frames ?? []).map((f) => ({ id: `${selected}@${f.t}`, t: f.t, view: f.view })),
     ],
-    [entry, tab],
+    [entry, tab, selected],
   );
-  const [frame, setFrame] = useState(0);
+  /* Выбор кадра держит карта, если она его прислала: кадры стоят на ней
+     узлами, и узел с кнопкой должны подсвечиваться вместе. Без карты (ход
+     турнира) панель хранит выбор сама. */
+  const [own, setOwn] = useState<string | null>(null);
+  const active = onFrame ? frame ?? null : own;
+  const pick = (id: string | null) => (onFrame ? onFrame(id) : setOwn(id));
   /* Кадр сбрасывается на основной при переходе: у соседнего экрана кадры
      другие, и «второй формат» с прошлого экрана оставил бы панель пустой. */
-  useEffect(() => setFrame(0), [selected]);
-  const shown = frames[Math.min(frame, frames.length - 1)];
+  useEffect(() => {
+    if (!onFrame) setOwn(null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selected]);
+  const shown = frames.find((f) => f.id === active) ?? frames[0];
   /** Подпись кнопки — до тире: полное название кадра в шапку не влезает. */
   const shortName = (t: string) => t.split(/\s+—\s+/)[0];
 
@@ -86,7 +102,7 @@ export function ScreenPane({
     ro.observe(box);
     ro.observe(content);
     return () => ro.disconnect();
-  }, [selected, fit, frame]);
+  }, [selected, fit, active]);
 
   /* Переходы прямо в макете: кнопка на экране ведёт туда же, куда написано в
      данных. Ищем её по подписи действия — так проверяется и сам макет: у
@@ -229,13 +245,13 @@ export function ScreenPane({
                 вовсе, если кадр у экрана один. */}
             {frames.length > 1 && (
               <>
-                {frames.map((f, i) => (
+                {frames.map((f) => (
                   <button
                     key={f.t}
                     type="button"
                     title={f.t}
-                    className={i === frame ? 'on' : undefined}
-                    onClick={() => setFrame(i)}
+                    className={f.id === (shown?.id ?? null) ? 'on' : undefined}
+                    onClick={() => pick(f.id)}
                   >
                     {shortName(f.t)}
                   </button>
