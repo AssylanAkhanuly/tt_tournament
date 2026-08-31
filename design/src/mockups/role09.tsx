@@ -1827,23 +1827,6 @@ const IIN_JUDGE9 = '881103300417';
     маской — как и на веб-кадре. */
 const OTP_JUDGE9 = '+7 7•• ••• 45 90';
 
-/** Шкала шагов телефонного кадра: три коротких слова полосой. */
-const PhoneSteps = ({ at, steps }: { at: number; steps: readonly string[] }) => (
-  <div className="flex items-start gap-1.5">
-    {steps.map((t, i) => (
-      <span
-        key={t}
-        className={
-          'flex-1 border-t-2 pt-1.5 text-[10px] font-semibold uppercase tracking-wider ' +
-          (i + 1 <= at ? 'border-blue-600 text-blue-700' : 'border-neutral-200 text-neutral-400')
-        }
-      >
-        {t}
-      </span>
-    ))}
-  </div>
-);
-
 /** Тот же экран регистрации судьи, что на сайте (Э0.7), но в телефоне ✳
     (30.08.2026, «все экраны в обоих»).
 
@@ -1879,8 +1862,6 @@ export function SignUpJudgePhone0_7() {
             Аккаунт вы заводите сами · категорию проставляет коллегия
           </div>
         </div>
-
-        <PhoneSteps at={step} steps={['ИИН', 'Код', 'Анкета']} />
 
         {step === 1 && (
           <>

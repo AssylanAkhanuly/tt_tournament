@@ -372,16 +372,26 @@ export function PhoneRoleApp({
   hint?: string;
   children: ReactNode;
 }) {
+  /* Кнопок в полосе не больше четырёх ✳ (31.08.2026, решение владельца
+     продукта). Пять и больше — это уже не полоса разделов, а список: подписи
+     ужимаются до нечитаемых, палец промахивается, и «Ещё» теряется среди
+     равных ему по виду соседей. Поэтому четыре: три раздела и «Ещё», а при
+     ровно четырёх разделах — все четыре без «Ещё».
+
+     Открытый раздел в полосе всегда есть, даже если он из «Ещё»: иначе полоса
+     показывает четыре чужих названия и ни одного своего — человек не понимает,
+     где он. Такой раздел встаёт третьим, вытесняя предыдущего. */
+  const MAX = 4;
   const items = role.nav;
-  let shown = items.slice(0, 4);
-  const rest = items.slice(4);
-  if (rest.length && !shown.some(([, l]) => l === nav)) {
+  const fits = items.length <= MAX;
+  let shown = items.slice(0, fits ? MAX : MAX - 1);
+  if (!fits && !shown.some(([, l]) => l === nav)) {
     const cur = items.find(([, l]) => l === nav);
-    if (cur) shown = [...shown.slice(0, 3), cur];
+    if (cur) shown = [...shown.slice(0, MAX - 2), cur];
   }
-  const tabs: [ReactNode, string][] = rest.length
-    ? [...shown, [<MoreHorizontal size={17} key="more" />, 'Ещё']]
-    : shown;
+  const tabs: [ReactNode, string][] = fits
+    ? shown
+    : [...shown, [<MoreHorizontal size={17} key="more" />, 'Ещё']];
 
   return (
     <Phone>

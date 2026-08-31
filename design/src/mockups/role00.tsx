@@ -16,7 +16,7 @@
 
 import { useState, type ReactNode } from 'react';
 import {
-  ArrowRight, BarChart3, Bell, CalendarDays, Check, CheckCheck, ChevronDown, Gavel, History,
+  ArrowRight, BarChart3, Bell, CalendarDays, Check, CheckCheck, ChevronDown, ChevronsUpDown, Gavel, History,
   LayoutDashboard, LogIn, LogOut, Newspaper, Play, Radio, RefreshCw, Scroll, ServerOff,
   ShieldCheck, Smartphone, Trophy, UserCog, UserPlus,
 } from 'lucide-react';
@@ -110,7 +110,9 @@ const ALink = ({ to, muted, children }: { to?: string; muted?: boolean; children
    Решение владельца продукта: аутентификация идёт через **Smart Bridge** —
    человек вводит ИИН, подтверждает вход одноразовым кодом из SMS. Пароля в
    системе нет вовсе: его нечего задавать, менять, забывать и подбирать.
-   Отсюда и весь набор ниже — поле ИИН, поле кода и шкала шагов. */
+   Отсюда и весь набор ниже — поле ИИН и поле кода. Шкалы шагов нет ✳
+   (31.08.2026, решение владельца продукта): полоса «1 ИИН — 2 код» убрана
+   отовсюду, где стояла. */
 
 /** Номер, на который уходит код, — всегда в маске: он привязан к ИИН и
     приходит вместе с ним, показывать его целиком до входа нельзя. */
@@ -121,31 +123,6 @@ const OTP_PHONE = '+7 7•• ••• 45 90';
     шапке и в профиле (Э0.2). */
 const IIN_DEMO = '870314400123';
 
-/** Шкала шагов: у входа их два (ИИН → код), у регистрации три (ещё анкета).
-    Без неё второй экран выглядит так, будто вход не закончился ошибкой. */
-const StepBar = ({ at, steps }: { at: number; steps: readonly string[] }) => (
-  <div className="mb-5 flex items-start gap-1.5">
-    {steps.map((t, i) => (
-      <span
-        key={t}
-        className={
-          'flex flex-1 items-center gap-1.5 border-t-2 pt-2 text-[11px] font-semibold uppercase tracking-wider ' +
-          (i + 1 <= at ? 'border-blue-600 text-blue-700' : 'border-neutral-200 text-neutral-400')
-        }
-      >
-        <span
-          className={
-            'grid size-4 shrink-0 place-items-center rounded-full text-[9px] ' +
-            (i + 1 <= at ? 'bg-blue-600 text-white' : 'bg-neutral-200 text-neutral-500')
-          }
-        >
-          {i + 1}
-        </span>
-        {t}
-      </span>
-    ))}
-  </div>
-);
 
 /** Поле ИИН — двенадцать цифр, набранных с документа.
 
@@ -400,8 +377,6 @@ export function Login0_1() {
         </div>
       </div>
 
-      <StepBar at={step} steps={['ИИН', 'Код из SMS']} />
-
       {step === 1 ? (
         <>
           <IinField value={iin} onChange={setIin} />
@@ -457,7 +432,7 @@ export function Context0_1() {
         <div>
           <div className="text-xl font-semibold tracking-tight">С какой ролью войти</div>
           <div className="mt-1 text-[12.5px] text-neutral-500">
-            Выбор запоминается · переключатель остаётся в шапке
+            Выбор запоминается · переключиться можно карточкой роли в меню
           </div>
         </div>
       </div>
@@ -482,80 +457,112 @@ export function Context0_1() {
   );
 }
 
-/** Меню профиля в шапке ✳ — то место, откуда из системы выходят.
+/** Роль и человек в боковом меню ✳ (31.08.2026) — то место, откуда из системы
+    выходят и где меняют рабочее место.
 
-    В ките (`chrome.tsx`) меню закрыто по умолчанию, и на макете от него видно
-    только имя с фотографией: решение зоны — «кто я» и «выйти» в одном месте —
-    не показано нигде. Врезка показывает то же меню открытым.
+    Раньше это была одна кнопка справа в шапке: имя, фото, роль и переключение
+    ролей — всё одним выпадающим меню. «Кто я» и «в какой роли я работаю»
+    оказались одним вопросом, а они разные: у человека с двумя ролями смена
+    рабочего места была спрятана за кликом по собственному фото. Теперь сверху
+    меню роль, снизу человек.
 
-    Выход живёт здесь, а не отдельной кнопкой: система именная, каждое действие
-    пишется в журнал с автором (TZ §12). Одним кликом по имени из системы не
-    выходят — первый клик открывает меню, выход второй; сам «Выйти» отбит
-    линией и краснеет под курсором, потому что необратим. */
+    В ките (`chrome.tsx`) обе карточки закрыты по умолчанию, и на макете от них
+    видно только строки: решения зон — «переключиться» и «выйти» — не показаны
+    нигде. Врезка показывает обе раскрытыми.
+
+    Выход живёт в карточке человека, а не отдельной кнопкой: система именная,
+    каждое действие пишется в журнал с автором (TZ §12). Одним кликом по имени
+    из системы не выходят — первый клик открывает меню, выход второй; сам
+    «Выйти» отбит линией и краснеет под курсором, потому что необратим. */
 const ProfileMenu0_1 = () => (
-  <Frag w={520}>
-    {/* Правый край шапки — он одинаков на каждом экране системы. */}
-    <div className="flex items-center gap-2 rounded-t-xl border border-neutral-200 bg-white px-4 py-2.5">
-      <span className="mr-auto text-[11px] font-semibold uppercase tracking-wider text-neutral-400">
-        Шапка — на каждом экране
-      </span>
-      <div className="relative grid size-9 place-items-center rounded-full text-neutral-600">
-        <Bell size={17} />
-        <span className="absolute right-2 top-2 size-2 rounded-full bg-red-500 ring-2 ring-white" />
-      </div>
-      <div className="flex items-center gap-2.5 rounded-full bg-neutral-100 py-1 pl-1 pr-2.5">
-        <Avatar size="sm">
-          <Avatar.Image alt="Абаева Д." src={AW(44)} />
-          <Avatar.Fallback>А</Avatar.Fallback>
-        </Avatar>
-        <div className="leading-tight">
-          <div className="text-[13px] font-semibold">Абаева Д.</div>
-          <div className="text-[11px] text-neutral-500">Администратор Федерации</div>
+  <Frag w={560}>
+    <div className="flex gap-4">
+      {/* Боковое меню целиком: карточка роли сверху, разделы, человек снизу. */}
+      <div className="flex w-[240px] shrink-0 flex-col rounded-xl border border-neutral-200 bg-white px-3 py-3">
+        <div className="flex items-center gap-2.5 rounded-xl border border-neutral-200 bg-white px-2.5 py-2">
+          <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-blue-600 text-[12px] font-bold text-white">
+            1
+          </span>
+          <span className="min-w-0 flex-1 leading-tight">
+            <span className="block truncate text-[12.5px] font-semibold">Администратор Федерации</span>
+            <span className="block truncate text-[11px] text-neutral-500">и ещё 1 роль</span>
+          </span>
+          <ChevronsUpDown size={14} className="shrink-0 text-neutral-400" />
         </div>
-        <ChevronDown size={14} className="text-neutral-400" />
-      </div>
-    </div>
 
-    {/* Меню под кнопкой: первый клик по имени открывает его, а не выходит. */}
-    <div className="flex justify-end rounded-b-xl border-x border-b border-neutral-200 bg-neutral-50 px-4 pb-4 pt-2">
-      <div className="w-64 rounded-xl border border-neutral-200 bg-white p-1.5 shadow-xl">
-        <div className="px-2.5 pb-1 pt-2 text-[11px] font-semibold uppercase tracking-wider text-neutral-400">
-          Вы вошли как
+        {/* Раскрытый список ролей: галочка у текущей, у остальных — «перейти». */}
+        <div className="mt-1.5 rounded-xl border border-neutral-200 bg-white p-1.5 shadow-xl">
+          <div className="px-2 pb-1 pt-1 text-[11px] font-semibold uppercase tracking-wider text-neutral-400">
+            Работать как
+          </div>
+          {(R00.roles ?? []).map((r, i) => {
+            const t = typeof r === 'string' ? r : r.t;
+            return (
+              <div
+                key={t}
+                className={
+                  'flex items-center gap-2 rounded-lg px-2 py-1.5 text-[12.5px] ' +
+                  (i === 0 ? 'font-medium text-neutral-900' : 'text-neutral-700')
+                }
+              >
+                <span className="w-4">{i === 0 && <Check size={14} className="text-blue-600" />}</span>
+                <span className="min-w-0 flex-1 truncate">{t}</span>
+                {i !== 0 && <span className="text-[11px] text-neutral-400">перейти</span>}
+              </div>
+            );
+          })}
         </div>
-        <div className="px-2.5 pb-2 leading-tight">
-          <div className="text-[13px] font-semibold">Абаева Динара Ерлановна</div>
-          <div className="text-[11px] text-neutral-500">d.abaeva@ttfrk.kz</div>
+
+        <div className="px-2 pb-1.5 pt-4 text-[11px] font-semibold uppercase tracking-wider text-neutral-400">
+          Разделы
         </div>
-        <Separator className="my-1" />
-        <div className="px-2.5 pb-1 pt-1 text-[11px] font-semibold uppercase tracking-wider text-neutral-400">
-          Мои роли
+        <div className="space-y-1 px-2 text-[13px] text-neutral-400">
+          <div>Календарь</div>
+          <div>Пользователи</div>
+          <div>Новости</div>
         </div>
-        {(R00.roles ?? []).map((r, i) => {
-          const t = typeof r === 'string' ? r : r.t;
-          return (
-            <div key={t} className="flex items-center gap-2 rounded-lg px-2.5 py-2 text-sm">
-              <span className="w-4">{i === 0 && <Check size={14} className="text-blue-600" />}</span>
-              {t}
-            </div>
-          );
-        })}
-        <Separator className="my-1" />
-        <button
-          type="button"
-          data-to="Э0.2"
-          className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-sm text-neutral-700 hover:bg-neutral-50"
-        >
-          <UserCog size={14} /> Мой профиль
-        </button>
-        <Separator className="my-1" />
-        {/* Нарисован под курсором: «Выйти» отбит линией и краснеет. */}
-        <button
-          type="button"
-          data-to="Э0.1"
-          className="flex w-full items-center gap-2 rounded-lg bg-red-50 px-2.5 py-2 text-left text-sm font-medium text-red-600"
-        >
-          <LogOut size={14} /> Выйти
-        </button>
+
+        <div className="mt-4 flex items-center gap-2.5 rounded-xl border border-neutral-200 bg-white px-2.5 py-2">
+          <Avatar size="sm">
+            <Avatar.Image alt="Абаева Д." src={AW(44)} />
+            <Avatar.Fallback>А</Avatar.Fallback>
+          </Avatar>
+          <span className="min-w-0 flex-1 leading-tight">
+            <span className="block truncate text-[12.5px] font-semibold">Абаева Д.</span>
+            <span className="block truncate text-[11px] text-neutral-500">d.abaeva@ttfrk.kz</span>
+          </span>
+          <ChevronsUpDown size={14} className="shrink-0 text-neutral-400" />
+        </div>
+      </div>
+
+      {/* Меню карточки человека: открывается вверх, над самой карточкой. */}
+      <div className="flex min-w-0 flex-1 flex-col justify-end">
+        <div className="rounded-xl border border-neutral-200 bg-white p-1.5 shadow-xl">
+          <div className="px-2 pb-1 pt-1 text-[11px] uppercase tracking-wider text-neutral-400">
+            Вы вошли как
+          </div>
+          <div className="px-2 pb-1.5 leading-tight">
+            <div className="text-[12.5px] font-semibold">Абаева Динара Ерлановна</div>
+            <div className="text-[11px] text-neutral-500">d.abaeva@ttfrk.kz</div>
+          </div>
+          <Separator className="my-1" />
+          <button
+            type="button"
+            data-to="Э0.2"
+            className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-[12.5px] text-neutral-700 hover:bg-neutral-50"
+          >
+            <UserCog size={14} /> Мой профиль
+          </button>
+          <Separator className="my-1" />
+          {/* Нарисован под курсором: «Выйти» отбит линией и краснеет. */}
+          <button
+            type="button"
+            data-to="Э0.1"
+            className="flex w-full items-center gap-2 rounded-lg bg-red-50 px-2 py-1.5 text-left text-[12.5px] font-medium text-red-600"
+          >
+            <LogOut size={14} /> Выйти
+          </button>
+        </div>
       </div>
     </div>
 
@@ -588,8 +595,6 @@ export function LoginPhone0_1() {
             ? 'По ИИН через Smart Bridge — тот же вход, что на сайте'
             : 'Код из SMS · приложение и сайт — одна учётная запись'}
         </p>
-
-        <StepBar at={step} steps={['ИИН', 'Код']} />
 
         {step === 1 ? (
           <>
@@ -1631,8 +1636,6 @@ export function SignUp0_5() {
         </div>
       </div>
 
-      <StepBar at={step} steps={['ИИН', 'Код из SMS', 'Анкета']} />
-
       {step === 1 && (
         <>
           <IinField value={iin} onChange={setIin} />
@@ -1877,8 +1880,6 @@ export function Accept0_6() {
         </div>
       </div>
 
-      <StepBar at={step} steps={['ИИН', 'Код из SMS', 'Проверка данных']} />
-
       {step === 1 && (
         <>
           <IinField value={iin} onChange={setIin} />
@@ -2111,8 +2112,6 @@ export function SignUpJudge0_7() {
           </div>
         </div>
       </div>
-
-      <StepBar at={step} steps={['ИИН', 'Код из SMS', 'Анкета']} />
 
       {step === 1 && (
         <>
@@ -2386,8 +2385,6 @@ export function SignUp0_5Phone() {
         title="Регистрация спортсмена"
       />
 
-      <StepBar at={step} steps={['ИИН', 'Код', 'Анкета']} />
-
       {step === 1 && (
         <>
           <IinField value={iin} onChange={setIin} />
@@ -2463,8 +2460,6 @@ export function Accept0_6Phone() {
         sub="Пригласил Досжан Мади · администратор клуба"
         title="Клуб «Алатау» приглашает вас в систему ФНТ РК"
       />
-
-      <StepBar at={step} steps={['ИИН', 'Код', 'Проверка']} />
 
       {step === 1 && (
         <>
@@ -2544,8 +2539,6 @@ export function SignUpJudge0_7Phone() {
         sub="Аккаунт вы заводите сами · категорию проставляет коллегия по удостоверению"
         title="Регистрация судьи"
       />
-
-      <StepBar at={step} steps={['ИИН', 'Код', 'Анкета']} />
 
       {step === 1 && (
         <>
@@ -2928,7 +2921,7 @@ export const SCREENS: ScreenMap = {
         <Also cap="Следующий шаг, если ролей несколько ✳">
           <Context0_1 />
         </Also>
-        <Also cap="Меню профиля в шапке ✳ — откуда сюда выходят">
+        <Also cap="Роль и человек в боковом меню ✳ — откуда сюда выходят">
           <ProfileMenu0_1 />
         </Also>
         <Login0_1States />
