@@ -406,21 +406,20 @@ export function Queues5_1(_props: { variant?: 'desktop' | 'land' } = {}) {
       {/* Очередь первой: главный акцент экрана — «что от меня ждут». */}
       <Attention items={ATTENTION5} />
 
-      <StatTiles items={TILES5_1} />
-
-      {/* Строка ведёт в карточку турнира, весь календарь — своим разделом:
-          панель не должна быть вторым календарём. */}
-      <Panel
-        title="Ближайшие старты"
-        extra={<Button size="sm" variant="outline" data-to="Э5.3">Все соревнования сезона</Button>}
-        flush
-      >
-        <div className="divide-y divide-neutral-100">
-          {NEAR5.map((t) => (
-            <Row key={t.nm} nm={t.nm} sub={t.sub} pill={t.pill} to="Э5.10" />
-          ))}
-        </div>
-      </Panel>
+      {/* Второго списка тех же турниров на панели нет ✳ (01.09.2026). Очередь
+          «требует внимания» выше уже называет старты, которым нужно решение, —
+          а «Ближайшие старты» повторяли их же плюс черновик. Читать одно и то
+          же дважды человек не будет, а доверие к первому списку теряется. Весь
+          сезон — своим разделом. */}
+      <div className="flex items-center justify-between gap-3 rounded-xl border border-neutral-200 bg-white px-4 py-3 shadow-sm">
+        <span className="text-[13px] text-neutral-600">
+          В сезоне <b className="text-neutral-900">8</b> официальных стартов ·{' '}
+          <b className="text-neutral-900">12</b> протоколов утверждено
+        </span>
+        <Button size="sm" variant="outline" data-to="Э5.3">
+          Все соревнования сезона
+        </Button>
+      </div>
     </WebApp>
   );
 }

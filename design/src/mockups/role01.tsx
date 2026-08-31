@@ -494,7 +494,7 @@ const TourPhoneRow = ({ t }: { t: Tour }) => (
     строкой ниже. */
 export const KPI = [
   { v: '12 / 32', k: 'Соревнований проведено' },
-  { v: '1 284', k: 'Спортсменов в сезоне', tone: 'b' as const },
+  { v: '1 284', k: 'Спортсменов в сезоне' },
   { v: '3 470', k: 'Матчей сыграно' },
   { v: '₸ 4,12 млн', k: 'Взносы собраны · 78%', tone: 'g' as const },
 ];
@@ -720,15 +720,18 @@ export function Dash1_1(_props: { variant?: 'desktop' | 'land' } = {}) {
       <Panel title="Сегодня идут">
         <TodayRows />
       </Panel>
-      <Panel
-        title="Ближайшие старты"
-        extra={<span className="text-xs text-neutral-500">ещё {UPCOMING.length - 1} в календаре</span>}
-        flush
-      >
-        {UPCOMING.slice(0, 1).map((t) => (
-          <TourRow key={t.nm} t={t} />
-        ))}
-      </Panel>
+      {/* «Ближайших стартов» на панели нет ✳ (01.09.2026): один и тот же
+          «Кубок Иртыша» стоял и в очереди «требует внимания», и здесь. Панель
+          отвечает на «что решить сегодня»; что впереди — в календаре, туда и
+          ведёт строка. */}
+      <div className="flex items-center justify-between gap-3 rounded-xl border border-neutral-200 bg-white px-4 py-3 shadow-sm">
+        <span className="text-[13px] text-neutral-600">
+          Впереди в календаре <b className="text-neutral-900">{UPCOMING.length}</b> стартов
+        </span>
+        <Button size="sm" variant="outline" data-to="Э1.2">
+          Календарь сезона
+        </Button>
+      </div>
     </WebApp>
   );
 }

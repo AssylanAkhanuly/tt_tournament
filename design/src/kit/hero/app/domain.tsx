@@ -212,10 +212,14 @@ export function Attention({
               </span>
             </button>
           ))}
-          <div className="border-t border-neutral-100 bg-neutral-50 px-4 py-1.5 text-[11px] text-neutral-400">
-            {act ? 'Строка ведёт туда, где дело снимается' : 'Только просмотр: переходов и действий у роли нет'}
-            {max && max < cur.rows.length && ` · показаны ${max} из ${cur.n}`}
-          </div>
+          {/* Подпись под очередью — только когда она несёт факт ✳ (01.09.2026):
+              «показаны 3 из 12». Объяснение «строка ведёт туда, где дело
+              снимается» убрано: строка и так нажимается. */}
+          {max && max < cur.rows.length && (
+            <div className="border-t border-neutral-100 bg-neutral-50 px-4 py-1.5 text-[11px] text-neutral-400">
+              показаны {max} из {cur.n}
+            </div>
+          )}
         </div>
       )}
     </div>
