@@ -122,7 +122,7 @@ const PhoneTiles = ({ children }: { children: ReactNode }) => (
 );
 
 /** Полоса переключателей на телефоне: не переносится рядами, а уезжает вбок.
-    Пять подписей вроде «Отклонены системой · 9» встают на 392 px в три ряда и
+    Подписи вроде «Отклонены судьёй · 3» встают на 392 px в несколько рядов и
     съедают экран раньше, чем начинается содержимое. */
 const Strip = ({ children }: { children: ReactNode }) => (
   <div className="-mx-4 mb-3 overflow-x-auto px-4 **:data-seg:flex-nowrap">{children}</div>
@@ -373,23 +373,6 @@ export function QueuePanel() {
 /* ── Заявки: авто-проверки и состав ─────────────────────────────── */
 
 /** Четыре авто-проверки допуска: у непроходящих — красная пометка. */
-const CHECKS = ['возраст', 'ценз', 'взнос', 'документы'];
-
-const Checks = ({ v }: { v: boolean[] }) => (
-  <span className="flex shrink-0 gap-2.5">
-    {CHECKS.map((k, i) => (
-      <span
-        key={k}
-        className={
-          'flex items-center gap-0.5 text-[11px] font-semibold ' + (v[i] ? 'text-green-700' : 'text-red-600')
-        }
-      >
-        {v[i] ? <Check size={12} /> : <X size={12} />}
-        {k}
-      </span>
-    ))}
-  </span>
-);
 
 /** Игрок в заявке. `v` — четыре авто-проверки; `auto` — заявку отклонила
     система, не дожидаясь судьи, и почему.
@@ -406,36 +389,15 @@ type Ply = {
   av: string;
   nm: string;
   sub: string;
-  v: boolean[];
   p: string;
   cls: 'live' | 'bad' | 'wait';
-  /** Причина автоматического отказа: она же уходит игроку уведомлением. */
-  auto?: string;
 };
 
 const SQUAD: Ply[] = [
-  { av: P.kim, nm: 'Ким Георгий', sub: '2003 г.р. · «Алатау» · рейтинг 2401', v: [true, true, true, true], p: 'ДОПУЩЕН', cls: 'live' },
-  { av: P.tok, nm: 'Токаев Марат', sub: '2005 г.р. · «Алатау» · рейтинг 2350', v: [true, true, true, true], p: 'ДОПУЩЕН', cls: 'live' },
-  { av: P.ahm, nm: 'Ахметов Дархан', sub: '2006 г.р. · «Алатау» · рейтинг 2120', v: [true, true, true, true], p: 'ДОПУЩЕН', cls: 'live' },
-  {
-    av: P.tle, nm: 'Тлеуова Аружан', sub: '2011 г.р. · «Достык» · рейтинг 1720',
-    v: [false, false, true, true], p: 'ОТКЛОНЕНА СИСТЕМОЙ', cls: 'bad',
-    auto: 'не проходите по возрасту: старт от 2008 г.р. и старше',
-  },
-  {
-    av: P.bai, nm: 'Байжанов Асхат', sub: '2004 г.р. · «Алатау» · рейтинг 2180',
-    v: [true, true, false, true], p: 'ОТКЛОНЕНА СИСТЕМОЙ', cls: 'bad',
-    auto: 'годовой взнос федерации не оплачен',
-  },
-  {
-    av: P.mur, nm: 'Мұрат Ерлан', sub: '2006 г.р. · «Алатау» · рейтинг 2040',
-    v: [true, true, true, false], p: 'ОТКЛОНЕНА СИСТЕМОЙ', cls: 'bad',
-    auto: 'нет действующего медицинского допуска',
-  },
-  {
-    av: P.osp, nm: 'Оспанов Тимур', sub: '1979 г.р. · ветеран · рейтинг 2210',
-    v: [true, true, true, true], p: 'ДОПУЩЕН · ВЕТЕРАН', cls: 'live',
-  },
+  { av: P.kim, nm: 'Ким Георгий', sub: '2003 г.р. · «Алатау» · рейтинг 2401', p: 'ДОПУЩЕН', cls: 'live' },
+  { av: P.tok, nm: 'Токаев Марат', sub: '2005 г.р. · «Алатау» · рейтинг 2350', p: 'ДОПУЩЕН', cls: 'live' },
+  { av: P.ahm, nm: 'Ахметов Дархан', sub: '2006 г.р. · «Алатау» · рейтинг 2120', p: 'ДОПУЩЕН', cls: 'live' },
+  { av: P.osp, nm: 'Оспанов Тимур', sub: '1979 г.р. · ветеран · рейтинг 2210', p: 'ДОПУЩЕН · ВЕТЕРАН', cls: 'live' },
 ];
 
 /** Возрастной ценз работает в одну сторону ✳ (комментарий федерации, 09.2026):
@@ -449,13 +411,8 @@ const SQUAD: Ply[] = [
 const AGE_RULE =
   'Ветеран играет в категории моложе себя — это разрешено. Младше нижней границы не допускается никто.';
 
-/** Что у игрока не прошло: четыре галочки словами. На десктопе они стоят
-    колонкой «Не пройдено», на телефоне — подписью под фамилией. */
-const failedOf = (p: Ply) => CHECKS.filter((_, i) => !p.v[i]);
-
 /** Игрок в составе на телефоне: значок допуска не влезает в строку рядом с
-    фамилией, поэтому стоит под ней. Слова те же, что на десктопе: «ОТКЛОНЕНА
-    СИСТЕМОЙ» отличается от «отклонена судьёй», и сокращать его нельзя. */
+    фамилией, поэтому стоит под ней. */
 const PhonePly = ({ p }: { p: Ply }) => (
   <div className="flex items-start gap-3 px-4 py-2.5">
     <Avatar size="sm">
@@ -464,16 +421,9 @@ const PhonePly = ({ p }: { p: Ply }) => (
     </Avatar>
     <span className="min-w-0 flex-1 leading-tight">
       <span className="block truncate text-[13.5px] font-medium">{p.nm}</span>
-      <span className={'block text-xs ' + (p.auto ? 'text-red-600' : 'text-neutral-500')}>
-        {p.auto ?? p.sub}
-      </span>
+      <span className="block text-xs text-neutral-500">{p.sub}</span>
       <span className="mt-1.5 flex flex-wrap items-center gap-2">
         <Pl t={p.p} cls={p.cls} />
-        {failedOf(p).length > 0 && (
-          <span className="text-[11px] font-semibold text-red-600">
-            не пройдено: {failedOf(p).join(' · ')}
-          </span>
-        )}
       </span>
     </span>
   </div>
@@ -512,7 +462,7 @@ export function Tournament6_1(_props: { variant?: 'desktop' | 'land' } = {}) {
 
       <div className="mb-3 flex items-center justify-between gap-4">
         <span className="text-[12.5px] text-neutral-500">
-          Кто подался · <b className="text-neutral-800">8</b> заявок ждут решения, в трёх игроки не проходят допуск
+          Кто подался · <b className="text-neutral-800">8</b> заявок ждут решения — все игроки в них прошли допуск
         </span>
         <div className="flex items-center gap-2">
           <QuietAction>Условия допуска</QuietAction>
@@ -536,14 +486,13 @@ export function Tournament6_1(_props: { variant?: 'desktop' | 'land' } = {}) {
               <span className="block truncate text-[13.5px] font-medium">{p.nm}</span>
               <span className="block truncate text-xs text-neutral-500">{p.sub}</span>
             </span>
-            <Checks v={p.v} />
             <Pl t={p.p} cls={p.cls} />
           </div>
         ))}
       </Rows>
 
       <div className="mt-3 text-[12.5px] text-neutral-500">
-        Показаны последние 6 из 128 заявок · весь список с решениями — на «Заявках»
+        Показаны последние 4 из 128 заявок · весь список с решениями — на «Заявках»
       </div>
     </WebApp>
   );
@@ -576,7 +525,7 @@ export function Tournament6_1Phone() {
         {SQUAD.map((p) => <PhonePly key={p.nm} p={p} />)}
       </Rows>
       <div className="mt-3 text-[12.5px] text-neutral-500">
-        Показаны последние 6 из 128 заявок · весь список с решениями — на «Заявках»
+        Показаны последние 4 из 128 заявок · весь список с решениями — на «Заявках»
       </div>
     </PhoneRoleApp>
   );
@@ -614,11 +563,11 @@ const Tournament6_1States = () => (
 /* ── Э6.2 · Заявки участников ───────────────────────────────────── */
 
 const BIDS = [
-  { nm: 'Сборная Алматы · 6 игроков', sub: 'Смагулов А. · 09.03, 11:20', who: 'РЕГИОН', on: true },
-  { nm: 'Сборная Караганды · 7 игроков', sub: 'Ахметов К. · 09.03, 14:05', who: 'РЕГИОН' },
-  { nm: 'Сборная Шымкента · 5 игроков', sub: 'Ержанов Д. · 10.03, 09:40', who: 'РЕГИОН' },
-  { nm: 'Сборная Павлодара · 4 игрока', sub: 'Сейтқали А. · 10.03, 18:12', who: 'РЕГИОН' },
-  { nm: 'Сборная Тараза · 3 игрока', sub: 'Бектұров Р. · 11.03, 08:30', who: 'РЕГИОН' },
+  { nm: 'Сборная Алматы · 4 игрока', sub: 'Смагулов А. · 09.03, 11:20', who: 'РЕГИОН', on: true },
+  { nm: 'Сборная Караганды · 3 игрока', sub: 'Ахметов К. · 09.03, 14:05', who: 'РЕГИОН' },
+  { nm: 'Сборная Шымкента · 3 игрока', sub: 'Ержанов Д. · 10.03, 09:40', who: 'РЕГИОН' },
+  { nm: 'Сборная Павлодара · 2 игрока', sub: 'Сейтқали А. · 10.03, 18:12', who: 'РЕГИОН' },
+  { nm: 'Сборная Тараза · 2 игрока', sub: 'Бектұров Р. · 11.03, 08:30', who: 'РЕГИОН' },
 ];
 
 /* Решённые заявки: вкладки «Приняты», «Отклонены» и «Отозваны» — то же
@@ -631,15 +580,6 @@ const DECIDED: Record<string, { nm: string; sub: string; p: string; cls: 'live' 
     { nm: 'Сборная Актобе · 5 игроков', sub: 'Ержанов Д. · принята 08.03, 16:05', p: 'ПРИНЯТА', cls: 'live' },
     { nm: 'Сборная Костаная · 6 игроков', sub: 'Сейтқали А. · принята 09.03, 09:15', p: 'ПРИНЯТА', cls: 'live' },
   ],
-  /* Отклонённые системой стоят отдельно от отклонённых судьёй ✳: это разные
-     вещи, и разбираются они по-разному — по авто-отказу игрок доносит документ
-     или платит взнос и подаёт заново, пока приём открыт; решение судьи
-     оспаривают через федерацию. */
-  'Отклонены системой': [
-    { nm: 'Тлеуова Аружан · Достык', sub: 'не проходите по возрасту: старт от 2008 г.р. и старше · уведомлена 07.03, 10:12', p: 'ВОЗРАСТ', cls: 'bad' },
-    { nm: 'Байжанов Асхат · Алатау', sub: 'годовой взнос федерации не оплачен · уведомлён 07.03, 10:12', p: 'ВЗНОС', cls: 'bad' },
-    { nm: 'Мұрат Ерлан · Алатау', sub: 'нет действующего медицинского допуска · уведомлён 07.03, 10:12', p: 'ДОКУМЕНТЫ', cls: 'bad' },
-  ],
   'Отклонены судьёй': [
     { nm: 'Сборная Тараза · 3 игрока', sub: 'причина: «состав подан после закрытия приёма» · 12.03', p: 'ОТКЛОНЕНА', cls: 'bad' },
   ],
@@ -649,7 +589,7 @@ const DECIDED: Record<string, { nm: string; sub: string; p: string; cls: 'live' 
 };
 
 const DecidedBids = ({ kind }: { kind: string }) => {
-  const auto = kind === 'Отклонены системой';
+  const auto = false;
   return (
     <Panel
       title={`${kind} · ${DECIDED[kind].length}`}
@@ -697,17 +637,15 @@ const plural = (n: number, one: string, few: string, many: string) => {
     было делать. */
 const BIDS_SQUADS: Record<string, Ply[]> = {
   'Сборная Алматы': SQUAD,
-  'Сборная Караганды': [SQUAD[0], SQUAD[1], SQUAD[2], SQUAD[6]],
-  'Сборная Шымкента': [SQUAD[0], SQUAD[2], SQUAD[4]],
+  'Сборная Караганды': [SQUAD[0], SQUAD[1], SQUAD[2]],
+  'Сборная Шымкента': [SQUAD[0], SQUAD[2], SQUAD[3]],
   'Сборная Павлодара': [SQUAD[1], SQUAD[3]],
-  'Сборная Тараза': [SQUAD[2], SQUAD[5]],
+  'Сборная Тараза': [SQUAD[2], SQUAD[0]],
 };
 
-/* Колонке «Состояние» — 180px: пилюля «ОТКЛОНЕНА СИСТЕМОЙ» должна помещаться
-   целиком, обрезанный краем панели значок читался как дефект. Формулировка —
-   та же, что у вкладки «Отклонены системой», а не «автоматически»: одно
-   решение — одно слово. */
-const SQUAD_GRID = '1.8fr 1fr 180px';
+/* Колонке «Состояние» — 180px: пилюля «ДОПУЩЕН · ВЕТЕРАН» должна помещаться
+   целиком, обрезанный краем панели значок читался как дефект. */
+const SQUAD_GRID = '1fr 180px';
 
 const Waiting6_2 = () => {
   const [cur, setCur] = useState(BIDS[0].nm);
@@ -775,12 +713,14 @@ const Waiting6_2 = () => {
           </span>
         }
       >
-        {/* Список игроков таблицей ✳: игрок, что не прошло, состояние. Четыре
-            галочки колонками не нужны: у проходящих они все зелёные и не несут
-            ничего, а у непроходящего важно ровно то, ЧТО не прошло. */}
-        <Sheet grid={SQUAD_GRID} cols={['Игрок', 'Не пройдено', 'Состояние']}>
+        {/* Список игроков таблицей ✳: игрок и состояние. Колонки «не пройдено»
+            здесь больше нет — и непроходящих строк тоже ✳ (31.08.2026, решение
+            владельца продукта). Кто не проходит по взносу, документам или
+            возрасту, до судьи не доходит вовсе: система отвечает заявителю в
+            момент подачи и уведомляет игрока сама. Показывать судье тех, по
+            кому он ничего не решает, значило дать ему работу, которой нет. */}
+        <Sheet grid={SQUAD_GRID} cols={['Игрок', 'Состояние']}>
           {squad.map((pl) => {
-            const failed = failedOf(pl);
             const excluded = out.includes(pl.nm);
             return (
               <div
@@ -791,7 +731,7 @@ const Waiting6_2 = () => {
                 data-on={pl.nm === pick ? '' : undefined}
                 className={
                   'grid cursor-pointer items-center gap-3 px-4 py-2.5 text-[13px] ' +
-                  (pl.auto || excluded ? 'opacity-55' : '')
+                  (excluded ? 'opacity-55' : '')
                 }
                 style={{ gridTemplateColumns: SQUAD_GRID }}
               >
@@ -802,25 +742,9 @@ const Waiting6_2 = () => {
                   </Avatar>
                   <span className="min-w-0 leading-tight">
                     <span className="block truncate text-[13.5px] font-medium">{pl.nm}</span>
-                    {/* Отклонённому пишем фразу, которая ушла игроку: судья
-                        должен видеть ровно то, что человек прочитал у себя.
-                        Поэтому подпись переносится, а не режется многоточием:
-                        «не проходите по воз…» — это не та фраза, которую
-                        прочитал игрок. Имя выше остаётся в одну строку. */}
-                    <span className={'block text-xs ' + (pl.auto ? 'text-red-600' : 'text-neutral-500')}>
-                      {pl.auto ?? pl.sub}
-                    </span>
+                    <span className="block text-xs text-neutral-500">{pl.sub}</span>
                   </span>
                 </span>
-                {failed.length ? (
-                  <span className="flex items-center gap-1 text-[12px] font-semibold text-red-600">
-                    <X size={12} /> {failed.join(' · ')}
-                  </span>
-                ) : (
-                  <span className="flex items-center gap-1 text-[12px] font-semibold text-green-700">
-                    <Check size={12} /> всё пройдено
-                  </span>
-                )}
                 <span>
                   <Pl t={excluded ? 'ИСКЛЮЧЁН' : pl.p} cls={excluded ? 'bad' : pl.cls} />
                 </span>
@@ -834,7 +758,7 @@ const Waiting6_2 = () => {
         {one && !verdict && (
           <div className="mt-3 flex items-center justify-between gap-3 rounded-lg bg-neutral-50 px-3 py-2">
             <span className="text-[12.5px] text-neutral-600">
-              {one.nm} · {out.includes(one.nm) ? 'исключён из состава' : one.auto ?? 'проходит допуск'}
+              {one.nm} · {out.includes(one.nm) ? 'исключён из состава' : 'проходит допуск'}
             </span>
             <Button
               size="sm"
@@ -898,13 +822,13 @@ const Waiting6_2 = () => {
     набор на оба формата — на десктопе `PageTabs`, на телефоне полоса, которая
     уезжает вбок. Без `kind` — очередь тех, кого ещё разбирают.
 
-    Отклонённые системой стоят отдельно от отклонённых судьёй ✳: по авто-отказу
-    игрок может донести документ и подать заново, по решению судьи спор идёт
-    через федерацию. */
+    Вкладки «Отклонены системой» здесь нет ✳ (31.08.2026, решение владельца
+    продукта): заявка, не прошедшая по взносу, документам или возрасту, к судье
+    не попадает вовсе — система отвечает заявителю в момент подачи. На экране
+    судьи остаётся то, что решает человек. */
 const BID_TABS: { t: string; kind?: string }[] = [
   { t: 'Ждут решения · 8' },
   { t: 'Приняты · 104', kind: 'Приняты' },
-  { t: 'Отклонены системой · 9', kind: 'Отклонены системой' },
   { t: 'Отклонены судьёй · 3', kind: 'Отклонены судьёй' },
   { t: 'Отозваны · 4', kind: 'Отозваны' },
 ];
@@ -915,7 +839,7 @@ export function Bids6_2({ tab }: { tab?: string }) {
       role={at('ПРИЁМ ЗАЯВОК')}
       nav="Заявки"
       title="Заявки участников"
-      sub="Заявка № 14 · 6 игроков"
+      sub="Заявка № 14 · 4 игрока"
     >
       <PageTabs
         active={tab}
@@ -1022,7 +946,7 @@ export function Bids6_2Phone() {
       role={at('ПРИЁМ ЗАЯВОК')}
       nav="Заявки"
       title="Заявки участников"
-      sub="Заявка № 14 · 6 игроков"
+      sub="Заявка № 14 · 4 игрока"
     >
       <Strip>
         <FilterSeg items={BID_TABS.map((b) => b.t)} active={tab} onPick={setTab} />
