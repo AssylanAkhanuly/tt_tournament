@@ -40,6 +40,12 @@ export function ScreenPane({
   byId: Map<string, Screen>;
 }) {
   const [fit, setFit] = useState(true);
+  /* Какой формат экрана показывает карта ✳ (30.08.2026). Второй формат
+     есть у каждого экрана (`alt` в карте роли), но карта рисовала только
+     основной — и адаптива на ней было не видно вовсе. */
+  const [alt, setAlt] = useState(false);
+  const hasAlt = !!screens[selected]?.alt;
+
 
   /* Макет нарисован в натуральную величину (ноутбук — 1200 px), а панель у́же:
      ужимаем его целиком, иначе видно левую треть экрана. Масштаб считаем от
@@ -64,7 +70,13 @@ export function ScreenPane({
     ro.observe(box);
     ro.observe(content);
     return () => ro.disconnect();
-  }, [selected, fit]);
+  }, [selected, fit, alt]);
+
+  /* У экрана без второго кадра переключатель гаснет — иначе панель
+     осталась бы пустой после перехода на такой экран. */
+  useEffect(() => {
+    if (!hasAlt) setAlt(false);
+  }, [hasAlt]);
 
   /* Переходы прямо в макете: кнопка на экране ведёт туда же, куда написано в
      данных. Ищем её по подписи действия — так проверяется и сам макет: у
@@ -203,6 +215,19 @@ export function ScreenPane({
             <span className="mkcode">{selected}</span> {screens[selected]?.cap}
           </div>
           <div className="fmap-zoom">
+            {/* Формат экрана: тот же экран на другом устройстве. Кнопок нет
+                вовсе, если второго кадра у экрана не нарисовано. */}
+            {hasAlt && (
+              <>
+                <button type="button" className={alt ? undefined : 'on'} onClick={() => setAlt(false)}>
+                  Основной
+                </button>
+                <button type="button" className={alt ? 'on' : undefined} onClick={() => setAlt(true)}>
+                  Второй формат
+                </button>
+                <span className="fmap-zoom-sep" />
+              </>
+            )}
             <button type="button" className={fit ? 'on' : undefined} onClick={() => setFit(true)}>
               Вписать
             </button>
@@ -221,7 +246,9 @@ export function ScreenPane({
             {/* Экран на выбранной вкладке: если роль отдала `tabView`, карта
                 показывает именно его — иначе тот же экран, а вкладку в нём
                 нажимает эффект ниже. */}
-            {(tab && screens[selected]?.tabView?.(tab)) || screens[selected]?.view()}
+            {alt
+              ? screens[selected]?.alt?.()
+              : (tab && screens[selected]?.tabView?.(tab)) || screens[selected]?.view()}
           </div>
         </div>
 

@@ -111,7 +111,10 @@
   font-weight: 600;
 }
 
-.fmap-zoom { display: flex; gap: 4px; }
+.fmap-zoom { display: flex; align-items: center; gap: 4px; }
+/* Отбивка между переключателем формата экрана и масштабом: это два разных
+   вопроса — что показано и как оно вписано. */
+.fmap-zoom-sep { width: 1px; align-self: stretch; margin: 2px 4px; background: var(--c-glass-line); }
 .fmap-zoom button {
   font: inherit;
   font-size: 11.5px;

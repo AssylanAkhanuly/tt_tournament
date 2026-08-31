@@ -30,7 +30,9 @@ import { BracketFlow } from '@/widgets/bracket/BracketFlow';
 /* Маршрут судейской роли начинается раньше входа: судья заводит себя сам
    (Э0.7), а роль в наряде ему выдают уже потом. Без этой колонки борд и карта
    начинались с «Вход», и откуда взялся человек, из них было не видно. */
-import { Login0_1, LoginPhone0_1, SignUpJudge0_7, SignUpJudge0_7States } from './role00';
+import {
+  Login0_1, LoginPhone0_1, SignUpJudge0_7, SignUpJudge0_7States, SignUpJudge0_7Phone,
+} from './role00';
 
 /* ── Роль: сайдбар и подпись профиля ─────────────────────────────── */
 
@@ -1384,6 +1386,9 @@ export const SCREENS: ScreenMap = {
   },
   'Э0.7': {
     cap: 'Регистрация судьи',
+    /* Второй формат — телефонный кадр того же экрана из role00: он
+       принадлежит сквозным экранам, и второй копии здесь быть не должно. */
+    alt: () => <SignUpJudge0_7Phone />,
     view: () => (
       <>
         <SignUpJudge0_7 />

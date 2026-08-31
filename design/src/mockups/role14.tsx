@@ -58,7 +58,9 @@ import { ChartBox, soft, token } from './chart';
    с той, что увидят в продукте. */
 import { BracketFlow } from '@/widgets/bracket/BracketFlow';
 import { ME_ID, MY_GROUP, OTHER_GROUPS, myBracket, playoffBracket } from './myBracket';
-import { Login0_1, LoginPhone0_1, SignUp0_5, SignUp0_5States } from './role00';
+import {
+  Login0_1, LoginPhone0_1, SignUp0_5, SignUp0_5States, SignUp0_5Phone,
+} from './role00';
 
 /* ── Роль: вкладки телефона и подпись профиля ────────────────────── */
 
@@ -2921,6 +2923,9 @@ export const SCREENS: ScreenMap = {
   },
   'Э0.5': {
     cap: 'Регистрация спортсмена',
+    /* Второй формат — телефонный кадр того же экрана из role00: он
+       принадлежит сквозным экранам, и второй копии здесь быть не должно. */
+    alt: () => <SignUp0_5Phone />,
     view: () => (
       <>
         <SignUp0_5 />
