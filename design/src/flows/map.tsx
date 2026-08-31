@@ -27,6 +27,12 @@ import type { ScreenMap } from '../mockups/shell';
 import { role00 } from './data/role00';
 import { ScreenPane } from './screenPane';
 import { SCREENS as COMMON_SCREENS } from '../mockups/role00';
+/* У судьи два контура — кабинет вне турнира (0С) и работа за столом (9), —
+   но человек и навигация у него одни ✳ (31.08.2026). Разделы сайдбара ведут
+   через границу контуров, поэтому карта каждого из них знает экраны соседа:
+   иначе половина пунктов меню в карте молча переставала нажиматься. */
+import { SCREENS as JUDGE_TABLE } from '../mockups/role09';
+import { SCREENS as JUDGE_CABINET } from '../mockups/role00j';
 import './map.css';
 
 /* Экраны из шапки: они есть на каждом экране системы и потому у каждой роли.
@@ -348,6 +354,18 @@ export function FlowMap({ flow, screens: own }: { flow: RoleFlow; screens: Scree
     const extra = Object.fromEntries(fromHeader(own).map((h) => [h.code, COMMON_SCREENS[h.code]]));
     return { ...own, ...extra };
   }, [own]);
+
+  /* Экраны, до которых можно ДОЙТИ, — шире тех, что стоят на графе. У судьи
+     навигация одна на два контура ✳ (31.08.2026): из турнирных экранов пункт
+     «Аттестация» ведёт в кабинет, из кабинета «Мой стол» — на турнир. Граф при
+     этом остаётся своим: чужие экраны узлами не встают и в счётчик не идут —
+     иначе карта роли показывала бы чужой маршрут. */
+  const reachable = useMemo<ScreenMap>(() => {
+    const other =
+      flow.num === '9' ? JUDGE_CABINET : flow.num === '0С' ? JUDGE_TABLE : undefined;
+    return other ? { ...other, ...screens } : screens;
+  }, [screens, flow.num]);
+
   const codes = Object.keys(screens);
   const ownCount = Object.keys(own).length;
   const headCount = codes.length - ownCount;
@@ -402,7 +420,7 @@ export function FlowMap({ flow, screens: own }: { flow: RoleFlow; screens: Scree
       </div>
 
       <ScreenPane
-        screens={screens}
+        screens={reachable}
         selected={selected}
         onSelect={setSelected}
         tab={tab}
