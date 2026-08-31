@@ -7,7 +7,7 @@
    тот же макет, те же подсвеченные переходы, то же требование. Две копии этого
    кода разъехались бы на первой же правке. */
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { ReactFlowProvider } from '@xyflow/react';
 import type { Screen } from './types';
 import type { ScreenMap } from '../mockups/shell';
@@ -40,11 +40,27 @@ export function ScreenPane({
   byId: Map<string, Screen>;
 }) {
   const [fit, setFit] = useState(true);
-  /* Какой формат экрана показывает карта ✳ (30.08.2026). Второй формат
-     есть у каждого экрана (`alt` в карте роли), но карта рисовала только
-     основной — и адаптива на ней было не видно вовсе. */
-  const [alt, setAlt] = useState(false);
-  const hasAlt = !!screens[selected]?.alt;
+  /* Какой кадр экрана показывает карта ✳ (31.08.2026). Кадров у экрана бывает
+     несколько: основной, тот же экран во втором формате (`alt` — решение от
+     30.08.2026) и другие положения того же экрана (`frames`) — у аттестации
+     это «тест идёт» и «итог». Борд ставит их врезками подряд, карте нужен
+     переключатель: простынёй вниз экзамен на ней находился только прокруткой. */
+  const entry = screens[selected];
+  const frames = useMemo(
+    () => [
+      { t: 'Основной', view: () => (tab && entry?.tabView?.(tab)) || entry?.view() },
+      ...(entry?.alt ? [{ t: 'Второй формат', view: entry.alt }] : []),
+      ...(entry?.frames ?? []),
+    ],
+    [entry, tab],
+  );
+  const [frame, setFrame] = useState(0);
+  /* Кадр сбрасывается на основной при переходе: у соседнего экрана кадры
+     другие, и «второй формат» с прошлого экрана оставил бы панель пустой. */
+  useEffect(() => setFrame(0), [selected]);
+  const shown = frames[Math.min(frame, frames.length - 1)];
+  /** Подпись кнопки — до тире: полное название кадра в шапку не влезает. */
+  const shortName = (t: string) => t.split(/\s+—\s+/)[0];
 
 
   /* Макет нарисован в натуральную величину (ноутбук — 1200 px), а панель у́же:
@@ -70,13 +86,7 @@ export function ScreenPane({
     ro.observe(box);
     ro.observe(content);
     return () => ro.disconnect();
-  }, [selected, fit, alt]);
-
-  /* У экрана без второго кадра переключатель гаснет — иначе панель
-     осталась бы пустой после перехода на такой экран. */
-  useEffect(() => {
-    if (!hasAlt) setAlt(false);
-  }, [hasAlt]);
+  }, [selected, fit, frame]);
 
   /* Переходы прямо в макете: кнопка на экране ведёт туда же, куда написано в
      данных. Ищем её по подписи действия — так проверяется и сам макет: у
@@ -215,16 +225,21 @@ export function ScreenPane({
             <span className="mkcode">{selected}</span> {screens[selected]?.cap}
           </div>
           <div className="fmap-zoom">
-            {/* Формат экрана: тот же экран на другом устройстве. Кнопок нет
-                вовсе, если второго кадра у экрана не нарисовано. */}
-            {hasAlt && (
+            {/* Кадры экрана: второй формат и другие его положения. Кнопок нет
+                вовсе, если кадр у экрана один. */}
+            {frames.length > 1 && (
               <>
-                <button type="button" className={alt ? undefined : 'on'} onClick={() => setAlt(false)}>
-                  Основной
-                </button>
-                <button type="button" className={alt ? 'on' : undefined} onClick={() => setAlt(true)}>
-                  Второй формат
-                </button>
+                {frames.map((f, i) => (
+                  <button
+                    key={f.t}
+                    type="button"
+                    title={f.t}
+                    className={i === frame ? 'on' : undefined}
+                    onClick={() => setFrame(i)}
+                  >
+                    {shortName(f.t)}
+                  </button>
+                ))}
                 <span className="fmap-zoom-sep" />
               </>
             )}
@@ -243,12 +258,10 @@ export function ScreenPane({
             className="fmap-scale"
             style={{ transform: `scale(${scale})`, transformOrigin: 'top left' }}
           >
-            {/* Экран на выбранной вкладке: если роль отдала `tabView`, карта
-                показывает именно его — иначе тот же экран, а вкладку в нём
-                нажимает эффект ниже. */}
-            {alt
-              ? screens[selected]?.alt?.()
-              : (tab && screens[selected]?.tabView?.(tab)) || screens[selected]?.view()}
+            {/* Выбранный кадр. Основной кадр учитывает вкладку: если роль
+                отдала `tabView`, карта показывает именно его — иначе тот же
+                экран, а вкладку в нём нажимает эффект ниже. */}
+            {shown?.view()}
           </div>
         </div>
 
