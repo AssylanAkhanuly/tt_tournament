@@ -298,15 +298,34 @@ export function Row({
   to?: string;
 }) {
   const PILL: Record<string, ChipColor> = { live: 'success', wait: 'warning', bad: 'danger', reg: 'accent', done: 'default' };
+  /* Кнопок внутри строк в системе нет ✳ (31.08.2026, решение владельца
+     продукта). Кнопка в каждой строке спорит с самой строкой за клик, тянет
+     под себя колонку на всю таблицу и на списке в сорок позиций превращает
+     реестр в частокол одинаковых прямоугольников. Теперь строку нажимают
+     целиком, а то, что было надписью на кнопке, становится главным действием
+     диалога — там же видно, по кому решение принимается.
+
+     Диалог держит сама строка, а не список: списки в макетах бывают и без
+     обёртки `Rows` (внутри `Panel flush` это просто `divide-y`), и привязка к
+     обёртке оставила бы половину строк без диалога. */
+  const [ask, setAsk] = useState(false);
   return (
+    <>
     <div
       data-to={to}
       data-row
-      onClick={onSelect}
+      onClick={
+        action
+          ? () => {
+              onSelect?.();
+              setAsk(true);
+            }
+          : onSelect
+      }
       className={
         'flex w-full items-center gap-3 px-4 py-2.5 text-left ' +
         (on ? 'bg-blue-50/60' : 'hover:bg-neutral-50') +
-        (onSelect || to ? ' cursor-pointer' : '')
+        (onSelect || to || action ? ' cursor-pointer' : '')
       }
     >
       {av && (
@@ -324,17 +343,41 @@ export function Row({
       </span>
       {val && <span className="text-[13px] font-medium tabular-nums text-neutral-700">{val}</span>}
       {pill && <Pill t={pill.t} color={PILL[pill.cls]} />}
-      {action && (
-        <Button
-          size="sm"
-          variant="outline"
-          data-to={actionTo}
-          onPress={() => onAction?.()}
-        >
-          {action}
-        </Button>
-      )}
+      {/* Стрелка вместо кнопки ✳ (31.08.2026): у строки одно действие, и оно
+          открывается кликом по самой строке. Стрелка — обещание, что клик
+          что-то сделает, а не украшение. */}
+      {action && <ChevronRight size={16} className="shrink-0 text-neutral-300" />}
     </div>
+    {ask && (
+      <InlineDialog
+        title={nm}
+        sub={sub}
+        foot={
+          <>
+            <Button variant="outline" onPress={() => setAsk(false)}>
+              Отмена
+            </Button>
+            <Button
+              variant="primary"
+              data-to={actionTo}
+              onPress={() => {
+                onAction?.();
+                setAsk(false);
+              }}
+            >
+              {action}
+            </Button>
+          </>
+        }
+      >
+        <div className="text-[13px] leading-relaxed text-neutral-600">
+          Действие по строке — <b className="text-neutral-900">{action}</b>. Раньше оно стояло
+          кнопкой в самой строке; теперь строка нажимается целиком, а решение принимается здесь,
+          где видно, по кому оно принимается.
+        </div>
+      </InlineDialog>
+    )}
+    </>
   );
 }
 

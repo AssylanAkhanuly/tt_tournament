@@ -3072,7 +3072,6 @@ const PER_REG = 20;
 /** Колонки, по которым сортируют: кто, значение, состояние. */
 type RegKey = 'nm' | 'val' | 'ok';
 
-const REG_GRID = '2.6fr 100px 110px 120px';
 const REG_GRID_PLAIN = '2.6fr 100px 110px';
 
 /** Таблица реестра — одна на реестры и на пользователей.
@@ -3083,25 +3082,23 @@ const REG_GRID_PLAIN = '2.6fr 100px 110px';
     любому столбцу, страницы. Фильтр по состоянию свой у каждого реестра —
     общего слова у взноса, категории и документов нет.
 
-    `withGrant` — у строки появляется «Выдать роль»: на экране пользователей
-    роли выдают прямо отсюда, она уводит в диалог выдачи (Э1.11). Клубам её не
-    показываем: роль выдают человеку, а клуб — организация; «администратор
-    клуба» это роль человека с областью «клуб», а не свойство самого клуба. */
+    Кнопок в строках нет ✳ (31.08.2026, решение владельца продукта): строка
+    нажимается целиком и открывает карточку человека (Э1.5), а роль выдают уже
+    оттуда — диалогом Э1.11. Прежде в каждой строке стояла кнопка «Выдать
+    роль»: она спорила со строкой за клик, занимала колонку на всю таблицу и
+    на реестре в тысячи строк превращала его в частокол одинаковых кнопок. */
 const RegTable = ({
   r,
   onOpen,
-  withGrant,
   phone,
 }: {
   r: Registry;
   onOpen: (e: Entry) => void;
-  withGrant?: boolean;
   /** Второй формат ✳: та же таблица строками — в 392 px четыре колонки со
       своими заголовками не читаются. Поиск, фильтр, сортировка и страницы
       остаются те же: это один компонент, а не второй реестр. */
   phone?: boolean;
 }) => {
-  const grant = withGrant && r.k !== 'Клубы и организации';
   const [q, setQ] = useState('');
   const [f, setF] = useState('Все');
   /* По умолчанию — по значению вниз: реестр открывают на сильнейших, а не на
@@ -3136,13 +3133,12 @@ const RegTable = ({
     setPage(0);
   };
 
-  const grid = grant ? REG_GRID : REG_GRID_PLAIN;
+  const grid = REG_GRID_PLAIN;
   const cols: ReactNode[] = [
     <Th key="nm" t={r.who} on={sort.k === 'nm'} onClick={() => pick('nm')} />,
     <Th key="val" t={r.cols[0]} on={sort.k === 'val'} onClick={() => pick('val')} />,
     <Th key="ok" t={r.cols[1]} on={sort.k === 'ok'} onClick={() => pick('ok')} />,
   ];
-  if (grant) cols.push(<span key="act" />);
 
   const total = rows.length === r.rows.length ? `${r.n} в реестре` : `найдено ${cnt(rows.length)} из ${r.n}`;
   const seen = rows.length
@@ -3205,13 +3201,6 @@ const RegTable = ({
                   </span>
                 </span>
               </div>
-              {grant && (
-                <div className="mt-1.5 flex justify-end" onClick={(ev) => ev.stopPropagation()}>
-                  <Button size="sm" variant="outline" data-to="Э1.11">
-                    Выдать роль
-                  </Button>
-                </div>
-              )}
             </div>
           ))}
           {shown.length === 0 && (
@@ -3265,14 +3254,6 @@ const RegTable = ({
                 {e.ok ? <Check size={13} /> : <Minus size={13} />}
               </span>
             </span>
-            {grant && (
-              /* Кнопка не открывает карточку: она уводит в диалог выдачи роли. */
-              <span className="flex justify-end" onClick={(ev) => ev.stopPropagation()}>
-                <Button size="sm" variant="outline" data-to="Э1.11">
-                  Выдать роль
-                </Button>
-              </span>
-            )}
           </div>
         ))}
         {shown.length === 0 && (
@@ -3382,7 +3363,7 @@ export function Users1_5() {
           выбирать его надо там же, где на него смотрят. `key` по реестру: у
           каждой вкладки свой поиск, свой фильтр и своя страница — вкладки это
           четыре разных списка, а не один с фильтром. */}
-      <RegTable key={r.k} r={r} onOpen={setOpen} withGrant />
+      <RegTable key={r.k} r={r} onOpen={setOpen}  />
       {open && <RegCard e={open} r={r} roles onClose={() => setOpen(null)} to="Э1.5" />}
     </WebApp>
   );
@@ -3413,7 +3394,7 @@ const Users1_5Phone = () => {
           <UserPlus size={15} /> Пригласить человека
         </Button>
       </div>
-      <RegTable key={r.k} r={r} onOpen={setOpen} withGrant phone />
+      <RegTable key={r.k} r={r} onOpen={setOpen}  phone />
       {open && (
         <PhoneDialog>
           <RegCard e={open} r={r} roles phone onClose={() => setOpen(null)} to="Э1.5" />
@@ -3983,7 +3964,7 @@ export function GrantRole1_11() {
           <UserPlus size={15} /> Пригласить человека
         </Button>
       </div>
-      <RegTable r={REGISTRIES[1]} onOpen={() => setOpen(true)} withGrant />
+      <RegTable r={REGISTRIES[1]} onOpen={() => setOpen(true)}  />
 
       {open && <GrantDialog onClose={() => setOpen(false)} />}
     </WebApp>
@@ -4005,7 +3986,7 @@ const GrantRole1_11Phone = () => {
           <UserPlus size={15} /> Пригласить человека
         </Button>
       </div>
-      <RegTable r={REGISTRIES[1]} onOpen={() => setOpen(true)} withGrant phone />
+      <RegTable r={REGISTRIES[1]} onOpen={() => setOpen(true)}  phone />
       {open && (
         <PhoneDialog>
           <GrantDialog phone onClose={() => setOpen(false)} />

@@ -320,11 +320,11 @@ const TourRowPhone = ({ t }: { t: (typeof TOURS)[number] }) => (
       </span>
       <P t={t.st} cls={t.cls} />
     </div>
+    {/* Кнопки в строке нет ✳ (31.08.2026): карточка ведёт в работу судей
+        (Э10.2), а заключение пишут оттуда — второе действие в строке отбирало
+        клик у первого и на списке в двадцать турниров читалось как главное. */}
     <div className="flex items-center justify-between gap-2">
       <span className="text-xs text-neutral-500">{t.val}</span>
-      <Button size="sm" variant="outline" data-to="Э10.4">
-        Заключение
-      </Button>
     </div>
   </div>
 );
