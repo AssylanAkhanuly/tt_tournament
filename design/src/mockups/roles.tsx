@@ -4,10 +4,11 @@
    макет читается вместе с флоу: пункт меню = экран Э№.№. */
 
 import {
-  BarChart3, Bell, CalendarDays, ClipboardCheck, ClipboardList, Eye, FileSpreadsheet,
+  BarChart3, Bell, CalendarDays, ChartPie, ClipboardCheck, ClipboardList, CreditCard, Eye,
+  FileSpreadsheet,
   FileText, Gavel, GraduationCap, Grid3x3, History, LayoutDashboard, ListChecks, Megaphone,
-  Newspaper, Scale,
-  Scroll, Search, Shield, Table2, Timer, Trophy, User, UserCog, UserPlus, Users, Wallet,
+  MapPin, Newspaper, Plane, Scale,
+  Scroll, Search, Shield, Table2, Timer, Trophy, User, UserCog, UserPlus, Users, Users2, Wallet,
 } from 'lucide-react';
 import { A, AW, type RoleUI } from './shell';
 
@@ -51,6 +52,7 @@ export const R01: RoleUI = {
     [<UserCog size={18} />, 'Пользователи'],
     [<History size={18} />, 'Журнал'],
     [<Newspaper size={18} />, 'Новости'],
+    [<ChartPie size={18} />, 'Статистика регионов'],
   ],
 };
 
@@ -245,8 +247,11 @@ export const R10: RoleUI = {
 export const R11: RoleUI = {
   num: '11', title: 'Главный тренер национальной команды',
   person: { nm: 'Ахметов С.', rl: 'Главный тренер сборной', av: A(52) },
-  brandName: 'Сборная РК', brandSub: 'Кандидаты · рейтинг · результаты',
+  brandName: 'Национальная команда РК', brandSub: 'Состав · подготовка · командирование',
   nav: [
+    [<Users2 size={18} />, 'Состав сборной'],
+    [<CalendarDays size={18} />, 'Календарь подготовки'],
+    [<Plane size={18} />, 'Рапорты'],
     [<Users size={18} />, 'Кандидаты'],
     [<User size={18} />, 'Карточка'],
     [<BarChart3 size={18} />, 'Сравнение'],
@@ -293,6 +298,7 @@ export const R13: RoleUI = {
        (Э13.7); республиканский турнир — турнир с нашими (Э13.9); команда ещё не
        допущена — команды и заявки (Э13.3). */
     [<Trophy size={18} />, 'Соревнования'],
+    [<CreditCard size={18} />, 'Взносы'],
   ],
 };
 
@@ -315,5 +321,17 @@ export const R14: RoleUI = {
        федерация (Э1.8). */
     [<Newspaper size={18} />, 'Новости'],
     [<User size={18} />, 'Профиль'],
+  ],
+};
+
+/* Роль 17 · Региональная федерация ✳ (31.08.2026, дополнения федерации, п. 3). */
+export const R17: RoleUI = {
+  num: '17', title: 'Региональная федерация',
+  person: { nm: 'Жумабеков Р.', rl: 'Федерация Павлодарской области', av: A(75) },
+  brandName: 'Федерация настольного тенниса Павлодарской области',
+  brandSub: 'Статистика региона · инфраструктура · кадры',
+  nav: [
+    [<MapPin size={18} />, 'Статистика региона'],
+    [<Users size={18} />, 'Кадры региона'],
   ],
 };

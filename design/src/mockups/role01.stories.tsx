@@ -6,6 +6,6 @@ export default {
   parameters: { layout: 'fullscreen' },
 };
 
-export const Flow = { name: 'Макеты по флоу · 14 экранов', render: () => <Role01Board /> };
+export const Flow = { name: 'Макеты по флоу · 15 экранов', render: () => <Role01Board /> };
 
 export const Phone = { name: 'Адаптив · телефон', render: () => <Role01PhoneBoard /> };

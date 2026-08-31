@@ -22,6 +22,7 @@
 
 import { Fragment, useState, type ReactNode } from 'react';
 import {
+  ChartPie,
   Bell, CalendarDays, Check, ChevronDown, ChevronRight, Copy, FileSpreadsheet, GitMerge, History,
   LayoutDashboard, Merge, Minus, Newspaper, Pencil, Plus, Send, UserCog, UserPlus, X,
 } from 'lucide-react';
@@ -34,6 +35,7 @@ import {
   EmptyBox, EventTimeline, Facts, FieldView, FileDrop, FilterSeg, FormGrid, InlineDialog, MiniMonth,
   MonthGrid, Pager, Panel, PhoneRoleApp, PickField, Pill, QuietAction, Row, Rows, ScreenScope,
   SearchInput, TextInput, TimeGrid, StatTiles, WebApp,
+  Bars, ChartRow, Donut, FilterBar,
   type AttnItem, type CalEvent, type CalTone, type RoleUI, type SlotEvent, type TimelineItem,
   Sheet,
 } from '../kit/hero/app';
@@ -76,6 +78,7 @@ const R01: RoleUI = {
     [<UserCog size={16} key="u" />, 'Пользователи'],
     [<History size={16} key="j" />, 'Журнал'],
     [<Newspaper size={16} key="n" />, 'Новости'],
+    [<ChartPie size={16} key="g" />, 'Статистика регионов'],
   ],
 };
 
@@ -4924,6 +4927,127 @@ const Editor1_14States = () => (
     у этой роли основной формат десктопный, второй — телефон. Состояния во
     втором кадре не повторяются: они уже разобраны под десктопным макетом, а
     `alt` показывает сам экран. */
+/* ── Э1.15 · Сводка по регионам ✳ (31.08.2026) ─────────────────────
+   Пункт 3 документа федерации: «автоматическое формирование сводной
+   статистики по регионам, а также возможность создания аналитической панели
+   (дашборда)». Вносят цифры регионы (роль 17, Э17.1) — здесь их только
+   смотрят: у вносящего форма с полями, у смотрящего сравнение регионов. */
+
+type Reg115 = {
+  nm: string;
+  players: number;
+  coaches: number;
+  judges: number;
+  halls: number;
+  tables: number;
+  /** Когда регион последний раз обновлял данные. */
+  upd: string;
+  stale?: boolean;
+};
+
+const REGIONS115: Reg115[] = [
+  { nm: 'Алматы', players: 1240, coaches: 58, judges: 74, halls: 22, tables: 168, upd: '28.08.2026' },
+  { nm: 'Астана', players: 980, coaches: 44, judges: 61, halls: 18, tables: 134, upd: '30.08.2026' },
+  { nm: 'Шымкент', players: 720, coaches: 33, judges: 40, halls: 14, tables: 96, upd: '19.08.2026' },
+  { nm: 'Караганда', players: 610, coaches: 28, judges: 35, halls: 12, tables: 84, upd: '02.06.2026', stale: true },
+  { nm: 'Павлодар', players: 412, coaches: 21, judges: 31, halls: 9, tables: 54, upd: '31.08.2026' },
+  { nm: 'Тараз', players: 305, coaches: 16, judges: 22, halls: 7, tables: 41, upd: '14.03.2026', stale: true },
+];
+
+const REG115_GRID = 'minmax(0,1.4fr) 96px 96px 84px 84px 88px 132px';
+const REG115_SORTS = ['По спортсменам', 'По судьям', 'По столам'];
+
+export function RegSum1_12() {
+  const [q, setQ] = useState('');
+  const [sort, setSort] = useState(REG115_SORTS[0]);
+  const rows = REGIONS115.filter((r) => r.nm.toLowerCase().includes(q.trim().toLowerCase())).sort((a, b) =>
+    sort === 'По судьям' ? b.judges - a.judges : sort === 'По столам' ? b.tables - a.tables : b.players - a.players,
+  );
+  return (
+    <WebApp
+      role={R01}
+      nav="Статистика регионов"
+      title="Статистика по регионам"
+      sub="Сводка складывается из данных, которые вносят региональные федерации"
+      hint="Предложение 3: автоматическая сводная статистика по регионам и аналитическая панель по этим показателям."
+    >
+      <StatTiles
+        items={[
+          { v: '4 267', k: 'Спортсменов в стране' },
+          { v: '200', k: 'Тренеров' },
+          { v: '263', k: 'Судей' },
+          { v: '82', k: 'Залов' },
+          { v: '577', k: 'Столов' },
+          { v: '2', k: 'Регионов не обновляли данные', tone: 'a' },
+        ]}
+      />
+
+      <ChartRow>
+        <Panel title="Где сосредоточены спортсмены" sub="Доли регионов в общем числе">
+          <Donut
+            label="Спортсмены по регионам"
+            total="4 267"
+            totalNote="спортсменов"
+            parts={[
+              { t: 'Алматы', v: 1240 },
+              { t: 'Астана', v: 980 },
+              { t: 'Шымкент', v: 720 },
+              { t: 'Остальные регионы', v: 1327 },
+            ]}
+          />
+        </Panel>
+        <Panel title="Судьи по регионам" sub="Столбик — регион; свой выделен">
+          <Bars
+            label="Число судей по регионам"
+            suffix="судей в регионе"
+            items={REGIONS115.map((r) => ({ t: r.nm, v: r.judges, on: r.nm === 'Павлодар' }))}
+          />
+        </Panel>
+      </ChartRow>
+
+      <FilterBar>
+        <SearchInput value={q} onChange={setQ} placeholder="Регион" className="w-64" />
+        <FilterSeg items={REG115_SORTS} active={sort} onPick={setSort} />
+      </FilterBar>
+
+      <Panel title={`Регионы · ${rows.length}`} sub="Строка ведёт в карточку региона" flush>
+        <Sheet
+          flush
+          grid={REG115_GRID}
+          cols={['Регион', 'Спортсмены', 'Тренеры', 'Судьи', 'Залы', 'Столы', 'Данные на']}
+        >
+          {rows.map((r) => (
+            <div
+              key={r.nm}
+              data-row
+              className="grid w-full items-center gap-3 px-4 py-2.5 text-left text-[13px] tabular-nums"
+              style={{ gridTemplateColumns: REG115_GRID }}
+            >
+              <span className="truncate font-medium">{r.nm}</span>
+              <span className="text-right">{r.players}</span>
+              <span className="text-right">{r.coaches}</span>
+              <span className="text-right">{r.judges}</span>
+              <span className="text-right">{r.halls}</span>
+              <span className="text-right">{r.tables}</span>
+              <span>
+                <Pill t={r.upd} color={r.stale ? 'warning' : 'default'} />
+              </span>
+            </div>
+          ))}
+        </Sheet>
+      </Panel>
+
+      <Bar tone="warning">
+        Сводка честна ровно настолько, насколько свежи данные регионов. Поэтому дата обновления
+        стоит колонкой в самой таблице, а не прячется в карточке: два региона здесь не обновлялись с
+        весны, и их числа в общую сумму входят как есть. ⚠ Как часто регион обязан обновлять данные
+        и что делать с просроченными — федерация не сказала.
+      </Bar>
+    </WebApp>
+  );
+}
+
+
 export const SCREENS: ScreenMap = {
   'Э0.1': {
     cap: 'Вход',
@@ -5084,6 +5208,10 @@ export const SCREENS: ScreenMap = {
     ),
     alt: () => <News1_8Phone />,
     next: '«Править»',
+  },
+  'Э1.15': {
+    cap: 'Статистика по регионам',
+    view: () => <RegSum1_12 />,
   },
   'Э1.14': {
     cap: 'Редактор материала',

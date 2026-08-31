@@ -1,13 +1,13 @@
-/* Сгенерировано: npm run gen:flows (источник — data/role11.ts).
+/* Сгенерировано: npm run gen:flows (источник — data/role17.ts).
    Руками не правим — правим данные роли и её макеты, затем: npm run gen:flows. */
 
 import { Paired } from './paired';
 import { FlowMap } from './map';
-import { role11 } from './data/role11';
-import { Role11Board, SCREENS } from '../mockups/role11';
+import { role17 } from './data/role17';
+import { Role17Board, SCREENS } from '../mockups/role17';
 
 export default {
-  title: 'Флоу/11 · Главный тренер национальной команды',
+  title: 'Флоу/17 · Региональная федерация',
   parameters: { layout: 'fullscreen' },
   globals: { theme: 'daylight-fnt' },
 };
@@ -15,16 +15,16 @@ export default {
 /* Парный вид первым: под каждым узлом маршрута стоит его макет — требование и
    картинка читаются вместе, а не в двух разных разделах дерева. */
 export const Nodes = {
-  name: 'Узлы и макеты · 8 экранов',
+  name: 'Узлы и макеты · 2 экрана',
   render: () => (
-    <Paired flow={role11}>
-      <Role11Board />
+    <Paired flow={role17}>
+      <Role17Board />
     </Paired>
   ),
 };
 
 /* Карта: граф маршрута и макет выбранного экрана рядом. */
 export const Route = {
-  name: 'Карта · 8 экранов',
-  render: () => <FlowMap flow={role11} screens={SCREENS} />,
+  name: 'Карта · 2 экрана',
+  render: () => <FlowMap flow={role17} screens={SCREENS} />,
 };
