@@ -1953,6 +1953,12 @@
 .focus\:border-blue-500:focus {
   border-color: var(--color-blue-500);
 }
+.disabled\:pointer-events-none:disabled {
+  pointer-events: none;
+}
+.disabled\:opacity-30:disabled {
+  opacity: 30%;
+}
 :is(.\*\*\:data-row\:grid-cols-1 *)[data-row] {
   grid-template-columns: repeat(1, minmax(0, 1fr));
 }

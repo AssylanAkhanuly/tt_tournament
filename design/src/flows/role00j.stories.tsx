@@ -15,7 +15,7 @@ export default {
 /* Парный вид первым: под каждым узлом маршрута стоит его макет — требование и
    картинка читаются вместе, а не в двух разных разделах дерева. */
 export const Nodes = {
-  name: 'Узлы и макеты · 7 экранов',
+  name: 'Узлы и макеты · 8 экранов',
   render: () => (
     <Paired flow={role00j}>
       <Role00jBoard />
@@ -25,6 +25,6 @@ export const Nodes = {
 
 /* Карта: граф маршрута и макет выбранного экрана рядом. */
 export const Route = {
-  name: 'Карта · 7 экранов',
+  name: 'Карта · 8 экранов',
   render: () => <FlowMap flow={role00j} screens={SCREENS} />,
 };
