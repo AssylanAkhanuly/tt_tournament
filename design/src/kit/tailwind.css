@@ -573,6 +573,9 @@
 .w-\[212px\] {
   width: 212px;
 }
+.w-\[248px\] {
+  width: 248px;
+}
 .w-\[324px\] {
   width: 324px;
 }
@@ -1833,6 +1836,9 @@
 }
 .ring-blue-300 {
   --tw-ring-color: var(--color-blue-300);
+}
+.ring-neutral-200 {
+  --tw-ring-color: var(--color-neutral-200);
 }
 .ring-white {
   --tw-ring-color: var(--color-white);

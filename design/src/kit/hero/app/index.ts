@@ -8,3 +8,4 @@ export * from './chrome';
 export * from './domain';
 export * from './calendar';
 export * from './quiz';
+export * from './exam';

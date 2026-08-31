@@ -25,7 +25,8 @@ import {
 } from 'lucide-react';
 import { Avatar, Button } from '@heroui/react';
 import {
-  A, Attention, Bar, EmptyBox, Facts, FieldView, FilterSeg, FormGrid, KV, Panel, PhoneRoleApp,
+  A, Attention, Bar, EmptyBox, ExamClock, ExamNav, ExamPhone, ExamShell, Facts, FieldView,
+  FilterSeg, FormGrid, KV, Panel, PhoneRoleApp,
   Pill, QuestionCard, QuietAction, QuizProgress, QuizResult, Row, Rows, ST, ScreenScope,
   SearchInput, SeasonTable, StatTiles, WebApp,
   type AttnItem, type Question, type RoleUI, type SeasonRow,
@@ -1278,6 +1279,18 @@ function AttNav({
     экран кабинета, где судья не читает, а работает, и вопрос, который на
     телефоне спрашивает иначе, чем в вебе, был бы вторым тестом. Меняются
     только ряды плиток и ширина кнопок. */
+/** Оболочка роли для положений «до теста» и «итог»: это разделы кабинета, и
+    сайдбар с шапкой на них уместен. У самого теста оболочка своя (ExamShell). */
+const Shell = ({ phone, children }: { phone?: boolean; children: ReactNode }) => {
+  const props = {
+    role: R,
+    nav: 'Аттестация',
+    title: 'Аттестация',
+    sub: `Оралбай Ержан · первая категория · действует до ${ATT_TILL}, осталось ${ATT_LEFT} дней`,
+  };
+  return phone ? <PhoneRoleApp {...props}>{children}</PhoneRoleApp> : <WebApp {...props}>{children}</WebApp>;
+};
+
 function Attest0_14Body({ phone, start = 'before' }: { phone?: boolean; start?: 'before' | 'run' | 'done' }) {
   /* Начальное положение приходит снаружи ✳ (31.08.2026): на борде экран
      снимается как есть, и ход теста с итогом в кадр не попадали вовсе —
@@ -1296,7 +1309,7 @@ function Attest0_14Body({ phone, start = 'before' }: { phone?: boolean; start?: 
 
   if (stage === 'before') {
     return (
-      <>
+      <Shell phone={phone}>
         {phone ? (
           <>
             <StatTiles items={TILES0_14.slice(0, 2)} />
@@ -1358,18 +1371,45 @@ function Attest0_14Body({ phone, start = 'before' }: { phone?: boolean; start?: 
             <Play size={15} /> Начать тест
           </Button>
         </div>
-      </>
+      </Shell>
     );
   }
 
   if (stage === 'run') {
-    return (
-      <>
-        {/* Остаток времени в макете — от сорока минут прошло девять: полоса и
-            часы должны показывать тест в ходу, а не в первую секунду. */}
-        <QuizProgress done={answered.size} total={ATT_TOTAL} left="31 мин" />
-        <AttNav cur={cur} answered={answered} onGo={setCur} />
+    /* Экзамен — отдельный режим, а не раздел кабинета ✳ (31.08.2026). Оболочка
+       роли здесь только мешает: сайдбар зовёт уйти в «Турниры», шапка показывает
+       уведомления, — а решение экрана одно: ответить и перейти дальше. Поэтому
+       у теста своя раскладка: слева навигатор по вопросам, в центре вопрос,
+       справа время и решения. Выйти можно только явно, кнопкой. */
+    const marks = Array.from({ length: ATT_TOTAL }, (_, i) => ({
+      n: i + 1,
+      answered: answered.has(i),
+      current: i === cur,
+    }));
+    const goto = (i: number) => setCur(Math.min(i, ATT_Q.length - 1));
 
+    const back = (
+      <Button
+        className={wide}
+        variant="outline"
+        isDisabled={cur === 0}
+        onPress={() => setCur(Math.max(0, cur - 1))}
+      >
+        <ChevronLeft size={15} /> Назад
+      </Button>
+    );
+    const next = last ? (
+      <Button className={wide} variant="primary" onPress={() => setStage('done')}>
+        Завершить тест
+      </Button>
+    ) : (
+      <Button className={wide} variant="primary" onPress={() => setCur(cur + 1)}>
+        Дальше <ChevronRight size={15} />
+      </Button>
+    );
+
+    const question = (
+      <>
         <QuestionCard
           q={q}
           n={cur + 1}
@@ -1378,43 +1418,115 @@ function Attest0_14Body({ phone, start = 'before' }: { phone?: boolean; start?: 
           picked={picked[q.id]}
           onPick={(id) => setPicked({ ...picked, [q.id]: id })}
         />
-
-        <div className={'mt-4 flex gap-2 ' + (phone ? 'flex-col' : 'items-center')}>
-          <Button
-            className={wide}
-            variant="outline"
-            isDisabled={cur === 0}
-            onPress={() => setCur(Math.max(0, cur - 1))}
-          >
-            <ChevronLeft size={15} /> Назад
-          </Button>
-          {last ? (
-            <Button className={wide} variant="primary" onPress={() => setStage('done')}>
-              Завершить тест
-            </Button>
-          ) : (
-            <Button className={wide} variant="primary" onPress={() => setCur(cur + 1)}>
-              Дальше <ChevronRight size={15} />
-            </Button>
-          )}
-          <span className={phone ? undefined : 'ml-auto'}>
-            <QuietAction onPress={() => setStage('before')}>Выйти из теста</QuietAction>
-          </span>
-        </div>
-
+        {/* Переход между вопросами — под самим вопросом, а не в колонке справа:
+            рука уже здесь, и это продолжение ответа, а не решение о тесте.
+            Справа остаются решения про тест целиком — завершить и выйти. */}
+        {!phone && (
+          <div className="mt-4 flex items-center justify-between gap-3">
+            {back}
+            <span className="text-[12px] text-neutral-400">
+              вопрос {cur + 1} из {ATT_TOTAL}
+            </span>
+            {next}
+          </div>
+        )}
         <div className="mt-4">
           <Bar>
-            В макете показаны {ATT_Q.length} вопроса из {ATT_TOTAL} — остальные устроены так же:
+            В макете показаны {ATT_Q.length} вопросов из {ATT_TOTAL} — остальные устроены так же:
             формулировка, четыре варианта, один верный. Верный вариант во время теста не
             подсвечивается ни одним признаком, разбор открывается только после завершения.
           </Bar>
         </div>
       </>
     );
+
+    if (phone) {
+      return (
+        <ExamPhone
+          title="Аттестация судей"
+          clock="31 мин"
+          nav={
+            <>
+              <ExamNav marks={marks} onGo={goto} row />
+              <div className="mt-1.5 text-[11px] text-neutral-500">
+                Отвечено <b className="text-neutral-900">{answered.size}</b> из {ATT_TOTAL}
+              </div>
+            </>
+          }
+          foot={
+            <>
+              <div className="flex gap-2">
+                {back}
+                {next}
+              </div>
+              {/* «Завершить тест» доступно с любого вопроса, а не только с
+                  последнего: судья, ответивший на все двадцать, не должен
+                  долистывать до конца, чтобы сдать. На последнем вопросе кнопка
+                  уже стоит выше — второй раз её не показываем. */}
+              <div className="flex items-center justify-between">
+                {last ? <span /> : (
+                  <QuietAction onPress={() => setStage('done')}>Завершить тест</QuietAction>
+                )}
+                <QuietAction onPress={() => setStage('before')}>Выйти из теста</QuietAction>
+              </div>
+            </>
+          }
+        >
+          {question}
+        </ExamPhone>
+      );
+    }
+
+    return (
+      <ExamShell
+        title="Аттестация судей"
+        sub={`Оралбай Ержан · попытка 1 из ${ATT_TRIES} · ${ATT_TIME}`}
+        left={
+          <>
+            <div className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-neutral-400">
+              Вопросы
+            </div>
+            <ExamNav marks={marks} onGo={goto} />
+            {/* Легенда обязательна: закрашенный и пустой квадрат сами по себе
+                не говорят, что значат, а от этого зависит, куда прыгать. */}
+            <div className="mt-3 flex flex-col gap-1.5 text-[11.5px] text-neutral-500">
+              <span className="flex items-center gap-2">
+                <span className="h-3 w-3 rounded bg-blue-600" /> текущий
+              </span>
+              <span className="flex items-center gap-2">
+                <span className="h-3 w-3 rounded bg-blue-50 ring-1 ring-blue-200" /> отвечен
+              </span>
+              <span className="flex items-center gap-2">
+                <span className="h-3 w-3 rounded bg-neutral-100 ring-1 ring-neutral-200" /> без ответа
+              </span>
+            </div>
+            <div className="mt-4 border-t border-neutral-100 pt-3 text-[12px] text-neutral-500">
+              Отвечено <b className="text-neutral-800">{answered.size}</b> из {ATT_TOTAL}
+            </div>
+          </>
+        }
+        right={
+          <div className="flex flex-col gap-3">
+            <ExamClock left="31 мин" />
+            <QuizProgress done={answered.size} total={ATT_TOTAL} />
+            <div className="rounded-xl border border-neutral-200 p-3 text-[12px] leading-relaxed text-neutral-600">
+              Проходной балл — <b>{ATT_PASS} из {ATT_TOTAL}</b>. Неотвеченные вопросы считаются
+              неверными, поэтому перед завершением стоит вернуться к пустым клеткам слева.
+            </div>
+            <Button variant="primary" className="w-full" onPress={() => setStage('done')}>
+              Завершить тест
+            </Button>
+            <QuietAction onPress={() => setStage('before')}>Выйти из теста</QuietAction>
+          </div>
+        }
+      >
+        {question}
+      </ExamShell>
+    );
   }
 
   return (
-    <>
+    <Shell phone={phone}>
       <div className="mb-4">
         <QuizResult right={ATT_RIGHT} total={ATT_TOTAL} pass={ATT_PASS} till={ATT_NEW_TILL} />
       </div>
@@ -1487,21 +1599,12 @@ function Attest0_14Body({ phone, start = 'before' }: { phone?: boolean; start?: 
           </Button>
         </span>
       </div>
-    </>
+    </Shell>
   );
 }
 
 export function Attest0_14() {
-  return (
-    <WebApp
-      role={R}
-      nav="Аттестация"
-      title="Аттестация"
-      sub={`Оралбай Ержан · первая категория · действует до ${ATT_TILL}, осталось ${ATT_LEFT} дней`}
-    >
-      <Attest0_14Body />
-    </WebApp>
-  );
+  return <Attest0_14Body />;
 }
 
 /** Два других положения экрана врезками ✳ (31.08.2026): вопрос с выбором
@@ -1509,19 +1612,16 @@ export function Attest0_14() {
     ровно то, ради чего заведён онлайн-тест, оставалось за кликом. */
 const Attest0_14Also = () => (
   <>
-    <Also cap="Тест идёт — вопрос и выбор ответа">
-      <ScreenScope>
-        <div style={{ width: 940 }}>
-          <Attest0_14Body start="run" />
-        </div>
-      </ScreenScope>
+    {/* Тест приносит свой корпус (ExamShell — тот же ноутбук), поэтому ширину
+        здесь не задаём: обёртка на 940 обрезала бы правую колонку экзамена. */}
+    <Also cap="Тест идёт — экзаменационный режим: слева вопросы, справа время">
+      <Attest0_14Body start="run" />
+    </Also>
+    <Also cap="Тест на телефоне — тот же режим: номера полосой, время в шапке">
+      <Attest0_14Body start="run" phone />
     </Also>
     <Also cap="Итог и разбор — свой ответ рядом с верным">
-      <ScreenScope>
-        <div style={{ width: 940 }}>
-          <Attest0_14Body start="done" />
-        </div>
-      </ScreenScope>
+      <Attest0_14Body start="done" />
     </Also>
   </>
 );
@@ -2274,16 +2374,7 @@ const Card0_13Phone = () => {
     ширина кнопок. Второй формат здесь нужен больше, чем на остальных экранах
     кабинета: напоминание о сроке приходит уведомлением, а уведомление человек
     открывает с телефона — и тут же должен мочь сесть и пройти тест. */
-const Attest0_14Phone = () => (
-  <PhoneRoleApp
-    role={R}
-    nav="Аттестация"
-    title="Аттестация"
-    sub={`Оралбай Ержан · действует до ${ATT_TILL}, осталось ${ATT_LEFT} дней`}
-  >
-    <Attest0_14Body phone />
-  </PhoneRoleApp>
-);
+const Attest0_14Phone = () => <Attest0_14Body phone />;
 
 /* ── Борд контура: экраны маршрута подряд ───────────────────────── */
 
