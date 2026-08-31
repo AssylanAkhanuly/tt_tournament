@@ -32,7 +32,7 @@ import { Also, Board, States, Shot, type ScreenMap } from './shell';
    нарисованная сетка разошлась бы с той, что увидят в продукте. */
 import { BracketFlow } from '@/widgets/bracket/BracketFlow';
 import { myBracket } from './myBracket';
-import { Context0_1, Login0_1, LoginPhone0_1 } from './role00';
+import { Login0_1, LoginPhone0_1 } from './role00';
 
 /* ── Роль: сайдбар и подпись профиля ─────────────────────────────── */
 
@@ -4754,12 +4754,6 @@ export const SCREENS: ScreenMap = {
     view: () => (
       <>
         <Login0_1 />
-        {/* Выбор контекста — зона данных Э0.1: у председателя ГСК ролей бывает
-            несколько (он же судья и член комиссии), и после входа спрашивают, с
-            какой работать. Экран сквозной, поэтому берётся из role00. */}
-        <Also cap="Следующий шаг, если ролей несколько ✳">
-          <Context0_1 />
-        </Also>
         <Login0_1States5 />
       </>
     ),

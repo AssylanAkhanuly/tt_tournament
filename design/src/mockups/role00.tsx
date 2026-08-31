@@ -423,40 +423,6 @@ export function Login0_1() {
   );
 }
 
-/** Следующий шаг, если ролей несколько: выбор контекста (✳ наше решение). */
-export function Context0_1() {
-  return (
-    <AuthPage wide>
-      <div className="mb-5 flex flex-col items-center gap-4 text-center">
-        <Brand size="lg" />
-        <div>
-          <div className="text-xl font-semibold tracking-tight">С какой ролью войти</div>
-          <div className="mt-1 text-[12.5px] text-neutral-500">
-            Выбор запоминается · переключиться можно карточкой роли в меню
-          </div>
-        </div>
-      </div>
-      <Rows>
-        <Row
-          nm="Судья · Кубок Республики Казахстан 2026"
-          sub="выдала Абаева Д., 10.04.2026 · до 20.05.2026"
-          pill={{ t: 'ДЕЙСТВУЕТ', cls: 'live' }}
-        />
-        <Row
-          nm="Судья стола · стол 4"
-          sub="выдал Оспанов Т., 15.04.2026 · до 20.05.2026"
-          pill={{ t: 'ДЕЙСТВУЕТ', cls: 'live' }}
-        />
-        <Row
-          nm="Спортсмен"
-          sub="своя карточка, рейтинг, заявки на турниры"
-          pill={{ t: 'ДЕЙСТВУЕТ', cls: 'live' }}
-        />
-      </Rows>
-    </AuthPage>
-  );
-}
-
 /** Роль и человек в боковом меню ✳ (31.08.2026) — то место, откуда из системы
     выходят и где меняют рабочее место.
 
@@ -771,7 +737,7 @@ const Login0_1States = () => (
     <Shot
       tone="warning"
       title="Роль истекла"
-      text="Роли нет в списке контекстов, история действий человека сохраняется."
+      text="Роль пропадает из карточки роли в меню, история действий человека сохраняется."
     >
       <Frag>
         <Rows>
@@ -2918,9 +2884,6 @@ export const SCREENS: ScreenMap = {
     view: () => (
       <>
         <Login0_1 />
-        <Also cap="Следующий шаг, если ролей несколько ✳">
-          <Context0_1 />
-        </Also>
         <Also cap="Роль и человек в боковом меню ✳ — откуда сюда выходят">
           <ProfileMenu0_1 />
         </Also>
