@@ -77,14 +77,10 @@ const P = ({ t, cls }: { t: string; cls: Cls }) => <Pill t={t} color={PC[cls]} /
 const Th = ({ children }: { children: ReactNode }) => <span className="block text-right">{children}</span>;
 
 /** Сноска под таблицей в панели flush: правило, из-за которого экран такой. */
-const Foot = ({ children }: { children: ReactNode }) => (
-  <div className="border-t border-neutral-100 px-4 py-2.5 text-xs leading-relaxed text-neutral-500">{children}</div>
-);
+const Foot = (_: { children: ReactNode }) => null;
 
 /** Мелкая подпись в правом краю заголовка панели. */
-const Cap = ({ children }: { children: ReactNode }) => (
-  <span className="text-xs text-neutral-500">{children}</span>
-);
+const Cap = (_: { children: ReactNode }) => null;
 
 /** Кадр состояния: фрагмент экрана в скоупе нового слоя — без обёртки фрагмент
     на полке States остаётся без стилей HeroUI. ⚠ Дупликация с role05.tsx.

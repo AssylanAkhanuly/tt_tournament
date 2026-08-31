@@ -144,14 +144,10 @@ export const JUDGE_DOCS = [
 const Th = ({ children }: { children: ReactNode }) => <span className="block text-right">{children}</span>;
 
 /** Сноска под таблицей в панели flush: правило, из-за которого числа такие. */
-const Foot = ({ children }: { children: ReactNode }) => (
-  <div className="border-t border-neutral-100 px-4 py-2.5 text-xs leading-relaxed text-neutral-500">{children}</div>
-);
+const Foot = (_: { children: ReactNode }) => null;
 
 /** Мелкая подпись в правом краю заголовка панели. */
-const Cap = ({ children }: { children: ReactNode }) => (
-  <span className="text-xs text-neutral-500">{children}</span>
-);
+const Cap = (_: { children: ReactNode }) => null;
 
 /** История судейства: пять однородных колонок, коэффициент читается колонкой
     сверху вниз — видно, за что дали полтора. Шапка у «моего рейтинга» и у

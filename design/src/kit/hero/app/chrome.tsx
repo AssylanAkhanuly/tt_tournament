@@ -253,7 +253,8 @@ export function WebApp({
   title: string;
   sub?: string;
   back?: { label: string; to?: string };
-  /** Плашка-правило под заголовком: почему экран устроен так. */
+  /** ⚠ Больше не рисуется ✳ (01.09.2026): правило под заголовком читалось как
+      шум над работой. Проп оставлен, чтобы не править двенадцать экранов. */
   hint?: string;
   /** Правая колонка экрана ✳ (30.08.2026): то, за чем следят, пока работают в
       основной области — идущие матчи и очередь пар на «ходе турнира». Такое
@@ -323,11 +324,6 @@ export function WebApp({
             {sub && <p className="mt-0.5 text-[13px] text-neutral-500">{sub}</p>}
           </div>
           <div className="min-h-0 flex-1 overflow-auto px-6 pb-6">
-            {hint && (
-              <div className="mb-4 rounded-lg border border-blue-100 bg-blue-50 px-3.5 py-2.5 text-[12.5px] leading-relaxed text-blue-900">
-                {hint}
-              </div>
-            )}
             {children}
           </div>
         </div>
@@ -367,8 +363,7 @@ export function PhoneRoleApp({
   title: string;
   sub?: string;
   back?: { label: string; to?: string };
-  /** Плашка-правило под заголовком — та же, что у `WebApp`: у экрана одно
-      объяснение на оба формата, и на телефоне оно не должно пропадать. */
+  /** ⚠ Больше не рисуется ✳ (01.09.2026), см. `WebApp`. */
   hint?: string;
   children: ReactNode;
 }) {
@@ -420,11 +415,6 @@ export function PhoneRoleApp({
           <h1 className="text-[19px] font-semibold leading-tight tracking-tight">{title}</h1>
           {sub && <p className="mt-0.5 text-[12.5px] leading-snug text-neutral-500">{sub}</p>}
         </div>
-        {hint && (
-          <div className="mb-3 rounded-lg border border-blue-100 bg-blue-50 px-3 py-2 text-[12px] leading-relaxed text-blue-900">
-            {hint}
-          </div>
-        )}
         {children}
       </div>
 

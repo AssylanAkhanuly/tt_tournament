@@ -1825,11 +1825,7 @@ const TileRows = ({ rows }: { rows: ComponentProps<typeof StatTiles>['items'][] 
 
 /** Сноска под таблицей в панели `flush`: правило, из-за которого числа такие.
     ⚠ Дупликация с judge.tsx: помощник там не экспортирован. */
-const Foot = ({ children }: { children: ReactNode }) => (
-  <div className="border-t border-neutral-100 px-4 py-2.5 text-xs leading-relaxed text-neutral-500">
-    {children}
-  </div>
-);
+const Foot = (_: { children: ReactNode }) => null;
 
 /* Числа рейтинга по-русски и зачёт по Положению (§6.3.1). ⚠ Дупликация с
    judge.tsx: там эти помощники не экспортированы, а телефонные кадры рейтинга

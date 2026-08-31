@@ -764,11 +764,15 @@ const BAR_TONE = {
 export type Tone = keyof typeof BAR_TONE;
 
 /** Плашка-правило или предупреждение: почему экран выглядит так. */
-export const Bar = ({ tone = 'info', children }: { tone?: Tone; children: ReactNode }) => (
-  <div className={'mb-4 rounded-lg border px-3.5 py-2.5 text-[12.5px] leading-relaxed ' + BAR_TONE[tone]}>
-    {children}
-  </div>
-);
+/* Плашка-объяснение больше не рисуется ✳ (01.09.2026, решение владельца
+   продукта). На экране остаются заголовок, короткое описание, подписи кнопок и
+   значки; разбор «почему так» переехал в flows/*.md и в карточку узла на карте
+   маршрута — туда приходят за объяснением, а на экран приходят работать.
+
+   Компонент оставлен заглушкой, а не удалён: вызовов больше двухсот восьмидесяти,
+   и текст рядом с экраном остаётся полезным для того, кто правит макет. На экран
+   он не попадает. */
+export const Bar = (_: { tone?: Tone; children: ReactNode }) => null;
 
 /** Пустое состояние — тоже часть макета. */
 export const EmptyBox = ({ title, text, action }: { title: string; text: string; action?: ReactNode }) => (
