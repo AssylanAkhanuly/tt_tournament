@@ -1044,7 +1044,6 @@ export function Squad11_4() {
 
       <Panel
         title={`Члены сборной · ${rows.length}`}
-        sub="Строка открывает карточку: план подготовки, медкарта, история"
         flush
       >
         <Sheet
@@ -1499,7 +1498,7 @@ export function Reports11_7() {
         ]}
       />
 
-      <Panel title="Очередь рапортов" sub="Строка открывает документ ниже" flush>
+      <Panel title="Очередь рапортов" flush>
         <Rows>
           {REPORTS.map((r) => (
             <Row

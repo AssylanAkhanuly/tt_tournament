@@ -174,9 +174,10 @@ function IinField({
         value={v}
         onChange={(e) => set(e.target.value)}
       />
-      <span className={'text-xs leading-snug ' + (bad ? 'text-red-600' : 'text-neutral-500')}>
-        {note ?? 'Индивидуальный идентификационный номер — 12 цифр, как в удостоверении личности'}
-      </span>
+      {/* Подпись под полем — только когда это ошибка ✳ (01.09.2026): «что такое
+          ИИН» человек знает и без нас, а счётчик «9 из 12» справа отвечает на
+          единственный вопрос, который у поля бывает. */}
+      {bad && note && <span className="text-xs leading-snug text-red-600">{note}</span>}
     </label>
   );
 }
@@ -564,7 +565,7 @@ export function LoginPhone0_1() {
 
         {step === 1 ? (
           <>
-            <IinField note="12 цифр из удостоверения личности" value={iin} onChange={setIin} />
+            <IinField value={iin} onChange={setIin} />
             <Button
               className="mt-1 w-full"
               isDisabled={iin.length !== 12}

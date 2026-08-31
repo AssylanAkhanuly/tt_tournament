@@ -618,7 +618,7 @@ export function Season5_3() {
       role={R05}
       nav="Соревнования"
       title="Соревнования сезона"
-      sub="Официальные старты календаря ФНТ РК · строка открывает карточку турнира"
+      sub="Официальные старты календаря ФНТ РК"
     >
       <div className="mb-3 flex items-center justify-between gap-4">
         <FilterSeg items={SEASON_FILTER} active={f} onPick={setF} />
@@ -730,7 +730,7 @@ const Season5_3Phone = () => {
       role={R05}
       nav="Соревнования"
       title="Соревнования сезона"
-      sub="Официальные старты календаря ФНТ РК · строка открывает карточку турнира"
+      sub="Официальные старты календаря ФНТ РК"
     >
       <Strip><FilterSeg items={SEASON_FILTER} active={f} onPick={setF} /></Strip>
       <div className="mb-3">

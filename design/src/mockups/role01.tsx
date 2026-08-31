@@ -4991,7 +4991,7 @@ export function RegSum1_12() {
         <FilterSeg items={REG115_SORTS} active={sort} onPick={setSort} />
       </FilterBar>
 
-      <Panel title={`Регионы · ${rows.length}`} sub="Строка ведёт в карточку региона" flush>
+      <Panel title={`Регионы · ${rows.length}`} flush>
         <Sheet
           flush
           grid={REG115_GRID}

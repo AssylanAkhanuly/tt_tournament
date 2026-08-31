@@ -721,10 +721,9 @@ export const Derived = ({ k, v }: { k: string; v: string }) => (
 export function FileDrop({ label, hint }: { label: string; hint: string }) {
   return (
     <div className="col-span-2 flex items-center justify-between gap-3 rounded-lg border border-dashed border-neutral-300 bg-neutral-50 px-4 py-3">
-      <span className="leading-tight">
-        <span className="block text-sm font-medium">{label}</span>
-        <span className="block text-xs text-neutral-500">{hint}</span>
-      </span>
+      {/* Подсказка под названием убрана ✳ (01.09.2026): «какие форматы и до
+          скольких мегабайт» человек узнаёт, когда файл не подошёл, а не заранее. */}
+      <span className="text-sm font-medium">{label}</span>
       <Button size="sm" variant="outline">Выбрать файл</Button>
     </div>
   );
