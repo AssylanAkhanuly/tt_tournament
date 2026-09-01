@@ -36,10 +36,23 @@ import {
   ArrowRightLeft, Ban, Clock, LayoutDashboard, Lock, Megaphone, Pencil, Shield, Timer, Upload,
 } from 'lucide-react';
 import { Button, Chip } from '@heroui/react';
+import { A, AW } from '../fedCommon';
 import {
-  A, Bar, Facts, PageTabs, Panel, PhoneRoleApp, Pill, PrimaryAction, QuietAction, Row, Rows,
-  ScreenScope, StatTiles, WebApp, type RoleUI,
-} from '../kit/hero/app';
+  Bar,
+  Facts,
+  PageTabs,
+  Panel,
+  PhoneRoleApp,
+  Pill,
+  PrimaryAction,
+  QuietAction,
+  Row,
+  Rows,
+  ScreenScope,
+  StatTiles,
+  WebApp,
+  type RoleUI,
+} from '@/shared/kit/app';
 /* Из старого слоя остаются только мета-компоненты борда: колонки, стрелки и
    полки состояний. Сами экраны собраны новым слоем. */
 import { Board, States, Shot, type ScreenMap } from './shell';

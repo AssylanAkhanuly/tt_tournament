@@ -17,7 +17,7 @@
    всё перекрашивается переключателем «Тема» в тулбаре. Витрины — истории
    «Дизайн-система → Компоненты». */
 
-export * from './brand';
+export * from '@/shared/kit/brand';
 export * from './base';
 export * from './forms';
 export * from './nav';

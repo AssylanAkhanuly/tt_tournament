@@ -36,11 +36,26 @@ import {
   ArrowRight, Check, Gavel, History, Pause, Radio, RefreshCw, Timer, Undo2,
 } from 'lucide-react';
 import { Avatar, Button, Chip, InputOTP, REGEXP_ONLY_DIGITS } from '@heroui/react';
+import { A, AW } from '../fedCommon';
 import {
-  A, Bar, DataTable, DisabledAction, EmptyBox, FieldView, FormGrid, GameCells, Phone,
-  PhoneRoleApp, PickField, Pill, Row, Rows, ScreenScope, TextInput, WebApp,
+  Bar,
+  DataTable,
+  DisabledAction,
+  EmptyBox,
+  FieldView,
+  FormGrid,
+  GameCells,
+  Phone,
+  PhoneRoleApp,
+  PickField,
+  Pill,
+  Row,
+  Rows,
+  ScreenScope,
+  TextInput,
+  WebApp,
   type RoleUI,
-} from '../kit/hero/app';
+} from '@/shared/kit/app';
 /* Бренд — общий примитив: тот же знак, что в шапке оболочек нового слоя. */
 import { Brand } from '../ui';
 /* Из старого слоя остаются только мета-компоненты борда: колонки, стрелки и

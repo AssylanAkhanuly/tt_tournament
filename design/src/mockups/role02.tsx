@@ -13,12 +13,31 @@ import {
   Banknote, Download, FileSpreadsheet, FileWarning, RefreshCw, Undo2, Wallet,
 } from 'lucide-react';
 import { Avatar, Button } from '@heroui/react';
+import { A, AW } from '../fedCommon';
 import {
-  A, AW, Bar, DataTable, DisabledAction, EmptyBox, Facts, FieldView,
-  FilterSeg, FormGrid, InlineDialog, KV, Panel, PhoneRoleApp, PickField, Pill, QuietAction, Row,
-  Rows, ScreenScope, SearchInput, TextInput, WebApp,
+  Bar,
+  DataTable,
+  DisabledAction,
+  EmptyBox,
+  Facts,
+  FieldView,
+  FilterSeg,
+  FormGrid,
+  InlineDialog,
+  KV,
+  Panel,
+  PhoneRoleApp,
+  PickField,
+  Pill,
+  QuietAction,
+  Row,
+  Rows,
+  ScreenScope,
+  SearchInput,
+  TextInput,
+  WebApp,
   type RoleUI,
-} from '../kit/hero/app';
+} from '@/shared/kit/app';
 /* Из старого слоя остаются только мета-компоненты борда: колонки, стрелки,
    полки состояний и «ещё один кадр». Сами экраны собраны новым слоем. */
 import { Also, Board, States, Shot, type ScreenMap } from './shell';

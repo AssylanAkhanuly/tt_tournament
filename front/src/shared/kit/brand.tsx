@@ -16,7 +16,7 @@
    • **две строки** — язык карточки сущности, поэтому `sub` уместен на
      телефонных шапках, где локап и есть всё содержимое шапки. */
 
-import markUrl from '../../../brand/fnt/fnt-mark.svg';
+import markUrl from '@/shared/kit/brand/fnt-mark.svg';
 import './brand.css';
 
 const cx = (...p: (string | false | undefined)[]) => p.filter(Boolean).join(' ');

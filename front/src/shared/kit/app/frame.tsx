@@ -11,7 +11,7 @@
    стоит полтора десятка экранов разом, и портал одного накрыл бы все. */
 
 import type { CSSProperties, ReactNode } from 'react';
-import '../../tailwind.css'; // собран из tailwind.src.css: npm run kit:css
+import '../tailwind.css'; // собран из tailwind.src.css: npm run kit:css
 
 /** Гарнитура нового слоя: Inter грузится глобально (src/fonts.ts). */
 const FONT: CSSProperties = {

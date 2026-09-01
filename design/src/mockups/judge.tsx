@@ -18,7 +18,7 @@ import {
   FileUp, GraduationCap, History, LayoutDashboard, ListChecks, Scale, Table2, Trophy,
 } from 'lucide-react';
 import { Avatar, Button } from '@heroui/react';
-import { Bar, Bars, ChartRow, Donut, Facts, KV, Panel, Pill, Row, Rows, Sheet, StatTiles } from '../kit/hero/app';
+import { Bar, Bars, ChartRow, Donut, Facts, KV, Panel, Pill, Row, Rows, Sheet, StatTiles } from '@/shared/kit/app';
 
 /* ── Разделы судьи: одна навигация на оба контура ────────────────── */
 

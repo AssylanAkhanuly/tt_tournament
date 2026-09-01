@@ -19,7 +19,7 @@
 
 import type { ReactNode } from 'react';
 import { Laptop, Phone } from './frame';
-import { Brand } from '../../../ui';
+import { Brand } from '../brand';
 
 /** Номер вопроса в навигаторе: отвечен, текущий, ещё не открыт. */
 export type ExamMark = { n: number; answered?: boolean; current?: boolean };

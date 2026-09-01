@@ -19,13 +19,21 @@ import { fileURLToPath } from 'node:url';
 // Через fileURLToPath, а не `.pathname`: на Windows тот отдаёт «/C:/…», и
 // join() склеивает «C:\C:\…» — проверка падала, не начав работу.
 const ROOT = fileURLToPath(new URL('..', import.meta.url));
-const SCAN = ['src', 'gen'];
+/* Кит и токены переехали в приложение ✳ (01.09.2026): компоненты принадлежат
+   тому, что отгружается, а Storybook показывает ровно их. Проверка идёт по
+   обоим местам сразу — иначе сырой цвет в ките никто бы не поймал. */
+const SCAN = ['src', 'gen', '../front/src/shared/kit'];
 const SKIP_DIRS = new Set(['node_modules', 'out', 'assets']);
-const TOKENS_FILE = 'src/theme/tokens.css';
+const TOKENS_FILE = '../front/src/shared/kit/theme/tokens.css';
 /* Инструменты темы работают с «сырыми» цветами по своей природе: список тем,
    хранилище своей палитры и конструктор с пипетками. Всё остальное — только
    токены. */
-const SKIP_RAW = new Set([TOKENS_FILE, 'src/theme/themes.ts', 'src/theme/custom.ts', 'src/theme/Builder.tsx']);
+const SKIP_RAW = new Set([
+  TOKENS_FILE,
+  '../front/src/shared/kit/theme/themes.ts',
+  '../front/src/shared/kit/theme/custom.ts',
+  'src/theme/Builder.tsx',
+]);
 /* Сборка Tailwind — артефакт, а не наш код: его пишет `npm run kit:css` из
    `src/kit/tailwind.src.css`. Внутри тысячи сырых цветов и радиусов самой
    библиотеки; проверять их бессмысленно, править нечего. Источник рядом
@@ -60,7 +68,7 @@ const read = (f) => readFileSync(f, 'utf8');
 /* известные токены: всё, что объявлено в tokens.css, темах и в самих файлах */
 const known = new Set(['--font']);
 for (const m of read(join(ROOT, TOKENS_FILE)).matchAll(VAR_DEF)) known.add(m[1]);
-for (const m of read(join(ROOT, 'src/theme/themes.ts')).matchAll(/'(--[\w-]+)'/g)) known.add(m[1]);
+for (const m of read(join(ROOT, '../front/src/shared/kit/theme/themes.ts')).matchAll(/'(--[\w-]+)'/g)) known.add(m[1]);
 for (const f of files) for (const m of read(f).matchAll(VAR_DEF)) known.add(m[1]);
 
 const rawHits = [];
@@ -113,7 +121,7 @@ const contrastOf = (a, b) => {
   return (hi + 0.05) / (lo + 0.05);
 };
 
-const themesSrc = readFileSync(join(ROOT, 'src/theme/themes.ts'), 'utf8');
+const themesSrc = readFileSync(join(ROOT, '../front/src/shared/kit/theme/themes.ts'), 'utf8');
 const inkHits = [];
 for (const m of themesSrc.matchAll(
   /id: '([a-z-]+)'[\s\S]{0,400}?seeds: (?:light|dark)\(\{ accent: '(#[0-9a-f]{6})'/g,

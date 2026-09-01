@@ -41,20 +41,46 @@ import {
   Lock, Newspaper, Receipt, Send, Trophy, User, X,
 } from 'lucide-react';
 import { Avatar, Button, Chip } from '@heroui/react';
+import { A, AW } from '../fedCommon';
 import {
-  A, BackLink, Bar, DataTable, DisabledAction, EmptyBox, EventTimeline, FieldView,
-  FileDrop, FilterSeg, FormGrid, GameCells, KV, Laptop, PageTabs, Pager, Panel,
-  Phone, PhoneApp, PickField, Pill, PrimaryAction, QuietAction, Row, Rows, ScreenScope,
-  SearchInput, TextInput, WebApp,
-  type RoleUI, type TimelineItem,
+  BackLink,
+  Bar,
+  DataTable,
+  DisabledAction,
+  EmptyBox,
+  EventTimeline,
+  FieldView,
+  FileDrop,
+  FilterSeg,
+  FormGrid,
+  GameCells,
+  KV,
+  Laptop,
+  PageTabs,
+  Pager,
+  Panel,
+  Phone,
+  PhoneApp,
+  PickField,
+  Pill,
+  PrimaryAction,
+  QuietAction,
+  Row,
+  Rows,
+  ScreenScope,
+  SearchInput,
+  TextInput,
+  WebApp,
+  type RoleUI,
+  type TimelineItem,
   Sheet,
-} from '../kit/hero/app';
+} from '@/shared/kit/app';
 /* Из старого слоя остаются только мета-компоненты борда: колонки, стрелки и
    полки состояний. Сами экраны собраны новым слоем. */
 import { Board, States, Shot, type ScreenMap } from './shell';
 /* Графики настоящие (Chart.js): нарисованная ломаная не отвечает на вопросы,
    которые задают графику. Холст обёрнут в Panel нового слоя. */
-import { ChartBox, soft, token } from './chart';
+import { ChartBox, soft, token } from '@/shared/kit/chart';
 /* Сетка — настоящий компонент фронта: вторая нарисованная сетка разошлась бы
    с той, что увидят в продукте. */
 import { BracketFlow } from '@/widgets/bracket/BracketFlow';

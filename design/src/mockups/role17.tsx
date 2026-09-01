@@ -14,10 +14,21 @@
 
 import { Building2, MapPin, Save, Users } from 'lucide-react';
 import { Button } from '@heroui/react';
+import { A, AW } from '../fedCommon';
 import {
-  A, Bar, Facts, FormGrid, Panel, PhoneRoleApp, Pill, Row, Rows, StatTiles, TextInput, WebApp,
+  Bar,
+  Facts,
+  FormGrid,
+  Panel,
+  PhoneRoleApp,
+  Pill,
+  Row,
+  Rows,
+  StatTiles,
+  TextInput,
+  WebApp,
   type RoleUI,
-} from '../kit/hero/app';
+} from '@/shared/kit/app';
 import { Board, type ScreenMap } from './shell';
 
 /* Роль региона: свой кабинет, свой регион в шапке. */

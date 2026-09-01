@@ -24,13 +24,40 @@ import {
   Play, RotateCcw, Send, Undo2,
 } from 'lucide-react';
 import { Avatar, Button } from '@heroui/react';
+import { A, AW } from '../fedCommon';
 import {
-  A, Attention, Bar, EmptyBox, ExamClock, ExamNav, ExamPhone, ExamShell, Facts, FieldView,
-  FilterSeg, FormGrid, KV, Panel, PhoneRoleApp,
-  Pill, QuestionCard, QuietAction, QuizProgress, QuizResult, Row, Rows, ST, ScreenScope,
-  SearchInput, SeasonTable, StatTiles, WebApp,
-  type AttnItem, type Question, type RoleUI, type SeasonRow,
-} from '../kit/hero/app';
+  Attention,
+  Bar,
+  EmptyBox,
+  ExamClock,
+  ExamNav,
+  ExamPhone,
+  ExamShell,
+  Facts,
+  FieldView,
+  FilterSeg,
+  FormGrid,
+  KV,
+  Panel,
+  PhoneRoleApp,
+  Pill,
+  QuestionCard,
+  QuietAction,
+  QuizProgress,
+  QuizResult,
+  Row,
+  Rows,
+  ST,
+  ScreenScope,
+  SearchInput,
+  SeasonTable,
+  StatTiles,
+  WebApp,
+  type AttnItem,
+  type Question,
+  type RoleUI,
+  type SeasonRow,
+} from '@/shared/kit/app';
 /* Из старого слоя остаются только мета-компоненты борда: колонки, стрелки и
    полки состояний. Сами экраны собраны новым слоем. */
 import { Also, Board, States, Shot, type ScreenMap } from './shell';

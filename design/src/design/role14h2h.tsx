@@ -26,7 +26,7 @@
    Цвет и радиусы — палитра референса `--d-*` и радиусы `--r-d-*`, те же, что
    у варианта Д профиля (`role14prof2.css`). */
 
-import { ChartBox, soft, token } from '../mockups/chart';
+import { ChartBox, soft, token } from '@/shared/kit/chart';
 import { Frame } from '../PlayerApp';
 import { MiniTabBar } from '../respShell';
 import { RoleScreen } from '../mockups/shell';

@@ -19,11 +19,24 @@
 import { useState, type ReactNode } from 'react';
 import { Bookmark, Download, Eye, FileText, Gavel, History, Paperclip, Send } from 'lucide-react';
 import { Button, Chip } from '@heroui/react';
+import { A, AW } from '../fedCommon';
 import {
-  A, Bar, EmptyBox, FieldView, FilterSeg, FormGrid, Panel, PhoneRoleApp, Pill, Row, Rows,
-  ScreenScope, SearchInput, WebApp, type RoleUI,
+  Bar,
+  EmptyBox,
+  FieldView,
+  FilterSeg,
+  FormGrid,
+  Panel,
+  PhoneRoleApp,
+  Pill,
+  Row,
+  Rows,
+  ScreenScope,
+  SearchInput,
+  WebApp,
+  type RoleUI,
   Sheet,
-} from '../kit/hero/app';
+} from '@/shared/kit/app';
 /* Из старого слоя остаются только мета-компоненты борда: колонки, стрелки и
    полки состояний. Сами экраны собраны новым слоем. */
 import { Board, States, Shot, type ScreenMap } from './shell';

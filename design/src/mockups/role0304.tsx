@@ -15,10 +15,23 @@ import {
   BarChart3, Bell, CalendarDays, ClipboardList, Download, LayoutDashboard, Printer, Users,
 } from 'lucide-react';
 import { Button } from '@heroui/react';
+import { A, AW } from '../fedCommon';
 import {
-  A, AW, Bar, DataTable, EmptyBox, FilterSeg, Panel, PhoneRoleApp, Pill, Row, Rows, ScreenScope,
-  SearchInput, StatTiles, WebApp, type RoleUI,
-} from '../kit/hero/app';
+  Bar,
+  DataTable,
+  EmptyBox,
+  FilterSeg,
+  Panel,
+  PhoneRoleApp,
+  Pill,
+  Row,
+  Rows,
+  ScreenScope,
+  SearchInput,
+  StatTiles,
+  WebApp,
+  type RoleUI,
+} from '@/shared/kit/app';
 /* Из старого слоя остаются только мета-компоненты борда: колонки, стрелки и
    полки состояний. Сами экраны собраны новым слоем. */
 import { Board, States, Shot, type ScreenMap } from './shell';

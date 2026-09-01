@@ -15,12 +15,40 @@ import {
   ChevronDown, ClipboardCheck, Paperclip, Search as SearchIcon, Trophy, UserPlus, Users,
 } from 'lucide-react';
 import { Avatar, Button } from '@heroui/react';
+import { A, AW } from '../fedCommon';
 import {
-  A, AW, Bar, Calendar, DataTable, DayList, EmptyBox, EventTimeline, Facts, FieldView, FilterSeg,
-  FormGrid, MiniMonth, PageTabs, Panel, PhoneRoleApp, Pill, PrimaryAction, QuietAction, Row, Rows,
-  ScreenScope, SearchInput, SeasonTable, StatusChip, TextInput, WebApp,
-  type CalEvent, type CalTone, type RoleUI, type SeasonRow, type St, type TimelineItem,
-} from '../kit/hero/app';
+  Bar,
+  Calendar,
+  DataTable,
+  DayList,
+  EmptyBox,
+  EventTimeline,
+  Facts,
+  FieldView,
+  FilterSeg,
+  FormGrid,
+  MiniMonth,
+  PageTabs,
+  Panel,
+  PhoneRoleApp,
+  Pill,
+  PrimaryAction,
+  QuietAction,
+  Row,
+  Rows,
+  ScreenScope,
+  SearchInput,
+  SeasonTable,
+  StatusChip,
+  TextInput,
+  WebApp,
+  type CalEvent,
+  type CalTone,
+  type RoleUI,
+  type SeasonRow,
+  type St,
+  type TimelineItem,
+} from '@/shared/kit/app';
 /* Из старого слоя остаются только мета-компоненты борда: колонки, стрелки,
    полки состояний и врезки. Сами экраны собраны новым слоем. */
 import { Also, Board, States, Shot, type ScreenMap } from './shell';

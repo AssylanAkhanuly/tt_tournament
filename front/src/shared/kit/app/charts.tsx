@@ -18,7 +18,7 @@
    Палитра берётся из токенов, сырых цветов здесь нет. */
 
 import { useCallback, type ReactNode } from 'react';
-import { ChartBox, soft, token } from '../../../mockups/chart';
+import { ChartBox, soft, token } from '../chart';
 
 /** Доли кольца по умолчанию — шкала акцента, а не светофор ✳. Слагаемые
     рейтинга не бывают «хорошими» и «плохими»: S4 = 0 покрасить красным значило

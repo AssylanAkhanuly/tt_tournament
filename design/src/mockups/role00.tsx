@@ -21,12 +21,34 @@ import {
   ShieldCheck, Smartphone, Trophy, UserCog, UserPlus,
 } from 'lucide-react';
 import { Avatar, Button, Chip, InputOTP, REGEXP_ONLY_DIGITS } from '@heroui/react';
+import { A, AW } from '../fedCommon';
 import {
-  A, AW, BackLink, Bar, DataTable, DisabledAction, EmptyBox, Facts, FieldView, FormGrid,
-  GameCells, Laptop, MatchCard, PageTabs, Panel, Phone, PhoneRoleApp, PickField, Pill, QuietAction,
-  Row, Rows, ScreenScope, Separator, TextInput, WebApp,
+  BackLink,
+  Bar,
+  DataTable,
+  DisabledAction,
+  EmptyBox,
+  Facts,
+  FieldView,
+  FormGrid,
+  GameCells,
+  Laptop,
+  MatchCard,
+  PageTabs,
+  Panel,
+  Phone,
+  PhoneRoleApp,
+  PickField,
+  Pill,
+  QuietAction,
+  Row,
+  Rows,
+  ScreenScope,
+  Separator,
+  TextInput,
+  WebApp,
   type RoleUI,
-} from '../kit/hero/app';
+} from '@/shared/kit/app';
 /* Из старого слоя остаются только мета-компоненты борда: колонки, стрелки и
    полки состояний. Сами экраны собраны новым слоем. */
 import { Also, Board, Shot, States, type ScreenMap } from './shell';

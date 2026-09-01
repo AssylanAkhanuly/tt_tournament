@@ -14,7 +14,7 @@
 import { useState, type ReactNode } from 'react';
 import { ArrowLeft, Bell, Check, ChevronDown, ChevronsUpDown, LogOut, MoreHorizontal, User } from 'lucide-react';
 import { Avatar, Chip, Separator } from '@heroui/react';
-import { Brand } from '../../../ui';
+import { Brand } from '../brand';
 import { Laptop, Phone } from './frame';
 
 /** Кто «сидит» за экраном роли — подпись профиля в шапке.

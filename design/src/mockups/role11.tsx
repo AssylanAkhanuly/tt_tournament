@@ -15,17 +15,38 @@ import {
   Download, Eye, FileText, Plane, Plus, Star, User, Users, Users2,
 } from 'lucide-react';
 import { Avatar, Button } from '@heroui/react';
+import { A, AW } from '../fedCommon';
 import {
-  A, AW, Bar, Bars, ChartRow, DataTable, Donut, EventTimeline, Facts, FilterBar, FilterSeg, KV,
-  PageTabs, Panel, PhoneRoleApp, Pill, Row, Rows, ScreenScope, SearchInput, Separator, Sheet,
-  StatTiles, WebApp, type RoleUI,
-} from '../kit/hero/app';
+  Bar,
+  Bars,
+  ChartRow,
+  DataTable,
+  Donut,
+  EventTimeline,
+  Facts,
+  FilterBar,
+  FilterSeg,
+  KV,
+  PageTabs,
+  Panel,
+  PhoneRoleApp,
+  Pill,
+  Row,
+  Rows,
+  ScreenScope,
+  SearchInput,
+  Separator,
+  Sheet,
+  StatTiles,
+  WebApp,
+  type RoleUI,
+} from '@/shared/kit/app';
 /* Из старого слоя остаются только мета-компоненты борда: колонки, стрелки и
    полки состояний. Сами экраны собраны новым слоем. */
 import { Board, States, Shot, type ScreenMap } from './shell';
 /* График — настоящий Chart.js, как у спортсмена (роль 14): нарисованная ломаная
    не ответила бы, что было в январе. Цвета — токенами через getComputedStyle. */
-import { ChartBox, soft, token } from './chart';
+import { ChartBox, soft, token } from '@/shared/kit/chart';
 import { Login0_1, LoginPhone0_1 } from './role00';
 
 /* ── Роль: сайдбар и подпись профиля ─────────────────────────────── */

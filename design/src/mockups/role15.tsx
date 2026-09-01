@@ -22,12 +22,25 @@ import {
   CalendarDays, ClipboardList, Gavel, GraduationCap, ListChecks, Scale, Send, Undo2, UserPlus, X,
 } from 'lucide-react';
 import { Avatar, Button, Meter } from '@heroui/react';
+import { A, AW } from '../fedCommon';
 import {
-  A, AW, Bar, EmptyBox, FileDrop, FormGrid, InlineDialog, PhoneRoleApp, PickField, Pill, Panel,
-  Row, Rows, ScreenScope, TextInput, WebApp,
+  Bar,
+  EmptyBox,
+  FileDrop,
+  FormGrid,
+  InlineDialog,
+  PhoneRoleApp,
+  PickField,
+  Pill,
+  Panel,
+  Row,
+  Rows,
+  ScreenScope,
+  TextInput,
+  WebApp,
   type RoleUI,
   Sheet,
-} from '../kit/hero/app';
+} from '@/shared/kit/app';
 /* Из старого слоя остаются только мета-компоненты борда: колонки, стрелки и
    полки состояний. Сами экраны собраны новым слоем. */
 import { Board, States, Shot, type ScreenMap } from './shell';

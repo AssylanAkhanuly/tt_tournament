@@ -7,9 +7,8 @@
 
 import { CalendarDays, FileCheck2, Gauge, Landmark, Megaphone, Users } from 'lucide-react';
 import { Button } from '@heroui/react';
+import { A, AW } from '../../../fedCommon';
 import {
-  A,
-  AW,
   Attention,
   Bar,
   Calendar,
@@ -46,7 +45,7 @@ import {
   TextInput,
   WebApp,
   type RoleUI,
-} from './index';
+} from '@/shared/kit/app';
 import { useState } from 'react';
 
 export default {

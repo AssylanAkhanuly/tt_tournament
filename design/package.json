@@ -11,7 +11,7 @@
     "gen:flows": "node scripts/gen-flow-stories.mjs",
     "lint:docs": "node scripts/lint-docs.mjs",
     "shot": "node scripts/shot.mjs",
-    "kit:css": "tailwindcss -i src/kit/tailwind.src.css -o src/kit/tailwind.css"
+    "kit:css": "npm --prefix ../front run kit:css"
   },
   "dependencies": {
     "@heroui/react": "^3.2.4",

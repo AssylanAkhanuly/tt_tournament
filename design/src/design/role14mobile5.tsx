@@ -26,7 +26,7 @@ import { Frame } from '../PlayerApp';
 import { MiniTabBar } from '../respShell';
 import { A } from '../fedCommon';
 import { Chrome, NAV } from './role14mobile';
-import { ChartBox, soft, token } from '../mockups/chart';
+import { ChartBox, soft, token } from '@/shared/kit/chart';
 import { RESULTS } from './role14home';
 import './role14mobile5.css';
 

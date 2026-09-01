@@ -17,7 +17,7 @@ import { useState, type ReactNode } from 'react';
 import { UNSAFE_PortalProvider } from 'react-aria';
 import { I18nProvider } from '@heroui/react';
 import { A, AW } from '../../fedCommon';
-import '../tailwind.css'; // собран из tailwind.src.css: npm run kit:css
+import '@/shared/kit/tailwind.css'; // собран из tailwind.src.css: npm run kit:css
 
 export { A, AW };
 

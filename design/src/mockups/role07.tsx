@@ -13,11 +13,27 @@ import {
   ArrowUpDown, CalendarDays, Grid3x3, LayoutDashboard, Printer, RefreshCw, Scroll, Send, Shuffle,
 } from 'lucide-react';
 import { Avatar, Button } from '@heroui/react';
+import { A, AW } from '../fedCommon';
 import {
-  A, AW, AreaInput, Bar, FieldView, FilterSeg, FormGrid, KV, Panel, PhoneRoleApp, Pill, Row, Rows,
-  ScreenScope, SearchInput, StatTiles, TextInput, WebApp, type RoleUI,
+  AreaInput,
+  Bar,
+  FieldView,
+  FilterSeg,
+  FormGrid,
+  KV,
+  Panel,
+  PhoneRoleApp,
+  Pill,
+  Row,
+  Rows,
+  ScreenScope,
+  SearchInput,
+  StatTiles,
+  TextInput,
+  WebApp,
+  type RoleUI,
   Sheet,
-} from '../kit/hero/app';
+} from '@/shared/kit/app';
 /* Из старого слоя остаются только мета-компоненты борда: колонки, стрелки и
    полки состояний. Сами экраны собраны новым слоем. */
 import { Board, States, Shot, type ScreenMap } from './shell';

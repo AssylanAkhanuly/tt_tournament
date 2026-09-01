@@ -21,11 +21,32 @@ import {
   Download, FileText, History, Newspaper, Scroll, Send, Trophy, User, X,
 } from 'lucide-react';
 import { Avatar, Button } from '@heroui/react';
+import { A, AW } from '../fedCommon';
 import {
-  A, AW, AreaInput, Bar, DataTable, DisabledAction, EmptyBox, Facts, FilterSeg, GameCells,
-  InlineDialog, KV, MatchCard, Panel, PhoneRoleApp, PickField, Pill, PrimaryAction, QuietAction,
-  Row, Rows, ScreenScope, SearchInput, WebApp, type RoleUI,
-} from '../kit/hero/app';
+  AreaInput,
+  Bar,
+  DataTable,
+  DisabledAction,
+  EmptyBox,
+  Facts,
+  FilterSeg,
+  GameCells,
+  InlineDialog,
+  KV,
+  MatchCard,
+  Panel,
+  PhoneRoleApp,
+  PickField,
+  Pill,
+  PrimaryAction,
+  QuietAction,
+  Row,
+  Rows,
+  ScreenScope,
+  SearchInput,
+  WebApp,
+  type RoleUI,
+} from '@/shared/kit/app';
 /* Из старого слоя остаются только мета-компоненты борда: колонки, стрелки и
    полки состояний. Сами экраны собраны новым слоем. */
 import { Board, States, Shot, type ScreenMap } from './shell';

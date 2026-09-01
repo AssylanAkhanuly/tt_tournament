@@ -18,12 +18,35 @@ import {
   Printer, Radio, Scroll, Shield, Shuffle, Timer, X,
 } from 'lucide-react';
 import { Avatar, Button, Chip } from '@heroui/react';
+import { A, AW } from '../fedCommon';
 import {
-  A, AW, Bar, DataTable, DisabledAction, EmptyBox, FieldView, FilterSeg, FormGrid, GameCells,
-  InlineDialog, MatchCard, PageTabs, Panel, PhoneRoleApp, Pill, PrimaryAction, QuietAction, Row,
-  Rows, ScreenScope, StatTiles, TextInput, TimeGrid, WebApp, type RoleUI, type SlotEvent,
+  Bar,
+  DataTable,
+  DisabledAction,
+  EmptyBox,
+  FieldView,
+  FilterSeg,
+  FormGrid,
+  GameCells,
+  InlineDialog,
+  MatchCard,
+  PageTabs,
+  Panel,
+  PhoneRoleApp,
+  Pill,
+  PrimaryAction,
+  QuietAction,
+  Row,
+  Rows,
+  ScreenScope,
+  StatTiles,
+  TextInput,
+  TimeGrid,
+  WebApp,
+  type RoleUI,
+  type SlotEvent,
   Sheet,
-} from '../kit/hero/app';
+} from '@/shared/kit/app';
 /* Из старого слоя остаются только мета-компоненты борда: колонки, стрелки и
    полки состояний. Сами экраны собраны новым слоем. */
 import { Board, States, Shot, type ScreenMap } from './shell';
