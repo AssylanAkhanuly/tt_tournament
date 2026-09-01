@@ -183,3 +183,16 @@
   border-color: var(--c-glass-line, rgba(15, 23, 42, 0.12));
 }
 .light .dim { opacity: 0.5; }
+
+/* Текст на светлом холсте ✳ (01.09.2026). Цвета выше писались под тёмный тон и
+   держались на токенах кита (`--c-ink` и соседних). В приложении их нет, и
+   подставлялся запасной цвет тёмной темы: фамилия победителя выходила
+   почти белой по белому — то есть исчезала ровно у того, кто выиграл.
+   Здесь берём токены самого приложения, они светлые. */
+.light .name { color: var(--muted, #737373); }
+.light .win { color: var(--text, #171717); }
+.light .tbd { color: var(--muted, #737373); }
+.light .score { color: var(--muted, #737373); }
+.light .scoreWin { color: var(--primary, #2563eb); }
+.light .divider { background: var(--line, #e5e5e5); }
+.light .round { color: var(--muted, #737373); }

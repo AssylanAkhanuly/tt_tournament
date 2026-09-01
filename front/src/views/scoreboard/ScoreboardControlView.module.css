@@ -34,8 +34,8 @@
   padding: var(--pad-y) var(--pad-x);
   overflow: hidden;
   overscroll-behavior: none;
-  background: #f7f8fa;
-  color: #171717;
+  background: var(--bg);
+  color: var(--text);
 }
 
 /* Тап не должен ждать «а вдруг это двойной» и подсвечиваться серым. */
@@ -52,10 +52,10 @@
   display: grid;
   place-items: center;
   padding: clamp(6px, 1vh, 14px);
-  border: 1px solid #e5e5e5;
+  border: 1px solid var(--line);
   border-radius: 12px;
   background:
-    repeating-conic-gradient(#eceef1 0% 25%, #f7f8fa 0% 50%) 50% / 24px 24px;
+    repeating-conic-gradient(var(--elevated) 0% 25%, var(--bg) 0% 50%) 50% / 24px 24px;
 }
 
 .preview {
