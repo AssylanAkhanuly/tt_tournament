@@ -220,3 +220,13 @@
 .teamColon {
   color: var(--sb-ink-dim);
 }
+
+/* Подпись у счёта встречи — только когда названий команд нет: с названиями она
+   лишняя, «АЛАТАУ 1 : 2 БАРЫС» и так читается однозначно. */
+.teamCaption {
+  margin-right: calc(6 * var(--sb-unit));
+  color: var(--sb-ink-dim);
+  font-size: calc(15 * var(--sb-unit));
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}

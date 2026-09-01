@@ -89,16 +89,25 @@ function Row({
 /** Счёт командной встречи — над игроками: он про всю встречу, а не про этот
  *  стол, и зритель читает его первым (образец федерации, 29.08.2026). */
 function TeamStrip({ state }: { state: ScoreboardState }) {
+  const left = teamLabel(state, 'left');
+  const right = teamLabel(state, 'right');
+  /* Названия команд заполняют не всегда, а в начале встречи — почти никогда.
+     Без них полоса вырождалась в пару чисел посреди пустоты, и зритель не
+     понимал, чей это счёт: всей встречи или этого стола. Пустое название
+     заменяем подписью «СЧЁТ ВСТРЕЧИ» в середине — у чисел появляется хозяин,
+     и плашка остаётся читаемой в эфире с первой секунды. */
+  const named = Boolean(left || right);
   return (
-    <div className={styles.teams} data-testid="team-score">
-      <span className={styles.teamName}>{teamLabel(state, 'left')}</span>
+    <div className={styles.teams} data-testid="team-score" data-named={named || undefined}>
+      <span className={styles.teamName}>{left}</span>
       <span className={styles.teamScore}>
+        {!named && <span className={styles.teamCaption}>счёт встречи</span>}
         <span data-testid="team-left">{state.team.left}</span>
         <span className={styles.teamColon}>:</span>
         <span data-testid="team-right">{state.team.right}</span>
       </span>
       <span className={styles.teamName} data-side="right">
-        {teamLabel(state, 'right')}
+        {right}
       </span>
     </div>
   );
