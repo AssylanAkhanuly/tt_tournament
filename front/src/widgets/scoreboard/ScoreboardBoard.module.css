@@ -186,13 +186,28 @@
    первым (образец федерации «SPAIN (ESP) 3 : 2 GERMANY»). Названия по краям
    тянутся, счёт держится в середине и не гуляет от длины названий. */
 .teams {
+  position: relative; /* подпись «счёт встречи» лежит по центру поверх полосы */
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
-  gap: calc(12 * var(--sb-unit));
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: calc(10 * var(--sb-unit));
   align-items: center;
   height: calc(34 * var(--sb-unit));
   padding: 0 calc(14 * var(--sb-unit));
   background: var(--sb-navy);
+}
+
+/* Название и его счёт — одной группой ✳ (01.09.2026): число прижато к своей
+   команде. Раньше названия стояли по краям, а счёт посередине, и связь
+   «чей это счёт» зритель достраивал сам. */
+.teamSide {
+  display: flex;
+  gap: calc(10 * var(--sb-unit));
+  align-items: center;
+  min-width: 0;
+}
+
+.teamSide[data-side='right'] {
+  justify-content: flex-end;
 }
 
 .teamName {
@@ -204,27 +219,40 @@
   white-space: nowrap;
 }
 
-.teamName[data-side='right'] {
-  text-align: right;
-}
-
-.teamScore {
-  display: flex;
-  gap: calc(8 * var(--sb-unit));
-  align-items: center;
-  justify-content: center;
-  font-size: calc(26 * var(--sb-unit));
+/* Счёт команды. Ведущая залита акцентом — «кто выигрывает» читается цветом
+   раньше, чем человек сравнил цифры. Отстающая остаётся на фоне полосы. */
+.teamNum {
+  display: grid;
+  place-items: center;
+  min-width: calc(34 * var(--sb-unit));
+  height: calc(28 * var(--sb-unit));
+  padding: 0 calc(6 * var(--sb-unit));
+  border-radius: calc(4 * var(--sb-unit));
+  background: color-mix(in srgb, var(--sb-ink) 12%, transparent);
+  font-size: calc(22 * var(--sb-unit));
+  font-weight: 800;
   font-variant-numeric: tabular-nums;
 }
 
-.teamColon {
-  color: var(--sb-ink-dim);
+.teamNum[data-lead] {
+  background: var(--sb-azure);
+  color: var(--sb-ink);
 }
+
+
 
 /* Подпись у счёта встречи — только когда названий команд нет: с названиями она
    лишняя, «АЛАТАУ 1 : 2 БАРЫС» и так читается однозначно. */
+/* Подпись вместо названий, когда команды не подписаны. Она не участвует в
+   сетке, а лежит по центру поверх полосы: иначе занимает собственную строку и
+   выталкивает счёт за пределы полосы фиксированной высоты. */
 .teamCaption {
-  margin-right: calc(6 * var(--sb-unit));
+  position: absolute;
+  top: 50%;
+  right: 0;
+  left: 0;
+  transform: translateY(-50%);
+  text-align: center;
   color: var(--sb-ink-dim);
   font-size: calc(15 * var(--sb-unit));
   letter-spacing: 0.08em;

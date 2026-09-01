@@ -97,17 +97,31 @@ function TeamStrip({ state }: { state: ScoreboardState }) {
      заменяем подписью «СЧЁТ ВСТРЕЧИ» в середине — у чисел появляется хозяин,
      и плашка остаётся читаемой в эфире с первой секунды. */
   const named = Boolean(left || right);
+  /* Кто ведёт. При равенстве — никто: ничья это ничья, а не «оба ведут». */
+  const lead =
+    state.team.left === state.team.right ? null : state.team.left > state.team.right ? 'left' : 'right';
   return (
     <div className={styles.teams} data-testid="team-score" data-named={named || undefined}>
-      <span className={styles.teamName}>{left}</span>
-      <span className={styles.teamScore}>
-        {!named && <span className={styles.teamCaption}>счёт встречи</span>}
-        <span data-testid="team-left">{state.team.left}</span>
-        <span className={styles.teamColon}>:</span>
-        <span data-testid="team-right">{state.team.right}</span>
+      {!named && <span className={styles.teamCaption}>счёт встречи</span>}
+
+      {/* Число прижато к своей команде, а не стоит посреди полосы: иначе
+          связь «это счёт вот этой команды» приходится достраивать в уме. */}
+      <span className={styles.teamSide}>
+        <span className={styles.teamName}>{left}</span>
+        <b className={styles.teamNum} data-lead={lead === 'left' || undefined} data-testid="team-left">
+          {state.team.left}
+        </b>
       </span>
-      <span className={styles.teamName} data-side="right">
-        {right}
+
+      {/* Двоеточия между половинами нет ✳: числа стоят у своих названий, и
+          разделять нечего — одинокий знак посреди метра пустоты только
+          сообщал бы, что счёт всё-таки где-то в середине. */}
+
+      <span className={styles.teamSide} data-side="right">
+        <b className={styles.teamNum} data-lead={lead === 'right' || undefined} data-testid="team-right">
+          {state.team.right}
+        </b>
+        <span className={styles.teamName}>{right}</span>
       </span>
     </div>
   );
