@@ -46,6 +46,7 @@ import {
   type RoleUI,
   type SlotEvent,
   Sheet,
+  Segmented,
 } from '@/shared/kit/app';
 /* Из старого слоя остаются только мета-компоненты борда: колонки, стрелки и
    полки состояний. Сами экраны собраны новым слоем. */
@@ -1096,7 +1097,7 @@ export function Bracket6_3() {
       <StatTiles items={tiles6_3(n)} />
 
       <div className="mb-4">
-        <FilterSeg items={DRAW_TABS} active={tab} onPick={setTab} />
+        <Segmented items={DRAW_TABS} value={tab} onPick={setTab} />
       </div>
 
       {tab === DRAW_TABS[0] && (
@@ -1260,7 +1261,7 @@ export function Bracket6_3Phone() {
       </PhoneTiles>
 
       <Strip>
-        <FilterSeg items={DRAW_TABS} active={tab} onPick={setTab} />
+        <Segmented items={DRAW_TABS} value={tab} onPick={setTab} />
       </Strip>
 
       {tab === DRAW_TABS[0] && (
@@ -1965,7 +1966,7 @@ export function Judges6_5() {
           заблокирована, а живой она бывает только на любительском турнире
           (кадр в полке состояний). */}
       <div className="mb-3 flex items-center justify-between gap-3">
-        <FilterSeg items={JUDGE_VIEWS} active={view} onPick={setView} />
+        <Segmented items={JUDGE_VIEWS} value={view} onPick={setView} />
         <span className="flex-1 text-right text-[12.5px] text-neutral-500">
           Официальный старт: судья на столе обязателен, пустой стол в игру не идёт
         </span>
@@ -2018,7 +2019,7 @@ export function Judges6_5Phone() {
       sub="Наряд набирает председатель ГСК (Э5.2) — судья расставляет его по столам"
     >
       <Strip>
-        <FilterSeg items={JUDGE_VIEWS} active={view} onPick={setView} />
+        <Segmented items={JUDGE_VIEWS} value={view} onPick={setView} />
       </Strip>
 
       {view === JUDGE_VIEWS[1] ? (
@@ -2324,7 +2325,7 @@ export function Protocol6_7() {
           из сетки: не сверив её, он утверждает список, происхождение которого
           не видел. */}
       <div className="mb-4">
-        <FilterSeg items={PROTO_VIEWS} active={view} onPick={setView} />
+        <Segmented items={PROTO_VIEWS} value={view} onPick={setView} />
       </div>
 
       {view === PROTO_VIEWS[1] && (
@@ -2463,7 +2464,7 @@ export function Protocol6_7Phone() {
       sub="Все 127 матчей сыграны · ввод результатов заблокирован"
     >
       <Strip>
-        <FilterSeg items={PROTO_VIEWS} active={view} onPick={setView} />
+        <Segmented items={PROTO_VIEWS} value={view} onPick={setView} />
       </Strip>
 
       {view === PROTO_VIEWS[1] && (

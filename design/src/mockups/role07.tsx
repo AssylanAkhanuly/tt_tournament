@@ -33,6 +33,7 @@ import {
   WebApp,
   type RoleUI,
   Sheet,
+  Segmented,
 } from '@/shared/kit/app';
 /* Из старого слоя остаются только мета-компоненты борда: колонки, стрелки и
    полки состояний. Сами экраны собраны новым слоем. */
@@ -707,7 +708,7 @@ export function Bracket7_3() {
           есть места в ней; а подсказка по системе стояла у главного судьи, хотя
           собирает по ней секретарь. */}
       <div className="mb-4">
-        <FilterSeg items={VIEW73} active={view} onPick={setView} />
+        <Segmented items={VIEW73} value={view} onPick={setView} />
       </div>
       {view === VIEW73[0] ? (
         <Systems7_3 />
@@ -934,7 +935,7 @@ export function Bracket7_3Phone() {
       )}
 
       <Strip>
-        <FilterSeg items={VIEW73} active={view} onPick={setView} />
+        <Segmented items={VIEW73} value={view} onPick={setView} />
       </Strip>
 
       {view === VIEW73[0] ? (

@@ -48,6 +48,7 @@ import {
   type SeasonRow,
   type St,
   type TimelineItem,
+  Segmented,
 } from '@/shared/kit/app';
 /* Из старого слоя остаются только мета-компоненты борда: колонки, стрелки,
    полки состояний и врезки. Сами экраны собраны новым слоем. */
@@ -487,7 +488,7 @@ export function Starts12_2({ view: initial }: { view?: string } = {}) {
             ? 'Полоса — сам старт, жёлтым — срок заявки; клик открывает то же, что строка списка'
             : '8 главных стартов сезона · строка открывает то, что с ней делают'}
         </span>
-        <FilterSeg items={VIEWS12_2} active={view} onPick={setView} />
+        <Segmented items={VIEWS12_2} value={view} onPick={setView} />
       </div>
 
       {view === 'Календарь' ? <SeasonCalendar12_2 /> : <SeasonTable rows={rows} />}

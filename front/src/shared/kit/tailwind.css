@@ -20,6 +20,7 @@
     --color-amber-100: oklch(96.2% 0.059 95.617);
     --color-amber-200: oklch(92.4% 0.12 95.746);
     --color-amber-300: oklch(87.9% 0.169 91.605);
+    --color-amber-400: oklch(82.8% 0.189 84.429);
     --color-amber-500: oklch(76.9% 0.188 70.08);
     --color-amber-600: oklch(66.6% 0.179 58.318);
     --color-amber-700: oklch(55.5% 0.163 48.998);
@@ -285,6 +286,12 @@
 .h-9 {
   height: calc(var(--spacing) * 9);
 }
+.h-11 {
+  height: calc(var(--spacing) * 11);
+}
+.h-12 {
+  height: calc(var(--spacing) * 12);
+}
 .h-14 {
   height: calc(var(--spacing) * 14);
 }
@@ -338,6 +345,9 @@
 }
 .w-9 {
   width: calc(var(--spacing) * 9);
+}
+.w-11 {
+  width: calc(var(--spacing) * 11);
 }
 .w-14 {
   width: calc(var(--spacing) * 14);
@@ -439,6 +449,9 @@
 .grid-cols-2 {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
+.grid-cols-3 {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
 .grid-cols-5 {
   grid-template-columns: repeat(5, minmax(0, 1fr));
 }
@@ -462,6 +475,9 @@
 }
 .flex-wrap {
   flex-wrap: wrap;
+}
+.place-items-center {
+  place-items: center;
 }
 .items-baseline {
   align-items: baseline;
@@ -626,6 +642,9 @@
 .border-amber-300 {
   border-color: var(--color-amber-300);
 }
+.border-amber-400 {
+  border-color: var(--color-amber-400);
+}
 .border-blue-100 {
   border-color: var(--color-blue-100);
 }
@@ -637,6 +656,9 @@
 }
 .border-blue-400 {
   border-color: var(--color-blue-400);
+}
+.border-blue-600 {
+  border-color: var(--color-blue-600);
 }
 .border-green-100 {
   border-color: var(--color-green-100);
@@ -671,11 +693,17 @@
 .border-red-400 {
   border-color: var(--color-red-400);
 }
+.border-red-500 {
+  border-color: var(--color-red-500);
+}
 .bg-amber-50 {
   background-color: var(--color-amber-50);
 }
 .bg-amber-100 {
   background-color: var(--color-amber-100);
+}
+.bg-amber-400 {
+  background-color: var(--color-amber-400);
 }
 .bg-amber-500 {
   background-color: var(--color-amber-500);
@@ -907,6 +935,10 @@
   font-size: var(--text-3xl);
   line-height: var(--tw-leading, var(--text-3xl--line-height));
 }
+.text-4xl {
+  font-size: var(--text-4xl);
+  line-height: var(--tw-leading, var(--text-4xl--line-height));
+}
 .text-sm {
   font-size: var(--text-sm);
   line-height: var(--tw-leading, var(--text-sm--line-height));
@@ -1131,6 +1163,9 @@
   }
   .hover\:bg-blue-200:hover {
     background-color: var(--color-blue-200);
+  }
+  .hover\:bg-blue-700:hover {
+    background-color: var(--color-blue-700);
   }
   .hover\:bg-green-200:hover {
     background-color: var(--color-green-200);

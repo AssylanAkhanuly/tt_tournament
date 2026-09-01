@@ -427,6 +427,64 @@ const Seg = ({
   </div>
 );
 
+/** Переключатель, у которого выбор живёт снаружи ✳ (01.09.2026).
+
+    `PageTabs` держит выбор внутри себя и годится там, где содержимое вкладок
+    рисуется тут же. Когда выбор приходит из состояния — разряд встречи на
+    пульте табло, вид протокола у судьи, — нужен управляемый: тот же сегмент,
+    но значение и обработчик снаружи.
+
+    Это не фильтр. Фильтр (`FilterSeg`) отбирает строки списка и потому
+    выпадающий; вкладка меняет экран и остаётся сегментом — по ней видно все
+    варианты сразу и то, какой открыт. */
+export function Segmented({
+  items,
+  value,
+  onPick,
+  ariaLabel,
+  wide,
+}: {
+  items: string[];
+  value: string;
+  onPick: (t: string) => void;
+  /** Подпись группы для читалки: «Разряд встречи», «Вид протокола». */
+  ariaLabel?: string;
+  /** Растянуть на всю ширину — там, где по кнопкам бьют пальцем. */
+  wide?: boolean;
+}) {
+  return (
+    <div
+      data-seg
+      role="tablist"
+      aria-label={ariaLabel}
+      className={
+        'gap-1 rounded-lg bg-neutral-100 p-1 ' +
+        (wide ? 'grid' : 'inline-flex flex-wrap')
+      }
+      style={wide ? { gridTemplateColumns: `repeat(${items.length}, minmax(0, 1fr))` } : undefined}
+    >
+      {items.map((t) => (
+        <button
+          key={t}
+          type="button"
+          role="tab"
+          aria-selected={t === value}
+          className={
+            'rounded-md text-[13px] font-medium ' +
+            (wide ? 'px-3 py-2.5' : 'px-3 py-1.5') +
+            (t === value
+              ? ' on bg-white text-neutral-900 shadow-sm'
+              : ' text-neutral-500 hover:text-neutral-800')
+          }
+          onClick={() => onPick(t)}
+        >
+          {t}
+        </button>
+      ))}
+    </div>
+  );
+}
+
 /** Вкладки экрана: переключатель обязан переключать — содержимое живёт рядом. */
 export function PageTabs({ items, active }: { items: TabItem[]; active?: string }) {
   const [cur, setCur] = useState(active ?? items[0].t);
@@ -620,6 +678,8 @@ export function TextInput({
   placeholder,
   wide,
   bad,
+  onChange,
+  ariaLabel,
 }: {
   label: string;
   value?: string;
@@ -627,16 +687,24 @@ export function TextInput({
   wide?: boolean;
   /** Поле не проходит проверку. */
   bad?: boolean;
+  /** Управляемое поле ✳ (01.09.2026): значение живёт снаружи, поле только
+      сообщает о вводе. Без него поле ведёт себя как раньше — держит значение
+      само; так работают двести макетов, и переписывать их незачем. */
+  onChange?: (value: string) => void;
+  /** Подпись для читалки и тестов, когда она не совпадает с видимой: на пульте
+      табло два одинаковых поля «Фамилия и имя», слева и справа. */
+  ariaLabel?: string;
 }) {
-  const [v, setV] = useState(value);
+  const [own, setOwn] = useState(value);
+  const managed = onChange !== undefined;
   return (
     <FieldShell label={label} wide={wide}>
       <Input
-        aria-label={label}
+        aria-label={ariaLabel ?? label}
         className={'w-full' + (bad ? ' border-red-400' : '')}
         placeholder={placeholder}
-        value={v}
-        onChange={(e) => setV(e.target.value)}
+        value={managed ? value : own}
+        onChange={(e) => (managed ? onChange(e.target.value) : setOwn(e.target.value))}
       />
     </FieldShell>
   );

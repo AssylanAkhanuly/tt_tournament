@@ -63,6 +63,7 @@ import {
   type TimelineItem,
   Sheet,
   FilterBar,
+  Segmented,
 } from '@/shared/kit/app';
 /* Из старого слоя остаются только мета-компоненты борда: колонки, стрелки и
    полки состояний. Сами экраны собраны новым слоем. */
@@ -669,7 +670,7 @@ export function Season5_3() {
           фильтра. Переключение настоящее — оно и есть смысл переключателя. */}
       <div className="mb-3 flex items-center justify-between gap-4">
         <SearchInput value={q} onChange={setQ} placeholder="Название, категория или город" className="w-80" />
-        <FilterSeg items={SEASON_VIEWS} active={view} onPick={setView} />
+        <Segmented items={SEASON_VIEWS} value={view} onPick={setView} />
       </div>
 
       {/* Календарь считается по той же выборке, что и таблица: фильтр и поиск
@@ -775,7 +776,7 @@ const Season5_3Phone = () => {
         <SearchInput value={q} onChange={setQ} placeholder="Название, категория или город" className="w-full" />
       </div>
       <div className="mb-3 flex items-center justify-between gap-2">
-        <FilterSeg items={SEASON_VIEWS} active={view} onPick={setView} />
+        <Segmented items={SEASON_VIEWS} value={view} onPick={setView} />
         <Button size="sm" variant="primary" data-to="Э5.11">
           <Plus size={15} /> Завести соревнование
         </Button>

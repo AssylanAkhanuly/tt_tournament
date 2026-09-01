@@ -1,9 +1,9 @@
 import type { Preview } from '@storybook/react';
 import React from 'react';
-import '../src/theme/tokens.css';
+import '@/shared/kit/theme/tokens.css';
 import '../src/ui/ui.css';
 import { DEFAULT_FONT, FONTS, ensureFontsLoaded, fontStack } from '../src/fonts';
-import { DEFAULT_THEME, THEMES, applyTheme } from '../src/theme/themes';
+import { DEFAULT_THEME, THEMES, applyTheme } from '@/shared/kit/theme/themes';
 
 // Гарнитуры грузим из списка `src/fonts.ts` — он единственный источник, ссылка
 // на Google Fonts собирается из него же (иначе список и <link> разъезжаются).

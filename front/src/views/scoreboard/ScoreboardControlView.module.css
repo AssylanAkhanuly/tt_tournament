@@ -1,19 +1,31 @@
 /* Пульт табло: рабочий экран оператора трансляции.
+
    Метит в планшет — им ведут счёт стоя у стола, поэтому:
    — экран не прокручивается, а раскладывается по высоте окна (всё видно сразу,
      не надо искать кнопку скроллом посреди розыгрыша);
    — размеры считаются от vh/vw, чтобы одна раскладка жила и на 1024×768,
      и на 1280×800, и на большом мониторе;
-   — кнопки крупные: по ним попадают пальцем не глядя. */
+   — кнопки крупные: по ним попадают пальцем не глядя.
+
+   Здесь осталась ТОЛЬКО раскладка ✳ (01.09.2026). Вид — стороны, поля,
+   переключатели, счётчики, кнопки — теперь из кита (`@/shared/kit/app`), тем
+   же набором, каким собраны все экраны системы. Прежние `.side`, `.field`,
+   `.input`, `.toggle`, `.counter`, `.step`, `.action` удалены: держать второй
+   набор тех же вещей в CSS-модуле значило иметь дизайн-систему в двух копиях,
+   которые расходятся на первой же правке.
+
+   Экран светлый — как остальные экраны продукта. Тёмным пульт был
+   единственным местом, и оператор в зале переключался между двумя разными на
+   вид программами. Плашка в предпросмотре при этом остаётся тёмной: это
+   вещательная графика для OBS, её смотрят поверх видео. */
 
 .page {
   --gap: clamp(10px, 1.6vh, 18px);
   --pad-x: clamp(12px, 2vw, 24px);
   --pad-y: clamp(10px, 1.6vh, 20px);
-  --step: clamp(46px, 9vh, 84px); /* 44 — нижняя граница попадания пальцем */
 
   display: grid;
-  grid-template-rows: auto auto minmax(0, 1fr) auto; /* таббар, предпросмотр, стороны, действия */
+  grid-template-rows: auto auto minmax(0, 1fr) auto; /* разряд, предпросмотр, стороны, действия */
   gap: var(--gap);
   height: 100vh;
   height: 100dvh; /* на планшете панели браузера съедают часть 100vh */
@@ -22,6 +34,8 @@
   padding: var(--pad-y) var(--pad-x);
   overflow: hidden;
   overscroll-behavior: none;
+  background: #f7f8fa;
+  color: #171717;
 }
 
 /* Тап не должен ждать «а вдруг это двойной» и подсвечиваться серым. */
@@ -31,55 +45,17 @@
   -webkit-tap-highlight-color: transparent;
 }
 
-/* ── разряд встречи ──
-   Первое, что выбирает оператор: от разряда зависит и пульт (второе имя,
-   названия команд), и плашка в эфире. Поэтому таббар — самой верхней строкой. */
-.tabs {
-  display: flex;
-  gap: 2px;
-  border: 1px solid var(--line);
-  border-radius: var(--r-md);
-  background: var(--card);
-  padding: 2px;
-}
-
-.tab {
-  flex: 1 1 0;
-  min-height: 40px;
-  padding: 6px 12px;
-  border: 0;
-  border-radius: var(--r-sm);
-  background: transparent;
-  color: var(--muted);
-  font-size: clamp(13px, 1.8vh, 16px);
-  white-space: nowrap;
-}
-
-.tab:hover {
-  color: var(--text);
-}
-
-/* Выбранный разряд должен читаться боковым зрением, как и остальные
-   включённые состояния пульта. */
-.tab[data-on] {
-  background: var(--primary);
-  color: var(--sb-ink);
-}
-
-/* ── предпросмотр эфира ── */
+/* ── предпросмотр эфира ──
+   Плашка как есть, на «шахматке» — как в графических редакторах: сразу видно,
+   что фон у неё прозрачный, и понятно, что именно уйдёт в OBS. */
 .previewWrap {
   display: grid;
   place-items: center;
   padding: clamp(6px, 1vh, 14px);
-  border: 1px solid var(--line);
-  border-radius: var(--r-md);
-  /* «Шахматка» — как в графических редакторах: показывает прозрачный фон. */
+  border: 1px solid #e5e5e5;
+  border-radius: 12px;
   background:
-    repeating-conic-gradient(
-        color-mix(in srgb, var(--elevated) 100%, transparent) 0% 25%,
-        var(--surface) 0% 50%
-      )
-      50% / 24px 24px;
+    repeating-conic-gradient(#eceef1 0% 25%, #f7f8fa 0% 50%) 50% / 24px 24px;
 }
 
 .preview {
@@ -96,184 +72,20 @@
   display: grid;
   gap: var(--gap);
   grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: start; /* панель по своей высоте, а не растянутая на всю строку */
   min-height: 0;
+  overflow: auto;
 }
 
-.side {
-  display: flex;
-  flex-direction: column;
-  gap: clamp(8px, 1.4vh, 16px);
-  min-height: 0;
-  padding: clamp(12px, 1.8vh, 20px);
-  border: 1px solid var(--line);
-  border-radius: var(--r-md);
-  background: var(--card);
+/* Панели кита несут собственный нижний отступ (они рассчитаны на поток блоков
+   сверху вниз). Здесь они стоят в сетке, и отступ снизу лишний. */
+.sides > * {
+  margin-bottom: 0;
 }
 
-.field {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.label {
-  color: var(--muted);
-  font-size: clamp(11px, 1.5vh, 13px);
-}
-
-.input {
-  min-height: 48px;
-  padding: 8px 12px;
-  border: 1px solid var(--line);
-  border-radius: var(--r-sm);
-  background: var(--surface);
-  font-size: clamp(15px, 2.2vh, 18px);
-}
-
-.input:focus-visible {
-  border-color: var(--primary);
-  outline: none;
-}
-
-/* ── подача, тайм-аут, карточка ── */
-.toggles {
-  display: flex;
-  flex-wrap: wrap;
-  gap: clamp(6px, 0.8vw, 10px);
-}
-
-.toggle {
-  flex: 1 1 auto;
-  min-height: 44px;
-  padding: 6px 10px;
-  border: 1px solid var(--line);
-  border-radius: var(--r-sm);
-  background: var(--surface);
-  color: var(--muted);
-  font-size: clamp(12px, 1.6vh, 14px);
-  white-space: nowrap;
-}
-
-.toggle:hover {
-  border-color: var(--primary);
-}
-
-/* Включённое состояние должно читаться боковым зрением: оператор смотрит на
-   стол, а не на пульт. */
-.toggle[data-on] {
-  border-color: transparent;
-  background: var(--primary);
-  color: var(--sb-ink);
-}
-
-.toggle[data-card='yellow'] {
-  border-color: transparent;
-  background: var(--sb-yellow);
-  color: var(--sb-navy);
-}
-
-.toggle[data-card='red'] {
-  border-color: transparent;
-  background: var(--sb-red);
-  color: var(--sb-ink);
-}
-
-/* ── счётчики ── */
-.counters {
-  display: flex;
-  flex: 1;
-  flex-direction: column;
-  gap: clamp(6px, 1vh, 12px);
-  justify-content: space-around;
-  min-height: 0;
-}
-
-.counter {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.stepper {
-  display: flex;
-  gap: clamp(6px, 1vw, 12px);
-  align-items: center;
-}
-
-.step {
-  width: var(--step);
-  height: var(--step);
-  border: 1px solid var(--line);
-  border-radius: var(--r-sm);
-  background: var(--surface);
-  font-size: calc(var(--step) * 0.42);
-  line-height: 1;
-  user-select: none; /* быстрая серия тапов не должна выделять «+» */
-}
-
-.step:hover {
-  border-color: var(--primary);
-}
-
-.step:active {
-  background: var(--elevated);
-}
-
-.stepPrimary {
-  border-color: transparent;
-  background: var(--primary);
-  color: var(--sb-ink);
-}
-
-.value {
-  min-width: clamp(48px, 7vw, 80px);
-  font-size: clamp(26px, 5.4vh, 44px);
-  font-variant-numeric: tabular-nums;
-  font-weight: 700;
-  text-align: center;
-}
-
-/* ── действия ── */
+/* ── действия над партией и матчем ── */
 .actions {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: clamp(8px, 1vw, 12px);
-}
-
-/* Тянутся на всю ширину: на планшете это увеличивает площадь попадания. */
-.action {
-  flex: 1 1 auto;
-  min-height: 52px;
-  padding: 10px 16px;
-  border: 1px solid var(--line);
-  border-radius: var(--r-sm);
-  background: var(--card);
-  font-size: clamp(14px, 2vh, 17px);
-  white-space: nowrap;
-}
-
-.action:hover {
-  border-color: var(--primary);
-}
-
-/* Партия доиграна по правилам — подсвечиваем нужную кнопку. */
-.actionHot {
-  border-color: transparent;
-  background: var(--primary);
-  color: var(--sb-ink);
-}
-
-/* Телефон и совсем низкие окна: вместить всё честно нельзя, поэтому лучше
-   вернуть прокрутку, чем обрезать содержимое. */
-@media (max-width: 640px), (max-height: 520px) {
-  .page {
-    height: auto;
-    min-height: 100dvh;
-    overflow: visible;
-  }
-
-  .sides {
-    grid-template-columns: minmax(0, 1fr);
-  }
 }
