@@ -3828,8 +3828,11 @@ const GRANTS: Grant[] = [
     nm: 'Судья',
     scopes: ['Турнир', 'Стол'],
     can: [
-      { nm: 'Вести счёт на своём столе', sub: 'матч не стартует, пока стол без судьи' },
-      { nm: 'Видеть расписание и вызовы', sub: 'уведомление о вызове пары приходит мгновенно' },
+      /* Подпись называет область, а не устройство системы ✳ (04.09.2026):
+         «матч не стартует без судьи» — правило турнира, а не то, что человек
+         получит вместе с ролью. */
+      { nm: 'Вести счёт на своём столе', sub: 'партии, тайм-ауты, карточки' },
+      { nm: 'Видеть расписание и вызовы', sub: 'свой стол и свои пары' },
     ],
   },
   {
@@ -3946,7 +3949,7 @@ const GrantDialog = ({ phone, onClose }: { phone?: boolean; onClose: () => void 
       }
     >
       <RolePick value={role} onPick={pick} />
-      <Sec>Область — состав зависит от роли</Sec>
+      <Sec>Область</Sec>
       {/* Недоступные области не показываем серыми — их просто нет: у роли
           они не бывают, и выбор из одной кнопки сам это говорит. */}
       <div className="mb-3">
@@ -4086,29 +4089,33 @@ const GrantRole1_11States = () => (
 
 /* ── Э1.12 · Карточка спортсмена ───────────────────────────────── */
 
-/** Тело карточки спортсмена — одно на оба формата ✳: те же панели в том же
-    порядке, на телефоне поля профиля идут в одну колонку, а полоса действий
-    складывается под подпись про журнал. */
+/** Действия по карточке — в закреплённой панели снизу, одни на обе рамки ✳
+    (04.09.2026). Подписи «каждая правка пишется в журнал» рядом с ними больше
+    нет: журнал — свойство системы, у него есть свой экран (Э1.7). */
+const ATHLETE_ACTIONS = (
+  <>
+    <QuietAction>
+      <GitMerge size={14} /> Объединить с другой записью
+    </QuietAction>
+    <Button variant="outline">Действия по человеку</Button>
+    <Button variant="primary">
+      <Pencil size={15} /> Править
+    </Button>
+  </>
+);
+
+/** Тело карточки спортсмена — одно на оба формата: те же панели в том же
+    порядке, на телефоне поля профиля идут в одну колонку. */
 const Athlete1_12Body = ({ phone }: { phone?: boolean } = {}) => (
   <>
-      <div className={'mb-3 flex ' + (phone ? 'flex-col gap-3' : 'items-center justify-between gap-4')}>
-        <span className="text-[12.5px] text-neutral-500">
-          Каждая правка профиля пишется в журнал: кто, когда, было → стало
-        </span>
-        <span className="flex flex-wrap gap-2">
-          <Btn>Действия по человеку</Btn>
-          <QuietAction>
-            <GitMerge size={14} /> Объединить с другой записью
-          </QuietAction>
-          <Button size="sm" variant="outline">Править</Button>
-        </span>
-      </div>
 
       {/* Блоки идут один под другим во всю ширину ✳ (30.08.2026): в две колонки
           узкая правая половина резала подписи рейтинга и взноса, а «Историю
           матчей» жала до полутора третей экрана. Порядок сверху вниз — от «кто
           это» к тому, что он наиграл: профиль, показатели, взнос, лента матчей. */}
-      <Panel title="Профиль" extra={<P t="ЗАРЕГИСТРИРОВАЛСЯ САМ" cls="reg" />}>
+      {/* Метки «ЗАРЕГИСТРИРОВАЛСЯ САМ» в углу нет ✳ (04.09.2026): ровно это, и
+          подробнее, стоит полем «Источник записи» внизу панели. */}
+      <Panel title="Профиль">
         <FormGrid>
           <FieldView label="Год рождения · пол" value="2004 · мужской" wide={phone} />
           <FieldView label="Разряд" value="кандидат в мастера спорта" wide={phone} />
@@ -4154,6 +4161,7 @@ export function Athlete1_12() {
       nav="Пользователи"
       title="Смагулов Алан"
       back={{ label: 'Пользователи и роли', to: 'Э1.5' }}
+      actions={ATHLETE_ACTIONS}
     >
       <Athlete1_12Body />
     </WebApp>
@@ -4167,6 +4175,11 @@ const Athlete1_12Phone = () => (
     nav="Пользователи"
     title="Смагулов Алан"
     back={{ label: 'Пользователи и роли', to: 'Э1.5' }}
+    actions={
+      <Button variant="primary">
+        <Pencil size={15} /> Править
+      </Button>
+    }
   >
     <Athlete1_12Body phone />
   </PhoneRoleApp>
@@ -4275,7 +4288,7 @@ const Merge1_13Body = ({ phone }: { phone?: boolean } = {}) => (
 
       <Panel
         title="Что переедет в главную запись"
-        extra={<span className="text-xs text-neutral-500">совпали ФИО, год рождения и город — пара предложена как дубль</span>}
+        extra={<span className="text-xs text-neutral-500">совпали ФИО, год рождения и город</span>}
         flush
       >
         {/* Пять слагаемых зоны: история матчей, заявки, роли, взносы, рейтинг.
@@ -4294,18 +4307,18 @@ const Merge1_13Body = ({ phone }: { phone?: boolean } = {}) => (
         </div>
       </Panel>
 
-      <div className={'flex ' + (phone ? 'flex-col gap-3' : 'items-center justify-between gap-4')}>
-        <span className="max-w-md text-[12.5px] text-neutral-500">
-          Объединение пишется в журнал, но само не откатывается: разделять придётся руками.
-        </span>
-        {/* На телефоне решения встают этажами, главное — сверху. */}
-        <span className={'flex gap-2 ' + (phone ? 'flex-col-reverse' : '')}>
-          <QuietAction>Это разные люди</QuietAction>
-          <Button className={phone ? 'w-full' : undefined} variant="primary">
-            <Merge size={15} /> Объединить
-          </Button>
-        </span>
-      </div>
+  </>
+);
+
+/** Решения по паре — в закреплённой панели снизу ✳ (04.09.2026). Подписи о
+    том, что объединение не откатывается, рядом с кнопкой больше нет: это не
+    сообщение экрана, а то, о чём спрашивают в подтверждении. */
+const MERGE_ACTIONS = (
+  <>
+    <QuietAction>Это разные люди</QuietAction>
+    <Button variant="primary">
+      <Merge size={15} /> Объединить
+    </Button>
   </>
 );
 
@@ -4316,6 +4329,7 @@ export function Merge1_13() {
       nav="Пользователи"
       title="Объединение дублей"
       back={{ label: 'Карточка спортсмена', to: 'Э1.12' }}
+      actions={MERGE_ACTIONS}
     >
       <Merge1_13Body />
     </WebApp>
@@ -4329,6 +4343,7 @@ const Merge1_13Phone = () => (
     nav="Пользователи"
     title="Объединение дублей"
     back={{ label: 'Карточка спортсмена', to: 'Э1.12' }}
+    actions={MERGE_ACTIONS}
   >
     <Merge1_13Body phone />
   </PhoneRoleApp>
@@ -4869,18 +4884,20 @@ export function Editor1_14() {
       nav="Новости"
       title="Кубок Республики: приём заявок открыт"
       back={{ label: 'Новости и страницы', to: 'Э1.8' }}
+      actions={
+        <>
+          <QuietAction onPress={() => setClosed(!closed)}>
+            {closed ? 'Править' : 'Сохранить черновик'}
+          </QuietAction>
+          {/* ⚠ Куда ведёт «Опубликовать», не решено: у публичной страницы
+              материала (Э0.4) нет своего кода экрана. */}
+          <Button variant="primary">
+            <Send size={15} /> Опубликовать
+          </Button>
+        </>
+      }
     >
       <MaterialForm closed={closed} />
-      <div className="flex items-center justify-end gap-2">
-        <QuietAction onPress={() => setClosed(!closed)}>
-          {closed ? 'Править' : 'Сохранить черновик'}
-        </QuietAction>
-        {/* ⚠ Куда ведёт «Опубликовать», не решено: у публичной страницы
-            материала (Э0.4) нет своего кода экрана. */}
-        <Button variant="primary">
-          <Send size={15} /> Опубликовать
-        </Button>
-      </div>
     </WebApp>
   );
 }
@@ -4895,15 +4912,17 @@ const Editor1_14Phone = () => {
       nav="Новости"
       title="Кубок Республики: приём заявок открыт"
       back={{ label: 'Новости и страницы', to: 'Э1.8' }}
+      actions={
+        <Button variant="primary">
+          <Send size={15} /> Опубликовать
+        </Button>
+      }
     >
       <MaterialForm closed={closed} phone />
-      <div className="flex flex-col-reverse gap-2">
+      <div className="mt-3">
         <QuietAction onPress={() => setClosed(!closed)}>
           {closed ? 'Править' : 'Сохранить черновик'}
         </QuietAction>
-        <Button className="w-full" variant="primary">
-          <Send size={15} /> Опубликовать
-        </Button>
       </div>
     </PhoneRoleApp>
   );

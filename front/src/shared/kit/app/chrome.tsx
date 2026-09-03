@@ -351,7 +351,7 @@ export function WebApp({
             отбирал высоту у таблиц. Прибито теперь то, к чему возвращаются
             постоянно, — полоса главных действий внизу. */}
         <div className="flex min-w-0 flex-1 flex-col bg-neutral-50">
-          <div className="min-h-0 flex-1 overflow-auto px-6 pb-6">
+          <div className="flex min-h-0 flex-1 flex-col overflow-auto px-6 pb-6 [--kit-gut:1.5rem] [--kit-gutb:1.5rem]">
             <div className="pb-4 pt-5">
               {back && <BackLink label={back.label} to={back.to} />}
               <h1 className="text-xl font-semibold tracking-tight">{title}</h1>
@@ -452,7 +452,7 @@ export function PhoneRoleApp({
         </div>
       </div>
 
-      <div className="min-h-0 flex-1 overflow-auto px-4 pb-3">
+      <div className="flex min-h-0 flex-1 flex-col overflow-auto px-4 pb-3 [--kit-gut:1rem] [--kit-gutb:0.75rem]">
         <div className="pb-3 pt-1">
           {back && <BackLink label={back.label} to={back.to} />}
           <h1 className="text-[19px] font-semibold leading-tight tracking-tight">{title}</h1>

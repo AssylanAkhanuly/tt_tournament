@@ -23,6 +23,7 @@ import {
 import { Avatar, Button } from '@heroui/react';
 import { A, AW } from '../fedCommon';
 import {
+  ActionBar,
   AreaInput,
   Bar,
   DataTable,
@@ -377,10 +378,10 @@ export function Protest16_1Ph() {
         <div className="mt-4">
           <Rule16_1 />
         </div>
-        <div className="flex flex-col gap-2">
-          <Button variant="primary" className="w-full" data-to="Э16.2">Подать протест</Button>
+        <ActionBar>
           <Button variant="ghost" className="w-full">Сохранить черновик</Button>
-        </div>
+          <Button variant="primary" className="w-full" data-to="Э16.2">Подать протест</Button>
+        </ActionBar>
       </Panel>
 
       <Panel
@@ -587,16 +588,16 @@ export function Cases16_2Ph() {
         )}
       </Panel>
 
-      <div className="flex flex-col gap-2">
+      <ActionBar>
+        <Button variant="ghost" className="w-full" data-to="Э16.4">
+          <History size={14} /> Дисциплинарная история
+        </Button>
         {canTake ? (
           <Button variant="primary" className="w-full" data-to="Э16.3">Взять в работу</Button>
         ) : (
           <Button variant="primary" className="w-full" isDisabled>Взять в работу</Button>
         )}
-        <Button variant="ghost" className="w-full" data-to="Э16.4">
-          <History size={14} /> Дисциплинарная история
-        </Button>
-      </div>
+      </ActionBar>
     </PhoneRoleApp>
   );
 }
@@ -830,15 +831,15 @@ export function Case16_3Ph() {
         <div className="mt-4">
           <Rule16_3 />
         </div>
-        <div className="flex flex-col gap-2">
-          <Button variant="primary" className="w-full">Принять решение</Button>
-          <Button variant="ghost" className="w-full" onPress={() => setAsk(true)}>
-            <FileText size={14} /> Запросить пояснение
-          </Button>
-        </div>
         <p className="mt-2 text-[11.5px] leading-snug text-neutral-500">
           Решение уйдёт заявителю уведомлением и останется в истории участников
         </p>
+        <ActionBar>
+          <Button variant="ghost" className="w-full" onPress={() => setAsk(true)}>
+            <FileText size={14} /> Запросить пояснение
+          </Button>
+          <Button variant="primary" className="w-full">Принять решение</Button>
+        </ActionBar>
       </Panel>
 
       {ask && (

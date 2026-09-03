@@ -850,6 +850,26 @@ export type Tone = keyof typeof BAR_TONE;
    он не попадает. */
 export const Bar = (_: { tone?: Tone; children: ReactNode }) => null;
 
+/** Полоса главных действий экрана ✳ (04.09.2026).
+
+    Главная кнопка не уезжает вместе с содержимым: она липнет к низу рабочей
+    области и видна всегда — и на десктопе, и на телефоне. Внутри прокрутки, а
+    не снаружи, поэтому её можно поставить в общее тело экрана, которое обе
+    рамки берут одним компонентом (`actions` рамки для этого не дотянуться).
+
+    Ширину и низ полоса забирает у самой рабочей области: та объявила свои
+    отступы переменными `--kit-gut` / `--kit-gutb`, и полоса распирается ровно
+    на них — без знания о том, в какой из двух рамок она сейчас стоит.
+
+    Липкость, вылет за отступы рабочей области и слой лежат в `.kit-actionbar`
+    (`kit/tailwind.src.css`): они держатся на переменных самой области, и
+    утилитами с произвольными значениями это не выражается. */
+export const ActionBar = ({ children }: { children: ReactNode }) => (
+  <div className="kit-actionbar flex shrink-0 flex-wrap items-center justify-end gap-2 border-t border-neutral-200 bg-white py-3">
+    {children}
+  </div>
+);
+
 /** Пустое состояние — тоже часть макета. */
 export const EmptyBox = ({ title, text, action }: { title: string; text: string; action?: ReactNode }) => (
   <div className="flex flex-col items-center gap-1.5 rounded-xl border border-dashed border-neutral-300 bg-white px-6 py-10 text-center">

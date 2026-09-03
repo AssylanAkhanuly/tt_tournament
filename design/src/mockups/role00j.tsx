@@ -26,6 +26,7 @@ import {
 import { Avatar, Button } from '@heroui/react';
 import { A, AW } from '../fedCommon';
 import {
+  ActionBar,
   Attention,
   Bar,
   EmptyBox,
@@ -272,14 +273,11 @@ const Cabinet0_8States = () => (
             { v: '0', k: 'Турниров отсужено' },
           ]}
         />
-        <div className="flex items-center justify-between gap-4">
-          <span className="text-[12.5px] text-neutral-500">
-            Удостоверение или приказ о категории — загрузите, чтобы вас допустили к заявкам
-          </span>
+        <ActionBar>
           <Button variant="primary">
             <FileUp size={15} /> Загрузить удостоверение
           </Button>
-        </div>
+        </ActionBar>
       </Frag>
     </Shot>
 
@@ -577,12 +575,12 @@ export function Call0_10() {
       </>
 
       {/* Подача последней: сначала выбирают позицию, потом жмут. */}
-      <div className="flex items-center justify-between gap-4">
-        <span className="text-[12.5px] text-neutral-500">{pickedCap(picked)}</span>
+      <ActionBar>
+        <span className="mr-auto text-[12.5px] text-neutral-500">{pickedCap(picked)}</span>
         <Button variant="primary" isDisabled={picked.length === 0}>
           <Send size={15} /> Подать заявку на судейство
         </Button>
-      </div>
+      </ActionBar>
     </WebApp>
   );
 }
@@ -1320,12 +1318,22 @@ function AttNav({
     только ряды плиток и ширина кнопок. */
 /** Оболочка роли для положений «до теста» и «итог»: это разделы кабинета, и
     сайдбар с шапкой на них уместен. У самого теста оболочка своя (ExamShell). */
-const Shell = ({ phone, children }: { phone?: boolean; children: ReactNode }) => {
+const Shell = ({
+  phone,
+  actions,
+  children,
+}: {
+  phone?: boolean;
+  /** Главное решение экрана — в закреплённой панели снизу, не в потоке. */
+  actions?: ReactNode;
+  children: ReactNode;
+}) => {
   const props = {
     role: R,
     nav: 'Аттестация',
     title: 'Аттестация',
     sub: `Оралбай Ержан · первая категория · действует до ${ATT_TILL}, осталось ${ATT_LEFT} дней`,
+    actions,
   };
   return phone ? <PhoneRoleApp {...props}>{children}</PhoneRoleApp> : <WebApp {...props}>{children}</WebApp>;
 };
@@ -1348,7 +1356,14 @@ function Attest0_14Body({ phone, start = 'before' }: { phone?: boolean; start?: 
 
   if (stage === 'before') {
     return (
-      <Shell phone={phone}>
+      <Shell
+        phone={phone}
+        actions={
+          <Button variant="primary" onPress={() => setStage('run')}>
+            <Play size={15} /> Начать тест
+          </Button>
+        }
+      >
         {/* Плиток над «Порядком аттестации» нет ✳ (03.09.2026): все четыре
             повторяли строки этой же таблицы — вопросов в тесте, проходной балл,
             попытки, срок. Витрина из чисел, которые через сантиметр показаны
@@ -1361,16 +1376,12 @@ function Attest0_14Body({ phone, start = 'before' }: { phone?: boolean; start?: 
           extra={phone ? undefined : <Pill t="ЗНАЧЕНИЯ ПО УМОЛЧАНИЮ" color="accent" />}
         >
           <KV items={ATT_RULES} />
-          <div className="mt-4">
-            <Bar>{ATT_RULES_NOTE}</Bar>
-          </div>
         </Panel>
 
         {/* Из каких тем — до теста, а не после ✳: судья готовится по темам, а
             не по списку вопросов, и знать заранее он должен именно их. */}
         <Panel
           title={`Из каких тем ${ATT_TOTAL} вопросов`}
-          sub="что попадёт именно вам — станет известно на тесте"
           flush
         >
           <div className="divide-y divide-neutral-100">
@@ -1383,30 +1394,8 @@ function Attest0_14Body({ phone, start = 'before' }: { phone?: boolean; start?: 
               />
             ))}
           </div>
-          <div className="border-t border-neutral-100 px-4 py-2.5 text-xs leading-relaxed text-neutral-500">
-            База пополняется коллегией (Э5.13): одни и те же вопросы из года в год судьи выучивают
-            наизусть, и тест перестаёт проверять
-          </div>
         </Panel>
 
-        <Panel title="Что будет, если не сдать">
-          <Bar tone="warning">{ATT_FAIL_NOTE}</Bar>
-          <div className="mt-3">
-            <Bar>{ATT_S3_NOTE}</Bar>
-          </div>
-        </Panel>
-
-        {/* Срок ещё не вышел — тест всё равно открыт ✳: ждать последнего дня
-            незачем, а после сдачи срок отсчитывается заново, со дня сдачи. */}
-        <div className={'flex gap-4 ' + (phone ? 'flex-col' : 'items-center justify-between')}>
-          <span className="text-[12.5px] leading-snug text-neutral-500">
-            Текущая аттестация действует до {ATT_TILL} — тест можно пройти сейчас, не дожидаясь
-            конца срока: новый год отсчитается со дня сдачи ✳
-          </span>
-          <Button className={wide} variant="primary" onPress={() => setStage('run')}>
-            <Play size={15} /> Начать тест
-          </Button>
-        </div>
       </Shell>
     );
   }
@@ -2128,12 +2117,11 @@ function Call0_10Phone() {
 
       {/* Подача последней и во всю ширину: сначала выбирают позицию, потом
           жмут, — а кнопка у нижнего края попадает под большой палец. */}
-      <div className="flex flex-col gap-2">
-        <span className="text-[12.5px] leading-snug text-neutral-500">{pickedCap(picked)}</span>
+      <ActionBar>
         <Button className="w-full" variant="primary" isDisabled={picked.length === 0}>
           <Send size={15} /> Подать заявку на судейство
         </Button>
-      </div>
+      </ActionBar>
     </PhoneRoleApp>
   );
 }

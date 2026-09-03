@@ -20,6 +20,7 @@ import {
 import { Avatar, Button, Chip } from '@heroui/react';
 import { A, AW } from '../fedCommon';
 import {
+  ActionBar,
   Bar,
   DataTable,
   DisabledAction,
@@ -483,17 +484,6 @@ export function Tournament6_1(_props: { variant?: 'desktop' | 'land' } = {}) {
     >
       <StatTiles items={TILES6_1} />
 
-      <div className="mb-3 flex items-center justify-between gap-4">
-        <span className="text-[12.5px] text-neutral-500">
-          Кто подался · <b className="text-neutral-800">8</b> заявок ждут решения — все игроки в них прошли допуск
-        </span>
-        <div className="flex items-center gap-2">
-          <QuietAction>Условия допуска</QuietAction>
-          <Button variant="primary" data-to="Э6.2">
-            <ClipboardList size={15} /> Разобрать заявки
-          </Button>
-        </div>
-      </div>
 
       {/* Тот же состав и те же авто-проверки, что на экране заявок (Э6.2): один
           список, а не два — второй разъехался бы с первым на первом же решении.
@@ -517,6 +507,12 @@ export function Tournament6_1(_props: { variant?: 'desktop' | 'land' } = {}) {
       <div className="mt-3 text-[12.5px] text-neutral-500">
         Показаны последние 4 из 128 заявок · весь список с решениями — на «Заявках»
       </div>
+      <ActionBar>
+        <QuietAction>Условия допуска</QuietAction>
+        <Button variant="primary" data-to="Э6.2">
+          <ClipboardList size={15} /> Разобрать заявки
+        </Button>
+      </ActionBar>
     </WebApp>
   );
 }
@@ -947,14 +943,14 @@ const Waiting6_2Phone = () => {
           </Wide>
         </>
       ) : (
-        <div className="mb-4 flex flex-col gap-2">
-          <Button variant="primary" onPress={() => setDone({ ...done, [cur]: 'ok' })}>
-            <Check size={14} /> Принять состав
-          </Button>
+        <ActionBar>
           <Button variant="outline" data-to="Э6.8" onPress={() => setDone({ ...done, [cur]: 'no' })}>
             Отклонить заявку с причиной
           </Button>
-        </div>
+          <Button variant="primary" onPress={() => setDone({ ...done, [cur]: 'ok' })}>
+            <Check size={14} /> Принять состав
+          </Button>
+        </ActionBar>
       )}
       <Bar>{AGE_RULE}</Bar>
     </>
@@ -1122,16 +1118,6 @@ export function Bracket6_3() {
             </FormGrid>
             {/* При посеве по рейтингу бросать нечего: расстановка выводится из
                 рейтинга целиком. Кнопка появляется только у жребия. */}
-            <div className="mt-4 flex flex-col items-start gap-2">
-              {lot && (
-                <Button variant="primary" onPress={() => setN(n + 1)}>
-                  <Shuffle size={15} /> {n ? 'Перебросить жребий' : 'Провести жеребьёвку'}
-                </Button>
-              )}
-              <QuietAction>
-                <Pencil size={14} /> {lot ? 'Изменить состав сеяных' : 'Изменить основание посева'}
-              </QuietAction>
-            </div>
             <div className="mt-3">
               <Bar>
                 Жеребьёвка лежит на главном судье ✳ (комментарий федерации, 09.2026). Секретарь
@@ -1140,6 +1126,16 @@ export function Bracket6_3() {
                 остаётся в журнале: переигранный жребий участники вправе проверить.
               </Bar>
             </div>
+            <ActionBar>
+              <QuietAction>
+                <Pencil size={14} /> {lot ? 'Изменить состав сеяных' : 'Изменить основание посева'}
+              </QuietAction>
+              {lot && (
+                <Button variant="primary" onPress={() => setN(n + 1)}>
+                  <Shuffle size={15} /> {n ? 'Перебросить жребий' : 'Провести жеребьёвку'}
+                </Button>
+              )}
+            </ActionBar>
           </Panel>
 
           <Panel title="Кто где стоит" extra={<span className="text-xs text-neutral-500">первые слоты</span>}>
@@ -1330,12 +1326,6 @@ export function Bracket6_3Phone() {
           >
             <Built6_3 n={n} />
           </Panel>
-          <div className="mb-4 flex flex-col gap-2">
-            <Button variant="primary" onPress={() => setOk('yes')}>
-              <Check size={15} /> Утвердить сетку
-            </Button>
-            <Button variant="outline" onPress={() => setOk('back')}>Вернуть с замечанием</Button>
-          </div>
 
           <Panel title="Параметры турнира" extra={<Pl t="ПОЛНЫЙ ДОСТУП" cls="reg" />}>
             <FormGrid>
@@ -1351,6 +1341,12 @@ export function Bracket6_3Phone() {
               </Bar>
             </div>
           </Panel>
+          <ActionBar>
+            <Button variant="outline" onPress={() => setOk('back')}>Вернуть с замечанием</Button>
+            <Button variant="primary" onPress={() => setOk('yes')}>
+              <Check size={15} /> Утвердить сетку
+            </Button>
+          </ActionBar>
         </>
       )}
     </PhoneRoleApp>
@@ -1646,16 +1642,13 @@ export function Schedule6_4({ tab }: { tab?: string }) {
 
       {/* Утверждать в живой очереди нечего — кнопки утверждения там нет. */}
       {order !== ORDER6[1] && (
-        <div className="mb-3 flex items-center gap-3 rounded-xl border border-neutral-200 bg-white px-4 py-2.5 shadow-sm">
-          <Pl t="ЖДЁТ УТВЕРЖДЕНИЯ" cls="wait" />
-          <span className="flex-1 text-[12.5px] text-neutral-500">
-            Собрал секретарь (Э7.4) — судья утверждает или возвращает
-          </span>
+        <ActionBar>
+          <span className="mr-auto"><Pl t="ЖДЁТ УТВЕРЖДЕНИЯ" cls="wait" /></span>
           <QuietAction>Вернуть с замечанием</QuietAction>
           <Button variant="primary">
             <Check size={15} /> Утвердить расписание
           </Button>
-        </div>
+        </ActionBar>
       )}
 
       {order === ORDER6[1] ? (
@@ -1704,14 +1697,13 @@ export function Schedule6_4Phone() {
       </Strip>
 
       {order !== ORDER6[1] && (
-        <div className="mb-4 flex flex-col gap-2 rounded-xl border border-neutral-200 bg-white p-3 shadow-sm">
-          <span className="flex items-center gap-2">
-            <Pl t="ЖДЁТ УТВЕРЖДЕНИЯ" cls="wait" />
-            <span className="text-[12.5px] text-neutral-500">собрал секретарь (Э7.4)</span>
-          </span>
-          <Button variant="primary"><Check size={15} /> Утвердить расписание</Button>
-          <Button variant="outline">Вернуть с замечанием</Button>
-        </div>
+        <>
+          <div className="mb-3"><Pl t="ЖДЁТ УТВЕРЖДЕНИЯ" cls="wait" /></div>
+          <ActionBar>
+            <Button variant="outline">Вернуть с замечанием</Button>
+            <Button variant="primary"><Check size={15} /> Утвердить расписание</Button>
+          </ActionBar>
+        </>
       )}
 
       {order !== ORDER6[1] && (

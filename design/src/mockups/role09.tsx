@@ -38,6 +38,7 @@ import {
 import { Avatar, Button, Chip, InputOTP, REGEXP_ONLY_DIGITS } from '@heroui/react';
 import { A, AW } from '../fedCommon';
 import {
+  ActionBar,
   Bar,
   DataTable,
   DisabledAction,
@@ -399,9 +400,11 @@ const Table9_2Phone = () => (
   >
     <div className="flex flex-col gap-3.5 pb-2">
       <Table9_2Card phone />
-      <Button variant="primary" className="h-16 w-full text-lg" data-to="Э9.3">
-        <Radio size={18} /> Старт матча
-      </Button>
+      <ActionBar>
+        <Button variant="primary" className="h-16 w-full text-lg" data-to="Э9.3">
+          <Radio size={18} /> Старт матча
+        </Button>
+      </ActionBar>
     </div>
   </PhoneRoleApp>
 );
@@ -1649,12 +1652,9 @@ const Sent9_5Body = ({ phone }: { phone?: boolean }) => (
         Следующая пара — 16:20 · вызов придёт от главного судьи
       </div>
       {phone ? (
-        /* На телефоне главное действие — во всю ширину и первым по месту под
-           пальцем; тихие кнопки уходят под него в один ряд. */
-        <div className="flex flex-col gap-2">
-          <Button variant="primary" className="h-14 w-full" data-to="Э9.2">
-            <Radio size={15} /> К моему столу
-          </Button>
+        /* На телефоне главное действие — во всю ширину закреплённой полосы;
+           тихие кнопки стоят над ней в один ряд. */
+        <>
           <div className="flex items-center justify-center gap-2">
             <Button variant="ghost" data-to="Э9.4">
               <History size={15} /> История
@@ -1663,9 +1663,14 @@ const Sent9_5Body = ({ phone }: { phone?: boolean }) => (
               <Undo2 size={15} /> Запросить правку
             </Button>
           </div>
-        </div>
+          <ActionBar>
+            <Button variant="primary" className="h-14 w-full" data-to="Э9.2">
+              <Radio size={15} /> К моему столу
+            </Button>
+          </ActionBar>
+        </>
       ) : (
-        <div className="flex items-center justify-center gap-2">
+        <ActionBar>
           <Button variant="ghost" data-to="Э9.4">
             <History size={15} /> История матча
           </Button>
@@ -1675,7 +1680,7 @@ const Sent9_5Body = ({ phone }: { phone?: boolean }) => (
           <Button variant="primary" className="h-12" data-to="Э9.2">
             <Radio size={15} /> К моему столу
           </Button>
-        </div>
+        </ActionBar>
       )}
     </div>
 

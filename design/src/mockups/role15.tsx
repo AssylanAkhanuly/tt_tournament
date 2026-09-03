@@ -24,6 +24,7 @@ import {
 import { Avatar, Button, Meter } from '@heroui/react';
 import { A, AW } from '../fedCommon';
 import {
+  ActionBar,
   Bar,
   EmptyBox,
   FileDrop,
@@ -287,25 +288,11 @@ export function Judges15_1() {
 
       {/* Акцент полосы один — приглашение: то, ради чего председатель сюда и
           заходит. Общий рейтинг он смотрит редко — тихой кнопкой. */}
-      <div className="mb-3 flex items-center justify-between gap-4">
-        <span className="text-[12.5px] text-neutral-500">
-          Свой регион · чужие судьи видны в общем рейтинге, но не здесь
-        </span>
-        <span className="flex items-center gap-2">
-          <Button variant="ghost" data-to="Э0.12">
-            <ListChecks size={14} /> Рейтинг судей
-          </Button>
-          <Button variant="primary" onPress={() => setInvite(true)}>
-            <UserPlus size={15} /> Пригласить судью
-          </Button>
-        </span>
-      </div>
 
-      <Panel
-        title="Судьи Павлодарской области"
-        extra={<Cap>категорию проставляет коллегия — регион приглашает и ведёт</Cap>}
-        flush
-      >
+      {/* У панели ни названия, ни подписи ✳ (04.09.2026): «Судьи Павлодарской
+          области» — это заголовок экрана и надпись в шапке разом, а кто
+          проставляет категорию, сказано колонкой «категория и кто подтвердил». */}
+      <Panel flush>
         <Sheet
           grid={REG_GRID}
           cols={[
@@ -384,6 +371,14 @@ export function Judges15_1() {
           <InviteForm15_1 />
         </InlineDialog>
       )}
+      <ActionBar>
+        <Button variant="ghost" data-to="Э0.12">
+          <ListChecks size={14} /> Рейтинг судей
+        </Button>
+        <Button variant="primary" onPress={() => setInvite(true)}>
+          <UserPlus size={15} /> Пригласить судью
+        </Button>
+      </ActionBar>
     </WebApp>
   );
 }
@@ -404,14 +399,6 @@ export function Judges15_1Ph() {
   const [invite, setInvite] = useState(false);
   return (
     <Ph15 nav="Судьи региона" title="Судьи региона" sub="Павлодарская область · сезон 2026">
-      <div className="mb-3 flex flex-col gap-2">
-        <Button variant="primary" className="w-full" onPress={() => setInvite(true)}>
-          <UserPlus size={15} /> Пригласить судью
-        </Button>
-        <Button variant="ghost" className="w-full" data-to="Э0.12">
-          <ListChecks size={14} /> Рейтинг судей
-        </Button>
-      </div>
 
       <div className="mb-4">
         <Rows>
@@ -450,6 +437,11 @@ export function Judges15_1Ph() {
           <InviteForm15_1 wide />
         </PhoneDialog>
       )}
+      <ActionBar>
+        <Button variant="primary" className="w-full" onPress={() => setInvite(true)}>
+          <UserPlus size={15} /> Пригласить судью
+        </Button>
+      </ActionBar>
     </Ph15>
   );
 }
@@ -551,9 +543,6 @@ export function Card15_2Ph() {
       {/* Действия региона — первым: с телефона на карточку заходят, чтобы
           поставить судью в наряд, а не читать её. Акцент один. */}
       <div className="mb-3 flex flex-col gap-2">
-        <Button variant="primary" className="w-full" data-to="Э15.3">
-          <CalendarDays size={15} /> Поставить в наряд
-        </Button>
         <Button variant="ghost" className="w-full" data-to="Э15.4">
           <Send size={14} /> Внести документ на S3 / S4
         </Button>
@@ -616,6 +605,11 @@ export function Card15_2Ph() {
         документов. На телефоне показано главное — балл, слагаемые и история судейства; паспортная
         часть и зачёт по Положению остаются в полной карточке.
       </Bar>
+      <ActionBar>
+        <Button variant="primary" className="w-full" data-to="Э15.3">
+          <CalendarDays size={15} /> Поставить в наряд
+        </Button>
+      </ActionBar>
     </Ph15>
   );
 }
@@ -717,16 +711,8 @@ export function Duty15_3() {
       nav="Наряды региона"
       title="Наряды региона"
     >
-      <div className="mb-3 flex items-center justify-between gap-4">
-        <span className="text-[12.5px] text-neutral-500">
-          {pick ? `Выбран старт: ${pick}` : 'Выберите старт, чтобы собрать наряд'}
-        </span>
-        {/* Добор — из своего реестра ✳: чужого региона в списке нет, поэтому
-            кнопка ведёт в Э15.1, а не в общий реестр судей. */}
-        <Button variant="primary" data-to="Э15.1">
-          <UserPlus size={15} /> Добавить судью в наряд
-        </Button>
-      </div>
+      {/* Добор — из своего реестра ✳: чужого региона в списке нет, поэтому
+          кнопка ведёт в Э15.1, а не в общий реестр судей. */}
 
       <Panel title="Старты сезона" extra={<Cap>республиканские — на чтение</Cap>} flush>
         <div className="divide-y divide-neutral-100">
@@ -810,6 +796,14 @@ export function Duty15_3() {
       )}
 
       <Rule15_3 />
+      <ActionBar>
+        <span className="mr-auto text-[12.5px] text-neutral-500">
+          {pick ? `Старт: ${pick}` : 'Старт не выбран'}
+        </span>
+        <Button variant="primary" data-to="Э15.1">
+          <UserPlus size={15} /> Добавить судью в наряд
+        </Button>
+      </ActionBar>
     </WebApp>
   );
 }
@@ -969,16 +963,8 @@ export function Points15_4() {
       nav="Начисления"
       title="Начисления региона"
     >
-      <div className="mb-3 flex items-center justify-between gap-4">
-        {/* Начисляет не регион ✳: регион подаёт, подтверждает председатель ГСК
-            (TZ §7.2) — это сказано прямо в полосе действия. */}
-        <span className="text-[12.5px] text-neutral-500">
-          Регион подаёт — подтверждает рейтинговая комиссия (председатель ГСК)
-        </span>
-        <Button variant="primary" onPress={() => setSubmit(true)}>
-          <Send size={15} /> Подать документ
-        </Button>
-      </div>
+      {/* Начисляет не регион ✳: регион подаёт, подтверждает председатель ГСК
+          (TZ §7.2) — это сказано в самой форме документа. */}
 
       <Panel title="Документы региона" extra={<Cap>S1 и S2 система считает сама</Cap>} flush>
         <Sheet
@@ -1031,6 +1017,11 @@ export function Points15_4() {
           <DocForm15_4 />
         </InlineDialog>
       )}
+      <ActionBar>
+        <Button variant="primary" onPress={() => setSubmit(true)}>
+          <Send size={15} /> Подать документ
+        </Button>
+      </ActionBar>
     </WebApp>
   );
 }

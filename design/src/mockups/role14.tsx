@@ -43,6 +43,7 @@ import {
 import { Avatar, Button, Chip } from '@heroui/react';
 import { A, AW } from '../fedCommon';
 import {
+  ActionBar,
   BackLink,
   Bar,
   DataTable,
@@ -689,14 +690,11 @@ export function Apply14_3Web() {
           {FORM14_3.map((f) => <PickField key={f.k} label={f.k} value={f.v} />)}
           <FileDrop label="Медицинская справка" hint="PDF или фото · до 10 МБ · нужна этому турниру" />
         </FormGrid>
-        <div className="mt-4 flex items-center justify-between gap-4">
-          <span className="text-[12.5px] text-neutral-500">
-            Решение принимает главный судья турнира
-          </span>
+        <ActionBar>
           <Button variant="primary" data-to="Э14.4">
             <Send size={14} /> Подать заявку
           </Button>
-        </div>
+        </ActionBar>
       </Panel>
 
       <Panel title="Условия допуска" sub="проверено системой" flush>
@@ -2152,13 +2150,12 @@ const ResultBody14 = ({ ok, title, lead, facts, action, note }: Result14Props) =
       </div>
     </Panel>
 
-    <div className="flex flex-col items-stretch gap-2">
+    <p className="text-center text-[11px] leading-snug text-neutral-400">{note}</p>
+    <ActionBar>
       <Button variant="primary" className="w-full" data-to={action.to}>
         {action.icon} {action.t}
       </Button>
-      <QuietAction to="Э14.7">В профиль</QuietAction>
-    </div>
-    <p className="text-center text-[11px] leading-snug text-neutral-400">{note}</p>
+    </ActionBar>
   </>
 );
 

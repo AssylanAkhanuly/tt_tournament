@@ -15,6 +15,7 @@ import {
 import { Avatar, Button } from '@heroui/react';
 import { A, AW } from '../fedCommon';
 import {
+  ActionBar,
   AreaInput,
   Bar,
   FieldView,
@@ -911,19 +912,11 @@ export function Bracket7_3Phone() {
       title="Система проведения и сетка"
       sub="Собирает секретарь, утверждает главный судья"
     >
-      <div className="mb-3 flex flex-col gap-2 rounded-xl border border-neutral-200 bg-white p-3 shadow-sm">
+      <div className="mb-3">
         <Pl
           t={sent ? 'У ГЛАВНОГО СУДЬИ' : built > 1 ? `ПЕРЕСОБРАНА ${built - 1} РАЗ` : 'СЕТКА СОБРАНА'}
           cls={sent ? 'reg' : 'live'}
         />
-        {!sent && (
-          <Button variant="primary" onPress={() => setSent(true)}>
-            <Send size={15} /> Передать главному судье
-          </Button>
-        )}
-        <Button variant="outline" onPress={() => { setBuilt(built + 1); setSent(false); }}>
-          <RefreshCw size={14} /> Пересобрать сетку
-        </Button>
       </div>
       {sent && (
         <Bar>
@@ -947,6 +940,16 @@ export function Bracket7_3Phone() {
       ) : (
         <GroupTables7_3 phone />
       )}
+      <ActionBar>
+        <Button variant="outline" onPress={() => { setBuilt(built + 1); setSent(false); }}>
+          <RefreshCw size={14} /> Пересобрать сетку
+        </Button>
+        {!sent && (
+          <Button variant="primary" onPress={() => setSent(true)}>
+            <Send size={15} /> Передать главному судье
+          </Button>
+        )}
+      </ActionBar>
     </PhoneRoleApp>
   );
 }

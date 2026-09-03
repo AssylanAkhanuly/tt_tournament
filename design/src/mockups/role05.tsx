@@ -17,6 +17,7 @@ import {
 import { Avatar, Button } from '@heroui/react';
 import { A, AW } from '../fedCommon';
 import {
+  ActionBar,
   AreaInput,
   Attention,
   Bar,
@@ -656,12 +657,14 @@ export function Season5_3() {
       role={R05}
       nav="Соревнования"
       title="Соревнования сезона"
-    >
-      <div className="mb-3 flex items-center justify-between gap-4">
-        <FilterSeg items={SEASON_FILTER} active={f} onPick={setF} />
+      actions={
         <Button variant="primary" data-to="Э5.11">
           <Plus size={15} /> Завести соревнование
         </Button>
+      }
+    >
+      <div className="mb-3">
+        <FilterSeg items={SEASON_FILTER} active={f} onPick={setF} />
       </div>
       {/* Вид — рядом с поиском, а не в одну строку с фильтром: фильтр сужает
           выборку, а вид меняет её подачу; рядом они читались бы как два
@@ -767,16 +770,18 @@ const Season5_3Phone = () => {
       role={R05}
       nav="Соревнования"
       title="Соревнования сезона"
+      actions={
+        <Button variant="primary" data-to="Э5.11">
+          <Plus size={15} /> Завести соревнование
+        </Button>
+      }
     >
       <Strip><FilterSeg items={SEASON_FILTER} active={f} onPick={setF} /></Strip>
       <div className="mb-3">
         <SearchInput value={q} onChange={setQ} placeholder="Название, категория или город" className="w-full" />
       </div>
-      <div className="mb-3 flex items-center justify-between gap-2">
+      <div className="mb-3">
         <Segmented items={SEASON_VIEWS} value={view} onPick={setView} />
-        <Button size="sm" variant="primary" data-to="Э5.11">
-          <Plus size={15} /> Завести соревнование
-        </Button>
       </div>
 
       {rows.length ? (
@@ -2199,14 +2204,14 @@ const Protocol5_4Body = ({ phone }: { phone?: boolean }) => {
             {v === '' && (
               /* Кнопки в строку, а не столбиком ✳: панель во всю ширину, и
                  растянутая на неё «Утвердить» читалась бы полосой. */
-              <div className="flex flex-wrap items-center gap-2">
-                <Button variant="primary" onPress={() => setV('ok')}>
-                  <Check size={15} /> Утвердить протокол
-                </Button>
+              <ActionBar>
                 <Button variant="outline" onPress={() => setAsk(true)}>
                   <Undo2 size={15} /> Вернуть с причиной
                 </Button>
-              </div>
+                <Button variant="primary" onPress={() => setV('ok')}>
+                  <Check size={15} /> Утвердить протокол
+                </Button>
+              </ActionBar>
             )}
             {v === 'ok' && (
               <Bar tone="success">

@@ -14,30 +14,40 @@
 
 import { useState } from 'react';
 import {
-  CalendarDays, ChevronLeft, ChevronRight, ClipboardCheck, Download, FileText, Plane, Plus, Users2,
+  CalendarDays, ChevronLeft, ChevronRight, ClipboardCheck, Download, FileText, Pencil, Plane, Plus,
+  Users2,
 } from 'lucide-react';
 import { Avatar, Button } from '@heroui/react';
 import { A, AW } from '../fedCommon';
 import {
+  ActionBar,
   Bar,
   Bars,
   ChartRow,
+  Derived,
   Donut,
   EmptyBox,
   EventTimeline,
   Facts,
+  FieldView,
   FilterBar,
   FilterSeg,
+  FormGrid,
   KV,
   PageTabs,
   Panel,
   PhoneRoleApp,
+  PickField,
   Pill,
+  PrimaryAction,
+  QuietAction,
   Row,
   Rows,
   SearchInput,
+  Segmented,
   Sheet,
   StatTiles,
+  TextInput,
   WebApp,
   type RoleUI,
 } from '@/shared/kit/app';
@@ -304,7 +314,7 @@ function CardTabs({ start = 'План подготовки' }: { start?: string 
             title="Индивидуальный план подготовки · сезон 2026"
             sub="Составил и правит главный тренер сборной · последняя правка 12.06.2026"
             extra={
-              <Button size="sm" variant="outline">
+              <Button size="sm" variant="outline" data-to="Э11.5">
                 <ClipboardCheck size={14} /> Внести правку
               </Button>
             }
@@ -530,6 +540,213 @@ export const Card11_2Phone = () => (
         },
       ]}
     />
+  </PhoneRoleApp>
+);
+
+/* ── Э11.5 · Составление плана подготовки ─────────────────────────── */
+
+/** Пункт 1 документа федерации: «формирование индивидуального плана подготовки,
+    а также внесение в него изменений и корректировок главным тренером». До
+    04.09.2026 план был только на чтение — кнопка «Внести правку» в карточке не
+    вела никуда, и плана, которого ещё нет, завести было нечем. */
+
+/** Тип пункта решает, откуда он берётся ✳: работу тренер пишет сам, а сбор и
+    старт выбираются из календаря подготовки (Э11.3) — иначе план и календарь
+    разъедутся, и «выполнено» будет не с чем сверить. */
+type PlanKind = 'Работа' | 'Сбор' | 'Старт';
+
+type PlanDraft = {
+  k: PlanKind;
+  t: string;
+  when: string;
+  /** Чем считается выполнение — ⚠ 20.8: федерация не ответила, поэтому
+      правило выбирается в самом пункте и остаётся видимым в документе. */
+  by: 'Отметка тренера' | 'Явка на УТС' | 'Результат старта';
+  done: boolean;
+};
+
+const PLAN_DRAFT: PlanDraft[] = [
+  { k: 'Работа', t: 'Общая физическая подготовка', when: 'январь–март · 3 раза в неделю', by: 'Отметка тренера', done: true },
+  { k: 'Работа', t: 'Техника: приём короткой подачи', when: 'февраль · с тренером региона', by: 'Отметка тренера', done: true },
+  { k: 'Сбор', t: 'УТС Алматы — базовый сбор', when: '02–14.03 · 12 дней', by: 'Явка на УТС', done: true },
+  { k: 'Старт', t: 'Чемпионат РК — выход в 1/4', when: '12–14.03 · целевой результат', by: 'Результат старта', done: true },
+  { k: 'Работа', t: 'Работа над игрой слева в атаке', when: 'апрель–май · видеоразбор раз в неделю', by: 'Отметка тренера', done: true },
+  { k: 'Сбор', t: 'УТС Астана — предсоревновательный', when: '05–18.05 · 14 дней', by: 'Явка на УТС', done: true },
+  { k: 'Старт', t: 'Открытый турнир Караганды', when: '24.05 · обкатка подачи', by: 'Результат старта', done: true },
+  { k: 'Сбор', t: 'УТС Шымкент — восстановительный', when: '10–20.06 · 11 дней', by: 'Явка на УТС', done: false },
+  { k: 'Старт', t: 'Международный старт — отбор', when: 'июль · по решению штаба', by: 'Результат старта', done: false },
+];
+
+const PLAN_EDITS = [
+  { t: 'План создан на сезон 2026', s: '9 пунктов · Ахметов С., главный тренер', at: '14.01.2026' },
+  { t: 'Добавлен пункт «Работа над игрой слева в атаке»', s: 'после разбора чемпионата РК', at: '19.03.2026' },
+  { t: 'Срок сбора в Шымкенте передвинут на 10–20.06', s: 'вслед за календарём подготовки', at: '02.06.2026' },
+  { t: 'Отмечено выполнение: открытый турнир Караганды', s: 'результат подтянут из истории', at: '12.06.2026' },
+];
+
+const KIND_PILL: Record<PlanKind, 'accent' | 'success' | 'warning'> = {
+  Работа: 'accent',
+  Сбор: 'success',
+  Старт: 'warning',
+};
+
+export function PlanEdit11_5() {
+  const [items, setItems] = useState(PLAN_DRAFT);
+  const [kind, setKind] = useState<PlanKind>('Работа');
+  const done = items.filter((p) => p.done).length;
+  /* Добавление пункта работает вживую: макет, в котором кнопка ничего не
+     делает, ровно тем и плох, что по нему не видно, куда встанет новая
+     строка и как она выглядит рядом с остальными. */
+  const add = () =>
+    setItems((p) => [
+      ...p,
+      kind === 'Работа'
+        ? { k: kind, t: 'Новый пункт работы', when: 'срок не задан', by: 'Отметка тренера', done: false }
+        : kind === 'Сбор'
+          ? { k: kind, t: 'УТС из календаря подготовки', when: 'сроки возьмутся из календаря', by: 'Явка на УТС', done: false }
+          : { k: kind, t: 'Старт из календаря подготовки', when: 'сроки возьмутся из календаря', by: 'Результат старта', done: false },
+    ]);
+
+  return (
+    <WebApp
+      role={R}
+      nav="Состав сборной"
+      back={{ label: 'Карточка спортсмена', to: 'Э11.2' }}
+      title="План подготовки · Ким Георгий"
+      sub="Сезон 2026 · составляет и правит главный тренер сборной"
+    >
+      <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,320px)]">
+        <div>
+          <Panel title="Шапка плана">
+            <FormGrid>
+              <FieldView label="Спортсмен" value="Ким Георгий · 2003 г.р. · основной состав" />
+              <PickField label="Период" value="Сезон 2026 · январь — декабрь" />
+              <TextInput label="Цель сезона" value="Медаль чемпионата РК и место в основном составе" wide />
+              <FieldView label="Кто ведёт план" value="Ахметов С. · главный тренер национальной команды" wide />
+              <Derived k="Выполнено пунктов" v={`${done} из ${items.length}`} />
+            </FormGrid>
+          </Panel>
+
+          <Panel
+            title={`Пункты плана · ${items.length}`}
+            sub="Сбор и старт выбираются из календаря подготовки, работа пишется руками"
+            flush
+          >
+            <Rows>
+              {items.map((p, i) => (
+                <div key={p.t + i} className="flex items-center gap-3 px-4 py-2.5">
+                  <span className="w-[74px] shrink-0">
+                    <Pill t={p.k.toUpperCase()} color={KIND_PILL[p.k]} />
+                  </span>
+                  <span className="min-w-0 flex-1 leading-tight">
+                    <span className="block truncate text-[13.5px] font-medium">{p.t}</span>
+                    <span className="block truncate text-xs text-neutral-500">
+                      {p.when} · выполнение: {p.by.toLowerCase()}
+                    </span>
+                  </span>
+                  <Pill t={p.done ? 'ВЫПОЛНЕНО' : 'ВПЕРЕДИ'} color={p.done ? 'success' : 'default'} />
+                  <Button size="sm" variant="ghost">
+                    <Pencil size={14} />
+                  </Button>
+                </div>
+              ))}
+            </Rows>
+          </Panel>
+
+          <Panel title="Добавить пункт" sub="Тип решает, откуда возьмутся сроки">
+            <div className="mb-3">
+              <Segmented
+                items={['Работа', 'Сбор', 'Старт']}
+                value={kind}
+                onPick={(v) => setKind(v as PlanKind)}
+                ariaLabel="Тип пункта плана"
+              />
+            </div>
+            <FormGrid>
+              {kind === 'Работа' ? (
+                <>
+                  <TextInput label="Что делаем" placeholder="Например: работа над подачей" wide />
+                  <TextInput label="Срок" placeholder="апрель–май · два раза в неделю" />
+                  <PickField label="Чем считается выполнение" value="Отметка тренера" />
+                </>
+              ) : (
+                <>
+                  <PickField
+                    label={kind === 'Сбор' ? 'Сбор из календаря подготовки' : 'Старт из календаря подготовки'}
+                    value={kind === 'Сбор' ? 'УТС Шымкент — восстановительный · 10–20.06' : 'Международный старт — отбор · 08–12.07'}
+                    wide
+                  />
+                  <FieldView label="Сроки" value="возьмутся из календаря подготовки" />
+                  <PickField
+                    label="Чем считается выполнение"
+                    value={kind === 'Сбор' ? 'Явка на УТС' : 'Результат старта'}
+                  />
+                </>
+              )}
+            </FormGrid>
+            <div className="mt-3">
+              <Button size="sm" variant="outline" onPress={add}>
+                <Plus size={14} /> Добавить в план
+              </Button>
+            </div>
+          </Panel>
+        </div>
+
+        <Panel title="Журнал правок" sub="Федерация просит и правки, и корректировки" flush>
+          <Rows>
+            {PLAN_EDITS.map((e) => (
+              <Row key={e.t} nm={e.t} sub={`${e.at} · ${e.s}`} />
+            ))}
+          </Rows>
+        </Panel>
+      </div>
+
+
+      <Bar>
+        Пункты «сбор» и «старт» не вводятся руками: они выбираются из календаря подготовки (Э11.3),
+        иначе план и календарь разъедутся и «выполнено» будет не с чем сверить. ⚠ 20.8 — чем
+        считается выполнение, федерация не сказала; правило выбирается в самом пункте.
+      </Bar>
+      <ActionBar>
+        <QuietAction to="Э11.2">Отменить правку</QuietAction>
+        <PrimaryAction to="Э11.2">Сохранить план</PrimaryAction>
+      </ActionBar>
+    </WebApp>
+  );
+}
+
+export const PlanEdit11_5Phone = () => (
+  <PhoneRoleApp
+    role={R}
+    nav="Состав сборной"
+    back={{ label: 'Карточка', to: 'Э11.2' }}
+    title="План подготовки"
+    sub="Ким Георгий · сезон 2026"
+  >
+    <Panel title="Пункты плана · 9" flush>
+      <Rows>
+        {PLAN_DRAFT.slice(0, 6).map((p) => (
+          <Row
+            key={p.t}
+            nm={p.t}
+            sub={`${p.when} · ${p.k.toLowerCase()}`}
+            pill={{ t: p.done ? 'ВЫПОЛНЕНО' : 'ВПЕРЕДИ', cls: p.done ? 'live' : 'wait' }}
+          />
+        ))}
+      </Rows>
+    </Panel>
+
+    <Panel title="Добавить пункт">
+      <FormGrid>
+        <PickField label="Тип" value="Работа" wide />
+        <TextInput label="Что делаем" placeholder="Например: работа над подачей" wide />
+        <TextInput label="Срок" placeholder="апрель–май" wide />
+      </FormGrid>
+    </Panel>
+
+    <ActionBar>
+      <PrimaryAction to="Э11.2">Сохранить план</PrimaryAction>
+    </ActionBar>
   </PhoneRoleApp>
 );
 
@@ -950,16 +1167,13 @@ export function Reports11_4() {
 
             {one.cls === 'wait' ? (
               <>
-                <div className="mt-4 flex flex-wrap items-center gap-2">
+                <ActionBar>
+                  <Button variant="outline">Отклонить</Button>
+                  <Button variant="outline">Вернуть на доработку</Button>
                   <Button variant="primary">
                     <ClipboardCheck size={15} /> Согласовать
                   </Button>
-                  <Button variant="outline">Вернуть на доработку</Button>
-                  <Button variant="outline">Отклонить</Button>
-                  <span className="text-[12.5px] text-neutral-500">
-                    У «вернуть» и «отклонить» комментарий обязателен.
-                  </span>
-                </div>
+                </ActionBar>
               </>
             ) : (
               <p className="mt-4 text-[12.5px] leading-snug text-neutral-500">{one.closed}</p>
@@ -999,13 +1213,11 @@ export const Reports11_4Phone = () => {
       <div className="mt-3">
         <Panel title={`Рапорт № ${one.no}`} sub={`${one.nm} · лист 1 из 2`}>
           <ReportPage r={one} page={1} compact />
-          <div className="mt-3 flex flex-col gap-2">
+          <ActionBar>
             <Button className="w-full" variant="primary">
               <ClipboardCheck size={15} /> Согласовать
             </Button>
-            <Button className="w-full" variant="outline">Вернуть на доработку</Button>
-            <Button className="w-full" variant="outline">Отклонить</Button>
-          </div>
+          </ActionBar>
         </Panel>
       </div>
 
@@ -1044,6 +1256,12 @@ export const SCREENS: ScreenMap = {
     cap: 'Календарь подготовки',
     view: () => <Prep11_3 />,
     next: 'рапорт по ближайшему сбору',
+  },
+  'Э11.5': {
+    cap: 'Составление плана подготовки',
+    view: () => <PlanEdit11_5 />,
+    alt: () => <PlanEdit11_5Phone />,
+    next: 'пункт меню «Календарь подготовки»',
   },
   'Э11.4': {
     cap: 'Рапорты на командирование',

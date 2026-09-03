@@ -23,6 +23,7 @@ import {
 import { Avatar, Button } from '@heroui/react';
 import { A, AW } from '../fedCommon';
 import {
+  ActionBar,
   KV,
   Sheet,
   Attention,
@@ -597,7 +598,7 @@ export function Invites13_8() {
       title="Приглашения клуба"
       back={{ label: 'Мой клуб', to: 'Э13.1' }}
     >
-      <div className="mb-3 flex items-center justify-between gap-4">
+      <div className="mb-3">
         <Facts
           items={[
             { k: 'приглашений', v: '5' },
@@ -607,9 +608,6 @@ export function Invites13_8() {
             { k: 'ссылкой', v: '1' },
           ]}
         />
-        <Button variant="primary" data-to="Э13.2">
-          <UserPlus size={14} /> Пригласить спортсмена
-        </Button>
       </div>
 
       <Panel title="Приглашения" flush>
@@ -625,6 +623,11 @@ export function Invites13_8() {
         остаётся прежний клуб. Тем, кого в реестре нет, уходит одноразовая ссылка на 7 дней —
         открыв её, человек подтверждает себя ИИН и кодом из SMS; клуб в этом не участвует.
       </Bar>
+      <ActionBar>
+        <Button variant="primary" data-to="Э13.2">
+          <UserPlus size={14} /> Пригласить спортсмена
+        </Button>
+      </ActionBar>
     </WebApp>
   );
 }
@@ -1296,15 +1299,6 @@ export function Confirm13_4() {
         </Bar>
       )}
 
-      <div className="flex items-center justify-between gap-4">
-        <span className="max-w-2xl text-[12.5px] text-neutral-500">
-          Едут {team.length} из {SQUAD.length} · после подтверждения состав только на чтение: его
-          видят главный судья тура и соперники
-        </span>
-        <Button variant="primary" onPress={() => setAsk(true)}>
-          <ShieldCheck size={15} /> Подтвердить состав
-        </Button>
-      </div>
 
       {/* Последний шаг — диалог поверх экрана с итоговым списком: кого именно
           заявляем. Крестик и «Закрыть» возвращают к набору без изменений. */}
@@ -1337,6 +1331,14 @@ export function Confirm13_4() {
           </Rows>
         </InlineDialog>
       )}
+      <ActionBar>
+        <span className="mr-auto text-[12.5px] text-neutral-500">
+          Едут {team.length} из {SQUAD.length}
+        </span>
+        <Button variant="primary" onPress={() => setAsk(true)}>
+          <ShieldCheck size={15} /> Подтвердить состав
+        </Button>
+      </ActionBar>
     </WebApp>
   );
 }
@@ -1789,14 +1791,14 @@ const Tour13_7States = () => (
             ]}
           />
         </div>
-        <div className="flex items-center justify-between gap-3">
-          <span className="text-[12.5px] text-neutral-500">
-            Состав на 3-й тур не подтверждён — окно закроется 8 мая
+        <ActionBar>
+          <span className="mr-auto text-[12.5px] text-neutral-500">
+            Состав на 3-й тур не подтверждён · окно до 8 мая
           </span>
           <Button variant="primary" data-to="Э13.4">
             <ShieldCheck size={15} /> Подтвердить состав
           </Button>
-        </div>
+        </ActionBar>
       </Frag>
     </Shot>
 
@@ -2181,7 +2183,7 @@ const Invites13_8Phone = () => (
     title="Приглашения клуба"
     back={{ label: 'Мой клуб', to: 'Э13.1' }}
   >
-    <div className="mb-3 flex flex-col gap-2">
+    <div className="mb-3">
       <Facts
         items={[
           { k: 'приглашений', v: '5' },
@@ -2191,9 +2193,6 @@ const Invites13_8Phone = () => (
           { k: 'ссылкой', v: '1' },
         ]}
       />
-      <Button variant="primary" className="w-full" data-to="Э13.2">
-        <UserPlus size={14} /> Пригласить спортсмена
-      </Button>
     </div>
 
     <Panel title="Приглашения" flush>
@@ -2209,6 +2208,11 @@ const Invites13_8Phone = () => (
       остаётся прежний клуб. Тем, кого в реестре нет, уходит одноразовая ссылка на 7 дней —
       открыв её, человек подтверждает себя ИИН и кодом из SMS; клуб в этом не участвует.
     </Bar>
+    <ActionBar>
+      <Button variant="primary" className="w-full" data-to="Э13.2">
+        <UserPlus size={14} /> Пригласить спортсмена
+      </Button>
+    </ActionBar>
   </PhoneRoleApp>
 );
 
@@ -2430,15 +2434,11 @@ function Confirm13_4Phone() {
         </Bar>
       )}
 
-      <div className="flex flex-col gap-2">
-        <span className="text-[12px] leading-snug text-neutral-500">
-          Едут {team.length} из {SQUAD.length} · после подтверждения состав только на чтение: его
-          видят главный судья тура и соперники
-        </span>
+      <ActionBar>
         <Button variant="primary" className="w-full" data-to="Э13.6">
           <ShieldCheck size={15} /> Подтвердить состав
         </Button>
-      </div>
+      </ActionBar>
     </PhoneRoleApp>
   );
 }
@@ -2781,15 +2781,11 @@ export function Fees13_10({ done }: { done?: boolean }) {
             { k: 'итого', v: money(sum), hot: true },
           ]}
         />
-        <div className="mt-3 flex flex-wrap items-center gap-3">
+        <ActionBar>
           <Button variant="primary" data-to="Э13.10">
             <CreditCard size={15} /> Оплатить {money(sum)} картой
           </Button>
-          <span className="text-[12.5px] text-neutral-500">
-            Один платёж через эквайринг Халык Банка (ePay). Уже оплатившие в платёж не попадают —
-            их строки нельзя отметить.
-          </span>
-        </div>
+        </ActionBar>
       </Panel>
 
       <Bar tone="warning">

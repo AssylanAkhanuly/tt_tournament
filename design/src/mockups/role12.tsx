@@ -12,25 +12,30 @@
 
 import { useState, type ReactNode } from 'react';
 import {
-  ChevronDown, ClipboardCheck, Paperclip, Search as SearchIcon, Trophy, UserPlus, Users,
+  ChevronDown, ClipboardCheck, Paperclip, Plane, Search as SearchIcon, Trophy, UserPlus, Users,
 } from 'lucide-react';
 import { Avatar, Button } from '@heroui/react';
 import { A, AW } from '../fedCommon';
 import {
+  ActionBar,
+  AreaInput,
   Bar,
   Calendar,
   DataTable,
+  DateInput,
   DayList,
   EmptyBox,
   EventTimeline,
   Facts,
   FieldView,
+  FileDrop,
   FilterSeg,
   FormGrid,
   MiniMonth,
   PageTabs,
   Panel,
   PhoneRoleApp,
+  PickField,
   Pill,
   PrimaryAction,
   QuietAction,
@@ -73,10 +78,14 @@ const R12: RoleUI = {
   person: { nm: 'Байтасов Р.', rl: 'Старший тренер · Алматы', av: A(55) },
   brandName: 'Регион Алматы',
   badge: false,
+  /* Четвёртый пункт ✳ (04.09.2026): рапорты на командирование. Пункт 4
+     дополнений федерации называет подающими старших тренеров регионов — это
+     эта роль, и раздел у неё свой. */
   nav: [
     [<Users size={16} key="r" />, 'Мой регион'],
     [<UserPlus size={16} key="i" />, 'Приглашения'],
     [<Trophy size={16} key="s" />, 'Соревнования'],
+    [<Plane size={16} key="p" />, 'Рапорты'],
   ],
 };
 
@@ -177,14 +186,8 @@ export function Region12_1(_props: { variant?: 'desktop' | 'land' } = {}) {
           Э12.1 три зоны: шапка, таблица и фильтры — очереди среди них нет.
           Осталось главное действие: тренер не заводит аккаунт за человека, а
           приглашает — по ссылке человек подтверждает себя ИИН и кодом (Э0.6). */}
-      <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+      <div className="mb-3">
         <Facts items={[{ k: 'Без годового взноса', v: '42 из 184', hot: true }]} />
-        <span className="flex items-center gap-2">
-          <QuietAction to="Э12.7">Приглашения региона · 2 ждут ответа</QuietAction>
-          <Button variant="primary" data-to="Э12.6">
-            <UserPlus size={15} /> Пригласить спортсмена
-          </Button>
-        </span>
       </div>
 
       {/* Фильтры зоны «Фильтры и поиск»: год рождения, пол, клуб, взнос, поиск.
@@ -231,6 +234,12 @@ export function Region12_1(_props: { variant?: 'desktop' | 'land' } = {}) {
           ? 'первые 6 из 184 · дальше — страницами'
           : `показано ${rows.length} · всего в регионе 184`}
       </div>
+      <ActionBar>
+        <QuietAction to="Э12.7">Приглашения региона · 2 ждут ответа</QuietAction>
+        <Button variant="primary" data-to="Э12.6">
+          <UserPlus size={15} /> Пригласить спортсмена
+        </Button>
+      </ActionBar>
     </WebApp>
   );
 }
@@ -1105,13 +1114,15 @@ export function Invites12_7() {
       title="Приглашения региона"
       back={{ label: 'Мой регион', to: 'Э12.1' }}
     >
-      <div className="mb-3 flex items-center justify-between gap-4">
-        <span className="text-[12.5px] text-neutral-500">
-          4 приглашения · 2 ждут ответа, 1 принято, 1 отклонено
-        </span>
-        <Button variant="primary" data-to="Э12.6">
-          <UserPlus size={15} /> Пригласить спортсмена
-        </Button>
+      <div className="mb-3">
+        <Facts
+          items={[
+            { k: 'приглашений', v: '4' },
+            { k: 'ждут ответа', v: '2', hot: true },
+            { k: 'принято', v: '1' },
+            { k: 'отклонено', v: '1' },
+          ]}
+        />
       </div>
 
       <Rows>
@@ -1126,6 +1137,11 @@ export function Invites12_7() {
           открыв её, человек подтверждает себя ИИН и кодом из SMS.
         </Bar>
       </div>
+      <ActionBar>
+        <Button variant="primary" data-to="Э12.6">
+          <UserPlus size={15} /> Пригласить спортсмена
+        </Button>
+      </ActionBar>
     </WebApp>
   );
 }
@@ -1394,12 +1410,8 @@ function Region12_1Phone() {
       nav="Мой регион"
       title="Спортсмены региона"
     >
-      <div className="mb-3 flex flex-col gap-2">
+      <div className="mb-3">
         <Facts items={[{ k: 'Без годового взноса', v: '42 из 184', hot: true }]} />
-        <Button variant="primary" className="w-full" data-to="Э12.6">
-          <UserPlus size={15} /> Пригласить спортсмена
-        </Button>
-        <QuietAction to="Э12.7">Приглашения региона · 2 ждут ответа</QuietAction>
       </div>
 
       {/* Поиск и фильтр по взносу — друг под другом: в строку они не встают, а
@@ -1433,6 +1445,11 @@ function Region12_1Phone() {
           ? 'первые 6 из 184 · дальше — прокруткой'
           : `показано ${rows.length} · всего в регионе 184`}
       </div>
+      <ActionBar>
+        <Button variant="primary" className="w-full" data-to="Э12.6">
+          <UserPlus size={15} /> Пригласить спортсмена
+        </Button>
+      </ActionBar>
     </PhoneRoleApp>
   );
 }
@@ -1699,13 +1716,13 @@ const Invites12_7Phone = () => (
     title="Приглашения региона"
     back={{ label: 'Мой регион', to: 'Э12.1' }}
   >
-    <div className="mb-3 flex flex-col gap-2">
-      <span className="text-[12px] text-neutral-500">
-        4 приглашения · 2 ждут ответа, 1 принято, 1 отклонено
-      </span>
-      <Button variant="primary" className="w-full" data-to="Э12.6">
-        <UserPlus size={15} /> Пригласить спортсмена
-      </Button>
+    <div className="mb-3">
+      <Facts
+        items={[
+          { k: 'приглашений', v: '4' },
+          { k: 'ждут ответа', v: '2', hot: true },
+        ]}
+      />
     </div>
 
     <Rows>
@@ -1721,10 +1738,208 @@ const Invites12_7Phone = () => (
         открыв её, человек подтверждает себя ИИН и кодом из SMS.
       </Bar>
     </div>
+    <ActionBar>
+      <Button variant="primary" className="w-full" data-to="Э12.6">
+        <UserPlus size={15} /> Пригласить спортсмена
+      </Button>
+    </ActionBar>
   </PhoneRoleApp>
 );
 
 /** Экраны роли по кодам: из этой карты собираются и борд, и карта флоу. */
+/* ── Э12.8 · Рапорт на командирование ───────────────────────────── */
+
+/** Пункт 4 документа федерации называет подающими «тренеров главного тренерского
+    штаба и старших тренеров регионов»: старший тренер региона — роль 12, и
+    подача живёт здесь. Согласование — у главного тренера сборной (Э11.4).
+
+    ⚠ Тренеров штаба отдельной ролью в перечне нет (QUESTIONS §20.2); когда
+    федерация ответит, тот же экран встанет и у них. */
+
+type MyReport = {
+  no: string;
+  nm: string;
+  sub: string;
+  st: string;
+  cls: Cls;
+  /** Комментарий главного тренера: у возвращённого рапорта это главное, что
+      автор должен прочитать — иначе он не знает, что править. */
+  why?: string;
+};
+
+const MY_REPORTS: MyReport[] = [
+  { no: '15/2026', nm: 'Открытый турнир Караганды', sub: '24.05 · 4 спортсмена · подан 12.05', st: 'У ГЛАВНОГО ТРЕНЕРА', cls: 'wait' },
+  {
+    no: '16/2026',
+    nm: 'Международный старт — отбор',
+    sub: '08–12.07 · состав не приложен · подан 02.06',
+    st: 'НА ДОРАБОТКЕ',
+    cls: 'bad',
+    why: 'Главный тренер, 03.06: «нет поимённого состава и основания — кого и по какому плану командируем».',
+  },
+  { no: '09/2026', nm: 'УТС Алматы — базовый сбор', sub: '02–14.03 · 5 спортсменов · согласован 21.02', st: 'В ФЕДЕРАЦИИ', cls: 'done' },
+  { no: '17/2026', nm: 'Чемпионат РК среди юниоров', sub: 'сроки не заданы · черновик', st: 'ЧЕРНОВИК', cls: 'reg' },
+];
+
+export function Report12_8() {
+  /* Рапорт формируют в системе или прикладывают готовый файл — документ
+     федерации разрешает оба пути, и выбор меняет весь низ экрана. */
+  const [way, setWay] = useState('Сформировать в системе');
+  const [picked, setPicked] = useState<string[]>(['Нургалиев Санжар', 'Оралбек Диас', 'Сейтжан Аяулым']);
+  const [q, setQ] = useState('');
+  const toggle = (nm: string) =>
+    setPicked((p) => (p.includes(nm) ? p.filter((x) => x !== nm) : [...p, nm]));
+  const found = CANDS.filter((c) => c.nm.toLowerCase().includes(q.trim().toLowerCase()));
+  const team = CANDS.filter((c) => picked.includes(c.nm));
+  const noFee = team.filter((c) => c.fee === UNPAID);
+  const form = way === 'Сформировать в системе';
+
+  return (
+    <WebApp
+      role={R12}
+      nav="Рапорты"
+      title="Рапорт на командирование"
+      sub="Подаётся главному тренеру национальной команды"
+    >
+      <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,330px)]">
+        <div>
+          <Panel title="Как подаём" sub="Оба пути разрешены пунктом 4 документа федерации">
+            <Segmented
+              items={['Сформировать в системе', 'Загрузить готовый файл']}
+              value={way}
+              onPick={setWay}
+              ariaLabel="Способ подачи рапорта"
+            />
+          </Panel>
+
+          <Panel title="Мероприятие и основание">
+            <FormGrid>
+              <PickField
+                label="Мероприятие"
+                value="УТС Шымкент — восстановительный"
+                wide
+              />
+              <DateInput label="Начало" value="2026-06-10" />
+              <DateInput label="Окончание" value="2026-06-20" />
+              <PickField label="Основание" value="План подготовки сборной на 2026 год" wide />
+              <FieldView label="Кому уходит" value="Ахметов С. · главный тренер национальной команды" wide />
+              {!form && <FileDrop label="Рапорт файлом" hint="PDF или скан, до 10 МБ" />}
+              <AreaInput
+                label="Дополнительно"
+                value="Ответственность за жизнь и здоровье спортсменов на период сбора возложить на старшего тренера региона."
+                rows={2}
+                wide
+              />
+            </FormGrid>
+          </Panel>
+
+          <Panel
+            title={`Кого командируем · ${team.length}`}
+            sub="Свои спортсмены региона; поимённый состав уходит приложением к рапорту"
+          >
+            <div className="mb-3">
+              <SearchInput value={q} onChange={setQ} placeholder="Фамилия" className="w-72" />
+            </div>
+            {found.length ? (
+              <Rows>
+                {found.map((a) => {
+                  const on = picked.includes(a.nm);
+                  return (
+                    <Row
+                      key={a.nm}
+                      av={a.av}
+                      nm={a.nm}
+                      sub={a.sub + (on ? ' · в рапорте' : '')}
+                      val={`рейтинг ${a.rt}`}
+                      on={on}
+                      pill={a.fee}
+                      action={on ? 'Убрать' : 'Добавить'}
+                      onAction={() => toggle(a.nm)}
+                    />
+                  );
+                })}
+              </Rows>
+            ) : (
+              <EmptyBox
+                title="Никого не нашли"
+                text="В рапорт попадают спортсмены своего региона: по этой фамилии среди них никого нет."
+              />
+            )}
+          </Panel>
+        </div>
+
+        <div>
+          <Panel title="Мои рапорты" sub="Что с поданными" flush>
+            <Rows>
+              {MY_REPORTS.map((r) => (
+                <Row key={r.no} nm={`№ ${r.no} · ${r.nm}`} sub={r.sub} pill={{ t: r.st, cls: r.cls }} />
+              ))}
+            </Rows>
+          </Panel>
+
+          {/* Возврат читается у автора ✳: комментарий главного тренера стоит
+              рядом с формой, в которой правят, а не в письме и не в чужом
+              кабинете. Без него «на доработке» — это тупик. */}
+          {MY_REPORTS.filter((r) => r.why).map((r) => (
+            <Panel key={r.no} title={`Вернули на доработку · № ${r.no}`}>
+              <p className="text-[13px] leading-relaxed text-neutral-700">{r.why}</p>
+              <div className="mt-3">
+                <Button size="sm" variant="outline">
+                  <ClipboardCheck size={14} /> Открыть и исправить
+                </Button>
+              </div>
+            </Panel>
+          ))}
+        </div>
+      </div>
+
+      <ActionBar>
+        <span className="mr-auto max-w-md text-[12.5px] leading-snug text-neutral-500">
+          В рапорте {team.length} человек
+          {noFee.length > 0 && ` · у ${noFee.length} не оплачен годовой взнос`}
+          {' · '}после согласования документ уходит в федерацию сам
+        </span>
+        <QuietAction>Сохранить черновик</QuietAction>
+        <PrimaryAction to="Э12.8">Подать рапорт</PrimaryAction>
+      </ActionBar>
+
+      <Bar>
+        Подают тренеры штаба и старшие тренеры регионов, согласовывает главный тренер сборной
+        (Э11.4). Комментарий возврата показан здесь же: править рапорт автор будет в этой форме.
+      </Bar>
+    </WebApp>
+  );
+}
+
+const Report12_8Phone = () => (
+  <PhoneRoleApp
+    role={R12}
+    nav="Рапорты"
+    title="Рапорт на командирование"
+    sub="УТС Шымкент · 10–20.06"
+  >
+    <Panel title="Мои рапорты" flush>
+      <Rows>
+        {MY_REPORTS.map((r) => (
+          <Row key={r.no} nm={`№ ${r.no} · ${r.nm}`} sub={r.sub} pill={{ t: r.st, cls: r.cls }} />
+        ))}
+      </Rows>
+    </Panel>
+
+    <Panel title="Кого командируем · 3" flush>
+      <Rows>
+        {CANDS.slice(0, 3).map((a) => (
+          <Row key={a.nm} av={a.av} nm={a.nm} sub={a.sub} pill={a.fee} />
+        ))}
+      </Rows>
+    </Panel>
+
+    <ActionBar>
+      <PrimaryAction>Подать рапорт</PrimaryAction>
+    </ActionBar>
+  </PhoneRoleApp>
+);
+
 export const SCREENS: ScreenMap = {
   'Э0.1': {
     cap: 'Вход',
@@ -1802,6 +2017,11 @@ export const SCREENS: ScreenMap = {
     /* Узел вкладки на карте открывает экран сразу на ней: вкладок пять, и без
        этого «Регионы» и «Группы» пришлось бы искать кликами. */
     tabView: (tab) => <Mine12_5 tab={tab} />,
+  },
+  'Э12.8': {
+    cap: 'Рапорт на командирование',
+    view: () => <Report12_8 />,
+    alt: () => <Report12_8Phone />,
   },
 };
 export function Role12Board() {
