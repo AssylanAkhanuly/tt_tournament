@@ -172,6 +172,11 @@ export function Squad11_1() {
       title="Состав национальной команды"
       sub="Сезон 2026"
       hint="Предложение 5 федерации: единая база членов сборной с распределением по составам, возрастным группам и тренерам."
+      actions={
+        <Button variant="primary">
+          <Plus size={15} /> Внести в состав
+        </Button>
+      }
     >
       <StatTiles
         items={[
@@ -184,13 +189,7 @@ export function Squad11_1() {
         ]}
       />
 
-      <FilterBar
-        right={
-          <Button size="sm" variant="outline">
-            <Plus size={14} /> Внести в состав
-          </Button>
-        }
-      >
+      <FilterBar>
         <SearchInput value={q} onChange={setQ} placeholder="Фамилия или регион" className="w-72" />
         <FilterSeg items={SQUADS} active={sq} onPick={setSq} />
         <FilterSeg items={AGES} active={age} onPick={setAge} />
@@ -310,21 +309,17 @@ function CardTabs({ start = 'План подготовки' }: { start?: string 
   const done = PLAN.filter((p) => p.done).length;
   const plan = (
         <>
-          <Panel
-            title="Индивидуальный план подготовки · сезон 2026"
-            sub="Составил и правит главный тренер сборной · последняя правка 12.06.2026"
-            extra={
-              <Button size="sm" variant="outline" data-to="Э11.5">
-                <ClipboardCheck size={14} /> Внести правку
-              </Button>
-            }
-          >
+          {/* Ни названия, ни подписи о том, кто план правит ✳ (04.09.2026):
+              вкладка над панелью называется «План подготовки», а правит его
+              единственный, кто это здесь может, — хозяин экрана. Число
+              пунктов ушло из фактов: оно стоит в «выполнено 7 из 9». */}
+          <Panel>
             <div className="mb-3">
               <Facts
                 items={[
-                  { k: 'пунктов плана', v: String(PLAN.length) },
                   { k: 'выполнено', v: `${done} из ${PLAN.length}` },
                   { k: 'период', v: 'январь — декабрь 2026' },
+                  { k: 'последняя правка', v: '12.06.2026' },
                   { k: 'правок за сезон', v: '4' },
                 ]}
               />
@@ -462,6 +457,11 @@ export const Card11_2 = () => (
     nav="Состав сборной"
     back={{ label: 'Состав сборной', to: 'Э11.1' }}
     title="Ким Георгий"
+    actions={
+      <Button variant="primary" data-to="Э11.5">
+        <ClipboardCheck size={15} /> Внести правку
+      </Button>
+    }
   >
     <CardTabs />
   </WebApp>
@@ -613,7 +613,7 @@ export function PlanEdit11_5() {
       nav="Состав сборной"
       back={{ label: 'Карточка спортсмена', to: 'Э11.2' }}
       title="План подготовки · Ким Георгий"
-      sub="Сезон 2026 · составляет и правит главный тренер сборной"
+      sub="Сезон 2026"
     >
       <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,320px)]">
         <div>

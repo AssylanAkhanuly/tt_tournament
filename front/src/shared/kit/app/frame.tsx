@@ -46,6 +46,15 @@ export const Phone = ({ children }: { children: ReactNode }) => (
   <ScreenScope>
     <div className="rounded-[2.8rem] bg-neutral-900 p-2.5 shadow-xl">
       <div className="relative flex h-[840px] w-[392px] flex-col overflow-hidden rounded-[2.2rem] bg-white">
+        {/* Камера ✳ (04.09.2026): островком посередине статусбара. Без неё
+            кадр читался просто скруглённым прямоугольником — а рядом с
+            ноутбучным кадром должно быть видно с первого взгляда, где какое
+            устройство. Точка объектива — светлым кругом внутри островка. */}
+        <div className="pointer-events-none absolute left-1/2 top-2.5 z-30 flex h-6 w-24 -translate-x-1/2 items-center justify-end rounded-full bg-neutral-900 pr-2.5">
+          <span className="block size-3 rounded-full bg-neutral-600 ring-1 ring-neutral-500">
+            <span className="block size-1.5 translate-x-[3px] translate-y-[3px] rounded-full bg-neutral-400" />
+          </span>
+        </div>
         {/* Статусбар: без него кадр не читается как телефон. */}
         <div className="flex items-center justify-between px-7 pb-1 pt-3 text-[13px] font-semibold">
           <span>9:41</span>

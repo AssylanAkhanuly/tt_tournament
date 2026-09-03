@@ -471,7 +471,7 @@ export function Calendar14_2(_props: { variant?: 'desktop' | 'land' } = {}) {
   const [filter, setFilter] = useState(TOUR_FILTERS[0]);
   return (
     <Ph tab="Турниры">
-      <PageT t="Турниры" sub="Сезон 2026 · мои старты и открытые приёмы одним списком" />
+      <PageT t="Турниры" sub="Сезон 2026" />
       <FilterSeg items={TOUR_FILTERS} active={filter} onPick={setFilter} />
       <EventTimeline items={tours14_2(filter)} today={TODAY14_2} />
       <Rule14_2 />
@@ -496,7 +496,7 @@ export function Calendar14_2Web() {
   const [filter, setFilter] = useState(TOUR_FILTERS[0]);
   const shown = tours14_2(filter);
   return (
-    <Web nav="Турниры" title="Турниры" sub="Сезон 2026 · мои старты и открытые приёмы одним списком">
+    <Web nav="Турниры" title="Турниры" sub="Сезон 2026">
       <div className="mb-3 flex items-center justify-between gap-4">
         <FilterSeg items={TOUR_FILTERS} active={filter} onPick={setFilter} />
         <span className="text-[12.5px] text-neutral-500">
@@ -648,10 +648,7 @@ export function Apply14_3() {
           </div>
           <FileDrop label="Медицинская справка" hint="PDF или фото · до 10 МБ" />
         </div>
-        <div className="flex items-center justify-between gap-3 border-t border-neutral-100 bg-neutral-50 px-4 py-3">
-          <span className="text-[11.5px] leading-tight text-neutral-500">
-            Решение принимает главный судья турнира
-          </span>
+        <div className="flex items-center justify-end border-t border-neutral-100 bg-neutral-50 px-4 py-3">
           <Button variant="primary" data-to="Э14.4">
             <Send size={14} /> Подать заявку
           </Button>
@@ -1692,7 +1689,7 @@ export function Stats14_6Web() {
     <Web
       nav="Профиль"
       title="Аналитика сезона"
-      sub="Сезон 2026 · динамика рейтинга, история турниров и личные встречи"
+      sub="Сезон 2026"
       back={{ label: 'Профиль', to: 'Э14.7' }}
     >
       <div className="mb-4">
@@ -1778,8 +1775,9 @@ const Vcard14_7 = ({ cover = 64 }: { cover?: number }) => (
       </Avatar>
       <div className="mt-1.5 text-[17px] font-bold leading-tight">Ким Георгий</div>
       <div className="text-xs text-neutral-500">2003 г.р. · г. Астана · клуб СКА, подтверждён 12.01.2026</div>
+      {/* Места в РК на визитке нет ✳ (04.09.2026): «7-е место в РК» стоит в
+          карточке рейтинга сразу под ней, вместе с самим числом. */}
       <div className="mt-2 flex flex-wrap gap-1.5">
-        <Pill t="7-Е В РК" color="default" />
         <Pill t="КМС" color="default" />
       </div>
     </div>
@@ -1812,9 +1810,6 @@ const Rating14_7 = () => (
       <BarChart3 size={16} className="shrink-0 text-blue-300" />
       <span className="min-w-0 flex-1 leading-tight">
         <span className="block text-[13.5px] font-semibold">Аналитика сезона</span>
-        <span className="block text-[11.5px] text-blue-200">
-          динамика рейтинга, история турниров, личные встречи
-        </span>
       </span>
       <ChevronRight size={16} className="shrink-0 text-blue-300" />
     </button>
@@ -1861,10 +1856,7 @@ const Rule14_7 = () => (
 
 /** Полоса оплаты под списком взносов: главное действие экрана. */
 const PayBar14_7 = () => (
-  <div className="flex items-center justify-between gap-3 border-t border-neutral-100 bg-neutral-50 px-4 py-2.5">
-    <span className="text-[11.5px] leading-tight text-neutral-500">
-      Оплата на странице банка · состояние видно и вашему тренеру
-    </span>
+  <div className="flex items-center justify-end border-t border-neutral-100 bg-neutral-50 px-4 py-2.5">
     <Button variant="primary" size="sm" data-to="Э14.8">
       <CreditCard size={14} /> Оплатить картой
     </Button>
