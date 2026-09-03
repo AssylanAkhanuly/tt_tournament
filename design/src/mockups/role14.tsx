@@ -687,11 +687,6 @@ export function Apply14_3Web() {
           {FORM14_3.map((f) => <PickField key={f.k} label={f.k} value={f.v} />)}
           <FileDrop label="Медицинская справка" hint="PDF или фото · до 10 МБ · нужна этому турниру" />
         </FormGrid>
-        <ActionBar>
-          <Button variant="primary" data-to="Э14.4">
-            <Send size={14} /> Подать заявку
-          </Button>
-        </ActionBar>
       </Panel>
 
       <Panel title="Условия допуска" sub="проверено системой" flush>
@@ -699,6 +694,11 @@ export function Apply14_3Web() {
       </Panel>
 
       <Rule14_3 />
+      <ActionBar>
+        <Button variant="primary" data-to="Э14.4">
+          <Send size={14} /> Подать заявку
+        </Button>
+      </ActionBar>
     </Web>
   );
 }

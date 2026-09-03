@@ -478,7 +478,7 @@ export function Tournament6_1(_props: { variant?: 'desktop' | 'land' } = {}) {
     <WebApp
       role={at('ПРИЁМ ЗАЯВОК')}
       nav="Мой турнир"
-      title="Чемпионат Казахстана 2026"
+      title="Мой турнир"
     >
       <StatTiles items={TILES6_1} />
 
@@ -523,7 +523,7 @@ export function Tournament6_1Phone() {
     <PhoneRoleApp
       role={at('ПРИЁМ ЗАЯВОК')}
       nav="Мой турнир"
-      title="Чемпионат Казахстана 2026"
+      title="Мой турнир"
       sub="Одиночный · г. Астана · 12–14 марта"
     >
       <PhoneTiles>
@@ -940,7 +940,11 @@ const Waiting6_2Phone = () => {
             </QuietAction>
           </Wide>
         </>
-      ) : (
+      ) : null}
+      <Bar>{AGE_RULE}</Bar>
+      {/* Решение принято — полосы больше нет: под ней стоит «вернуть заявку в
+          очередь», и это уже другое действие. */}
+      {!verdict && (
         <ActionBar>
           <Button variant="outline" data-to="Э6.8" onPress={() => setDone({ ...done, [cur]: 'no' })}>
             Отклонить заявку с причиной
@@ -950,7 +954,6 @@ const Waiting6_2Phone = () => {
           </Button>
         </ActionBar>
       )}
-      <Bar>{AGE_RULE}</Bar>
     </>
   );
 };
@@ -1124,16 +1127,6 @@ export function Bracket6_3() {
                 остаётся в журнале: переигранный жребий участники вправе проверить.
               </Bar>
             </div>
-            <ActionBar>
-              <QuietAction>
-                <Pencil size={14} /> {lot ? 'Изменить состав сеяных' : 'Изменить основание посева'}
-              </QuietAction>
-              {lot && (
-                <Button variant="primary" onPress={() => setN(n + 1)}>
-                  <Shuffle size={15} /> {n ? 'Перебросить жребий' : 'Провести жеребьёвку'}
-                </Button>
-              )}
-            </ActionBar>
           </Panel>
 
           <Panel title="Кто где стоит" extra={<span className="text-xs text-neutral-500">первые слоты</span>}>
@@ -1142,6 +1135,16 @@ export function Bracket6_3() {
               <Bar>Весь состав со слотами — у секретаря (Э7.3): он собирает по ним сетку.</Bar>
             </div>
           </Panel>
+          <ActionBar>
+            <QuietAction>
+              <Pencil size={14} /> {lot ? 'Изменить состав сеяных' : 'Изменить основание посева'}
+            </QuietAction>
+            {lot && (
+              <Button variant="primary" onPress={() => setN(n + 1)}>
+                <Shuffle size={15} /> {n ? 'Перебросить жребий' : 'Провести жеребьёвку'}
+              </Button>
+            )}
+          </ActionBar>
         </>
       )}
 
@@ -1638,17 +1641,6 @@ export function Schedule6_4({ tab }: { tab?: string }) {
         </span>
       </div>
 
-      {/* Утверждать в живой очереди нечего — кнопки утверждения там нет. */}
-      {order !== ORDER6[1] && (
-        <ActionBar>
-          <span className="mr-auto"><Pl t="ЖДЁТ УТВЕРЖДЕНИЯ" cls="wait" /></span>
-          <QuietAction>Вернуть с замечанием</QuietAction>
-          <Button variant="primary">
-            <Check size={15} /> Утвердить расписание
-          </Button>
-        </ActionBar>
-      )}
-
       {order === ORDER6[1] ? (
         <LiveOrder6_4 />
       ) : (
@@ -1663,6 +1655,16 @@ export function Schedule6_4({ tab }: { tab?: string }) {
               : DAYS6_4.map((d) => ({ t: d.t, view: <Day6_4 day={d} /> }))
           }
         />
+      )}
+      {/* Утверждать в живой очереди нечего — полосы утверждения там нет. */}
+      {order !== ORDER6[1] && (
+        <ActionBar>
+          <span className="mr-auto"><Pl t="ЖДЁТ УТВЕРЖДЕНИЯ" cls="wait" /></span>
+          <QuietAction>Вернуть с замечанием</QuietAction>
+          <Button variant="primary">
+            <Check size={15} /> Утвердить расписание
+          </Button>
+        </ActionBar>
       )}
     </WebApp>
   );

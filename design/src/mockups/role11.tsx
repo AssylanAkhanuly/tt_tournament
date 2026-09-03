@@ -1165,17 +1165,7 @@ export function Reports11_4() {
 
             <ReportPage r={one} page={page} />
 
-            {one.cls === 'wait' ? (
-              <>
-                <ActionBar>
-                  <Button variant="outline">Отклонить</Button>
-                  <Button variant="outline">Вернуть на доработку</Button>
-                  <Button variant="primary">
-                    <ClipboardCheck size={15} /> Согласовать
-                  </Button>
-                </ActionBar>
-              </>
-            ) : (
+            {one.cls !== 'wait' && (
               <p className="mt-4 text-[12.5px] leading-snug text-neutral-500">{one.closed}</p>
             )}
           </Panel>
@@ -1187,6 +1177,16 @@ export function Reports11_4() {
               ))}
             </Rows>
           </Panel>
+          {/* Решение принимают только по рапорту, который ждёт ответа. */}
+          {one.cls === 'wait' && (
+            <ActionBar>
+              <Button variant="outline">Отклонить</Button>
+              <Button variant="outline">Вернуть на доработку</Button>
+              <Button variant="primary">
+                <ClipboardCheck size={15} /> Согласовать
+              </Button>
+            </ActionBar>
+          )}
         </div>
       </div>
 
@@ -1213,15 +1213,16 @@ export const Reports11_4Phone = () => {
       <div className="mt-3">
         <Panel title={`Рапорт № ${one.no}`} sub={`${one.nm} · лист 1 из 2`}>
           <ReportPage r={one} page={1} compact />
-          <ActionBar>
-            <Button className="w-full" variant="primary">
-              <ClipboardCheck size={15} /> Согласовать
-            </Button>
-          </ActionBar>
         </Panel>
       </div>
 
       <Bar>Согласование с телефона — то же решение: согласовать, вернуть с комментарием, отклонить.</Bar>
+
+      <ActionBar>
+        <Button className="w-full" variant="primary">
+          <ClipboardCheck size={15} /> Согласовать
+        </Button>
+      </ActionBar>
     </PhoneRoleApp>
   );
 };

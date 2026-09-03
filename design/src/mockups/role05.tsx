@@ -2203,18 +2203,6 @@ const Protocol5_4Body = ({ phone }: { phone?: boolean }) => {
               протокол завершает турнир и запускает пересчёт рейтинга. Вместо
               кнопок — что именно произошло. */}
           <div className="mt-4 flex flex-col gap-2">
-            {v === '' && (
-              /* Кнопки в строку, а не столбиком ✳: панель во всю ширину, и
-                 растянутая на неё «Утвердить» читалась бы полосой. */
-              <ActionBar>
-                <Button variant="outline" onPress={() => setAsk(true)}>
-                  <Undo2 size={15} /> Вернуть с причиной
-                </Button>
-                <Button variant="primary" onPress={() => setV('ok')}>
-                  <Check size={15} /> Утвердить протокол
-                </Button>
-              </ActionBar>
-            )}
             {v === 'ok' && (
               <Bar tone="success">
                 Протокол утверждён: турнир → «Завершён», запущен пересчёт рейтинга, главному судье
@@ -2241,6 +2229,19 @@ const Protocol5_4Body = ({ phone }: { phone?: boolean }) => {
             )}
           </div>
         </Panel>
+
+        {/* Решение принято — полосы больше нет, а не «серые кнопки»:
+            утверждённый протокол завершает турнир и запускает пересчёт. */}
+        {v === '' && (
+          <ActionBar>
+            <Button variant="outline" onPress={() => setAsk(true)}>
+              <Undo2 size={15} /> Вернуть с причиной
+            </Button>
+            <Button variant="primary" onPress={() => setV('ok')}>
+              <Check size={15} /> Утвердить протокол
+            </Button>
+          </ActionBar>
+        )}
       </>
 
       {phone ? <PhoneDialog>{dialog}</PhoneDialog> : dialog}

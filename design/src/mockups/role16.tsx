@@ -380,10 +380,6 @@ export function Protest16_1Ph() {
         <div className="mt-4">
           <Rule16_1 />
         </div>
-        <ActionBar>
-          <Button variant="ghost" className="w-full">Сохранить черновик</Button>
-          <Button variant="primary" className="w-full" data-to="Э16.2">Подать протест</Button>
-        </ActionBar>
       </Panel>
 
       <Panel
@@ -401,6 +397,10 @@ export function Protest16_1Ph() {
           <Rule16_1Mat />
         </div>
       </Panel>
+      <ActionBar>
+        <Button variant="ghost" className="w-full">Сохранить черновик</Button>
+        <Button variant="primary" className="w-full" data-to="Э16.2">Подать протест</Button>
+      </ActionBar>
     </PhoneRoleApp>
   );
 }
@@ -829,12 +829,6 @@ export function Case16_3Ph() {
         <p className="mt-2 text-[11.5px] leading-snug text-neutral-500">
           Решение уйдёт заявителю уведомлением и останется в истории участников
         </p>
-        <ActionBar>
-          <Button variant="ghost" className="w-full" onPress={() => setAsk(true)}>
-            <FileText size={14} /> Запросить пояснение
-          </Button>
-          <Button variant="primary" className="w-full">Принять решение</Button>
-        </ActionBar>
       </Panel>
 
       {ask && (
@@ -855,6 +849,12 @@ export function Case16_3Ph() {
           <AskForm16_3 />
         </PhoneDialog>
       )}
+      <ActionBar>
+        <Button variant="ghost" className="w-full" onPress={() => setAsk(true)}>
+          <FileText size={14} /> Запросить пояснение
+        </Button>
+        <Button variant="primary" className="w-full">Принять решение</Button>
+      </ActionBar>
     </PhoneRoleApp>
   );
 }

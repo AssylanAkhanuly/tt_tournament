@@ -309,7 +309,13 @@ export function Club13_1(_props: { variant?: 'desktop' | 'land' } = {}) {
     <WebApp
       role={R13}
       nav="Мой клуб"
-      title="Клуб «Алатау»"
+      // Название клуба стоит в шапке — заголовок экрана его не повторяет ✳
+      title="Мой клуб"
+      actions={
+        <Button variant="primary" data-to="Э13.2">
+          <UserPlus size={15} /> Пригласить спортсмена
+        </Button>
+      }
     >
       <StatTiles items={TILES13} />
 
@@ -323,14 +329,7 @@ export function Club13_1(_props: { variant?: 'desktop' | 'land' } = {}) {
           ширины, а рядом висели узкие «Команды» и «Карточка». Панель сама
           держит отступ снизу, поэтому обёртка не нужна. */}
       <>
-        <Panel
-          title="Состав клуба"
-          extra={
-            <Button size="sm" variant="outline" data-to="Э13.2">
-              <UserPlus size={14} /> Пригласить спортсмена
-            </Button>
-          }
-        >
+        <Panel title="Состав клуба">
           <div className="mb-3 flex items-center justify-between gap-3">
             <FilterSeg
               items={MATE_TABS.map(segMate)}
@@ -2103,7 +2102,12 @@ function Club13_1Phone() {
     <PhoneRoleApp
       role={R13}
       nav="Мой клуб"
-      title="Клуб «Алатау»"
+      title="Мой клуб"
+      actions={
+        <Button variant="primary" data-to="Э13.2">
+          <UserPlus size={15} /> Пригласить спортсмена
+        </Button>
+      }
     >
       <Tiles13Phone />
       <Attention13Phone />
@@ -2140,13 +2144,8 @@ function Club13_1Phone() {
           />
         )}
 
-        <div className="mt-3 flex flex-col gap-2">
-          <span className="text-[12px] leading-snug text-neutral-500">
-            Показаны {rows.length} из 38 · взнос и рейтинг — из реестра федерации
-          </span>
-          <Button variant="outline" className="w-full" data-to="Э13.2">
-            <UserPlus size={14} /> Пригласить спортсмена
-          </Button>
+        <div className="mt-3 text-[12px] leading-snug text-neutral-500">
+          {rows.length} из 38
         </div>
       </Panel>
 
@@ -2781,17 +2780,17 @@ export function Fees13_10({ done }: { done?: boolean }) {
             { k: 'итого', v: money(sum), hot: true },
           ]}
         />
-        <ActionBar>
-          <Button variant="primary" data-to="Э13.10">
-            <CreditCard size={15} /> Оплатить {money(sum)} картой
-          </Button>
-        </ActionBar>
       </Panel>
 
       <Bar tone="warning">
         ⚠ Что делать с возвратом, федерация не сказала: платёж один, а людей несколько — возвращать
         придётся долю, и по чьей заявке. Вопрос к федерации и к бухгалтеру (роль 2).
       </Bar>
+      <ActionBar>
+        <Button variant="primary" data-to="Э13.10">
+          <CreditCard size={15} /> Оплатить {money(sum)} картой
+        </Button>
+      </ActionBar>
     </WebApp>
   );
 }

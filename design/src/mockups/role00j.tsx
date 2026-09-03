@@ -2117,11 +2117,11 @@ function Call0_10Phone() {
 
       {/* Подача последней и во всю ширину: сначала выбирают позицию, потом
           жмут, — а кнопка у нижнего края попадает под большой палец. */}
-      <ActionBar>
-        <Button className="w-full" variant="primary" isDisabled={picked.length === 0}>
-          <Send size={15} /> Подать заявку на судейство
-        </Button>
-      </ActionBar>
+          <ActionBar>
+            <Button className="w-full" variant="primary" isDisabled={picked.length === 0}>
+              <Send size={15} /> Подать заявку на судейство
+            </Button>
+          </ActionBar>
     </PhoneRoleApp>
   );
 }
