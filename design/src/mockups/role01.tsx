@@ -886,7 +886,7 @@ const AttnPhone = () => {
             </div>
           ))}
           <div className="bg-neutral-50 px-4 py-1.5 text-[11px] text-neutral-400">
-            Строка ведёт туда, где дело снимается · показаны {max} из {cur.n}
+            показаны {max} из {cur.n}
           </div>
         </Rows>
       )}

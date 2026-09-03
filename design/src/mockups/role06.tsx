@@ -1542,7 +1542,7 @@ const List6_4 = ({ day, max = 12 }: { day: Day6; max?: number }) => {
       </Rows>
       {slots.length > shown.length && (
         <div className="mt-3 text-[12.5px] text-neutral-500">
-          Показаны первые {shown.length} матчей из {slots.length} — весь день целиком виден на сетке времени
+          {shown.length} из {slots.length} матчей дня
         </div>
       )}
     </>

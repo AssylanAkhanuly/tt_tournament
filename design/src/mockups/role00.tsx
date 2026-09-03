@@ -1522,7 +1522,7 @@ export function Tournament0_4() {
             {
               t: 'Результаты',
               view: (
-                <Panel title="Результаты · первый тур сыгран" sub="показаны две личные встречи из шести" flush>
+                <Panel title="Результаты · первый тур сыгран" flush>
                   <DataTable
                     cols={['Тур', 'Матч', 'Счёт', 'Партии']}
                     grid="110px 1fr 70px 210px"
@@ -2860,7 +2860,7 @@ const Tournament0_4Phone = () => (
           {
             t: 'Результаты',
             view: (
-              <Panel title="Результаты · первый тур сыгран" sub="показаны две личные встречи из шести" flush>
+              <Panel title="Результаты · первый тур сыгран" flush>
                 <div className="divide-y divide-neutral-100">
                   {RESULTS.map((r) => (
                     <div key={r.key} className="px-4 py-2.5">

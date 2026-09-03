@@ -231,8 +231,8 @@ export function Region12_1(_props: { variant?: 'desktop' | 'land' } = {}) {
 
       <div className="mt-3 text-[12.5px] text-neutral-500">
         {rows.length === REGION.length
-          ? 'первые 6 из 184 · дальше — страницами'
-          : `показано ${rows.length} · всего в регионе 184`}
+          ? '6 из 184'
+          : `${rows.length} из 184`}
       </div>
       <ActionBar>
         <QuietAction to="Э12.7">Приглашения региона · 2 ждут ответа</QuietAction>
@@ -1442,7 +1442,7 @@ function Region12_1Phone() {
 
       <div className="mt-3 text-[12px] text-neutral-500">
         {rows.length === REGION.length
-          ? 'первые 6 из 184 · дальше — прокруткой'
+          ? '6 из 184'
           : `показано ${rows.length} · всего в регионе 184`}
       </div>
       <ActionBar>

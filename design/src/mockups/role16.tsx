@@ -83,7 +83,9 @@ const RD: RoleUI = {
   num: '16',
   title: 'Дисциплинарный комитет',
   person: { nm: 'Мукашев Б.', rl: 'Член комитета · председатель ГСК', av: A(67) },
-  brandName: 'Дисциплинарный комитет',
+  /* В шапке — сезон, а не название роли ✳ (04.09.2026): «Дисциплинарный
+     комитет» стоит в боковом меню, и второй раз наверху это тот же текст. */
+  brandName: 'Сезон 2026',
   badge: false,
   nav: [
     [<Scroll size={16} key="p" />, 'Протесты'],
@@ -460,7 +462,7 @@ const hint16_2 = (picked: Case | undefined, canTake: boolean) =>
     ? canTake
       ? `Выбрано дело ${picked.id} — состояние станет «на рассмотрении», автор и время запишутся в журнал`
       : `Дело ${picked.id} уже ${picked.st === 'на рассмотрении' ? 'ведётся' : 'закрыто'} — взять в работу можно только дело в состоянии «подан»`
-    : 'Новые сверху: у протеста есть срок ⚠ 15.4 · выберите дело, чтобы взять его в работу';
+    : 'Выберите дело';
 
 /** Очередь дел комитета — первый экран члена комитета (пункт «Протесты»).
     Взять в работу можно только дело в состоянии «подан»: остальные либо уже
@@ -479,7 +481,6 @@ export function Cases16_2() {
       role={RD}
       nav="Протесты"
       title="Протесты"
-      sub="Сезон 2026"
     >
       {/* Плиток-счётчиков над очередью больше нет ✳ (30.08.2026): экран — сама
           очередь дел, и три плитки пересказывали её состояния, которые стоят
@@ -488,30 +489,12 @@ export function Cases16_2() {
           очередь по состоянию можно фильтром, а не чтением плитки. */}
 
       {/* Фильтр по состоянию и турниру ✳ — оба сужают список, а не меняют экран. */}
-      <div className="mb-3 flex items-center justify-between gap-4">
-        <div className="flex flex-wrap items-center gap-2">
-          <FilterSeg items={FILTER_ST} active={fs} onPick={setFs} />
-          <FilterSeg items={FILTER_TOUR} active={ft} onPick={setFt} />
-        </div>
-        <div className="flex items-center gap-2">
-          <Button size="sm" variant="outline" data-to="Э16.4">
-            <History size={14} /> Дисциплинарная история
-          </Button>
-          {canTake ? (
-            <PrimaryAction to="Э16.3">Взять в работу</PrimaryAction>
-          ) : (
-            <DisabledAction>Взять в работу</DisabledAction>
-          )}
-        </div>
+      <div className="mb-3 flex flex-wrap items-center gap-2">
+        <FilterSeg items={FILTER_ST} active={fs} onPick={setFs} />
+        <FilterSeg items={FILTER_TOUR} active={ft} onPick={setFt} />
       </div>
-      <div className="mb-3 text-[12.5px] text-neutral-500">{hint16_2(picked, canTake)}</div>
 
-      <Panel
-        title="Очередь дел"
-        sub="новые сверху — сортировка по дате подачи"
-        extra={<span className="text-xs text-neutral-500">кто подал · по какому матчу · состояние</span>}
-        flush
-      >
+      <Panel title="Очередь дел" flush>
         {rows.length ? (
           <div className="divide-y divide-neutral-100">
             {rows.map((c) => (
@@ -533,6 +516,18 @@ export function Cases16_2() {
           </div>
         )}
       </Panel>
+
+      <ActionBar>
+        <span className="mr-auto text-[12.5px] text-neutral-500">{hint16_2(picked, canTake)}</span>
+        <Button variant="outline" data-to="Э16.4">
+          <History size={14} /> Дисциплинарная история
+        </Button>
+        {canTake ? (
+          <PrimaryAction to="Э16.3">Взять в работу</PrimaryAction>
+        ) : (
+          <DisabledAction>Взять в работу</DisabledAction>
+        )}
+      </ActionBar>
     </WebApp>
   );
 }
@@ -558,7 +553,7 @@ export function Cases16_2Ph() {
   const canTake = picked?.st === 'подан';
 
   return (
-    <PhoneRoleApp role={RD} nav="Протесты" title="Протесты" sub="Сезон 2026">
+    <PhoneRoleApp role={RD} nav="Протесты" title="Протесты">
       <div className="mb-2 flex flex-col gap-2">
         <Scroller><FilterSeg items={FILTER_ST} active={fs} onPick={setFs} /></Scroller>
         <Scroller><FilterSeg items={FILTER_TOUR} active={ft} onPick={setFt} /></Scroller>
@@ -978,7 +973,6 @@ export function History16_4() {
       role={RD}
       nav="История"
       title="Дисциплинарная история"
-      sub="Сезон 2026"
       hint={HINT16_4}
     >
       <div className="mb-3 flex items-center justify-between gap-4">
@@ -1061,7 +1055,6 @@ export function History16_4Ph() {
       role={RD}
       nav="История"
       title="Дисциплинарная история"
-      sub="Сезон 2026"
     >
       <div className="mb-3 flex flex-col gap-2">
         <Scroller><FilterSeg items={LENSES} active={lens} onPick={setLens} /></Scroller>
