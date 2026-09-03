@@ -136,9 +136,21 @@ const P = ({ t, cls }: { t: string; cls: string }) => <Pill t={t} color={PC[cls]
     аналитики от графика полсантиметра, а кнопка «Подать заявку» исчезала
     вместе с подвалом своей карточки. Обёртка со `shrink-0` возвращает блокам
     их настоящую высоту, а экрану — честную прокрутку. */
-const Ph = ({ tab, center, children }: { tab: string; center?: boolean; children: ReactNode }) => (
+const Ph = ({
+  tab,
+  center,
+  action,
+  children,
+}: {
+  tab: string;
+  center?: boolean;
+  /** Закреплённая полоса действия — вне колонки содержимого. */
+  action?: ReactNode;
+  children: ReactNode;
+}) => (
   <PhoneApp brand="Спортсмен" tabs={TABS} active={tab} center={center}>
     <div className="flex shrink-0 flex-col gap-3.5">{children}</div>
+    {action}
   </PhoneApp>
 );
 
@@ -2143,16 +2155,21 @@ const ResultBody14 = ({ ok, title, lead, facts, action, note }: Result14Props) =
     </Panel>
 
     <p className="text-center text-[11px] leading-snug text-neutral-400">{note}</p>
-    <ActionBar>
-      <Button variant="primary" className="w-full" data-to={action.to}>
-        {action.icon} {action.t}
-      </Button>
-    </ActionBar>
   </>
 );
 
+/** Действие страницы возврата — закреплённой полосой ✳ (04.09.2026): внутри
+    узкой колонки ответа она распиралась по ней, а не по экрану. */
+const ResultAction14 = ({ action }: { action: Result14Props['action'] }) => (
+  <ActionBar>
+    <Button variant="primary" className="w-full" data-to={action.to}>
+      {action.icon} {action.t}
+    </Button>
+  </ActionBar>
+);
+
 const Result14 = (p: Result14Props) => (
-  <Ph tab="Профиль" center>
+  <Ph tab="Профиль" center action={<ResultAction14 action={p.action} />}>
     <ResultBody14 {...p} />
   </Ph>
 );
@@ -2166,6 +2183,7 @@ const Result14Web = (p: Result14Props) => (
     <div className="mx-auto flex w-115 flex-col gap-3.5 py-6">
       <ResultBody14 {...p} />
     </div>
+    <ResultAction14 action={p.action} />
   </Web>
 );
 
@@ -2182,7 +2200,7 @@ const PAID14_10: Result14Props = {
     ['Взнос действует', 'до 31.03.2027'],
   ],
   action: { t: 'К турнирам', to: 'Э14.2', icon: <Trophy size={15} /> },
-  note: 'Квитанцию присылает банк на почту. Отметка об оплате видна тренеру и в реестре — ставить её вручную никому не нужно.',
+  note: 'Квитанцию присылает банк на почту',
 };
 
 export function Paid14_10() {
@@ -2229,7 +2247,7 @@ const DECLINED14_11: Result14Props = {
     ['Взнос', 'остался неоплаченным'],
   ],
   action: { t: 'Повторить оплату', to: 'Э14.8', icon: <CreditCard size={15} /> },
-  note: 'Причину пишет банк — мы её только показываем. Ни номера карты, ни кода из SMS у нас нет; можно повторить или заплатить другой картой.',
+  note: 'Причину отказа пишет банк',
 };
 
 export function Declined14_11() {

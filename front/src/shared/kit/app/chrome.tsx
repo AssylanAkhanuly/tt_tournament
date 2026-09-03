@@ -515,7 +515,7 @@ export function PhoneApp({
           <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-red-500 ring-2 ring-white" />
         </button>
       </div>
-      <div className={'flex min-h-0 flex-1 flex-col gap-3.5 overflow-auto px-4 pb-3 pt-1' + (center ? ' justify-center' : '')}>
+      <div className={'flex min-h-0 flex-1 flex-col gap-3.5 overflow-auto px-4 pb-3 pt-1 [--kit-gut:1rem] [--kit-gutb:0.75rem]' + (center ? ' justify-center' : '')}>
         {children}
       </div>
       <div className="flex shrink-0 items-stretch justify-around border-t border-neutral-200 bg-white px-1 pt-1">

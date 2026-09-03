@@ -1177,16 +1177,6 @@ export function Reports11_4() {
               ))}
             </Rows>
           </Panel>
-          {/* Решение принимают только по рапорту, который ждёт ответа. */}
-          {one.cls === 'wait' && (
-            <ActionBar>
-              <Button variant="outline">Отклонить</Button>
-              <Button variant="outline">Вернуть на доработку</Button>
-              <Button variant="primary">
-                <ClipboardCheck size={15} /> Согласовать
-              </Button>
-            </ActionBar>
-          )}
         </div>
       </div>
 
@@ -1194,6 +1184,19 @@ export function Reports11_4() {
         Согласованный рапорт уходит в федерацию сам — отправлять его отдельно никто не должен.
         Дальше он живёт в документах федерации, а здесь остаётся строкой «в федерации» с датой.
       </Bar>
+
+      {/* Полоса стоит вне двух колонок ✳ (04.09.2026): внутри правой она
+          распиралась по колонке, а не по рабочей области. Решение принимают
+          только по рапорту, который ждёт ответа. */}
+      {one.cls === 'wait' && (
+        <ActionBar>
+          <Button variant="outline">Отклонить</Button>
+          <Button variant="outline">Вернуть на доработку</Button>
+          <Button variant="primary">
+            <ClipboardCheck size={15} /> Согласовать
+          </Button>
+        </ActionBar>
+      )}
     </WebApp>
   );
 }
