@@ -686,9 +686,8 @@ export function Squad12_3() {
 
       {/* Документы и подача — последним: их читают ровно перед тем, как нажать. */}
       <div className="flex items-center justify-between gap-4">
-        <span className="max-w-md text-[12.5px] leading-snug text-neutral-500">
-          В заявке {team.length} из {CANDS.length} · одна заявка на весь список: решение главного
-          судьи приходит по ней целиком (TZ §8.2)
+        <span className="text-[12.5px] leading-snug text-neutral-500">
+          В заявке {team.length} из {CANDS.length}
         </span>
         <span className="flex shrink-0 items-center gap-2">
           <QuietAction>
@@ -1576,8 +1575,7 @@ function Squad12_3Phone() {
 
       <div className="flex flex-col gap-2">
         <span className="text-[12px] leading-snug text-neutral-500">
-          В заявке {team.length} из {CANDS.length} · одна заявка на весь список: решение главного
-          судьи приходит по ней целиком (TZ §8.2)
+          В заявке {team.length} из {CANDS.length}
         </span>
         <PrimaryAction>
           <ClipboardCheck size={15} /> Подать заявку

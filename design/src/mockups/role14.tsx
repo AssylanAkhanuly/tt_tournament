@@ -43,6 +43,7 @@ import {
 import { Avatar, Button, Chip } from '@heroui/react';
 import { A, AW } from '../fedCommon';
 import {
+  Facts,
   ActionBar,
   BackLink,
   Bar,
@@ -1633,10 +1634,7 @@ const RatingHero14_6 = () => (
     выглядит она одинаково в обоих форматах. */
 const Extended14_6 = () => (
   <Panel title="Расширенная аналитика" extra={<P t="ПЛАТНАЯ" cls="reg" />}>
-    <p className="text-[12.5px] leading-relaxed text-neutral-600">
-      Длина розыгрышей и ход партий — считается по вводу счёта по очкам, если судья вёл матч
-      по очкам.
-    </p>
+    <Facts items={[{ k: 'длина розыгрышей', v: 'по вводу счёта' }, { k: 'ход партий', v: 'по вводу счёта' }]} />
     <div className="mt-3">
       <Bar tone="warning">
         ⚠ Состав расширенной аналитики и её оплата не зафиксированы (§10) — до решения
@@ -1662,7 +1660,7 @@ export function Stats14_6() {
       <BackLink label="Профиль" to="Э14.7" />
       <RatingHero14_6 />
 
-      <Panel title="Динамика рейтинга" sub="зелёная точка — турнир в плюс, красная — в минус · 2388 → 2456">
+      <Panel title="Динамика рейтинга" sub="2388 → 2456">
         <RatingChart />
       </Panel>
 
@@ -1708,7 +1706,7 @@ export function Stats14_6Web() {
         <RatingHero14_6 />
       </div>
 
-      <Panel title="Динамика рейтинга" sub="зелёная точка — турнир в плюс, красная — в минус · 2388 → 2456">
+      <Panel title="Динамика рейтинга" sub="2388 → 2456">
         <RatingChart h={280} />
       </Panel>
 
@@ -2043,10 +2041,7 @@ const PayForm14_8 = () => (
         <CreditCard size={15} /> Оплатить ₸ 10 000
       </Button>
     </div>
-    <div className="mt-2.5 flex items-start justify-between gap-3">
-      <span className="text-[11px] leading-snug text-neutral-500">
-        Форму и 3-D Secure показывает банк — номер карты в систему федерации не попадает
-      </span>
+    <div className="mt-2.5 flex items-start justify-end gap-3">
       <button type="button" data-to="Э14.11" className="shrink-0 text-[12.5px] font-semibold text-blue-600">
         Отмена
       </button>
@@ -2649,7 +2644,6 @@ export function History14_12() {
 
       <Panel
         title="Платежи"
-        sub="неудачные попытки тоже видны: по ним понятно, что деньги не списаны"
         flush
       >
         {/* Строка в две ступени, а не в одну: на телефоне значок и «Квитанция»
@@ -2706,7 +2700,7 @@ export function History14_12Web() {
         <PaySum14_12 />
       </div>
 
-      <Panel title="Платежи" sub="неудачные попытки тоже видны: по ним понятно, что деньги не списаны" flush>
+      <Panel title="Платежи" flush>
         <DataTable
           cols={['Платёж', 'Когда', 'Чем платили', 'Сумма', 'Состояние', '']}
           grid={PAY_GRID}
@@ -2800,7 +2794,6 @@ export function Edit14_9() {
       <BackLink label="Профиль" to="Э14.7" />
       <PageT
         t="Телефон и почта"
-        sub="Всё остальное меняется не здесь: в клуб зовёт администратор клуба, в регион — старший тренер"
       />
 
       <Panel title="Контакты" sub="сохраняются сразу">
@@ -2835,7 +2828,6 @@ export function Edit14_9Web() {
     <Web
       nav="Профиль"
       title="Телефон и почта"
-      sub="Всё остальное меняется не здесь: в клуб зовёт администратор клуба, в регион — старший тренер"
       back={{ label: 'Профиль', to: 'Э14.7' }}
     >
       <Panel title="Контакты" sub="сохраняются сразу">

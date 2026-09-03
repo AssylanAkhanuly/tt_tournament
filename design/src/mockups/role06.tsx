@@ -503,7 +503,7 @@ export function Tournament6_1(_props: { variant?: 'desktop' | 'land' } = {}) {
       </Rows>
 
       <div className="mt-3 text-[12.5px] text-neutral-500">
-        Показаны последние 4 из 128 заявок · весь список с решениями — на «Заявках»
+        Показаны последние 4 из 128 заявок
       </div>
       <ActionBar>
         <QuietAction>Условия допуска</QuietAction>
@@ -542,7 +542,7 @@ export function Tournament6_1Phone() {
         {SQUAD.map((p) => <PhonePly key={p.nm} p={p} />)}
       </Rows>
       <div className="mt-3 text-[12.5px] text-neutral-500">
-        Показаны последние 4 из 128 заявок · весь список с решениями — на «Заявках»
+        Показаны последние 4 из 128 заявок
       </div>
     </PhoneRoleApp>
   );
@@ -1958,7 +1958,6 @@ export function Judges6_5() {
       <div className="mb-3 flex items-center justify-between gap-3">
         <Segmented items={JUDGE_VIEWS} value={view} onPick={setView} />
         <span className="flex-1 text-right text-[12.5px] text-neutral-500">
-          Официальный старт: судья на столе обязателен, пустой стол в игру не идёт
         </span>
         <DisabledAction>Разрешить игру без судьи</DisabledAction>
       </div>
@@ -2061,8 +2060,7 @@ export function Judges6_5Phone() {
           </Panel>
 
           <div className="mb-3 text-[12.5px] text-neutral-500">
-            Официальный старт: судья на столе обязателен, пустой стол в игру не идёт
-          </div>
+            </div>
           <Wide>
             <DisabledAction>Разрешить игру без судьи</DisabledAction>
           </Wide>

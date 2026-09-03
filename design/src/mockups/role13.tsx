@@ -2870,7 +2870,6 @@ export function Tie13_11() {
 
       <Panel
         title="Составы на встречу"
-        sub="Буква — место в схеме, а не сила игрока: по ней видно, кто с кем играет"
       >
         <div className="grid gap-4 md:grid-cols-2">
           <div>

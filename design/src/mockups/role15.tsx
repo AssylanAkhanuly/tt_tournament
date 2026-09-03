@@ -494,27 +494,21 @@ export function Card15_2() {
       title="Карточка судьи региона"
       back={{ label: 'Судьи региона', to: 'Э15.1' }}
     >
-      {/* Полоса действий региона — над карточкой ✳: карточка одна на всю
-          систему и читается всеми, а действия по ней есть только у своего
-          региона. Акцент полосы один — наряд: остальное реже. */}
-      <div className="mb-4 flex items-center justify-between gap-4">
-        <span className="text-[12.5px] text-neutral-500">
-          Ваш судья: наряд, аттестация и документы — ваши; рейтинг считает система
-        </span>
-        <span className="flex items-center gap-2">
-          <Button variant="ghost" data-to="Э15.4">
-            <Send size={14} /> Внести документ на S3 / S4
-          </Button>
-          <Button variant="ghost">
-            <GraduationCap size={14} /> Отправить на аттестацию
-          </Button>
-          <Button variant="primary" data-to="Э15.3">
-            <CalendarDays size={15} /> Поставить в наряд
-          </Button>
-        </span>
-      </div>
-
       <JudgeCard me={CARD} tours={CARD_TOURS} />
+
+      {/* Действия региона ✳: карточка одна на всю систему и читается всеми, а
+          действия по ней есть только у своего региона. Акцент один — наряд. */}
+      <ActionBar>
+        <Button variant="ghost" data-to="Э15.4">
+          <Send size={14} /> Внести документ на S3 / S4
+        </Button>
+        <Button variant="ghost">
+          <GraduationCap size={14} /> Отправить на аттестацию
+        </Button>
+        <Button variant="primary" data-to="Э15.3">
+          <CalendarDays size={15} /> Поставить в наряд
+        </Button>
+      </ActionBar>
     </WebApp>
   );
 }
