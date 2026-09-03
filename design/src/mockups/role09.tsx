@@ -39,6 +39,7 @@ import { Avatar, Button, Chip, InputOTP, REGEXP_ONLY_DIGITS } from '@heroui/reac
 import { A, AW } from '../fedCommon';
 import {
   ActionBar,
+  Facts,
   Bar,
   DataTable,
   DisabledAction,
@@ -214,10 +215,10 @@ const Tours9_1Body = () => {
           <Row key={a.t} nm={a.t} sub={a.sub} pill={{ t: a.st, cls: a.cls }} to="Э9.2" />
         ))}
       </Rows>
-      <div className="text-xs leading-relaxed text-neutral-500">
-        Отсужено {played} турнира за сезон · баллы S1 {num9(s1)} — рейтинг судья смотрит в кабинете,
-        а не здесь; судье стола коэффициент 1,5 идёт только за выезд (TZ §7.2)
-      </div>
+      {/* Строкой фактов, а не абзацем ✳ (04.09.2026): где судья смотрит свой
+          рейтинг и как считается коэффициент выезда — устройство системы, а не
+          сводка по этому списку. */}
+      <Facts items={[{ k: 'отсужено за сезон', v: `${played}` }, { k: 'баллы S1', v: num9(s1) }]} />
 
       {/* Открытых приёмов и подачи заявок здесь больше нет ✳ (18.08.2026): они
           уехали в кабинет судьи (Э0.9, Э0.10). Подача жила у роли судьи стола —
@@ -232,7 +233,7 @@ const Tours9_1Body = () => {
       <Rows>
         <Row
           nm="Турниры и заявки на судейство"
-          sub="Открытые приёмы, мои заявки и решения — тот же раздел, весь список сезона"
+          sub="открытые приёмы, мои заявки и решения"
           pill={{ t: '3 ПРИЁМА', cls: 'reg' }}
           to="Э0.9"
         />
@@ -775,12 +776,12 @@ function ByPoints9_3({ pts, sets, swap, paused, off, done, ready, over, marks, h
     />
   );
 
-  /** Подпись полосы счёта по партиям: что это за числа и откуда они взялись. */
-  const setsHint = (
-    <span className={'text-[11px] leading-snug ' + (hand ? 'font-medium text-amber-700' : 'text-neutral-400')}>
-      {hand ? 'итог задан вручную' : 'впишите итог — партии заполнять не нужно'}
-    </span>
-  );
+  /** Подпись полосы счёта по партиям — только когда итог задан руками ✳
+      (04.09.2026): «впишите итог» объясняло второй способ ввода, который
+      выбирается переключателем в двух сантиметрах выше. */
+  const setsHint = hand ? (
+    <span className="text-[11px] font-medium leading-snug text-amber-700">итог задан вручную</span>
+  ) : null;
   const setsCap = (
     <span className="text-[11px] font-semibold uppercase tracking-wider text-neutral-400">
       Счёт по партиям
@@ -928,13 +929,9 @@ function ByPoints9_3({ pts, sets, swap, paused, off, done, ready, over, marks, h
           <Check size={16} /> Подтвердить результат · {won(order[0])} : {won(order[1])}
         </Button>
       )}
-      {/* Матч не доигран — на месте кнопки сказано, чего ждут ✳: пустое место
-          читается как «сломалось», а серая кнопка — как «нажми ещё раз». */}
-      {!ready && !done && !over && (
-        <div className="rounded-lg bg-neutral-50 py-3 text-center text-[13px] text-neutral-500">
-          Матч идёт: до {WIN} побед в партиях, сейчас {won(order[0])} : {won(order[1])}
-        </div>
-      )}
+      {/* Пока матч не доигран, на месте кнопки ничего нет ✳ (04.09.2026):
+          «до N побед в партиях» стоит в подписи экрана, а счёт по партиям —
+          крупно посередине; строка повторяла оба числа третий раз. */}
     </div>
   );
 }
@@ -1075,11 +1072,7 @@ function BySets9_3({ sets, pts, done, over, marks, won, phone, onSet, onKeep, on
             >
               <Check size={15} /> Подтвердить результат · {won(0)} : {won(1)}
             </Button>
-          ) : (
-            <div className={'text-center text-[13px] text-neutral-500 ' + (phone ? 'py-1' : 'flex-1')}>
-              До {WIN} побед в партиях · сейчас {won(0)} : {won(1)}
-            </div>
-          )}
+          ) : null}
         </div>
       )}
     </div>
@@ -1634,62 +1627,40 @@ const Sent9_5Body = ({ phone }: { phone?: boolean }) => (
       <GameCells games={SENT_GAMES} />
       {/* Что именно ушло ✳: не только счёт. Карточки и тайм-ауты уходят
           вместе с результатом (TZ §6.5), и судья должен видеть, что они
-          отправлены, — спрашивать о них будут после матча. */}
-      <div className="max-w-md text-xs leading-relaxed text-neutral-500">
-        Ушло главному судье и в базу: счёт, партии, карточки и тайм-ауты · сетка продвинулась ·
-        15:58, отправил Оралбай Е.
-      </div>
+          отправлены, — спрашивать о них будут после матча. Строкой фактов, а
+          не абзацем ✳ (04.09.2026). */}
+      <Facts
+        items={[
+          { k: 'ушло', v: 'счёт, партии, карточки, тайм-ауты' },
+          { k: 'сетка', v: 'продвинулась' },
+          { k: 'отправил', v: 'Оралбай Е. · 15:58' },
+        ]}
+      />
     </div>
 
-    {/* Что дальше — прямо здесь: между матчами у судьи минуты, искать дорогу
-        он не должен. Акцент один ✳ — «К моему столу»: это единственное, что
-        он делает каждый раз. «История матча» и «Запросить правку» стоят
-        рядом тихими: первая на просмотр, вторая бывает раз на сотню матчей.
-        «Запросить правку» стоит здесь, а не только в состояниях: ошибку
-        замечают на этом экране — на нём партии и показаны целиком. */}
-    <div className="flex flex-col gap-2">
-      <div className="text-center text-[12.5px] text-neutral-500">
-        Следующая пара — 16:20 · вызов придёт от главного судьи
-      </div>
-      {phone ? (
-        /* На телефоне главное действие — во всю ширину закреплённой полосы;
-           тихие кнопки стоят над ней в один ряд. */
-        <>
-          <div className="flex items-center justify-center gap-2">
-            <Button variant="ghost" data-to="Э9.4">
-              <History size={15} /> История
-            </Button>
-            <Button variant="ghost">
-              <Undo2 size={15} /> Запросить правку
-            </Button>
-          </div>
-          <ActionBar>
-            <Button variant="primary" className="h-14 w-full" data-to="Э9.2">
-              <Radio size={15} /> К моему столу
-            </Button>
-          </ActionBar>
-        </>
-      ) : (
-        <ActionBar>
-          <Button variant="ghost" data-to="Э9.4">
-            <History size={15} /> История матча
-          </Button>
-          <Button variant="ghost">
-            <Undo2 size={15} /> Запросить правку
-          </Button>
-          <Button variant="primary" className="h-12" data-to="Э9.2">
-            <Radio size={15} /> К моему столу
-          </Button>
-        </ActionBar>
-      )}
-    </div>
-
-    <Bar>
-      Исправить счёт после подтверждения судья стола уже не может: правка идёт через главного
-      судью, с лимитом времени и записью в журнал (TZ §6). Поэтому экран и показывает партии
-      целиком — увидеть ошибку надо сейчас, а не после.
-    </Bar>
+    <div className="text-center text-[12.5px] text-neutral-500">Следующая пара — 16:20</div>
   </>
+);
+
+/** Что дальше — закреплённой полосой: между матчами у судьи минуты, искать
+    дорогу он не должен. Акцент один ✳ — «К моему столу»: это единственное,
+    что он делает каждый раз. «История матча» и «Запросить правку» стоят рядом
+    тихими: первая на просмотр, вторая бывает раз на сотню матчей.
+
+    Полоса живёт снаружи узкой колонки экрана ✳ (04.09.2026): внутри неё она
+    распиралась по колонке, а не по рабочей области, и читалась карточкой. */
+const Sent9_5Actions = ({ phone }: { phone?: boolean }) => (
+  <ActionBar>
+    <Button variant="ghost" data-to="Э9.4">
+      <History size={15} /> {phone ? 'История' : 'История матча'}
+    </Button>
+    <Button variant="ghost">
+      <Undo2 size={15} /> Запросить правку
+    </Button>
+    <Button variant="primary" className={phone ? 'h-14 w-full' : 'h-12'} data-to="Э9.2">
+      <Radio size={15} /> К моему столу
+    </Button>
+  </ActionBar>
 );
 
 export function Sent9_5() {
@@ -1705,6 +1676,7 @@ export function Sent9_5() {
       <div className="mx-auto flex w-full max-w-205 flex-col gap-4">
         <Sent9_5Body />
       </div>
+      <Sent9_5Actions />
     </WebApp>
   );
 }
@@ -1720,6 +1692,7 @@ const Sent9_5Phone = () => (
     <div className="flex flex-col gap-3.5 pb-2">
       <Sent9_5Body phone />
     </div>
+    <Sent9_5Actions phone />
   </PhoneRoleApp>
 );
 

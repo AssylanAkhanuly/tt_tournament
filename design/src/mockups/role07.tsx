@@ -241,11 +241,11 @@ export function Desk7_1(_props: { variant?: 'desktop' | 'land' } = {}) {
       <>
         {/* Работы — главный акцент экрана: у каждой видно, готова ли она и у
             кого сейчас лежит; строка ведёт на свой экран. */}
-        <Panel title="Работы по турниру" extra={<Pl t="СИСТЕМА ПРОВЕДЕНИЯ" cls="reg" />} flush>
+        <Panel title="Работы по турниру" flush>
           <Works7_1 />
         </Panel>
 
-        <Panel title="Решение главного судьи · чтение" extra={<Pl t="ТОЛЬКО ПРОСМОТР" cls="wait" />}>
+        <Panel title="Решение главного судьи" extra={<Pl t="ТОЛЬКО ПРОСМОТР" cls="wait" />}>
           <KV items={JUDGE_KV} />
         </Panel>
       </>
@@ -273,7 +273,7 @@ export function Desk7_1Phone() {
         <StatTiles items={TILES7_1} />
       </PhoneTiles>
 
-      <Panel title="Решение главного судьи · чтение" extra={<Pl t="ПРОСМОТР" cls="wait" />}>
+      <Panel title="Решение главного судьи" extra={<Pl t="ТОЛЬКО ПРОСМОТР" cls="wait" />}>
         <KV items={JUDGE_KV} />
       </Panel>
     </PhoneRoleApp>
@@ -1126,17 +1126,6 @@ const Sched7_4Body = ({ phone }: { phone?: boolean }) => {
 
       {/* Конфликты — отдельным списком под расписанием: в таблице они помечены,
           но разбирают их подряд, а не выискивая красные строки. */}
-      {/* Столбиком на телефоне: кнопка растягивается сама (`items-stretch`), и
-          главное действие занимает строку кадра. */}
-      <div className={phone ? 'mb-3 mt-4 flex flex-col gap-2' : 'mb-3 mt-4 flex items-center justify-end gap-4'}>
-        {sent ? (
-          <Pl t="ОТПРАВЛЕНО ГЛАВНОМУ СУДЬЕ" cls="live" />
-        ) : (
-          <Button variant="outline" onPress={() => setSent(true)}>
-            <Send size={15} /> Передать главному судье на проверку
-          </Button>
-        )}
-      </div>
       {clashes.length > 0 ? (
         <Rows>
           {clashes.map((m) => (
@@ -1156,6 +1145,15 @@ const Sched7_4Body = ({ phone }: { phone?: boolean }) => {
           Конфликтов нет: ни один игрок не стоит на двух столах в одно время.
         </Bar>
       )}
+      <ActionBar>
+        {sent ? (
+          <Pl t="ОТПРАВЛЕНО ГЛАВНОМУ СУДЬЕ" cls="live" />
+        ) : (
+          <Button className={phone ? 'w-full' : undefined} variant="primary" onPress={() => setSent(true)}>
+            <Send size={15} /> Передать главному судье на проверку
+          </Button>
+        )}
+      </ActionBar>
     </>
   );
 };
@@ -1249,8 +1247,10 @@ const Protocols7_5Body = ({ phone }: { phone?: boolean }) => {
             <FilterSeg items={LISTS75} active={list} onPick={setList} />
           </div>
         )}
+        {/* Названия у панелей ниже нет ✳ (04.09.2026): выбранная вкладка над
+            ними и есть их название, а состояние турнира стоит в шапке. */}
         {list === LISTS75[0] ? (
-          <Panel title="Итоговый протокол" extra={<Pl t="МЕСТА 1–5 ИЗ 128" cls="reg" />} flush>
+          <Panel extra={<Pl t="МЕСТА 1–5 ИЗ 128" cls="reg" />} flush>
             <div className="divide-y divide-neutral-100">
               {/* Место стоит первым в имени: «1 · Смагулов Алан» — так строка
                   читается слева направо, как в итоговой таблице на бумаге. */}
@@ -1260,7 +1260,7 @@ const Protocols7_5Body = ({ phone }: { phone?: boolean }) => {
             </div>
           </Panel>
         ) : (
-          <Panel title="Протоколы матчей" extra={<Pl t="127 МАТЧЕЙ" cls="reg" />} flush>
+          <Panel extra={<Pl t="127 МАТЧЕЙ" cls="reg" />} flush>
             <div className="divide-y divide-neutral-100">
               {MATCH_PROTOCOLS.map((m) => (
                 <Row key={m.nm} nm={m.nm} sub={m.sub} val={m.sc} pill={{ t: m.tag, cls: m.cls }} />
@@ -1289,32 +1289,22 @@ const Protocols7_5Body = ({ phone }: { phone?: boolean }) => {
             <TextInput label="Состав бригады" value="14 человек · из наряда коллегии" wide />
             <AreaInput label="Примечания к протоколу" value="Техпобеда в 1/4 — неявка Байжанова А., подтверждена судьёй стола." wide />
           </FormGrid>
-          {/* Кнопки — рядом, а не столбиком ✳: панель стоит во всю ширину, и
-              две растянутые на весь экран кнопки читались бы как две полосы.
-              На телефоне рядом их не поставить — там они идут столбиком. */}
-          <div className={'mt-4 flex gap-2 ' + (phone ? 'flex-col' : 'flex-wrap items-center')}>
-            {sent ? (
-              <Button variant="outline" onPress={() => setSent(false)}>
-                <RefreshCw size={15} /> Вернуть в работу
-              </Button>
-            ) : (
-              <ToJudge onPress={() => setSent(true)}>Передать главному судье на утверждение</ToJudge>
-            )}
-            {/* Кнопка отвечает «отправлено на печать» ✳: печать — действие без
-                экрана результата, и молчащая кнопка выглядела бы сломанной. */}
-            <Button variant="outline" onPress={() => setPrinted(true)}>
-              <Printer size={15} /> {printed ? 'Отправлено на печать' : 'Печать протоколов'}
-            </Button>
-          </div>
-          {sent && (
-            <div className="mt-3">
-              <Bar>
-                Протокол у главного судьи. Пока он не утвердил, работа ещё секретаря — «Вернуть в
-                работу» отзывает отправленное.
-              </Bar>
-            </div>
-          )}
         </Panel>
+
+        <ActionBar>
+          {/* Кнопка отвечает «отправлено на печать» ✳: печать — действие без
+              экрана результата, и молчащая кнопка выглядела бы сломанной. */}
+          <Button variant="outline" onPress={() => setPrinted(true)}>
+            <Printer size={15} /> {printed ? 'Отправлено на печать' : 'Печать протоколов'}
+          </Button>
+          {sent ? (
+            <Button variant="outline" onPress={() => setSent(false)}>
+              <RefreshCw size={15} /> Вернуть в работу
+            </Button>
+          ) : (
+            <ToJudge onPress={() => setSent(true)}>Передать главному судье на утверждение</ToJudge>
+          )}
+        </ActionBar>
       </>
     </>
   );
