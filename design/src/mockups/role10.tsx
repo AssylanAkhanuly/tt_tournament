@@ -21,6 +21,7 @@ import { Bookmark, Download, Eye, FileText, Gavel, History, Paperclip, Send } fr
 import { Button, Chip } from '@heroui/react';
 import { A, AW } from '../fedCommon';
 import {
+  ActionBar,
   Bar,
   EmptyBox,
   FieldView,
@@ -368,17 +369,11 @@ export function Tours10_1(_props: { variant?: 'desktop' | 'land' } = {}) {
           так стоит в строках («черновик», «отправлено»), а список отжимали
           вниз. По данным роли (`flows/data/role10.ts`, Э10.1) у экрана одна
           зона — список стартов; числа остались короткой строкой фактов. */}
-      <ActionRow
-        count={saved ?? '5 соревнований · сезон 2026 · 1 черновик · 3 отправлено · всё только просмотр'}
-      >
-        <Button
-          size="sm"
-          variant="outline"
-          onPress={() => setSaved(`Выгружено ${TOURS.length} соревнований · сезон 2026 · CSV`)}
-        >
-          <Download size={14} /> Выгрузить список
-        </Button>
-      </ActionRow>
+      {/* Счётчики черновиков и отправленных сняты ✳ (04.09.2026): состояние
+          каждого старта стоит значком в его же строке. */}
+      <div className="mb-3 text-[12.5px] text-neutral-500">
+        {saved ?? '5 соревнований · сезон 2026'}
+      </div>
       {/* Строка открывает турнир и приземляет на «Работу судей» — оттуда
           инспектор и начинает. Кнопка ведёт сразу в заключение: к нему
           возвращаются много раз, и каждый раз проходить через ход турнира
@@ -400,6 +395,14 @@ export function Tours10_1(_props: { variant?: 'desktop' | 'land' } = {}) {
       <div className="mt-4">
         <Tours10_1Bar />
       </div>
+      <ActionBar>
+        <Button
+          variant="outline"
+          onPress={() => setSaved(`Выгружено ${TOURS.length} соревнований · сезон 2026 · CSV`)}
+        >
+          <Download size={14} /> Выгрузить список
+        </Button>
+      </ActionBar>
     </WebApp>
   );
 }
@@ -415,24 +418,24 @@ function Tours10_1Phone() {
       nav="На контроле"
       title="Соревнования на контроле"
     >
-      <ActionRow
-        phone
-        count={saved ?? '5 соревнований · 1 черновик · 3 отправлено · всё только просмотр'}
-      >
-        <Button
-          size="sm"
-          variant="outline"
-          onPress={() => setSaved(`Выгружено ${TOURS.length} соревнований · сезон 2026 · CSV`)}
-        >
-          <Download size={14} /> Выгрузить список
-        </Button>
-      </ActionRow>
+      <div className="mb-3 text-[12.5px] text-neutral-500">
+        {saved ?? '5 соревнований · сезон 2026'}
+      </div>
       <Rows>
         {TOURS.map((t) => <TourRowPhone key={t.nm} t={t} />)}
       </Rows>
       <div className="mt-4">
         <Tours10_1Bar />
       </div>
+      <ActionBar>
+        <Button
+          className="w-full"
+          variant="outline"
+          onPress={() => setSaved(`Выгружено ${TOURS.length} соревнований · сезон 2026 · CSV`)}
+        >
+          <Download size={14} /> Выгрузить список
+        </Button>
+      </ActionBar>
     </PhoneRoleApp>
   );
 }

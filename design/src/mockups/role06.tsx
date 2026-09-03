@@ -14,10 +14,10 @@
 
 import { useState, type ReactNode } from 'react';
 import {
-  Ban, CalendarDays, Check, ChevronRight, ClipboardList, Grid3x3, LayoutDashboard, Lock, Pencil,
+  Ban, CalendarDays, Check, ChevronRight, ClipboardList, Grid3x3, LayoutDashboard, Pencil,
   Printer, Radio, Scroll, Shield, Shuffle, Timer, X,
 } from 'lucide-react';
-import { Avatar, Button, Chip } from '@heroui/react';
+import { Avatar, Button } from '@heroui/react';
 import { A, AW } from '../fedCommon';
 import {
   ActionBar,
@@ -213,12 +213,10 @@ export function NeedRow({ n, read }: { n: Need; read?: boolean }) {
         <span className="block text-xs text-neutral-500">{n.s}</span>
       </span>
       <Pill t={n.p} color={PC[n.cls]} />
-      {read ? (
-        /* У заместителя без переданной смены — только чтение (роль 8). */
-        <Chip className="whitespace-nowrap" color="accent" size="sm" variant="primary">
-          <Lock size={10} className="mr-1" /> ЧТЕНИЕ
-        </Chip>
-      ) : (
+      {/* У заместителя без переданной смены строка только читается (роль 8) —
+          кнопки нет вовсе ✳ (04.09.2026). Значка «ЧТЕНИЕ» на каждой строке
+          тоже: он стоит один раз в углу панели, а не четыре раза подряд. */}
+      {!read && (
         <Button size="sm" variant="outline">
           Открыть <ChevronRight size={13} />
         </Button>

@@ -38,6 +38,7 @@ import {
 import { Button, Chip } from '@heroui/react';
 import { A, AW } from '../fedCommon';
 import {
+  ActionBar,
   Bar,
   Facts,
   PageTabs,
@@ -162,11 +163,10 @@ const NeedRowPhone = ({ n }: { n: Need }) => (
         <span className="block text-xs text-neutral-500">{n.s}</span>
       </span>
     </div>
+    {/* «ЧТЕНИЕ» на каждой строке снято ✳ (04.09.2026): значок в углу панели
+        говорит это один раз за всю панель, а не четыре. */}
     <div className="flex flex-wrap items-center gap-2 pl-11">
       <Pl t={n.p} cls={n.cls} />
-      <Chip className="whitespace-nowrap" color="accent" size="sm" variant="primary">
-        <Lock size={10} className="mr-1" /> ЧТЕНИЕ
-      </Chip>
     </div>
   </div>
 );
@@ -177,13 +177,12 @@ const NeedsPanel = ({ phone }: { phone?: boolean }) => (
   <Panel
     title="Что сейчас требуется"
     extra={
-      /* Единственный акцент панели. На телефоне значок уехал в сами строки:
-         в шапке на 392 px он выталкивал заголовок на второй ряд. */
-      phone ? undefined : (
-        <Chip className="whitespace-nowrap" color="accent" size="sm" variant="primary">
-          <Lock size={10} className="mr-1" /> ДЕЙСТВИЯ НЕДОСТУПНЫ
-        </Chip>
-      )
+      /* Единственный акцент панели — и единственное место, где сказано про
+         чтение: на телефоне заголовок из-за него уходит на второй ряд, и это
+         дешевле, чем тот же значок в каждой строке. */
+      <Chip className="whitespace-nowrap" color="accent" size="sm" variant="primary">
+        <Lock size={10} className="mr-1" /> ДЕЙСТВИЯ НЕДОСТУПНЫ
+      </Chip>
     }
     flush
   >
@@ -196,11 +195,10 @@ const NeedsPanel = ({ phone }: { phone?: boolean }) => (
 /** Панель «Доступ» — одна на оба формата: кто за пультом, что может попросить
     заместитель и кто ему это выдаёт. Ряд значка и кнопки уже свёрстан
     переносом, поэтому на 392 px он встаёт сам — второй раскладки не нужно. */
-function AccessPanel({ asked, onAsk }: { asked: boolean; onAsk: () => void }) {
+function AccessPanel({ asked }: { asked: boolean }) {
   return (
     <Panel
       title="Доступ"
-      sub="индикатор смены виден всем в наряде: кто сейчас за пультом"
       extra={<Pl t="ВЕДЁТ ГЛАВНЫЙ СУДЬЯ" cls="live" />}
       flush
     >
@@ -225,25 +223,14 @@ function AccessPanel({ asked, onAsk }: { asked: boolean; onAsk: () => void }) {
             nm="Сагинтаев Дархан — это вы"
             sub={asked
               ? 'Запрос ушёл главному судье · не ответит — уйдёт председателю ГСК'
-              : 'Заместитель главного судьи · доступ выдаёт главный судья или председатель ГСК'}
+              : 'Заместитель главного судьи'}
           />
           {/* `flex-wrap`: на узком экране кнопка уедет под значок, а не
               начнёт сжимать его текст. */}
-          <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 pb-2.5 pl-15 pr-4">
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-2 pb-2.5 pl-15 pr-4">
             <Pl t={asked ? 'ДОСТУП ЗАПРОШЕН' : 'ДОСТУП НЕ ВЫДАН'} cls={asked ? 'reg' : 'wait'} />
-            <Button className="shrink-0" size="sm" variant="outline" onPress={onAsk}>
-              {asked ? 'Отозвать запрос' : 'Запросить доступ'}
-            </Button>
           </div>
         </div>
-      </div>
-      <div className="px-4 pb-1 pt-3">
-        <Bar>
-          С доступом заместитель выполняет <b>все обязанности главного судьи</b> ✳: назначает
-          судей на стол, вызывает игроков, вносит результаты. Доступ у главного при этом не
-          отбирается — работать могут оба, и каждое действие пишется в журнал с именем автора:
-          видно, кто из двоих решал (TZ §4.7.1).
-        </Bar>
       </div>
     </Panel>
   );
@@ -262,7 +249,7 @@ export function Shift8_1(_props: { variant?: 'desktop' | 'land' } = {}) {
       role={R08}
       nav="Мой турнир"
       title="Чемпионат Казахстана 2026"
-      sub="Заместитель главного судьи · доступ не выдан"
+      sub="Доступ не выдан"
     >
       {/* Панель турнира — та же, что у главного судьи (Э6.1): шкала состояний
           и счётчики. Заместитель видит турнир целиком ещё до передачи смены. */}
@@ -276,7 +263,12 @@ export function Shift8_1(_props: { variant?: 'desktop' | 'land' } = {}) {
           снизу — обёртка не нужна. */}
       <>
         <NeedsPanel />
-        <AccessPanel asked={asked} onAsk={() => setAsked(!asked)} />
+        <AccessPanel asked={asked} />
+        <ActionBar>
+          <Button variant="primary" onPress={() => setAsked(!asked)}>
+            {asked ? 'Отозвать запрос' : 'Запросить доступ'}
+          </Button>
+        </ActionBar>
       </>
     </WebApp>
   );
@@ -295,7 +287,7 @@ function Shift8_1Phone() {
       role={R08}
       nav="Мой турнир"
       title="Чемпионат Казахстана 2026"
-      sub="Заместитель главного судьи · доступ не выдан"
+      sub="Доступ не выдан"
     >
       {/* Шкала состояний свёрстана переносом и на 392 px встаёт в три ряда
           коротких слов — прокрутка ей не нужна. */}
@@ -307,7 +299,12 @@ function Shift8_1Phone() {
         <Facts items={TILES8_1.map((t) => ({ k: t.k, v: t.v, hot: t.tone === 'a' }))} />
       </div>
       <NeedsPanel phone />
-      <AccessPanel asked={asked} onAsk={() => setAsked(!asked)} />
+      <AccessPanel asked={asked} />
+      <ActionBar>
+        <Button className="w-full" variant="primary" onPress={() => setAsked(!asked)}>
+          {asked ? 'Отозвать запрос' : 'Запросить доступ'}
+        </Button>
+      </ActionBar>
     </PhoneRoleApp>
   );
 }
