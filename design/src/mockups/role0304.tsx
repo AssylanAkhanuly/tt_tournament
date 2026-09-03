@@ -162,23 +162,21 @@ export function Dash3_1(_props: { variant?: 'desktop' | 'land' } = {}) {
       nav="Обзор"
       title="Обзорная панель"
       hint="Кнопки «Завести соревнование» здесь нет: недоступное действие не показывается вовсе — не серой кнопкой, а её отсутствием."
+      actions={
+        /* Единственное действие роли-наблюдателя: выгрузка сводки ничего в
+           системе не меняет. */
+        <Button variant="outline">
+          <Download size={14} /> Выгрузить сводку
+        </Button>
+      }
     >
       {/* Счётчики те же, что у администратора Федерации; каждый ведёт в
           список на чтение — единственный переход этого экрана. */}
       <StatTiles items={KPI} to="Э3.2" />
 
-      {/* Единственная «кнопка» полосы — выгрузка сводки: она ничего в системе
-          не меняет. В раскрытом счётчике две строки, как на Э1.1: панель
-          обязана помещаться на экран целиком. */}
-      <Attention
-        act={false}
-        max={2}
-        action={
-          <Btn>
-            <Download size={14} /> Выгрузить сводку
-          </Btn>
-        }
-      />
+      {/* В раскрытом счётчике две строки, как на Э1.1: панель обязана
+          помещаться на экран целиком. */}
+      <Attention act={false} max={2} />
 
       {/* Блоки идут один под другим во всю ширину ✳ (30.08.2026): в две колонки
           строки турнира переносились и обе панели росли вдвое. Порядок тот же,
@@ -189,15 +187,6 @@ export function Dash3_1(_props: { variant?: 'desktop' | 'land' } = {}) {
             а не flush — иначе рамка в рамке. */}
         <Panel title="Сегодня идут">
           <TodayRows act={false} one />
-        </Panel>
-        <Panel
-          title="Ближайшие старты"
-          extra={<span className="text-xs text-neutral-500">ещё {UPCOMING.length - 1} в календаре</span>}
-          flush
-        >
-          {UPCOMING.slice(0, 1).map((t) => (
-            <TourRow key={t.nm} t={t} />
-          ))}
         </Panel>
       </>
     </WebApp>
@@ -212,6 +201,11 @@ const Dash3_1Phone = () => (
     role={R0304}
     nav="Обзор"
     title="Обзорная панель"
+    actions={
+      <Button variant="outline">
+        <Download size={14} /> Выгрузить сводку
+      </Button>
+    }
   >
     {/* Плашка-правило вместо `hint` оболочки: у телефонной её нет, а само
         правило от формата не зависит. */}
@@ -223,23 +217,9 @@ const Dash3_1Phone = () => (
     <PhoneTiles><StatTiles items={KPI} to="Э3.2" /></PhoneTiles>
 
     <PhoneQueue><Attention act={false} max={2} /></PhoneQueue>
-    <div className="mb-4">
-      <Btn>
-        <Download size={14} /> Выгрузить сводку
-      </Btn>
-    </div>
 
     <Panel title="Сегодня идут">
       <TodayRows act={false} one />
-    </Panel>
-    <Panel
-      title="Ближайшие старты"
-      extra={<span className="text-xs text-neutral-500">ещё {UPCOMING.length - 1} в календаре</span>}
-      flush
-    >
-      {UPCOMING.slice(0, 1).map((t) => (
-        <TourRowPhone key={t.nm} t={t} />
-      ))}
     </Panel>
   </PhoneRoleApp>
 );

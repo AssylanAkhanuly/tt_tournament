@@ -152,7 +152,7 @@ const FMAP: Record<string, FeeSt | undefined> = {
   Просрочен: 'late',
 };
 
-const FEE_GRID = '1.5fr 0.8fr 0.9fr 122px 118px 1.1fr 138px';
+const FEE_GRID = '2.4fr 0.85fr 0.85fr 112px 92px 0.9fr 164px';
 
 /** Правило экрана — одно на оба формата ✳: у веб-оболочки для него есть место
     под заголовком (`hint`), у телефонной его нет — там оно стоит плашкой. */
@@ -177,7 +177,7 @@ const FEE_PICKS: [string, string][] = [
 /** Сколько строк показано: в реестре 526 спортсменов, в макете нарисованы
     первые шесть. Подпись одна на оба формата. */
 const feeCount = (n: number) =>
-  n === FEES.length ? '526 спортсменов · взнос 2026' : `показано ${n} из 526`;
+  n === FEES.length ? '526 спортсменов' : `показано ${n} из 526`;
 
 /** Почему серый значок «не оплачен» всё-таки важен (TZ §9.2). Текст один на оба
     формата: правило экрана не может звучать на телефоне иначе. */
@@ -210,18 +210,19 @@ export function Fees2_1(_props: { variant?: 'desktop' | 'land' } = {}) {
       role={R02}
       nav="Взносы"
       title="Взносы за сезон"
-      sub="2026 год · ₸ 10 000"
       hint={FEE_HINT}
-    >
-      <div className="mb-3 flex items-center justify-between gap-4">
-        <div className="flex items-center gap-4">
-          <FilterSeg items={FSEG} active={f} onPick={setF} />
-          <Facts items={FEE_FACTS} />
-        </div>
-        {/* Реестр оплат по текущему фильтру за период — файлом, в «Выгрузки». */}
+      actions={
+        /* Реестр оплат по текущему фильтру за период — файлом, в «Выгрузки». */
         <Button variant="outline">
           <Download size={15} /> Выгрузить список
         </Button>
+      }
+    >
+      {/* Год взноса не подписан второй раз ✳ (04.09.2026): он стоит и в шапке
+          («Взносы 2026»), и первым полем отбора. */}
+      <div className="mb-3 flex items-center gap-4">
+        <FilterSeg items={FSEG} active={f} onPick={setF} />
+        <Facts items={FEE_FACTS} />
       </div>
 
       {/* Год и срезы — статичный выбор (PickField, без портала): живой список
