@@ -831,9 +831,12 @@ export function Shot({
 }) {
   return (
     <div className={'mkshot' + (wide ? ' wide' : '')}>
+      {/* У состояния остаётся только название ✳ (04.09.2026): пояснение под ним
+          пересказывало то, что видно на самом кадре, и полка состояний читалась
+          как статья, а не как ряд ситуаций. Почему экран так устроен — в
+          `flows/*.md`. */}
       <div className={'mkshot-h ' + tone}>
         <b>{title}</b>
-        {text && <span>{text}</span>}
       </div>
       <div className="mkshot-b">{children}</div>
     </div>

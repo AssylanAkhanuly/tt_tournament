@@ -90,7 +90,7 @@ export function Panel({
   children: ReactNode;
 }) {
   return (
-    <section className="mb-4 overflow-hidden rounded-xl border border-neutral-200 bg-white shadow-sm">
+    <section className="kit-panel mb-4 overflow-hidden rounded-xl border border-neutral-200 bg-white shadow-sm">
       {title && (
         <div className="flex items-center justify-between gap-3 border-b border-neutral-100 px-4 py-3">
           <div className="leading-tight">
@@ -100,7 +100,10 @@ export function Panel({
           {extra}
         </div>
       )}
-      <div className={flush ? undefined : 'p-4'}>{children}</div>
+      {/* Тело панели помечено классом ✳ (03.09.2026): по нему снимается рамка у
+          вложенных карточек. Панель уже нарисовала границу — второй контур
+          внутри неё читается как отдельный блок, которого нет. */}
+      <div className={'kit-panel-body ' + (flush ? '' : 'p-4')}>{children}</div>
     </section>
   );
 }
@@ -295,7 +298,9 @@ export function Row({
 }: {
   av?: string;
   nm: string;
-  sub: string;
+  /** Вторая строка. Необязательна ✳: строка часто несёт значение и значок,
+      и подпись под названием была бы пересказом того, что уже показано. */
+  sub?: string;
   val?: string;
   pill?: { t: string; cls: 'live' | 'wait' | 'bad' | 'reg' | 'done' };
   action?: string;
@@ -391,7 +396,7 @@ export function Row({
 
 /** Список строк реестра: рамка и волосяные линии между строками. */
 export const Rows = ({ children }: { children: ReactNode }) => (
-  <div className="divide-y divide-neutral-100 overflow-hidden rounded-xl border border-neutral-200 bg-white shadow-sm">
+  <div className="kit-rows divide-y divide-neutral-100 overflow-hidden rounded-xl border border-neutral-200 bg-white shadow-sm">
     {children}
   </div>
 );

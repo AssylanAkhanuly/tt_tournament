@@ -106,7 +106,6 @@ const R01: RoleUI = {
   title: 'Администратор Федерации',
   person: { nm: 'Абаева Д.', rl: 'Администратор Федерации', av: AW(44) },
   brandName: 'Сезон 2026',
-  brandSub: 'Календарь ФНТ РК · 8 главных стартов',
   badge: false,
   nav: [
     [<LayoutDashboard size={16} key="p" />, 'Панель'],
@@ -288,7 +287,7 @@ const Login0_1States = () => (
   <States>
     <Shot
       tone="danger"
-      title="Код подтверждения не подошёл ✳"
+      title="Код подтверждения не подошёл"
       text="ИИН уже принят — заново его не вводят; ошибка стоит под полем кода."
     >
       <Frag w={420}>
@@ -343,7 +342,7 @@ const Login0_1States = () => (
 
     <Shot
       tone="warning"
-      title="Приглашение ещё не принято ✳"
+      title="Приглашение ещё не принято"
       text="Ссылка выпущена, но человек не подтвердил себя ИИН и кодом — учётной записи ещё нет (Э0.6)."
       wide
     >
@@ -733,20 +732,23 @@ export function Dash1_1(_props: { variant?: 'desktop' | 'land' } = {}) {
       role={R01}
       nav="Панель"
       title="Панель Федерации"
-      sub="Сезон 2026 · 15 апреля"
+      sub="15 апреля"
+      actions={
+        <>
+          <Button variant="outline" data-to="Э1.2">
+            Календарь сезона
+          </Button>
+          <Button variant="primary">
+            <Plus size={15} /> Завести соревнование
+          </Button>
+        </>
+      }
     >
       <StatTiles items={KPI} />
       {/* В раскрытом счётчике две строки: панель обязана поместиться на экран
           целиком вместе с панелями под ней, а весь список открывается в
           календаре сезона. Сколько строк из скольких — подписано. */}
-      <Attention
-        max={2}
-        action={
-          <Button variant="primary">
-            <Plus size={15} /> Завести соревнование
-          </Button>
-        }
-      />
+      <Attention max={2} />
       {/* Блоки идут один под другим во всю ширину ✳ (30.08.2026): в две колонки
           строки обеих панелей переносились — и «Сегодня идут», и «Ближайшие
           старты» вырастали вдвое ради того, чтобы стоять рядом. Панель сама
@@ -756,18 +758,7 @@ export function Dash1_1(_props: { variant?: 'desktop' | 'land' } = {}) {
       <Panel title="Сегодня идут">
         <TodayRows />
       </Panel>
-      {/* «Ближайших стартов» на панели нет ✳ (01.09.2026): один и тот же
-          «Кубок Иртыша» стоял и в очереди «требует внимания», и здесь. Панель
-          отвечает на «что решить сегодня»; что впереди — в календаре, туда и
-          ведёт строка. */}
-      <div className="flex items-center justify-between gap-3 rounded-xl border border-neutral-200 bg-white px-4 py-3 shadow-sm">
-        <span className="text-[13px] text-neutral-600">
-          Впереди в календаре <b className="text-neutral-900">{UPCOMING.length}</b> стартов
-        </span>
-        <Button size="sm" variant="outline" data-to="Э1.2">
-          Календарь сезона
-        </Button>
-      </div>
+
     </WebApp>
   );
 }
@@ -905,7 +896,17 @@ const AttnPhone = () => {
 
 /** Панель Федерации на телефоне ✳. */
 const Dash1_1Phone = () => (
-  <PhoneRoleApp role={R01} nav="Панель" title="Панель Федерации" sub="Сезон 2026 · 15 апреля">
+  <PhoneRoleApp
+    role={R01}
+    nav="Панель"
+    title="Панель Федерации"
+    sub="15 апреля"
+    actions={
+      <Button variant="primary">
+        <Plus size={15} /> Завести соревнование
+      </Button>
+    }
+  >
     {/* Плиток показателей на телефоне нет: четыре крупных числа занимают
         полкадра и выдавливают очередь дел под сгиб — а с телефона панель
         открывают ради неё. Те же четыре числа стоят строкой фактов. */}
@@ -913,13 +914,6 @@ const Dash1_1Phone = () => (
       <Facts items={KPI.map((k) => ({ k: k.k, v: k.v }))} />
     </div>
     <AttnPhone />
-    {/* Главное действие экрана — во всю ширину: на телефоне кнопка в ряду со
-        счётчиками ужалась бы до иконки. Подпись та же, что на десктопе. */}
-    <div className="mb-4">
-      <Button className="w-full" variant="primary">
-        <Plus size={15} /> Завести соревнование
-      </Button>
-    </div>
     <Panel title="Сегодня идут">
       <TodayRows phone />
     </Panel>
@@ -1166,7 +1160,19 @@ export function Cal1_2(_props: { variant?: 'desktop' | 'land' } = {}) {
       role={R01}
       nav="Календарь"
       title="Календарь сезона"
-      sub={`Сезон 2026 · ${CATS.find((c) => c.k === cat)!.sub}`}
+      sub={CATS.find((c) => c.k === cat)!.sub}
+      actions={
+        <>
+          <Button variant="outline">
+            {/* Формат назван на кнопке: «выгрузить» без формата — обещание,
+                под которым человек ждёт свой Excel, а получает csv. */}
+            <FileSpreadsheet size={14} /> Выгрузить в Excel
+          </Button>
+          <Button variant="primary">
+            <Plus size={15} /> Завести соревнование
+          </Button>
+        </>
+      }
     >
       <div className="mb-3 flex items-center justify-between gap-4">
         <FilterSeg items={CATS.map((c) => c.k)} active={cat} onPick={(v) => setCat(v as typeof cat)} />
@@ -1186,16 +1192,6 @@ export function Cal1_2(_props: { variant?: 'desktop' | 'land' } = {}) {
             найдено {rows.length} из {inCat.length}
           </span>
         )}
-      </div>
-      <div className="mb-3 flex items-center justify-end gap-2">
-        <Btn>
-          {/* Формат назван на кнопке: «выгрузить» без формата — обещание,
-              под которым человек ждёт свой Excel, а получает csv. */}
-          <FileSpreadsheet size={14} /> Выгрузить в Excel
-        </Btn>
-        <Button variant="primary">
-          <Plus size={15} /> Завести соревнование
-        </Button>
       </div>
       {!rows.length ? (
         <EmptyBox
@@ -1289,9 +1285,14 @@ const Cal1_2Phone = () => {
       role={R01}
       nav="Календарь"
       title="Календарь сезона"
-      sub={`Сезон 2026 · ${CATS.find((c) => c.k === cat)!.sub}`}
+      sub={CATS.find((c) => c.k === cat)!.sub}
+      actions={
+        <Button variant="primary">
+          <Plus size={15} /> Завести соревнование
+        </Button>
+      }
     >
-      {/* Ряды «фильтр + поиск + кнопка» идут друг под другом: в одну строку на
+      {/* Ряды фильтров и поиска идут друг под другом: в одну строку на
           телефоне не встают ни два переключателя, ни поиск с кнопкой. */}
       <div className="mb-2">
         <Swipe>
@@ -1318,10 +1319,7 @@ const Cal1_2Phone = () => {
           найдено {rows.length} из {inCat.length}
         </div>
       )}
-      <div className="mb-4 flex flex-col gap-2">
-        <Button className="w-full" variant="primary">
-          <Plus size={15} /> Завести соревнование
-        </Button>
+      <div className="mb-3">
         <Button className="w-full" size="sm" variant="outline">
           <FileSpreadsheet size={14} /> Выгрузить в Excel
         </Button>
@@ -1401,9 +1399,11 @@ const CatPick = ({ one }: { one?: boolean } = {}) => {
             (c.k === cat ? 'border-blue-400 ring-1 ring-blue-200' : 'border-neutral-200 hover:border-neutral-300')
           }
         >
+          {/* Выбор отмечен галочкой, не словом ✳ (04.09.2026): рамка карточки
+              уже синяя, и метка «ВЫБРАНО» рядом с ней — второй раз о том же. */}
           <span className="flex items-center justify-between gap-2 text-[13.5px] font-semibold">
             {c.k === 'Лига' ? 'Евразийская лига' : c.k}
-            {c.k === cat && <Pill t="ВЫБРАНО" color="success" />}
+            {c.k === cat && <Check size={16} className="shrink-0 text-blue-600" />}
           </span>
           <span className="mt-1 block text-xs text-neutral-500">{c.sub}</span>
         </button>
@@ -1450,15 +1450,7 @@ export function New1_4() {
       nav="Календарь"
       title="Завести соревнование"
       back={{ label: 'Календарь сезона', to: 'Э1.2' }}
-      sub="Только название и даты: остальное дозаполняется в карточке черновика"
-    >
-      {/* Полоса шагов сверху, текущий подсвечен, по ним можно листать: мастер —
-          один экран, который листается, а не пять кадров подряд. */}
-      <div className="mb-4">
-        <FilterSeg items={STEPS} active={STEPS[step - 1]} onPick={(s) => setStep(STEPS.indexOf(s) + 1)} />
-      </div>
-      {STEP_BODY[step]()}
-      <div className="mt-4 flex justify-end">
+      actions={
         <Button
           variant="primary"
           data-to={step === 2 ? 'Э1.3' : undefined}
@@ -1466,7 +1458,14 @@ export function New1_4() {
         >
           {STEP_BTN[step]}
         </Button>
+      }
+    >
+      {/* Полоса шагов сверху, текущий подсвечен, по ним можно листать: мастер —
+          один экран, который листается, а не пять кадров подряд. */}
+      <div className="mb-4">
+        <FilterSeg items={STEPS} active={STEPS[step - 1]} onPick={(s) => setStep(STEPS.indexOf(s) + 1)} />
       </div>
+      {STEP_BODY[step]()}
     </WebApp>
   );
 }
@@ -1481,22 +1480,20 @@ const New1_4Phone = () => {
       nav="Календарь"
       title="Завести соревнование"
       back={{ label: 'Календарь сезона', to: 'Э1.2' }}
-      sub="Только название и даты: остальное дозаполняется в карточке черновика"
-    >
-      <div className="mb-4">
-        <FilterSeg items={STEPS} active={STEPS[step - 1]} onPick={(s) => setStep(STEPS.indexOf(s) + 1)} />
-      </div>
-      {STEP_BODY[step](true)}
-      <div className="mt-4">
+      actions={
         <Button
-          className="w-full"
           variant="primary"
           data-to={step === 2 ? 'Э1.3' : undefined}
           onPress={() => setStep(Math.min(2, step + 1))}
         >
           {STEP_BTN[step]}
         </Button>
+      }
+    >
+      <div className="mb-4">
+        <FilterSeg items={STEPS} active={STEPS[step - 1]} onPick={(s) => setStep(STEPS.indexOf(s) + 1)} />
       </div>
+      {STEP_BODY[step](true)}
     </PhoneRoleApp>
   );
 };
@@ -2067,7 +2064,7 @@ const Groups1_3 = ({ phone }: { phone?: boolean } = {}) => {
         <span className="text-[12.5px] text-neutral-500">
           {t
             ? `${shown.length} ${grp(shown.length)} из ${GROUPS1_3.length}`
-            : '24 группы по 4 · выходят 32: победители групп и восемь лучших вторых ✳'}
+            : '24 группы по 4 · выходят 32: победители групп и восемь лучших вторых'}
         </span>
       </div>
 
@@ -2159,6 +2156,23 @@ export function Tour1_3() {
       nav="Календарь"
       title="Кубок Республики Казахстан 2026"
       back={{ label: 'Календарь сезона', to: 'Э1.2' }}
+      actions={
+        sec === 'Черновик' ? (
+          <>
+            {/* «Отменить / перенести» — единственный вход в Э1.9, и спорить с
+                главной кнопкой не должно: обводка, не заливка. */}
+            <Button variant="outline" data-to="Э1.9">
+              Отменить / перенести
+            </Button>
+            {/* Одна кнопка на два состояния: закрыть регламент и открыть его
+                обратно. Держать обе сразу незачем. */}
+            <Button variant="primary" onPress={() => setClosed(!closed)}>
+              {closed ? <Pencil size={15} /> : <Check size={15} />}
+              {closed ? 'Изменить' : 'Завершить'}
+            </Button>
+          </>
+        ) : undefined
+      }
     >
       <SectionRow on={sec} onPick={setSec} />
       {sec !== 'Черновик' ? (
@@ -2168,34 +2182,11 @@ export function Tour1_3() {
            единственное место, где у турнира задаются формат, столы и допуск.
            Панели «Действия по турниру» рядом нет ✳: кнопка закрытия стоит под
            самим регламентом, а рядом с ней — то, что мешает идти дальше. */
-        <Panel
-          title="Регламент"
-          extra={<P t={closed ? 'РЕГЛАМЕНТ ЗАКРЫТ' : 'ЧЕРНОВИК'} cls={closed ? 'reg' : 'done'} />}
-        >
+        /* Метка «ЧЕРНОВИК» в углу панели снята ✳ (04.09.2026): раздел, на
+           котором стоит человек, так и называется — и подсвечен в ряду выше.
+           Остаётся метка закрытого регламента: её в ряду разделов нет. */
+        <Panel title="Регламент" extra={closed ? <P t="РЕГЛАМЕНТ ЗАКРЫТ" cls="reg" /> : undefined}>
           <TourRules edit={!closed} />
-          {/* Одна кнопка на два состояния: закрыть регламент и открыть его
-              обратно. Держать обе сразу незачем — доступна всегда ровно та,
-              которая сейчас имеет смысл. */}
-          <div className="mt-4 flex items-center justify-between gap-4">
-            <span className="max-w-lg text-[12.5px] text-neutral-500">
-              {closed
-                ? 'Регламент закрыт. Правка после этого сохраняется с автором и уходит в журнал.'
-                : 'Пока регламент не закрыт, турнир нельзя опубликовать и на него нельзя открыть приём заявок судей.'}
-            </span>
-            {/* «Отменить / перенести» стоит рядом: это единственный вход в
-                Э1.9, и держать его где-то ещё было негде — панели «Действия по
-                турниру» у карточки нет. Действие доступно до «Завершён», а
-                спорить с главной кнопкой не должно: обводка, не заливка. */}
-            <span className="flex shrink-0 items-center gap-2">
-              <Button variant="outline" data-to="Э1.9">
-                Отменить / перенести
-              </Button>
-              <Button variant="primary" onPress={() => setClosed(!closed)}>
-                {closed ? <Pencil size={15} /> : <Check size={15} />}
-                {closed ? 'Изменить' : 'Завершить'}
-              </Button>
-            </span>
-          </div>
         </Panel>
       )}
     </WebApp>
@@ -2214,28 +2205,25 @@ const Tour1_3Phone = () => {
       nav="Календарь"
       title="Кубок Республики Казахстан 2026"
       back={{ label: 'Календарь сезона', to: 'Э1.2' }}
+      actions={
+        sec === 'Черновик' ? (
+          <Button variant="primary" onPress={() => setClosed(!closed)}>
+            {closed ? <Pencil size={15} /> : <Check size={15} />}
+            {closed ? 'Изменить' : 'Завершить'}
+          </Button>
+        ) : undefined
+      }
     >
       <SectionRow on={sec} onPick={setSec} scroll />
       {sec !== 'Черновик' ? (
         SECTION_BODY[sec](true)
       ) : (
-        <Panel
-          title="Регламент"
-          extra={<P t={closed ? 'РЕГЛАМЕНТ ЗАКРЫТ' : 'ЧЕРНОВИК'} cls={closed ? 'reg' : 'done'} />}
-        >
+        /* Метка «ЧЕРНОВИК» в углу панели снята ✳ (04.09.2026): раздел, на
+           котором стоит человек, так и называется — и подсвечен в ряду выше.
+           Остаётся метка закрытого регламента: её в ряду разделов нет. */
+        <Panel title="Регламент" extra={closed ? <P t="РЕГЛАМЕНТ ЗАКРЫТ" cls="reg" /> : undefined}>
           <TourRules edit={!closed} phone />
-          {/* Правило и кнопки — этажами: в строку они не встают, а правило
-              объясняет именно кнопку под ним. */}
-          <div className="mt-4 flex flex-col gap-2">
-            <span className="text-[12.5px] text-neutral-500">
-              {closed
-                ? 'Регламент закрыт. Правка после этого сохраняется с автором и уходит в журнал.'
-                : 'Пока регламент не закрыт, турнир нельзя опубликовать и на него нельзя открыть приём заявок судей.'}
-            </span>
-            <Button className="w-full" variant="primary" onPress={() => setClosed(!closed)}>
-              {closed ? <Pencil size={15} /> : <Check size={15} />}
-              {closed ? 'Изменить' : 'Завершить'}
-            </Button>
+          <div className="mt-4">
             <Button className="w-full" variant="outline" data-to="Э1.9">
               Отменить / перенести
             </Button>
@@ -2329,9 +2317,6 @@ const CancelDialog = ({ phone, onClose }: { phone?: boolean; onClose: () => void
       to="Э1.3"
       foot={
         <>
-          {!phone && (
-            <span className="mr-auto text-xs text-neutral-500">Причина уйдёт заявителям и в журнал</span>
-          )}
           <QuietAction onPress={onClose}>Закрыть</QuietAction>
           <Button variant="primary">Перенести</Button>
         </>
@@ -2352,20 +2337,17 @@ const CancelDialog = ({ phone, onClose }: { phone?: boolean; onClose: () => void
       <Sec>Кого затрагивает</Sec>
       {phone ? <Facts items={AFFECTED.map((a) => ({ k: a.k, v: a.v }))} /> : <Cells items={AFFECTED} />}
       {/* Что будет с заявками — здесь же, а не в уведомлении после: это
-          первое, о чём спрашивают, увидев числа выше. */}
+          первое, о чём спрашивают, увидев числа выше. Строкой фактов ✳
+          (04.09.2026): двумя карточками одно и то же говорилось трижды —
+          заголовком, подписью и меткой справа. */}
       <Sec>Что будет с заявками</Sec>
-      <Rows>
-        <Row
-          nm="Заявки сохраняются"
-          sub="и при переносе, и при отмене — подавать их заново не нужно"
-          pill={{ t: 'СОХРАНЯЮТСЯ', cls: 'live' }}
-        />
-        <Row
-          nm="При переносе переезжают на новые даты"
-          sub="1–3 июня 2026 · заявителям уходит уведомление с причиной"
-          pill={{ t: 'ПЕРЕЕДУТ', cls: 'reg' }}
-        />
-      </Rows>
+      <Facts
+        items={[
+          { k: 'заявки', v: 'сохраняются' },
+          { k: 'переезжают на', v: '1–3 июня 2026' },
+          { k: 'заявителям', v: 'уведомление с причиной' },
+        ]}
+      />
     </InlineDialog>
   );
 };
@@ -2456,7 +2438,7 @@ const Cancel1_9States = () => (
 
     <Shot
       tone="warning"
-      title="Турнир в состоянии «Идёт» ✳"
+      title="Турнир в состоянии «Идёт»"
       text="Предупреждение, что часть матчей уже сыграна и отмена их результаты не удаляет."
     >
       <Frag>
@@ -2653,7 +2635,7 @@ const REGISTRIES: Registry[] = [
           { k: 'Год рождения · пол', v: '2009 · женский' },
           { k: 'Разряд', v: 'второй разряд' },
           { k: 'Регион и клуб', v: 'Шымкент · «Достык»' },
-          { k: 'Источник записи ✳', v: 'завёл клуб «Достык», 03.02.2026' },
+          { k: 'Источник записи', v: 'завёл клуб «Достык», 03.02.2026' },
         ],
       },
       {
@@ -3179,7 +3161,10 @@ const RegTable = ({
     <Th key="ok" t={r.cols[1]} on={sort.k === 'ok'} onClick={() => pick('ok')} />,
   ];
 
-  const total = rows.length === r.rows.length ? `${r.n} в реестре` : `найдено ${cnt(rows.length)} из ${r.n}`;
+  /* Счёт — только когда список сужен ✳ (04.09.2026): целое число записей
+     стоит на вкладке реестра («Спортсмены · 5 210»), и во второй раз это уже
+     не число, а шум. */
+  const total = rows.length === r.rows.length ? '' : `найдено ${cnt(rows.length)} из ${r.n}`;
   const seen = rows.length
     ? `${cnt(cur * PER_REG + 1)}–${cnt(cur * PER_REG + shown.length)} из ${cnt(rows.length)}`
     : '0 из 0';
@@ -3202,9 +3187,11 @@ const RegTable = ({
       ) : (
         <FilterSeg items={['Все', ...r.flt]} active={f} onPick={(v) => { setF(v); setPage(0); }} />
       )}
-      <span className={'whitespace-nowrap text-[12.5px] text-neutral-500' + (phone ? '' : ' ml-auto')}>
-        {total}
-      </span>
+      {total && (
+        <span className={'whitespace-nowrap text-[12.5px] text-neutral-500' + (phone ? '' : ' ml-auto')}>
+          {total}
+        </span>
+      )}
     </div>
   );
 
@@ -3384,8 +3371,17 @@ export function Users1_5() {
   const [open, setOpen] = useState<Entry | null>(null);
   const r = REGISTRIES.find((x) => x.k === reg)!;
   return (
-    <WebApp role={R01} nav="Пользователи" title="Пользователи и роли">
-      <div className="mb-3 flex items-center justify-between gap-4">
+    <WebApp
+      role={R01}
+      nav="Пользователи"
+      title="Пользователи и роли"
+      actions={
+        <Button variant="primary" data-to="Э1.10">
+          <UserPlus size={15} /> Пригласить человека
+        </Button>
+      }
+    >
+      <div className="mb-3">
         <FilterSeg
           items={REGISTRIES.map(regTab)}
           active={regTab(r)}
@@ -3394,9 +3390,6 @@ export function Users1_5() {
             if (hit) { setReg(hit.k); setOpen(null); }
           }}
         />
-        <Button variant="primary" data-to="Э1.10">
-          <UserPlus size={15} /> Пригласить человека
-        </Button>
       </div>
       {/* «Выдать роль» стоит в строке: роль выдают конкретному человеку, и
           выбирать его надо там же, где на него смотрят. `key` по реестру: у
@@ -3415,7 +3408,16 @@ const Users1_5Phone = () => {
   const [open, setOpen] = useState<Entry | null>(null);
   const r = REGISTRIES.find((x) => x.k === reg)!;
   return (
-    <PhoneRoleApp role={R01} nav="Пользователи" title="Пользователи и роли">
+    <PhoneRoleApp
+      role={R01}
+      nav="Пользователи"
+      title="Пользователи и роли"
+      actions={
+        <Button variant="primary" data-to="Э1.10">
+          <UserPlus size={15} /> Пригласить человека
+        </Button>
+      }
+    >
       <div className="mb-2">
         <Swipe>
           <FilterSeg
@@ -3427,11 +3429,6 @@ const Users1_5Phone = () => {
             }}
           />
         </Swipe>
-      </div>
-      <div className="mb-3">
-        <Button className="w-full" variant="primary" data-to="Э1.10">
-          <UserPlus size={15} /> Пригласить человека
-        </Button>
       </div>
       <RegTable key={r.k} r={r} onOpen={setOpen}  phone />
       {open && (
@@ -3447,7 +3444,7 @@ const Users1_5States = () => (
   <States>
     <Shot
       tone="warning"
-      title="Попытка выдать роль «главный судья» ✳"
+      title="Попытка выдать роль «главный судья»"
       text="Подсказка, что на официальный турнир судью назначает председатель ГСК через заявки, а не этот экран."
     >
       <Frag>
@@ -3530,10 +3527,9 @@ const NewUser1_10Body = ({ phone }: { phone?: boolean } = {}) => (
         <FormGrid>
           <TextInput label="Фамилия" value="Абдрахманова" wide={phone} />
           <TextInput label="Имя, отчество" value="Айгерим Ерлановна" wide={phone} />
-          <TextInput label="Год рождения ✳" value="1994" wide={phone} />
+          <TextInput label="Год рождения" value="1994" wide={phone} />
           <TextInput label="Телефон" value="+7 707 118 44 03" placeholder="+7 ___ ___ __ __" wide={phone} />
           <TextInput label="Почта" value="a.abdrakhmanova@ttfrk.kz" placeholder="имя@домен" wide={phone} />
-          <FieldView label="Хотя бы один контакт ✳" value="телефон и почта заполнены" wide={phone} />
         </FormGrid>
       </Panel>
 
@@ -3544,7 +3540,7 @@ const NewUser1_10Body = ({ phone }: { phone?: boolean } = {}) => (
           ни знать этот канал, ни уметь слать письма с SMS. Себя человек
           подтверждает сам, открыв ссылку: ИИН и одноразовым кодом ✳
           (30.08.2026) — пароля в системе нет. */}
-      <Panel title="Приглашение — ссылка ✳">
+      <Panel title="Приглашение — ссылка">
         {/* На телефоне поле и «Скопировать» встают друг под другом: ссылка
             длинная, и делить с кнопкой одну строку ей нечем. */}
         <div className={'flex gap-2 ' + (phone ? 'flex-col' : 'items-end')}>
@@ -3555,23 +3551,22 @@ const NewUser1_10Body = ({ phone }: { phone?: boolean } = {}) => (
             <Copy size={14} /> Скопировать
           </Btn>
         </div>
-        {/* Ссылка и правило под ней — один блок: правило объясняет поле над
-            собой. Про то, что канал отправки любой, здесь не пишем — это
-            следует из того, что канала на экране нет. */}
-        <p className="mt-2 text-[12.5px] text-neutral-500">
-          Одноразовая, действует 7 дней ✳. Пересланная ссылка чужого не пустит: открыв её, человек
-          подтверждает себя ИИН и кодом из SMS (Э0.6).
-        </p>
+        {/* Под ссылкой — только её срок ✳ (04.09.2026): как система проверяет
+            того, кто по ней придёт, — свойство входа (Э0.6), а не сообщение
+            тому, кто эту ссылку отправляет. */}
+        <p className="mt-2 text-[12.5px] text-neutral-500">Одноразовая, действует 7 дней</p>
       </Panel>
 
-      {/* `flex-col-reverse` на телефоне: порядок в разметке остаётся прежним, а
-          главное действие встаёт первым — в столбик оно должно быть сверху. */}
-      <div className={'flex gap-2 ' + (phone ? 'flex-col-reverse' : 'items-center justify-end')}>
-        <QuietAction>Выдать роль сразу</QuietAction>
-        <Button className={phone ? 'w-full' : undefined} variant="primary">
-          <Send size={15} /> Пригласить и получить ссылку
-        </Button>
-      </div>
+  </>
+);
+
+/** Действия экрана — в закреплённой панели снизу, одни на обе рамки. */
+const NEW_USER_ACTIONS = (
+  <>
+    <QuietAction>Выдать роль сразу</QuietAction>
+    <Button variant="primary">
+      <Send size={15} /> Пригласить и получить ссылку
+    </Button>
   </>
 );
 
@@ -3582,6 +3577,7 @@ export function NewUser1_10() {
       nav="Пользователи"
       title="Пригласить человека"
       back={{ label: 'Пользователи и роли', to: 'Э1.5' }}
+      actions={NEW_USER_ACTIONS}
     >
       <NewUser1_10Body />
     </WebApp>
@@ -3595,6 +3591,7 @@ const NewUser1_10Phone = () => (
     nav="Пользователи"
     title="Пригласить человека"
     back={{ label: 'Пользователи и роли', to: 'Э1.5' }}
+    actions={NEW_USER_ACTIONS}
   >
     <NewUser1_10Body phone />
   </PhoneRoleApp>
@@ -3604,7 +3601,7 @@ const NewUser1_10States = () => (
   <States>
     <Shot
       tone="warning"
-      title="Найден похожий человек ✳"
+      title="Найден похожий человек"
       text="Система сама сверяет ФИО, год рождения и город и предлагает связать, а не заводить вторую запись."
     >
       <Frag>
@@ -3625,7 +3622,7 @@ const NewUser1_10States = () => (
 
     <Shot
       tone="danger"
-      title="Срок ссылки вышел ✳"
+      title="Срок ссылки вышел"
       text="Вместо ссылки — «выпустить новую»; старая больше не работает."
     >
       <Frag>
@@ -3719,7 +3716,7 @@ const ScopeFields = ({ scope, phone }: { scope: Scope; phone?: boolean }) => {
     return (
       <FormGrid>
         <PickField
-          label={scope === 'Регион' ? 'Регион ✳' : 'Клуб'}
+          label={scope === 'Регион' ? 'Регион' : 'Клуб'}
           value={scope === 'Регион' ? REGIONS[18] : CLUBS[0]}
           wide={phone}
         />
@@ -3772,7 +3769,7 @@ const GRANTS: Grant[] = [
     nm: 'Экономист',
     scopes: ['Система'],
     can: [
-      { nm: 'Отмечать оплату годового взноса', sub: 'и снимать отметку с причиной ✳' },
+      { nm: 'Отмечать оплату годового взноса', sub: 'и снимать отметку с причиной' },
       { nm: 'Выгружать списки по взносам', sub: 'по региону, клубу, состоянию оплаты' },
     ],
   },
@@ -3781,7 +3778,7 @@ const GRANTS: Grant[] = [
     scopes: ['Система'],
     can: [
       { nm: 'Смотреть и выгружать любой модуль', sub: 'календарь, заявки, сетки, взносы, рейтинг' },
-      { nm: 'Подписываться на соревнование ✳', sub: 'уведомления о смене состояния' },
+      { nm: 'Подписываться на соревнование', sub: 'уведомления о смене состояния' },
     ],
   },
   {
@@ -3789,7 +3786,7 @@ const GRANTS: Grant[] = [
     scopes: ['Система'],
     can: [
       { nm: 'Смотреть и выгружать любой модуль', sub: 'то же, что у менеджера по спорту' },
-      { nm: 'Подписываться на соревнование ✳', sub: 'уведомления о смене состояния' },
+      { nm: 'Подписываться на соревнование', sub: 'уведомления о смене состояния' },
     ],
   },
   {
@@ -3964,7 +3961,7 @@ const GrantDialog = ({ phone, onClose }: { phone?: boolean; onClose: () => void 
       {/* Ключ по области сбрасывает выбор при её смене: турнир, выбранный
           для стола, не должен всплыть в клубе. */}
       <ScopeFields key={scope} scope={scope} phone={phone} />
-      <Sec>Что человек сможет ✳</Sec>
+      <Sec>Что человек сможет</Sec>
       {g.open ? (
         <Bar tone="warning">{g.open} ⚠</Bar>
       ) : (
@@ -4117,7 +4114,7 @@ const Athlete1_12Body = ({ phone }: { phone?: boolean } = {}) => (
           <FieldView label="Разряд" value="кандидат в мастера спорта" wide={phone} />
           <FieldView label="Регион и клуб" value="Алматы · «Алатау»" wide={phone} />
           <FieldView label="Тренер" value="Смагулов Асхат" wide={phone} />
-          <FieldView label="Источник записи ✳" value="зарегистрировался сам, 11.01.2026 · подтвердил клуб «Алатау»" wide />
+          <FieldView label="Источник записи" value="зарегистрировался сам, 11.01.2026 · подтвердил клуб «Алатау»" wide />
         </FormGrid>
       </Panel>
 
@@ -4156,7 +4153,6 @@ export function Athlete1_12() {
       role={R01}
       nav="Пользователи"
       title="Смагулов Алан"
-      sub="2004 · Алматы · «Алатау» · КМС"
       back={{ label: 'Пользователи и роли', to: 'Э1.5' }}
     >
       <Athlete1_12Body />
@@ -4170,7 +4166,6 @@ const Athlete1_12Phone = () => (
     role={R01}
     nav="Пользователи"
     title="Смагулов Алан"
-    sub="2004 · Алматы · «Алатау» · КМС"
     back={{ label: 'Пользователи и роли', to: 'Э1.5' }}
   >
     <Athlete1_12Body phone />
@@ -4198,7 +4193,7 @@ const Athlete1_12States = () => (
 
     <Shot
       tone="info"
-      title="Запись заведена клубом или самим человеком ✳"
+      title="Запись заведена клубом или самим человеком"
       text="Виден источник записи."
     >
       <Frag w={520}>
@@ -4279,7 +4274,7 @@ const Merge1_13Body = ({ phone }: { phone?: boolean } = {}) => (
       />
 
       <Panel
-        title="Что переедет в главную запись ✳"
+        title="Что переедет в главную запись"
         extra={<span className="text-xs text-neutral-500">совпали ФИО, год рождения и город — пара предложена как дубль</span>}
         flush
       >
@@ -4320,7 +4315,6 @@ export function Merge1_13() {
       role={R01}
       nav="Пользователи"
       title="Объединение дублей"
-      sub="Реестр спортсменов · две записи об одном человеке"
       back={{ label: 'Карточка спортсмена', to: 'Э1.12' }}
     >
       <Merge1_13Body />
@@ -4334,7 +4328,6 @@ const Merge1_13Phone = () => (
     role={R01}
     nav="Пользователи"
     title="Объединение дублей"
-    sub="Реестр спортсменов · две записи об одном человеке"
     back={{ label: 'Карточка спортсмена', to: 'Э1.12' }}
   >
     <Merge1_13Body phone />
@@ -4345,7 +4338,7 @@ const Merge1_13States = () => (
   <States>
     <Shot
       tone="danger"
-      title="Пол или год рождения расходятся ✳"
+      title="Пол или год рождения расходятся"
       text="Предупреждение, что это, возможно, разные люди: объединять без проверки нельзя."
     >
       <Frag>
@@ -4450,7 +4443,10 @@ export function Log1_7() {
     (l) => (type === LOG_TYPES[0] || l.type === type) && l.ago <= period.days,
   );
   return (
-    <WebApp role={R01} nav="Журнал" title="Журнал действий" sub="Записи не редактируются и не удаляются (TZ §12) · новые сверху">
+    /* Подписи «записи не редактируются… · новые сверху» нет ✳ (04.09.2026):
+       порядок виден по датам в самой таблице, а неизменяемость журнала —
+       свойство системы из ТЗ, а не сообщение человеку на экране. */
+    <WebApp role={R01} nav="Журнал" title="Журнал действий">
       <div className="mb-3 flex items-center justify-between gap-4">
         <FilterSeg items={[...LOG_TYPES]} active={type} onPick={setType} />
         <FilterSeg
@@ -4515,7 +4511,6 @@ const Log1_7Phone = () => {
       role={R01}
       nav="Журнал"
       title="Журнал действий"
-      sub="Записи не редактируются и не удаляются (TZ §12) · новые сверху"
     >
       <div className="mb-2">
         <Swipe>
@@ -4563,7 +4558,7 @@ const Log1_7States = () => (
   <States>
     <Shot
       tone="info"
-      title="По фильтру записей нет ✳"
+      title="По фильтру записей нет"
       text="Журнал пуст только по фильтру, а не вообще: видно, какой фильтр это дал."
       wide
     >
@@ -4621,17 +4616,23 @@ export function News1_8() {
   const rows = newsOf(tab);
   const count = (t: string) => newsOf(t).length;
   return (
-    <WebApp role={R01} nav="Новости" title="Новости и страницы">
-      <div className="mb-3 flex items-center justify-between gap-4">
+    <WebApp
+      role={R01}
+      nav="Новости"
+      title="Новости и страницы"
+      actions={
+        <Button variant="primary" data-to="Э1.14">
+          <Plus size={15} /> Создать материал
+        </Button>
+      }
+    >
+      <div className="mb-3">
         {/* Вкладки со счётчиками: сколько материалов в каждой, видно до нажатия. */}
         <FilterSeg
           items={NEWS_TABS.map((t) => `${t} · ${count(t)}`)}
           active={`${tab} · ${count(tab)}`}
           onPick={(v) => setTab(NEWS_TABS.find((t) => v.startsWith(t)) ?? NEWS_TABS[0])}
         />
-        <Button variant="primary" data-to="Э1.14">
-          <Plus size={15} /> Создать материал
-        </Button>
       </div>
 
       <Sheet grid={NEWS_GRID} cols={['Материал', 'Состояние', <span key="a" className="text-right">Действия</span>]}>
@@ -4701,7 +4702,16 @@ const News1_8Phone = () => {
   const rows = newsOf(tab);
   const count = (t: string) => newsOf(t).length;
   return (
-    <PhoneRoleApp role={R01} nav="Новости" title="Новости и страницы">
+    <PhoneRoleApp
+      role={R01}
+      nav="Новости"
+      title="Новости и страницы"
+      actions={
+        <Button variant="primary" data-to="Э1.14">
+          <Plus size={15} /> Создать материал
+        </Button>
+      }
+    >
       <div className="mb-2">
         <Swipe>
           <FilterSeg
@@ -4710,11 +4720,6 @@ const News1_8Phone = () => {
             onPick={(v) => setTab(NEWS_TABS.find((t) => v.startsWith(t)) ?? NEWS_TABS[0])}
           />
         </Swipe>
-      </div>
-      <div className="mb-3">
-        <Button className="w-full" variant="primary" data-to="Э1.14">
-          <Plus size={15} /> Создать материал
-        </Button>
       </div>
       <Rows>
         {rows.map((n) => (
@@ -4922,7 +4927,7 @@ const Editor1_14States = () => (
 
     <Shot
       tone="info"
-      title="Правка опубликованного материала ✳"
+      title="Правка опубликованного материала"
       text="Изменения видны сразу, и каждая версия пишется в журнал."
     >
       <Frag>
@@ -4988,7 +4993,6 @@ export function RegSum1_12() {
       role={R01}
       nav="Статистика регионов"
       title="Статистика по регионам"
-      sub="Сводка складывается из данных, которые вносят региональные федерации"
       hint="Предложение 3: автоматическая сводная статистика по регионам и аналитическая панель по этим показателям."
     >
       <StatTiles

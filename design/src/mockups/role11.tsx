@@ -1,18 +1,20 @@
-/* Роль 11 · Главный тренер национальной команды — макеты по флоу на новом
-   слое (HeroUI) ✳ (30.08.2026). Содержание, коды экранов и переходы — прежние
-   (см. `flows/11-glavnyy-trener-sbornoy.md`); меняется подача: оболочка WebApp
-   и доменные компоненты `kit/hero/app` вместо старого макетного слоя.
+/* Роль 11 · Главный тренер национальной команды — макеты по флоу
+   (см. `flows/11-glavnyy-trener-sbornoy.md`).
 
-   ⚠ Вся роль — рабочая гипотеза: функционал в документе федерации не заполнен
-   (вопрос 12.1), международных стартов в календаре нет. Рисуем минимальный
-   наблюдательный кабинет: смотреть, сравнивать, выгружать. Данных роль не
-   меняет — единственная «запись» на экранах — личная звёздочка кандидата, она
-   живёт в списке тренера и на реестр не влияет. */
+   ⚠ Функционал роли в документе федерации не заполнен (вопрос 12.1). Поэтому
+   в роли остаётся только то, что федерация назвала сама — дополнения от
+   31.08.2026 (`docs/refs/predlozheniya-dopolneniya-2026-08-31.md`, пп. 1, 2,
+   4, 5): состав сборной, карточка члена сборной с планом и медкартой,
+   календарь подготовки и рапорты на командирование.
 
-import { Fragment, useState, type ReactNode } from 'react';
+   Наблюдательный кабинет (кандидаты, карточка на чтение, сравнение) убран
+   ✳ (04.09.2026, решение владельца продукта): это была наша гипотеза, а не
+   запрос федерации, и рисовать по ней экраны раньше ответа на вопрос 12.1
+   значило показывать заказчику как решённое то, что он не заказывал. */
+
+import { useState } from 'react';
 import {
-  Activity, ArrowDownRight, ArrowUpDown, ArrowUpRight, BarChart3, CalendarDays, ClipboardCheck,
-  Download, Eye, FileText, Plane, Plus, Star, User, Users, Users2,
+  CalendarDays, ChevronLeft, ChevronRight, ClipboardCheck, Download, FileText, Plane, Plus, Users2,
 } from 'lucide-react';
 import { Avatar, Button } from '@heroui/react';
 import { A, AW } from '../fedCommon';
@@ -20,8 +22,8 @@ import {
   Bar,
   Bars,
   ChartRow,
-  DataTable,
   Donut,
+  EmptyBox,
   EventTimeline,
   Facts,
   FilterBar,
@@ -33,20 +35,15 @@ import {
   Pill,
   Row,
   Rows,
-  ScreenScope,
   SearchInput,
-  Separator,
   Sheet,
   StatTiles,
   WebApp,
   type RoleUI,
 } from '@/shared/kit/app';
-/* Из старого слоя остаются только мета-компоненты борда: колонки, стрелки и
-   полки состояний. Сами экраны собраны новым слоем. */
-import { Board, States, Shot, type ScreenMap } from './shell';
-/* График — настоящий Chart.js, как у спортсмена (роль 14): нарисованная ломаная
-   не ответила бы, что было в январе. Цвета — токенами через getComputedStyle. */
-import { ChartBox, soft, token } from '@/shared/kit/chart';
+/* Из старого слоя остаётся только сборка борда: колонки экранов и стрелки
+   между ними. Сами экраны собраны китом приложения. */
+import { Board, type ScreenMap } from './shell';
 import { Login0_1, LoginPhone0_1 } from './role00';
 
 /* ── Роль: сайдбар и подпись профиля ─────────────────────────────── */
@@ -58,893 +55,20 @@ const R: RoleUI = {
   title: 'Главный тренер национальной команды',
   person: { nm: 'Ахметов С.', rl: 'Главный тренер сборной', av: A(52) },
   brandName: 'Национальная команда РК',
-  brandSub: 'Состав · подготовка · командирование',
   badge: false,
-  /* Меню выросло с трёх пунктов до пяти ✳ (31.08.2026, дополнения федерации):
-     к наблюдательному кабинету (кандидаты, карточка, сравнение) добавились
-     состав сборной, календарь подготовки и рапорты. «Карточка» и «Сравнение»
-     остались пунктами: это не разделы, а экраны, куда приходят из списка, но
-     подсветку сайдбара им сохраняем — иначе экран выглядит пришедшим ниоткуда. */
+  /* Меню — три раздела ✳ (04.09.2026, решение владельца продукта). Кандидаты,
+     карточка на чтение и сравнение убраны вовсе: их никто не просил — роль в
+     документе федерации не заполнена (вопрос 12.1), и три экрана были нашей
+     гипотезой. Остаётся то, что федерация назвала прямым текстом в дополнениях
+     31.08.2026: состав, календарь подготовки и рапорты. Карточка спортсмена
+     сборной пунктом меню не стоит — в неё приходят строкой состава. */
   nav: [
     [<Users2 size={16} key="t" />, 'Состав сборной'],
     [<CalendarDays size={16} key="p" />, 'Календарь подготовки'],
     [<Plane size={16} key="r" />, 'Рапорты'],
-    [<Users size={16} key="c" />, 'Кандидаты'],
-    [<User size={16} key="k" />, 'Карточка'],
-    [<BarChart3 size={16} key="s" />, 'Сравнение'],
   ],
   roles: ['Главный тренер национальной команды', { t: 'Судья · вне турнира', to: 'Э0.8' }],
 };
-
-/* ── Данные экранов ──────────────────────────────────────────────── */
-
-/** Кандидат в списке отбора. Поля разложены (год, регион, клуб), а не склеены
-    в подпись: по ним фильтруют и сортируют — из строки текста это не сделать. */
-type Cand = {
-  pl: number;
-  av: string;
-  nm: string;
-  born: number;
-  region: string;
-  club: string;
-  grade: string;
-  /** Последние главные старты сезона: турнир → место. */
-  res: [string, string][];
-  r: number;
-  d: number;
-};
-
-const CANDS: Cand[] = [
-  {
-    pl: 1, av: A(44), nm: 'Ким Георгий', born: 2003, region: 'Астана', club: 'клуб «СКА»',
-    grade: 'мастер спорта РК', res: [['ЧК', '1'], ['Кубок', '2'], ['Спарт.', '1']], r: 2456, d: 38,
-  },
-  {
-    pl: 2, av: A(32), nm: 'Смагулов Алан', born: 2004, region: 'Алматы', club: 'клуб «Алатау»',
-    grade: 'мастер спорта РК', res: [['ЧК', '2'], ['Кубок', '1'], ['Спарт.', '4']], r: 2411, d: 52,
-  },
-  {
-    pl: 3, av: A(51), nm: 'Токаев Марат', born: 2002, region: 'Астана', club: 'клуб «Барыс»',
-    grade: 'мастер спорта РК', res: [['ЧК', '4'], ['Кубок', '3'], ['Спарт.', '2']], r: 2388, d: -14,
-  },
-  {
-    pl: 4, av: A(22), nm: 'Жумабеков Расул', born: 2007, region: 'Караганда', club: 'клуб «Шахтёр»',
-    grade: 'КМС', res: [['ЧК', '8'], ['Кубок', '4'], ['Спарт.', '3']], r: 2295, d: 96,
-  },
-  {
-    pl: 5, av: A(85), nm: 'Байжанов Арман', born: 2005, region: 'Актобе', club: 'клуб «Актобе»',
-    grade: 'КМС', res: [['ЧК', '8'], ['Кубок', '8'], ['Спарт.', '5']], r: 2270, d: 11,
-  },
-  {
-    pl: 6, av: A(93), nm: 'Мұрат Ерасыл', born: 2008, region: 'Шымкент', club: 'клуб «Достык»',
-    grade: 'КМС', res: [['ЧК', '8'], ['Кубок', '4'], ['Спарт.', '3']], r: 2244, d: 130,
-  },
-  {
-    pl: 7, av: A(56), nm: 'Гладун Игорь', born: 2001, region: 'Тараз', club: 'без клуба',
-    grade: 'мастер спорта РК', res: [['ЧК', '16'], ['Кубок', '8'], ['Спарт.', '6']], r: 2210, d: -27,
-  },
-];
-
-const subOf = (c: Cand) => `${c.born} г.р. · ${c.region} · ${c.club} · ${c.grade}`;
-/** Дельта с типографским минусом: «-14» из числа выглядит дефисом. */
-const fmtD = (d: number) => (d > 0 ? `+${d}` : d < 0 ? `−${Math.abs(d)}` : '0');
-
-/** Число в русском формате: разряды пробелом («2 460», а не английское
-    «2,460»). Считаем сами, а не `toLocaleString`: разделитель не должен
-    зависеть от локали браузера, в котором открыт Storybook, а пробел здесь —
-    обычный, тот же, что в «5 210 спортсменов» на полке состояний Э11.1. */
-const fmtN = (n: number) => {
-  const [int, frac] = String(n).split('.');
-  const grouped = int.replace(/\B(?=(\d{3})+$)/g, ' ');
-  return frac ? `${grouped},${frac}` : grouped;
-};
-
-/* История рейтинга Кима Г. по месяцам сезона: 2418 (август) → 2456 (март),
-   +38 за сезон — то же число, что в списке и в сравнении: числа на разных
-   экранах обязаны сходиться. */
-const RATING: { m: string; r: number }[] = [
-  { m: 'авг', r: 2418 }, { m: 'сен', r: 2410 }, { m: 'окт', r: 2426 }, { m: 'ноя', r: 2431 },
-  { m: 'дек', r: 2422 }, { m: 'янв', r: 2440 }, { m: 'фев', r: 2449 }, { m: 'мар', r: 2456 },
-];
-
-const MATCHES: { st: 'win' | 'loss'; nm: string; sub: string; sc: string; dt: string }[] = [
-  { st: 'win', nm: 'Ким Г. — Токаев М.', sub: 'Чемпионат Казахстана 2026 · 1/4 финала', sc: '4:2', dt: '14.03' },
-  { st: 'win', nm: 'Ким Г. — Байжанов А.', sub: 'Чемпионат Казахстана 2026 · 1/8 финала', sc: '4:0', dt: '13.03' },
-  { st: 'loss', nm: 'Ким Г. — Смагулов А.', sub: 'Кубок Казахстана 2026 · финал', sc: '2:4', dt: '22.02' },
-  { st: 'win', nm: 'Ким Г. — Жумабеков Р.', sub: 'Кубок Казахстана 2026 · 1/2 финала', sc: '4:3', dt: '21.02' },
-  { st: 'win', nm: 'Ким Г. — Гладун И.', sub: 'Спартакиада РК 2026 · финал', sc: '4:1', dt: '26.01' },
-  { st: 'win', nm: 'Ким Г. — Мұрат Е.', sub: 'Спартакиада РК 2026 · 1/2 финала', sc: '4:2', dt: '25.01' },
-];
-
-const H2H: [string, string, string][] = [
-  ['Смагулов Алан', '5 : 4', 'последняя 22.02.2026 · 2:4'],
-  ['Токаев Марат', '7 : 2', 'последняя 14.03.2026 · 4:2'],
-  ['Жумабеков Расул', '3 : 1', 'последняя 21.02.2026 · 4:3'],
-  ['Мұрат Ерасыл', '2 : 0', 'последняя 25.01.2026 · 4:2'],
-];
-
-/** Главные старты Кима по сезонам — зона «участие в главных стартах». */
-const SEASONS: { y: string; ch: string; cup: string; sp: string }[] = [
-  { y: '2026', ch: '1 место', cup: '2 место', sp: '1 место' },
-  { y: '2025', ch: '3 место', cup: '1 место', sp: '—' },
-  { y: '2024', ch: '6 место', cup: '—', sp: '—' },
-];
-
-/* Трое отмеченных — колонки сравнения Э11.3 и стартовый «мой список» Э11.1.
-   Один источник: кто со звёздочкой, того и сравниваем. */
-const THREE = [CANDS[0], CANDS[1], CANDS[5]];
-
-const CMP: [string, string, string, string][] = [
-  ['Регион и клуб', 'Астана · «СКА»', 'Алматы · «Алатау»', 'Шымкент · «Достык»'],
-  ['Возраст', '22 года (2003 г.р.)', '21 год (2004 г.р.)', '17 лет (2008 г.р.)'],
-  ['Место в рейтинге', '1', '2', '6'],
-  ['Рейтинг на 14.03.2026', '2456', '2411', '2244'],
-  ['Чемпионат РК 2026', '1 место', '2 место', '1/8 финала'],
-  ['Кубок РК 2026', '2 место', '1 место', '1/4 финала'],
-  ['Спартакиада РК 2026', '1 место', '4 место', '3 место'],
-  ['Матчей за сезон', '46 · побед 38', '44 · побед 35', '39 · побед 30'],
-];
-
-const CMP_H2H: [string, string, string] = [
-  'со Смагуловым 5 : 4\nс Мұратом 2 : 0',
-  'с Кимом 4 : 5\nс Мұратом 1 : 1',
-  'с Кимом 0 : 2\nсо Смагуловым 1 : 1',
-];
-
-/* ── Мелочи, общие для экранов роли ─────────────────────────────── */
-
-/** Значок «только чтение»: в матрице прав у роли проставлено чтение — это
-    допущение (⚠ 12.1), и на каждой панели оно сказано явно. */
-const ReadOnly = () => (
-  <span className="flex items-center gap-1 whitespace-nowrap rounded-md bg-neutral-100 px-2 py-0.5 text-[10.5px] font-semibold tracking-wide text-neutral-500">
-    <Eye size={11} /> ТОЛЬКО ЧТЕНИЕ
-  </span>
-);
-
-
-/** Заголовок сортируемого столбца (⚠ дупликация из role05). */
-const Th = ({ t, on, onClick }: { t: string; on: boolean; onClick: () => void }) => (
-  <button
-    type="button"
-    onClick={onClick}
-    className={'flex items-center gap-1 text-left uppercase ' + (on ? 'text-neutral-700' : 'hover:text-neutral-600')}
-  >
-    {t}
-    {on && <ArrowUpDown size={11} />}
-  </button>
-);
-
-/** Человек в строке таблицы: фото и две строки; `to` — переход в карточку
-    (⚠ дупликация из role05). */
-const Who = ({ av, nm, sub, to }: { av: string; nm: string; sub?: ReactNode; to?: string }) => {
-  const inner = (
-    <>
-      <Avatar size="sm">
-        <Avatar.Image alt={nm} src={av} />
-        <Avatar.Fallback>{nm.slice(0, 1)}</Avatar.Fallback>
-      </Avatar>
-      <span className="min-w-0 leading-tight">
-        <span className="block truncate text-[13.5px] font-medium">{nm}</span>
-        {sub && <span className="block truncate text-xs text-neutral-500">{sub}</span>}
-      </span>
-    </>
-  );
-  return to ? (
-    <button type="button" data-to={to} className="flex min-w-0 items-center gap-2.5 text-left">{inner}</button>
-  ) : (
-    <span className="flex min-w-0 items-center gap-2.5">{inner}</span>
-  );
-};
-
-/** Кадр состояния: фрагмент экрана в скоупе нового слоя — без обёртки фрагмент
-    на полке States остаётся без стилей HeroUI (⚠ дупликация из role05). */
-const Frag = ({ w = 560, children }: { w?: number; children: ReactNode }) => (
-  <ScreenScope>
-    <div style={{ width: w }}>{children}</div>
-  </ScreenScope>
-);
-
-/** Дельта рейтинга со стрелкой: рост зелёный, падение красное — динамика
-    считывается раньше числа. */
-const Delta = ({ d }: { d: number }) => (
-  <span
-    className={
-      'flex items-center justify-end gap-0.5 font-semibold tabular-nums ' +
-      (d >= 0 ? 'text-green-700' : 'text-red-600')
-    }
-  >
-    {d >= 0 ? <ArrowUpRight size={13} /> : <ArrowDownRight size={13} />}
-    {fmtD(d)}
-  </span>
-);
-
-/* ── Э11.1 · Кандидаты в сборную ─────────────────────────────────── */
-
-const REGIONS11 = ['Все регионы', 'Астана', 'Алматы'];
-const AGES11 = ['Взрослые', 'До 19 лет', 'До 15 лет'];
-const CAND_GRID = '36px 1.9fr 1.1fr 76px 90px 36px';
-
-/** Кто остаётся в списке после фильтров. Выборка одна на оба формата: если бы
-    десктоп и телефон считали её каждый по-своему, по одним и тем же фильтрам они
-    показали бы разных кандидатов. */
-const filterCands = (sex: string, age: string, region: string) =>
-  CANDS.filter((c) => {
-    /* Женского списка в рабочей гипотезе нет: фильтр честно показывает пусто,
-       а не делает вид, что переключился. */
-    if (sex === 'Женщины') return false;
-    const byAge = age === AGES11[0] ? true : age === AGES11[1] ? c.born >= 2007 : c.born >= 2011;
-    return byAge && (region === REGIONS11[0] || c.region === region);
-  });
-
-/** Охват списка — открытый вопрос из флоу, и он сказан на самом экране (в обоих
-    форматах одним текстом: два пересказа одного допущения разъедутся). */
-const SCOPE_WARN11 = (
-  <>
-    ⚠ Видит ли роль всех спортсменов страны или только кандидатский список — не решено
-    (вопрос 12.1). Пока показываем всех, как чтение реестра; данных экран не меняет.
-  </>
-);
-
-type SortKey = 'pl' | 'nm' | 'r' | 'd';
-const COLS11: { k: SortKey; t: string }[] = [
-  { k: 'pl', t: '№' },
-  { k: 'nm', t: 'Спортсмен' },
-];
-const COLS11R: { k: SortKey; t: string }[] = [
-  { k: 'r', t: 'Рейтинг' },
-  { k: 'd', t: 'Динамика' },
-];
-
-/** Список отбора: фильтры и сортировка рабочие — отбор кандидатов и есть работа
-    роли, и список под руками сужается сразу. Звёздочка — личная пометка «в мой
-    список», данных федерации она не меняет; «Сравнить» оживает, когда отмечены
-    двое-трое. Проп `variant` старой адаптивной рамки сохранён ради истории
-    «Адаптив»: у нового слоя своей планшетной рамки веба пока нет. */
-export function Cands11_1(_props: { variant?: 'desktop' | 'land' } = {}) {
-  const [sex, setSex] = useState('Мужчины');
-  const [age, setAge] = useState(AGES11[0]);
-  const [region, setRegion] = useState(REGIONS11[0]);
-  const [period, setPeriod] = useState('Сезон 2026');
-  const [sort, setSort] = useState<{ k: SortKey; up: boolean }>({ k: 'pl', up: true });
-  /* Мой список — те же трое, что в колонках Э11.3: пометка и сравнение — одно
-     множество, второму счётчику разъезжаться не с чем. */
-  const [stars, setStars] = useState<ReadonlySet<string>>(new Set(THREE.map((c) => c.nm)));
-  const toggle = (nm: string) => {
-    const next = new Set(stars);
-    if (!next.delete(nm)) next.add(nm);
-    setStars(next);
-  };
-
-  const found = filterCands(sex, age, region);
-  const rows = [...found].sort((a, b) => {
-    const x = sort.k === 'nm' ? a.nm.localeCompare(b.nm, 'ru') : a[sort.k] - b[sort.k];
-    return sort.up ? x : -x;
-  });
-  const canCmp = stars.size >= 2 && stars.size <= 3;
-
-  return (
-    <WebApp
-      role={R}
-      nav="Кандидаты"
-      title="Кандидаты в сборную"
-      sub="Реестр спортсменов · рейтинг и динамика за сезон 2026"
-    >
-      {/* Плиток-счётчиков над таблицей больше нет ✳ (30.08.2026): экран — реестр
-          кандидатов, и витрина «214 в отборе · 8 стартов» отодвигала работу вниз,
-          ничего не решая. Сколько отмечено — написано на самой кнопке «Сравнить
-          отмеченных», сколько строк на экране — в строке под фильтрами. В данных
-          роли зоны счётчиков и нет: там фильтры, таблица и охват списка. */}
-
-      {/* Фильтры из флоу: пол · возрастная группа · регион · период. */}
-      <div className="mb-3 flex flex-wrap gap-2">
-        <FilterSeg items={['Мужчины', 'Женщины']} active={sex} onPick={setSex} />
-        <FilterSeg items={AGES11} active={age} onPick={setAge} />
-        <FilterSeg items={REGIONS11} active={region} onPick={setRegion} />
-        <FilterSeg items={['Сезон 2026', 'Год']} active={period} onPick={setPeriod} />
-      </div>
-
-      {/* Счётчик говорит, по чему список сужен; справа — оба действия роли.
-          «Сравнить» — главный акцент экрана, и он же объясняет звёздочки. */}
-      <div className="mb-3 flex items-center justify-between gap-4">
-        <span className="text-[12.5px] text-neutral-500">
-          {rows.length} из {CANDS.length} на экране · {sex.toLowerCase()}, {age.toLowerCase()},{' '}
-          {region.toLowerCase()} · период: {period.toLowerCase()}
-        </span>
-        <span className="flex items-center gap-2">
-          <Button size="sm" variant="outline">
-            <Download size={14} /> Выгрузить список
-          </Button>
-          <Button size="sm" variant="primary" data-to="Э11.3" isDisabled={!canCmp}>
-            Сравнить отмеченных ({stars.size})
-          </Button>
-        </span>
-      </div>
-
-      <Sheet
-        grid={CAND_GRID}
-        cols={[
-          ...COLS11.map((c) => (
-            <Th
-              key={c.k}
-              t={c.t}
-              on={sort.k === c.k}
-              onClick={() => setSort({ k: c.k, up: sort.k === c.k ? !sort.up : c.k !== 'r' && c.k !== 'd' })}
-            />
-          )),
-          <span key="res">Главные старты</span>,
-          ...COLS11R.map((c) => (
-            <Th
-              key={c.k}
-              t={c.t}
-              on={sort.k === c.k}
-              onClick={() => setSort({ k: c.k, up: sort.k === c.k ? !sort.up : false })}
-            />
-          )),
-          <span key="star" />,
-        ]}
-      >
-        {rows.map((c) => {
-          const on = stars.has(c.nm);
-          return (
-            <div
-              key={c.nm}
-              className="grid items-center gap-3 px-4 py-2.5 text-[13px] hover:bg-neutral-50"
-              style={{ gridTemplateColumns: CAND_GRID }}
-            >
-              <span className="font-semibold tabular-nums text-neutral-400">{c.pl}</span>
-              {/* Строка ведёт в карточку спортсмена — переход на человеке, а не
-                  на всей полосе: звёздочка в той же строке не должна уводить. */}
-              <Who av={c.av} nm={c.nm} sub={subOf(c)} to="Э11.2" />
-              <span className="flex flex-wrap gap-1">
-                {c.res.map(([k, v]) => (
-                  <span key={k} className="whitespace-nowrap rounded-md bg-neutral-100 px-1.5 py-0.5 text-[11px] font-medium text-neutral-500">
-                    {k} <b className="text-neutral-800">{v}</b>
-                  </span>
-                ))}
-              </span>
-              <span className="text-right font-semibold tabular-nums">{c.r}</span>
-              <Delta d={c.d} />
-              <button
-                type="button"
-                title={on ? 'Убрать из моего списка' : 'Отметить в мой список'}
-                aria-pressed={on}
-                onClick={() => toggle(c.nm)}
-                className="flex h-7 w-7 items-center justify-center rounded-md hover:bg-amber-50"
-              >
-                <Star size={15} className={on ? 'text-amber-500' : 'text-neutral-300'} fill={on ? 'currentColor' : 'none'} />
-              </button>
-            </div>
-          );
-        })}
-        {rows.length === 0 && (
-          <div className="px-4 py-4 text-[12.5px] text-neutral-500">
-            По этим фильтрам в отборе никого нет — женский список появится с данными федерации.
-          </div>
-        )}
-      </Sheet>
-
-      {/* Охват списка — открытый вопрос из флоу, и он сказан на самом экране. */}
-      <div className="mt-4">
-        <Bar tone="warning">{SCOPE_WARN11}</Bar>
-      </div>
-    </WebApp>
-  );
-}
-
-const Cands11_1States = () => (
-  <States>
-    <Shot
-      tone="warning"
-      title="Охват списка не решён"
-      text="Видит ли роль всех спортсменов страны или только кандидатский список — не решено (⚠ 12.1)."
-      wide
-    >
-      <Frag>
-        <Rows>
-          <Row
-            nm="Весь реестр — 5 210 спортсменов"
-            sub="наше допущение: показываем всех, на чтение"
-            pill={{ t: 'СЕЙЧАС ТАК', cls: 'reg' }}
-          />
-          <Row
-            nm="Только кандидатский список"
-            sub="если федерация подтвердит — экран сузится"
-            pill={{ t: 'ВОПРОС', cls: 'bad' }}
-          />
-        </Rows>
-      </Frag>
-    </Shot>
-  </States>
-);
-
-/* ── Э11.2 · Карточка спортсмена — чтение ────────────────────────── */
-
-/** График истории рейтинга: линия, а не столбики — вопрос к рейтингу «куда
-    идёт». Точки месяцев роста зелёные, спадов красные. */
-const RatingChart11 = () => (
-  <ChartBox
-    height={168}
-    label="История рейтинга Кима Георгия по месяцам сезона"
-    make={(el) => ({
-      type: 'line',
-      data: {
-        labels: RATING.map((p) => p.m),
-        datasets: [
-          {
-            label: 'Рейтинг',
-            data: RATING.map((p) => p.r),
-            borderColor: token('--c-accent', el),
-            backgroundColor: soft('--c-accent', 16, el),
-            pointBackgroundColor: RATING.map((p, i) =>
-              i > 0 && p.r < RATING[i - 1].r ? token('--c-danger', el) : token('--c-success', el),
-            ),
-            pointBorderColor: token('--c-panel', el),
-            pointBorderWidth: 2,
-            pointRadius: 3.5,
-            pointHoverRadius: 5,
-            borderWidth: 2,
-            fill: true,
-            tension: 0.3,
-          },
-        ],
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        /* Локаль — для всего, что Chart.js форматирует сам (подсказка,
-           внутренние числа): без неё он считает по en-US. На саму ось на это
-           не полагаемся — на снимке она всё равно вышла с английской запятой
-           («2,460»), — и подписи тиков считаем своим `fmtN`. */
-        locale: 'ru-RU',
-        plugins: {
-          legend: { display: false },
-          tooltip: {
-            callbacks: {
-              label: (i) => {
-                const d = i.dataIndex > 0 ? RATING[i.dataIndex].r - RATING[i.dataIndex - 1].r : 0;
-                return `${RATING[i.dataIndex].r}${i.dataIndex > 0 ? ` · ${fmtD(d)} за месяц` : ''}`;
-              },
-            },
-          },
-        },
-        scales: {
-          x: {
-            grid: { color: soft('--c-glass-line', 60, el) },
-            ticks: { color: token('--c-dim', el), font: { size: 10 } },
-          },
-          y: {
-            grid: { color: soft('--c-glass-line', 60, el) },
-            ticks: {
-              color: token('--c-dim', el),
-              font: { size: 10 },
-              callback: (v: string | number) => (typeof v === 'number' ? fmtN(v) : v),
-            },
-          },
-        },
-      },
-    })}
-  />
-);
-
-/** Профиль по зонам флоу: клуб · тренер · разряд — отдельными строками, а не
-    склейкой в подпись. Один список на оба формата. */
-const PROFILE11: [string, ReactNode][] = [
-  ['Клуб', '«СКА» · Астана'],
-  ['Тренер', 'Ахметов Дамир'],
-  ['Разряд', 'Мастер спорта РК'],
-  ['Год рождения', '2003 · 22 года'],
-  ['Матчей за сезон', '46 · побед 38 (83%)'],
-  ['Динамика за сезон', <span key="d" className="text-green-700">+38 (было 2418)</span>],
-];
-
-/** Последние матчи: победа-поражение кружком, счёт справа. Список один на оба
-    формата — на телефоне он и так строчный, ужимать нечего. */
-const Matches11 = () => (
-  <div className="divide-y divide-neutral-100">
-    {MATCHES.map((m) => (
-      <div key={m.nm + m.dt} className="flex items-center gap-3 px-4 py-2.5">
-        <span
-          className={
-            'flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[11px] font-bold ' +
-            (m.st === 'win' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-600')
-          }
-        >
-          {m.st === 'win' ? 'П' : 'О'}
-        </span>
-        <span className="min-w-0 flex-1 leading-tight">
-          <span className="block truncate text-[13.5px] font-medium">{m.nm}</span>
-          <span className="block truncate text-xs text-neutral-500">{m.sub}</span>
-        </span>
-        <span className="text-[13.5px] font-bold tabular-nums">{m.sc}</span>
-        <span className="w-10 text-right text-xs tabular-nums text-neutral-400">{m.dt}</span>
-      </div>
-    ))}
-  </div>
-);
-
-/** Карточка на чтение: сперва кто это и куда идёт рейтинг, ниже — чем это
-    подтверждено (матчи, личные встречи, главные старты). Правок на экране нет
-    вовсе — только просмотр, и об этом сказано на каждой панели. */
-export function Card11_2() {
-  return (
-    <WebApp
-      role={R}
-      nav="Карточка"
-      title="Ким Георгий — карточка спортсмена"
-      sub="2003 г.р. · Астана · клуб «СКА» · 1 место в рейтинге"
-      back={{ label: 'Кандидаты в сборную', to: 'Э11.1' }}
-    >
-      {/* Блоки идут один под другим во всю ширину ✳ (30.08.2026): в две колонки
-          график истории рейтинга сжимался вдвое, а таблица главных стартов и
-          строки матчей теряли колонки. Порядок — как читают карточку: кто это,
-          куда идёт рейтинг, чем это подтверждено. Панель сама держит отступ
-          снизу, обёртка не нужна. */}
-      <>
-        <Panel title="Профиль и рейтинг" extra={<ReadOnly />}>
-          <div className="flex items-center gap-3.5">
-            <Avatar size="lg">
-              <Avatar.Image alt="Ким Георгий" src={A(44)} />
-              <Avatar.Fallback>К</Avatar.Fallback>
-            </Avatar>
-            <div className="min-w-0 flex-1 leading-tight">
-              <div className="text-[15px] font-semibold">Ким Георгий</div>
-              <div className="mt-0.5 text-xs text-neutral-500">1 место в рейтинге · сезон 2026</div>
-            </div>
-            <div className="text-right leading-tight">
-              <div className="text-2xl font-bold tabular-nums tracking-tight">2456</div>
-              <div className="text-[11px] text-neutral-400">рейтинг</div>
-            </div>
-          </div>
-          <Separator className="my-3" />
-          <KV items={PROFILE11} />
-        </Panel>
-
-        <Panel
-          title="История рейтинга"
-          sub="август 2025 — март 2026 · по месяцам"
-          extra={<Pill t="+38 ЗА СЕЗОН" color="success" />}
-        >
-          <RatingChart11 />
-        </Panel>
-
-        <Panel title="Последние матчи" extra={<ReadOnly />} flush>
-          <Matches11 />
-        </Panel>
-
-        <Panel title="Личные встречи с соперниками" flush>
-          <div className="divide-y divide-neutral-100">
-            {H2H.map(([nm, sc, sub]) => (
-              <Row key={nm} nm={nm} sub={sub} val={sc} />
-            ))}
-          </div>
-        </Panel>
-
-        <Panel title="Главные старты по сезонам" flush>
-          <DataTable
-            cols={['Сезон', 'Чемпионат РК', 'Кубок РК', 'Спартакиада']}
-            grid="64px 1fr 1fr 1fr"
-            rows={SEASONS.map((s) => ({
-              key: s.y,
-              cells: [
-                <b key="y" className="tabular-nums">{s.y}</b>,
-                <span key="c">{s.ch}</span>,
-                <span key="k">{s.cup}</span>,
-                <span key="s">{s.sp}</span>,
-              ],
-            }))}
-          />
-        </Panel>
-      </>
-    </WebApp>
-  );
-}
-
-/* ── Э11.3 · Сравнение кандидатов ────────────────────────────────── */
-
-const CMP_GRID = '200px repeat(3, 1fr)';
-const cellK = 'border-t border-neutral-100 px-3 py-2.5 text-xs font-medium text-neutral-500';
-const cellV = 'border-t border-neutral-100 px-3 py-2.5 text-[13px] font-semibold tabular-nums';
-
-/** Все строки сравнения одним списком: признак и три значения в порядке
-    колонок `THREE`. Один источник на оба формата — на десктопе из него
-    складывается матрица, на телефоне блоки по признакам: 200-пиксельная
-    колонка подписей и три колонки значений в 392 px не помещаются вовсе. */
-const CMP_ALL: [string, ReactNode[]][] = [
-  ...CMP.map(([k, a, b, c]): [string, ReactNode[]] => [k, [a, b, c]]),
-  /* Динамика — из тех же чисел, что список Э11.1: стрелка и дельта. */
-  ['Динамика за сезон', THREE.map((c) => <span key={c.nm} className="inline-flex"><Delta d={c.d} /></span>)],
-  [
-    'Личные встречи между собой',
-    CMP_H2H.map((v, i) => (
-      <span key={THREE[i].nm} className="whitespace-pre-line leading-relaxed">{v}</span>
-    )),
-  ],
-];
-
-/** Трое отмеченных колонками: по строкам — то, по чему выбирают в сборную.
-    Экран на чтение; единственное действие — выгрузка. */
-export function Compare11_3() {
-  return (
-    <WebApp
-      role={R}
-      nav="Сравнение"
-      title="Сравнение кандидатов"
-      sub="Трое отмеченных из списка · сезон 2026 · только просмотр"
-      back={{ label: 'Кандидаты в сборную', to: 'Э11.1' }}
-    >
-      <Panel
-        title="Ким Георгий · Смагулов Алан · Мұрат Ерасыл"
-        extra={
-          <span className="flex items-center gap-2">
-            <ReadOnly />
-            <Button size="sm" variant="outline">
-              <Download size={14} /> Выгрузить сравнение
-            </Button>
-          </span>
-        }
-        flush
-      >
-        <div className="grid" style={{ gridTemplateColumns: CMP_GRID }}>
-          <div />
-          {THREE.map((c) => (
-            <div key={c.nm} className="flex items-center gap-2.5 px-3 pb-3 pt-4">
-              <Avatar size="sm">
-                <Avatar.Image alt={c.nm} src={c.av} />
-                <Avatar.Fallback>{c.nm.slice(0, 1)}</Avatar.Fallback>
-              </Avatar>
-              <span className="min-w-0 leading-tight">
-                <span className="block truncate text-[13.5px] font-semibold">{c.nm}</span>
-                <span className="block text-[11px] text-neutral-500">{c.pl} место в рейтинге</span>
-              </span>
-            </div>
-          ))}
-
-          {CMP_ALL.map(([k, vals]) => (
-            <Fragment key={k}>
-              <div className={cellK}>{k}</div>
-              {vals.map((v, i) => (
-                <div key={THREE[i].nm} className={cellV}>{v}</div>
-              ))}
-            </Fragment>
-          ))}
-        </div>
-      </Panel>
-    </WebApp>
-  );
-}
-
-/* ── Второй формат: те же экраны на телефоне ────────────────────── */
-
-/* Полный адаптив ✳ (30.08.2026, решение владельца «все экраны в обоих»).
-
-   Тренер сборной сидит за столом не всегда: список отбора и карточку он
-   открывает в зале, между матчами, — телефон для этой роли не «на всякий
-   случай», а второе рабочее место. Содержание то же и из тех же данных
-   (`CANDS`, `MATCHES`, `CMP_ALL`), меняется раскладка:
-
-   - оболочка `WebApp` → `PhoneRoleApp`: вкладки нижней панели она строит из
-     тех же `R.nav`, что рисует сайдбар;
-   - таблица кандидатов (`Sheet`) → строки `Rows`/`Row`: фото, фамилия,
-     рейтинг справа, остальное подписью;
-   - ряд из четырёх фильтров → друг под другом, длинные — с прокруткой вбок;
-   - матрица сравнения (подпись + три колонки) → блоки по признакам.
-
-   Состояния экрана во втором формате не повторяем: они показаны один раз, на
-   полке `States` под основным макетом. */
-
-/** Полоса фильтра, которая не влезает в 392 px: прокручивается вбок в своей
-    полосе, а не режется и не переносится. `w-max` нужен потому, что сам
-    сегмент умеет переносить кнопки — в узком родителе он бы завернулся вместо
-    того, чтобы поехать. */
-const Slide = ({ children }: { children: ReactNode }) => (
-  <div className="-mx-4 overflow-x-auto px-4">
-    <div className="w-max">{children}</div>
-  </div>
-);
-
-/** Э11.1 на телефоне: те же фильтры, те же кандидаты, та же звёздочка. */
-function Cands11_1Phone() {
-  const [sex, setSex] = useState('Мужчины');
-  const [age, setAge] = useState(AGES11[0]);
-  const [region, setRegion] = useState(REGIONS11[0]);
-  const [period, setPeriod] = useState('Сезон 2026');
-  const [stars, setStars] = useState<ReadonlySet<string>>(new Set(THREE.map((c) => c.nm)));
-  const toggle = (nm: string) => {
-    const next = new Set(stars);
-    if (!next.delete(nm)) next.add(nm);
-    setStars(next);
-  };
-  /* Сортировки на телефоне нет: её место — шапки колонок, а колонок здесь нет
-     вовсе. Список идёт по месту в рейтинге, как открывается и на десктопе. */
-  const rows = filterCands(sex, age, region);
-  const canCmp = stars.size >= 2 && stars.size <= 3;
-
-  return (
-    <PhoneRoleApp
-      role={R}
-      nav="Кандидаты"
-      title="Кандидаты в сборную"
-      sub="Реестр спортсменов · рейтинг и динамика за сезон 2026"
-    >
-      <div className="mb-3 flex flex-col gap-2">
-        {/* Пол и период коротки и стоят в одной строке; возраст и регион — по
-            своей полосе: резать выбор нельзя, отбор и есть работа роли. */}
-        <div className="flex flex-wrap gap-2">
-          <FilterSeg items={['Мужчины', 'Женщины']} active={sex} onPick={setSex} />
-          <FilterSeg items={['Сезон 2026', 'Год']} active={period} onPick={setPeriod} />
-        </div>
-        <Slide><FilterSeg items={AGES11} active={age} onPick={setAge} /></Slide>
-        <Slide><FilterSeg items={REGIONS11} active={region} onPick={setRegion} /></Slide>
-      </div>
-
-      <div className="mb-3 flex flex-col gap-2">
-        <span className="text-[12px] leading-snug text-neutral-500">
-          {rows.length} из {CANDS.length} на экране · {sex.toLowerCase()}, {age.toLowerCase()},{' '}
-          {region.toLowerCase()} · период: {period.toLowerCase()}
-        </span>
-        {/* Оба действия роли — в ряд во всю ширину: на телефоне кнопка у края
-            экрана попадает под большой палец, а не ищется глазами. */}
-        <div className="flex gap-2">
-          <Button size="sm" variant="outline" className="flex-1">
-            <Download size={14} /> Выгрузить
-          </Button>
-          <Button size="sm" variant="primary" className="flex-1" data-to="Э11.3" isDisabled={!canCmp}>
-            Сравнить ({stars.size})
-          </Button>
-        </div>
-      </div>
-
-      {rows.length ? (
-        <Rows>
-          {rows.map((c) => {
-            const on = stars.has(c.nm);
-            return (
-              <Row
-                key={c.nm}
-                av={c.av}
-                nm={c.nm}
-                /* Всё, что на десктопе стоит колонками — место, год, регион,
-                   клуб, динамика, — здесь подписью: она переносится, и ничего
-                   из таблицы не пропадает. Главные старты остаются числом в
-                   строке: «ЧК 1 · Кубок 2 · Спарт. 1». */
-                sub={
-                  `${c.pl} место · ${c.born} г.р. · ${c.region} · ${c.club} · ` +
-                  `${c.res.map(([k, v]) => `${k} ${v}`).join(' · ')} · ${fmtD(c.d)} за сезон`
-                }
-                val={String(c.r)}
-                to="Э11.2"
-                /* Звёздочка словом: значок в 15 px рядом с фамилией на телефоне
-                   не нажать. `actionTo` — свой же экран: кнопка помечает в мой
-                   список и никуда не уводит, в отличие от самой строки. */
-                action={on ? 'В списке' : 'Отметить'}
-                actionTo="Э11.1"
-                onAction={() => toggle(c.nm)}
-              />
-            );
-          })}
-        </Rows>
-      ) : (
-        <div className="rounded-xl border border-neutral-200 bg-white px-4 py-4 text-[12.5px] text-neutral-500">
-          По этим фильтрам в отборе никого нет — женский список появится с данными федерации.
-        </div>
-      )}
-
-      <div className="mt-4">
-        <Bar tone="warning">{SCOPE_WARN11}</Bar>
-      </div>
-    </PhoneRoleApp>
-  );
-}
-
-/** Э11.2 на телефоне: те же панели одна под другой. График — тот же холст
-    Chart.js: он и на десктопе тянется по ширине панели, на 392 px читается. */
-const Card11_2Phone = () => (
-  <PhoneRoleApp
-    role={R}
-    nav="Карточка"
-    title="Ким Георгий"
-    sub="2003 г.р. · Астана · клуб «СКА» · 1 место в рейтинге"
-    back={{ label: 'Кандидаты в сборную', to: 'Э11.1' }}
-  >
-    <Panel title="Профиль и рейтинг" extra={<ReadOnly />}>
-      <div className="flex items-center gap-3">
-        <Avatar size="lg">
-          <Avatar.Image alt="Ким Георгий" src={A(44)} />
-          <Avatar.Fallback>К</Avatar.Fallback>
-        </Avatar>
-        <div className="min-w-0 flex-1 leading-tight">
-          <div className="text-[14px] font-semibold">Ким Георгий</div>
-          <div className="mt-0.5 text-[11.5px] text-neutral-500">1 место в рейтинге · сезон 2026</div>
-        </div>
-        <div className="text-right leading-tight">
-          <div className="text-xl font-bold tabular-nums tracking-tight">2456</div>
-          <div className="text-[11px] text-neutral-400">рейтинг</div>
-        </div>
-      </div>
-      <Separator className="my-3" />
-      <KV items={PROFILE11} />
-    </Panel>
-
-    <Panel
-      title="История рейтинга"
-      sub="август 2025 — март 2026 · по месяцам"
-      extra={<Pill t="+38 ЗА СЕЗОН" color="success" />}
-    >
-      <RatingChart11 />
-    </Panel>
-
-    <Panel title="Последние матчи" extra={<ReadOnly />} flush>
-      <Matches11 />
-    </Panel>
-
-    <Panel title="Личные встречи с соперниками" flush>
-      <div className="divide-y divide-neutral-100">
-        {H2H.map(([nm, sc, sub]) => (
-          <Row key={nm} nm={nm} sub={sub} val={sc} />
-        ))}
-      </div>
-    </Panel>
-
-    {/* Таблица главных стартов — четыре колонки, и на 392 px они сжимаются до
-        нечитаемых. Тот же сезон строкой: год слева, три результата подписью. */}
-    <Panel title="Главные старты по сезонам" flush>
-      <div className="divide-y divide-neutral-100">
-        {SEASONS.map((s) => (
-          <Row
-            key={s.y}
-            nm={`Сезон ${s.y}`}
-            sub={`Чемпионат РК — ${s.ch} · Кубок РК — ${s.cup} · Спартакиада — ${s.sp}`}
-          />
-        ))}
-      </div>
-    </Panel>
-  </PhoneRoleApp>
-);
-
-/** Э11.3 на телефоне: сначала кого сравниваем, дальше признак за признаком.
-    Матрица разворачивается «по строкам»: подпись признака — заголовком блока,
-    три значения — тремя строками с фамилиями. Колонок рядом на телефоне не
-    бывает, а вопрос «кто из троих» остаётся тем же. */
-const Compare11_3Phone = () => (
-  <PhoneRoleApp
-    role={R}
-    nav="Сравнение"
-    title="Сравнение кандидатов"
-    sub="Трое отмеченных из списка · сезон 2026 · только просмотр"
-    back={{ label: 'Кандидаты в сборную', to: 'Э11.1' }}
-  >
-    <div className="mb-3">
-      <Rows>
-        {THREE.map((c) => (
-          <Row
-            key={c.nm}
-            av={c.av}
-            nm={c.nm}
-            sub={`${c.pl} место в рейтинге · ${c.region}`}
-            val={String(c.r)}
-          />
-        ))}
-      </Rows>
-    </div>
-
-    <Panel title="Чем отличаются" extra={<ReadOnly />} flush>
-      <div className="divide-y divide-neutral-100">
-        {CMP_ALL.map(([k, vals]) => (
-          <div key={k} className="px-4 py-2.5">
-            <div className="text-[11px] font-semibold uppercase tracking-wider text-neutral-400">{k}</div>
-            <div className="mt-0.5">
-              <KV items={THREE.map((c, i): [string, ReactNode] => [c.nm, vals[i]])} />
-            </div>
-          </div>
-        ))}
-      </div>
-    </Panel>
-
-    <Button variant="outline" className="w-full">
-      <Download size={14} /> Выгрузить сравнение
-    </Button>
-  </PhoneRoleApp>
-);
 
 /* ── Борд роли: экраны маршрута подряд ──────────────────────────── */
 
@@ -1021,11 +145,11 @@ const medPill = (a: Athlete) =>
     <Pill t={`ДО ${a.med.till}`} color="success" />
   );
 
-/* ── Э11.4 · Состав сборной ───────────────────────────────────────── */
+/* ── Э11.1 · Состав сборной ───────────────────────────────────────── */
 
 const TEAM_GRID = 'minmax(0,2.4fr) 100px 84px minmax(0,1.1fr) 70px 118px 142px';
 
-export function Squad11_4() {
+export function Squad11_1() {
   const [q, setQ] = useState('');
   const [sq, setSq] = useState(SQUADS[0]);
   const [age, setAge] = useState(AGES[0]);
@@ -1036,7 +160,7 @@ export function Squad11_4() {
       role={R}
       nav="Состав сборной"
       title="Состав национальной команды"
-      sub="Сезон 2026 · основной и расширенный составы"
+      sub="Сезон 2026"
       hint="Предложение 5 федерации: единая база членов сборной с распределением по составам, возрастным группам и тренерам."
     >
       <StatTiles
@@ -1076,7 +200,7 @@ export function Squad11_4() {
             <div
               key={a.nm}
               data-row
-              data-to="Э11.5"
+              data-to="Э11.2"
               className="grid w-full items-center gap-3 px-4 py-2.5 text-left text-[13px]"
               style={{ gridTemplateColumns: TEAM_GRID }}
             >
@@ -1112,7 +236,7 @@ export function Squad11_4() {
   );
 }
 
-export const Squad11_4Phone = () => (
+export const Squad11_1Phone = () => (
   <PhoneRoleApp
     role={R}
     nav="Состав сборной"
@@ -1130,7 +254,7 @@ export const Squad11_4Phone = () => (
           nm={a.nm}
           sub={`${a.age} · ${a.region} · ${a.coach}`}
           val={String(a.rating)}
-          to="Э11.5"
+          to="Э11.2"
           pill={a.med === null ? { t: 'НЕТ ДОПУСКА', cls: 'bad' } : a.plan === null ? { t: 'ПЛАНА НЕТ', cls: 'wait' } : { t: `${a.plan.done}/${a.plan.total}`, cls: 'live' }}
         />
       ))}
@@ -1141,7 +265,7 @@ export const Squad11_4Phone = () => (
   </PhoneRoleApp>
 );
 
-/* ── Э11.5 · Карточка спортсмена сборной ──────────────────────────── */
+/* ── Э11.2 · Карточка спортсмена сборной ──────────────────────────── */
 
 const PLAN = [
   { t: 'Общая физическая подготовка', sub: 'январь–март · 3 раза в неделю', done: true },
@@ -1322,47 +446,44 @@ function CardTabs({ start = 'План подготовки' }: { start?: string 
   );
 }
 
-export const Card11_5 = () => (
+export const Card11_2 = () => (
   <WebApp
     role={R}
     nav="Состав сборной"
-    back={{ label: 'Состав сборной', to: 'Э11.4' }}
+    back={{ label: 'Состав сборной', to: 'Э11.1' }}
     title="Ким Георгий"
-    sub="Основной состав · взрослые · 2003 г.р. · Алматы · рейтинг 2456 · тренер Ахметов С."
   >
     <CardTabs />
   </WebApp>
 );
 
-export const Card11_5Med = () => (
+export const Card11_2Med = () => (
   <WebApp
     role={R}
     nav="Состав сборной"
-    back={{ label: 'Состав сборной', to: 'Э11.4' }}
+    back={{ label: 'Состав сборной', to: 'Э11.1' }}
     title="Ким Георгий"
-    sub="Основной состав · взрослые · 2003 г.р. · Алматы · рейтинг 2456 · тренер Ахметов С."
   >
     <CardTabs start="Медицинская карта" />
   </WebApp>
 );
 
-export const Card11_5History = () => (
+export const Card11_2History = () => (
   <WebApp
     role={R}
     nav="Состав сборной"
-    back={{ label: 'Состав сборной', to: 'Э11.4' }}
+    back={{ label: 'Состав сборной', to: 'Э11.1' }}
     title="Ким Георгий"
-    sub="Основной состав · взрослые · 2003 г.р. · Алматы · рейтинг 2456 · тренер Ахметов С."
   >
     <CardTabs start="История подготовки" />
   </WebApp>
 );
 
-export const Card11_5Phone = () => (
+export const Card11_2Phone = () => (
   <PhoneRoleApp
     role={R}
     nav="Состав сборной"
-    back={{ label: 'Состав', to: 'Э11.4' }}
+    back={{ label: 'Состав', to: 'Э11.1' }}
     title="Ким Георгий"
     sub="Основной состав · 2003 г.р. · рейтинг 2456"
   >
@@ -1412,7 +533,7 @@ export const Card11_5Phone = () => (
   </PhoneRoleApp>
 );
 
-/* ── Э11.6 · Календарь подготовки ─────────────────────────────────── */
+/* ── Э11.3 · Календарь подготовки ─────────────────────────────────── */
 
 const PREP = [
   { id: 'p1', from: '2026-03-02', till: '2026-03-14', nm: 'УТС Алматы — базовый сбор', sub: '12 дней · основной состав · тренер Ахметов С.', tone: 'accent' as const },
@@ -1423,12 +544,12 @@ const PREP = [
   { id: 'p6', from: '2026-07-08', till: '2026-07-12', nm: 'Международный старт — отбор', sub: 'состав определяет штаб', tone: 'neutral' as const },
 ];
 
-export const Prep11_6 = () => (
+export const Prep11_3 = () => (
   <WebApp
     role={R}
     nav="Календарь подготовки"
     title="Календарь подготовки сборной"
-    sub="Сезон 2026 · сборы, выезды и целевые старты в одной ленте"
+    sub="Сезон 2026"
     hint="Предложение 5: единый календарь подготовки национальной команды с учётом УТС и выездов на соревнования."
     aside={
       <>
@@ -1447,7 +568,7 @@ export const Prep11_6 = () => (
             />
           </div>
           <div className="mt-3">
-            <Button className="w-full" variant="primary" data-to="Э11.7">
+            <Button className="w-full" variant="primary" data-to="Э11.4">
               <FileText size={15} /> Открыть рапорт
             </Button>
           </div>
@@ -1475,39 +596,274 @@ export const Prep11_6 = () => (
   </WebApp>
 );
 
-/* ── Э11.7 · Рапорты на командирование ────────────────────────────── */
+/* ── Э11.4 · Рапорты на командирование ────────────────────────────── */
 
+/** Рапорт целиком, а не строка о нём ✳ (04.09.2026). Пункт 4 документа
+    федерации разрешает рапорт **загружать файлом**, а решение принимают по
+    тому, что в нём написано: очередь со статусами и именем файла предлагает
+    подписать не глядя. Поэтому запись несёт сам документ — текст, подпись и
+    поимённый состав, — а очередь только выбирает, какой из них открыт. */
 type Report = {
+  no: string;
   nm: string;
   sub: string;
   who: string;
+  /** Кто подал: подпись под рапортом и автор в истории. */
+  by: string;
   st: string;
   cls: 'live' | 'bad' | 'wait' | 'done';
+  ev: string;
+  when: string;
+  basis: string;
+  /** Приложенный файл: рапорт либо сформирован в системе, либо загружен сканом. */
+  file: { nm: string; size: string } | null;
+  text: string[];
+  sign: string;
+  roster: { nm: string; role: string; sub: string }[];
+  /** Чем кончилось, если решение уже принято: вместо кнопок — строка состояния. */
+  closed?: string;
+  track: { at: string; t: string; s: string }[];
 };
 
 const REPORTS: Report[] = [
-  { nm: 'УТС Шымкент — восстановительный', sub: '10–20.06 · 8 спортсменов, 2 тренера · подал Смагулова Д.', who: 'Регион Шымкент', st: 'ЖДЁТ МЕНЯ', cls: 'wait' },
-  { nm: 'Открытый турнир Караганды', sub: '24.05 · 4 спортсмена · подал Байтасов Р.', who: 'Регион Алматы', st: 'ЖДЁТ МЕНЯ', cls: 'wait' },
-  { nm: 'УТС Астана — предсоревновательный', sub: '05–18.05 · 12 спортсменов, 3 тренера · подал Ахметов С.', who: 'Штаб сборной', st: 'СОГЛАСОВАН', cls: 'live' },
-  { nm: 'Международный старт — отбор', sub: '08–12.07 · состав не приложен · подал Байтасов Р.', who: 'Регион Алматы', st: 'НА ДОРАБОТКЕ', cls: 'bad' },
-  { nm: 'УТС Алматы — базовый сбор', sub: '02–14.03 · 14 спортсменов · подал Ахметов С.', who: 'Штаб сборной', st: 'В ФЕДЕРАЦИИ', cls: 'done' },
+  {
+    no: '14/2026',
+    nm: 'УТС Шымкент — восстановительный',
+    sub: '10–20.06 · 8 спортсменов, 2 тренера · подал Смагулова Д.',
+    who: 'Регион Шымкент',
+    by: 'Смагулова Д.',
+    st: 'ЖДЁТ МЕНЯ',
+    cls: 'wait',
+    ev: 'Учебно-тренировочный сбор, Шымкент',
+    when: '10–20 июня 2026 · 11 дней',
+    basis: 'План подготовки национальной команды на 2026 год',
+    file: { nm: 'рапорт-скан.pdf', size: '240 КБ' },
+    text: [
+      'Прошу командировать спортсменов и тренеров национальной команды по настольному теннису для участия в учебно-тренировочном сборе (восстановительный этап) в городе Шымкент в период с 10 по 20 июня 2026 года.',
+      'Основание: план подготовки национальной команды на 2026 год, раздел «Восстановительные сборы».',
+      'Проезд, проживание и питание — за счёт средств, предусмотренных сметой ФНТ РК на 2026 год.',
+      'Поимённый состав — 8 спортсменов и 2 тренера — приведён в приложении к настоящему рапорту.',
+      'Ответственность за жизнь и здоровье спортсменов на период сбора возложить на старшего тренера региона Шымкент Смагулову Д.',
+    ],
+    sign: 'Старший тренер региона Шымкент · 10.06.2026',
+    roster: [
+      { nm: 'Тлеуова Аружан', role: 'спортсмен', sub: '2007 · Шымкент · основной состав' },
+      { nm: 'Ким Георгий', role: 'спортсмен', sub: '2003 · Алматы · основной состав' },
+      { nm: 'Токаев Марат', role: 'спортсмен', sub: '2005 · Астана · основной состав' },
+      { nm: 'Байжанов Асхат', role: 'спортсмен', sub: '2004 · Караганда · расширенный' },
+      { nm: 'Ким Лариса', role: 'спортсмен', sub: '2008 · Павлодар · расширенный' },
+      { nm: 'Сейтқали Айдос', role: 'спортсмен', sub: '2009 · Тараз · расширенный' },
+      { nm: 'Абдрахманова Айгерим', role: 'спортсмен', sub: '2007 · Шымкент · расширенный' },
+      { nm: 'Досжан Марат', role: 'спортсмен', sub: '2006 · Актобе · расширенный' },
+      { nm: 'Смагулова Д.', role: 'тренер', sub: 'старший тренер региона Шымкент' },
+      { nm: 'Пак Сергей', role: 'тренер', sub: 'тренер по физической подготовке' },
+    ],
+    track: [
+      { at: '09.06, 11:20', t: 'Подан на согласование', s: 'Смагулова Д. · старший тренер региона Шымкент' },
+      { at: '09.06, 15:04', t: 'Возвращён на доработку', s: 'главный тренер: «приложите поимённый состав и сроки заезда»' },
+      { at: '10.06, 09:12', t: 'Подан повторно', s: 'состав приложен · 8 спортсменов, 2 тренера' },
+    ],
+  },
+  {
+    no: '15/2026',
+    nm: 'Открытый турнир Караганды',
+    sub: '24.05 · 4 спортсмена · подал Байтасов Р.',
+    who: 'Регион Алматы',
+    by: 'Байтасов Р.',
+    st: 'ЖДЁТ МЕНЯ',
+    cls: 'wait',
+    ev: 'Открытый турнир города Караганды',
+    when: '24 мая 2026 · 1 день',
+    basis: 'Календарь соревнований ФНТ РК на 2026 год',
+    file: null,
+    text: [
+      'Прошу командировать спортсменов национальной команды для участия в открытом турнире города Караганды 24 мая 2026 года.',
+      'Основание: календарь соревнований ФНТ РК на 2026 год; турнир входит в отбор к чемпионату Республики Казахстан.',
+      'Выезд 23 мая, возвращение 25 мая 2026 года.',
+      'Поимённый состав — 4 спортсмена — приведён в приложении к настоящему рапорту.',
+    ],
+    sign: 'Старший тренер региона Алматы · 12.05.2026',
+    roster: [
+      { nm: 'Ким Георгий', role: 'спортсмен', sub: '2003 · Алматы · основной состав' },
+      { nm: 'Байжанов Асхат', role: 'спортсмен', sub: '2004 · Караганда · расширенный' },
+      { nm: 'Ким Лариса', role: 'спортсмен', sub: '2008 · Павлодар · расширенный' },
+      { nm: 'Досжан Марат', role: 'спортсмен', sub: '2006 · Актобе · расширенный' },
+    ],
+    track: [{ at: '12.05, 10:02', t: 'Подан на согласование', s: 'Байтасов Р. · старший тренер региона Алматы' }],
+  },
+  {
+    no: '11/2026',
+    nm: 'УТС Астана — предсоревновательный',
+    sub: '05–18.05 · 6 спортсменов, 2 тренера · подал Ахметов С.',
+    who: 'Штаб сборной',
+    by: 'Ахметов С.',
+    st: 'СОГЛАСОВАН',
+    cls: 'live',
+    ev: 'Учебно-тренировочный сбор, Астана',
+    when: '5–18 мая 2026 · 14 дней',
+    basis: 'План подготовки национальной команды на 2026 год',
+    file: null,
+    text: [
+      'Прошу командировать спортсменов и тренеров национальной команды для участия в предсоревновательном учебно-тренировочном сборе в городе Астана в период с 5 по 18 мая 2026 года.',
+      'Основание: план подготовки национальной команды на 2026 год, раздел «Предсоревновательные сборы».',
+      'Сбор проводится на базе республиканского центра настольного тенниса.',
+      'Поимённый состав — 6 спортсменов и 2 тренера — приведён в приложении к настоящему рапорту.',
+    ],
+    sign: 'Главный тренер национальной команды · 28.04.2026',
+    roster: [
+      { nm: 'Ким Георгий', role: 'спортсмен', sub: '2003 · Алматы · основной состав' },
+      { nm: 'Токаев Марат', role: 'спортсмен', sub: '2005 · Астана · основной состав' },
+      { nm: 'Тлеуова Аружан', role: 'спортсмен', sub: '2007 · Шымкент · основной состав' },
+      { nm: 'Байжанов Асхат', role: 'спортсмен', sub: '2004 · Караганда · расширенный' },
+      { nm: 'Ким Лариса', role: 'спортсмен', sub: '2008 · Павлодар · расширенный' },
+      { nm: 'Сейтқали Айдос', role: 'спортсмен', sub: '2009 · Тараз · расширенный' },
+      { nm: 'Ахметов С.', role: 'тренер', sub: 'главный тренер национальной команды' },
+      { nm: 'Пак Сергей', role: 'тренер', sub: 'тренер по физической подготовке' },
+    ],
+    closed: 'Согласован 29.04.2026 и в тот же день ушёл в федерацию.',
+    track: [
+      { at: '28.04, 16:40', t: 'Подан на согласование', s: 'Ахметов С. · штаб сборной' },
+      { at: '29.04, 09:15', t: 'Согласован', s: 'главный тренер национальной команды' },
+      { at: '29.04, 09:15', t: 'Направлен в федерацию', s: 'автоматически, отдельной отправки не требовалось' },
+    ],
+  },
+  {
+    no: '16/2026',
+    nm: 'Международный старт — отбор',
+    sub: '08–12.07 · состав не приложен · подал Байтасов Р.',
+    who: 'Регион Алматы',
+    by: 'Байтасов Р.',
+    st: 'НА ДОРАБОТКЕ',
+    cls: 'bad',
+    ev: 'Международный турнир, отборочный этап',
+    when: '8–12 июля 2026 · 5 дней',
+    basis: 'Не указано',
+    file: { nm: 'рапорт-международный.pdf', size: '180 КБ' },
+    text: [
+      'Прошу командировать спортсменов национальной команды для участия в отборочном этапе международного турнира в период с 8 по 12 июля 2026 года.',
+      'Состав будет определён по результатам открытого турнира города Караганды.',
+    ],
+    sign: 'Старший тренер региона Алматы · 02.06.2026',
+    roster: [],
+    closed: 'Возвращён автору 03.06.2026: пока он не подаст заново, командирования нет.',
+    track: [
+      { at: '02.06, 18:30', t: 'Подан на согласование', s: 'Байтасов Р. · старший тренер региона Алматы' },
+      { at: '03.06, 08:55', t: 'Возвращён на доработку', s: 'главный тренер: «нет поимённого состава и основания — кого и по какому плану командируем»' },
+    ],
+  },
+  {
+    no: '07/2026',
+    nm: 'УТС Алматы — базовый сбор',
+    sub: '02–14.03 · 5 спортсменов, 1 тренер · подал Ахметов С.',
+    who: 'Штаб сборной',
+    by: 'Ахметов С.',
+    st: 'В ФЕДЕРАЦИИ',
+    cls: 'done',
+    ev: 'Учебно-тренировочный сбор, Алматы',
+    when: '2–14 марта 2026 · 13 дней',
+    basis: 'План подготовки национальной команды на 2026 год',
+    file: null,
+    text: [
+      'Прошу командировать спортсменов и тренера национальной команды для участия в базовом учебно-тренировочном сборе в городе Алматы в период со 2 по 14 марта 2026 года.',
+      'Основание: план подготовки национальной команды на 2026 год, раздел «Базовые сборы».',
+      'Поимённый состав — 5 спортсменов и 1 тренер — приведён в приложении к настоящему рапорту.',
+    ],
+    sign: 'Главный тренер национальной команды · 20.02.2026',
+    roster: [
+      { nm: 'Ким Георгий', role: 'спортсмен', sub: '2003 · Алматы · основной состав' },
+      { nm: 'Токаев Марат', role: 'спортсмен', sub: '2005 · Астана · основной состав' },
+      { nm: 'Тлеуова Аружан', role: 'спортсмен', sub: '2007 · Шымкент · основной состав' },
+      { nm: 'Ким Лариса', role: 'спортсмен', sub: '2008 · Павлодар · расширенный' },
+      { nm: 'Досжан Марат', role: 'спортсмен', sub: '2006 · Актобе · расширенный' },
+      { nm: 'Пак Сергей', role: 'тренер', sub: 'тренер по физической подготовке' },
+    ],
+    closed: 'Ушёл в федерацию 21.02.2026 — дальше живёт в её документах.',
+    track: [
+      { at: '20.02, 12:10', t: 'Подан на согласование', s: 'Ахметов С. · штаб сборной' },
+      { at: '21.02, 10:30', t: 'Согласован', s: 'главный тренер национальной команды' },
+      { at: '21.02, 10:30', t: 'Направлен в федерацию', s: 'принят к работе 24.02.2026' },
+    ],
+  },
 ];
 
-const TRACK = [
-  { at: '09.06, 11:20', t: 'Подан на согласование', s: 'Смагулова Д. · старший тренер региона Шымкент', tone: 'flat' },
-  { at: '09.06, 15:04', t: 'Возвращён на доработку', s: 'главный тренер: «приложите поимённый состав и сроки заезда»', tone: 'loss' },
-  { at: '10.06, 09:12', t: 'Подан повторно', s: 'состав приложен · 8 спортсменов, 2 тренера', tone: 'flat' },
-];
+/** Лист рапорта: то, что подписывают. Первый лист — шапка, текст и подпись,
+    второй — поимённый состав; у рапорта без состава второй лист показывает
+    именно эту нехватку, а не пустоту. */
+function ReportPage({ r, page, compact }: { r: Report; page: number; compact?: boolean }) {
+  const pad = compact ? 'px-4 py-5' : 'px-8 py-7';
+  return (
+    <div className={'mx-auto w-full max-w-[620px] border border-neutral-200 bg-white shadow-sm ' + pad}>
+      {page === 1 ? (
+        <>
+          <div className="text-right text-[12.5px] leading-snug text-neutral-600">
+            Главному тренеру национальной
+            <br />
+            команды Республики Казахстан
+            <br />
+            <span className="font-medium text-neutral-800">Ахметову С.</span>
+          </div>
 
-export function Reports11_7() {
-  const [pick, setPick] = useState(REPORTS[0].nm);
-  const one = REPORTS.find((r) => r.nm === pick) ?? REPORTS[0];
+          <div className="mt-6 text-center">
+            <div className="text-[15px] font-semibold tracking-wide">РАПОРТ № {r.no}</div>
+            <div className="mt-1 text-xs text-neutral-500">о командировании спортсменов и тренеров</div>
+          </div>
+
+          <div className="mt-5 space-y-3 text-[13px] leading-relaxed text-neutral-800">
+            {r.text.map((t) => (
+              <p key={t}>{t}</p>
+            ))}
+          </div>
+
+          <div className="mt-7 flex items-end justify-between gap-4 text-[12.5px]">
+            <span className="min-w-0 text-neutral-600">{r.sign}</span>
+            <span className="flex items-end gap-2">
+              <span className="inline-block w-20 border-b border-dashed border-neutral-300" />
+              <span className="font-medium">{r.by}</span>
+            </span>
+          </div>
+        </>
+      ) : r.roster.length ? (
+        <>
+          <div className="text-[12.5px] text-neutral-500">Приложение к рапорту № {r.no}</div>
+          <div className="mt-1 text-[15px] font-semibold">Поимённый состав</div>
+          <div className="mt-4 divide-y divide-neutral-100 border-y border-neutral-200">
+            {r.roster.map((m, i) => (
+              <div key={m.nm} className="grid grid-cols-[24px_minmax(0,1fr)_auto] items-baseline gap-3 py-2 text-[13px]">
+                <span className="tabular-nums text-neutral-400">{i + 1}</span>
+                <span className="min-w-0">
+                  <span className="font-medium">{m.nm}</span>
+                  <span className="text-neutral-500"> · {m.sub}</span>
+                </span>
+                <span className="text-[10.5px] uppercase tracking-wider text-neutral-400">{m.role}</span>
+              </div>
+            ))}
+          </div>
+        </>
+      ) : (
+        <EmptyBox
+          title="Поимённый состав не приложен"
+          text="Кого командируют, из документа не следует — это и есть причина вернуть рапорт на доработку."
+        />
+      )}
+    </div>
+  );
+}
+
+export function Reports11_4() {
+  const [pick, setPick] = useState(REPORTS[0].no);
+  const [page, setPage] = useState(1);
+  const one = REPORTS.find((r) => r.no === pick) ?? REPORTS[0];
+  /* Выбор строки открывает документ и всегда с первого листа: второй лист
+     предыдущего рапорта в новом документе читается как его собственный. */
+  const open = (no: string) => {
+    setPick(no);
+    setPage(1);
+  };
   return (
     <WebApp
       role={R}
       nav="Рапорты"
       title="Рапорты на командирование"
-      sub="Сборы и выезды · согласование главного тренера"
       hint="Предложение 4: рапорт подают тренеры штаба и старшие тренеры регионов; после согласования документ уходит в федерацию сам."
     >
       <StatTiles
@@ -1519,59 +875,98 @@ export function Reports11_7() {
         ]}
       />
 
-      <Panel title="Очередь рапортов" flush>
+      <Panel title="Очередь рапортов" sub="Строка открывает сам документ" flush>
         <Rows>
           {REPORTS.map((r) => (
             <Row
-              key={r.nm}
+              key={r.no}
               nm={r.nm}
               sub={r.sub}
               pill={{ t: r.st, cls: r.cls }}
-              on={r.nm === pick}
-              onSelect={() => setPick(r.nm)}
+              on={r.no === pick}
+              onSelect={() => open(r.no)}
             />
           ))}
         </Rows>
       </Panel>
 
-      <Panel
-        title={one.nm}
-        sub={`${one.who} · рапорт № 14/2026`}
-        extra={<Pill t={one.st} color={one.cls === 'live' ? 'success' : one.cls === 'bad' ? 'danger' : one.cls === 'wait' ? 'warning' : 'default'} />}
-      >
-        <KV
-          items={[
-            ['Мероприятие', 'Учебно-тренировочный сбор, Шымкент'],
-            ['Сроки', '10–20 июня 2026 · 11 дней'],
-            ['Состав', '8 спортсменов, 2 тренера — поимённо в приложении'],
-            ['Основание', 'план подготовки сборной на 2026 год'],
-            ['Приложение', 'рапорт-скан.pdf · 240 КБ'],
-          ]}
-        />
+      {/* Документ и решение рядом ✳: подписывают не строку очереди, а лист —
+          и комментарий «почему вернули» пишут, глядя в тот же лист. */}
+      <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]">
+        <Panel
+          title={`Рапорт № ${one.no}`}
+          sub={`${one.nm} · ${one.who}`}
+          extra={
+            <span className="flex shrink-0 items-center gap-1.5">
+              <Button size="sm" variant="outline" isDisabled={page === 1} onPress={() => setPage(1)}>
+                <ChevronLeft size={14} />
+              </Button>
+              <span className="whitespace-nowrap text-xs tabular-nums text-neutral-500">
+                лист {page} из 2
+              </span>
+              <Button size="sm" variant="outline" isDisabled={page === 2} onPress={() => setPage(2)}>
+                <ChevronRight size={14} />
+              </Button>
+            </span>
+          }
+        >
+          {one.file && (
+            <div className="mb-3 flex items-center gap-2 border border-neutral-200 bg-neutral-50 px-3 py-2 text-[12.5px] text-neutral-600">
+              <FileText size={14} className="shrink-0 text-neutral-400" />
+              <span className="min-w-0">
+                Загружен файлом: <b className="font-medium text-neutral-800">{one.file.nm}</b> · {one.file.size}
+              </span>
+              <span className="ml-auto shrink-0">
+                <Button size="sm" variant="outline">
+                  <Download size={13} /> Скачать
+                </Button>
+              </span>
+            </div>
+          )}
+          <ReportPage r={one} page={page} />
+        </Panel>
 
-        {/* История согласования — не журнал ради журнала ✳: рапорт ходит между
-            тремя людьми, и «почему вернули» должно читаться там же, где решают. */}
-        <div className="mt-4">
+        <div>
+          <Panel title="Реквизиты" extra={<Pill t={one.st} color={one.cls === 'live' ? 'success' : one.cls === 'bad' ? 'danger' : one.cls === 'wait' ? 'warning' : 'default'} />}>
+            <KV
+              items={[
+                ['Мероприятие', one.ev],
+                ['Сроки', one.when],
+                ['Состав', one.roster.length ? `${one.roster.filter((m) => m.role === 'спортсмен').length} спортсменов, ${one.roster.filter((m) => m.role === 'тренер').length} тренера` : 'не приложен'],
+                ['Основание', one.basis],
+                ['Подал', `${one.by} · ${one.who}`],
+                ['Приложение', one.file ? `${one.file.nm} · ${one.file.size}` : 'рапорт сформирован в системе'],
+              ]}
+            />
+          </Panel>
+
           <Panel title="История согласования" flush>
             <Rows>
-              {TRACK.map((t) => (
-                <Row key={t.at} nm={t.t} sub={`${t.at} · ${t.s}`} />
+              {one.track.map((t) => (
+                <Row key={t.at + t.t} nm={t.t} sub={`${t.at} · ${t.s}`} />
               ))}
             </Rows>
           </Panel>
-        </div>
 
-        <div className="mt-3 flex flex-wrap items-center gap-2">
-          <Button variant="primary">
-            <ClipboardCheck size={15} /> Согласовать
-          </Button>
-          <Button variant="outline">Вернуть на доработку</Button>
-          <Button variant="outline">Отклонить</Button>
-          <span className="text-[12.5px] text-neutral-500">
-            У «вернуть» и «отклонить» комментарий обязателен — иначе автор не знает, что править.
-          </span>
+          {one.cls === 'wait' ? (
+            <>
+              <div className="flex flex-wrap items-center gap-2">
+                <Button variant="primary">
+                  <ClipboardCheck size={15} /> Согласовать
+                </Button>
+                <Button variant="outline">Вернуть на доработку</Button>
+                <Button variant="outline">Отклонить</Button>
+              </div>
+              <p className="mt-2 text-[12.5px] leading-snug text-neutral-500">
+                У «вернуть» и «отклонить» комментарий обязателен — иначе автор не знает, что править.
+                Согласованный рапорт уходит в федерацию сам.
+              </p>
+            </>
+          ) : (
+            <p className="text-[12.5px] leading-snug text-neutral-500">{one.closed}</p>
+          )}
         </div>
-      </Panel>
+      </div>
 
       <Bar>
         Согласованный рапорт уходит в федерацию сам — отправлять его отдельно никто не должен.
@@ -1581,23 +976,35 @@ export function Reports11_7() {
   );
 }
 
-export const Reports11_7Phone = () => (
-  <PhoneRoleApp
-    role={R}
-    nav="Рапорты"
-    title="Рапорты"
-    sub="2 ждут решения"
-  >
-    <Rows>
-      {REPORTS.map((r) => (
-        <Row key={r.nm} nm={r.nm} sub={r.sub} pill={{ t: r.st, cls: r.cls }} />
-      ))}
-    </Rows>
-    <div className="mt-3">
+/** На телефоне лист рапорта идёт под очередью ✳: колонок рядом нет, а читать
+    решение всё равно нужно по документу, а не по строке списка. */
+export const Reports11_4Phone = () => {
+  const one = REPORTS[0];
+  return (
+    <PhoneRoleApp role={R} nav="Рапорты" title="Рапорты" sub="2 ждут решения">
+      <Rows>
+        {REPORTS.map((r) => (
+          <Row key={r.no} nm={r.nm} sub={r.sub} pill={{ t: r.st, cls: r.cls }} on={r.no === one.no} />
+        ))}
+      </Rows>
+
+      <div className="mt-3">
+        <Panel title={`Рапорт № ${one.no}`} sub={`${one.nm} · лист 1 из 2`}>
+          <ReportPage r={one} page={1} compact />
+          <div className="mt-3 flex flex-col gap-2">
+            <Button className="w-full" variant="primary">
+              <ClipboardCheck size={15} /> Согласовать
+            </Button>
+            <Button className="w-full" variant="outline">Вернуть на доработку</Button>
+            <Button className="w-full" variant="outline">Отклонить</Button>
+          </div>
+        </Panel>
+      </div>
+
       <Bar>Согласование с телефона — то же решение: согласовать, вернуть с комментарием, отклонить.</Bar>
-    </div>
-  </PhoneRoleApp>
-);
+    </PhoneRoleApp>
+  );
+};
 
 
 export const SCREENS: ScreenMap = {
@@ -1610,53 +1017,30 @@ export const SCREENS: ScreenMap = {
     next: 'первый экран роли',
   },
   'Э11.1': {
-    cap: 'Кандидаты в сборную',
-    view: () => (
-      <>
-        <Cands11_1 />
-        <Cands11_1States />
-      </>
-    ),
-    alt: () => <Cands11_1Phone />,
+    cap: 'Состав национальной команды',
+    view: () => <Squad11_1 />,
+    alt: () => <Squad11_1Phone />,
     next: 'строка спортсмена',
   },
   'Э11.2': {
-    cap: 'Карточка спортсмена — чтение',
+    cap: 'Карточка спортсмена сборной',
     view: () => <Card11_2 />,
     alt: () => <Card11_2Phone />,
-    next: 'отмечены трое · сравнить',
-  },
-  'Э11.3': {
-    cap: 'Сравнение кандидатов',
-    view: () => <Compare11_3 />,
-    alt: () => <Compare11_3Phone />,
-    next: 'пункт меню «Состав сборной»',
-  },
-  'Э11.4': {
-    cap: 'Состав национальной команды',
-    view: () => <Squad11_4 />,
-    alt: () => <Squad11_4Phone />,
-    next: 'строка спортсмена',
-  },
-  'Э11.5': {
-    cap: 'Карточка спортсмена сборной',
-    view: () => <Card11_5 />,
-    alt: () => <Card11_5Phone />,
     frames: [
-      { t: 'Медицинская карта — вкладка с ограниченным доступом', view: () => <Card11_5Med /> },
-      { t: 'История подготовки — УТС, старты и результаты', view: () => <Card11_5History /> },
+      { t: 'Медицинская карта — вкладка с ограниченным доступом', view: () => <Card11_2Med /> },
+      { t: 'История подготовки — УТС, старты и результаты', view: () => <Card11_2History /> },
     ],
     next: 'пункт меню «Календарь подготовки»',
   },
-  'Э11.6': {
+  'Э11.3': {
     cap: 'Календарь подготовки',
-    view: () => <Prep11_6 />,
+    view: () => <Prep11_3 />,
     next: 'рапорт по ближайшему сбору',
   },
-  'Э11.7': {
+  'Э11.4': {
     cap: 'Рапорты на командирование',
-    view: () => <Reports11_7 />,
-    alt: () => <Reports11_7Phone />,
+    view: () => <Reports11_4 />,
+    alt: () => <Reports11_4Phone />,
   },
 };
 

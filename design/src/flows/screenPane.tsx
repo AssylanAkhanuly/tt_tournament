@@ -11,7 +11,6 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { ReactFlowProvider } from '@xyflow/react';
 import type { Screen } from './types';
 import type { ScreenMap } from '../mockups/shell';
-import { NodeSpec } from './nodeSpec';
 import { role00 } from './data/role00';
 import './map.css';
 
@@ -312,11 +311,11 @@ export function ScreenPane({
           </div>
         )}
 
-        {spec && (
-          <div className="fmap-spec">
-            <NodeSpec screen={spec} />
-          </div>
-        )}
+        {/* Разбора под экраном больше нет ✳ (04.09.2026): «как попадает», «зоны
+            экрана», «действия» и «состояния» текстом занимали больше места, чем
+            сам макет, и повторяли то, что на макете уже нарисовано. Требование
+            к экрану живёт в `flows/*.md` — там его и читают. Под экраном
+            остаются только его состояния: тот же экран в другой ситуации. */}
       </div>
     </ReactFlowProvider>
   );

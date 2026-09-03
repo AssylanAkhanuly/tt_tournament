@@ -131,14 +131,30 @@ const SideRole = ({ role }: { role: RoleUI }) => {
           (many ? 'hover:bg-neutral-50' : 'cursor-default')
         }
       >
-        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-blue-600 text-[12px] font-bold text-white">
-          {role.num}
+        {/* Знак роли — иконка, а не номер ✳ (04.09.2026): «1» человеку не
+            говорит ничего, номер роли живёт в наших документах, а не у него в
+            голове. Берём иконку первого раздела роли: она уже подобрана под то,
+            чем эта роль занимается, и второй раз выбирать её не нужно. */}
+        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-blue-600 text-white [&_svg]:h-4 [&_svg]:w-4">
+          {role.nav?.[0]?.[0] ?? <span className="text-[12px] font-bold">{role.num}</span>}
         </span>
+        {/* У одной роли второй строки нет ✳ (04.09.2026): «единственная роль»
+            — рассказ о самом себе, а не факт о человеке, и отсутствующая
+            стрелка говорит то же самое молча. Освободившуюся строку забирает
+            название роли: оно длинное и в одну строку не помещалось. */}
         <span className="min-w-0 flex-1 leading-tight">
-          <span className="block truncate text-[12.5px] font-semibold">{cur}</span>
-          <span className="block truncate text-[11px] text-neutral-500">
-            {many ? `и ещё ${list.length - 1} роль` : 'единственная роль'}
+          <span
+            className={
+              'block text-[12.5px] font-semibold ' + (many ? 'truncate' : 'line-clamp-2')
+            }
+          >
+            {cur}
           </span>
+          {many && (
+            <span className="block truncate text-[11px] text-neutral-500">
+              и ещё {list.length - 1} роль
+            </span>
+          )}
         </span>
         {many && <ChevronsUpDown size={14} className="shrink-0 text-neutral-400" />}
       </button>
@@ -245,6 +261,7 @@ export function WebApp({
   back,
   hint,
   aside,
+  actions,
   children,
 }: {
   role: RoleUI;
@@ -262,6 +279,12 @@ export function WebApp({
       доскроллив до низа. Это единственное исключение из правила «блоки идут
       один под другим»: правая колонка — не второй блок, а наблюдение. */
   aside?: ReactNode;
+  /** Главные кнопки экрана ✳ (03.09.2026): «Подтвердить результат», «Отправить
+      заключение», «Принять состав». Прилипают к низу рабочей области, а не
+      стоят в потоке: до них дотягиваются в любой момент, не доскроллив до
+      конца. В потоке главное действие находилось только после прокрутки — на
+      длинном экране это значит «не находилось». */
+  actions?: ReactNode;
   children: ReactNode;
 }) {
   return (
@@ -270,9 +293,13 @@ export function WebApp({
       <div className="flex h-14 shrink-0 items-center gap-3.5 border-b border-neutral-200 bg-white px-5">
         <Brand size="sm" />
         <Separator orientation="vertical" className="h-6" />
+        {/* Вторая строка в шапке — только факт о том, что открыто (турнир,
+            сезон, клуб). Пересказ разделов меню («заявки · рейтинг · документы»)
+            отсюда убран ✳: он повторял сайдбар и ничего не добавлял. Нет
+            факта — нет и строки, подставлять умолчание незачем. */}
         <div className="leading-tight">
-          <div className="text-[13.5px] font-semibold">{role.brandName ?? 'Чемпионат Казахстана 2026'}</div>
-          <div className="text-[11px] text-neutral-500">{role.brandSub ?? 'Одиночный · олимпийская · г. Астана'}</div>
+          {role.brandName && <div className="text-[13.5px] font-semibold">{role.brandName}</div>}
+          {role.brandSub && <div className="text-[11px] text-neutral-500">{role.brandSub}</div>}
         </div>
         {role.badge !== false && (
           <Chip color="success" size="sm">
@@ -316,16 +343,27 @@ export function WebApp({
           </div>
         </div>
 
-        {/* Рабочая область: заголовок и содержимое на сером холсте. */}
+        {/* Рабочая область: заголовок и содержимое на сером холсте.
+
+            Заголовок прокручивается вместе с содержимым ✳ (03.09.2026): он
+            отвечает на вопрос «куда я попал», а его задают один раз — при входе
+            на экран. Прибитый к верху, он всю остальную работу занимал место и
+            отбирал высоту у таблиц. Прибито теперь то, к чему возвращаются
+            постоянно, — полоса главных действий внизу. */}
         <div className="flex min-w-0 flex-1 flex-col bg-neutral-50">
-          <div className="shrink-0 px-6 pb-4 pt-5">
-            {back && <BackLink label={back.label} to={back.to} />}
-            <h1 className="text-xl font-semibold tracking-tight">{title}</h1>
-            {sub && <p className="mt-0.5 text-[13px] text-neutral-500">{sub}</p>}
-          </div>
           <div className="min-h-0 flex-1 overflow-auto px-6 pb-6">
+            <div className="pb-4 pt-5">
+              {back && <BackLink label={back.label} to={back.to} />}
+              <h1 className="text-xl font-semibold tracking-tight">{title}</h1>
+              {sub && <p className="mt-0.5 text-[13px] text-neutral-500">{sub}</p>}
+            </div>
             {children}
           </div>
+          {actions && (
+            <div className="kit-actions flex shrink-0 items-center justify-end gap-2 border-t border-neutral-200 bg-white px-6 py-3">
+              {actions}
+            </div>
+          )}
         </div>
 
         {/* Правая колонка наблюдения: свой скролл, чтобы очередь не уезжала
@@ -356,6 +394,7 @@ export function PhoneRoleApp({
   sub,
   back,
   hint,
+  actions,
   children,
 }: {
   role: RoleUI;
@@ -365,6 +404,10 @@ export function PhoneRoleApp({
   back?: { label: string; to?: string };
   /** ⚠ Больше не рисуется ✳ (01.09.2026), см. `WebApp`. */
   hint?: string;
+  /** Главные кнопки экрана ✳ (03.09.2026): прилипают к низу, над вкладками. На
+      телефоне это важнее, чем на десктопе: экран короткий, и кнопка в потоке
+      уезжает за первым же списком. */
+  actions?: ReactNode;
   children: ReactNode;
 }) {
   /* Кнопок в полосе не больше четырёх ✳ (31.08.2026, решение владельца
@@ -417,6 +460,12 @@ export function PhoneRoleApp({
         </div>
         {children}
       </div>
+
+      {actions && (
+        <div className="kit-actions flex shrink-0 items-center gap-2 border-t border-neutral-200 bg-white px-4 py-2.5 [&>*]:flex-1">
+          {actions}
+        </div>
+      )}
 
       <div className="flex shrink-0 items-stretch justify-around border-t border-neutral-200 bg-white px-1 pt-1">
         {tabs.map(([icon, label]) => (

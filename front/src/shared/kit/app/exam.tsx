@@ -90,15 +90,14 @@ export function ExamShell({
   return (
     <Laptop>
       {/* Шапка теста, а не продукта: ни уведомлений, ни меню профиля — уйти
-          отсюда можно только кнопкой справа. */}
+          отсюда можно только кнопкой справа. Ярлыка «идёт аттестация» здесь
+          тоже нет ✳: он повторял сам экран — человек стоит внутри теста, перед
+          ним вопросы и часы. */}
       <div className="flex h-14 shrink-0 items-center gap-3.5 border-b border-neutral-200 bg-white px-5">
         <Brand size="sm" />
         <div className="leading-tight">
           <div className="text-[13.5px] font-semibold">{title}</div>
           {sub && <div className="text-[11px] text-neutral-500">{sub}</div>}
-        </div>
-        <div className="ml-auto rounded-full bg-blue-50 px-3 py-1 text-[11px] font-semibold uppercase tracking-wider text-blue-700">
-          Идёт аттестация
         </div>
       </div>
 
@@ -135,9 +134,11 @@ export function ExamPhone({
   return (
     <Phone>
       <div className="flex shrink-0 items-center justify-between gap-2 border-b border-neutral-200 px-4 py-2.5">
+        {/* Ярлык «идёт аттестация» убран ✳ (03.09.2026): человек внутри теста —
+            перед ним вопросы и часы, и сообщать ему, что тест идёт, значит
+            занимать место сообщением, которое он и так видит. */}
         <div className="min-w-0 leading-tight">
           <div className="truncate text-[13.5px] font-semibold">{title}</div>
-          <div className="text-[11px] uppercase tracking-wider text-blue-600">идёт аттестация</div>
         </div>
         <div className="shrink-0 text-[15px] font-bold tabular-nums">{clock}</div>
       </div>

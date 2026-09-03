@@ -52,7 +52,6 @@ const R02: RoleUI = {
   title: 'Экономист / бухгалтер',
   person: { nm: 'Сериков Н.', rl: 'Экономист ФНТ РК', av: A(60) },
   brandName: 'Взносы 2026',
-  brandSub: 'Годовой членский взнос федерации',
   badge: false,
   nav: [
     [<Wallet size={16} key="w" />, 'Взносы'],
@@ -495,7 +494,6 @@ export function Fee2_2() {
       role={R02}
       nav="Взносы"
       title="Карточка взноса"
-      sub="Пак Сергей · Павлодар · «Иртыш»"
       back={{ label: 'Взносы за сезон', to: 'Э2.1' }}
     >
       <Fee2_2Body />
@@ -509,7 +507,6 @@ const Fee2_2Phone = () => (
     role={R02}
     nav="Взносы"
     title="Карточка взноса"
-    sub="Пак Сергей · Павлодар · «Иртыш»"
     back={{ label: 'Взносы за сезон', to: 'Э2.1' }}
   >
     <Fee2_2Body phone />
@@ -632,7 +629,7 @@ const MarkDialog = ({ phone }: { phone?: boolean } = {}) => {
         {phone ? <Swipe>{seg}</Swipe> : <div>{seg}</div>}
       </div>
       <FormGrid>
-        <TextInput label="Основание ✳" value="квитанция № 4471" wide={phone} />
+        <TextInput label="Основание" value="квитанция № 4471" wide={phone} />
         {/* Дата — текстом в русском формате: нативный `input type="date"`
             (DateInput кита) рисуется в локали браузера и на снимке выдавал
             американское «02/22/2026» рядом с «22.02.2026» остального экрана. */}
@@ -654,7 +651,6 @@ export function Mark2_3() {
       role={R02}
       nav="Взносы"
       title="Карточка взноса"
-      sub="Жумабеков Расул · Караганда · «Шахтёр»"
       back={{ label: 'Взносы за сезон', to: 'Э2.1' }}
     >
       <Mark2_3Parent />
@@ -669,7 +665,6 @@ const Mark2_3Phone = () => (
     role={R02}
     nav="Взносы"
     title="Карточка взноса"
-    sub="Жумабеков Расул · Караганда · «Шахтёр»"
     back={{ label: 'Взносы за сезон', to: 'Э2.1' }}
   >
     <Mark2_3Parent phone />
@@ -685,7 +680,7 @@ const Mark2_3States = () => (
       <Frag w={440}>
         <FormGrid>
           <div className="flex flex-col gap-1">
-            <span className="text-xs font-medium text-neutral-500">Основание ✳</span>
+            <span className="text-xs font-medium text-neutral-500">Основание</span>
             <span className="w-full rounded-lg bg-red-50 px-3 py-1.5 text-sm font-medium text-red-700">
               — не заполнено
             </span>
@@ -744,7 +739,7 @@ const UnmarkDialog = ({ phone }: { phone?: boolean } = {}) => (
     <FormGrid>
       <FieldView label="Кто и когда отметил" value="Сериков Н. · 22.02.2026, 10:42" wide={phone} />
       <FieldView label="Основание отметки" value="квитанция № 4471" wide={phone} />
-      <TextInput label="Причина ✳" value="квитанция не подтвердилась в банке" wide />
+      <TextInput label="Причина" value="квитанция не подтвердилась в банке" wide />
     </FormGrid>
     <div className="mt-3">
       <Bar tone="danger">
@@ -773,7 +768,6 @@ export function Unmark2_4() {
       role={R02}
       nav="Взносы"
       title="Карточка взноса"
-      sub="Пак Сергей · Павлодар · «Иртыш»"
       back={{ label: 'Взносы за сезон', to: 'Э2.1' }}
     >
       <Unmark2_4Parent />
@@ -788,7 +782,6 @@ const Unmark2_4Phone = () => (
     role={R02}
     nav="Взносы"
     title="Карточка взноса"
-    sub="Пак Сергей · Павлодар · «Иртыш»"
     back={{ label: 'Взносы за сезон', to: 'Э2.1' }}
   >
     <Unmark2_4Parent />
@@ -823,7 +816,7 @@ const Unmark2_4States = () => (
       <Frag w={440}>
         <FormGrid>
           <div className="flex flex-col gap-1">
-            <span className="text-xs font-medium text-neutral-500">Причина ✳</span>
+            <span className="text-xs font-medium text-neutral-500">Причина</span>
             <span className="w-full rounded-lg bg-red-50 px-3 py-1.5 text-sm font-medium text-red-700">
               — не заполнена
             </span>

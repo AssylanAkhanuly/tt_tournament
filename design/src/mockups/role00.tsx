@@ -67,7 +67,6 @@ const R00: RoleUI = {
   title: 'Сквозные экраны',
   person: { nm: 'Абаева Д.', rl: 'Администратор Федерации', av: AW(44) },
   brandName: 'Сезон 2026',
-  brandSub: 'Календарь ФНТ РК · 8 главных стартов',
   /* Сквозные экраны — вне турнира: значка «ИДЁТ» в шапке нет. */
   badge: false,
   nav: [
@@ -178,11 +177,18 @@ function IinField({
   };
   return (
     <label className="flex flex-col gap-1.5">
+      {/* Счётчик показывается, только пока номер не добран ✳: «12 из 12» —
+          отчёт о том, что и так видно в поле, а вот «9 из 12» отвечает на
+          единственный вопрос, который у поля бывает, — сколько ещё цифр.
+          Набранный номер сообщает о себе сам: рамка перестаёт быть красной, а
+          «Продолжить» становится нажимаемым. */}
       <span className="flex items-baseline justify-between">
         <span className="text-xs font-medium text-neutral-500">ИИН</span>
-        <span className={'text-[11px] tabular-nums ' + (bad ? 'text-red-600' : 'text-neutral-400')}>
-          {v.length} из 12
-        </span>
+        {v.length < 12 && (
+          <span className={'text-[11px] tabular-nums ' + (bad ? 'text-red-600' : 'text-neutral-400')}>
+            {v.length} из 12
+          </span>
+        )}
       </span>
       <input
         aria-label="ИИН — индивидуальный идентификационный номер"
@@ -318,7 +324,7 @@ const Consent = ({ t, off, sub }: { t?: string; off?: boolean; sub?: string }) =
   <label className="col-span-2 mt-1 flex items-start gap-2.5">
     <input type="checkbox" defaultChecked={!off} className="mt-0.5 size-4 shrink-0 accent-blue-600" />
     <span className="text-[12.5px] leading-snug text-neutral-700">
-      {t ?? 'Согласие на обработку персональных данных'} ✳
+      {t ?? 'Согласие на обработку персональных данных'}
       {sub && <span className="block text-xs text-neutral-500">{sub}</span>}
     </span>
   </label>
@@ -392,11 +398,6 @@ export function Login0_1() {
         <Brand size="lg" />
         <div>
           <div className="text-xl font-semibold tracking-tight">Вход в систему</div>
-          <div className="mt-1 text-[12.5px] text-neutral-500">
-            {step === 1
-              ? 'По ИИН через Smart Bridge · пароля в системе нет'
-              : 'Подтвердите вход кодом из SMS'}
-          </div>
         </div>
       </div>
 
@@ -437,10 +438,13 @@ export function Login0_1() {
       {/* Два пути завести себя самому: спортсмен и судья (⚠ 9.2 — про судью
           федерация не ответила, экран стоит на нашем предположении). */}
       <div className="mt-4 flex items-center justify-center gap-2 border-t border-neutral-100 pt-4">
+        {/* «Стать судьёй» с экрана входа убрано ✳ (04.09.2026): регистрация
+            одна на всех — судья заводит себя тем же ИИН, что и спортсмен, а
+            роль ему присваивает коллегия по удостоверению (Э5.6). Второй вход в
+            регистрацию заставлял человека выбирать, кем он записывается,
+            хотя выбора у него нет. */}
         <span className="text-[12.5px] text-neutral-500">Впервые здесь?</span>
         <ALink to="Э0.5">Зарегистрироваться</ALink>
-        <span className="text-neutral-300">·</span>
-        <ALink to="Э0.7">Стать судьёй</ALink>
       </div>
     </AuthPage>
   );
@@ -814,17 +818,17 @@ const LOGIN_ROWS0_2: {
 }[] = [
   {
     nm: 'ИИН · •••• •••• 0123',
-    sub: 'вход через Smart Bridge — государственный сервис проверяет, что это вы',
+    sub: 'Smart Bridge',
     pill: { t: 'НЕ МЕНЯЕТСЯ', cls: 'done' },
   },
   {
     nm: `Номер для кода · ${OTP_PHONE}`,
-    sub: 'сюда приходит одноразовый код при каждом входе · номер привязан к ИИН, а не к профилю',
+    sub: 'привязан к ИИН',
     pill: { t: 'ИЗ БАЗЫ', cls: 'reg' },
   },
   {
     nm: 'Выйти на всех устройствах',
-    sub: 'закрывает все сеансы, кроме текущего: телефон остался в зале — вход по нему больше не работает',
+    sub: 'кроме текущего',
     action: 'Выйти везде',
   },
 ];
@@ -841,19 +845,26 @@ export function Profile0_2() {
       role={R00}
       nav="Профиль"
       title="Мой профиль"
-      sub="Контакты, язык интерфейса и вход"
       /* Возврат к работе ✳: на профиль и уведомления приходят из шапки, а не
          из меню, — и обратно из них не вело ничего. Пункта в сайдбаре у них
          нет по устройству (входы в шапке), так что выйти можно было только
          кнопкой браузера. Экран сквозной: возвращает на первый экран роли, под
          которой человек работает; в макете это панель Федерации. */
       back={{ label: 'К работе', to: 'Э1.1' }}
+      /* Главное действие — в прибитой полосе внизу ✳ (04.09.2026): в потоке
+         «Сохранить» стояло внутри блока про язык, то есть относилось будто бы
+         к нему одному, и находилось только прокруткой. */
+      actions={
+        <Button size="sm" variant="primary">
+          <Check size={15} /> Сохранить
+        </Button>
+      }
     >
       {/* Блоки идут один под другим во всю ширину ✳ (30.08.2026): в две
           колонки узкая нижняя панель висела в пустоте рядом со сжатым
           «Профилем». Панель сама держит отступ снизу, обёртка не нужна. */}
       <>
-        <Panel title="Профиль">
+        <Panel>
           <div className="mb-4">
             <ProfileHead0_2 />
           </div>
@@ -869,11 +880,7 @@ export function Profile0_2() {
             <div>
               <div className="text-xs font-medium text-neutral-500">Язык интерфейса</div>
               <div className="mt-1"><Langs /></div>
-              <div className="mt-1.5 text-xs leading-snug text-neutral-500">
-                Письма и уведомления приходят на нём же
-              </div>
             </div>
-            <Button size="sm" variant="primary">Сохранить</Button>
           </div>
         </Panel>
 
@@ -901,7 +908,7 @@ export function Profile0_2() {
               пароль, чтобы выгнать чужого, теперь — закрывает сеансы. Стоит
               последней строкой, ниже двух неизменяемых: остальное здесь читают,
               а нажимают только это. */}
-        <Panel title="Вход" sub="Пароля в системе нет: вход по ИИН и одноразовому коду ✳" flush>
+        <Panel title="Вход" sub="пароля нет" flush>
           <div className="divide-y divide-neutral-100">
             {LOGIN_ROWS0_2.map((r) => (
               <Row key={r.nm} action={r.action} nm={r.nm} pill={r.pill} sub={r.sub} />
@@ -917,7 +924,7 @@ export function Profile0_2() {
 
 const Profile0_2States = () => (
   <States>
-    <Shot tone="info" title="Роль одна ✳" text="Раздела переключения в меню профиля нет: выбирать не из чего.">
+    <Shot tone="info" title="Роль одна" text="Раздела переключения в меню профиля нет: выбирать не из чего.">
       <Frag>
         <Rows>
           <Row nm="Спортсмен" sub="система · бессрочно" pill={{ t: 'СЕЙЧАС', cls: 'live' }} />
@@ -927,7 +934,7 @@ const Profile0_2States = () => (
 
     <Shot
       tone="info"
-      title="Роль истекла ✳"
+      title="Роль истекла"
       text="Из переключателя в шапке пропадает, доступ по ней закрыт. Срок и кто выдал — в карточке пользователя (Э1.5)."
     >
       <Frag>
@@ -1036,10 +1043,6 @@ const NOTES0_3: { ic: ReactNode; t: string; s: string; when: string; unread?: bo
   },
 ];
 
-/** Требование зоны: уведомление не тупик — строка ведёт на свой экран. */
-const NOTE_FOOT0_3 =
-  'Строка ведёт на экран, о котором уведомление: заявка — в заявку, вызов — в матч, ' +
-  'протокол — в протокол';
 
 export function Notif0_3() {
   return (
@@ -1047,7 +1050,6 @@ export function Notif0_3() {
       role={R00}
       nav="Уведомления"
       title="Уведомления"
-      sub="3 непрочитанных из 42"
       /* Тот же возврат, что и у профиля ✳: вход в шапке, значит и выход должен
          быть на экране, а не в кнопке браузера. */
       back={{ label: 'К работе', to: 'Э1.1' }}
@@ -1055,7 +1057,9 @@ export function Notif0_3() {
       <div className="mb-3 flex items-center justify-between gap-4">
         <Facts
           items={[
-            { k: 'непрочитанных', v: '3', hot: true },
+            /* «Непрочитанных» отсюда убрано ✳ (04.09.2026): это ровно число
+               чипов «НОВОЕ» в списке под ним. Остаётся то, чего в списке не
+               видно: сколько всего за период и какой период. */
             { k: 'всего', v: '42' },
             { k: 'период', v: '7 дней' },
           ]}
@@ -1069,7 +1073,6 @@ export function Notif0_3() {
           <NRow key={n.t} {...n} />
         ))}
       </Rows>
-      <div className="mt-2 text-[11px] text-neutral-400">{NOTE_FOOT0_3}</div>
     </WebApp>
   );
 }
@@ -1142,7 +1145,7 @@ const BellFeed0_3 = () => (
 
 const Notif0_3States = () => (
   <States>
-    <Shot tone="info" title="Непрочитанных нет ✳" text="Пустая лента с подписью, что новые появятся здесь.">
+    <Shot tone="info" title="Непрочитанных нет" text="Пустая лента с подписью, что новые появятся здесь.">
       <Frag>
         <EmptyBox title="Всё разобрано" text="0 непрочитанных. Новые уведомления появятся здесь и счётчиком в шапке." />
       </Frag>
@@ -1545,7 +1548,7 @@ export function Tournament0_4() {
 
 const Public0_4States = () => (
   <States>
-    <Shot tone="info" title="Действие требует входа ✳" text="Заявка, счёт, правка — любое действие ведёт на экран входа.">
+    <Shot tone="info" title="Действие требует входа" text="Заявка, счёт, правка — любое действие ведёт на экран входа.">
       <Frag>
         <Rows>
           <Row
@@ -1617,11 +1620,6 @@ export function SignUp0_5() {
         <Brand size="lg" />
         <div>
           <div className="text-xl font-semibold tracking-tight">Регистрация спортсмена</div>
-          <div className="mt-1 text-[12.5px] text-neutral-500">
-            {step === 3
-              ? 'ФИО, дата рождения и пол пришли из государственной базы — руками только то, чего в ней нет'
-              : 'По ИИН через Smart Bridge · пароль придумывать не нужно, его в системе нет'}
-          </div>
         </div>
       </div>
 
@@ -1745,7 +1743,7 @@ export const SignUp0_5States = () => (
         связывание перестало быть догадкой. */}
     <Shot
       tone="warning"
-      title="Запись уже завёл клуб — связываем по ИИН ✳"
+      title="Запись уже завёл клуб — связываем по ИИН"
       text="Совпадение точное, а не «похожий человек»: ИИН один. Рейтинг и история достаются человеку."
     >
       <Frag>
@@ -1934,7 +1932,7 @@ export function Accept0_6() {
       )}
 
       <div className="mt-4 flex items-center justify-between">
-        <span className="text-xs text-neutral-500">Ссылка одноразовая и действует до 22.04.2026</span>
+        <span className="text-xs text-neutral-500">Действует до 22.04.2026</span>
         <ALink muted>Это не я</ALink>
       </div>
     </AuthPage>
@@ -1966,7 +1964,7 @@ export const Accept0_6States = () => (
         записи, и расхождение видно сразу. */}
     <Shot
       tone="danger"
-      title="ФИО из базы расходится с тем, что указал клуб ✳"
+      title="ФИО из базы расходится с тем, что указал клуб"
       text="Дальше не идём: либо ссылку открыл не тот человек, либо клуб ошибся в карточке."
       wide
     >
@@ -2001,7 +1999,7 @@ export const Accept0_6States = () => (
       </Frag>
     </Shot>
 
-    <Shot tone="danger" title="Срок ссылки вышел ✳" text="Семь дней прошли: войти по ней нельзя, нужна новая.">
+    <Shot tone="danger" title="Срок ссылки вышел" text="Семь дней прошли: войти по ней нельзя, нужна новая.">
       <Frag>
         <Bar tone="danger">
           Ссылка выпущена 02.04.2026, срок вышел 09.04.2026. Попросите пригласившего выпустить
@@ -2011,7 +2009,7 @@ export const Accept0_6States = () => (
       </Frag>
     </Shot>
 
-    <Shot tone="warning" title="Ссылкой уже воспользовались ✳" text="Одноразовая: второй раз по ней не входят.">
+    <Shot tone="warning" title="Ссылкой уже воспользовались" text="Одноразовая: второй раз по ней не входят.">
       <Frag>
         <Rows>
           <Row
@@ -2028,7 +2026,7 @@ export const Accept0_6States = () => (
       </Frag>
     </Shot>
 
-    <Shot tone="warning" title="«Это не я» ✳" text="Ссылка гаснет, пригласившему уходит уведомление — данные чужие.">
+    <Shot tone="warning" title="«Это не я»" text="Ссылка гаснет, пригласившему уходит уведомление — данные чужие.">
       <Frag>
         <Rows>
           <Row
@@ -2092,13 +2090,7 @@ export function SignUpJudge0_7() {
       <div className="mb-5 flex flex-col items-center gap-4 text-center">
         <Brand size="lg" />
         <div className="flex flex-col items-center gap-1.5">
-          <Chip color="warning" size="sm" variant="soft">
-            <Gavel size={12} className="mr-1 inline" /> СУДЕЙСКАЯ КОЛЛЕГИЯ
-          </Chip>
           <div className="text-xl font-semibold tracking-tight">Регистрация судьи</div>
-          <div className="text-[12.5px] text-neutral-500">
-            Аккаунт вы заводите сами · категорию проставляет коллегия по удостоверению
-          </div>
         </div>
       </div>
 
@@ -2182,7 +2174,7 @@ export const SignUpJudge0_7States = () => (
   <States>
     <Shot
       tone="warning"
-      title="Сразу после регистрации — без категории ✳"
+      title="Сразу после регистрации — без категории"
       text="Аккаунт создаётся, но в реестре судья стоит без категории: S2 не начисляется и в наряд его не назначают, пока коллегия не увидит удостоверение."
       wide
     >
@@ -2211,7 +2203,7 @@ export const SignUpJudge0_7States = () => (
         происходит само и объявляется, а не спрашивается. */}
     <Shot
       tone="info"
-      title="Этот ИИН уже в системе — спортсменом ✳"
+      title="Этот ИИН уже в системе — спортсменом"
       text="Один человек — один аккаунт (QUESTIONS 9.5): судейская роль добавляется к существующему, второй регистрации нет."
     >
       <Frag>
@@ -2233,7 +2225,7 @@ export const SignUpJudge0_7States = () => (
 
     <Shot
       tone="warning"
-      title="Судья уже в реестре, но входа у него не было ✳"
+      title="Судья уже в реестре, но входа у него не было"
       text="Коллегия завела карточку с категорией; регистрация даёт человеку вход в неё, а не вторую запись."
     >
       <Frag>
@@ -2502,7 +2494,7 @@ export function Accept0_6Phone() {
       )}
 
       <div className="mt-4 flex flex-col items-center gap-1 text-center">
-        <span className="text-xs text-neutral-500">Ссылка одноразовая и действует до 22.04.2026</span>
+        <span className="text-xs text-neutral-500">Действует до 22.04.2026</span>
         <ALink muted>Это не я</ALink>
       </div>
     </AuthPhone>
@@ -2603,10 +2595,9 @@ const Profile0_2Phone = () => (
     role={R00}
     nav="Профиль"
     title="Мой профиль"
-    sub="Контакты, язык интерфейса и вход"
     back={{ label: 'К работе', to: 'Э1.1' }}
   >
-    <Panel title="Профиль">
+    <Panel>
       <div className="mb-4">
         <ProfileHead0_2 />
       </div>
@@ -2620,14 +2611,11 @@ const Profile0_2Phone = () => (
       <div className="mt-4">
         <div className="text-xs font-medium text-neutral-500">Язык интерфейса</div>
         <div className="mt-1"><Langs /></div>
-        <div className="mt-1.5 text-xs leading-snug text-neutral-500">
-          Письма и уведомления приходят на нём же
-        </div>
         <Button className="mt-3 w-full" size="sm" variant="primary">Сохранить</Button>
       </div>
     </Panel>
 
-    <Panel title="Вход" sub="Пароля в системе нет: вход по ИИН и одноразовому коду ✳" flush>
+    <Panel title="Вход" sub="пароля нет" flush>
       <div className="divide-y divide-neutral-100">
         {LOGIN_ROWS0_2.map((r) => (
           <Row key={r.nm} action={r.action} nm={r.nm} pill={r.pill} sub={r.sub} />
@@ -2648,7 +2636,6 @@ const Notif0_3Phone = () => (
     role={R00}
     nav="Уведомления"
     title="Уведомления"
-    sub="3 непрочитанных из 42"
     back={{ label: 'К работе', to: 'Э1.1' }}
   >
     <div className="mb-3 flex flex-col gap-2">
@@ -2668,7 +2655,6 @@ const Notif0_3Phone = () => (
         <NRow key={n.t} {...n} one />
       ))}
     </Rows>
-    <div className="mt-2 text-[11px] leading-snug text-neutral-400">{NOTE_FOOT0_3}</div>
   </PhoneRoleApp>
 );
 
@@ -2907,7 +2893,7 @@ export const SCREENS: ScreenMap = {
     view: () => (
       <>
         <Login0_1 />
-        <Also cap="Роль и человек в боковом меню ✳ — откуда сюда выходят">
+        <Also cap="Роль и человек в боковом меню — откуда сюда выходят">
           <ProfileMenu0_1 />
         </Also>
         <Login0_1States />
@@ -2929,7 +2915,7 @@ export const SCREENS: ScreenMap = {
       </>
     ),
     alt: () => <SignUp0_5Phone />,
-    next: 'регистрация судьи ✳',
+    next: 'регистрация судьи',
   },
   'Э0.7': {
     cap: 'Регистрация судьи',
@@ -2969,7 +2955,7 @@ export const SCREENS: ScreenMap = {
     view: () => (
       <>
         <Notif0_3 />
-        <Also cap="Лента последних — под колокольчиком ✳">
+        <Also cap="Лента последних — под колокольчиком">
           <BellFeed0_3 />
         </Also>
         <Notif0_3States />

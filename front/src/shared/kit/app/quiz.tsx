@@ -110,7 +110,11 @@ export function QuestionCard({
   extra?: ReactNode;
 }) {
   return (
-    <div className="rounded-xl border border-neutral-200 bg-white p-4 shadow-sm">
+    /* Карточка внутри карточки убрана ✳ (03.09.2026): вопрос стоит на белом
+       листе теста, и своя рамка со своей тенью давала вторую рамку вокруг того
+       же самого — а варианты внутри неё оказывались третьим уровнем. Границу
+       рисует то, что её требует: варианты ответа, по которым кликают. */
+    <div>
       <div className="mb-2.5 flex items-start justify-between gap-3">
         <div className="min-w-0">
           {(n || q.topic) && (

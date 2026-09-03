@@ -68,7 +68,6 @@ const R14L: RoleUI = {
   title: 'Спортсмен',
   person: { nm: 'Ким Г.', rl: 'Спортсмен · рейтинг 2456', av: A(44) },
   brandName: 'Мой профиль',
-  brandSub: 'Сайт и приложение',
   badge: false,
   nav: [
     [<Trophy size={16} key="t" />, 'Турниры'],
@@ -84,7 +83,6 @@ const RD: RoleUI = {
   title: 'Дисциплинарный комитет',
   person: { nm: 'Мукашев Б.', rl: 'Член комитета · председатель ГСК', av: A(67) },
   brandName: 'Дисциплинарный комитет',
-  brandSub: 'Протесты · нарушения · решения',
   badge: false,
   nav: [
     [<Scroll size={16} key="p" />, 'Протесты'],
@@ -286,7 +284,6 @@ export function Protest16_1() {
       role={R14L}
       nav="Турниры"
       title="Протест по матчу"
-      sub="Чемпионат Казахстана 2026 · 1/8 финала · 13 марта"
     >
       {/* Блоки идут один под другим во всю ширину ✳ (30.08.2026): в две колонки
           карточка матча со счётом по партиям сжималась вдвое, а подписи
@@ -365,7 +362,6 @@ export function Protest16_1Ph() {
       role={R14L}
       nav="Турниры"
       title="Протест по матчу"
-      sub="Чемпионат Казахстана 2026 · 1/8 финала · 13 марта"
     >
       <Panel title="Протест" extra={<Pill t="ЧЕРНОВИК" color="warning" />}>
         <MatchRows16_1 />
@@ -410,7 +406,7 @@ const Protest16_1States = () => (
   <States>
     <Shot
       tone="info"
-      title="Протест по этому матчу уже подан ✳"
+      title="Протест по этому матчу уже подан"
       text="Второй по тому же матчу не подаётся — открывается поданный."
     >
       <Frag>
@@ -482,7 +478,7 @@ export function Cases16_2() {
       role={RD}
       nav="Протесты"
       title="Протесты"
-      sub="Сезон 2026 · дела по всем соревнованиям"
+      sub="Сезон 2026"
     >
       {/* Плиток-счётчиков над очередью больше нет ✳ (30.08.2026): экран — сама
           очередь дел, и три плитки пересказывали её состояния, которые стоят
@@ -561,7 +557,7 @@ export function Cases16_2Ph() {
   const canTake = picked?.st === 'подан';
 
   return (
-    <PhoneRoleApp role={RD} nav="Протесты" title="Протесты" sub="Сезон 2026 · дела по всем соревнованиям">
+    <PhoneRoleApp role={RD} nav="Протесты" title="Протесты" sub="Сезон 2026">
       <div className="mb-2 flex flex-col gap-2">
         <Scroller><FilterSeg items={FILTER_ST} active={fs} onPick={setFs} /></Scroller>
         <Scroller><FilterSeg items={FILTER_TOUR} active={ft} onPick={setFt} /></Scroller>
@@ -607,7 +603,7 @@ export function Cases16_2Ph() {
 
 const Cases16_2States = () => (
   <States>
-    <Shot tone="info" title="Протестов нет ✳" text="Пустое состояние, а не пустой список.">
+    <Shot tone="info" title="Протестов нет" text="Пустое состояние, а не пустой список.">
       <Frag>
         <EmptyBox title="Протестов нет" text="Дела появляются, когда спортсмен подаёт протест по матчу." />
       </Frag>
@@ -700,7 +696,6 @@ export function Case16_3() {
       role={RD}
       nav="Протесты"
       title="Дело Д-118"
-      sub="Ким Георгий · 1/8 финала · Чемпионат Казахстана 2026"
       back={{ label: 'Протесты', to: 'Э16.2' }}
     >
       {/* Блоки идут один под другим во всю ширину ✳ (30.08.2026): в две колонки
@@ -800,7 +795,6 @@ export function Case16_3Ph() {
       role={RD}
       nav="Протесты"
       title="Дело Д-118"
-      sub="Ким Георгий · 1/8 финала · Чемпионат Казахстана 2026"
       back={{ label: 'Протесты', to: 'Э16.2' }}
     >
       <Panel title="Протест" extra={<Pill t="НА РАССМОТРЕНИИ" color="accent" />}>
@@ -871,7 +865,7 @@ export function Case16_3Ph() {
 
 const Case16_3States = () => (
   <States>
-    <Shot tone="info" title="Решение принято — только чтение ✳" text="Дальше дело не правится.">
+    <Shot tone="info" title="Решение принято — только чтение" text="Дальше дело не правится.">
       <Frag>
         <Rows>
           <Row
@@ -983,7 +977,7 @@ export function History16_4() {
       role={RD}
       nav="История"
       title="Дисциплинарная история"
-      sub="Сезон 2026 · карточки, снятия, технические поражения, решения"
+      sub="Сезон 2026"
       hint={HINT16_4}
     >
       <div className="mb-3 flex items-center justify-between gap-4">
@@ -1066,7 +1060,7 @@ export function History16_4Ph() {
       role={RD}
       nav="История"
       title="Дисциплинарная история"
-      sub="Сезон 2026 · карточки, снятия, технические поражения, решения"
+      sub="Сезон 2026"
     >
       <div className="mb-3 flex flex-col gap-2">
         <Scroller><FilterSeg items={LENSES} active={lens} onPick={setLens} /></Scroller>
@@ -1109,7 +1103,7 @@ export function History16_4Ph() {
 
 const History16_4States = () => (
   <States>
-    <Shot tone="info" title="Нарушений нет ✳" text="Так и написано, а не пустая лента.">
+    <Shot tone="info" title="Нарушений нет" text="Так и написано, а не пустая лента.">
       <Frag>
         <EmptyBox title="Нарушений нет" text="Карточки и снятия появляются здесь сами, когда судья выносит их на столе." />
       </Frag>
