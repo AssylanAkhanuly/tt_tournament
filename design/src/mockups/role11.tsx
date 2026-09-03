@@ -875,96 +875,104 @@ export function Reports11_4() {
         ]}
       />
 
-      <Panel title="Очередь рапортов" sub="Строка открывает сам документ" flush>
-        <Rows>
-          {REPORTS.map((r) => (
-            <Row
-              key={r.no}
-              nm={r.nm}
-              sub={r.sub}
-              pill={{ t: r.st, cls: r.cls }}
-              on={r.no === pick}
-              onSelect={() => open(r.no)}
-            />
-          ))}
-        </Rows>
-      </Panel>
-
-      {/* Документ и решение рядом ✳: подписывают не строку очереди, а лист —
-          и комментарий «почему вернули» пишут, глядя в тот же лист. */}
-      <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]">
-        <Panel
-          title={`Рапорт № ${one.no}`}
-          sub={`${one.nm} · ${one.who}`}
-          extra={
-            <span className="flex shrink-0 items-center gap-1.5">
-              <Button size="sm" variant="outline" isDisabled={page === 1} onPress={() => setPage(1)}>
-                <ChevronLeft size={14} />
-              </Button>
-              <span className="whitespace-nowrap text-xs tabular-nums text-neutral-500">
-                лист {page} из 2
-              </span>
-              <Button size="sm" variant="outline" isDisabled={page === 2} onPress={() => setPage(2)}>
-                <ChevronRight size={14} />
-              </Button>
-            </span>
-          }
-        >
-          {one.file && (
-            <div className="mb-3 flex items-center gap-2 border border-neutral-200 bg-neutral-50 px-3 py-2 text-[12.5px] text-neutral-600">
-              <FileText size={14} className="shrink-0 text-neutral-400" />
-              <span className="min-w-0">
-                Загружен файлом: <b className="font-medium text-neutral-800">{one.file.nm}</b> · {one.file.size}
-              </span>
-              <span className="ml-auto shrink-0">
-                <Button size="sm" variant="outline">
-                  <Download size={13} /> Скачать
-                </Button>
-              </span>
-            </div>
-          )}
-          <ReportPage r={one} page={page} />
+      {/* Очередь слева, документ справа ✳: список сверху, а лист под ним
+          уезжает за нижний край рамки — и экран снова выглядит одним списком,
+          в котором ничего не открывается. Решение принимают, глядя в документ,
+          поэтому он стоит на экране, а не под ним. */}
+      <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,300px)_minmax(0,1fr)]">
+        <Panel title="Очередь рапортов" sub="Строка открывает лист" flush>
+          <Rows>
+            {REPORTS.map((r) => (
+              <Row
+                key={r.no}
+                nm={r.nm}
+                sub={r.sub}
+                pill={{ t: r.st, cls: r.cls }}
+                on={r.no === pick}
+                onSelect={() => open(r.no)}
+              />
+            ))}
+          </Rows>
         </Panel>
 
         <div>
-          <Panel title="Реквизиты" extra={<Pill t={one.st} color={one.cls === 'live' ? 'success' : one.cls === 'bad' ? 'danger' : one.cls === 'wait' ? 'warning' : 'default'} />}>
-            <KV
-              items={[
-                ['Мероприятие', one.ev],
-                ['Сроки', one.when],
-                ['Состав', one.roster.length ? `${one.roster.filter((m) => m.role === 'спортсмен').length} спортсменов, ${one.roster.filter((m) => m.role === 'тренер').length} тренера` : 'не приложен'],
-                ['Основание', one.basis],
-                ['Подал', `${one.by} · ${one.who}`],
-                ['Приложение', one.file ? `${one.file.nm} · ${one.file.size}` : 'рапорт сформирован в системе'],
-              ]}
-            />
+          <Panel
+            title={`Рапорт № ${one.no}`}
+            sub={`${one.nm} · ${one.who}`}
+            extra={
+              <span className="flex shrink-0 items-center gap-1.5">
+                <Pill
+                  t={one.st}
+                  color={one.cls === 'live' ? 'success' : one.cls === 'bad' ? 'danger' : one.cls === 'wait' ? 'warning' : 'default'}
+                />
+                <Button size="sm" variant="outline" isDisabled={page === 1} onPress={() => setPage(1)}>
+                  <ChevronLeft size={14} />
+                </Button>
+                <span className="whitespace-nowrap text-xs tabular-nums text-neutral-500">лист {page} из 2</span>
+                <Button size="sm" variant="outline" isDisabled={page === 2} onPress={() => setPage(2)}>
+                  <ChevronRight size={14} />
+                </Button>
+              </span>
+            }
+          >
+            <div className="mb-3">
+              <Facts
+                items={[
+                  { k: 'мероприятие', v: one.ev },
+                  { k: 'сроки', v: one.when },
+                  {
+                    k: 'состав',
+                    v: one.roster.length
+                      ? `${one.roster.filter((m) => m.role === 'спортсмен').length} спортсменов, ${one.roster.filter((m) => m.role === 'тренер').length} тренера`
+                      : 'не приложен',
+                    hot: !one.roster.length,
+                  },
+                  { k: 'подал', v: `${one.by} · ${one.who}` },
+                ]}
+              />
+            </div>
+
+            {one.file && (
+              <div className="mb-3 flex items-center gap-2 border border-neutral-200 bg-neutral-50 px-3 py-2 text-[12.5px] text-neutral-600">
+                <FileText size={14} className="shrink-0 text-neutral-400" />
+                <span className="min-w-0">
+                  Загружен файлом: <b className="font-medium text-neutral-800">{one.file.nm}</b> · {one.file.size}
+                </span>
+                <span className="ml-auto shrink-0">
+                  <Button size="sm" variant="outline">
+                    <Download size={13} /> Скачать
+                  </Button>
+                </span>
+              </div>
+            )}
+
+            <ReportPage r={one} page={page} />
+
+            {one.cls === 'wait' ? (
+              <>
+                <div className="mt-4 flex flex-wrap items-center gap-2">
+                  <Button variant="primary">
+                    <ClipboardCheck size={15} /> Согласовать
+                  </Button>
+                  <Button variant="outline">Вернуть на доработку</Button>
+                  <Button variant="outline">Отклонить</Button>
+                  <span className="text-[12.5px] text-neutral-500">
+                    У «вернуть» и «отклонить» комментарий обязателен.
+                  </span>
+                </div>
+              </>
+            ) : (
+              <p className="mt-4 text-[12.5px] leading-snug text-neutral-500">{one.closed}</p>
+            )}
           </Panel>
 
-          <Panel title="История согласования" flush>
+          <Panel title="История согласования" sub={`Рапорт № ${one.no} · основание: ${one.basis.toLowerCase()}`} flush>
             <Rows>
               {one.track.map((t) => (
                 <Row key={t.at + t.t} nm={t.t} sub={`${t.at} · ${t.s}`} />
               ))}
             </Rows>
           </Panel>
-
-          {one.cls === 'wait' ? (
-            <>
-              <div className="flex flex-wrap items-center gap-2">
-                <Button variant="primary">
-                  <ClipboardCheck size={15} /> Согласовать
-                </Button>
-                <Button variant="outline">Вернуть на доработку</Button>
-                <Button variant="outline">Отклонить</Button>
-              </div>
-              <p className="mt-2 text-[12.5px] leading-snug text-neutral-500">
-                У «вернуть» и «отклонить» комментарий обязателен — иначе автор не знает, что править.
-                Согласованный рапорт уходит в федерацию сам.
-              </p>
-            </>
-          ) : (
-            <p className="text-[12.5px] leading-snug text-neutral-500">{one.closed}</p>
-          )}
         </div>
       </div>
 
