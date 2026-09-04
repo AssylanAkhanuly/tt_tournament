@@ -282,7 +282,7 @@ export function ScreenPane({
 
         {links.length > 0 && (
           <div className="fmap-links">
-            <h4>Переходы с этого экрана — подсвечены прямо в макете</h4>
+            <h4>Переходы с этого экрана</h4>
             {links.map((l) => (
               <button
                 key={l.el + l.to}

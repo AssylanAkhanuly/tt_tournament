@@ -33,7 +33,8 @@
 
 import { useState, type ReactNode } from 'react';
 import {
-  ArrowRightLeft, Ban, Clock, LayoutDashboard, Lock, Megaphone, Pencil, Shield, Timer, Upload,
+  ArrowRightLeft, Ban, Clock, KeyRound, LayoutDashboard, Lock, Megaphone, Pencil, Shield, Timer,
+  Undo2, Upload,
 } from 'lucide-react';
 import { Button, Chip } from '@heroui/react';
 import { A, AW } from '../fedCommon';
@@ -266,6 +267,7 @@ export function Shift8_1(_props: { variant?: 'desktop' | 'land' } = {}) {
         <AccessPanel asked={asked} />
         <ActionBar>
           <Button variant="primary" onPress={() => setAsked(!asked)}>
+            {asked ? <Undo2 size={15} /> : <KeyRound size={15} />}
             {asked ? 'Отозвать запрос' : 'Запросить доступ'}
           </Button>
         </ActionBar>
@@ -302,6 +304,7 @@ function Shift8_1Phone() {
       <AccessPanel asked={asked} />
       <ActionBar>
         <Button className="w-full" variant="primary" onPress={() => setAsked(!asked)}>
+          {asked ? <Undo2 size={15} /> : <KeyRound size={15} />}
           {asked ? 'Отозвать запрос' : 'Запросить доступ'}
         </Button>
       </ActionBar>

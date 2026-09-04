@@ -12,7 +12,8 @@
 
 import { useState, type ReactNode } from 'react';
 import {
-  ChevronDown, ClipboardCheck, Paperclip, Plane, Search as SearchIcon, Trophy, UserPlus, Users,
+  ChevronDown, ClipboardCheck, Paperclip, Plane, Save, Search as SearchIcon, Send, Trophy, UserPlus,
+  Users,
 } from 'lucide-react';
 import { Avatar, Button } from '@heroui/react';
 import { A, AW } from '../fedCommon';
@@ -235,7 +236,9 @@ export function Region12_1(_props: { variant?: 'desktop' | 'land' } = {}) {
           : `${rows.length} из 184`}
       </div>
       <ActionBar>
-        <QuietAction to="Э12.7">Приглашения региона · 2 ждут ответа</QuietAction>
+        <QuietAction to="Э12.7">
+          <Send size={14} /> Приглашения региона · 2 ждут ответа
+        </QuietAction>
         <Button variant="primary" data-to="Э12.6">
           <UserPlus size={15} /> Пригласить спортсмена
         </Button>
@@ -243,24 +246,6 @@ export function Region12_1(_props: { variant?: 'desktop' | 'land' } = {}) {
     </WebApp>
   );
 }
-
-const Region12_1States = () => (
-  <States>
-    <Shot
-      tone="warning"
-      title="Регистрация спортсмена не спроектирована"
-      text="⚠ 12.10 — пока не решено, как сходятся три пути регистрации, форму не рисуем."
-      wide
-    >
-      <Frag>
-        <Bar tone="warning">
-          Спортсмен регистрируется сам, его заводит клуб, его заводит федерация. Кто «владелец»
-          записи и как пути сходятся — вопрос к федерации; до ответа у региона только чтение.
-        </Bar>
-      </Frag>
-    </Shot>
-  </States>
-);
 
 /* ── Э12.2 · Сезон региона: главные старты, сроки и заявки ──────── */
 
@@ -1902,7 +1887,9 @@ export function Report12_8() {
           {noFee.length > 0 && ` · у ${noFee.length} не оплачен годовой взнос`}
           {' · '}после согласования документ уходит в федерацию сам
         </span>
-        <QuietAction>Сохранить черновик</QuietAction>
+        <QuietAction>
+          <Save size={14} /> Сохранить черновик
+        </QuietAction>
         <PrimaryAction to="Э12.8">Подать рапорт</PrimaryAction>
       </ActionBar>
     </WebApp>
@@ -1952,7 +1939,6 @@ export const SCREENS: ScreenMap = {
     view: () => (
       <>
         <Region12_1 />
-        <Region12_1States />
       </>
     ),
     alt: () => <Region12_1Phone />,

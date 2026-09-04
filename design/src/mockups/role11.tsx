@@ -15,7 +15,7 @@
 import { useState } from 'react';
 import {
   CalendarDays, ChevronLeft, ChevronRight, ClipboardCheck, Download, FileText, Pencil, Plane, Plus,
-  Users2,
+  Undo2, Users2, X,
 } from 'lucide-react';
 import { Avatar, Button } from '@heroui/react';
 import { A, AW } from '../fedCommon';
@@ -708,7 +708,9 @@ export function PlanEdit11_5() {
         считается выполнение, федерация не сказала; правило выбирается в самом пункте.
       </Bar>
       <ActionBar>
-        <QuietAction to="Э11.2">Отменить правку</QuietAction>
+        <QuietAction to="Э11.2">
+          <Undo2 size={14} /> Отменить правку
+        </QuietAction>
         <PrimaryAction to="Э11.2">Сохранить план</PrimaryAction>
       </ActionBar>
     </WebApp>
@@ -1190,8 +1192,12 @@ export function Reports11_4() {
           только по рапорту, который ждёт ответа. */}
       {one.cls === 'wait' && (
         <ActionBar>
-          <Button variant="outline">Отклонить</Button>
-          <Button variant="outline">Вернуть на доработку</Button>
+          <Button variant="outline">
+            <X size={15} /> Отклонить
+          </Button>
+          <Button variant="outline">
+            <Undo2 size={15} /> Вернуть на доработку
+          </Button>
           <Button variant="primary">
             <ClipboardCheck size={15} /> Согласовать
           </Button>

@@ -18,7 +18,7 @@
 
 import { useState, type ReactNode } from 'react';
 import {
-  Download, FileText, History, Newspaper, Scroll, Send, Trophy, User, X,
+  Download, FileText, Gavel, History, Newspaper, Scroll, Send, Trophy, User, X,
 } from 'lucide-react';
 import { Avatar, Button } from '@heroui/react';
 import { A, AW } from '../fedCommon';
@@ -523,9 +523,13 @@ export function Cases16_2() {
           <History size={14} /> Дисциплинарная история
         </Button>
         {canTake ? (
-          <PrimaryAction to="Э16.3">Взять в работу</PrimaryAction>
+          <PrimaryAction to="Э16.3">
+            <Gavel size={15} /> Взять в работу
+          </PrimaryAction>
         ) : (
-          <DisabledAction>Взять в работу</DisabledAction>
+          <DisabledAction>
+            <Gavel size={15} /> Взять в работу
+          </DisabledAction>
         )}
       </ActionBar>
     </WebApp>

@@ -14,8 +14,8 @@
 
 import { useState, type ReactNode } from 'react';
 import {
-  Ban, CalendarDays, Check, ChevronRight, ClipboardList, Grid3x3, LayoutDashboard, Pencil,
-  Printer, Radio, Scroll, Shield, Shuffle, Timer, X,
+  Ban, CalendarDays, Check, ChevronRight, ClipboardList, Grid3x3, LayoutDashboard, ListChecks,
+  Pencil, Printer, Radio, Scroll, Shield, Shuffle, Timer, Undo2, X,
 } from 'lucide-react';
 import { Avatar, Button } from '@heroui/react';
 import { A, AW } from '../fedCommon';
@@ -506,7 +506,9 @@ export function Tournament6_1(_props: { variant?: 'desktop' | 'land' } = {}) {
         Показаны последние 4 из 128 заявок
       </div>
       <ActionBar>
-        <QuietAction>Условия допуска</QuietAction>
+        <QuietAction>
+          <ListChecks size={14} /> Условия допуска
+        </QuietAction>
         <Button variant="primary" data-to="Э6.2">
           <ClipboardList size={15} /> Разобрать заявки
         </Button>
@@ -1659,7 +1661,9 @@ export function Schedule6_4({ tab }: { tab?: string }) {
       {order !== ORDER6[1] && (
         <ActionBar>
           <span className="mr-auto"><Pl t="ЖДЁТ УТВЕРЖДЕНИЯ" cls="wait" /></span>
-          <QuietAction>Вернуть с замечанием</QuietAction>
+          <QuietAction>
+            <Undo2 size={14} /> Вернуть с замечанием
+          </QuietAction>
           <Button variant="primary">
             <Check size={15} /> Утвердить расписание
           </Button>

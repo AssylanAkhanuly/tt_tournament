@@ -807,7 +807,9 @@ export type Tone = 'info' | 'success' | 'warning' | 'danger';
 export function States({ children }: { children: ReactNode }) {
   return (
     <div className="mkstates">
-      <div className="mkstates-h">Состояния экрана — тот же экран в другой ситуации</div>
+      {/* Заголовок полки — только название ✳ (04.09.2026): что состояние это
+          «тот же экран в другой ситуации», видно по самим кадрам. */}
+      <div className="mkstates-h">Состояния экрана</div>
       <div className="mkstates-g">{children}</div>
     </div>
   );

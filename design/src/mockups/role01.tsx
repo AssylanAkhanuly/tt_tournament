@@ -23,8 +23,9 @@
 import { Fragment, useState, type ReactNode } from 'react';
 import {
   ChartPie,
-  Bell, CalendarDays, Check, ChevronDown, ChevronRight, Copy, FileSpreadsheet, GitMerge, History,
-  LayoutDashboard, Merge, Minus, Newspaper, Pencil, Plus, Send, UserCog, UserPlus, X,
+  ArrowRight, Bell, CalendarDays, CalendarX, Check, ChevronDown, ChevronRight, Copy, FileSpreadsheet, GitMerge,
+  History, LayoutDashboard, Merge, Minus, Newspaper, Pencil, Plus, Save, Send, Settings2,
+  ShieldCheck, UserCog, UserPlus, Users, X,
 } from 'lucide-react';
 import { Avatar, Button } from '@heroui/react';
 /* Кит-компоненты берутся поимённо. У календаря кита есть свои `MONTHS` и
@@ -736,7 +737,7 @@ export function Dash1_1(_props: { variant?: 'desktop' | 'land' } = {}) {
       actions={
         <>
           <Button variant="outline" data-to="Э1.2">
-            Календарь сезона
+            <CalendarDays size={15} /> Календарь сезона
           </Button>
           <Button variant="primary">
             <Plus size={15} /> Завести соревнование
@@ -1437,9 +1438,9 @@ const STEP_BODY: Record<number, (phone?: boolean) => ReactNode> = {
 
 /* Подпись главной кнопки называет, куда ведёт шаг: «дальше — то-то» отдельной
    строкой повторяло ровно это. */
-const STEP_BTN: Record<number, string> = {
-  1: 'Дальше · основное',
-  2: 'Создать',
+const STEP_BTN: Record<number, ReactNode> = {
+  1: <><ArrowRight size={15} /> Дальше · основное</>,
+  2: <><Check size={15} /> Создать</>,
 };
 
 export function New1_4() {
@@ -2162,7 +2163,7 @@ export function Tour1_3() {
             {/* «Отменить / перенести» — единственный вход в Э1.9, и спорить с
                 главной кнопкой не должно: обводка, не заливка. */}
             <Button variant="outline" data-to="Э1.9">
-              Отменить / перенести
+              <CalendarX size={15} /> Отменить / перенести
             </Button>
             {/* Одна кнопка на два состояния: закрыть регламент и открыть его
                 обратно. Держать обе сразу незачем. */}
@@ -3563,7 +3564,9 @@ const NewUser1_10Body = ({ phone }: { phone?: boolean } = {}) => (
 /** Действия экрана — в закреплённой панели снизу, одни на обе рамки. */
 const NEW_USER_ACTIONS = (
   <>
-    <QuietAction>Выдать роль сразу</QuietAction>
+    <QuietAction>
+      <ShieldCheck size={14} /> Выдать роль сразу
+    </QuietAction>
     <Button variant="primary">
       <Send size={15} /> Пригласить и получить ссылку
     </Button>
@@ -4097,7 +4100,9 @@ const ATHLETE_ACTIONS = (
     <QuietAction>
       <GitMerge size={14} /> Объединить с другой записью
     </QuietAction>
-    <Button variant="outline">Действия по человеку</Button>
+    <Button variant="outline">
+      <Settings2 size={15} /> Действия по человеку
+    </Button>
     <Button variant="primary">
       <Pencil size={15} /> Править
     </Button>
@@ -4315,7 +4320,9 @@ const Merge1_13Body = ({ phone }: { phone?: boolean } = {}) => (
     сообщение экрана, а то, о чём спрашивают в подтверждении. */
 const MERGE_ACTIONS = (
   <>
-    <QuietAction>Это разные люди</QuietAction>
+    <QuietAction>
+      <Users size={14} /> Это разные люди
+    </QuietAction>
     <Button variant="primary">
       <Merge size={15} /> Объединить
     </Button>
@@ -4762,25 +4769,6 @@ const News1_8Phone = () => {
   );
 };
 
-const News1_8States = () => (
-  <States>
-    <Shot
-      tone="warning"
-      title="Заполненность языков по списку не видна ⚠"
-      text="Колонка языков убрана: где перевода нет, теперь узнают только в редакторе."
-      wide
-    >
-      <Frag>
-        <Bar tone="warning">
-          Материал переводится не весь и не сразу. Пока заполненность была в списке, непереведённые
-          находились одним взглядом; теперь их надо искать, открывая материалы по одному. Нужно
-          решить, где это место — фильтр «без перевода», колонка обратно или отдельная сводка.
-        </Bar>
-      </Frag>
-    </Shot>
-  </States>
-);
-
 /* ── Э1.14 · Редактор материала ────────────────────────────────── */
 
 /** Дата в форме: русский формат ДД.ММ.ГГГГ и значок календаря.
@@ -4887,6 +4875,7 @@ export function Editor1_14() {
       actions={
         <>
           <QuietAction onPress={() => setClosed(!closed)}>
+            {closed ? <Pencil size={15} /> : <Save size={15} />}
             {closed ? 'Править' : 'Сохранить черновик'}
           </QuietAction>
           {/* ⚠ Куда ведёт «Опубликовать», не решено: у публичной страницы
@@ -4930,20 +4919,6 @@ const Editor1_14Phone = () => {
 
 const Editor1_14States = () => (
   <States>
-    <Shot
-      tone="warning"
-      title="Материала на трёх языках больше нет ⚠"
-      text="Переключатель RU / KZ / EN убран — у материала одна версия текста."
-    >
-      <Frag>
-        <Bar tone="warning">
-          Сайт по ТЗ трёхъязычный, а редактор теперь ведёт один текст: где живут казахская и
-          английская версии, надо решить — тремя полями в этой же форме, тремя материалами в списке
-          или отдельным экраном перевода.
-        </Bar>
-      </Frag>
-    </Shot>
-
     <Shot
       tone="info"
       title="Правка опубликованного материала"
@@ -5246,7 +5221,6 @@ export const SCREENS: ScreenMap = {
     view: () => (
       <>
         <News1_8 />
-        <News1_8States />
       </>
     ),
     alt: () => <News1_8Phone />,
