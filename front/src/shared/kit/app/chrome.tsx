@@ -351,7 +351,18 @@ export function WebApp({
             отбирал высоту у таблиц. Прибито теперь то, к чему возвращаются
             постоянно, — полоса главных действий внизу. */}
         <div className="flex min-w-0 flex-1 flex-col bg-neutral-50">
-          <div className="flex min-h-0 flex-1 flex-col overflow-auto px-6 pb-6 [--kit-gut:1.5rem] [--kit-gutb:1.5rem]">
+          {/* Блоки рабочей области не ужимаются ✳ (04.09.2026). Область и
+             прокручиваемая, и колонка-flex, а у панели `overflow-hidden` — по
+             правилу флексбокса такой элемент теряет минимальную высоту по
+             содержимому (`min-height: auto` считается нулём) и сжимается
+             вместо того, чтобы уехать в прокрутку. Панель при этом режет своё
+             содержимое: у «Слагаемых» пропадала половина кольца и столбиков, у
+             истории судейства — вторая строка турнира. Замер до правки: 204
+             обрезанных панели на 16 ролях из 18. `shrink-0` детям возвращает им
+             высоту по содержимому, лишнее уходит в прокрутку — ради неё область
+             и сделана. Правило на контейнере, а не на панели: следующий блок
+             рабочей области получит его сам, не вспоминая про этот случай. */}
+          <div className="flex min-h-0 flex-1 flex-col overflow-auto px-6 pb-6 [--kit-gut:1.5rem] [--kit-gutb:1.5rem] [&>*]:shrink-0">
             <div className="pb-4 pt-5">
               {back && <BackLink label={back.label} to={back.to} />}
               <h1 className="text-xl font-semibold tracking-tight">{title}</h1>
@@ -452,7 +463,8 @@ export function PhoneRoleApp({
         </div>
       </div>
 
-      <div className="flex min-h-0 flex-1 flex-col overflow-auto px-4 pb-3 [--kit-gut:1rem] [--kit-gutb:0.75rem]">
+      {/* Блоки не ужимаются — см. пояснение в `RoleApp`. */}
+      <div className="flex min-h-0 flex-1 flex-col overflow-auto px-4 pb-3 [--kit-gut:1rem] [--kit-gutb:0.75rem] [&>*]:shrink-0">
         <div className="pb-3 pt-1">
           {back && <BackLink label={back.label} to={back.to} />}
           <h1 className="text-[19px] font-semibold leading-tight tracking-tight">{title}</h1>
@@ -515,7 +527,8 @@ export function PhoneApp({
           <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-red-500 ring-2 ring-white" />
         </button>
       </div>
-      <div className={'flex min-h-0 flex-1 flex-col gap-3.5 overflow-auto px-4 pb-3 pt-1 [--kit-gut:1rem] [--kit-gutb:0.75rem]' + (center ? ' justify-center' : '')}>
+      {/* Блоки не ужимаются — см. пояснение в `RoleApp`. */}
+      <div className={'flex min-h-0 flex-1 flex-col gap-3.5 overflow-auto px-4 pb-3 pt-1 [--kit-gut:1rem] [--kit-gutb:0.75rem] [&>*]:shrink-0' + (center ? ' justify-center' : '')}>
         {children}
       </div>
       <div className="flex shrink-0 items-stretch justify-around border-t border-neutral-200 bg-white px-1 pt-1">
