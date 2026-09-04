@@ -954,6 +954,16 @@ Vercel'ом сам — руками ничего заливать не надо.
   прод-деплой; пуш в другую ветку / PR → превью-деплой со своей ссылкой.
 - Корень проекта — папка `design/`, сборка и вывод описаны в `design/vercel.json`
   (`npm install` → `npm run build` → отдаём `storybook-static/`).
+- **Зависимости ставятся в обеих папках** ✳ (04.09.2026): install-команда —
+  `npm install && npm --prefix ../front install`. Второй install обязателен,
+  потому что после переезда кита в приложение CSS собирается из `front/`
+  (`kit:css` зовёт `npm --prefix ../front run kit:css`), а `tailwind.src.css`
+  лежит в `front/src/shared/kit/` и импортирует `tailwindcss/theme.css`,
+  `@heroui/styles/*`, `tw-animate-css`. Tailwind ищет их от папки самого CSS —
+  то есть в `front/node_modules`, которых на Vercel не было: корень проекта
+  `design/`, ставился только он. Каждый деплой Storybook падал с
+  `Can't resolve 'tailwindcss/theme.css'`; так было с 01.09 по 04.09.2026 —
+  локально не воспроизводилось, потому что `front/node_modules` на машине есть.
 - «Ignored Build Step» на Vercel: `git diff --quiet HEAD^ HEAD -- . ../front/src`.
   Сборка запускается, если коммит изменил `design/` **или** `front/src` — второе
   обязательно, потому что экран «Сетка» тянет настоящий `BracketFlow` из
