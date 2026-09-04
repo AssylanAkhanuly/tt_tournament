@@ -1504,7 +1504,6 @@ const Grid6_4 = ({ day }: { day: Day6 }) => (
       <span className="flex items-center gap-1.5">
         <Radio size={12} className="text-red-500" /> Трансляция — столы {STREAM.join(' и ')}
       </span>
-      <span>Высота блока — минуты на круг из регламента времени (Э6.3)</span>
     </div>
     {/* Шкала с 10:00: игровой день начинается в 10, последнее, что на ней
         стоит, — финал 14:30 плюс 35 минут регламента. Красной линии «сейчас»
@@ -1634,7 +1633,7 @@ export function Schedule6_4({ tab }: { tab?: string }) {
         <FilterSeg items={ORDER6} active={order} onPick={setOrder} />
         <span className="text-[12.5px] text-neutral-500">
           {order === ORDER6[0]
-            ? '2 конфликта: их видно на дне 1 — сначала их и разбирают'
+            ? 'Конфликты — на дне 1'
             : order === ORDER6[1]
               ? 'Пары вызываются на освободившийся стол; часов в расписании нет'
               : 'Дни 1–2 по расписанию, финальный день — живой очередью'}
@@ -2319,7 +2318,9 @@ export function Protocol6_7() {
         <>
           {/* Настоящая сетка тем же компонентом, что на фронте; светлый тон —
               новый слой светлый, чёрная плоскость из него выпадала. */}
-          <div className="relative h-[430px] overflow-hidden rounded-xl border border-neutral-200 shadow-sm">
+          {/* Своей рамки у сетки нет ✳ (04.09.2026): она стоит внутри панели,
+              и вторая рамка вокруг того же блока читается лишним слоем. */}
+          <div className="relative h-[430px] overflow-hidden rounded-xl">
             <div className="absolute inset-0 [&>div]:h-full!">
               <BracketFlow bracket={bracket6_7} minZoom={0.1} fitPadding={0.04} tone="light" />
             </div>

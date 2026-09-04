@@ -1208,13 +1208,13 @@ const Report10_4Head = ({ r, phone }: { r: ReturnType<typeof useReport10_4>; pho
 const Report10_4Files = ({ phone }: { phone?: boolean }) => (
   <Panel title="Материалы" extra={<P t="4 ЭПИЗОДА · 3 ФАЙЛА" cls="reg" />}>
     {/* Кнопка стоит в теле, а не в шапке: в шапке она спорила бы за место
-        с заголовком и бейджем. Полоса действий тут же говорит, когда
-        прикладывать можно. */}
-    <ActionRow phone={phone} count="Приложить можно, пока заключение — черновик">
+        с заголовком и бейджем. Правила «пока черновик» рядом с ней нет ✳
+        (04.09.2026): состояние заключения стоит меткой наверху экрана. */}
+    <div className="mb-3 flex justify-end">
       <Button size="sm" variant="outline">
         <Paperclip size={13} /> Приложить материалы
       </Button>
-    </ActionRow>
+    </div>
     <Sec>Отмеченные эпизоды из хода турнира</Sec>
     <Rows>
       {EPISODES.slice(0, 2).map((e) => (
@@ -1302,7 +1302,7 @@ export function Report10_4() {
           то, что система измерила сама: инспектор ставит ступень, глядя на
           цифру, а не вспоминая её. */}
       <Panel
-        title="Оценка по критериям · TZ §7.3"
+        title="Оценка по критериям"
         sub={r.kind === KIND4[1] ? 'Оралбай Ержан · столы 4, 9' : 'бригада целиком · 13 судей'}
         extra={<CritExtra worst={r.worst} />}
         flush

@@ -162,7 +162,7 @@ export function MonthGrid({
   }
 
   return (
-    <div className="overflow-hidden rounded-xl border border-neutral-200 bg-white">
+    <div className="kit-sheet overflow-hidden rounded-xl border border-neutral-200 bg-white">
       <div className="grid grid-cols-7 border-b border-neutral-200 bg-neutral-50">
         {WEEKDAYS.map((w, i) => (
           <div
@@ -409,7 +409,7 @@ export function TimeGrid({
   const roomy = cols.length <= 5;
 
   return (
-    <div className="overflow-hidden rounded-xl border border-neutral-200 bg-white">
+    <div className="kit-sheet overflow-hidden rounded-xl border border-neutral-200 bg-white">
       {/* Шапка колонок; левый столбец пуст — под шкалой часов.
           `min-w-0` обязателен: без него длинная подпись (`sub`) распирает свою
           ячейку по содержимому и отбирает ширину у остальных — шапка перестаёт
@@ -547,7 +547,7 @@ export function Calendar({
   const cur = parse(month);
 
   return (
-    <div className="overflow-hidden rounded-xl border border-neutral-200 bg-white shadow-sm">
+    <div className="kit-sheet overflow-hidden rounded-xl border border-neutral-200 bg-white shadow-sm">
       <div className="flex flex-wrap items-center gap-3 border-b border-neutral-200 px-3 py-2.5">
         <div className="flex items-center gap-0.5">
           <button
@@ -754,7 +754,7 @@ export const DayList = ({
   title: string;
   items: { id: string; t: string; nm: string; sub?: string; tone?: CalTone; to?: string }[];
 }) => (
-  <div className="overflow-hidden rounded-xl border border-neutral-200 bg-white">
+  <div className="kit-sheet overflow-hidden rounded-xl border border-neutral-200 bg-white">
     <div className="border-b border-neutral-100 px-3 py-2 text-[12.5px] font-semibold">{title}</div>
     {items.length === 0 ? (
       <div className="px-3 py-6 text-center text-[12.5px] text-neutral-400">В этот день ничего нет</div>

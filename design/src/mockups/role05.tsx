@@ -1044,18 +1044,17 @@ const Rules5_10 = () => (
       <div className="divide-y divide-neutral-100">
         <Row
           nm="Дозаполнить регламент"
-          sub="то, чего не знали при заведении: формат, столы, трансляция"
+          sub="формат, столы, трансляция"
           pill={{ t: 'ПОКА ЧЕРНОВИК', cls: 'done' }}
           action="Править"
         />
         <Row
           nm="Приём заявок судей"
-          sub="без заявок некого назначать"
           pill={{ t: 'ОТКРЫТ', cls: 'wait' }}
           action="Закрыть приём"
         />
         <Row nm="Заявки судей" sub="подано 9 · нужно 10 в бригаду" action="Разобрать" to="Э5.2" />
-        <Row nm="Отмена или перенос" sub="заявки сохраняются, заявители уведомлены" action="Перенести" />
+        <Row nm="Отмена или перенос" action="Перенести" />
       </div>
       <div className="px-4 pb-1 pt-3">
         <Bar>Публикует турнир и открывает приём заявок игроков администратор Федерации (Э1.3).</Bar>
@@ -1871,13 +1870,11 @@ export function JudgeCrew({ cur, phone }: { cur: (typeof OPEN_TOURS)[number]; ph
         <div className="mb-3 flex flex-col gap-2">
           {search}
           {facts}
-          <div>{add}</div>
         </div>
       ) : (
         <div className="mb-3 flex items-center justify-between gap-4">
           {search}
           {facts}
-          {add}
         </div>
       )}
 
@@ -1905,6 +1902,10 @@ export function JudgeCrew({ cur, phone }: { cur: (typeof OPEN_TOURS)[number]; ph
           {empty}
         </Sheet>
       )}
+
+      {/* Добор — закреплённой полосой ✳ (04.09.2026): наряд собирают сверху
+          вниз по списку, и кнопка не должна уезжать вместе с ним. */}
+      <ActionBar>{add}</ActionBar>
     </>
   );
 }
@@ -3105,7 +3106,7 @@ const Judge5_12Body = ({ phone }: { phone?: boolean }) => (
             действия резался до «Поставить в…». */}
         <Row
           nm="Поставить в наряд"
-          sub="на турнир с открытым приёмом заявок · свободен 12–15.09"
+          sub="свободен 12–15.09"
           pill={{ t: 'СВОБОДЕН', cls: 'live' }}
           action="Выбрать турнир"
           to="Э5.8"

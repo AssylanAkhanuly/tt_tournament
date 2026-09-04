@@ -193,7 +193,7 @@ export function Attention({
         {action && <span className="ml-auto">{action}</span>}
       </div>
       {cur && (
-        <div className="mt-2 overflow-hidden rounded-xl border border-neutral-200 bg-white shadow-sm">
+        <div className="kit-sheet mt-2 overflow-hidden rounded-xl border border-neutral-200 bg-white shadow-sm">
           {cur.rows.slice(0, max ?? cur.rows.length).map((r, i) => (
             <button
               key={r.nm}
@@ -247,7 +247,7 @@ export type SeasonRow = {
 
 /** Сезон одной таблицей: соревнование · когда и где · срок или итог · состояние. */
 export const SeasonTable = ({ rows }: { rows: SeasonRow[] }) => (
-  <div className="overflow-hidden rounded-xl border border-neutral-200 bg-white shadow-sm">
+  <div className="kit-sheet overflow-hidden rounded-xl border border-neutral-200 bg-white shadow-sm">
     <div className="grid grid-cols-[1.7fr_1.1fr_1fr_1fr_28px] gap-3 border-b border-neutral-200 bg-neutral-50 px-4 py-2 text-[11px] font-semibold uppercase tracking-wider text-neutral-400">
       <span>Соревнование</span>
       <span>Когда и где</span>
@@ -872,7 +872,7 @@ export const ActionBar = ({ children }: { children: ReactNode }) => (
 
 /** Пустое состояние — тоже часть макета. */
 export const EmptyBox = ({ title, text, action }: { title: string; text: string; action?: ReactNode }) => (
-  <div className="flex flex-col items-center gap-1.5 rounded-xl border border-dashed border-neutral-300 bg-white px-6 py-10 text-center">
+  <div className="kit-empty flex flex-col items-center gap-1.5 rounded-xl border border-dashed border-neutral-300 bg-white px-6 py-10 text-center">
     <div className="text-sm font-semibold">{title}</div>
     <div className="max-w-sm text-[13px] text-neutral-500">{text}</div>
     {action && <div className="mt-2">{action}</div>}
@@ -1082,7 +1082,7 @@ export function Sheet({
   children: ReactNode;
 }) {
   return (
-    <div className={flush ? undefined : 'overflow-hidden rounded-xl border border-neutral-200 bg-white shadow-sm'}>
+    <div className={flush ? undefined : 'kit-sheet overflow-hidden rounded-xl border border-neutral-200 bg-white shadow-sm'}>
       <div
         className="grid items-center gap-3 border-b border-neutral-200 bg-neutral-100/70 px-4 py-2 text-[11px] font-semibold uppercase tracking-wider text-neutral-500"
         style={{ gridTemplateColumns: grid }}
