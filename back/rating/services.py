@@ -312,6 +312,43 @@ def register_no_show(user, tournament=None, reason: str = "", actor=None, occurr
     return entry
 
 
+# ── Исправление (п. 21.5–21.6) ──────────────────────────────────────
+
+
+@transaction.atomic
+def register_correction(user, value, reason: str, actor=None, occurred_at=None) -> RatingEntry:
+    """Исправить рейтинговое значение — техническая ошибка (п. 21.5).
+
+    Ничего не переписывает: прежние строки остаются на месте, а разница
+    дописывается отдельной записью с основанием и автором. Так выполняется
+    п. 21.6 — «сохраняются первоначальная запись, новая запись, дата, основание
+    и лицо, внёсшее исправление», — и остаётся верным главный инвариант:
+    значение карточки равно сумме журнала.
+
+    Срока давности у исправления нет (п. 21.5): достоверность данных важнее.
+    """
+    if not reason.strip():
+        raise ValueError("Основание обязательно (п. 21.6)")
+
+    profile = get_or_create_profile(user)
+    params = RatingParams.active()
+    before = float(profile.value)
+    after = max(float(params.min_rating), engine.round2(float(value)))
+
+    entry = RatingEntry.objects.create(
+        profile=profile,
+        kind=RatingEntry.KIND_CORRECTION,
+        occurred_at=occurred_at or timezone.localdate(),
+        before=_dec(before),
+        delta=_dec(engine.round2(after - before)),
+        after=_dec(after),
+        reason=reason.strip(),
+        created_by=actor,
+    )
+    recalc_profile(profile)
+    return entry
+
+
 # ── Неактивность (п. 18) ────────────────────────────────────────────
 
 

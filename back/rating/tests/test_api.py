@@ -331,3 +331,69 @@ def test_предпросчёт_возвращает_наблюдения_по_�
     assert широкая.data["insights"]["win_share_ms_over_kms"] < 0.7
     # И путь новичка до КМС считается там же.
     assert узкая.data["insights"]["matches_new_to_kms"] is not None
+
+
+# ── Исправление (п. 21.5–21.6) ──────────────────────────────────────
+
+
+def федерация(api, phone="+7710000200"):
+    админ = User.objects.create_user(phone=phone, name="Федерация")
+    админ.is_staff = True
+    админ.save()
+    api.force_authenticate(user=админ)
+    return админ
+
+
+def test_исправление_доступно_только_федерации(api, params):
+    u = игрок("+7710000210", "Игрок", 20)
+    api.force_authenticate(user=u)
+    r = api.post(
+        "/api/rating/correction/",
+        {"user_id": str(u.id), "value": 25, "reason": "хочу"},
+        format="json",
+    )
+    assert r.status_code == 403
+    assert RatingProfile.objects.get(user=u).value == Decimal("20.00")
+
+
+def test_исправление_без_основания_не_проходит(api, params):
+    u = игрок("+7710000220", "Игрок", 20)
+    федерация(api, "+7710000221")
+    r = api.post("/api/rating/correction/", {"user_id": str(u.id), "value": 25}, format="json")
+    assert r.status_code == 400
+    assert RatingProfile.objects.get(user=u).value == Decimal("20.00")
+
+
+def test_исправление_дописывает_разницу_и_не_трогает_прошлые_записи(api, params):
+    u = игрок("+7710000230", "Игрок", 20)
+    было = RatingEntry.objects.filter(profile__user=u).count()
+    федерация(api, "+7710000231")
+
+    r = api.post(
+        "/api/rating/correction/",
+        {"user_id": str(u.id), "value": "20.15", "reason": "перенос прежнего значения с опечаткой"},
+        format="json",
+    )
+    assert r.status_code == 201
+    assert r.data["kind"] == RatingEntry.KIND_CORRECTION
+    assert r.data["delta"] == "0.15"
+
+    profile = RatingProfile.objects.get(user=u)
+    assert profile.value == Decimal("20.15")
+    # п. 21.6: первоначальная запись сохраняется, добавляется новая.
+    assert RatingEntry.objects.filter(profile=profile).count() == было + 1
+    assert not RatingEntry.objects.filter(profile=profile, is_reverted=True).exists()
+    # И инвариант держится: значение равно сумме журнала.
+    сумма = sum(e.delta for e in profile.entries.filter(is_reverted=False))
+    assert profile.value == сумма
+
+
+def test_исправление_не_уводит_рейтинг_в_минус(api, params):
+    u = игрок("+7710000240", "Игрок", 20)
+    федерация(api, "+7710000241")
+    api.post(
+        "/api/rating/correction/",
+        {"user_id": str(u.id), "value": -5, "reason": "ошибка ввода"},
+        format="json",
+    )
+    assert RatingProfile.objects.get(user=u).value == Decimal("0.00")

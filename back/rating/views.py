@@ -1,7 +1,7 @@
 """API Национального рейтинга.
 
-Пять ручек: список, карточка, коэффициенты (чтение и правка), предпросчёт для
-калибровки и фиксация неявки. Расчёта здесь нет — он в `engine.py`, сборка в
+Шесть ручек: список, карточка, коэффициенты (чтение и правка), предпросчёт для
+калибровки, фиксация неявки и исправление начисления. Расчёта здесь нет — он в `engine.py`, сборка в
 `services.py`; вьюха только принимает запрос и отдаёт ответ.
 
 Рейтинг открыт без входа (ТЗ §3, экран Э0.4): таблица и карточка спортсмена —
@@ -215,4 +215,42 @@ class RatingNoShowView(APIView):
         entry = services.register_no_show(
             user, tournament=tournament, reason=reason, actor=request.user
         )
+        return Response(RatingEntrySerializer(entry).data, status=status.HTTP_201_CREATED)
+
+
+class RatingCorrectionView(APIView):
+    """Исправить рейтинговое значение — техническая ошибка (п. 21.5–21.6).
+
+    Ничего не переписывает: разница дописывается отдельной строкой журнала с
+    основанием и автором, прежние записи остаются. Основание обязательно —
+    исправление без объяснения ничем не отличается от подкрутки.
+    """
+
+    permission_classes = [IsAdminUser]
+
+    def post(self, request):
+        from django.contrib.auth import get_user_model
+
+        user_id = request.data.get("user_id")
+        reason = (request.data.get("reason") or "").strip()
+        value = request.data.get("value")
+
+        if not user_id:
+            return Response({"detail": "Не указан спортсмен"}, status=status.HTTP_400_BAD_REQUEST)
+        if not reason:
+            return Response(
+                {"detail": "Основание обязательно (п. 21.6)"}, status=status.HTTP_400_BAD_REQUEST
+            )
+        try:
+            value = float(value)
+        except (TypeError, ValueError):
+            return Response(
+                {"detail": "Нужно исправленное значение рейтинга"}, status=status.HTTP_400_BAD_REQUEST
+            )
+
+        user = get_user_model().objects.filter(pk=user_id).first()
+        if not user:
+            return Response({"detail": "Спортсмен не найден"}, status=status.HTTP_404_NOT_FOUND)
+
+        entry = services.register_correction(user, value, reason=reason, actor=request.user)
         return Response(RatingEntrySerializer(entry).data, status=status.HTTP_201_CREATED)
