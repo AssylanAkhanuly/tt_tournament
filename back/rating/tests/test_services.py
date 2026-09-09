@@ -370,7 +370,7 @@ def test_неактивный_сохраняет_рейтинг(params):
 
 
 def test_предпросчёт_ничего_не_сохраняет(params):
-    result = services.preview(
+    result, _ = services.preview(
         players=[
             {"id": "a", "name": "А", "origin": "legacy", "start": 20},
             {"id": "b", "name": "Б", "origin": "legacy", "start": 20},
@@ -392,5 +392,5 @@ def test_предпросчёт_принимает_свои_коэффициен
         tournaments=[{"id": "t", "name": "Тест", "level": "top"}],
         matches=[{"id": "m", "tournament": "t", "a": "a", "b": "b", "games": [3, 1]}],
     )
-    свой = services.preview(**вход, params={"k_standard": 1.2})
+    свой, _ = services.preview(**вход, params={"k_standard": 1.2})
     assert next(x for x in свой.table if x.id == "a").rating == 20.72

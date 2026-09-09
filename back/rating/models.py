@@ -150,7 +150,7 @@ class RatingProfile(models.Model):
     """
 
     ORIGIN_CHOICES = [
-        (engine.ORIGIN_NEW, "Новый — 1,00 (п. 6.1)"),
+        (engine.ORIGIN_NEW, "Новый спортсмен (п. 6.1)"),
         (engine.ORIGIN_LEGACY, "Перенос прежнего (п. 6.3)"),
         (engine.ORIGIN_ITTF, "Из позиции ITTF (п. 17)"),
     ]

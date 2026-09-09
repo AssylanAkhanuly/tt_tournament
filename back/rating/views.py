@@ -15,7 +15,7 @@ from rest_framework.permissions import AllowAny, IsAdminUser
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from . import engine, services
+from . import analysis, engine, services
 from .models import RatingEntry, RatingParams, RatingProfile
 from .serializers import (
     PreviewRequestSerializer,
@@ -162,7 +162,7 @@ class RatingPreviewView(APIView):
         serializer.is_valid(raise_exception=True)
         data = serializer.validated_data
 
-        result = services.preview(
+        result, used = services.preview(
             players=data["players"],
             tournaments=data["tournaments"],
             matches=data["matches"],
@@ -174,6 +174,10 @@ class RatingPreviewView(APIView):
                 "table": [asdict(r) for r in result.table],
                 "injected": result.injected,
                 "skipped": result.skipped,
+                # Что выбранные коэффициенты значат на практике: доля ожидаемых
+                # побед и путь новичка до уровня КМС. Считается здесь, потому
+                # что это та же формула п. 9.3 — на фронте она была бы копией.
+                "insights": analysis.insights(used),
             }
         )
 

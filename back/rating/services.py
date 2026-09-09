@@ -351,7 +351,7 @@ def refresh_activity(now: Optional[date] = None) -> Dict[str, int]:
 
 
 def preview(players: Sequence[dict], tournaments: Sequence[dict], matches: Sequence[dict],
-            params: Optional[dict] = None) -> engine.RunResult:
+            params: Optional[dict] = None):
     """Посчитать присланный набор, не трогая базу.
 
     Это ручка калибровки: федерация крутит коэффициенты и смотрит, что получится,
@@ -366,17 +366,21 @@ def preview(players: Sequence[dict], tournaments: Sequence[dict], matches: Seque
             clean["level_c"] = {str(k): float(v) for k, v in clean["level_c"].items()}
         base = base.replace(**clean)
 
-    lab_players = [
-        engine.LabPlayer(
+    # Стартовое значение выводится ЗДЕСЬ, а не на клиенте: новичок входит с
+    # 1,00 (п. 6.1), легионер — по формуле перевода из ITTF (п. 17.4). Считай
+    # это фронт сам, формула Положения оказалась бы в двух местах сразу.
+    lab_players = []
+    for p in players:
+        player = engine.LabPlayer(
             id=str(p["id"]),
             name=p.get("name") or str(p["id"]),
             origin=p.get("origin") or engine.ORIGIN_LEGACY,
-            start=float(p.get("start", 1)),
+            start=float(p.get("start") or 1),
             played=int(p.get("played", 0) or 0),
             ittf_position=p.get("ittf_position"),
         )
-        for p in players
-    ]
+        player.start = engine.start_rating(player, base)
+        lab_players.append(player)
     lab_tournaments = [
         engine.LabTournament(
             id=str(t["id"]),
@@ -397,4 +401,6 @@ def preview(players: Sequence[dict], tournaments: Sequence[dict], matches: Seque
         )
         for m in matches
     ]
-    return engine.run_series(lab_players, lab_tournaments, lab_matches, base)
+    # Возвращаем и применённые коэффициенты: по ним считаются наблюдения, и
+    # брать их второй раз из настроек — значит разойтись с тем, чем считали.
+    return engine.run_series(lab_players, lab_tournaments, lab_matches, base), base

@@ -288,3 +288,46 @@ def test_неявка_снимает_баллы_и_пишется_в_истор�
     assert r.status_code == 201
     assert r.data["delta"] == "-0.20"
     assert RatingProfile.objects.get(user=u).value == Decimal("19.80")
+
+
+def test_предпросчёт_сам_выводит_стартовое_значение(api, params):
+    """Формула перевода из ITTF (п. 17.4) считается на сервере, а не на клиенте:
+    иначе она оказалась бы в двух местах сразу и разъехалась бы."""
+    r = api.post(
+        "/api/rating/preview/",
+        {
+            "players": [
+                {"id": "n", "name": "Новичок", "origin": "new"},
+                {"id": "l", "name": "Легионер", "origin": "ittf", "ittf_position": 100},
+                {"id": "p", "name": "Перенос", "origin": "legacy", "start": 50},
+            ],
+            "tournaments": [{"id": "t", "name": "Т", "level": "republic"}],
+            "matches": [],
+        },
+        format="json",
+    )
+    старты = {x["id"]: x["start"] for x in r.data["table"]}
+    assert старты["n"] == 1.0     # п. 6.1
+    assert старты["l"] == 43.95   # пример п. 17.12
+    assert старты["p"] == 50.0    # п. 6.3
+
+
+def test_предпросчёт_возвращает_наблюдения_по_шкале(api, params):
+    """Что значат выбранные коэффициенты — считает сервер: это та же формула
+    п. 9.3, и копия на фронте разошлась бы с боевой."""
+    тело = {
+        "players": [
+            {"id": "a", "name": "А", "origin": "legacy", "start": 20},
+            {"id": "b", "name": "Б", "origin": "legacy", "start": 20},
+        ],
+        "tournaments": [{"id": "t", "name": "Т", "level": "republic"}],
+        "matches": [{"id": "m", "tournament": "t", "a": "a", "b": "b", "games": [3, 1]}],
+    }
+    узкая = api.post("/api/rating/preview/", {**тело, "params": {"d": 10}}, format="json")
+    широкая = api.post("/api/rating/preview/", {**тело, "params": {"d": 30}}, format="json")
+
+    # При узкой шкале мастер обыгрывает кандидата почти всегда, при широкой — нет.
+    assert узкая.data["insights"]["win_share_ms_over_kms"] > 0.9
+    assert широкая.data["insights"]["win_share_ms_over_kms"] < 0.7
+    # И путь новичка до КМС считается там же.
+    assert узкая.data["insights"]["matches_new_to_kms"] is not None
