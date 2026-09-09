@@ -2,6 +2,9 @@
 Single-elimination bracket generator + group stage helpers + full consolation bracket.
 """
 import math
+
+from django.db.models import F
+
 from .models import Match
 
 
@@ -447,9 +450,11 @@ def generate_group_bracket(tournament):
     TournamentGroup.objects.filter(tournament=tournament).delete()
 
     # Seed by rating (best first); joined_at breaks ties for a stable order.
+    # Рейтинг берётся из карточки (`rating.RatingProfile`); у кого её ещё нет,
+    # тот уходит в конец посева — это новичок без рейтинговой истории.
     participants = list(
-        tournament.participants.select_related("user").order_by(
-            "-user__rating", "joined_at"
+        tournament.participants.select_related("user", "user__rating_profile").order_by(
+            F("user__rating_profile__value").desc(nulls_last=True), "joined_at"
         )
     )
     n = len(participants)

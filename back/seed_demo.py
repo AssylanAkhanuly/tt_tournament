@@ -20,7 +20,8 @@ from django.contrib.auth import get_user_model
 from clubs.models import Club
 from tournaments.models import Tournament, TournamentParticipant, Match
 from tournaments.bracket import generate_bracket, advance_winner_and_loser
-from tournaments.rating import apply_tournament_ratings
+from rating.services import apply_tournament, get_or_create_profile
+from rating import engine as rating_engine
 
 U = get_user_model()
 random.seed(7)
@@ -38,7 +39,12 @@ def get_or_create_opponents(exclude_id, want=7):
         phone = f"+7700000{1000 + i}"
         user, _ = U.objects.get_or_create(
             phone=phone,
-            defaults={"name": names[i % len(names)], "rating": random.randint(60, 130)},
+            defaults={"name": names[i % len(names)]},
+        )
+        # Демо-соперники входят как перенос прежнего рейтинга (п. 6.3): со
+        # старта 1,00 у всех кривая показательного профиля была бы плоской.
+        get_or_create_profile(
+            user, origin=rating_engine.ORIGIN_LEGACY, legacy=random.randint(15, 45)
         )
         if user.id != exclude_id and user not in pool:
             pool.append(user)
@@ -93,7 +99,7 @@ def play_tournament(name, when, players, win_bias, club, admin, target):
     if not unresolved:
         t.status = Tournament.STATUS_FINISHED
         t.save()
-        apply_tournament_ratings(t)
+        apply_tournament(t)
     return t
 
 
@@ -101,9 +107,14 @@ def main():
     target = U.objects.get(phone=TARGET_PHONE)
     if not target.name or target.name == "adsf":
         target.name = "Асылан А."
-    # reset rating to a sensible starting point so the curve is meaningful
-    target.rating = 100
+    # Показательный профиль начинает с уровня КМС (40,00 по п. 6) — так кривая
+    # рейтинга читается и видно движение в обе стороны.
     target.save()
+    profile = get_or_create_profile(target, origin=rating_engine.ORIGIN_LEGACY, legacy=40)
+    profile.entries.all().delete()
+    profile.value = profile.start_value = 40
+    profile.matches_played = profile.wins = profile.losses = 0
+    profile.save()
 
     # wipe previous demo tournaments (idempotent re-run)
     old = Tournament.objects.filter(name__startswith=DEMO_PREFIX)
@@ -135,7 +146,7 @@ def main():
               f"before={getattr(tp,'rating_before',None)} change={getattr(tp,'rating_change',None)}")
 
     target.refresh_from_db()
-    print("FINAL rating:", target.rating)
+    print("FINAL rating:", get_or_create_profile(target).value)
     print("participations:", TournamentParticipant.objects.filter(user=target).count())
     print("bracket matches:",
           Match.objects.filter(player1=target).count() + Match.objects.filter(player2=target).count())

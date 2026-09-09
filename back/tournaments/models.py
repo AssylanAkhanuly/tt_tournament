@@ -53,6 +53,26 @@ class Tournament(models.Model):
     )
     group_size = models.PositiveIntegerField(default=4, verbose_name="Игроков в группе")
 
+    # ── Рейтинговая часть (Положение о Национальном рейтинге) ──────────
+    # Уровень задаёт коэффициент C по таблице п. 13; без него множитель матча
+    # брать неоткуда. Значение по умолчанию — республиканский (C = 1,00).
+    LEVEL_CHOICES = [
+        ("top", "Чемпионат и кубок РК, спартакиада, молодёжные игры, ТОП-12"),
+        ("republic", "Чемпионаты РК по возрастам, ЕЛНТ, республиканские"),
+        ("region", "Областные и городские"),
+        ("amateur", "Любительские турниры"),
+    ]
+    level = models.CharField(
+        max_length=16, choices=LEVEL_CHOICES, default="republic",
+        verbose_name="Уровень соревнования (п. 13)",
+    )
+    # ТЗ §4.1: официальные учитываются всегда, клубный — если флаг включён.
+    is_rating = models.BooleanField(default=True, verbose_name="Рейтинговый турнир")
+    # п. 10.4: бронзовых двое, если матча за третье место не было.
+    no_third_place_match = models.BooleanField(
+        default=False, verbose_name="Матча за 3-е место не было (п. 10.4)",
+    )
+
     class Meta:
         verbose_name = "Турнир"
         verbose_name_plural = "Турниры"
@@ -79,9 +99,17 @@ class TournamentParticipant(models.Model):
     # Absent / no-show: their matches are excluded from RTTF rating and score 0
     # group points; their unplayed group matches are auto-forfeited.
     is_absent = models.BooleanField(default=False, verbose_name="Отсутствует")
-    # RTTF rating snapshot, set when the tournament finishes.
-    rating_before = models.IntegerField(null=True, blank=True, verbose_name="Рейтинг до")
-    rating_change = models.IntegerField(null=True, blank=True, verbose_name="Изменение рейтинга")
+    # Итоговое место — от него коэффициент P (п. 10). Призовые только первые три
+    # (п. 10.5), но место хранится любое: оно же идёт в протокол и в историю.
+    place = models.PositiveIntegerField(null=True, blank=True, verbose_name="Итоговое место")
+    # Снимок рейтинга на завершение турнира. Два знака после запятой — п. 6.4
+    # Положения; прежние целые значения прототипа (методика RTTF) не переносятся.
+    rating_before = models.DecimalField(
+        max_digits=6, decimal_places=2, null=True, blank=True, verbose_name="Рейтинг до",
+    )
+    rating_change = models.DecimalField(
+        max_digits=6, decimal_places=2, null=True, blank=True, verbose_name="Изменение рейтинга",
+    )
 
     class Meta:
         verbose_name = "Участник"

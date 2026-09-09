@@ -482,11 +482,21 @@ class AddParticipantView(APIView):
         if not user:
             name = request.data.get("name", "").strip() or f"Игрок {phone[-4:]}"
             temp_password = str(secrets.randbelow(900000) + 100000)
+            user = User.objects.create_user(phone=phone, name=name, password=temp_password)
+            # Рейтинг заводится карточкой: присланное значение — это прежний
+            # рейтинг спортсмена и переносится один к одному (п. 6.3); без него
+            # человек входит новым со старта 1,00 (п. 6.1).
+            from rating.services import get_or_create_profile
+            from rating import engine as rating_engine
+
             try:
-                rating_val = int(request.data.get("rating", 100))
+                legacy = float(request.data.get("rating"))
             except (TypeError, ValueError):
-                rating_val = 100
-            user = User.objects.create_user(phone=phone, name=name, password=temp_password, rating=rating_val)
+                legacy = None
+            if legacy is not None:
+                get_or_create_profile(user, origin=rating_engine.ORIGIN_LEGACY, legacy=legacy)
+            else:
+                get_or_create_profile(user)
             created_user = True
 
         participant, joined = TournamentParticipant.objects.get_or_create(
@@ -999,8 +1009,11 @@ def _record_bracket_result(match, tournament, request, score1, score2, winner, w
     if total_matches > 0 and total_matches == finished_matches:
         tournament.status = Tournament.STATUS_FINISHED
         tournament.save()
-        from .rating import apply_tournament_ratings
-        apply_tournament_ratings(tournament)
+        # Национальный рейтинг ФНТ РК считается по итоговому протоколу (п. 8.1
+        # Положения). Прежняя методика RTTF из прототипа SpinCoach заменена —
+        # см. rating/engine.py и TZ.md §7.1.
+        from rating.services import apply_tournament
+        apply_tournament(tournament, actor=request.user)
 
 
 class SubmitScoreView(APIView):
@@ -1158,8 +1171,10 @@ class MatchResetView(APIView):
             return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
         if was_finished:
-            from .rating import revert_tournament_ratings
-            revert_tournament_ratings(tournament)
+            # Протокол вернулся на доработку: начисления помечаются
+            # отменёнными, карточки пересобираются из журнала (п. 21.6).
+            from rating.services import revert_tournament
+            revert_tournament(tournament, actor=request.user)
             tournament.status = Tournament.STATUS_IN_PROGRESS
             tournament.save()
 

@@ -7,11 +7,19 @@ User = get_user_model()
 class UserSerializer(serializers.ModelSerializer):
     club_ids_admin = serializers.SerializerMethodField()
     avatar = serializers.SerializerMethodField()
+    # Национальный рейтинг из карточки (`rating.RatingProfile`). Поле в ответе
+    # осталось прежним — фронт не переписывается, — но значение теперь одно на
+    # систему и с двумя знаками после запятой (п. 6.4 Положения).
+    rating = serializers.SerializerMethodField()
 
     class Meta:
         model  = User
         fields = ["id", "phone", "name", "rating", "is_staff", "club_ids_admin", "avatar"]
         read_only_fields = ["id", "phone", "name", "rating", "is_staff", "club_ids_admin", "avatar"]
+
+    def get_rating(self, obj):
+        profile = getattr(obj, "rating_profile", None)
+        return str(profile.value) if profile else None
 
     def get_club_ids_admin(self, obj):
         return [str(r.club_id) for r in obj.club_admin_roles.all()]

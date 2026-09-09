@@ -4,10 +4,10 @@ from django.db import models
 
 
 class UserManager(BaseUserManager):
-    def create_user(self, phone, name, password=None, rating=100):
+    def create_user(self, phone, name, password=None):
         if not phone:
             raise ValueError("Номер телефона обязателен")
-        user = self.model(phone=phone, name=name, rating=rating)
+        user = self.model(phone=phone, name=name)
         user.set_password(password)
         user.save(using=self._db)
         return user
@@ -24,7 +24,10 @@ class User(AbstractBaseUser, PermissionsMixin):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     phone = models.CharField(max_length=20, unique=True, verbose_name="Телефон")
     name = models.CharField(max_length=150, verbose_name="Имя")
-    rating = models.PositiveIntegerField(default=100, verbose_name="Рейтинг")
+    # Рейтинга здесь больше нет ✳ (10.09.2026): он один на систему и живёт в
+    # рейтинговой карточке `rating.RatingProfile` — со своим происхождением,
+    # журналом изменений и двумя знаками после запятой (TZ.md §7.1). Прежнее
+    # целое поле было второй копией из прототипа SpinCoach и разъезжалось с ней.
     avatar = models.ImageField(upload_to="avatars/", null=True, blank=True)
     is_active = models.BooleanField(default=True)
     is_staff = models.BooleanField(default=False)
