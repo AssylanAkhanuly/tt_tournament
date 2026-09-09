@@ -29,6 +29,7 @@ INSTALLED_APPS = [
     "clubs",
     "notifications",
     "scoreboard",
+    "rating",
 ]
 
 MIDDLEWARE = [
