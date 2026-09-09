@@ -1,118 +1,145 @@
 import { expect, test, type Page } from '@playwright/test';
 
-/* Пилотный калькулятор рейтинга — сквозная проверка в браузере.
+/* Рейтинг игроков: лист и карточка спортсмена — сквозная проверка в браузере.
 
-   Утверждения конкретные и умеют падать: не «страница открылась», а именно то
-   число, которое даёт формула §9.2 Положения при заданных параметрах. Сломается
-   формула, коэффициент уровня или округление — тест покраснеет. */
+   Числа берутся из показательного набора (`seed_rating_demo`), посчитанного
+   боевым расчётом. Утверждения конкретные: порядок строк, значение в ячейке,
+   сходимость истории. Сломается расчёт, отдача API или разбор чисел на фронте —
+   тест покраснеет. */
 
 const строка = (page: Page, имя: string) =>
-  page.locator('[data-testid="standing-row"][data-player="' + имя + '"]');
+  page.locator('[data-testid="rating-row"][data-player="' + имя + '"]');
 
-const рейтинг = (page: Page, имя: string) => строка(page, имя).getByTestId('rating-value');
+/** Выбрать значение в фильтре.
 
-/** Два равных соперника в одном матче — самая проверяемая точка формулы. */
-async function двоеРавных(page: Page) {
-  await page.goto('/reyting');
-  await page.getByRole('button', { name: 'Очистить' }).click();
-  await page.getByLabel('Прежний рейтинг: Спортсмен А').fill('20');
-  await page.getByLabel('Прежний рейтинг: Спортсмен Б').fill('20');
-  await page.getByTestId('add-match').click();
+    Открытие списка держится на React, а под дев-сервером с восемью
+    работниками страница успевает отрисоваться раньше, чем к ней подключится
+    обработчик: первый клик тогда уходит в никуда. Поэтому клик по кнопке
+    фильтра повторяется, пока список не откроется. */
+async function фильтр(page: Page, подпись: RegExp, значение: string) {
+  await expect(async () => {
+    await page.getByRole('button', { name: подпись }).click();
+    await expect(page.getByRole('button', { name: значение, exact: true })).toBeVisible({
+      timeout: 1000,
+    });
+  }).toPass();
+  await page.getByRole('button', { name: значение, exact: true }).click();
 }
 
-test('считает изменение по формуле §9.2 с коэффициентом уровня §13', async ({ page }) => {
-  await двоеРавных(page);
+/** Фамилии в листе сверху вниз.
 
-  // Соревнование демо — чемпионат РК, уровень «высшие»: C = 1,20 (§13).
-  // При равных рейтингах E = 0,50, K = 0,60 → 0,60 × 1,20 × 0,50 = 0,36.
-  await expect(рейтинг(page, 'Спортсмен А')).toHaveText('20,36');
-  await expect(рейтинг(page, 'Спортсмен Б')).toHaveText('19,64');
-});
+    Читаются с повтором: список приходит по сети, и одиночное чтение может
+    попасть в момент между сменой отбора и ответом сервера — тогда сравнение
+    идёт с пустым списком и тест краснеет на ровном месте. */
+async function ожидатьСписок(page: Page, ожидание: string[]) {
+  await expect(async () => {
+    const порядок = await page
+      .locator('[data-testid="rating-row"]')
+      .evaluateAll((els) => els.map((e) => e.getAttribute('data-player')));
+    expect(порядок).toEqual(ожидание);
+  }).toPass();
+}
 
-test('коэффициент уровня меняет изменение: любительский турнир вдвое дешевле', async ({ page }) => {
-  await двоеРавных(page);
-  await page.getByLabel('Уровень соревнования: Чемпионат Республики Казахстан').selectOption('любители');
-
-  // C = 0,60 (§13): 0,60 × 0,60 × 0,50 = 0,18.
-  await expect(рейтинг(page, 'Спортсмен А')).toHaveText('20,18');
-  await expect(рейтинг(page, 'Спортсмен Б')).toHaveText('19,82');
-});
-
-test('масштаб D меняет ожидаемый результат, а с ним и изменение', async ({ page }) => {
+test('лист открыт без входа и отсортирован по убыванию рейтинга', async ({ page }) => {
   await page.goto('/reyting');
-  await page.getByRole('button', { name: 'Очистить' }).click();
-  await page.getByLabel('Прежний рейтинг: Спортсмен А').fill('20');
-  await page.getByLabel('Прежний рейтинг: Спортсмен Б').fill('35');
-  await page.getByTestId('add-match').click();
 
-  // Разрыв 15 при D = 15 даёт слабому E = 1/11 ≈ 0,0909.
-  // 0,60 × 1,20 × (1 − 0,0909) = 0,6546 → +0,65.
-  await expect(рейтинг(page, 'Спортсмен А')).toHaveText('20,65');
+  const имена = page.locator('[data-testid="rating-row"]');
+  await expect(имена.first()).toBeVisible();
 
-  // Расширим шкалу — победа над тем же соперником станет дешевле.
-  await page.getByTestId('param-D').fill('40');
-  await expect(рейтинг(page, 'Спортсмен А')).not.toHaveText('20,65');
-  const после = await рейтинг(page, 'Спортсмен А').textContent();
-  expect(Number((после ?? '').replace(',', '.'))).toBeLessThan(20.65);
+  await expect(async () => {
+    const порядок = await имена.evaluateAll((els) => els.map((e) => e.getAttribute('data-player')));
+    expect(порядок.slice(0, 3)).toEqual(['Ахметов Ерлан', 'Сулейменов Азамат', 'Жумабаева Айна']);
+  }).toPass();
+
+  // Значения посчитаны расчётом, а не подставлены: 82,00 после трёх побед
+  // на чемпионате РК даёт 82,01 — прибавка почти нулевая, потому что все
+  // соперники слабее и победы ожидаемы.
+  await expect(строка(page, 'Ахметов Ерлан').getByTestId('rating-value')).toHaveText('82,01');
+  await expect(строка(page, 'Сулейменов Азамат').getByTestId('rating-value')).toHaveText('50,05');
 });
 
-test('потолок §12.1 режет изменение и помечает строку истории', async ({ page }) => {
-  await двоеРавных(page);
-  await page.getByTestId('param-cap').fill('0.1');
-
-  await expect(рейтинг(page, 'Спортсмен А')).toHaveText('20,10');
-  await expect(рейтинг(page, 'Спортсмен Б')).toHaveText('19,90');
-  await expect(page.getByTestId('history-row').first()).toContainText('⛔');
-});
-
-test('история §20 сходится: рейтинг до плюс изменение равен рейтингу после', async ({ page }) => {
+test('фильтр по полу оставляет только женщин', async ({ page }) => {
   await page.goto('/reyting');
-  await page.getByTestId('fill-round-robin').click();
+  await фильтр(page, /Пол/, 'Женщины');
 
-  const rows = page.getByTestId('history-row');
+  await ожидатьСписок(page, ['Жумабаева Айна', 'Оралбек Дана']);
+});
+
+test('возрастная выборка сужает список, не меняя значений', async ({ page }) => {
+  await page.goto('/reyting');
+  const общий = await строка(page, 'Оспанов Тимур').getByTestId('rating-value').textContent();
+
+  await фильтр(page, /Возраст/, 'U15');
+
+  await expect(строка(page, 'Оспанов Тимур')).toBeVisible();
+  await expect(строка(page, 'Ахметов Ерлан')).toHaveCount(0); // 1998 года — не U15
+  // п. 7.2–7.3: возрастной рейтинг не отдельный, значение то же самое.
+  await expect(строка(page, 'Оспанов Тимур').getByTestId('rating-value')).toHaveText(общий ?? '');
+});
+
+test('поиск находит спортсмена по фамилии', async ({ page }) => {
+  await page.goto('/reyting');
+  await page.getByPlaceholder('Фамилия или регион').fill('Ким');
+
+  await expect(строка(page, 'Ким Виктор')).toBeVisible();
+  await expect(строка(page, 'Ахметов Ерлан')).toHaveCount(0);
+});
+
+test('строка листа открывает карточку спортсмена', async ({ page }) => {
+  await page.goto('/reyting');
+  await строка(page, 'Ким Виктор').click();
+
+  await page.waitForURL(/\/reyting\/[0-9a-f-]{36}$/);
+  // Заголовок страницы, а не заголовок карточки внутри: фамилия стоит и там,
+  // и там, и без уточнения локатор находит оба.
+  await expect(page.locator('h1')).toHaveText('Ким Виктор');
+});
+
+test('карточка сходится: рейтинг равен сумме изменений в истории', async ({ page }) => {
+  await page.goto('/reyting');
+  await строка(page, 'Оспанов Тимур').click();
+  await expect(page.getByTestId('card-history-row').first()).toBeVisible();
+
+  const число = (s: string) =>
+    Number(s.replace('−', '-').replace(',', '.').replace(/[^\d.\-+]/g, ''));
+
+  const rows = page.getByTestId('card-history-row');
   const n = await rows.count();
-  expect(n).toBeGreaterThan(10); // круговая шестерых — 15 матчей, 30 строк
-
-  for (let i = 0; i < Math.min(n, 12); i++) {
-    // Только прямые дети: внутри ячейки изменения живут пометки ⛔ и ●
-    // отдельными span, и вложенные сдвинули бы нумерацию колонок.
+  let сумма = 0;
+  for (let i = 0; i < n; i++) {
     const cells = await rows.nth(i).locator(':scope > span').allTextContents();
-    const число = (s: string) => Number(s.replace('−', '-').replace(',', '.').replace(/[^\d.\-+]/g, ''));
     const [до, изм, после] = [число(cells[4]), число(cells[5]), число(cells[6])];
+    // Каждая строка сходится сама по себе — требование таблицы п. 20.
     expect(до + изм).toBeCloseTo(после, 6);
+    сумма += изм;
   }
+
+  // И значение карточки равно сумме журнала — главный инвариант рейтинга.
+  const тайл = page.getByText('Текущий рейтинг').locator('..');
+  const значение = число((await тайл.textContent()) ?? '');
+  expect(значение).toBeCloseTo(сумма, 2);
 });
 
-test('новичок идёт по переходному периоду §11 и это видно в таблице', async ({ page }) => {
+test('в карточке новичка виден переходный период и стартовое значение 1,00', async ({ page }) => {
   await page.goto('/reyting');
-  await expect(строка(page, 'Новичок')).toContainText('переходный период, ещё 20');
+  await строка(page, 'Оспанов Тимур').click();
 
-  await page.getByTestId('fill-round-robin').click();
-  await expect(строка(page, 'Новичок')).toContainText('переходный период, ещё 15'); // сыграл 5 матчей
-  await expect(page.getByTestId('history-row').first()).toBeVisible();
+  await expect(page.getByText('Стартовое значение', { exact: true })).toBeVisible();
+  await expect(page.getByText(/1,00 · Новый/)).toBeVisible();
+  // ● — пометка матча переходного периода (п. 11.2).
+  await expect(page.getByTestId('card-history-row').filter({ hasText: '●' }).first()).toBeVisible();
 });
 
-test('легионер получает старт из позиции ITTF по §17.4', async ({ page }) => {
+test('в карточке легионера видно, что старт посчитан из позиции ITTF', async ({ page }) => {
   await page.goto('/reyting');
-  // Rmax = 90, k = 10, позиция 100: 90 − 10 × ln(100) = 43,95 (пример §17.12).
-  await expect(строка(page, 'Легионер (ITTF 100)')).toContainText('43,95');
+  await строка(page, 'Ли Александр').click();
 
-  await page.getByLabel('Позиция ITTF: Легионер (ITTF 100)').fill('50');
-  await expect(строка(page, 'Легионер (ITTF 100)')).toContainText('50,88');
+  // Rmax = 90, k = 10, позиция 100: 90 − 10 × ln(100) = 43,95 (пример п. 17.12).
+  await expect(page.getByText(/43,95 · Из позиции ITTF/)).toBeVisible();
+  await expect(page.getByText('Позиция в ITTF на момент входа')).toBeVisible();
 });
 
-test('введённое имя спортсмена доходит до рейтинговой таблицы', async ({ page }) => {
-  await page.goto('/reyting');
-  await page.getByLabel('Фамилия и имя спортсмена').first().fill('Ахметов Ерлан');
-  await expect(строка(page, 'Ахметов Ерлан')).toBeVisible();
-  await expect(строка(page, 'Спортсмен А')).toHaveCount(0);
-});
-
-test('коэффициент места §10 применяется к победителю турнира', async ({ page }) => {
-  await двоеРавных(page);
-  await expect(рейтинг(page, 'Спортсмен А')).toHaveText('20,36');
-
-  await page.getByLabel('1 место: Чемпионат Республики Казахстан').selectOption({ label: 'Спортсмен А' });
-  // P = 1,20: 0,36 × 1,20 = 0,432 → +0,43.
-  await expect(рейтинг(page, 'Спортсмен А')).toHaveText('20,43');
+test('у спортсмена без рейтинга карточки нет, и это сказано прямо', async ({ page }) => {
+  await page.goto('/reyting/00000000-0000-0000-0000-000000000000');
+  await expect(page.getByText('Карточки нет')).toBeVisible();
 });

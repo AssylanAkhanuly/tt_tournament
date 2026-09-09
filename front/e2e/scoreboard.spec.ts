@@ -93,13 +93,15 @@ test.describe('Табло трансляции /scoreboard', () => {
     const overlay = await openBoth(page);
 
     await page.locator('body').click(); // фокус вне полей ввода
-    await page.keyboard.press('Digit1');
-    await page.keyboard.press('Digit2');
-    await page.keyboard.press('Digit2');
+    // Схема по `event.code`: Q/A — очко слева плюс и минус, P/L — справа.
+    // Раскладка на неё не влияет, оператору не надо переключаться посреди партии.
+    await page.keyboard.press('KeyQ');
+    await page.keyboard.press('KeyP');
+    await page.keyboard.press('KeyP');
     await expect(overlay.getByTestId('points-left')).toHaveText('1');
     await expect(overlay.getByTestId('points-right')).toHaveText('2');
 
-    await page.keyboard.press('KeyQ'); // минус слева
+    await page.keyboard.press('KeyA'); // минус слева
     await expect(overlay.getByTestId('points-left')).toHaveText('0');
   });
 
