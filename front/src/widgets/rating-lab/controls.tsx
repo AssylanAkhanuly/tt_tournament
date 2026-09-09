@@ -157,6 +157,5 @@ export const Source = ({ fixed, clause }: { fixed: boolean; clause: string }) =>
   </span>
 );
 
-/** Число рейтинга в формате 00,00 (§6 Положения — запятая, два знака). */
-export const num2 = (x: number): string => x.toFixed(2).replace('.', ',');
-export const signed2 = (x: number): string => (x > 0 ? '+' : x < 0 ? '−' : '') + Math.abs(x).toFixed(2).replace('.', ',');
+/* Форматирование чисел переехало в `entities/rating/lib/format` ✳ (10.09.2026):
+   его нужно и рейтинг-листу, и карточке спортсмена, а не только калибровке. */

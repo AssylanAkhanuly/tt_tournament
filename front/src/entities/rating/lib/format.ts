@@ -1,0 +1,20 @@
+/* Показ рейтинговых чисел. Формат задан п. 6.4 Положения: два знака после
+   запятой, разделитель — запятая. Одно место на весь фронт, иначе в одном
+   экране окажется «20.4», а в соседнем «20,40». */
+
+/** Рейтинг как 20,36. */
+export const num2 = (x: number): string => x.toFixed(2).replace('.', ',');
+
+/** Изменение со знаком: +0,36 и −0,18 (минус типографский, не дефис). */
+export const signed2 = (x: number): string =>
+  (x > 0 ? '+' : x < 0 ? '−' : '') + Math.abs(x).toFixed(2).replace('.', ',');
+
+/** Коэффициент как 1,20 — те же правила, что у рейтинга. */
+export const coeff = (x: number | null): string => (x === null ? '—' : x.toFixed(2).replace('.', ','));
+
+/** Дата ДД.ММ.ГГГГ из ISO. Пустая строка, если даты нет. */
+export const ruDate = (iso: string | null): string => {
+  if (!iso) return '';
+  const [y, m, d] = iso.slice(0, 10).split('-');
+  return d && m && y ? d + '.' + m + '.' + y : '';
+};

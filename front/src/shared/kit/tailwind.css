@@ -743,6 +743,9 @@
 .min-w-\[900px\] {
   min-width: 900px;
 }
+.min-w-\[980px\] {
+  min-width: 980px;
+}
 .flex-1 {
   flex: 1;
 }
@@ -1936,6 +1939,9 @@
 }
 .accent-blue-600 {
   accent-color: var(--color-blue-600);
+}
+.opacity-50 {
+  opacity: 50%;
 }
 .opacity-55 {
   opacity: 55%;

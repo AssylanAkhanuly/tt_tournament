@@ -1,17 +1,17 @@
 'use client';
 
-/* Спортсмены: имя, откуда взялся стартовый рейтинг, сколько матчей за плечами.
-   Стартовое значение считается по §6.1 / §6.3 / §17.4 и показывается готовым —
-   вводить его руками там, где Положение его выводит, незачем. */
+/* Спортсмены калибровки: имя, откуда взялся стартовый рейтинг, сколько матчей
+   за плечами. Стартовое значение НЕ считается здесь — его выводит сервер по
+   п. 6.1 / 6.3 / 17.4 и присылает в ответе; экран только показывает. */
 
 import { Panel } from '@/shared/kit/app';
-import { startRating, type LabPlayerInput } from '@/features/rating-lab/useRatingLab';
-import type { Origin, RatingParams } from '@/entities/rating';
-import { Btn, Num, Select, Text, num2 } from './controls';
+import { num2, type RatingOrigin } from '@/entities/rating';
+import type { LabPlayerInput } from '@/features/rating-lab/types';
+import { Btn, Num, Select, Text } from './controls';
 
-const ORIGIN: { value: Origin; label: string }[] = [
-  { value: 'новый', label: 'Новый — 1,00' },
-  { value: 'перенос', label: 'Прежний рейтинг' },
+const ORIGIN: { value: RatingOrigin; label: string }[] = [
+  { value: 'new', label: 'Новый — 1,00' },
+  { value: 'legacy', label: 'Прежний рейтинг' },
   { value: 'ittf', label: 'Позиция ITTF' },
 ];
 
@@ -19,13 +19,14 @@ const GRID = 'minmax(0,1.7fr) minmax(0,1.2fr) 84px 76px 80px 32px';
 
 export function PlayersPanel({
   players,
-  params,
+  startOf,
   onAdd,
   onUpdate,
   onRemove,
 }: {
   players: LabPlayerInput[];
-  params: RatingParams;
+  /** Стартовое значение из ответа сервера; null — ответа ещё нет. */
+  startOf: (id: string) => number | null;
   onAdd: () => void;
   onUpdate: (id: string, patch: Partial<LabPlayerInput>) => void;
   onRemove: (id: string) => void;
@@ -33,7 +34,7 @@ export function PlayersPanel({
   return (
     <Panel
       title="Спортсмены"
-      sub="Стартовое значение выводится из происхождения — §6.1, §6.3, §17.4"
+      sub="Стартовое значение выводит сервер — п. 6.1, п. 6.3, п. 17.4"
       extra={
         <Btn onClick={onAdd} tone="primary" testId="add-player">
           Добавить спортсмена
@@ -54,14 +55,15 @@ export function PlayersPanel({
 
       <div className="flex flex-col gap-1.5" data-testid="players-list">
         {players.map((p) => {
-          const свой = p.origin === 'перенос';
+          const свой = p.origin === 'legacy';
           const ittf = p.origin === 'ittf';
+          const start = startOf(p.id);
           return (
             <div key={p.id} className="grid items-center gap-2" style={{ gridTemplateColumns: GRID }} data-row>
               <Text
                 value={p.name}
                 onChange={(v) => onUpdate(p.id, { name: v })}
-                ariaLabel={'Фамилия и имя спортсмена'}
+                ariaLabel="Фамилия и имя спортсмена"
                 placeholder="Фамилия и имя"
               />
               <Select
@@ -85,7 +87,7 @@ export function PlayersPanel({
                 min={0}
               />
               <span className="text-right text-[13px] font-semibold tabular-nums" data-testid="start-value">
-                {num2(startRating(p, params))}
+                {start === null ? '…' : num2(start)}
               </span>
               <Btn onClick={() => onRemove(p.id)} tone="danger" ariaLabel={'Удалить ' + p.name}>
                 ×

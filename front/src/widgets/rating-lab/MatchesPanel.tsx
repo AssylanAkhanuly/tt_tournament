@@ -1,13 +1,12 @@
 'use client';
 
 /* Матчи: кто с кем, в каком соревновании и с каким счётом. Учитываются только
-   одиночные матчи официальных рейтинговых соревнований (§14.1), счёт обязателен
-   (§14.3). На размер изменения счёт не влияет — S в формуле §9.2 знает только
-   победу и поражение; счёт нужен протоколу и истории (§20). */
+   одиночные матчи официальных рейтинговых соревнований (п. 14.1), счёт
+   обязателен (п. 14.3). На размер изменения счёт не влияет — S в формуле п. 9.2
+   знает только победу и поражение; счёт нужен протоколу и истории (п. 20). */
 
 import { Panel } from '@/shared/kit/app';
-import type { LabMatch, LabTournament } from '@/entities/rating';
-import type { LabPlayerInput } from '@/features/rating-lab/useRatingLab';
+import type { LabMatchInput, LabPlayerInput, LabTournamentInput } from '@/features/rating-lab/types';
 import { Btn, Select } from './controls';
 
 const SCORES: [number, number][] = [
@@ -31,11 +30,11 @@ export function MatchesPanel({
   onClear,
   onRoundRobin,
 }: {
-  matches: LabMatch[];
+  matches: LabMatchInput[];
   players: LabPlayerInput[];
-  tournaments: LabTournament[];
+  tournaments: LabTournamentInput[];
   onAdd: () => void;
-  onUpdate: (id: string, patch: Partial<LabMatch>) => void;
+  onUpdate: (id: string, patch: Partial<LabMatchInput>) => void;
   onRemove: (id: string) => void;
   onClear: () => void;
   onRoundRobin: () => void;
@@ -46,7 +45,7 @@ export function MatchesPanel({
   return (
     <Panel
       title="Матчи"
-      sub="Одиночный разряд рейтингового соревнования (§14.1); счёт обязателен (§14.3)"
+      sub="Одиночный разряд рейтингового соревнования (п. 14.1); счёт обязателен (п. 14.3)"
       extra={
         <div className="flex gap-2">
           <Btn onClick={onRoundRobin} testId="fill-round-robin">
@@ -89,7 +88,7 @@ export function MatchesPanel({
               value={m.games[0] + ':' + m.games[1]}
               onChange={(v) => {
                 const [x, y] = v.split(':').map(Number);
-                onUpdate(m.id, { games: [x, y] });
+                onUpdate(m.id, { games: [x, y] as [number, number] });
               }}
               options={SCORES.map(([x, y]) => ({ value: x + ':' + y, label: x + ' : ' + y }))}
               ariaLabel="Счёт по партиям"

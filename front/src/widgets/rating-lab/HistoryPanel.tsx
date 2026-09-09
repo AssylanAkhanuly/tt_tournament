@@ -1,31 +1,41 @@
 'use client';
 
-/* История изменения рейтинга — таблица §20 Положения. Колонки её: дата,
+/* История изменения рейтинга — таблица п. 20 Положения. Её колонки: дата,
    турнир, соперник, счёт, рейтинг до, изменение, рейтинг после. К ним добавлены
-   E, K, C, P — из чего сложилось изменение: §4.6 требует прозрачности, а без
-   слагаемых «+0,35» ничем не проверяемо. */
+   E, K, C, P — из чего сложилось изменение: п. 4.6 требует прозрачности, а
+   «+0,35» без слагаемых ничем не проверяемо. */
 
 import { useState } from 'react';
+
+import { coeff, num2, signed2, type PreviewHistoryRow } from '@/entities/rating';
 import { Panel } from '@/shared/kit/app';
-import type { HistoryRow } from '@/entities/rating';
-import { Select, num2, signed2 } from './controls';
+import { Select } from './controls';
 
 const GRID = 'minmax(0,1.5fr) minmax(0,1.3fr) minmax(0,1.3fr) 54px 62px 74px 66px 52px 46px 46px 46px';
 
-export function HistoryPanel({ history, players }: { history: HistoryRow[]; players: { id: string; name: string }[] }) {
+export function HistoryPanel({
+  history,
+  players,
+}: {
+  history: PreviewHistoryRow[];
+  players: { id: string; name: string }[];
+}) {
   const [filter, setFilter] = useState('');
   const rows = filter ? history.filter((h) => h.player === filter) : history;
 
   return (
     <Panel
       title="История изменения рейтинга"
-      sub="Таблица §20 Положения: каждое изменение привязано к конкретному матчу (§4.6)"
+      sub="Таблица п. 20 Положения: каждое изменение привязано к конкретному матчу (п. 4.6)"
       extra={
         <div className="w-64">
           <Select
             value={filter}
             onChange={setFilter}
-            options={[{ value: '', label: 'Все спортсмены' }, ...players.map((p) => ({ value: p.id, label: p.name }))]}
+            options={[
+              { value: '', label: 'Все спортсмены' },
+              ...players.map((p) => ({ value: p.id, label: p.name })),
+            ]}
             ariaLabel="Показать историю спортсмена"
             testId="history-filter"
           />
@@ -54,30 +64,31 @@ export function HistoryPanel({ history, players }: { history: HistoryRow[]; play
           <div className="divide-y divide-neutral-100" data-testid="history">
             {rows.map((h, i) => (
               <div
-                key={h.matchId + '-' + h.player + '-' + i}
+                key={h.match_id + '-' + h.player + '-' + i}
                 className="grid items-center gap-2 px-1 py-1.5 text-[12.5px]"
                 style={{ gridTemplateColumns: GRID }}
                 data-testid="history-row"
               >
-                <span className="min-w-0 truncate text-neutral-500">{h.tournamentName}</span>
-                <span className="min-w-0 truncate font-medium">{h.playerName}</span>
-                <span className="min-w-0 truncate text-neutral-600">{h.opponentName}</span>
+                <span className="min-w-0 truncate text-neutral-500">{h.tournament_name}</span>
+                <span className="min-w-0 truncate font-medium">{h.player_name}</span>
+                <span className="min-w-0 truncate text-neutral-600">{h.opponent_name}</span>
                 <span className={'tabular-nums ' + (h.won ? 'text-green-700' : 'text-neutral-500')}>{h.score}</span>
                 <span className="text-right tabular-nums text-neutral-500">{num2(h.before)}</span>
                 <span
                   className={
-                    'text-right font-semibold tabular-nums ' + (h.delta > 0 ? 'text-green-700' : h.delta < 0 ? 'text-red-600' : 'text-neutral-400')
+                    'text-right font-semibold tabular-nums ' +
+                    (h.delta > 0 ? 'text-green-700' : h.delta < 0 ? 'text-red-600' : 'text-neutral-400')
                   }
                 >
                   {signed2(h.delta)}
-                  {h.capped && <span title="Упёрлось в потолок §12.1"> ⛔</span>}
-                  {h.transition && <span title="Переходный период §11.2"> ●</span>}
+                  {h.capped && <span title="Упёрлось в потолок п. 12.1"> ⛔</span>}
+                  {h.transition && <span title="Переходный период п. 11.2"> ●</span>}
                 </span>
                 <span className="text-right font-semibold tabular-nums">{num2(h.after)}</span>
-                <span className="text-right tabular-nums text-neutral-500">{h.expected.toFixed(2).replace('.', ',')}</span>
-                <span className="text-right tabular-nums text-neutral-500">{h.K}</span>
-                <span className="text-right tabular-nums text-neutral-500">{h.C}</span>
-                <span className="text-right tabular-nums text-neutral-500">{h.P}</span>
+                <span className="text-right tabular-nums text-neutral-500">{coeff(h.expected)}</span>
+                <span className="text-right tabular-nums text-neutral-500">{coeff(h.k)}</span>
+                <span className="text-right tabular-nums text-neutral-500">{coeff(h.c)}</span>
+                <span className="text-right tabular-nums text-neutral-500">{coeff(h.p)}</span>
               </div>
             ))}
           </div>
@@ -91,7 +102,7 @@ export function HistoryPanel({ history, players }: { history: HistoryRow[]; play
       )}
 
       <p className="mt-3 text-[11.5px] leading-snug text-neutral-500">
-        ⛔ — изменение обрезано потолком §12.1. ● — матч переходного периода §11.2.
+        ⛔ — изменение обрезано потолком п. 12.1. ● — матч переходного периода п. 11.2.
       </p>
     </Panel>
   );

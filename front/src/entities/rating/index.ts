@@ -1,12 +1,12 @@
-/* Ядро расчёта Национального рейтинга: одна точка входа для экранов. */
+/* Рейтинг: одна точка входа для экранов.
 
-export * from './model/types';
-export * from './model/params';
-export * from './model/elo';
-export * from './model/prize';
-export * from './model/start';
-export * from './model/noshow';
-export * from './model/activity';
-export * from './model/run';
-export * from './model/analysis';
-export { round2 } from './model/round';
+   Расчёта на фронте больше нет ✳ (10.09.2026, решение владельца продукта):
+   боевая реализация одна и живёт на бэкенде (`back/rating/engine.py`), фронт
+   только показывает и зовёт ручку предпросчёта для калибровки. Прежняя
+   TypeScript-копия движка удалена — две реализации одной методики неизбежно
+   разъезжаются. Устройство целиком — RATING.md в корне. */
+
+export * from './api/types';
+export * from './api/client';
+export * from './api/hooks';
+export * from './lib/format';
