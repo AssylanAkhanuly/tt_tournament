@@ -61,7 +61,14 @@ export function RatingShell({
   const path = usePathname() || '/rating';
   const { user, loading, isGskChairman, signOut } = useSession();
 
-  if (!loading && user && isGskChairman) {
+  // Пока сессия не известна — никакой оболочки ✳ (11.09.2026). Иначе председатель
+  // сначала видел шапку сайта, потом страница пересобиралась в его оболочку, и
+  // всё, что он успел открыть (выбор выпуска, диалог), закрывалось: дерево под
+  // оболочкой монтировалось заново. Ответ сессии быстрый, пустой кадр короче
+  // вспышки чужой шапки.
+  if (loading) return <FullScreen>{null}</FullScreen>;
+
+  if (user && isGskChairman) {
     const role: RoleUI = {
       num: '5',
       title: 'Председатель ГСК',
