@@ -445,7 +445,10 @@ storage: "7 · ДАННЫЕ · два разных хранилища" {
       template_id: "uuid — из какого шаблона засеян регламент" {constraint: foreign_key}
       govtype: "официальный | клубный — копия kind шаблона, денормализация под фильтр"
       city: string
-      format: "олимпийка | круговая | швейцарка"
+      # «протокол вручную» ✳ (11.09.2026, пилот): результаты турнира, прошедшего
+      # вне системы, — сетки нет, участников и матчи со счётом вносит председатель
+      # ГСК, рейтинг считается тем же пересчётом (RATING.md, раздел 5.1).
+      format: "олимпийка | круговая | швейцарка | протокол вручную"
       discipline: "одиночный | парный | командный"
       status: "состояния, см. ТЗ §4.3"
       games_to_win: int
@@ -778,43 +781,6 @@ storage: "7 · ДАННЫЕ · два разных хранилища" {
       reason: "основание — обязательно для неявки и исправления (п. 15.7, 21.6)"
       is_reverted: "bool — отменена возвратом протокола; строка сохраняется"
       created_by: uuid {constraint: foreign_key}
-    }
-
-    # Выпуск рейтинговой таблицы (п. 8.2) ✳ 11.09.2026: снимок на минуту публикации.
-    # Живая карточка меняется дальше, выпуск — нет; от его даты срок апелляции.
-    rating_edition: RATING_EDITION {
-      shape: sql_table
-      id: uuid {constraint: primary_key}
-      number: "номер выпуска, подряд"
-      published_at: datetime
-      published_by: uuid {constraint: foreign_key}
-      appeal_until: "date — приём апелляций до: +5 рабочих дней (п. 21.2)"
-    }
-
-    rating_edition_row: RATING_EDITION_ROW {
-      shape: sql_table
-      id: uuid {constraint: primary_key}
-      edition_id: uuid {constraint: foreign_key}
-      user_id: uuid {constraint: foreign_key}
-      place: "место в таблице; у неактивного пусто (п. 18.2)"
-      value: "рейтинг на дату выпуска"
-      counters: "матчи, победы, поражения, статус"
-      filters: "пол, год рождения, регион — выборки листа по выпуску"
-    }
-
-    # Апелляция на выпуск (п. 21) ✳ 11.09.2026. Письменная — вносит председатель ГСК.
-    rating_appeal: RATING_APPEAL {
-      shape: sql_table
-      id: uuid {constraint: primary_key}
-      edition_id: uuid {constraint: foreign_key}
-      user_id: uuid {constraint: foreign_key}
-      content: "кто подал, что обжалуется, обстоятельства, требование, документы (п. 21.2)"
-      received_at: "date — не позже срока выпуска"
-      review_until: "date — +10 рабочих дней (п. 21.3)"
-      status: "ждёт решения | удовлетворена | отклонена — решение окончательное"
-      decision: "обоснование — обязательно"
-      correction_id: uuid {constraint: foreign_key}
-      decided_by: uuid {constraint: foreign_key}
     }
 
     # Обе таблицы появились после ревизии дизайна: на схеме архитектуры была

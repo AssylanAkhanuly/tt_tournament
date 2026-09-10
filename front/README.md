@@ -16,7 +16,8 @@ bun dev
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Корень `/` сразу перенаправляет на `/login` ✳ (11.09.2026): `app/page.tsx` —
+только перенаправление, экраны живут в `src/views`.
 
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 
@@ -42,14 +43,17 @@ Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/bui
 
 | Маршрут | Что это |
 |---|---|
-| `/rating` | рейтинг-лист: фильтры по полу, возрасту, региону, поиск, постранично до 500 |
+| `/` | перенаправляет на `/login` ✳ (11.09.2026): заглушки-главной больше нет |
+| `/rating` | рейтинг-лист: фильтры по полу, возрасту, региону, поиск, постранично до 500; председателю ГСК — «Добавить спортсмена» |
 | `/rating/<id>` | карточка спортсмена: значение, счётчики, история изменений со слагаемыми |
-| `/rating/calibration` | подбор коэффициентов: ввод спортсменов и матчей, прогон, наблюдения |
+| `/rating/tournaments` ✳ (11.09.2026) | турниры для рейтинга — председателю ГСК: завершённые рейтинговые и турниры протоколом вручную, «Новый турнир» |
+| `/rating/tournaments/<id>` ✳ (11.09.2026) | страница турнира: уровень, места, участники, матчи, предпросмотр и утверждение; у черновика вручную — правка участников и матчей, у учтённого — «Вернуть на доработку» |
 | `GET /api/rating/` | лист (Django) |
 | `GET /api/rating/<id>/` | карточка с историей |
-| `GET|PATCH /api/rating/params/` | коэффициенты; правит председатель ГСК |
-| `/login` | вход по почте и паролю — временный, для председателя ГСК |
-| `POST /api/rating/preview/` | предпросчёт для калибровки, ничего не сохраняет |
+| `/login` | вход по почте и паролю — временный, для председателя ГСК; вошедший видит карточки аккаунтов этого устройства вместо формы |
+
+Прежние адреса `/rating/protocols` и `/rating/protocols/<id>` постоянно
+перенаправляются на `/rating/tournaments…` (`next.config.ts`).
 
 Лист и карточка открыты без входа — это публичные страницы (ТЗ §3, Э0.4).
 Расчёта на фронте нет: страницы без бэкенда не работают и говорят об этом

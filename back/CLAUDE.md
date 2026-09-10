@@ -15,8 +15,11 @@
   областью и сроком действия;
 - **статусов турнира три** (`open | in_progress | finished`), в ТЗ §4.3 —
   **восемь**, и от них зависят права;
-- **форматов два** (`single_elimination`, `group_playoff`), перечень уточняется
-  у федерации ([QUESTIONS.md](../QUESTIONS.md) §13);
+- **форматов три**: два сеточных (`single_elimination`, `group_playoff`) и
+  `manual` — турнир протоколом вручную ✳ (11.09.2026, пилот): сетки нет, матчи
+  турнира, прошедшего вне системы, вносит председатель ГСК
+  ([RATING.md](../RATING.md), раздел 5.1). Перечень сеточных форматов
+  уточняется у федерации ([QUESTIONS.md](../QUESTIONS.md) §13);
 - политик турнира (кто утверждает, куда идёт рейтинг, модель денег) в модели
   ещё нет — см. `TOURNAMENT_TEMPLATE` в `diagrams/domain.d2`.
 
@@ -44,7 +47,7 @@
 | `tournaments` | Tournaments, participants, bracket/group matches, table management |
 | `clubs` | Clubs, club admins (ClubAdmin), club tables (ClubTable) |
 | `notifications` | In-app notifications feed |
-| `rating` | Национальный рейтинг спортсменов. Движок (`engine.py`) — чистая арифметика Положения ФНТ РК без обращений к базе; сборка (`services.py`) читает протокол турнира, зовёт движок и раскладывает результат по журналу и карточкам; API — список, карточка, коэффициенты, предпросчёт для калибровки, фиксация неявки. **Журнал `RatingEntry` — источник правды:** значение карточки всегда равно сумме неотменённых строк, поэтому откат протокола помечает строки отменёнными и пересобирает карточку, а не «вычитает обратно». Прежняя методика RTTF из прототипа удалена вместе с полем `User.rating`. Устройство целиком — [RATING.md](../RATING.md). Тесты — `pytest rating` (105 проверок). Показательные данные: `manage.py seed_rating_demo --reset`; статусы активности: `manage.py refresh_activity` |
+| `rating` | Национальный рейтинг спортсменов. Движок (`engine.py`) — чистая арифметика Положения ФНТ РК без обращений к базе; сборка (`services.py`) читает протокол турнира, зовёт движок и раскладывает результат по журналу и карточкам; API — лист, карточка, заведение спортсмена (старт считает сервер по п. 6.1, 6.3, 17.4), фиксация неявки, исправление значения, объединение дублей, протоколы (список, страница, предпросмотр, утверждение с пересчётом, возврат на доработку) и турниры протоколом вручную ✳ (11.09.2026): `manual.py` заводит турнир формата `manual`, участников и матчи, а утверждение уходит в тот же `set_protocol` → `apply_tournament` — второго расчёта нет. Коэффициенты (`RatingParams`) правятся только в Django-админке ✳ (11.09.2026): экран калибровки, выпуски, апелляции и журнал председателя сняты решением владельца продукта вместе с их ручками. **Журнал `RatingEntry` — источник правды:** значение карточки всегда равно сумме неотменённых строк, поэтому откат протокола помечает строки отменёнными и пересобирает карточку, а не «вычитает обратно». Прежняя методика RTTF из прототипа удалена вместе с полем `User.rating`. Устройство целиком — [RATING.md](../RATING.md). Тесты — `pytest rating`. Показательные данные: `manage.py seed_rating_demo --reset` (сносит и заведённое сквозными проверками — турниры и пользователей с «[e2e] » в названии); статусы активности: `manage.py refresh_activity` |
 | `scoreboard` | Live score of a streamed table: one row per board, read by the OBS overlay, written by the operator's panel (`front/` → `/scoreboard`). Clients subscribe over SSE (`<key>/stream/`); the stream watches the row's `rev` because gunicorn's two processes share no memory. Holds the discipline (`mode` — single / doubles / team, set by the panel's top tab bar), serve (`first_server` — who served first this game; the current server is derived from the score), the pair's second name (`*_name2`), time-outs, cards, and the team tie's overall score with team names (`team_*`, on air above the players in `mode=team`). Optimistic concurrency on `rev`, ETag/304 on the snapshot GET. **An open stream holds a gunicorn thread** — `nixpacks.toml` runs 12 threads per worker for that. Has tests — `manage.py test scoreboard` |
 
 ## Auth
@@ -75,7 +78,7 @@
 - `ClubTable`: club-level physical tables (number, name, is_active)
 
 ### Tournament (`tournaments/models.py`)
-- `format`: `single_elimination` | `group_playoff`
+- `format`: `single_elimination` | `group_playoff` | `manual` («Протокол вручную» ✳ 11.09.2026: сетки нет, участников и матчи вносит председатель ГСК через `rating/manual.py`; миграция `0017`)
 - `group_size`: players per group (default 4)
 - `status`: `open` | `in_progress` | `finished`
 - `TournamentTable`: tournament-specific tables (pre-populated from ClubTable on create)
