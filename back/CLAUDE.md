@@ -70,7 +70,13 @@
 ## Key Models
 
 ### User (`users/models.py`)
-- `phone` (USERNAME_FIELD), `name`, `is_staff`, `rating` (default 100)
+- `id` (UUID), `phone` (USERNAME_FIELD), `name`, `email` (уникальна, может быть пустой —
+  временный вход по почте и паролю, только для пользователей с ролью), `avatar`,
+  `is_active`, `is_staff`, `created_at`; роли — `user.roles` (`users.Role`, см. «Auth»)
+- Рейтинга на пользователе нет ✳ (10.09.2026): поле `rating` удалено вместе с методикой
+  RTTF (миграция `0004_remove_user_rating`), значение живёт в `rating.RatingProfile`.
+  `GET /api/auth/me/` по-прежнему отдаёт `rating` — строкой из карточки, `null`, если
+  карточки нет (`users/serializers.py`)
 
 ### Club (`clubs/models.py`)
 - `Club`: name, description, created_by
@@ -79,6 +85,7 @@
 
 ### Tournament (`tournaments/models.py`)
 - `format`: `single_elimination` | `group_playoff` | `manual` («Протокол вручную» ✳ 11.09.2026: сетки нет, участников и матчи вносит председатель ГСК через `rating/manual.py`; миграция `0017`)
+- `games_to_win`: партий до победы в матче (default 3). Турнир вручную заводится с 2, 3 или 4 (`rating/manual.py::GAMES_TO_WIN`), и `manual.add_match` принимает только счёт «у победителя ровно N, у проигравшего меньше» ✳ 11.09.2026; миграция `0018`
 - `group_size`: players per group (default 4)
 - `status`: `open` | `in_progress` | `finished`
 - `TournamentTable`: tournament-specific tables (pre-populated from ClubTable on create)

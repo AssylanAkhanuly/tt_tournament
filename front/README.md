@@ -1,40 +1,78 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Веб платформы ФНТ РК (`front/`)
 
-## Getting Started
+Веб-клиент цифровой платформы турниров Федерации настольного тенниса РК:
+публичные страницы, экраны ролей, пульт и плашка табло трансляции. Next.js 16
+(App Router), React 19, TypeScript; стили — Tailwind + HeroUI, нативный CSS там,
+где Tailwind не тянет. Данные хранит и считает Django (`back/`), фронт — экраны
+и транспорт.
 
-First, run the development server:
+Структура (Feature-Sliced Design), стили и правила работы в модуле —
+[CLAUDE.md](CLAUDE.md). Требования и модель — в корне репозитория:
+[TZ.md](../TZ.md), [ARCHITECTURE.md](../ARCHITECTURE.md).
+
+## Запуск
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install
+npm run dev          # http://localhost:3000
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Рядом нужен бэкенд на `:8000`
+(`cd ../back && C:\apps\tt_back\venv\Scripts\python.exe manage.py runserver`).
+Браузер ходит только во фронт: `next.config.ts` проксирует `/api/*` в Django,
+поэтому куки JWT остаются первой стороной, а серверные компоненты могут
+пробросить их дальше. Адрес бэкенда — переменная `NEXT_PUBLIC_API_URL`, по
+умолчанию `http://localhost:8000`; её же читает серверный транспорт табло
+(`src/entities/scoreboard/api.server.ts`).
 
-Корень `/` сразу перенаправляет на `/login` ✳ (11.09.2026): `app/page.tsx` —
-только перенаправление, экраны живут в `src/views`.
+## Проверки
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+npx tsc --noEmit     # типы
+npm run lint         # ESLint
+npm test             # юниты, Vitest
+npm run test:e2e     # сквозные, Playwright (то же, что npx playwright test)
+```
 
-## Learn More
+Playwright сам поднимает и Next (`npm run dev`), и Django
+(`manage.py runserver 8000`); уже запущенные серверы переиспользует
+(`playwright.config.ts`). Перед прогоном `e2e/global-setup.ts` приводит базу в
+известное состояние: `seed_rating_demo --reset` пересобирает показательный
+рейтинг боевым расчётом и сносит заведённое прошлыми прогонами (всё с «[e2e] »
+в названии), `create_gsk_chairman` заводит учётку председателя ГСК для проверок
+входа и правок. Дев-база при этом меняется — это её назначение. Путь к Python
+из venv бэкенда прописан в обоих файлах.
 
-To learn more about Next.js, take a look at the following resources:
+## CSS кита
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```bash
+npm run kit:css      # src/shared/kit/tailwind.src.css → src/shared/kit/tailwind.css
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Собранный CSS лежит в репозитории: после правки классов в ките без пересборки
+новые классы не появятся. Сборка Tailwind одна на проект — Storybook в
+`design/` зовёт этот же скрипт.
 
-## Deploy on Vercel
+## Маршруты
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+| Маршрут | Что это |
+|---|---|
+| `/` | перенаправляет на `/login` ✳ (11.09.2026): `app/page.tsx` — только перенаправление, заглушки-главной больше нет |
+| `/login` | вход по почте и паролю — временный, для председателя ГСК; вошедший видит карточки аккаунтов этого устройства вместо формы |
+| `/rating…` | рейтинг игроков — раздел ниже |
+| `/scoreboard`, `/scoreboard/overlay` | пульт и плашка табло трансляции — раздел ниже |
+| `/bracket` | турнирная сетка на React Flow, пока на образце данных (`src/entities/bracket/sample`) |
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+`app/` — только роутинг, экраны живут в `src/views`.
+
+Прежние адреса постоянно перенаправляются вместе со строкой запроса
+(`next.config.ts`): `/reyting…` → `/rating…`, `/vhod` → `/login`, `/setka` →
+`/bracket` (адреса по-английски с 10.09.2026); `/rating/protocols` и
+`/rating/protocols/<id>` → `/rating/tournaments…` (с 11.09.2026).
+
+## Деплой
+
+Vercel, проект `tt-tournament`, по пушу в `main`.
 
 ## Рейтинг игроков
 
@@ -43,17 +81,12 @@ Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/bui
 
 | Маршрут | Что это |
 |---|---|
-| `/` | перенаправляет на `/login` ✳ (11.09.2026): заглушки-главной больше нет |
-| `/rating` | рейтинг-лист: фильтры по полу, возрасту, региону, поиск, постранично до 500; председателю ГСК — «Добавить спортсмена» |
+| `/rating` | рейтинг-лист: фильтры по полу, возрасту, статусу активности, поиск по фамилии или региону; страница — 100 строк (сервер отдаёт до 500); председателю ГСК — «Добавить спортсмена» |
 | `/rating/<id>` | карточка спортсмена: значение, счётчики, история изменений со слагаемыми |
 | `/rating/tournaments` ✳ (11.09.2026) | турниры для рейтинга — председателю ГСК: завершённые рейтинговые и турниры протоколом вручную, «Новый турнир» |
 | `/rating/tournaments/<id>` ✳ (11.09.2026) | страница турнира: уровень, места, участники, матчи, предпросмотр и утверждение; у черновика вручную — правка участников и матчей, у учтённого — «Вернуть на доработку» |
 | `GET /api/rating/` | лист (Django) |
 | `GET /api/rating/<id>/` | карточка с историей |
-| `/login` | вход по почте и паролю — временный, для председателя ГСК; вошедший видит карточки аккаунтов этого устройства вместо формы |
-
-Прежние адреса `/rating/protocols` и `/rating/protocols/<id>` постоянно
-перенаправляются на `/rating/tournaments…` (`next.config.ts`).
 
 Лист и карточка открыты без входа — это публичные страницы (ТЗ §3, Э0.4).
 Расчёта на фронте нет: страницы без бэкенда не работают и говорят об этом
