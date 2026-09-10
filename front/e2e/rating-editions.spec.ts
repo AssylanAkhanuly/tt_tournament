@@ -127,3 +127,15 @@ test('апелляция: регистрируется с карточки и р
     page.getByTestId('card-history-row').filter({ hasText: 'Апелляция №' }),
   ).toBeVisible();
 });
+
+/* Журнал (п. 20, 22.2): правка из теста выпусков видна в нём с суммой,
+   основанием и автором. */
+test('журнал показывает правку с суммой, основанием и автором', async ({ page }) => {
+  await войти(page, '/rating/journal');
+  await page.getByPlaceholder('Спортсмен').fill(ИМЯ);
+  const строка = page
+    .locator('[data-testid="journal-row"][data-player="' + ИМЯ + '"]')
+    .filter({ hasText: 'Сверка с протоколом' });
+  await expect(строка).toContainText('+0,86');
+  await expect(строка).toContainText('Председатель ГСК (проверки)');
+});

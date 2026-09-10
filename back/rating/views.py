@@ -321,6 +321,52 @@ class RatingEditionDraftView(APIView):
         return Response(EditionDraftRowSerializer(services.edition_draft(), many=True).data)
 
 
+#: Журнал постранично: строк много, а смотрят обычно последние.
+JOURNAL_PAGE_DEFAULT = 50
+JOURNAL_PAGE_MAX = 200
+
+
+class RatingJournalView(APIView):
+    """Журнал изменений (п. 20, 21.6, 22.2): все строки истории всех
+    спортсменов, новые первыми, с автором и основанием. Отменённые остаются с
+    пометкой — история хранится без удаления. Только чтение, только
+    председателю ГСК: он обеспечивает сохранность базы и истории (п. 22.2)."""
+
+    permission_classes = [IsGskChairman]
+
+    def get(self, request):
+        from .serializers import RatingJournalEntrySerializer
+
+        qs = RatingEntry.objects.select_related("profile__user", "tournament", "opponent", "created_by")
+        kind = request.query_params.get("kind")
+        if kind:
+            qs = qs.filter(kind=kind)
+        search = request.query_params.get("q")
+        if search:
+            qs = qs.filter(profile__user__name__icontains=search)
+        user_id = request.query_params.get("user_id")
+        if user_id:
+            qs = qs.filter(profile__user_id=user_id)
+
+        qs = qs.order_by("-created_at", "-id")
+        total = qs.count()
+        try:
+            size = min(int(request.query_params.get("page_size", JOURNAL_PAGE_DEFAULT)), JOURNAL_PAGE_MAX)
+            page = max(1, int(request.query_params.get("page", 1)))
+        except (TypeError, ValueError):
+            size, page = JOURNAL_PAGE_DEFAULT, 1
+
+        rows = qs[(page - 1) * size: page * size]
+        return Response(
+            {
+                "count": total,
+                "page": page,
+                "page_size": size,
+                "results": RatingJournalEntrySerializer(rows, many=True).data,
+            }
+        )
+
+
 class RatingAppealsView(APIView):
     """Апелляции (п. 21): очередь и регистрация — председатель ГСК.
 

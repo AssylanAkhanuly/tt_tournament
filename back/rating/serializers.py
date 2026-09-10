@@ -60,6 +60,18 @@ class RatingEntrySerializer(serializers.ModelSerializer):
         read_only_fields = fields
 
 
+class RatingJournalEntrySerializer(RatingEntrySerializer):
+    """Строка журнала: та же строка истории плюс чья она и кто её внёс."""
+
+    athlete_id = serializers.CharField(source="profile.user.id", read_only=True)
+    athlete_name = serializers.CharField(source="profile.user.name", read_only=True)
+    created_by_name = serializers.CharField(source="created_by.name", read_only=True, default=None)
+
+    class Meta(RatingEntrySerializer.Meta):
+        fields = RatingEntrySerializer.Meta.fields + ["athlete_id", "athlete_name", "created_by_name"]
+        read_only_fields = fields
+
+
 class RatingCardSerializer(serializers.Serializer):
     """Карточка спортсмена целиком: шапка плюс история изменений."""
 
