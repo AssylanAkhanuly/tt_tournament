@@ -1,6 +1,8 @@
 from django.urls import path
 
 from .views import (
+    RatingAppealDecisionView,
+    RatingAppealsView,
     RatingCardView,
     RatingCorrectionView,
     RatingEditionDraftView,
@@ -19,5 +21,7 @@ urlpatterns = [
     path("correction/", RatingCorrectionView.as_view(), name="rating-correction"),
     path("editions/", RatingEditionsView.as_view(), name="rating-editions"),
     path("editions/draft/", RatingEditionDraftView.as_view(), name="rating-edition-draft"),
+    path("appeals/", RatingAppealsView.as_view(), name="rating-appeals"),
+    path("appeals/<int:pk>/decision/", RatingAppealDecisionView.as_view(), name="rating-appeal-decision"),
     path("<uuid:user_id>/", RatingCardView.as_view(), name="rating-card"),
 ]

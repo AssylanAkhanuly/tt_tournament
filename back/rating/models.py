@@ -381,3 +381,64 @@ class RatingEditionRow(models.Model):
         if not self.birth_year:
             return None
         return engine.age_category(date.today().year, self.birth_year)
+
+
+class RatingAppeal(models.Model):
+    """Апелляция на рейтинг (п. 21.1–21.4) ✳ (11.09.2026).
+
+    Подаётся в письменной форме в адрес Федерации (п. 21.2), поэтому в системе
+    её регистрирует председатель ГСК — с тем, что требует п. 21.2: кто подал,
+    что обжалуется, обстоятельства, требование, документы. Обжалуется всегда
+    конкретный выпуск: от его даты считается срок подачи.
+
+    Решение окончательное. Удовлетворённая апелляция исправляет значение
+    отдельной строкой журнала (`correction`) — выпуск при этом не меняется,
+    подача не приостанавливает опубликованный рейтинг (п. 21.2), изменение
+    уходит в следующий выпуск (п. 21.4).
+    """
+
+    STATUS_PENDING = "pending"
+    STATUS_UPHELD = "upheld"
+    STATUS_REJECTED = "rejected"
+    STATUS_CHOICES = [
+        (STATUS_PENDING, "Ждёт решения"),
+        (STATUS_UPHELD, "Удовлетворена"),
+        (STATUS_REJECTED, "Отклонена"),
+    ]
+
+    edition = models.ForeignKey(RatingEdition, on_delete=models.CASCADE, related_name="appeals")
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="rating_appeals",
+    )
+    applicant = models.CharField(max_length=120, blank=True, verbose_name="Кто подал (п. 21.1)")
+    subject = models.TextField(verbose_name="Обжалуемое значение или действие")
+    circumstances = models.TextField(blank=True, verbose_name="Обстоятельства")
+    demand = models.TextField(verbose_name="Требование")
+    documents = models.TextField(blank=True, verbose_name="Документы")
+
+    received_at = models.DateField(verbose_name="Получена")
+    review_until = models.DateField(verbose_name="Рассмотреть до (п. 21.3)")
+
+    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default=STATUS_PENDING)
+    decision = models.TextField(blank=True, verbose_name="Решение")
+    decided_at = models.DateTimeField(null=True, blank=True)
+    decided_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, null=True, blank=True,
+        on_delete=models.SET_NULL, related_name="rating_appeals_decided",
+    )
+    correction = models.ForeignKey(
+        RatingEntry, null=True, blank=True, on_delete=models.SET_NULL, related_name="appeals",
+    )
+    registered_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, null=True, blank=True,
+        on_delete=models.SET_NULL, related_name="rating_appeals_registered",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "Апелляция"
+        verbose_name_plural = "Апелляции"
+        ordering = ["-received_at", "-id"]
+
+    def __str__(self) -> str:
+        return "Апелляция №%s — %s" % (self.pk, self.user)

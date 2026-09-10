@@ -443,6 +443,21 @@ rating_edition_row: RATING_EDITION_ROW {
   filters: "пол, год рождения, регион — выборки листа по выпуску"
 }
 
+# Апелляция на выпуск (п. 21) ✳ 11.09.2026. Письменная — вносит председатель ГСК.
+rating_appeal: RATING_APPEAL {
+  shape: sql_table
+  id: uuid {constraint: primary_key}
+  edition_id: uuid {constraint: foreign_key}
+  user_id: uuid {constraint: foreign_key}
+  content: "кто подал, что обжалуется, обстоятельства, требование, документы (п. 21.2)"
+  received_at: "date — не позже срока выпуска"
+  review_until: "date — +10 рабочих дней (п. 21.3)"
+  status: "ждёт решения | удовлетворена | отклонена — решение окончательное"
+  decision: "обоснование — обязательно"
+  correction_id: uuid {constraint: foreign_key}
+  decided_by: uuid {constraint: foreign_key}
+}
+
 # Обе таблицы появились после ревизии дизайна: на схеме архитектуры была
 # «лента уведомлений» и «регистрация токена», а хранилища под ними — не было.
 notification: NOTIFICATION {
@@ -634,6 +649,9 @@ user.id -> rating_params.updated_by: кто правил коэффициент�
 rating_edition.id -> rating_edition_row.edition_id: снимок таблицы (п. 8.2)
 user.id -> rating_edition_row.user_id: строка выпуска
 user.id -> rating_edition.published_by: опубликовал
+rating_edition.id -> rating_appeal.edition_id: обжалуется выпуск (срок от его даты)
+user.id -> rating_appeal.user_id: чей рейтинг
+rating_entry.id -> rating_appeal.correction_id: исправление по удовлетворённой
 
 scoreboard: SCOREBOARD {
   shape: sql_table

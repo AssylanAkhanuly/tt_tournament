@@ -319,3 +319,98 @@ class RatingEditionDraftView(APIView):
 
     def get(self, request):
         return Response(EditionDraftRowSerializer(services.edition_draft(), many=True).data)
+
+
+class RatingAppealsView(APIView):
+    """Апелляции (п. 21): очередь и регистрация — председатель ГСК.
+
+    Апелляция подаётся письменно в Федерацию (п. 21.2), в систему её вносит
+    председатель. Выпуск по умолчанию — последний: обжалуют опубликованное.
+    """
+
+    permission_classes = [IsGskChairman]
+
+    def get(self, request):
+        from .models import RatingAppeal
+        from .serializers import RatingAppealSerializer
+
+        qs = RatingAppeal.objects.select_related("user", "edition", "decided_by", "correction")
+        state = request.query_params.get("status")
+        if state:
+            qs = qs.filter(status=state)
+        return Response(RatingAppealSerializer(qs, many=True).data)
+
+    def post(self, request):
+        from django.contrib.auth import get_user_model
+        from django.core.exceptions import ValidationError
+        from django.utils.dateparse import parse_date
+
+        from .serializers import RatingAppealSerializer
+
+        try:
+            user = get_user_model().objects.filter(pk=request.data.get("user_id")).first()
+        except (ValueError, ValidationError):
+            user = None
+        if not user:
+            return Response({"detail": "Спортсмен не найден"}, status=status.HTTP_404_NOT_FOUND)
+
+        edition_id = request.data.get("edition_id")
+        edition = (
+            RatingEdition.objects.filter(pk=edition_id).first()
+            if edition_id
+            else RatingEdition.objects.order_by("-number").first()
+        )
+        if not edition:
+            return Response(
+                {"detail": "Выпусков ещё нет — обжаловать нечего"}, status=status.HTTP_400_BAD_REQUEST
+            )
+
+        received = request.data.get("received_at")
+        try:
+            appeal = services.register_appeal(
+                edition,
+                user,
+                received_at=parse_date(received) if received else None,
+                applicant=request.data.get("applicant") or "",
+                subject=request.data.get("subject") or "",
+                circumstances=request.data.get("circumstances") or "",
+                demand=request.data.get("demand") or "",
+                documents=request.data.get("documents") or "",
+                actor=request.user,
+            )
+        except services.AppealError as e:
+            return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        return Response(RatingAppealSerializer(appeal).data, status=status.HTTP_201_CREATED)
+
+
+class RatingAppealDecisionView(APIView):
+    """Решение по апелляции (п. 21.4): удовлетворить с исправленным значением
+    или отклонить. Обоснование обязательно, решение окончательное."""
+
+    permission_classes = [IsGskChairman]
+
+    def post(self, request, pk):
+        from .models import RatingAppeal
+        from .serializers import RatingAppealSerializer
+
+        appeal = RatingAppeal.objects.filter(pk=pk).first()
+        if not appeal:
+            return Response({"detail": "Апелляция не найдена"}, status=status.HTTP_404_NOT_FOUND)
+
+        raw = request.data.get("value")
+        try:
+            value = float(raw) if raw not in (None, "") else None
+        except (TypeError, ValueError):
+            return Response({"detail": "Значение рейтинга — число"}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            services.decide_appeal(
+                appeal,
+                upheld=bool(request.data.get("upheld")),
+                decision=request.data.get("decision") or "",
+                value=value,
+                actor=request.user,
+            )
+        except services.AppealError as e:
+            return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        return Response(RatingAppealSerializer(appeal).data)

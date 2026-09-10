@@ -19,7 +19,14 @@ from django.db.models import Q
 from django.utils import timezone
 
 from . import engine
-from .models import RatingEdition, RatingEditionRow, RatingEntry, RatingParams, RatingProfile
+from .models import (
+    RatingAppeal,
+    RatingEdition,
+    RatingEditionRow,
+    RatingEntry,
+    RatingParams,
+    RatingProfile,
+)
 
 
 def _dec(x: float, places: str = "0.01") -> Decimal:
@@ -461,6 +468,91 @@ def edition_draft() -> List[dict]:
         )
     out.sort(key=lambda d: (d["before"] is None, -abs(d["delta"] or 0), d["name"]))
     return out
+
+
+# ── Апелляции (п. 21.1–21.4) ────────────────────────────────────────
+
+
+class AppealError(ValueError):
+    """Апелляцию нельзя принять или решить. Текст объясняет почему — его
+    показывает экран, а не придумывает свой."""
+
+
+def _ru(d: date) -> str:
+    return d.strftime("%d.%m.%Y")
+
+
+@transaction.atomic
+def register_appeal(
+    edition,
+    user,
+    *,
+    received_at: Optional[date] = None,
+    applicant: str = "",
+    subject: str = "",
+    circumstances: str = "",
+    demand: str = "",
+    documents: str = "",
+    actor=None,
+) -> RatingAppeal:
+    """Зарегистрировать письменную апелляцию на выпуск (п. 21.2).
+
+    Принимается от публикации выпуска до конца пятого рабочего дня. Срок
+    рассмотрения — 10 рабочих дней с получения (п. 21.3).
+    """
+    received_at = received_at or timezone.localdate()
+    if not (subject or "").strip():
+        raise AppealError("Не указано, что обжалуется (п. 21.2)")
+    if not (demand or "").strip():
+        raise AppealError("Не указано требование (п. 21.2)")
+    if received_at < timezone.localdate(edition.published_at):
+        raise AppealError("Апелляция не может быть получена раньше публикации выпуска")
+    if received_at > edition.appeal_until:
+        raise AppealError(
+            "Срок подачи истёк %s — 5 рабочих дней с публикации выпуска №%s (п. 21.2)"
+            % (_ru(edition.appeal_until), edition.number)
+        )
+
+    return RatingAppeal.objects.create(
+        edition=edition,
+        user=user,
+        applicant=applicant.strip(),
+        subject=subject.strip(),
+        circumstances=circumstances.strip(),
+        demand=demand.strip(),
+        documents=documents.strip(),
+        received_at=received_at,
+        review_until=engine.add_working_days(received_at, engine.APPEAL_REVIEW_WORKING_DAYS),
+        registered_by=actor,
+    )
+
+
+@transaction.atomic
+def decide_appeal(appeal: RatingAppeal, *, upheld: bool, decision: str, value=None, actor=None) -> RatingAppeal:
+    """Решение по апелляции (п. 21.4) — окончательное.
+
+    Удовлетворить значит исправить значение: разница дописывается строкой
+    журнала со ссылкой на апелляцию (п. 21.6), опубликованный выпуск не
+    трогается — изменение уйдёт в следующий.
+    """
+    if appeal.status != RatingAppeal.STATUS_PENDING:
+        raise AppealError("По апелляции уже есть решение — оно окончательное")
+    decision = (decision or "").strip()
+    if not decision:
+        raise AppealError("Обоснование решения обязательно (п. 21.4)")
+    if upheld and value is None:
+        raise AppealError("Чтобы удовлетворить апелляцию, нужно исправленное значение рейтинга")
+
+    if upheld:
+        appeal.correction = register_correction(
+            appeal.user, value, reason="Апелляция №%s: %s" % (appeal.pk, decision), actor=actor
+        )
+    appeal.status = RatingAppeal.STATUS_UPHELD if upheld else RatingAppeal.STATUS_REJECTED
+    appeal.decision = decision
+    appeal.decided_at = timezone.now()
+    appeal.decided_by = actor
+    appeal.save()
+    return appeal
 
 
 def preview(players: Sequence[dict], tournaments: Sequence[dict], matches: Sequence[dict],

@@ -7,7 +7,14 @@
 from rest_framework import serializers
 
 from . import engine
-from .models import RatingEdition, RatingEditionRow, RatingEntry, RatingParams, RatingProfile
+from .models import (
+    RatingAppeal,
+    RatingEdition,
+    RatingEditionRow,
+    RatingEntry,
+    RatingParams,
+    RatingProfile,
+)
 
 
 class RatingProfileSerializer(serializers.ModelSerializer):
@@ -106,6 +113,30 @@ class EditionDraftRowSerializer(serializers.Serializer):
     before = serializers.DecimalField(max_digits=6, decimal_places=2, allow_null=True)
     after = serializers.DecimalField(max_digits=6, decimal_places=2)
     delta = serializers.DecimalField(max_digits=6, decimal_places=2, allow_null=True)
+
+
+class RatingAppealSerializer(serializers.ModelSerializer):
+    """Апелляция: кто, на какой выпуск, что и чего требует, сроки и решение."""
+
+    user_id = serializers.CharField(source="user.id", read_only=True)
+    name = serializers.CharField(source="user.name", read_only=True)
+    edition_number = serializers.IntegerField(source="edition.number", read_only=True)
+    status_label = serializers.CharField(source="get_status_display", read_only=True)
+    decided_by_name = serializers.CharField(source="decided_by.name", read_only=True, default=None)
+    correction_after = serializers.DecimalField(
+        source="correction.after", max_digits=6, decimal_places=2, read_only=True, default=None
+    )
+
+    class Meta:
+        model = RatingAppeal
+        fields = [
+            "id", "user_id", "name", "edition", "edition_number",
+            "applicant", "subject", "circumstances", "demand", "documents",
+            "received_at", "review_until",
+            "status", "status_label", "decision", "decided_at", "decided_by_name",
+            "correction_after", "created_at",
+        ]
+        read_only_fields = fields
 
 
 class RatingParamsSerializer(serializers.ModelSerializer):

@@ -1019,6 +1019,10 @@ sequenceDiagram
   рейтинговой таблицы (п. 8.2) и его строки: снимок значений и мест на минуту
   публикации. Публичный лист показывает последний выпуск; от даты выпуска
   считается срок апелляции (п. 21.2), он же хранится в выпуске.
+- **`RATING_APPEAL`** ✳ (11.09.2026) — апелляция на выпуск (п. 21): письменную
+  апелляцию вносит председатель ГСК, срок подачи — по выпуску, рассмотрения —
+  10 рабочих дней. Удовлетворённая ссылается на строку исправления в
+  `RATING_ENTRY`; выпуск при этом не меняется.
 
 ```mermaid
 erDiagram
@@ -1072,6 +1076,9 @@ erDiagram
     RATING_EDITION ||--o{ RATING_EDITION_ROW : "снимок таблицы"
     USER ||--o{ RATING_EDITION_ROW : "строка выпуска"
     USER ||--o{ RATING_EDITION : "опубликовал"
+    RATING_EDITION ||--o{ RATING_APPEAL : "обжалуется выпуск"
+    USER ||--o{ RATING_APPEAL : "чей рейтинг"
+    RATING_ENTRY |o--o| RATING_APPEAL : "исправление по удовлетворённой"
     TOURNAMENT }o--o| BRACKET_TEMPLATE : "собрана по шаблону"
     USER ||--o{ BRACKET_TEMPLATE : "автор шаблона"
     TOURNAMENT }o--o| TOURNAMENT_TEMPLATE : "заведён по пресету регламента"
@@ -1340,6 +1347,20 @@ erDiagram
         string sex "поля выборок — лист выпуска фильтруется как живой"
         int birthYear
         string region
+    }
+    RATING_APPEAL {
+        uuid id PK
+        uuid editionId FK "обжалуется выпуск"
+        uuid userId FK
+        string applicant "кто подал (п. 21.1)"
+        string subject "что обжалуется"
+        string demand "требование"
+        date receivedAt "не позже срока выпуска (п. 21.2)"
+        date reviewUntil "+10 рабочих дней (п. 21.3)"
+        string status "ждёт решения | удовлетворена | отклонена"
+        string decision "обоснование — обязательно"
+        uuid correctionId FK "строка исправления по удовлетворённой"
+        uuid decidedBy FK
     }
     BRACKET_TEMPLATE {
         uuid id PK
