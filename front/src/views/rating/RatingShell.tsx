@@ -18,7 +18,7 @@
    решение владельца продукта): между разделами ведут меню роли и шапка сайта. */
 
 import { Button } from '@heroui/react';
-import { BarChart3, LogIn, SlidersHorizontal } from 'lucide-react';
+import { BarChart3, LogIn, Newspaper, SlidersHorizontal } from 'lucide-react';
 import { usePathname, useRouter } from 'next/navigation';
 import type { ReactNode } from 'react';
 
@@ -28,6 +28,7 @@ import { AppChrome, FullScreen, SiteHeader, type RoleUI } from '@/shared/kit/app
 /** Разделы кабинета председателя, которые уже есть в приложении. */
 const NAV: [string, string, ReactNode][] = [
   ['Рейтинг игроков', '/rating', <BarChart3 size={16} key="r" />],
+  ['Выпуски', '/rating/editions', <Newspaper size={16} key="e" />],
   ['Калибровка', '/rating/calibration', <SlidersHorizontal size={16} key="k" />],
 ];
 

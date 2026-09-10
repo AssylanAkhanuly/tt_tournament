@@ -277,9 +277,6 @@
 .ms-auto {
   margin-inline-start: auto;
 }
-.-mt-2 {
-  margin-top: calc(var(--spacing) * -2);
-}
 .-mt-7 {
   margin-top: calc(var(--spacing) * -7);
 }
@@ -506,9 +503,6 @@
 .h-\[840px\] {
   height: 840px;
 }
-.h-fit {
-  height: fit-content;
-}
 .h-full {
   height: 100%;
 }
@@ -686,9 +680,6 @@
 .max-w-2xl {
   max-width: var(--container-2xl);
 }
-.max-w-3xl {
-  max-width: var(--container-3xl);
-}
 .max-w-4xl {
   max-width: var(--container-4xl);
 }
@@ -727,9 +718,6 @@
 }
 .max-w-md {
   max-width: var(--container-md);
-}
-.max-w-prose {
-  max-width: 65ch;
 }
 .max-w-sm {
   max-width: var(--container-sm);
@@ -1776,10 +1764,6 @@
 .font-medium {
   --tw-font-weight: var(--font-weight-medium);
   font-weight: var(--font-weight-medium);
-}
-.font-normal {
-  --tw-font-weight: var(--font-weight-normal);
-  font-weight: var(--font-weight-normal);
 }
 .font-semibold {
   --tw-font-weight: var(--font-weight-semibold);

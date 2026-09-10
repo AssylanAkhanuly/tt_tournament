@@ -1,7 +1,9 @@
 /* Рейтинг игроков — публичная страница (ТЗ §3, экран Э0.4).
-   Маршрут тонкий: композиция во `views`. */
+   Маршрут тонкий: композиция во `views`. Suspense — потому что лист читает
+   выпуск из адреса (`?edition=`), а без границы Next не соберёт страницу. */
 
 import type { Metadata } from 'next';
+import { Suspense } from 'react';
 import { RatingListView } from '@/views/rating';
 
 export const metadata: Metadata = {
@@ -11,5 +13,9 @@ export const metadata: Metadata = {
 };
 
 export default function RatingPage() {
-  return <RatingListView />;
+  return (
+    <Suspense>
+      <RatingListView />
+    </Suspense>
+  );
 }

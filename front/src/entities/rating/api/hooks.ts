@@ -9,6 +9,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import {
+  fetchEditionDraft,
+  fetchEditions,
   fetchRatingCard,
   fetchRatingList,
   fetchRatingParams,
@@ -17,11 +19,13 @@ import {
   type RatingListQuery,
 } from './client';
 import type {
+  EditionDraftRow,
   PreviewMatch,
   PreviewPlayer,
   PreviewResult,
   PreviewTournament,
   RatingCard,
+  RatingEdition,
   RatingList,
   RatingParams,
 } from './types';
@@ -72,6 +76,16 @@ export function useRatingList(query: RatingListQuery): AsyncState<RatingList> {
 
 export function useRatingCard(userId: string): AsyncState<RatingCard> {
   return useAsync(() => fetchRatingCard(userId), [userId]);
+}
+
+/** Выпуски, новые первыми (п. 8.2). */
+export function useEditions(): AsyncState<RatingEdition[]> {
+  return useAsync(() => fetchEditions(), []);
+}
+
+/** Черновик следующего выпуска — только председателю ГСК. */
+export function useEditionDraft(): AsyncState<EditionDraftRow[]> {
+  return useAsync(() => fetchEditionDraft(), []);
 }
 
 export function useRatingParams() {

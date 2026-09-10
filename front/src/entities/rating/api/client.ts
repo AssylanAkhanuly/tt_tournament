@@ -8,11 +8,13 @@
    в одном месте. */
 
 import type {
+  EditionDraftRow,
   PreviewMatch,
   PreviewPlayer,
   PreviewResult,
   PreviewTournament,
   RatingCard,
+  RatingEdition,
   RatingEntry,
   RatingList,
   RatingParams,
@@ -136,6 +138,15 @@ const toParams = (raw: Record<string, unknown>): RatingParams => ({
   sources: (raw.sources ?? {}) as RatingParams['sources'],
 });
 
+const toEdition = (raw: Record<string, unknown>): RatingEdition => ({
+  id: n(raw.id),
+  number: n(raw.number),
+  publishedAt: String(raw.published_at ?? ''),
+  publishedByName: (raw.published_by_name as string) ?? null,
+  appealUntil: String(raw.appeal_until ?? ''),
+  rows: n(raw.rows),
+});
+
 /* ── Ручки ──────────────────────────────────────────────────────── */
 
 export type RatingListQuery = {
@@ -147,6 +158,8 @@ export type RatingListQuery = {
   all?: boolean;
   page?: number;
   pageSize?: number;
+  /** Номер записи выпуска или `live` — живые значения. Без него — последний выпуск. */
+  edition?: string;
 };
 
 /** Рейтинг-лист (Э0.4). По умолчанию активный: неактивные исключены из текущей
@@ -161,6 +174,7 @@ export async function fetchRatingList(query: RatingListQuery = {}): Promise<Rati
   if (query.all) params.set('all', '1');
   if (query.page) params.set('page', String(query.page));
   if (query.pageSize) params.set('page_size', String(query.pageSize));
+  if (query.edition) params.set('edition', query.edition);
 
   const raw = await request<Record<string, unknown>>('/?' + params.toString());
   return {
@@ -168,6 +182,7 @@ export async function fetchRatingList(query: RatingListQuery = {}): Promise<Rati
     page: n(raw.page),
     pageSize: n(raw.page_size),
     results: (raw.results as RawProfile[]).map(toProfile),
+    edition: raw.edition ? toEdition(raw.edition as Record<string, unknown>) : null,
     updatedAt: (raw.updated_at as string) ?? null,
   };
 }
@@ -231,4 +246,29 @@ export async function correctRating(userId: string, value: number, reason: strin
     body: JSON.stringify({ user_id: userId, value, reason }),
   });
   return toEntry(raw);
+}
+
+/* ── Выпуски (п. 8.2) ✳ (11.09.2026) ──────────────────────────────── */
+
+/** Все выпуски, новые первыми. Открыто всем: по ним выбирают таблицу. */
+export async function fetchEditions(): Promise<RatingEdition[]> {
+  const raw = await request<Record<string, unknown>[]>('/editions/');
+  return raw.map(toEdition);
+}
+
+/** Опубликовать выпуск — только председатель ГСК. */
+export async function publishEdition(): Promise<RatingEdition> {
+  return toEdition(await request<Record<string, unknown>>('/editions/', { method: 'POST' }));
+}
+
+/** Что уйдёт в следующий выпуск: кто сдвинулся с прошлого и кто новый. */
+export async function fetchEditionDraft(): Promise<EditionDraftRow[]> {
+  const raw = await request<Record<string, unknown>[]>('/editions/draft/');
+  return raw.map((r) => ({
+    userId: String(r.user_id ?? ''),
+    name: String(r.name ?? ''),
+    before: nOrNull(r.before),
+    after: n(r.after),
+    delta: nOrNull(r.delta),
+  }));
 }

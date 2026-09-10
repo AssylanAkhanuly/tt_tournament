@@ -8,6 +8,7 @@
    рейтинг (п. 7.2–7.3 Положения): фильтр сужает список, значения те же. */
 
 import Link from 'next/link';
+import type { ReactNode } from 'react';
 import { Avatar } from '@heroui/react';
 
 import { num2, type RatingList, type RatingProfile } from '@/entities/rating';
@@ -36,6 +37,7 @@ export function RatingTable({
   page,
   onFilters,
   onPage,
+  extra,
 }: {
   data: RatingList | null;
   loading: boolean;
@@ -44,6 +46,8 @@ export function RatingTable({
   page: number;
   onFilters: (patch: Partial<RatingFilters>) => void;
   onPage: (p: number) => void;
+  /** Правый край строки фильтров — выбор выпуска (п. 8.2). */
+  extra?: ReactNode;
 }) {
   const rows = data?.results ?? [];
   const pages = data ? Math.max(1, Math.ceil(data.count / data.pageSize)) : 1;
@@ -51,7 +55,7 @@ export function RatingTable({
 
   return (
     <>
-      <FilterBar>
+      <FilterBar right={extra}>
         <SearchInput
           value={filters.q}
           onChange={(v) => onFilters({ q: v })}

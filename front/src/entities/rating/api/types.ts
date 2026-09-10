@@ -64,13 +64,38 @@ export type RatingEntry = {
   createdAt: string;
 };
 
+/** Выпуск рейтинговой таблицы (п. 8.2): снимок на дату публикации. От неё
+    считается срок апелляции (п. 21.2). */
+export type RatingEdition = {
+  id: number;
+  number: number;
+  publishedAt: string;
+  publishedByName: string | null;
+  /** Последний день приёма апелляций — 5 рабочих дней с публикации. */
+  appealUntil: string;
+  rows: number;
+};
+
 export type RatingList = {
   count: number;
   page: number;
   pageSize: number;
   results: RatingProfile[];
-  /** Дата последнего пересчёта. Публикации снимками нет — значение живое. */
+  /** Какой выпуск показан; `null` — живые значения (выпусков ещё нет или
+      председатель смотрит текущие). */
+  edition: RatingEdition | null;
+  /** Дата выпуска или последнего пересчёта. */
   updatedAt: string | null;
+};
+
+/** Строка черновика выпуска: было в прошлом выпуске → стало сейчас.
+    `before` и `delta` — `null` у того, кого в прошлом выпуске не было. */
+export type EditionDraftRow = {
+  userId: string;
+  name: string;
+  before: number | null;
+  after: number;
+  delta: number | null;
 };
 
 export type RatingCard = {
