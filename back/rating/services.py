@@ -20,9 +20,6 @@ from django.utils import timezone
 
 from . import engine
 from .models import (
-    RatingAppeal,
-    RatingEdition,
-    RatingEditionRow,
     RatingEntry,
     RatingParams,
     RatingProfile,
@@ -391,171 +388,73 @@ def refresh_activity(now: Optional[date] = None) -> Dict[str, int]:
     return counts
 
 
-# ── Предпросчёт для калькулятора (ничего не сохраняет) ──────────────
+# ── Новый спортсмен (п. 6.1, 6.3, 17.4) ─────────────────────────────
 
 
-# ── Выпуски (п. 8.2) ────────────────────────────────────────────────
-
-#: Кто стоит в текущей таблице: неактивные и аннулированные исключены (п. 18.2).
-_OUT_OF_TABLE = (engine.STATUS_INACTIVE, engine.STATUS_VOID)
-
-
-@transaction.atomic
-def publish_edition(actor=None) -> RatingEdition:
-    """Опубликовать выпуск: снимок всех карточек на эту минуту (п. 8.2).
-
-    Места считаются только среди стоящих в таблице, по убыванию значения, при
-    равенстве — по алфавиту (как в листе). Неактивные хранятся без места: они
-    исключены из текущей таблицы, но их значение сохраняется (п. 18.2).
-    """
-    now = timezone.now()
-    # Статусы (п. 18) — перед снимком: еженедельный выпуск и есть расписание
-    # их пересчёта, иначе снимок уходил бы со вчерашним «активен».
-    refresh_activity(timezone.localdate(now))
-    last = RatingEdition.objects.order_by("-number").first()
-    edition = RatingEdition.objects.create(
-        number=(last.number + 1) if last else 1,
-        published_at=now,
-        published_by=actor,
-        appeal_until=engine.add_working_days(timezone.localdate(now), engine.APPEAL_WORKING_DAYS),
-    )
-
-    rows = []
-    place = 0
-    for p in RatingProfile.objects.select_related("user").order_by("-value", "user__name"):
-        in_table = p.status not in _OUT_OF_TABLE
-        if in_table:
-            place += 1
-        rows.append(
-            RatingEditionRow(
-                edition=edition,
-                user=p.user,
-                place=place if in_table else None,
-                value=p.value,
-                matches_played=p.matches_played,
-                wins=p.wins,
-                losses=p.losses,
-                status=p.status,
-                sex=p.sex,
-                birth_year=p.birth_year,
-                region=p.region,
-            )
-        )
-    RatingEditionRow.objects.bulk_create(rows)
-    return edition
-
-
-def edition_draft() -> List[dict]:
-    """Что уйдёт в следующий выпуск: кто сдвинулся с прошлого и кто новый.
-
-    Председатель смотрит на это перед публикацией. Без изменений спортсмена
-    здесь нет — черновик отвечает на вопрос «что поменялось», а не повторяет
-    таблицу. Сначала самые большие сдвиги, новые — в конце по алфавиту.
-    """
-    last = RatingEdition.objects.order_by("-number").first()
-    before = {r.user_id: r.value for r in last.rows.all()} if last else {}
-
-    out = []
-    for p in RatingProfile.objects.select_related("user"):
-        was = before.get(p.user_id)
-        if was is not None and was == p.value:
-            continue
-        out.append(
-            {
-                "user_id": str(p.user_id),
-                "name": p.user.name,
-                "before": was,
-                "after": p.value,
-                "delta": None if was is None else p.value - was,
-            }
-        )
-    out.sort(key=lambda d: (d["before"] is None, -abs(d["delta"] or 0), d["name"]))
-    return out
-
-
-# ── Апелляции (п. 21.1–21.4) ────────────────────────────────────────
-
-
-class AppealError(ValueError):
-    """Апелляцию нельзя принять или решить. Текст объясняет почему — его
-    показывает экран, а не придумывает свой."""
-
-
-def _ru(d: date) -> str:
-    return d.strftime("%d.%m.%Y")
+class AthleteError(ValueError):
+    """Спортсмена нельзя завести. Текст объясняет почему."""
 
 
 @transaction.atomic
-def register_appeal(
-    edition,
-    user,
+def create_athlete(
     *,
-    received_at: Optional[date] = None,
-    applicant: str = "",
-    subject: str = "",
-    circumstances: str = "",
-    demand: str = "",
-    documents: str = "",
-    actor=None,
-) -> RatingAppeal:
-    """Зарегистрировать письменную апелляцию на выпуск (п. 21.2).
+    name: str,
+    region: str = "",
+    sex: str = "",
+    birth_year=None,
+    origin: str = engine.ORIGIN_NEW,
+    legacy=None,
+    ittf_position=None,
+):
+    """Завести спортсмена с рейтинговой карточкой ✳ (11.09.2026).
 
-    Принимается от публикации выпуска до конца пятого рабочего дня. Срок
-    рассмотрения — 10 рабочих дней с получения (п. 21.3).
+    Старт по Положению: новый — 1,00 (п. 6.1), перенос прежнего — один к
+    одному (п. 6.3), легионер — из позиции ITTF (п. 17.4). Считает сервер:
+    формула перевода должна жить в одном месте. Вход у спортсмена появится
+    со Smart Bridge; пока это только карточка, телефон — служебная метка.
     """
-    received_at = received_at or timezone.localdate()
-    if not (subject or "").strip():
-        raise AppealError("Не указано, что обжалуется (п. 21.2)")
-    if not (demand or "").strip():
-        raise AppealError("Не указано требование (п. 21.2)")
-    if received_at < timezone.localdate(edition.published_at):
-        raise AppealError("Апелляция не может быть получена раньше публикации выпуска")
-    if received_at > edition.appeal_until:
-        raise AppealError(
-            "Срок подачи истёк %s — 5 рабочих дней с публикации выпуска №%s (п. 21.2)"
-            % (_ru(edition.appeal_until), edition.number)
-        )
+    import uuid
 
-    return RatingAppeal.objects.create(
-        edition=edition,
-        user=user,
-        applicant=applicant.strip(),
-        subject=subject.strip(),
-        circumstances=circumstances.strip(),
-        demand=demand.strip(),
-        documents=documents.strip(),
-        received_at=received_at,
-        review_until=engine.add_working_days(received_at, engine.APPEAL_REVIEW_WORKING_DAYS),
-        registered_by=actor,
-    )
+    from django.contrib.auth import get_user_model
 
+    name = (name or "").strip()
+    if not name:
+        raise AthleteError("Фамилия и имя обязательны")
+    if sex not in ("", "m", "f"):
+        raise AthleteError("Пол — «m» или «f»")
+    if birth_year not in (None, ""):
+        try:
+            birth_year = int(birth_year)
+        except (TypeError, ValueError):
+            raise AthleteError("Год рождения — число")
+        if not 1920 <= birth_year <= timezone.localdate().year:
+            raise AthleteError("Год рождения вне разумных границ")
+    else:
+        birth_year = None
 
-@transaction.atomic
-def decide_appeal(appeal: RatingAppeal, *, upheld: bool, decision: str, value=None, actor=None) -> RatingAppeal:
-    """Решение по апелляции (п. 21.4) — окончательное.
+    extra = {"region": (region or "").strip(), "sex": sex, "birth_year": birth_year}
+    if origin == engine.ORIGIN_LEGACY:
+        try:
+            value = float(str(legacy).replace(",", "."))
+        except (TypeError, ValueError):
+            raise AthleteError("Для переноса нужен прежний рейтинг (п. 6.3)")
+        if value < 0:
+            raise AthleteError("Прежний рейтинг не может быть отрицательным")
+        extra["legacy"] = value
+    elif origin == engine.ORIGIN_ITTF:
+        try:
+            position = int(ittf_position)
+        except (TypeError, ValueError):
+            raise AthleteError("Для старта из ITTF нужна позиция в рейтинге ITTF (п. 17.4)")
+        if position < 1:
+            raise AthleteError("Позиция ITTF — от 1")
+        extra["ittf_position"] = position
+    elif origin != engine.ORIGIN_NEW:
+        raise AthleteError("Неизвестное происхождение стартового значения")
 
-    Удовлетворить значит исправить значение: разница дописывается строкой
-    журнала со ссылкой на апелляцию (п. 21.6), опубликованный выпуск не
-    трогается — изменение уйдёт в следующий.
-    """
-    if appeal.status != RatingAppeal.STATUS_PENDING:
-        raise AppealError("По апелляции уже есть решение — оно окончательное")
-    decision = (decision or "").strip()
-    if not decision:
-        raise AppealError("Обоснование решения обязательно (п. 21.4)")
-    if upheld and value is None:
-        raise AppealError("Чтобы удовлетворить апелляцию, нужно исправленное значение рейтинга")
-
-    if upheld:
-        appeal.correction = register_correction(
-            appeal.user, value, reason="Апелляция №%s: %s" % (appeal.pk, decision), actor=actor
-        )
-    appeal.status = RatingAppeal.STATUS_UPHELD if upheld else RatingAppeal.STATUS_REJECTED
-    appeal.decision = decision
-    appeal.decided_at = timezone.now()
-    appeal.decided_by = actor
-    appeal.save()
-    return appeal
+    user = get_user_model().objects.create_user(phone="ath-" + uuid.uuid4().hex[:10], name=name)
+    get_or_create_profile(user, origin=origin, **extra)
+    return user
 
 
 # ── Объединение дублей (п. 5.3) ─────────────────────────────────────
@@ -573,8 +472,7 @@ def merge_profiles(keep_user, drop_user, *, reason: str, actor=None) -> RatingPr
     рейтинговая история». Кроме старта: у каждой карточки своя стартовая
     строка, и сложи их — стартовое значение удвоилось бы. Поэтому старт дубля
     остаётся в истории отменённым, а считаются только его изменения после
-    старта. Апелляции дубля переходят к основной, счётчик неявок
-    складывается, карточка дубля исчезает — параллельных карточек не бывает.
+    старта. Счётчик неявок складывается, карточка дубля исчезает — параллельных карточек не бывает.
     Сведения об объединении — нулевой строкой журнала с основанием и автором.
 
     Выпуски не трогаются: что было опубликовано, то и было.
@@ -593,7 +491,6 @@ def merge_profiles(keep_user, drop_user, *, reason: str, actor=None) -> RatingPr
         is_reverted=True, reverted_at=timezone.now(), reverted_by=actor
     )
     RatingEntry.objects.filter(profile=drop).update(profile=keep)
-    RatingAppeal.objects.filter(user=drop_user).update(user=keep_user)
 
     keep.no_shows += drop.no_shows
     keep.save(update_fields=["no_shows", "updated_at"])
@@ -766,6 +663,7 @@ def protocol_detail(tournament) -> dict:
             return None
         return str(p.rating_before + p.rating_change)
 
+    applied = RatingEntry.objects.filter(tournament=tournament, is_reverted=False).exists()
     when = getattr(tournament, "starts_at", None) or getattr(tournament, "created_at", None)
     ordered = sorted(parts, key=lambda p: (p.place is None, p.place or 0, p.user.name))
     return {
@@ -775,7 +673,12 @@ def protocol_detail(tournament) -> dict:
         "level": tournament.level,
         "level_label": engine.LEVEL_LABELS.get(tournament.level, tournament.level),
         "no_third_place_match": tournament.no_third_place_match,
-        "applied": RatingEntry.objects.filter(tournament=tournament, is_reverted=False).exists(),
+        "applied": applied,
+        # Участников и матчи правят только у турнира протоколом вручную и
+        # только пока он не учтён (rating/manual.py).
+        "editable": getattr(tournament, "format", "") == "manual" and not applied,
+        "manual": getattr(tournament, "format", "") == "manual",
+        "status": tournament.status,
         "blocked": protocol_block_reason(tournament),
         "participants": [
             {
@@ -810,59 +713,3 @@ def preview_protocol(tournament, *, level: str, places: Dict[str, int], no_third
         transaction.set_rollback(True)
     tournament.refresh_from_db()
     return detail
-
-
-def preview(players: Sequence[dict], tournaments: Sequence[dict], matches: Sequence[dict],
-            params: Optional[dict] = None):
-    """Посчитать присланный набор, не трогая базу.
-
-    Это ручка калибровки: федерация крутит коэффициенты и смотрит, что получится,
-    на своих данных. Расчёт тот же самый, что и боевой, — движок один.
-    """
-    base = RatingParams.active().to_engine()
-    if params:
-        clean = {k: v for k, v in params.items() if v is not None and hasattr(base, k)}
-        if "prize_p" in clean:
-            clean["prize_p"] = {int(k): float(v) for k, v in clean["prize_p"].items()}
-        if "level_c" in clean:
-            clean["level_c"] = {str(k): float(v) for k, v in clean["level_c"].items()}
-        base = base.replace(**clean)
-
-    # Стартовое значение выводится ЗДЕСЬ, а не на клиенте: новичок входит с
-    # 1,00 (п. 6.1), легионер — по формуле перевода из ITTF (п. 17.4). Считай
-    # это фронт сам, формула Положения оказалась бы в двух местах сразу.
-    lab_players = []
-    for p in players:
-        player = engine.LabPlayer(
-            id=str(p["id"]),
-            name=p.get("name") or str(p["id"]),
-            origin=p.get("origin") or engine.ORIGIN_LEGACY,
-            start=float(p.get("start") or 1),
-            played=int(p.get("played", 0) or 0),
-            ittf_position=p.get("ittf_position"),
-        )
-        player.start = engine.start_rating(player, base)
-        lab_players.append(player)
-    lab_tournaments = [
-        engine.LabTournament(
-            id=str(t["id"]),
-            name=t.get("name") or str(t["id"]),
-            level=t.get("level") or engine.LEVEL_REPUBLIC,
-            places={str(k): int(v) for k, v in (t.get("places") or {}).items()},
-            no_third_place_match=bool(t.get("no_third_place_match")),
-        )
-        for t in tournaments
-    ]
-    lab_matches = [
-        engine.LabMatch(
-            id=str(m["id"]),
-            tournament=str(m["tournament"]),
-            a=str(m["a"]),
-            b=str(m["b"]),
-            games=(int(m["games"][0]), int(m["games"][1])),
-        )
-        for m in matches
-    ]
-    # Возвращаем и применённые коэффициенты: по ним считаются наблюдения, и
-    # брать их второй раз из настроек — значит разойтись с тем, чем считали.
-    return engine.run_series(lab_players, lab_tournaments, lab_matches, base), base

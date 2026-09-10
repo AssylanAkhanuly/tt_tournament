@@ -75,16 +75,15 @@ class Command(BaseCommand):
         if options["reset"]:
             Tournament.objects.filter(name__startswith="[demo] ").delete()
             User.objects.filter(phone__startswith=ПРЕФИКС).delete()
+            # Что заводили сквозные проверки (турниры вручную и спортсмены
+            # председателя) — помечено «[e2e] » в названии и сносится тоже:
+            # иначе каждый прогон добавлял бы строки в живой лист.
+            Tournament.objects.filter(name__startswith="[e2e] ").delete()
+            User.objects.filter(name__startswith="[e2e] ").delete()
             # Коэффициенты тоже возвращаются к значениям по умолчанию: иначе
             # показательные числа зависели бы от того, что кто-то накрутил в
             # калибровке, и сквозные проверки перестали бы что-либо проверять.
             RatingParams.objects.all().delete()
-            # Выпуски — тоже все: лист показывает последний выпуск, и снимок,
-            # сделанный до засева, спрятал бы показательные числа. Команда
-            # показательная и на боевой базе не запускается.
-            from rating.models import RatingEdition
-
-            RatingEdition.objects.all().delete()
 
         params = RatingParams.active()
         users = {}

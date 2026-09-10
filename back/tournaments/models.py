@@ -15,9 +15,13 @@ class Tournament(models.Model):
 
     FORMAT_SINGLE = "single_elimination"
     FORMAT_GROUP  = "group_playoff"
+    # Протокол вручную ✳ (11.09.2026): турнир прошёл вне системы, председатель
+    # ГСК вносит участников и матчи сам (rating/manual.py). Сетки у него нет.
+    FORMAT_MANUAL = "manual"
     FORMAT_CHOICES = [
         (FORMAT_SINGLE, "Олимпийская система"),
         (FORMAT_GROUP,  "Групповой этап + плей-офф"),
+        (FORMAT_MANUAL, "Протокол вручную"),
     ]
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)

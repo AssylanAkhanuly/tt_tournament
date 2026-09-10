@@ -1,17 +1,15 @@
 """API Национального рейтинга.
 
-Ручки: список (живой или выпуск), карточка, коэффициенты (чтение и правка),
-предпросчёт для калибровки, неявка, исправление, выпуски и черновик выпуска.
+Ручки: список, карточка, неявка, исправление, объединение дублей и протоколы
+турниров (уровень, места, пересчёт).
 Расчёта здесь нет — он в `engine.py`, сборка в `services.py`; вьюха только
 принимает запрос и отдаёт ответ.
 
 Рейтинг открыт без входа (ТЗ §3, экран Э0.4): таблица и карточка спортсмена —
-публичные страницы. Править рейтинговые данные — коэффициенты, неявки,
-исправления, выпуски — может только председатель ГСК ✳ (10.09.2026, решение
+публичные страницы. Править рейтинговые данные — неявки, исправления, дубли,
+протоколы — может только председатель ГСК ✳ (10.09.2026, решение
 владельца продукта): по Положению он ведёт базу и историю рейтинга (п. 8.3, 22).
 """
-from dataclasses import asdict
-
 from django.db.models import Q
 from rest_framework import status
 from rest_framework.permissions import AllowAny
@@ -20,57 +18,28 @@ from users.permissions import IsGskChairman
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from . import analysis, engine, services
-from .models import RatingEdition, RatingEntry, RatingParams, RatingProfile
-from .serializers import (
-    EditionDraftRowSerializer,
-    PreviewRequestSerializer,
-    RatingEditionRowSerializer,
-    RatingEditionSerializer,
-    RatingEntrySerializer,
-    RatingParamsSerializer,
-    RatingProfileSerializer,
-)
+from . import engine, services
+from .models import RatingEntry, RatingProfile
+from .serializers import RatingEntrySerializer, RatingProfileSerializer
 
 #: Э0.4: «таблица с фильтрами, постранично до 500 строк».
 PAGE_SIZE_MAX = 500
 PAGE_SIZE_DEFAULT = 100
 
 
-def _edition_from(param):
-    """Какой выпуск показывать. Без параметра — последний; `live` — живые
-    значения; иначе номер записи выпуска. Выпусков ещё нет — лист живой."""
-    if param == "live":
-        return None
-    if param:
-        try:
-            return RatingEdition.objects.filter(pk=int(param)).first()
-        except (TypeError, ValueError):
-            return None
-    return RatingEdition.objects.order_by("-number").first()
-
-
 class RatingListView(APIView):
     """Рейтинг-лист.
 
-    Публичный лист — последний опубликованный выпуск (п. 8.2): спорят и
-    обжалуют опубликованное число, а не то, что успело пересчитаться. До
-    первого выпуска лист живой. Возрастные категории — выборка из общего
+    Значение живое: посчитали — сразу действует ✳ (11.09.2026 выпуски сняты
+    решением владельца продукта). Возрастные категории — выборка из общего
     рейтинга, а не отдельный рейтинг (п. 7.2–7.3): фильтр `age` сужает список,
-    значения при этом те же. Поля выборок у строки выпуска те же, что у
-    карточки, поэтому фильтры одни.
+    значения при этом те же.
     """
 
     permission_classes = [AllowAny]
 
     def get(self, request):
-        edition = _edition_from(request.query_params.get("edition"))
-        if edition:
-            qs = edition.rows.select_related("user")
-            row_serializer = RatingEditionRowSerializer
-        else:
-            qs = RatingProfile.objects.select_related("user")
-            row_serializer = RatingProfileSerializer
+        qs = RatingProfile.objects.select_related("user")
 
         qs = _apply_filters(qs, request.query_params).order_by("-value", "user__name")
         total = qs.count()
@@ -87,19 +56,14 @@ class RatingListView(APIView):
                 "count": total,
                 "page": page,
                 "page_size": size,
-                "results": row_serializer(rows, many=True).data,
-                "edition": RatingEditionSerializer(edition).data if edition else None,
-                "updated_at": (
-                    edition.published_at
-                    if edition
-                    else qs.order_by("-updated_at").values_list("updated_at", flat=True).first()
-                ),
+                "results": RatingProfileSerializer(rows, many=True).data,
+                "updated_at": qs.order_by("-updated_at").values_list("updated_at", flat=True).first(),
             }
         )
 
 
 def _apply_filters(qs, params):
-    """Пол, регион, статус, поиск, возраст — одинаково для живого листа и выпуска."""
+    """Пол, регион, статус, поиск, возраст."""
     sex = params.get("sex")
     if sex:
         qs = qs.filter(sex=sex)
@@ -161,61 +125,6 @@ class RatingCardView(APIView):
                 "history": RatingEntrySerializer(history, many=True).data,
                 "place": better + 1,
                 "of": of,
-            }
-        )
-
-
-class RatingParamsView(APIView):
-    """Коэффициенты расчёта: читать может любой, править — председатель ГСК.
-
-    Читать открыто намеренно: рядом с рейтингом должно быть видно, по каким
-    числам он посчитан, иначе «прозрачность» из п. 4.6 не работает.
-    """
-
-    def get_permissions(self):
-        return [AllowAny()] if self.request.method == "GET" else [IsGskChairman()]
-
-    def get(self, request):
-        return Response(RatingParamsSerializer(RatingParams.active()).data)
-
-    def patch(self, request):
-        params = RatingParams.active()
-        serializer = RatingParamsSerializer(params, data=request.data, partial=True)
-        serializer.is_valid(raise_exception=True)
-        serializer.save(updated_by=request.user)
-        return Response(serializer.data)
-
-
-class RatingPreviewView(APIView):
-    """Предпросчёт: считает присланный набор и ничего не сохраняет.
-
-    Ручка калибровки — федерация крутит коэффициенты и смотрит, что получится.
-    Движок тот же, что и боевой: иначе подобранные числа не значили бы ничего.
-    """
-
-    permission_classes = [AllowAny]
-
-    def post(self, request):
-        serializer = PreviewRequestSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        data = serializer.validated_data
-
-        result, used = services.preview(
-            players=data["players"],
-            tournaments=data["tournaments"],
-            matches=data["matches"],
-            params=data.get("params"),
-        )
-        return Response(
-            {
-                "history": [asdict(r) for r in result.history],
-                "table": [asdict(r) for r in result.table],
-                "injected": result.injected,
-                "skipped": result.skipped,
-                # Что выбранные коэффициенты значат на практике: доля ожидаемых
-                # побед и путь новичка до уровня КМС. Считается здесь, потому
-                # что это та же формула п. 9.3 — на фронте она была бы копией.
-                "insights": analysis.insights(used),
             }
         )
 
@@ -294,174 +203,6 @@ class RatingCorrectionView(APIView):
         return Response(RatingEntrySerializer(entry).data, status=status.HTTP_201_CREATED)
 
 
-class RatingEditionsView(APIView):
-    """Выпуски (п. 8.2): список открыт всем, публикует председатель ГСК.
-
-    Список открыт, потому что по нему выбирают, какую таблицу смотреть, и от
-    даты выпуска считают срок апелляции (п. 21.2).
-    """
-
-    def get_permissions(self):
-        return [AllowAny()] if self.request.method == "GET" else [IsGskChairman()]
-
-    def get(self, request):
-        return Response(RatingEditionSerializer(RatingEdition.objects.all(), many=True).data)
-
-    def post(self, request):
-        edition = services.publish_edition(actor=request.user)
-        return Response(RatingEditionSerializer(edition).data, status=status.HTTP_201_CREATED)
-
-
-class RatingEditionDraftView(APIView):
-    """Черновик следующего выпуска: кто сдвинулся с прошлого и кто новый."""
-
-    permission_classes = [IsGskChairman]
-
-    def get(self, request):
-        return Response(EditionDraftRowSerializer(services.edition_draft(), many=True).data)
-
-
-#: Журнал постранично: строк много, а смотрят обычно последние.
-JOURNAL_PAGE_DEFAULT = 50
-JOURNAL_PAGE_MAX = 200
-
-
-class RatingJournalView(APIView):
-    """Журнал изменений (п. 20, 21.6, 22.2): все строки истории всех
-    спортсменов, новые первыми, с автором и основанием. Отменённые остаются с
-    пометкой — история хранится без удаления. Только чтение, только
-    председателю ГСК: он обеспечивает сохранность базы и истории (п. 22.2)."""
-
-    permission_classes = [IsGskChairman]
-
-    def get(self, request):
-        from .serializers import RatingJournalEntrySerializer
-
-        qs = RatingEntry.objects.select_related("profile__user", "tournament", "opponent", "created_by")
-        kind = request.query_params.get("kind")
-        if kind:
-            qs = qs.filter(kind=kind)
-        search = request.query_params.get("q")
-        if search:
-            qs = qs.filter(profile__user__name__icontains=search)
-        user_id = request.query_params.get("user_id")
-        if user_id:
-            qs = qs.filter(profile__user_id=user_id)
-
-        qs = qs.order_by("-created_at", "-id")
-        total = qs.count()
-        try:
-            size = min(int(request.query_params.get("page_size", JOURNAL_PAGE_DEFAULT)), JOURNAL_PAGE_MAX)
-            page = max(1, int(request.query_params.get("page", 1)))
-        except (TypeError, ValueError):
-            size, page = JOURNAL_PAGE_DEFAULT, 1
-
-        rows = qs[(page - 1) * size: page * size]
-        return Response(
-            {
-                "count": total,
-                "page": page,
-                "page_size": size,
-                "results": RatingJournalEntrySerializer(rows, many=True).data,
-            }
-        )
-
-
-class RatingAppealsView(APIView):
-    """Апелляции (п. 21): очередь и регистрация — председатель ГСК.
-
-    Апелляция подаётся письменно в Федерацию (п. 21.2), в систему её вносит
-    председатель. Выпуск по умолчанию — последний: обжалуют опубликованное.
-    """
-
-    permission_classes = [IsGskChairman]
-
-    def get(self, request):
-        from .models import RatingAppeal
-        from .serializers import RatingAppealSerializer
-
-        qs = RatingAppeal.objects.select_related("user", "edition", "decided_by", "correction")
-        state = request.query_params.get("status")
-        if state:
-            qs = qs.filter(status=state)
-        return Response(RatingAppealSerializer(qs, many=True).data)
-
-    def post(self, request):
-        from django.contrib.auth import get_user_model
-        from django.core.exceptions import ValidationError
-        from django.utils.dateparse import parse_date
-
-        from .serializers import RatingAppealSerializer
-
-        try:
-            user = get_user_model().objects.filter(pk=request.data.get("user_id")).first()
-        except (ValueError, ValidationError):
-            user = None
-        if not user:
-            return Response({"detail": "Спортсмен не найден"}, status=status.HTTP_404_NOT_FOUND)
-
-        edition_id = request.data.get("edition_id")
-        edition = (
-            RatingEdition.objects.filter(pk=edition_id).first()
-            if edition_id
-            else RatingEdition.objects.order_by("-number").first()
-        )
-        if not edition:
-            return Response(
-                {"detail": "Выпусков ещё нет — обжаловать нечего"}, status=status.HTTP_400_BAD_REQUEST
-            )
-
-        received = request.data.get("received_at")
-        try:
-            appeal = services.register_appeal(
-                edition,
-                user,
-                received_at=parse_date(received) if received else None,
-                applicant=request.data.get("applicant") or "",
-                subject=request.data.get("subject") or "",
-                circumstances=request.data.get("circumstances") or "",
-                demand=request.data.get("demand") or "",
-                documents=request.data.get("documents") or "",
-                actor=request.user,
-            )
-        except services.AppealError as e:
-            return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
-        return Response(RatingAppealSerializer(appeal).data, status=status.HTTP_201_CREATED)
-
-
-class RatingAppealDecisionView(APIView):
-    """Решение по апелляции (п. 21.4): удовлетворить с исправленным значением
-    или отклонить. Обоснование обязательно, решение окончательное."""
-
-    permission_classes = [IsGskChairman]
-
-    def post(self, request, pk):
-        from .models import RatingAppeal
-        from .serializers import RatingAppealSerializer
-
-        appeal = RatingAppeal.objects.filter(pk=pk).first()
-        if not appeal:
-            return Response({"detail": "Апелляция не найдена"}, status=status.HTTP_404_NOT_FOUND)
-
-        raw = request.data.get("value")
-        try:
-            value = float(raw) if raw not in (None, "") else None
-        except (TypeError, ValueError):
-            return Response({"detail": "Значение рейтинга — число"}, status=status.HTTP_400_BAD_REQUEST)
-
-        try:
-            services.decide_appeal(
-                appeal,
-                upheld=bool(request.data.get("upheld")),
-                decision=request.data.get("decision") or "",
-                value=value,
-                actor=request.user,
-            )
-        except services.AppealError as e:
-            return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
-        return Response(RatingAppealSerializer(appeal).data)
-
-
 class RatingMergeView(APIView):
     """Объединить дублирующие карточки (п. 5.3) — председатель ГСК.
 
@@ -494,9 +235,10 @@ class RatingMergeView(APIView):
 
 
 def _protocol(t) -> dict:
-    """Протокол для рейтинга: уровень, места, учтён ли турнир в рейтинге."""
+    """Строка списка протоколов: уровень, участники, учтён ли турнир."""
     from django.utils import timezone
 
+    applied = RatingEntry.objects.filter(tournament=t, is_reverted=False).exists()
     when = t.starts_at or t.created_at
     return {
         "id": t.pk,
@@ -505,7 +247,10 @@ def _protocol(t) -> dict:
         "level": t.level,
         "level_label": engine.LEVEL_LABELS.get(t.level, t.level),
         "no_third_place_match": t.no_third_place_match,
-        "applied": RatingEntry.objects.filter(tournament=t, is_reverted=False).exists(),
+        "applied": applied,
+        "editable": t.format == "manual" and not applied,
+        "manual": t.format == "manual",
+        "status": t.status,
         "participants": [
             {
                 "user_id": str(p.user_id),
@@ -518,70 +263,6 @@ def _protocol(t) -> dict:
     }
 
 
-class RatingProtocolsView(APIView):
-    """Завершённые рейтинговые турниры — уровень и места для C и P (п. 10, 13).
-
-    Председатель ГСК утверждает протокол для рейтинга: без уровня и призовой
-    тройки коэффициенты в настоящих турнирах были бы 1,00.
-    """
-
-    permission_classes = [IsGskChairman]
-
-    def get(self, request):
-        from tournaments.models import Tournament
-
-        qs = Tournament.objects.filter(status=Tournament.STATUS_FINISHED, is_rating=True).order_by(
-            "-starts_at", "-created_at"
-        )
-        return Response([_protocol(t) for t in qs])
-
-
-class RatingProtocolView(APIView):
-    """Утвердить протокол: уровень, места, «матча за 3-е место не было» — и пересчёт."""
-
-    permission_classes = [IsGskChairman]
-
-    def post(self, request, pk):
-        from django.core.exceptions import ValidationError
-        from tournaments.models import Tournament
-
-        try:
-            t = Tournament.objects.filter(pk=pk).first()
-        except (ValueError, ValidationError):
-            t = None
-        if not t:
-            return Response({"detail": "Турнир не найден"}, status=status.HTTP_404_NOT_FOUND)
-
-        places = {}
-        for uid, place in (request.data.get("places") or {}).items():
-            if place in (None, ""):
-                continue
-            try:
-                places[str(uid)] = int(place)
-            except (TypeError, ValueError):
-                return Response({"detail": "Место — целое число"}, status=status.HTTP_400_BAD_REQUEST)
-
-        try:
-            services.set_protocol(
-                t,
-                level=request.data.get("level") or t.level,
-                places=places,
-                no_third_place_match=bool(request.data.get("no_third_place_match")),
-                actor=request.user,
-            )
-        except services.ProtocolError as e:
-            return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
-        t.refresh_from_db()
-        return Response(services.protocol_detail(t))
-
-    def get(self, request, pk):
-        """Страница протокола: участники с изменением рейтинга, матчи, причина отказа."""
-        t = _tournament_or_none(pk)
-        if not t:
-            return Response({"detail": "Турнир не найден"}, status=status.HTTP_404_NOT_FOUND)
-        return Response(services.protocol_detail(t))
-
-
 def _tournament_or_none(pk):
     from django.core.exceptions import ValidationError
     from tournaments.models import Tournament
@@ -590,6 +271,106 @@ def _tournament_or_none(pk):
         return Tournament.objects.filter(pk=pk).first()
     except (ValueError, ValidationError):
         return None
+
+
+def _user_or_none(pk):
+    from django.contrib.auth import get_user_model
+    from django.core.exceptions import ValidationError
+
+    try:
+        return get_user_model().objects.filter(pk=pk).first()
+    except (ValueError, ValidationError):
+        return None
+
+
+def _places_from(data):
+    """{user_id: место} из запроса; пустые значения — без места."""
+    places = {}
+    for uid, place in (data.get("places") or {}).items():
+        if place in (None, ""):
+            continue
+        places[str(uid)] = int(place)
+    return places
+
+
+def _bad(e) -> Response:
+    return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+
+def _missing(what: str = "Турнир не найден") -> Response:
+    return Response({"detail": what}, status=status.HTTP_404_NOT_FOUND)
+
+
+class RatingProtocolsView(APIView):
+    """Рейтинговые турниры (п. 10, 13) и заведение турнира протоколом вручную.
+
+    В списке — завершённые рейтинговые турниры и черновики протоколов вручную
+    ✳ (11.09.2026): их заводит председатель ГСК, вносит участников и матчи.
+    """
+
+    permission_classes = [IsGskChairman]
+
+    def get(self, request):
+        from django.db.models import Q
+        from tournaments.models import Tournament
+
+        qs = Tournament.objects.filter(is_rating=True).filter(
+            Q(status=Tournament.STATUS_FINISHED) | Q(format=Tournament.FORMAT_MANUAL)
+        ).order_by("-starts_at", "-created_at")
+        return Response([_protocol(t) for t in qs])
+
+    def post(self, request):
+        from django.utils.dateparse import parse_date
+
+        from . import manual
+
+        raw = request.data.get("date")
+        try:
+            t = manual.create_tournament(
+                name=request.data.get("name") or "",
+                when=parse_date(raw) if raw else None,
+                level=request.data.get("level") or "republic",
+                actor=request.user,
+            )
+        except manual.ManualError as e:
+            return _bad(e)
+        return Response(services.protocol_detail(t), status=status.HTTP_201_CREATED)
+
+
+class RatingProtocolView(APIView):
+    """Страница протокола (GET) и утверждение (POST): уровень, места, пересчёт.
+    У турнира вручную утверждение ещё и завершает его и учитывает в рейтинге."""
+
+    permission_classes = [IsGskChairman]
+
+    def get(self, request, pk):
+        t = _tournament_or_none(pk)
+        if not t:
+            return _missing()
+        return Response(services.protocol_detail(t))
+
+    def post(self, request, pk):
+        from . import manual
+
+        t = _tournament_or_none(pk)
+        if not t:
+            return _missing()
+        try:
+            places = _places_from(request.data)
+        except (TypeError, ValueError):
+            return _bad("Место — целое число")
+        try:
+            manual.approve(
+                t,
+                level=request.data.get("level") or t.level,
+                places=places,
+                no_third_place_match=bool(request.data.get("no_third_place_match")),
+                actor=request.user,
+            )
+        except (services.ProtocolError, manual.ManualError) as e:
+            return _bad(e)
+        t.refresh_from_db()
+        return Response(services.protocol_detail(t))
 
 
 class RatingProtocolPreviewView(APIView):
@@ -601,22 +382,166 @@ class RatingProtocolPreviewView(APIView):
     def post(self, request, pk):
         t = _tournament_or_none(pk)
         if not t:
-            return Response({"detail": "Турнир не найден"}, status=status.HTTP_404_NOT_FOUND)
-
-        places = {}
-        for uid, place in (request.data.get("places") or {}).items():
-            if place in (None, ""):
-                continue
-            try:
-                places[str(uid)] = int(place)
-            except (TypeError, ValueError):
-                return Response({"detail": "Место — целое число"}, status=status.HTTP_400_BAD_REQUEST)
+            return _missing()
+        try:
+            places = _places_from(request.data)
+        except (TypeError, ValueError):
+            return _bad("Место — целое число")
+        from . import manual
 
         return Response(
-            services.preview_protocol(
+            manual.preview(
                 t,
                 level=request.data.get("level") or t.level,
                 places=places,
                 no_third_place_match=bool(request.data.get("no_third_place_match")),
             )
         )
+
+
+class RatingProtocolParticipantsView(APIView):
+    """Добавить участника: существующего (`user_id`) или нового (`new`: имя,
+    регион, пол, год рождения, прежний рейтинг или позиция ITTF)."""
+
+    permission_classes = [IsGskChairman]
+
+    def post(self, request, pk):
+        from . import manual
+
+        t = _tournament_or_none(pk)
+        if not t:
+            return _missing()
+        try:
+            new = request.data.get("new")
+            if new:
+                origin = new.get("origin") or (
+                    engine.ORIGIN_LEGACY if new.get("legacy") not in (None, "") else engine.ORIGIN_NEW
+                )
+                manual._check_editable(t)
+                user = services.create_athlete(
+                    name=new.get("name") or "",
+                    region=new.get("region") or "",
+                    sex=new.get("sex") or "",
+                    birth_year=new.get("birth_year"),
+                    origin=origin,
+                    legacy=new.get("legacy"),
+                    ittf_position=new.get("ittf_position"),
+                )
+            else:
+                user = _user_or_none(request.data.get("user_id"))
+                if not user:
+                    return _missing("Спортсмен не найден")
+            manual.add_participant(t, user)
+        except (manual.ManualError, services.AthleteError) as e:
+            return _bad(e)
+        return Response(services.protocol_detail(t))
+
+
+class RatingProtocolParticipantView(APIView):
+    """Убрать участника — пока у него нет матчей в турнире."""
+
+    permission_classes = [IsGskChairman]
+
+    def delete(self, request, pk, user_id):
+        from . import manual
+
+        t = _tournament_or_none(pk)
+        user = _user_or_none(user_id)
+        if not t or not user:
+            return _missing()
+        try:
+            manual.remove_participant(t, user)
+        except manual.ManualError as e:
+            return _bad(e)
+        return Response(services.protocol_detail(t))
+
+
+class RatingProtocolMatchesView(APIView):
+    """Внести матч: кто с кем (`a`, `b`) и счёт (`score_a`, `score_b`)."""
+
+    permission_classes = [IsGskChairman]
+
+    def post(self, request, pk):
+        from . import manual
+
+        t = _tournament_or_none(pk)
+        a = _user_or_none(request.data.get("a"))
+        b = _user_or_none(request.data.get("b"))
+        if not t:
+            return _missing()
+        if not a or not b:
+            return _missing("Спортсмен не найден")
+        try:
+            manual.add_match(t, a, b, request.data.get("score_a"), request.data.get("score_b"))
+        except manual.ManualError as e:
+            return _bad(e)
+        return Response(services.protocol_detail(t))
+
+
+class RatingProtocolMatchView(APIView):
+    """Удалить матч. Идентификатор — как в странице протокола («b12») или число."""
+
+    permission_classes = [IsGskChairman]
+
+    def delete(self, request, pk, mid):
+        from . import manual
+
+        t = _tournament_or_none(pk)
+        if not t:
+            return _missing()
+        raw = str(mid)
+        try:
+            match_pk = int(raw[1:] if raw[:1] in ("b", "g") else raw)
+        except ValueError:
+            return _missing("Матч не найден")
+        try:
+            manual.remove_match(t, match_pk)
+        except manual.ManualError as e:
+            return _bad(e)
+        return Response(services.protocol_detail(t))
+
+
+class RatingProtocolReworkView(APIView):
+    """Вернуть протокол на доработку: снять учёт турнира, чтобы поправить
+    участников и матчи. Отказ — если после турнира были другие изменения."""
+
+    permission_classes = [IsGskChairman]
+
+    def post(self, request, pk):
+        from . import manual
+
+        t = _tournament_or_none(pk)
+        if not t:
+            return _missing()
+        try:
+            manual.return_for_rework(t, actor=request.user)
+        except manual.ManualError as e:
+            return _bad(e)
+        t.refresh_from_db()
+        return Response(services.protocol_detail(t))
+
+
+class RatingAthletesView(APIView):
+    """Завести спортсмена в рейтинге ✳ (11.09.2026) — председатель ГСК.
+
+    Старт считает сервер: новый — 1,00 (п. 6.1), перенос прежнего (п. 6.3),
+    позиция ITTF (п. 17.4).
+    """
+
+    permission_classes = [IsGskChairman]
+
+    def post(self, request):
+        try:
+            user = services.create_athlete(
+                name=request.data.get("name") or "",
+                region=request.data.get("region") or "",
+                sex=request.data.get("sex") or "",
+                birth_year=request.data.get("birth_year"),
+                origin=request.data.get("origin") or engine.ORIGIN_NEW,
+                legacy=request.data.get("legacy"),
+                ittf_position=request.data.get("ittf_position"),
+            )
+        except services.AthleteError as e:
+            return _bad(e)
+        profile = RatingProfile.objects.select_related("user").get(user=user)
+        return Response(RatingProfileSerializer(profile).data, status=status.HTTP_201_CREATED)

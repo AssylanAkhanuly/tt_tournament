@@ -367,30 +367,3 @@ def test_неактивный_сохраняет_рейтинг(params):
 
 
 # ── Предпросчёт для калибровки ──────────────────────────────────────
-
-
-def test_предпросчёт_ничего_не_сохраняет(params):
-    result, _ = services.preview(
-        players=[
-            {"id": "a", "name": "А", "origin": "legacy", "start": 20},
-            {"id": "b", "name": "Б", "origin": "legacy", "start": 20},
-        ],
-        tournaments=[{"id": "t", "name": "Тест", "level": "top"}],
-        matches=[{"id": "m", "tournament": "t", "a": "a", "b": "b", "games": [3, 1]}],
-    )
-    assert next(x for x in result.table if x.id == "a").rating == 20.36
-    assert RatingProfile.objects.count() == 0
-    assert RatingEntry.objects.count() == 0
-
-
-def test_предпросчёт_принимает_свои_коэффициенты(params):
-    вход = dict(
-        players=[
-            {"id": "a", "name": "А", "origin": "legacy", "start": 20},
-            {"id": "b", "name": "Б", "origin": "legacy", "start": 20},
-        ],
-        tournaments=[{"id": "t", "name": "Тест", "level": "top"}],
-        matches=[{"id": "m", "tournament": "t", "a": "a", "b": "b", "games": [3, 1]}],
-    )
-    свой, _ = services.preview(**вход, params={"k_standard": 1.2})
-    assert next(x for x in свой.table if x.id == "a").rating == 20.72

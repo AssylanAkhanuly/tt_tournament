@@ -16,7 +16,7 @@ import pytest
 from rest_framework.test import APIClient
 
 from rating import engine, services
-from rating.models import RatingAppeal, RatingEntry, RatingParams, RatingProfile
+from rating.models import RatingEntry, RatingParams, RatingProfile
 from users.models import Role, User
 
 pytestmark = pytest.mark.django_db
@@ -76,17 +76,6 @@ def test_объединение_записано_в_журнал(params):
     assert запись.created_by == chair
     assert "Документ удостоверения совпал" in запись.reason
     assert "Спортсмен (дубль)" in запись.reason
-
-
-def test_апелляции_дубля_переходят_к_основной(params):
-    основная = игрок("+7704000005", "Спортсмен", 40)
-    дубль = игрок("+7704000006", "Дубль", 30)
-    ed = services.publish_edition(actor=None)
-    ap = services.register_appeal(ed, дубль, subject="Неявка", demand="Снять")
-
-    services.merge_profiles(основная, дубль, reason="Дубль", actor=None)
-
-    assert RatingAppeal.objects.get(pk=ap.pk).user == основная
 
 
 def test_с_самой_собой_не_объединить(params):
