@@ -1093,6 +1093,7 @@ erDiagram
         string iin UK "12 цифр, чем человек входит; пароля в системе нет"
         string name
         string phone UK "на него уходит одноразовый код"
+        string email UK "временный вход по паролю, только для ролей"
         string city
         string photoUrl
         uuid clubId FK "необязателен"

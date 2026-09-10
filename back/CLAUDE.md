@@ -41,6 +41,18 @@
 - JWT stored in `HttpOnly` cookies (`access_token`, `refresh_token`)
 - `CookieJWTAuthentication` in `users/authentication.py` reads from cookie
 - Three roles: `is_staff` (superuser), `ClubAdmin` (club-level), player
+- **Роли по модели ТЗ** ✳ (10.09.2026): `users.Role` — «пользователь → роль → область»
+  (`ROLE` в `diagrams/domain.d2`). Первая роль — председатель ГСК (`gsk_chairman`),
+  проверка — `users/permissions.py` (`IsGskChairman`). Ему принадлежат правки рейтинга;
+  `is_staff` без роли их больше не открывает.
+- **Вход по почте и паролю — временный** (ТЗ §2): `POST /api/auth/login/email/`, только для
+  пользователей с ролью. Председателя заводит `manage.py create_gsk_chairman --email --name
+  --password`.
+- ⚠ **Локальное окружение: `cryptography` 41.0.7, не 42.x.** Сборка 42.0.8 не грузится на
+  Python 3.9.0 (`DLL load failed while importing _rust`), а через неё падает `import jwt` —
+  то есть любой выпуск токена, любой удачный вход. В `requirements.txt` её нет (нужна
+  библиотекам веб-пушей), на прод (Linux) не влияет. Поломка жила давно: тесты входили в
+  обход токенов через `force_authenticate`, и выпуск токена не проверял никто.
 
 ## Key Models
 

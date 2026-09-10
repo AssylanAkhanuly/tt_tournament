@@ -47,7 +47,8 @@ Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/bui
 | `/reyting/kalibrovka` | подбор коэффициентов: ввод спортсменов и матчей, прогон, наблюдения |
 | `GET /api/rating/` | лист (Django) |
 | `GET /api/rating/<id>/` | карточка с историей |
-| `GET|PATCH /api/rating/params/` | коэффициенты; правит федерация |
+| `GET|PATCH /api/rating/params/` | коэффициенты; правит председатель ГСК |
+| `/vhod` | вход по почте и паролю — временный, для председателя ГСК |
 | `POST /api/rating/preview/` | предпросчёт для калибровки, ничего не сохраняет |
 
 Лист и карточка открыты без входа — это публичные страницы (ТЗ §3, Э0.4).

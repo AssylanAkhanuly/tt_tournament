@@ -26,6 +26,9 @@ user: USER {
   # На этот номер уходит одноразовый код; он привязан к ИИН на стороне
   # государства, в профиле показывается маской и не правится.
   phone: string {constraint: unique}
+  # Почта — для ВРЕМЕННОГО входа по паролю председателя ГСК (10.09.2026), пока
+  # не подключён Smart Bridge. Вход по почте открыт только пользователям с ролью.
+  email: "string — временный вход по паролю, только для ролей" {constraint: unique}
   city: string
   photo_url: string
   club_id: uuid {constraint: foreign_key}
@@ -36,7 +39,7 @@ role: ROLE {
   class: new
   id: uuid {constraint: primary_key}
   user_id: uuid {constraint: foreign_key}
-  kind: "четырнадцать ролей, см. ТЗ §2 (перечень федерации)"
+  kind: "четырнадцать ролей, см. ТЗ §2; первой заведена «председатель ГСК» (10.09.2026)"
   scope: "система | турнир | клуб | стол"
   scope_id: uuid
 }
