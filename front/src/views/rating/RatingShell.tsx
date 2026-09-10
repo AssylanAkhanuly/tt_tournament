@@ -9,6 +9,7 @@ import Link from 'next/link';
 import type { ReactNode } from 'react';
 
 import '@/shared/kit/tailwind.css';
+import { SessionBar } from '@/widgets/session';
 
 export function RatingShell({
   title,
@@ -29,18 +30,24 @@ export function RatingShell({
     <div className="hero-scope min-h-screen bg-neutral-50 text-neutral-900" data-theme="light">
       <header className="border-b border-neutral-200 bg-white">
         <div className="mx-auto max-w-[1400px] px-6 py-5">
-          {back ? (
-            <Link
-              href={back.href}
-              className="text-[11px] font-semibold uppercase tracking-wider text-blue-600 hover:underline"
-            >
-              ← {back.label}
-            </Link>
-          ) : (
-            <p className="text-[11px] font-semibold uppercase tracking-wider text-neutral-500">
-              Федерация настольного тенниса Республики Казахстан
-            </p>
-          )}
+          {/* Справа — кто вошёл: председателю ГСК на этих же экранах
+              открываются правки рейтинга, и видеть, от чьего имени он работает,
+              надо на каждом из них. */}
+          <div className="flex items-start justify-between gap-4">
+            {back ? (
+              <Link
+                href={back.href}
+                className="text-[11px] font-semibold uppercase tracking-wider text-blue-600 hover:underline"
+              >
+                ← {back.label}
+              </Link>
+            ) : (
+              <p className="text-[11px] font-semibold uppercase tracking-wider text-neutral-500">
+                Федерация настольного тенниса Республики Казахстан
+              </p>
+            )}
+            <SessionBar />
+          </div>
           <h1 className="mt-1 text-2xl font-semibold tracking-tight">{title}</h1>
           {lead && <div className="mt-1.5 max-w-3xl text-[13.5px] leading-snug text-neutral-600">{lead}</div>}
           {note && (

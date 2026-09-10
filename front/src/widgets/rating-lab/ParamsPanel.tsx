@@ -119,10 +119,20 @@ export function ParamsPanel({
       extra={
         <div className="flex gap-2">
           <Btn onClick={onReset}>Вернуть действующие</Btn>
-          {canSave && (
+          {canSave ? (
             <Btn onClick={onPublish} tone="primary" testId="publish-params">
               {saving ? 'Сохраняю…' : 'Сделать действующими'}
             </Btn>
+          ) : (
+            /* Не прячем возможность совсем: иначе коэффициенты казались бы
+               неизменяемыми. Показываем, кто их меняет и где войти. */
+            <a
+              href="/vhod?next=/reyting/kalibrovka"
+              data-testid="publish-login"
+              className="self-center text-[12.5px] text-blue-600 hover:underline"
+            >
+              Сохранить может председатель ГСК — войти
+            </a>
           )}
         </div>
       }

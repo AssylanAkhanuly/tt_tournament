@@ -210,3 +210,25 @@ export async function previewRating(body: {
 }): Promise<PreviewResult> {
   return request<PreviewResult>('/preview/', { method: 'POST', body: JSON.stringify(body) });
 }
+
+/* ── Правки председателя ГСК ✳ (10.09.2026) ─────────────────────────
+   Обе ручки сервер пускает только председателю ГСК. Отказ приходит текстом
+   сервера — его экран и показывает, а не придумывает свой. */
+
+/** Неявка без уважительной причины (п. 15.4–15.6). Основание обязательно. */
+export async function registerNoShow(userId: string, reason: string): Promise<RatingEntry> {
+  const raw = await request<Record<string, unknown>>('/no-show/', {
+    method: 'POST',
+    body: JSON.stringify({ user_id: userId, reason }),
+  });
+  return toEntry(raw);
+}
+
+/** Исправление технической ошибки (п. 21.5–21.6): разница дописывается строкой. */
+export async function correctRating(userId: string, value: number, reason: string): Promise<RatingEntry> {
+  const raw = await request<Record<string, unknown>>('/correction/', {
+    method: 'POST',
+    body: JSON.stringify({ user_id: userId, value, reason }),
+  });
+  return toEntry(raw);
+}
