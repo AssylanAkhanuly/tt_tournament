@@ -81,3 +81,49 @@ test('опубликованный выпуск держит значение, �
   expect(await вЛистеГостя(гость)).toBe('48,00');
   await гость.close();
 });
+
+/* Апелляция (п. 21) — здесь же, после выпусков: обжалуется опубликованный
+   выпуск, а выпуски публикует только этот файл. Спортсменка — Оралбек Дана:
+   её значение другие наборы не меняют. */
+test('апелляция: регистрируется с карточки и решается в очереди', async ({ page }) => {
+  const ДАНА = 'Оралбек Дана';
+  await войти(page, '/rating');
+
+  await page.getByPlaceholder('Фамилия или регион').fill(ДАНА);
+  await page.locator('[data-testid="rating-row"][data-player="' + ДАНА + '"]').click();
+  await page.waitForURL(/\/rating\/[0-9a-f-]{36}$/);
+  await page.getByTestId('appeal-open').click();
+  await expect(page.getByTestId('appeal-submit')).toBeDisabled(); // без предмета и требования
+  await page.getByLabel('Что обжалуется').fill('Начисление за матч с Жумабаевой');
+  await page.getByLabel('Требование').fill('Пересчитать по исправленному протоколу');
+  await page.getByTestId('appeal-submit').click();
+  await expect(page.getByTestId('chairman-result')).toContainText('Апелляция №');
+
+  // В очереди «Ждут решения».
+  await page.goto('/rating/appeals');
+  const строка = page.locator('[data-testid="appeal-row"][data-player="' + ДАНА + '"]');
+  await expect(строка).toContainText('Ждёт решения');
+
+  // Удовлетворить нельзя без обоснования и значения.
+  await строка.click();
+  await expect(page.getByTestId('appeal-uphold')).toBeDisabled();
+  await page.getByLabel('Обоснование решения').fill('Ошибка в протоколе подтверждена');
+  await page.getByLabel('Исправленное значение').fill('38,00');
+  await page.getByTestId('appeal-uphold').click();
+
+  // Из очереди ушла, во вкладке «Решённые» — удовлетворена.
+  await expect(строка).toHaveCount(0);
+  const вкладки = page.getByTestId('appeal-tabs');
+  await вкладки.getByRole('button').first().click();
+  await вкладки.getByRole('button', { name: 'Решённые' }).click();
+  await expect(строка).toContainText('Удовлетворена');
+
+  // Значение исправлено строкой журнала.
+  await page.goto('/rating');
+  await page.getByPlaceholder('Фамилия или регион').fill(ДАНА);
+  await page.locator('[data-testid="rating-row"][data-player="' + ДАНА + '"]').click();
+  await expect(page.getByText('Текущий рейтинг').locator('..')).toContainText('38,00');
+  await expect(
+    page.getByTestId('card-history-row').filter({ hasText: 'Апелляция №' }),
+  ).toBeVisible();
+});

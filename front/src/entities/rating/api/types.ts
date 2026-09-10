@@ -98,6 +98,56 @@ export type EditionDraftRow = {
   delta: number | null;
 };
 
+/** Строка журнала изменений (п. 20, 22.2): строка истории плюс чья она и кто
+    её внёс. Отменённые строки остаются с `isReverted`. */
+export type RatingJournalEntry = RatingEntry & {
+  athleteId: string;
+  athleteName: string;
+  createdByName: string | null;
+};
+
+export type RatingJournalPage = {
+  count: number;
+  page: number;
+  pageSize: number;
+  results: RatingJournalEntry[];
+};
+
+export type AppealStatus = 'pending' | 'upheld' | 'rejected';
+
+/** Апелляция на выпуск (п. 21): что требует п. 21.2, сроки и решение. */
+export type RatingAppeal = {
+  id: number;
+  userId: string;
+  name: string;
+  editionNumber: number;
+  applicant: string;
+  subject: string;
+  circumstances: string;
+  demand: string;
+  documents: string;
+  receivedAt: string;
+  /** Рассмотреть до — 10 рабочих дней с получения (п. 21.3). */
+  reviewUntil: string;
+  status: AppealStatus;
+  statusLabel: string;
+  decision: string;
+  decidedAt: string | null;
+  decidedByName: string | null;
+  /** Значение после исправления, если апелляцию удовлетворили. */
+  correctionAfter: number | null;
+};
+
+export type AppealInput = {
+  userId: string;
+  receivedAt?: string;
+  applicant: string;
+  subject: string;
+  circumstances: string;
+  demand: string;
+  documents: string;
+};
+
 export type RatingCard = {
   profile: RatingProfile;
   history: RatingEntry[];

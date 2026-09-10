@@ -9,8 +9,11 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import {
+  fetchAppeals,
   fetchEditionDraft,
   fetchEditions,
+  fetchJournal,
+  type JournalQuery,
   fetchRatingCard,
   fetchRatingList,
   fetchRatingParams,
@@ -86,6 +89,18 @@ export function useEditions(): AsyncState<RatingEdition[]> {
 /** Черновик следующего выпуска — только председателю ГСК. */
 export function useEditionDraft(): AsyncState<EditionDraftRow[]> {
   return useAsync(() => fetchEditionDraft(), []);
+}
+
+/** Апелляции (п. 21) — только председателю ГСК; фильтр по вкладке — на экране. */
+export function useAppeals() {
+  return useAsync(() => fetchAppeals(), []);
+}
+
+/** Журнал изменений (п. 20, 22.2) — только председателю ГСК. */
+export function useJournal(query: JournalQuery) {
+  const key = JSON.stringify(query);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  return useAsync(() => fetchJournal(query), [key]);
 }
 
 export function useRatingParams() {

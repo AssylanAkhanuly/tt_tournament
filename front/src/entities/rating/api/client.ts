@@ -8,7 +8,10 @@
    в одном месте. */
 
 import type {
+  AppealInput,
   EditionDraftRow,
+  RatingAppeal,
+  RatingJournalPage,
   PreviewMatch,
   PreviewPlayer,
   PreviewResult,
@@ -271,4 +274,87 @@ export async function fetchEditionDraft(): Promise<EditionDraftRow[]> {
     after: n(r.after),
     delta: nOrNull(r.delta),
   }));
+}
+
+/* ── Журнал изменений (п. 20, 22.2) ✳ (11.09.2026) ───────────────── */
+
+export type JournalQuery = { kind?: string; q?: string; page?: number };
+
+/** Все строки истории всех спортсменов, новые первыми — председателю ГСК. */
+export async function fetchJournal(query: JournalQuery = {}): Promise<RatingJournalPage> {
+  const params = new URLSearchParams();
+  if (query.kind) params.set('kind', query.kind);
+  if (query.q) params.set('q', query.q);
+  if (query.page) params.set('page', String(query.page));
+  const raw = await request<Record<string, unknown>>('/journal/?' + params.toString());
+  return {
+    count: n(raw.count),
+    page: n(raw.page),
+    pageSize: n(raw.page_size),
+    results: (raw.results as Record<string, unknown>[]).map((r) => ({
+      ...toEntry(r),
+      athleteId: String(r.athlete_id ?? ''),
+      athleteName: String(r.athlete_name ?? ''),
+      createdByName: (r.created_by_name as string) ?? null,
+    })),
+  };
+}
+
+/* ── Апелляции (п. 21) ✳ (11.09.2026) ─────────────────────────────── */
+
+const toAppeal = (r: Record<string, unknown>): RatingAppeal => ({
+  id: n(r.id),
+  userId: String(r.user_id ?? ''),
+  name: String(r.name ?? ''),
+  editionNumber: n(r.edition_number),
+  applicant: String(r.applicant ?? ''),
+  subject: String(r.subject ?? ''),
+  circumstances: String(r.circumstances ?? ''),
+  demand: String(r.demand ?? ''),
+  documents: String(r.documents ?? ''),
+  receivedAt: String(r.received_at ?? ''),
+  reviewUntil: String(r.review_until ?? ''),
+  status: r.status as RatingAppeal['status'],
+  statusLabel: String(r.status_label ?? ''),
+  decision: String(r.decision ?? ''),
+  decidedAt: (r.decided_at as string) ?? null,
+  decidedByName: (r.decided_by_name as string) ?? null,
+  correctionAfter: nOrNull(r.correction_after),
+});
+
+/** Апелляции — только председателю ГСК. `status` — pending | upheld | rejected. */
+export async function fetchAppeals(status?: string): Promise<RatingAppeal[]> {
+  const raw = await request<Record<string, unknown>[]>('/appeals/' + (status ? '?status=' + status : ''));
+  return raw.map(toAppeal);
+}
+
+/** Зарегистрировать письменную апелляцию на последний выпуск (п. 21.2). */
+export async function registerAppeal(input: AppealInput): Promise<RatingAppeal> {
+  return toAppeal(
+    await request<Record<string, unknown>>('/appeals/', {
+      method: 'POST',
+      body: JSON.stringify({
+        user_id: input.userId,
+        received_at: input.receivedAt || undefined,
+        applicant: input.applicant,
+        subject: input.subject,
+        circumstances: input.circumstances,
+        demand: input.demand,
+        documents: input.documents,
+      }),
+    }),
+  );
+}
+
+/** Решение по апелляции (п. 21.4): удовлетворить — с исправленным значением. */
+export async function decideAppeal(
+  id: number,
+  decision: { upheld: boolean; decision: string; value?: number },
+): Promise<RatingAppeal> {
+  return toAppeal(
+    await request<Record<string, unknown>>('/appeals/' + id + '/decision/', {
+      method: 'POST',
+      body: JSON.stringify(decision),
+    }),
+  );
 }

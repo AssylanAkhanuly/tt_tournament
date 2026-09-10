@@ -756,15 +756,29 @@ export function AreaInput({
 }
 
 /** Дата: календарь браузера, а не строка. */
-export function DateInput({ label, value, wide }: { label: string; value: string; wide?: boolean }) {
+export function DateInput({
+  label,
+  value,
+  wide,
+  onChange,
+}: {
+  label: string;
+  value: string;
+  wide?: boolean;
+  /** Управляемое поле ✳ (11.09.2026) — как у `TextInput`: значение живёт
+      снаружи (ГГГГ-ММ-ДД). Без него поле держит значение само, как в макетах. */
+  onChange?: (value: string) => void;
+}) {
   const [v, setV] = useState(value);
+  const managed = onChange !== undefined;
   return (
     <FieldShell label={label} wide={wide}>
       <input
         type="date"
+        aria-label={label}
         className="w-full rounded-lg border border-neutral-300 bg-white px-3 py-1.5 text-sm outline-none focus:border-blue-500"
-        value={v}
-        onChange={(e) => setV(e.target.value)}
+        value={managed ? value : v}
+        onChange={(e) => (managed ? onChange(e.target.value) : setV(e.target.value))}
       />
     </FieldShell>
   );
