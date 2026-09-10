@@ -13217,6 +13217,14 @@
     display: block;
   }
 }
+.hero-scope {
+  --field-border-width: 1px;
+  --border-width-field: 1px;
+  --field-border: var(--color-neutral-300);
+  --field-border-focus: var(--color-blue-500);
+  --field-shadow: 0 0 0 0 transparent;
+  --shadow-field: 0 0 0 0 transparent;
+}
 .kit-panel-body .kit-rows, .kit-panel-body .kit-sheet, .kit-panel-body .kit-empty, .kit-panel-body .kit-panel, .kit-rows .kit-panel {
   border: 0;
   border-radius: 0;
