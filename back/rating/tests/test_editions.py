@@ -79,8 +79,12 @@ def test_выпуск_это_снимок_на_дату_публикации(par
 
 
 def test_неактивный_в_выпуске_без_места(params):
-    игрок("+7701000003", "Активный", 30, status=engine.STATUS_ACTIVE)
-    игрок("+7701000004", "Неактивный", 45, status=engine.STATUS_INACTIVE)
+    from datetime import timedelta
+
+    сегодня = timezone.localdate()
+    # Статус выводится из даты последнего матча — выпуск его пересчитывает (п. 18).
+    игрок("+7701000003", "Активный", 30, last_match_at=сегодня - timedelta(days=30))
+    игрок("+7701000004", "Неактивный", 45, last_match_at=сегодня - timedelta(days=25 * 31))
 
     rows = {r.user.name: r for r in services.publish_edition(actor=None).rows.all()}
     # Неактивный исключается из текущей таблицы (п. 18.2), но в выпуске хранится.
@@ -180,9 +184,12 @@ def test_лист_прошлого_выпуска_по_номеру(params):
 
 
 def test_фильтры_и_исключение_неактивных_работают_на_выпуске(params):
-    игрок("+7701000015", "Он", 20, sex="m", status=engine.STATUS_ACTIVE)
-    игрок("+7701000016", "Она", 30, sex="f", status=engine.STATUS_ACTIVE)
-    игрок("+7701000017", "Ушла", 50, sex="f", status=engine.STATUS_INACTIVE)
+    from datetime import timedelta
+
+    недавно = timezone.localdate() - timedelta(days=30)
+    игрок("+7701000015", "Он", 20, sex="m", last_match_at=недавно)
+    игрок("+7701000016", "Она", 30, sex="f", last_match_at=недавно)
+    игрок("+7701000017", "Ушла", 50, sex="f", last_match_at=timezone.localdate() - timedelta(days=25 * 31))
     services.publish_edition(actor=None)
 
     r = APIClient().get("/api/rating/", {"sex": "f"})
@@ -204,3 +211,26 @@ def test_список_выпусков_открыт_а_черновик_толь
     d = api.get("/api/rating/editions/draft/")
     assert d.status_code == 200
     assert d.data == []  # с выпуска ничего не менялось
+
+
+# ── Статусы активности обновляются при публикации (п. 18) ───────────
+
+
+def test_выпуск_сначала_обновляет_статусы_активности(params):
+    """Выпуск еженедельный (п. 8.2) — это и есть расписание пересчёта статусов:
+    без него «неактивен через 24 месяца» (п. 18.1) держался бы на ручном
+    запуске команды, и снимок уходил бы со вчерашним статусом."""
+    from datetime import timedelta
+
+    давно = игрок("+7701000019", "Давно не играл", 45, status=engine.STATUS_ACTIVE)
+    профиль = давно.rating_profile
+    профиль.last_match_at = timezone.localdate() - timedelta(days=25 * 31)
+    профиль.save(update_fields=["last_match_at"])
+    игрок("+7701000020", "Играет", 30, status=engine.STATUS_ACTIVE)
+
+    ed = services.publish_edition(actor=None)
+
+    строка = ed.rows.get(user=давно)
+    assert строка.status == engine.STATUS_INACTIVE
+    assert строка.place is None  # исключён из текущей таблицы (п. 18.2)
+    assert ed.rows.get(user__name="Играет").place == 1

@@ -1,5 +1,17 @@
 import { expect, test, type Page } from '@playwright/test';
 
+import { E2E_GSK } from './global-setup';
+
+/* Калибровка — раздел председателя ГСК ✳ (11.09.2026): гостя уводит на
+   вход, поэтому каждый тест сначала входит. */
+test.beforeEach(async ({ page }) => {
+  await page.goto('/login?next=/rating/calibration');
+  await page.getByLabel('Эл. почта').fill(E2E_GSK.email);
+  await page.getByLabel('Пароль').fill(E2E_GSK.password);
+  await page.getByRole('button', { name: 'Войти' }).click();
+  await page.waitForURL((url) => url.pathname === '/rating/calibration');
+});
+
 /* Калибровка коэффициентов — сквозная проверка в браузере.
 
    Считает бэкенд, экран только показывает, поэтому проверка идёт до конца: от

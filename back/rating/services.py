@@ -409,6 +409,9 @@ def publish_edition(actor=None) -> RatingEdition:
     исключены из текущей таблицы, но их значение сохраняется (п. 18.2).
     """
     now = timezone.now()
+    # Статусы (п. 18) — перед снимком: еженедельный выпуск и есть расписание
+    # их пересчёта, иначе снимок уходил бы со вчерашним «активен».
+    refresh_activity(timezone.localdate(now))
     last = RatingEdition.objects.order_by("-number").first()
     edition = RatingEdition.objects.create(
         number=(last.number + 1) if last else 1,

@@ -94,15 +94,15 @@ test('председатель исправляет значение: оно с�
   ).toBeVisible();
 });
 
-test('калибровка: гостю — ссылка на вход, председателю — «Сделать действующими»', async ({ page }) => {
+test('калибровка — раздел председателя: гостя уводит на вход, председатель видит «Сделать действующими»', async ({ page }) => {
   await page.goto('/rating/calibration');
-  await expect(page.getByTestId('param-D')).toHaveValue('15');
-  await expect(page.getByTestId('publish-login')).toBeVisible();
-  await expect(page.getByTestId('publish-params')).toHaveCount(0);
+  await page.waitForURL(
+    (url) => url.pathname === '/login' && url.searchParams.get('next') === '/rating/calibration',
+  );
 
   await войти(page, '/rating/calibration');
+  await expect(page.getByTestId('param-D')).toHaveValue('15');
   await expect(page.getByTestId('publish-params')).toBeVisible();
-  await expect(page.getByTestId('publish-login')).toHaveCount(0);
 });
 
 test('разделы бокового меню переводят между экранами председателя', async ({ page }) => {

@@ -8,13 +8,20 @@
    том же движке, которым считается боевой рейтинг.
 
    Расчёта здесь нет ✳ (10.09.2026): он на бэкенде, экран шлёт набор в ручку
-   предпросчёта. Крутить коэффициенты может любой — ничего не сохраняется.
-   Сделать их действующими может только председатель ГСК ✳ (10.09.2026): по
-   Положению он ведёт базу и историю рейтинга (п. 8.3, 22).
+   предпросчёта. Коэффициенты правит и делает действующими председатель ГСК
+   (п. 8.3, 22).
+
+   Раздел председателя ✳ (11.09.2026, карта функций рейтинга): гостя уводим
+   на вход, как с остальных его разделов. Сами ручки чтения коэффициентов и
+   предпросчёта остаются открытыми — это не граница прав, а место экрана в
+   кабинете.
 
    Пояснительного текста на экране нет ✳ (10.09.2026, решение владельца
    продукта): ни заголовка с вводным абзацем, ни плашки об условности чисел, ни
    панели открытых вопросов — они живут в RATING.md и QUESTIONS.md §5. */
+
+import { useRouter } from 'next/navigation';
+import { useEffect } from 'react';
 
 import { useSession } from '@/entities/session';
 import { useRatingLab } from '@/features/rating-lab/useRatingLab';
@@ -30,8 +37,13 @@ import {
 } from '@/widgets/rating-lab';
 
 export function RatingLabView() {
+  const router = useRouter();
   const lab = useRatingLab();
-  const { isGskChairman } = useSession();
+  const { loading: sessionLoading, isGskChairman } = useSession();
+
+  useEffect(() => {
+    if (!sessionLoading && !isGskChairman) router.replace('/login?next=/rating/calibration');
+  }, [sessionLoading, isGskChairman, router]);
 
   return (
     <RatingShell active="Калибровка">
@@ -85,9 +97,6 @@ export function RatingLabView() {
               error={lab.paramsError}
               saving={lab.saving}
               saveError={lab.saveError}
-              /* Кнопка сохранения — только председателю ГСК. Остальным вместо
-                 неё — куда войти: иначе коэффициенты казались бы вовсе
-                 неизменяемыми. Права всё равно проверяет сервер. */
               canSave={isGskChairman}
               onChange={lab.setParams}
               onReset={lab.resetParams}
