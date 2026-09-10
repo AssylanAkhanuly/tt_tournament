@@ -2,10 +2,12 @@
 
 /* Добавить участника из рейтинга ✳ (11.09.2026) — поиск по живому листу.
 
-   Строка добавляет сразу, и диалог остаётся открытым: состав турнира вносят
-   подряд, и открывать диалог на каждого — лишние клики. Уже добавленные в
-   выдаче не показываются. Спортсмена, которого в листе нет, заводят кнопкой
-   «Новый спортсмен» на странице турнира. */
+   Список виден сразу — лист по убыванию рейтинга, ввод его сужает ✳
+   (11.09.2026): пустой диалог до первых букв выглядел сломанным. Строка
+   добавляет сразу, и диалог остаётся открытым: состав турнира вносят подряд,
+   и открывать диалог на каждого — лишние клики. Уже добавленные в выдаче не
+   показываются. Спортсмена, которого в листе нет, заводят кнопкой «Новый
+   спортсмен» на странице турнира. */
 
 import { Button } from '@heroui/react';
 import { useMemo, useState } from 'react';
@@ -29,10 +31,10 @@ export function ParticipantDialog({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const query = useMemo(() => ({ q: q.trim(), all: true, pageSize: 8 }), [q]);
+  const query = useMemo(() => ({ q: q.trim() || undefined, all: true, pageSize: 30 }), [q]);
   const found = useRatingList(query);
   const taken = new Set(exclude);
-  const candidates = q.trim().length >= 2 ? (found.data?.results ?? []).filter((p) => !taken.has(p.userId)) : [];
+  const candidates = (found.data?.results ?? []).filter((p) => !taken.has(p.userId));
 
   async function pick(userId: string) {
     setBusy(true);
@@ -59,8 +61,13 @@ export function ParticipantDialog({
       }
     >
       <SearchInput value={q} onChange={setQ} placeholder="Фамилия или регион" className="w-full" />
+      {!found.loading && found.data && candidates.length === 0 && (
+        <p data-testid="participant-none" className="mt-3 text-center text-[13px] text-neutral-500">
+          Никого не нашлось
+        </p>
+      )}
       {candidates.length > 0 && (
-        <div className="mt-2 flex max-h-64 flex-col overflow-auto rounded-lg border border-neutral-200">
+        <div className="mt-2 flex max-h-80 flex-col overflow-auto rounded-lg border border-neutral-200">
           {candidates.map((p) => (
             <button
               key={p.userId}

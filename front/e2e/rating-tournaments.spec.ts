@@ -100,3 +100,24 @@ test('председатель заводит турнир, вносит уча�
   await expect(page.getByTestId('protocol-state')).toHaveText('черновик');
   await expect(page.getByTestId('match-add')).toBeVisible();
 });
+
+test('участник из рейтинга: список виден сразу, ввод сужает, добавленный из выдачи уходит', async ({ page }) => {
+  await войти(page, '/rating/tournaments');
+  await page.getByTestId('tournament-create-open').click();
+  await page.getByLabel('Название').fill('[e2e] Состав из листа ' + метка());
+  await page.getByTestId('tournament-submit').click();
+  await page.waitForURL(/\/rating\/tournaments\/[^/]+$/);
+
+  await page.getByTestId('participant-add').click();
+  // До ввода — лист по убыванию: первым самый высокий рейтинг засева.
+  await expect(page.getByTestId('participant-candidate').first()).toHaveAttribute('data-player', 'Ахметов Ерлан');
+
+  await page.getByPlaceholder('Фамилия или регион').last().fill('Ким Виктор');
+  await page.locator('[data-testid="participant-candidate"][data-player="Ким Виктор"]').click();
+  await expect(page.locator('[data-testid="protocol-participant"][data-player="Ким Виктор"]')).toBeVisible();
+
+  // Уже в турнире — в выдаче его больше нет.
+  await page.getByPlaceholder('Фамилия или регион').last().fill('Ким Виктор');
+  await expect(page.getByTestId('participant-none')).toBeVisible();
+  await expect(page.locator('[data-testid="participant-candidate"][data-player="Ким Виктор"]')).toHaveCount(0);
+});
