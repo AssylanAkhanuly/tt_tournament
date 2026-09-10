@@ -237,8 +237,10 @@ class RatingMergeView(APIView):
 def _protocol(t) -> dict:
     """Строка списка протоколов: уровень, участники, учтён ли турнир."""
     from django.utils import timezone
+    from tournaments.models import Tournament
 
     applied = RatingEntry.objects.filter(tournament=t, is_reverted=False).exists()
+    manual = t.format == Tournament.FORMAT_MANUAL
     when = t.starts_at or t.created_at
     return {
         "id": t.pk,
@@ -248,8 +250,8 @@ def _protocol(t) -> dict:
         "level_label": engine.LEVEL_LABELS.get(t.level, t.level),
         "no_third_place_match": t.no_third_place_match,
         "applied": applied,
-        "editable": t.format == "manual" and not applied,
-        "manual": t.format == "manual",
+        "editable": manual and not applied,
+        "manual": manual,
         "status": t.status,
         "participants": [
             {
@@ -417,8 +419,8 @@ class RatingProtocolParticipantsView(APIView):
                 origin = new.get("origin") or (
                     engine.ORIGIN_LEGACY if new.get("legacy") not in (None, "") else engine.ORIGIN_NEW
                 )
-                manual._check_editable(t)
-                user = services.create_athlete(
+                manual.add_new_athlete(
+                    t,
                     name=new.get("name") or "",
                     region=new.get("region") or "",
                     sex=new.get("sex") or "",
@@ -431,7 +433,7 @@ class RatingProtocolParticipantsView(APIView):
                 user = _user_or_none(request.data.get("user_id"))
                 if not user:
                     return _missing("Спортсмен не найден")
-            manual.add_participant(t, user)
+                manual.add_participant(t, user)
         except (manual.ManualError, services.AthleteError) as e:
             return _bad(e)
         return Response(services.protocol_detail(t))

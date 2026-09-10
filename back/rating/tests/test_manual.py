@@ -237,3 +237,34 @@ def test_предпросмотр_пустого_черновика_называ
     r = api.post("/api/rating/protocols/%s/preview/" % t["id"], {"level": "republic", "places": {}}, format="json")
     assert r.status_code == 200
     assert "матч" in r.data["blocked"]
+
+
+# ── Возврат на доработку: только вручную и без поздних изменений ────
+
+
+def test_турнир_из_сетки_на_доработку_не_возвращается(params, api):
+    автор = User.objects.create_user(phone="+7709", name="Организатор")
+    t = Tournament.objects.create(
+        name="Турнир из сетки", created_by=автор, is_rating=True,
+        format=Tournament.FORMAT_SINGLE, status=Tournament.STATUS_FINISHED,
+    )
+    r = api.post("/api/rating/protocols/%s/rework/" % t.pk)
+    assert r.status_code == 400
+    assert "вручную" in r.data["detail"]
+
+
+def test_возврат_отказан_если_после_турнира_у_участника_были_изменения(params, api):
+    а, б = игрок("+7701", "А"), игрок("+7702", "Б")
+    t = завести(api)
+    добавить(api, t["id"], а)
+    добавить(api, t["id"], б)
+    матч(api, t["id"], а, б)
+    assert api.post("/api/rating/protocols/%s/" % t["id"], {"level": "republic", "places": {}}, format="json").status_code == 200
+    services.register_correction(а, Decimal("25.00"), "Техническая ошибка")
+
+    r = api.post("/api/rating/protocols/%s/rework/" % t["id"])
+    assert r.status_code == 400
+    assert r.data["detail"]
+    d = api.get("/api/rating/protocols/%s/" % t["id"]).data
+    assert (d["applied"], d["editable"]) == (True, False)
+    assert значение(а) == Decimal("25.00")

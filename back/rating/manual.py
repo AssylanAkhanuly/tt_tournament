@@ -77,6 +77,14 @@ def add_participant(tournament, user) -> TournamentParticipant:
 
 
 @transaction.atomic
+def add_new_athlete(tournament, **athlete) -> TournamentParticipant:
+    """Новый спортсмен сразу участником — одной транзакцией: если турнир его
+    не примет, карточка без турнира в листе не останется."""
+    _check_editable(tournament)
+    return add_participant(tournament, services.create_athlete(**athlete))
+
+
+@transaction.atomic
 def remove_participant(tournament, user) -> None:
     _check_editable(tournament)
     if tournament.matches.filter(Q(player1=user) | Q(player2=user)).exists():
@@ -169,8 +177,11 @@ def return_for_rework(tournament, actor=None):
     """Снять учёт турнира, чтобы поправить участников и матчи.
 
     Прежние строки остаются в истории отменёнными (п. 20). Отказ — если после
-    турнира у участников были другие изменения рейтинга.
+    турнира у участников были другие изменения рейтинга. Только у турнира
+    вручную: откат турнира из сетки — дело его организатора (RATING.md §11).
     """
+    if tournament.format != Tournament.FORMAT_MANUAL:
+        raise ManualError("На доработку возвращается только турнир, заведённый протоколом вручную")
     blocked = services.protocol_block_reason(tournament)
     if blocked:
         raise ManualError(blocked)
