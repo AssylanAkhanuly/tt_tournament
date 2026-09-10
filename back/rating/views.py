@@ -5,13 +5,17 @@
 `services.py`; вьюха только принимает запрос и отдаёт ответ.
 
 Рейтинг открыт без входа (ТЗ §3, экран Э0.4): таблица и карточка спортсмена —
-публичные страницы. Правка коэффициентов и фиксация неявки — только федерация.
+публичные страницы. Править рейтинговые данные — коэффициенты, неявки,
+исправления — может только председатель ГСК ✳ (10.09.2026, решение владельца
+продукта): по Положению он ведёт базу и историю рейтинга (п. 8.3, 22).
 """
 from dataclasses import asdict
 
 from django.db.models import Q
 from rest_framework import status
-from rest_framework.permissions import AllowAny, IsAdminUser
+from rest_framework.permissions import AllowAny
+
+from users.permissions import IsGskChairman
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
@@ -128,14 +132,14 @@ class RatingCardView(APIView):
 
 
 class RatingParamsView(APIView):
-    """Коэффициенты расчёта: читать может любой, править — федерация.
+    """Коэффициенты расчёта: читать может любой, править — председатель ГСК.
 
     Читать открыто намеренно: рядом с рейтингом должно быть видно, по каким
     числам он посчитан, иначе «прозрачность» из п. 4.6 не работает.
     """
 
     def get_permissions(self):
-        return [AllowAny()] if self.request.method == "GET" else [IsAdminUser()]
+        return [AllowAny()] if self.request.method == "GET" else [IsGskChairman()]
 
     def get(self, request):
         return Response(RatingParamsSerializer(RatingParams.active()).data)
@@ -189,7 +193,7 @@ class RatingNoShowView(APIView):
     последствие, пока обстоятельства не установлены.
     """
 
-    permission_classes = [IsAdminUser]
+    permission_classes = [IsGskChairman]
 
     def post(self, request):
         from django.contrib.auth import get_user_model
@@ -226,7 +230,7 @@ class RatingCorrectionView(APIView):
     исправление без объяснения ничем не отличается от подкрутки.
     """
 
-    permission_classes = [IsAdminUser]
+    permission_classes = [IsGskChairman]
 
     def post(self, request):
         from django.contrib.auth import get_user_model

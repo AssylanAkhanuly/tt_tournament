@@ -11,7 +11,7 @@ from rest_framework.test import APIClient
 
 from rating import engine, services
 from rating.models import RatingEntry, RatingParams, RatingProfile
-from users.models import User
+from users.models import Role, User
 
 pytestmark = pytest.mark.django_db
 
@@ -151,7 +151,7 @@ def test_коэффициенты_читаются_всеми_и_несут_пр
     assert r.data["sources"]["c_top"] == {"fixed": True, "clause": "п. 13"}
 
 
-def test_коэффициенты_правит_только_федерация(api, params):
+def test_коэффициенты_правит_только_председатель_гск(api, params):
     обычный = User.objects.create_user(phone="+7710000100", name="Обычный")
     api.force_authenticate(user=обычный)
     assert api.patch("/api/rating/params/", {"d": 20}, format="json").status_code == 403
@@ -160,10 +160,9 @@ def test_коэффициенты_правит_только_федерация(a
     assert RatingParams.active().d == Decimal("15.00")
 
 
-def test_федерация_меняет_коэффициент_и_он_применяется(api, params):
+def test_председатель_гск_меняет_коэффициент_и_он_применяется(api, params):
     админ = User.objects.create_user(phone="+7710000110", name="Федерация")
-    админ.is_staff = True
-    админ.save()
+    Role.objects.create(user=админ, kind=Role.KIND_GSK_CHAIRMAN)
     api.force_authenticate(user=админ)
 
     r = api.patch("/api/rating/params/", {"k_standard": "1.200"}, format="json")
@@ -254,7 +253,7 @@ def test_предпросчёт_отвергает_кривой_вход(api, pa
 # ── Неявка ──────────────────────────────────────────────────────────
 
 
-def test_неявку_фиксирует_только_федерация(api, params):
+def test_неявку_фиксирует_только_председатель_гск(api, params):
     u = игрок("+7710000120", "Игрок", 20)
     api.force_authenticate(user=u)
     r = api.post("/api/rating/no-show/", {"user_id": str(u.id), "reason": "х"}, format="json")
@@ -264,8 +263,7 @@ def test_неявку_фиксирует_только_федерация(api, pa
 def test_неявка_без_основания_не_проходит(api, params):
     u = игрок("+7710000130", "Игрок", 20)
     админ = User.objects.create_user(phone="+7710000131", name="Ф")
-    админ.is_staff = True
-    админ.save()
+    Role.objects.create(user=админ, kind=Role.KIND_GSK_CHAIRMAN)
     api.force_authenticate(user=админ)
 
     r = api.post("/api/rating/no-show/", {"user_id": str(u.id)}, format="json")
@@ -276,8 +274,7 @@ def test_неявка_без_основания_не_проходит(api, param
 def test_неявка_снимает_баллы_и_пишется_в_историю(api, params):
     u = игрок("+7710000140", "Игрок", 20)
     админ = User.objects.create_user(phone="+7710000141", name="Ф")
-    админ.is_staff = True
-    админ.save()
+    Role.objects.create(user=админ, kind=Role.KIND_GSK_CHAIRMAN)
     api.force_authenticate(user=админ)
 
     r = api.post(
@@ -336,15 +333,14 @@ def test_предпросчёт_возвращает_наблюдения_по_�
 # ── Исправление (п. 21.5–21.6) ──────────────────────────────────────
 
 
-def федерация(api, phone="+7710000200"):
+def председатель(api, phone="+7710000200"):
     админ = User.objects.create_user(phone=phone, name="Федерация")
-    админ.is_staff = True
-    админ.save()
+    Role.objects.create(user=админ, kind=Role.KIND_GSK_CHAIRMAN)
     api.force_authenticate(user=админ)
     return админ
 
 
-def test_исправление_доступно_только_федерации(api, params):
+def test_исправление_доступно_только_председателю_гск(api, params):
     u = игрок("+7710000210", "Игрок", 20)
     api.force_authenticate(user=u)
     r = api.post(
@@ -358,7 +354,7 @@ def test_исправление_доступно_только_федерации
 
 def test_исправление_без_основания_не_проходит(api, params):
     u = игрок("+7710000220", "Игрок", 20)
-    федерация(api, "+7710000221")
+    председатель(api, "+7710000221")
     r = api.post("/api/rating/correction/", {"user_id": str(u.id), "value": 25}, format="json")
     assert r.status_code == 400
     assert RatingProfile.objects.get(user=u).value == Decimal("20.00")
@@ -367,7 +363,7 @@ def test_исправление_без_основания_не_проходит(
 def test_исправление_дописывает_разницу_и_не_трогает_прошлые_записи(api, params):
     u = игрок("+7710000230", "Игрок", 20)
     было = RatingEntry.objects.filter(profile__user=u).count()
-    федерация(api, "+7710000231")
+    председатель(api, "+7710000231")
 
     r = api.post(
         "/api/rating/correction/",
@@ -390,10 +386,28 @@ def test_исправление_дописывает_разницу_и_не_тр
 
 def test_исправление_не_уводит_рейтинг_в_минус(api, params):
     u = игрок("+7710000240", "Игрок", 20)
-    федерация(api, "+7710000241")
+    председатель(api, "+7710000241")
     api.post(
         "/api/rating/correction/",
         {"user_id": str(u.id), "value": -5, "reason": "ошибка ввода"},
         format="json",
     )
     assert RatingProfile.objects.get(user=u).value == Decimal("0.00")
+
+
+def test_администратор_системы_без_роли_рейтинг_не_правит(api, params):
+    """Администратор системы — техническая роль (ТЗ §2), в судейство не входит.
+    Флажок is_staff без роли председателя ГСК права на рейтинг не даёт."""
+    админ = User.objects.create_user(phone="+7710000300", name="Сисадмин")
+    админ.is_staff = True
+    админ.save()
+    u = игрок("+7710000301", "Игрок", 20)
+    api.force_authenticate(user=админ)
+
+    assert api.patch("/api/rating/params/", {"d": 20}, format="json").status_code == 403
+    assert api.post("/api/rating/no-show/", {"user_id": str(u.id), "reason": "х"},
+                    format="json").status_code == 403
+    assert api.post("/api/rating/correction/",
+                    {"user_id": str(u.id), "value": 25, "reason": "х"},
+                    format="json").status_code == 403
+    assert RatingProfile.objects.get(user=u).value == Decimal("20.00")

@@ -77,6 +77,41 @@ class LoginView(APIView):
         return _set_auth_cookies(response, refresh)
 
 
+class LoginEmailView(APIView):
+    """Вход по почте и паролю — ВРЕМЕННЫЙ ✳ (10.09.2026, решение владельца продукта).
+
+    По ТЗ §2 личность подтверждает Smart Bridge по ИИН и одноразовому коду, и
+    паролей система не хранит. Пока Smart Bridge не подключён, председателю ГСК
+    нужно войти, чтобы править рейтинг. Поэтому исключение узкое: по почте входит
+    только тот, у кого есть роль. Остальные ждут Smart Bridge — пароль у них не
+    работает, даже если он задан.
+
+    Ответ на любую неудачу один и тот же: иначе по разнице ответов можно
+    перебрать, какие почты заведены в системе.
+    """
+
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        email = (request.data.get("email") or "").strip()
+        password = request.data.get("password") or ""
+        user = User.objects.filter(email__iexact=email).first() if email else None
+
+        if (
+            user is None
+            or not user.is_active
+            or not user.roles.exists()
+            or not user.check_password(password)
+        ):
+            return Response(
+                {"detail": "Неверная почта или пароль."},
+                status=status.HTTP_401_UNAUTHORIZED,
+            )
+        refresh = RefreshToken.for_user(user)
+        response = Response(UserSerializer(user, context={"request": request}).data)
+        return _set_auth_cookies(response, refresh)
+
+
 class LogoutView(APIView):
     permission_classes = [IsAuthenticated]
 

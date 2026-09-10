@@ -11,11 +11,19 @@ class UserSerializer(serializers.ModelSerializer):
     # осталось прежним — фронт не переписывается, — но значение теперь одно на
     # систему и с двумя знаками после запятой (п. 6.4 Положения).
     rating = serializers.SerializerMethodField()
+    # Роли — по ним экран решает, что показать. Проверяет права всё равно сервер.
+    roles = serializers.SerializerMethodField()
 
     class Meta:
         model  = User
-        fields = ["id", "phone", "name", "rating", "is_staff", "club_ids_admin", "avatar"]
-        read_only_fields = ["id", "phone", "name", "rating", "is_staff", "club_ids_admin", "avatar"]
+        fields = ["id", "phone", "name", "email", "rating", "is_staff", "roles", "club_ids_admin", "avatar"]
+        read_only_fields = ["id", "phone", "name", "email", "rating", "is_staff", "roles", "club_ids_admin", "avatar"]
+
+    def get_roles(self, obj):
+        return [
+            {"kind": r.kind, "label": r.get_kind_display(), "scope": r.scope}
+            for r in obj.roles.all()
+        ]
 
     def get_rating(self, obj):
         profile = getattr(obj, "rating_profile", None)
