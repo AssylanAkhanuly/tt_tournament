@@ -191,7 +191,7 @@ const SideRole = ({ role }: { role: RoleUI }) => {
 /** Нижняя карточка бокового меню: кто вошёл. Профиль и выход — здесь же:
     выход отбит линией и красный, случайный выход посреди турнира стоит
     дороже лишнего клика. */
-const SidePerson = ({ person }: { person: Person }) => {
+const SidePerson = ({ person, onSignOut }: { person: Person; onSignOut?: () => void }) => {
   const [open, setOpen] = useState(false);
   return (
     <div className="relative">
@@ -211,6 +211,7 @@ const SidePerson = ({ person }: { person: Person }) => {
           <button
             type="button"
             data-to="Э0.1"
+            onClick={onSignOut}
             className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-[12.5px] text-red-600 hover:bg-red-50"
           >
             <LogOut size={14} /> Выйти
@@ -220,6 +221,7 @@ const SidePerson = ({ person }: { person: Person }) => {
       <button
         type="button"
         aria-expanded={open}
+        data-testid="side-person"
         onClick={() => setOpen(!open)}
         className="flex w-full items-center gap-2.5 rounded-xl border border-neutral-200 bg-white px-2.5 py-2 text-left hover:bg-neutral-50"
       >
@@ -242,10 +244,20 @@ const SidePerson = ({ person }: { person: Person }) => {
 };
 
 /** Возврат над заголовком — у экранов, куда приходят из списка. */
-export const BackLink = ({ label, to }: { label: string; to?: string }) => (
+export const BackLink = ({
+  label,
+  to,
+  onPress,
+}: {
+  label: string;
+  to?: string;
+  /** Переход в приложении; в макетах его ловит карта флоу по `data-to`. */
+  onPress?: () => void;
+}) => (
   <button
     type="button"
     data-to={to}
+    onClick={onPress}
     className="mb-1 flex items-center gap-1 text-xs font-medium text-blue-600 hover:underline"
   >
     <ArrowLeft size={13} /> {label}
@@ -253,7 +265,7 @@ export const BackLink = ({ label, to }: { label: string; to?: string }) => (
 );
 
 /** Веб-оболочка роли: ноутбук, шапка, сайдбар, рабочая область. */
-export function WebApp({
+export function AppChrome({
   role,
   nav,
   title,
@@ -262,6 +274,9 @@ export function WebApp({
   hint,
   aside,
   actions,
+  onNavigate,
+  onSignOut,
+  bell = true,
   children,
 }: {
   role: RoleUI;
@@ -269,7 +284,7 @@ export function WebApp({
   nav: string;
   title: string;
   sub?: string;
-  back?: { label: string; to?: string };
+  back?: { label: string; to?: string; onPress?: () => void };
   /** ⚠ Больше не рисуется ✳ (01.09.2026): правило под заголовком читалось как
       шум над работой. Проп оставлен, чтобы не править двенадцать экранов. */
   hint?: string;
@@ -285,10 +300,20 @@ export function WebApp({
       конца. В потоке главное действие находилось только после прокрутки — на
       длинном экране это значит «не находилось». */
   actions?: ReactNode;
+  /** Переход по разделу сайдбара — только в приложении ✳ (10.09.2026). В
+      макетах переходы ловит карта флоу по `data-nav`, и проп не передаётся. */
+  onNavigate?: (label: string) => void;
+  /** «Выйти» в карточке человека — только в приложении; в макетах переход
+      ловит карта флоу по `data-to`. */
+  onSignOut?: () => void;
+  /** Колокол уведомлений. Лента у него показательная (`NOTES`), поэтому
+      приложение ✳ (10.09.2026) выключает его, пока уведомления (ТЗ §10.1) не
+      подключены: иначе красная точка обещала бы три несуществующих события. */
+  bell?: boolean;
   children: ReactNode;
 }) {
   return (
-    <Laptop>
+    <>
       {/* Шапка: бренд · название продукта/турнира · состояние · профиль. */}
       <div className="flex h-14 shrink-0 items-center gap-3.5 border-b border-neutral-200 bg-white px-5">
         <Brand size="sm" />
@@ -308,7 +333,7 @@ export function WebApp({
           </Chip>
         )}
         <div className="flex-1" />
-        <BellMenu />
+        {bell && <BellMenu />}
       </div>
 
       <div className="flex min-h-0 flex-1">
@@ -325,6 +350,7 @@ export function WebApp({
               type="button"
               data-nav
               aria-current={label === nav || undefined}
+              onClick={onNavigate ? () => onNavigate(label) : undefined}
               className={
                 'flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-[13px] font-medium ' +
                 (label === nav
@@ -339,7 +365,7 @@ export function WebApp({
           {/* Карточка человека прижата к низу: она не пункт меню, а ответ на
               «под кем я работаю», и место у неё постоянное. */}
           <div className="mt-auto pt-3">
-            <SidePerson person={role.person} />
+            <SidePerson person={role.person} onSignOut={onSignOut} />
           </div>
         </div>
 
@@ -364,7 +390,7 @@ export function WebApp({
              рабочей области получит его сам, не вспоминая про этот случай. */}
           <div className="flex min-h-0 flex-1 flex-col overflow-auto px-6 pb-6 [--kit-gut:1.5rem] [--kit-gutb:1.5rem] [&>*]:shrink-0">
             <div className="pb-4 pt-5">
-              {back && <BackLink label={back.label} to={back.to} />}
+              {back && <BackLink label={back.label} to={back.to} onPress={back.onPress} />}
               <h1 className="text-xl font-semibold tracking-tight">{title}</h1>
               {sub && <p className="mt-0.5 text-[13px] text-neutral-500">{sub}</p>}
             </div>
@@ -386,6 +412,18 @@ export function WebApp({
           </aside>
         )}
       </div>
+    </>
+  );
+}
+
+/** Веб-оболочка роли в рамке ноутбука — для макетов ✳ (10.09.2026).
+
+    Приложение берёт `AppChrome` без рамки (внутри `FullScreen`): вид один, и
+    экран больше не рисуется заново рядом с макетом. */
+export function WebApp(props: Parameters<typeof AppChrome>[0]) {
+  return (
+    <Laptop>
+      <AppChrome {...props} />
     </Laptop>
   );
 }

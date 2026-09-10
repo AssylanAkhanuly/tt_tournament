@@ -72,3 +72,19 @@ export const Phone = ({ children }: { children: ReactNode }) => (
     </div>
   </ScreenScope>
 );
+
+/** Экран приложения во всё окно ✳ (10.09.2026): тот же скоуп нового слоя,
+    что у рамок, но без корпуса устройства. Макеты кладут оболочки
+    (`AppChrome`, `AuthScreen`, `SiteHeader`) в `Laptop` / `Phone`, приложение —
+    сюда: вид один, отличается только рамка. `relative` — по той же причине, что
+    у рамок: диалоги (`InlineDialog`) рисуются абсолютным слоем внутри. */
+export const FullScreen = ({ children }: { children: ReactNode }) => (
+  <div
+    className="hero-scope relative flex h-screen w-full flex-col overflow-hidden bg-white text-neutral-900"
+    data-theme="light"
+    style={FONT}
+  >
+    {children}
+  </div>
+);
+

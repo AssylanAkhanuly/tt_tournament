@@ -19,7 +19,11 @@
 import markUrl from '@/shared/kit/brand/fnt-mark.svg';
 import './brand.css';
 
+import { assetUrl } from './asset';
+
 const cx = (...p: (string | false | undefined)[]) => p.filter(Boolean).join(' ');
+
+const MARK = assetUrl(markUrl);
 
 export type BrandSize = 'sm' | 'md' | 'lg';
 
@@ -36,7 +40,7 @@ export function Brand({
 }) {
   return (
     <div className={cx('ui-brand', size !== 'md' && size, className)}>
-      <img className="mark" src={markUrl} alt="ФНТ РК" />
+      <img className="mark" src={MARK} alt="ФНТ РК" />
       <span className="wm">
         <b>ФНТ РК</b>
         {sub && <i>{sub}</i>}

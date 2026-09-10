@@ -48,6 +48,9 @@ import {
   TextInput,
   WebApp,
   type RoleUI,
+  AUTH_FOOT,
+  AuthScreen,
+  SiteHeader,
 } from '@/shared/kit/app';
 /* Из старого слоя остаются только мета-компоненты борда: колонки, стрелки и
    полки состояний. Сами экраны собраны новым слоем. */
@@ -340,9 +343,6 @@ const SecCap = ({ children }: { children: ReactNode }) => (
 
 /* ── Оболочка страниц без входа ─────────────────────────────────── */
 
-/** Подпись в подвале титульных страниц — одна на оба формата. */
-const AUTH_FOOT = 'Федерация настольного тенниса Республики Казахстан · цифровая платформа турниров';
-
 /** Титульная страница: до входа ни сайдбара, ни профиля — карточка по центру
     на фирменном синем. Синий — цвет знака ФНТ; кольца на фоне — намёк на мяч,
     нарисованы рамками, без картинок. `judge` — своя окраска формы судьи:
@@ -358,22 +358,10 @@ const AuthPage = ({
   children: ReactNode;
 }) => (
   <Laptop>
-    <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden bg-linear-to-br from-blue-800 via-blue-900 to-blue-950">
-      <div className="pointer-events-none absolute -left-28 -top-28 h-96 w-96 rounded-full border-[30px] border-blue-700/40" />
-      <div className="pointer-events-none absolute -bottom-36 -right-20 h-[440px] w-[440px] rounded-full border-[38px] border-blue-700/30" />
-      <div className="relative flex min-h-0 flex-1 items-center justify-center overflow-auto p-8">
-        <div
-          className={
-            'my-auto rounded-2xl bg-white p-7 shadow-2xl ' +
-            (wide ? 'w-[560px]' : 'w-[400px]') +
-            (judge ? ' border-t-4 border-t-amber-500' : '')
-          }
-        >
-          {children}
-        </div>
-      </div>
-      <div className="relative shrink-0 pb-5 text-center text-xs text-blue-200/80">{AUTH_FOOT}</div>
-    </div>
+    {/* Сама страница — из кита ✳ (10.09.2026): та же, что вход в приложении. */}
+    <AuthScreen wide={wide} judge={judge}>
+      {children}
+    </AuthScreen>
   </Laptop>
 );
 
@@ -1172,59 +1160,24 @@ const Notif0_3States = () => (
 /** Разделы публичного сайта — один список на оба формата. */
 const SITE_NAV = ['Главная', 'Календарь', 'Рейтинги', 'Новости'];
 
-const SiteLink = ({ t, on }: { t: string; on: boolean }) => (
-  <button
-    type="button"
-    aria-current={on || undefined}
-    className={
-      'shrink-0 rounded-lg px-2.5 py-1.5 ' +
-      (on ? 'bg-blue-50 text-blue-700' : 'text-neutral-600 hover:bg-neutral-50')
-    }
-  >
-    {t}
-  </button>
-);
-
-/** Шапка сайта: одна на главную и на страницу турнира — разделы, язык и
-    «Войти». Общая нарочно: публичная часть — один сайт, и шапка не должна
-    разъезжаться между двумя кадрами.
-
-    `one` — телефон ✳ (30.08.2026): знак, язык и «Войти» первой строкой,
-    разделы — второй, с прокруткой вбок. Нижней панели вкладок у публичной
-    части нет и не будет: это сайт, а не приложение, и человек в него не
-    входил. */
-const SiteHead = ({ active, one }: { active: string; one?: boolean }) =>
-  one ? (
-    <div className="shrink-0 border-b border-neutral-200 bg-white">
-      <div className="flex items-center gap-2 px-4 py-2">
-        <Brand size="sm" />
-        <div className="flex-1" />
+/** Шапка сайта — из кита (`SiteHeader`) ✳ (10.09.2026): та же, что у
+    публичных страниц приложения, поэтому макет и экран не разъезжаются.
+    Здесь только наполнение: разделы, язык и «Войти» по карте флоу. */
+const SiteHead = ({ active, one }: { active: string; one?: boolean }) => (
+  <SiteHeader
+    items={SITE_NAV.map((t) => ({ t }))}
+    active={active}
+    one={one}
+    right={
+      <>
         <Langs />
         <Button size="sm" variant="primary" data-to="Э0.1">
           <LogIn size={14} /> Войти
         </Button>
-      </div>
-      <nav className="flex gap-1 overflow-x-auto px-3 pb-1.5 text-[13px] font-medium">
-        {SITE_NAV.map((t) => (
-          <SiteLink key={t} on={t === active} t={t} />
-        ))}
-      </nav>
-    </div>
-  ) : (
-    <div className="flex h-14 shrink-0 items-center gap-6 border-b border-neutral-200 bg-white px-6">
-      <Brand />
-      <nav className="flex items-center gap-1 text-[13px] font-medium">
-        {SITE_NAV.map((t) => (
-          <SiteLink key={t} on={t === active} t={t} />
-        ))}
-      </nav>
-      <div className="flex-1" />
-      <Langs />
-      <Button size="sm" variant="primary" data-to="Э0.1">
-        <LogIn size={14} /> Войти
-      </Button>
-    </div>
-  );
+      </>
+    }
+  />
+);
 
 type LiveMatch = {
   tour: string;

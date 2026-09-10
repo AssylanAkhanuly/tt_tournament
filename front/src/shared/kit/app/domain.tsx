@@ -685,10 +685,13 @@ export function TextInput({
   bad,
   onChange,
   ariaLabel,
+  type,
 }: {
   label: string;
   value?: string;
   placeholder?: string;
+  /** Тип поля ✳ (10.09.2026): почта и пароль — вход председателя ГСК. */
+  type?: 'text' | 'email' | 'password';
   wide?: boolean;
   /** Поле не проходит проверку. */
   bad?: boolean;
@@ -706,6 +709,7 @@ export function TextInput({
     <FieldShell label={label} wide={wide}>
       <Input
         aria-label={ariaLabel ?? label}
+        type={type}
         className={'w-full' + (bad ? ' border-red-400' : '')}
         placeholder={placeholder}
         value={managed ? value : own}
@@ -721,20 +725,31 @@ export function AreaInput({
   value = '',
   rows = 3,
   wide,
+  onChange,
+  ariaLabel,
+  placeholder,
 }: {
   label: string;
   value?: string;
   rows?: number;
   wide?: boolean;
+  /** Управляемое поле ✳ (10.09.2026) — как у `TextInput`: значение живёт
+      снаружи. Без него поле держит значение само, как в макетах. */
+  onChange?: (value: string) => void;
+  ariaLabel?: string;
+  placeholder?: string;
 }) {
   const [v, setV] = useState(value);
+  const managed = onChange !== undefined;
   return (
     <FieldShell label={label} wide={wide}>
       <textarea
+        aria-label={ariaLabel ?? label}
+        placeholder={placeholder}
         className="w-full rounded-lg border border-neutral-300 bg-white px-3 py-2 text-sm outline-none placeholder:text-neutral-400 focus:border-blue-500"
         rows={rows}
-        value={v}
-        onChange={(e) => setV(e.target.value)}
+        value={managed ? value : v}
+        onChange={(e) => (managed ? onChange(e.target.value) : setV(e.target.value))}
       />
     </FieldShell>
   );
@@ -914,6 +929,7 @@ export function InlineDialog({
   foot,
   to,
   wide,
+  onClose,
   children,
 }: {
   title: string;
@@ -922,6 +938,8 @@ export function InlineDialog({
   foot?: ReactNode;
   /** Экран позади диалога — туда ведёт крестик. */
   to?: string;
+  /** Закрыть — в приложении; в макетах крестик ведёт по карте флоу (`to`). */
+  onClose?: () => void;
   wide?: boolean;
   children: ReactNode;
 }) {
@@ -945,6 +963,8 @@ export function InlineDialog({
           <button
             type="button"
             data-to={to}
+            onClick={onClose}
+            aria-label="Закрыть"
             className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-neutral-400 hover:bg-neutral-100 hover:text-neutral-700"
           >
             <X size={16} />
