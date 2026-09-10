@@ -2,48 +2,41 @@
 
 /* Действия председателя ГСК над рейтингом спортсмена: неявка и исправление.
 
-   Хук держит только состояние действия — идёт ли запрос, чем кончился. Сам
-   запрос в транспорте (`entities/rating`), права — на сервере. */
+   Хук держит только состояние действия — идёт ли запрос и чем кончился. Сам
+   запрос в транспорте (`entities/rating`), права — на сервере. Возвращает
+   записанную строку журнала: по ней экран говорит, что именно изменилось, а
+   не пересчитывает сам. */
 
 import { useCallback, useState } from 'react';
 
 import { correctRating, registerNoShow, type RatingEntry } from '@/entities/rating';
 
-export type ActionKind = 'no_show' | 'correction';
-
-export function useRatingActions(userId: string, onDone: () => void) {
-  const [busy, setBusy] = useState<ActionKind | null>(null);
+export function useRatingActions(userId: string) {
+  const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [last, setLast] = useState<RatingEntry | null>(null);
 
-  const run = useCallback(
-    async (kind: ActionKind, action: () => Promise<RatingEntry>) => {
-      setBusy(kind);
-      setError(null);
-      try {
-        const entry = await action();
-        setLast(entry);
-        onDone(); // карточка перечитывается: значение и история уже новые
-        return true;
-      } catch (e) {
-        setError((e as Error).message);
-        return false;
-      } finally {
-        setBusy(null);
-      }
-    },
-    [onDone],
-  );
+  const run = useCallback(async (action: () => Promise<RatingEntry>): Promise<RatingEntry | null> => {
+    setBusy(true);
+    setError(null);
+    try {
+      return await action();
+    } catch (e) {
+      setError((e as Error).message);
+      return null;
+    } finally {
+      setBusy(false);
+    }
+  }, []);
 
   const noShow = useCallback(
-    (reason: string) => run('no_show', () => registerNoShow(userId, reason)),
+    (reason: string) => run(() => registerNoShow(userId, reason)),
     [run, userId],
   );
 
   const correct = useCallback(
-    (value: number, reason: string) => run('correction', () => correctRating(userId, value, reason)),
+    (value: number, reason: string) => run(() => correctRating(userId, value, reason)),
     [run, userId],
   );
 
-  return { noShow, correct, busy, error, last };
+  return { noShow, correct, busy, error };
 }

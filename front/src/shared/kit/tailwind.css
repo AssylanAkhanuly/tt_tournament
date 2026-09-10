@@ -121,6 +121,9 @@
     --ease-linear: linear;
   }
 }
+.\@container {
+  container-type: inline-size;
+}
 .pointer-events-auto {
   pointer-events: auto;
 }
@@ -273,6 +276,9 @@
 }
 .ms-auto {
   margin-inline-start: auto;
+}
+.-mt-2 {
+  margin-top: calc(var(--spacing) * -2);
 }
 .-mt-7 {
   margin-top: calc(var(--spacing) * -7);
@@ -509,6 +515,9 @@
 .h-px {
   height: 1px;
 }
+.h-screen {
+  height: 100vh;
+}
 .max-h-44 {
   max-height: calc(var(--spacing) * 44);
 }
@@ -712,9 +721,6 @@
 }
 .max-w-\[720px\] {
   max-width: 720px;
-}
-.max-w-\[1400px\] {
-  max-width: 1400px;
 }
 .max-w-full {
   max-width: 100%;
@@ -1470,9 +1476,6 @@
 .p-4 {
   padding: calc(var(--spacing) * 4);
 }
-.p-5 {
-  padding: calc(var(--spacing) * 5);
-}
 .p-6 {
   padding: calc(var(--spacing) * 6);
 }
@@ -1590,9 +1593,6 @@
 .pt-14 {
   padding-top: calc(var(--spacing) * 14);
 }
-.pt-16 {
-  padding-top: calc(var(--spacing) * 16);
-}
 .pr-1 {
   padding-right: var(--spacing);
 }
@@ -1631,9 +1631,6 @@
 }
 .pb-6 {
   padding-bottom: calc(var(--spacing) * 6);
-}
-.pb-10 {
-  padding-bottom: calc(var(--spacing) * 10);
 }
 .pl-4 {
   padding-left: calc(var(--spacing) * 4);
@@ -2162,12 +2159,6 @@
 .disabled\:opacity-30:disabled {
   opacity: 30%;
 }
-.disabled\:opacity-50:disabled {
-  opacity: 50%;
-}
-.disabled\:opacity-60:disabled {
-  opacity: 60%;
-}
 :is(.\*\*\:data-row\:grid-cols-1 *)[data-row] {
   grid-template-columns: repeat(1, minmax(0, 1fr));
 }
@@ -2183,9 +2174,6 @@
   }
 }
 @media (width >= 64rem) {
-  .lg\:grid-cols-\[minmax\(0\,1\.05fr\)_minmax\(0\,1fr\)\] {
-    grid-template-columns: minmax(0,1.05fr) minmax(0,1fr);
-  }
   .lg\:grid-cols-\[minmax\(0\,1fr\)_minmax\(0\,320px\)\] {
     grid-template-columns: minmax(0,1fr) minmax(0,320px);
   }
@@ -2194,6 +2182,11 @@
   }
   .lg\:grid-cols-\[minmax\(0\,300px\)_minmax\(0\,1fr\)\] {
     grid-template-columns: minmax(0,300px) minmax(0,1fr);
+  }
+}
+@container (width >= 72rem) {
+  .\@min-\[72rem\]\:grid-cols-\[minmax\(0\,1\.05fr\)_minmax\(0\,1fr\)\] {
+    grid-template-columns: minmax(0,1.05fr) minmax(0,1fr);
   }
 }
 .\[\&_\[data-row\]\>span\]\:text-left [data-row] > span {

@@ -1,23 +1,23 @@
 'use client';
 
-/* Вход по почте и паролю — для председателя ГСК.
+/* Вход — по макету Э0.1 из Storybook ✳ (10.09.2026): та же титульная
+   страница (`AuthScreen` из кита — синий фон, белая карточка, знак ФНТ), та же
+   кнопка во всю ширину. Отличаются только поля: вместо ИИН и кода — почта и
+   пароль.
 
-   Временный ✳ (10.09.2026, решение владельца продукта). По ТЗ §2 личность
-   подтверждает Smart Bridge по ИИН и одноразовому коду, и паролей система не
-   хранит; пока он не подключён, председателю ГСК нужно войти, чтобы править
-   рейтинг. Экран так прямо и говорит — иначе он выглядел бы как постоянный
-   способ входа для всех. */
+   Вход по паролю временный (ТЗ §2): личность должен подтверждать Smart Bridge
+   по ИИН, и паролей система хранить не будет. Пока он не подключён, так входит
+   председатель ГСК — сервер пускает по паролю только тех, у кого есть роль.
+   Экран говорит об этом прямо, иначе выглядел бы как постоянный вход для всех. */
 
-import Link from 'next/link';
+import { Button } from '@heroui/react';
+import { LogIn } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useState, type FormEvent } from 'react';
 
-import '@/shared/kit/tailwind.css';
 import { useSession } from '@/entities/session';
-
-const FIELD =
-  'w-full rounded-lg border border-neutral-300 bg-white px-3 py-2 text-[14px] outline-none ' +
-  'focus:border-blue-500';
+import { AuthScreen, FullScreen, TextInput } from '@/shared/kit/app';
+import { Brand } from '@/shared/kit/brand';
 
 export function LoginView() {
   const router = useRouter();
@@ -48,93 +48,53 @@ export function LoginView() {
   }
 
   return (
-    <div className="hero-scope min-h-screen bg-neutral-50 text-neutral-900" data-theme="light">
-      <main className="mx-auto flex max-w-md flex-col px-6 pt-16 pb-10">
-        <Link
-          href="/reyting"
-          className="text-[11px] font-semibold uppercase tracking-wider text-blue-600 hover:underline"
-        >
-          ← Рейтинг игроков
-        </Link>
-        <h1 className="mt-2 text-2xl font-semibold tracking-tight">Вход</h1>
-        <p className="mt-1.5 text-[13.5px] leading-snug text-neutral-600">
-          Для председателя Главной судейской коллегии — по почте и паролю.
-        </p>
+    <FullScreen>
+      <AuthScreen>
+        <div className="mb-5 flex flex-col items-center gap-4 text-center">
+          <Brand size="lg" />
+          <div>
+            <div className="text-xl font-semibold tracking-tight">Вход в систему</div>
+            <div className="mt-1 text-[12.5px] text-neutral-500">Председатель ГСК — по почте и паролю</div>
+          </div>
+        </div>
 
         {!loading && user ? (
-          <div className="mt-6 rounded-xl border border-neutral-200 bg-white p-5" data-testid="already-in">
-            <p className="text-[14px]">
+          <div className="flex flex-col gap-3 text-center" data-testid="already-in">
+            <p className="text-[13.5px]">
               Вы вошли как <b>{user.name}</b>
               {isGskChairman && ' — председатель ГСК'}.
             </p>
-            <div className="mt-4 flex gap-2">
-              <Link
-                href={next}
-                className="rounded-lg bg-blue-600 px-3 py-1.5 text-[13px] font-medium text-white hover:bg-blue-700"
-              >
-                Продолжить
-              </Link>
-              <button
-                type="button"
-                onClick={() => void signOut()}
-                className="rounded-lg border border-neutral-300 px-3 py-1.5 text-[13px] font-medium text-neutral-700 hover:bg-neutral-50"
-              >
-                Выйти
-              </button>
-            </div>
+            <Button className="w-full" variant="primary" onPress={() => router.push(next)}>
+              Продолжить
+            </Button>
+            <button
+              type="button"
+              onClick={() => void signOut()}
+              className="text-[12.5px] font-semibold text-neutral-500 hover:underline"
+            >
+              Выйти
+            </button>
           </div>
         ) : (
-          <form
-            onSubmit={onSubmit}
-            className="mt-6 flex flex-col gap-3.5 rounded-xl border border-neutral-200 bg-white p-5"
-          >
-            <label className="flex flex-col gap-1">
-              <span className="text-xs font-medium text-neutral-500">Эл. почта</span>
-              <input
-                type="email"
-                required
-                autoComplete="username"
-                aria-label="Эл. почта"
-                className={FIELD}
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-              />
-            </label>
-            <label className="flex flex-col gap-1">
-              <span className="text-xs font-medium text-neutral-500">Пароль</span>
-              <input
-                type="password"
-                required
-                autoComplete="current-password"
-                aria-label="Пароль"
-                className={FIELD}
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-              />
-            </label>
-
+          <form onSubmit={onSubmit} className="flex flex-col gap-3">
+            <TextInput label="Эл. почта" type="email" value={email} onChange={setEmail} />
+            <TextInput label="Пароль" type="password" value={password} onChange={setPassword} />
             {error && (
-              <p role="alert" className="text-[13px] text-red-600" data-testid="login-error">
+              <div role="alert" data-testid="login-error" className="text-center text-xs leading-snug text-red-600">
                 {error}
-              </p>
+              </div>
             )}
-
-            <button
-              type="submit"
-              disabled={busy}
-              className="mt-1 rounded-lg bg-blue-600 px-3 py-2 text-[14px] font-medium text-white hover:bg-blue-700 disabled:opacity-60"
-            >
-              {busy ? 'Входим…' : 'Войти'}
-            </button>
+            <Button type="submit" className="mt-1 w-full" variant="primary" isDisabled={busy}>
+              <LogIn size={15} /> {busy ? 'Входим…' : 'Войти'}
+            </Button>
           </form>
         )}
 
-        <p className="mt-4 text-[12px] leading-snug text-neutral-500">
-          Вход по паролю временный: по техническому заданию личность подтверждается через Smart Bridge по
-          ИИН и одноразовому коду, и паролей система хранить не будет. Пока Smart Bridge не подключён, так
-          входит только председатель ГСК.
-        </p>
-      </main>
-    </div>
+        <div className="mt-4 border-t border-neutral-100 pt-4 text-center text-[12px] leading-snug text-neutral-500">
+          Вход по паролю временный: по техническому заданию личность подтверждается через Smart Bridge по ИИН
+          и одноразовому коду. Пока он не подключён, так входит только председатель ГСК.
+        </div>
+      </AuthScreen>
+    </FullScreen>
   );
 }

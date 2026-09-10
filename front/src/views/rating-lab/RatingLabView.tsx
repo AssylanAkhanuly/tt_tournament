@@ -33,6 +33,7 @@ export function RatingLabView() {
   return (
     <RatingShell
       title="Калибровка рейтинга"
+      active="Калибровка"
       back={{ href: '/reyting', label: 'Рейтинг игроков' }}
       lead="Введите спортсменов и матчи, подвиньте коэффициенты — и посмотрите, что делает с рейтингом формула из проекта Положения. Считает тот же движок, что и боевой рейтинг; ничего не сохраняется, пока председатель ГСК не сделает коэффициенты действующими."
       note="Значения D, K и потолка изменения в проекте Положения не заданы. Пока федерация их не утвердит, любые числа отсюда условны."
@@ -43,54 +44,59 @@ export function RatingLabView() {
         </div>
       )}
 
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,1fr)]">
-        <div className="min-w-0">
-          <PlayersPanel
-            players={lab.players}
-            startOf={lab.startOf}
-            onAdd={lab.addPlayer}
-            onUpdate={lab.updatePlayer}
-            onRemove={lab.removePlayer}
-          />
-          <TournamentsPanel
-            tournaments={lab.tournaments}
-            players={lab.players}
-            params={lab.params}
-            onAdd={lab.addTournament}
-            onUpdate={lab.updateTournament}
-            onRemove={lab.removeTournament}
-            onPlace={lab.setPlace}
-          />
-          <MatchesPanel
-            matches={lab.matches}
-            players={lab.players}
-            tournaments={lab.tournaments}
-            onAdd={lab.addMatch}
-            onUpdate={lab.updateMatch}
-            onRemove={lab.removeMatch}
-            onClear={lab.clearMatches}
-            onRoundRobin={lab.fillRoundRobin}
-          />
-        </div>
+      {/* Две колонки — по ширине рабочей области, а не окна: у председателя
+          слева меню роли, и при «широком» окне таблице прогона оставалось
+          место на три буквы фамилии. */}
+      <div className="@container">
+        <div className="grid gap-6 @min-[72rem]:grid-cols-[minmax(0,1.05fr)_minmax(0,1fr)]">
+          <div className="min-w-0">
+            <PlayersPanel
+              players={lab.players}
+              startOf={lab.startOf}
+              onAdd={lab.addPlayer}
+              onUpdate={lab.updatePlayer}
+              onRemove={lab.removePlayer}
+            />
+            <TournamentsPanel
+              tournaments={lab.tournaments}
+              players={lab.players}
+              params={lab.params}
+              onAdd={lab.addTournament}
+              onUpdate={lab.updateTournament}
+              onRemove={lab.removeTournament}
+              onPlace={lab.setPlace}
+            />
+            <MatchesPanel
+              matches={lab.matches}
+              players={lab.players}
+              tournaments={lab.tournaments}
+              onAdd={lab.addMatch}
+              onUpdate={lab.updateMatch}
+              onRemove={lab.removeMatch}
+              onClear={lab.clearMatches}
+              onRoundRobin={lab.fillRoundRobin}
+            />
+          </div>
 
-        <div className="min-w-0">
-          <StandingsPanel table={lab.result?.table ?? []} calculating={lab.calculating} />
-          <FindingsPanel result={lab.result} params={lab.params} />
-          <ParamsPanel
-            params={lab.params}
-            sources={lab.sources}
-            loading={lab.paramsLoading}
-            error={lab.paramsError}
-            saving={lab.saving}
-            saveError={lab.saveError}
-            /* Кнопка сохранения — только председателю ГСК. Остальным вместо
-               неё — куда войти: иначе коэффициенты казались бы вовсе
-               неизменяемыми. Права всё равно проверяет сервер. */
-            canSave={isGskChairman}
-            onChange={lab.setParams}
-            onReset={lab.resetParams}
-            onPublish={lab.publishParams}
-          />
+          <div className="min-w-0">
+            <StandingsPanel table={lab.result?.table ?? []} calculating={lab.calculating} />
+            <FindingsPanel result={lab.result} params={lab.params} />
+            <ParamsPanel
+              params={lab.params}
+              sources={lab.sources}
+              loading={lab.paramsLoading}
+              error={lab.paramsError}
+              saving={lab.saving}
+              saveError={lab.saveError}
+              /* Кнопка сохранения — только председателю ГСК. Остальным вместо
+                 неё — куда войти: иначе коэффициенты казались бы вовсе
+                 неизменяемыми. Права всё равно проверяет сервер. */
+              canSave={isGskChairman}
+              onChange={lab.setParams}
+              onReset={lab.resetParams}
+              onPublish={lab.publishParams}
+            />
+          </div>
         </div>
       </div>
 

@@ -4,10 +4,11 @@ import { E2E_GSK } from './global-setup';
 
 /* Вход председателя ГСК и его правки рейтинга — сквозная проверка.
 
-   Вход по почте и паролю временный (ТЗ §2 — Smart Bridge), права на правки
-   рейтинга — только у председателя ГСК. Утверждения конкретные: не «кнопка
-   есть», а что после неявки рейтинг упал ровно на 0,20 и в истории появилась
-   строка с тем самым основанием. Учётка заводится в `global-setup`. */
+   Экраны собраны по макетам Storybook: вход — Э0.1, гость — шапка публичного
+   сайта (Э0.4), председатель — оболочка роли, правки — диалогами с основанием.
+   Утверждения конкретные: не «кнопка есть», а что после неявки рейтинг упал
+   ровно на 0,20 и в истории появилась строка с тем самым основанием. Учётка
+   заводится в `global-setup`. */
 
 const строка = (page: Page, имя: string) =>
   page.locator('[data-testid="rating-row"][data-player="' + имя + '"]');
@@ -20,7 +21,8 @@ async function войти(page: Page, next = '/reyting') {
   await page.getByLabel('Пароль').fill(E2E_GSK.password);
   await page.getByRole('button', { name: 'Войти' }).click();
   await page.waitForURL((url) => url.pathname === next);
-  await expect(page.getByTestId('session-user')).toContainText('председатель ГСК');
+  // Оболочка роли: карточка человека снизу бокового меню.
+  await expect(page.getByTestId('side-person')).toContainText('Председатель ГСК (проверки)');
 }
 
 async function карточка(page: Page, имя: string) {
@@ -31,10 +33,11 @@ async function карточка(page: Page, имя: string) {
   await expect(page.locator('h1')).toHaveText(имя);
 }
 
-test('гость видит «Войти» и не видит правок на карточке', async ({ page }) => {
+test('гость видит шапку сайта с «Войти» и не видит правок на карточке', async ({ page }) => {
   await карточка(page, 'Ким Виктор');
   await expect(page.getByTestId('login-link')).toBeVisible();
-  await expect(page.getByTestId('chairman-panel')).toHaveCount(0);
+  await expect(page.getByTestId('side-person')).toHaveCount(0);
+  await expect(page.getByTestId('noshow-open')).toHaveCount(0);
 });
 
 test('неверный пароль не пускает и говорит об этом', async ({ page }) => {
@@ -53,7 +56,8 @@ test('председатель фиксирует неявку: рейтинг �
   // Ким Виктор в показательном наборе: 40,00 + 0,20 за турнир = 40,20.
   await expect(текущий(page)).toContainText('40,20');
 
-  await page.getByTestId('noshow-reason').fill('Не явился на кубок РК, уведомления о снятии нет');
+  await page.getByTestId('noshow-open').click();
+  await page.getByLabel('Основание неявки').fill('Не явился на кубок РК, уведомления о снятии нет');
   await page.getByTestId('noshow-submit').click();
 
   // Первая неявка — −0,20 (п. 15.4); размер прислал сервер, экран не считал.
@@ -64,12 +68,22 @@ test('председатель фиксирует неявку: рейтинг �
   ).toBeVisible();
 });
 
+test('без основания неявку не зафиксировать', async ({ page }) => {
+  await войти(page);
+  await карточка(page, 'Оралбек Дана');
+  await page.getByTestId('noshow-open').click();
+  await expect(page.getByTestId('noshow-submit')).toBeDisabled();
+  await page.getByRole('button', { name: 'Закрыть' }).last().click();
+  await expect(page.getByTestId('noshow-submit')).toHaveCount(0);
+});
+
 test('председатель исправляет значение: оно становится ровно введённым', async ({ page }) => {
   await войти(page);
   await карточка(page, 'Нурланов Данияр');
 
-  await page.getByTestId('correction-value').fill('33,50');
-  await page.getByTestId('correction-reason').fill('Опечатка при переносе прежнего рейтинга');
+  await page.getByTestId('correction-open').click();
+  await page.getByLabel('Исправленное значение').fill('33,50');
+  await page.getByLabel('Основание исправления').fill('Опечатка при переносе прежнего рейтинга');
   await page.getByTestId('correction-submit').click();
 
   await expect(page.getByTestId('chairman-result')).toContainText('→ 33,50');
@@ -91,8 +105,16 @@ test('калибровка: гостю — ссылка на вход, пред�
   await expect(page.getByTestId('publish-login')).toHaveCount(0);
 });
 
-test('выход возвращает гостя', async ({ page }) => {
+test('разделы бокового меню переводят между экранами председателя', async ({ page }) => {
   await войти(page);
-  await page.getByTestId('session-user').getByRole('button', { name: 'Выйти' }).click();
+  await page.getByRole('button', { name: 'Калибровка' }).click();
+  await page.waitForURL((url) => url.pathname === '/reyting/kalibrovka');
+  await expect(page.locator('h1')).toHaveText('Калибровка рейтинга');
+});
+
+test('выход из карточки человека возвращает гостя', async ({ page }) => {
+  await войти(page);
+  await page.getByTestId('side-person').click();
+  await page.getByRole('button', { name: 'Выйти' }).click();
   await expect(page.getByTestId('login-link')).toBeVisible();
 });
