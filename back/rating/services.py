@@ -614,6 +614,68 @@ def merge_profiles(keep_user, drop_user, *, reason: str, actor=None) -> RatingPr
     return keep
 
 
+# ── Утверждение протокола: уровень и места (п. 10, 13) ──────────────
+
+
+class ProtocolError(ValueError):
+    """Протокол нельзя утвердить. Текст объясняет почему."""
+
+
+@transaction.atomic
+def set_protocol(tournament, *, level: str, places: Dict[str, int], no_third_place_match: bool, actor=None):
+    """Задать уровень соревнования и итоговые места — и пересчитать турнир.
+
+    Без этого C (п. 13) и P (п. 10) в настоящих турнирах всегда были бы 1,00.
+    Прежние строки турнира отменяются (история сохраняется, п. 20), расчёт
+    идёт заново — от значений участников до турнира.
+
+    Честно это только для последнего турнира участников: расчёт берёт их
+    текущие значения. Если после турнира у кого-то из них появились другие
+    строки (турнир, неявка, исправление), пересчёт отказан — иначе поздние
+    начисления остались бы посчитанными от старых чисел, а каскадного
+    исправления (п. 21.6) нет.
+    """
+    if level not in engine.LEVELS:
+        raise ProtocolError("Уровень соревнования не из таблицы п. 13")
+    parts = {str(p.user_id): p for p in tournament.participants.all()}
+    for uid, place in places.items():
+        if uid not in parts:
+            raise ProtocolError("Место указано не участнику турнира")
+        if not isinstance(place, int) or place < 1:
+            raise ProtocolError("Место — целое число от 1")
+
+    rows = RatingEntry.objects.filter(tournament=tournament, is_reverted=False)
+    first = rows.order_by("created_at").values_list("created_at", flat=True).first()
+    if first is not None:
+        later = (
+            RatingEntry.objects.filter(
+                profile_id__in=rows.values_list("profile_id", flat=True),
+                is_reverted=False,
+                created_at__gt=first,
+            )
+            .exclude(tournament=tournament)
+            .exclude(kind__in=[RatingEntry.KIND_START, RatingEntry.KIND_MERGE])
+        )
+        if later.exists():
+            raise ProtocolError(
+                "После этого турнира у участников были другие изменения рейтинга — пересчёт "
+                "задел бы их (п. 21.6). Поправьте значения исправлениями"
+            )
+        revert_tournament(tournament, actor=actor)
+
+    tournament.level = level
+    tournament.no_third_place_match = bool(no_third_place_match)
+    tournament.save(update_fields=["level", "no_third_place_match"])
+    for uid, participant in parts.items():
+        new_place = places.get(uid)
+        if participant.place != new_place:
+            participant.place = new_place
+            participant.save(update_fields=["place"])
+
+    apply_tournament(tournament, actor=actor)
+    return tournament
+
+
 def preview(players: Sequence[dict], tournaments: Sequence[dict], matches: Sequence[dict],
             params: Optional[dict] = None):
     """Посчитать присланный набор, не трогая базу.

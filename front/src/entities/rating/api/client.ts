@@ -12,6 +12,7 @@ import type {
   EditionDraftRow,
   RatingAppeal,
   RatingJournalPage,
+  RatingProtocol,
   PreviewMatch,
   PreviewPlayer,
   PreviewResult,
@@ -274,6 +275,46 @@ export async function fetchEditionDraft(): Promise<EditionDraftRow[]> {
     after: n(r.after),
     delta: nOrNull(r.delta),
   }));
+}
+
+/* ── Протоколы: уровень и места (п. 10, 13) ✳ (11.09.2026) ─────────── */
+
+const toProtocol = (r: Record<string, unknown>): RatingProtocol => ({
+  id: String(r.id ?? ''),
+  name: String(r.name ?? ''),
+  date: (r.date as string) ?? null,
+  level: r.level as RatingProtocol['level'],
+  levelLabel: String(r.level_label ?? ''),
+  noThirdPlaceMatch: Boolean(r.no_third_place_match),
+  applied: Boolean(r.applied),
+  participants: ((r.participants as Record<string, unknown>[]) ?? []).map((p) => ({
+    userId: String(p.user_id ?? ''),
+    name: String(p.name ?? ''),
+    place: nOrNull(p.place),
+    ratingChange: nOrNull(p.rating_change),
+  })),
+});
+
+/** Завершённые рейтинговые турниры — только председателю ГСК. */
+export async function fetchProtocols(): Promise<RatingProtocol[]> {
+  return (await request<Record<string, unknown>[]>('/protocols/')).map(toProtocol);
+}
+
+/** Утвердить протокол: уровень, места, «матча за 3-е место не было» — и пересчёт. */
+export async function saveProtocol(
+  id: string,
+  body: { level: string; places: Record<string, number>; noThirdPlaceMatch: boolean },
+): Promise<RatingProtocol> {
+  return toProtocol(
+    await request<Record<string, unknown>>('/protocols/' + id + '/', {
+      method: 'POST',
+      body: JSON.stringify({
+        level: body.level,
+        places: body.places,
+        no_third_place_match: body.noThirdPlaceMatch,
+      }),
+    }),
+  );
 }
 
 /* ── Объединение дублей (п. 5.3) ✳ (11.09.2026) ───────────────────── */

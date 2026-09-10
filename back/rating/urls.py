@@ -13,6 +13,8 @@ from .views import (
     RatingNoShowView,
     RatingParamsView,
     RatingPreviewView,
+    RatingProtocolsView,
+    RatingProtocolView,
 )
 
 urlpatterns = [
@@ -22,6 +24,8 @@ urlpatterns = [
     path("no-show/", RatingNoShowView.as_view(), name="rating-no-show"),
     path("correction/", RatingCorrectionView.as_view(), name="rating-correction"),
     path("merge/", RatingMergeView.as_view(), name="rating-merge"),
+    path("protocols/", RatingProtocolsView.as_view(), name="rating-protocols"),
+    path("protocols/<str:pk>/", RatingProtocolView.as_view(), name="rating-protocol"),
     path("editions/", RatingEditionsView.as_view(), name="rating-editions"),
     path("editions/draft/", RatingEditionDraftView.as_view(), name="rating-edition-draft"),
     path("journal/", RatingJournalView.as_view(), name="rating-journal"),

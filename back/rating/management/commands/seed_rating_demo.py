@@ -141,6 +141,34 @@ class Command(BaseCommand):
             if "(дубль)" in name and not profile.no_shows:
                 register_no_show(user, reason="Показательная неявка дубля")
 
+        # Отдельный областной турнир для показа утверждения протокола (п. 10, 13):
+        # свои спортсменки и один матч, чтобы пересчёт с новым уровнем и местами
+        # не задевал основной показательный набор. Уровень «областные» (C = 0,80):
+        # 25,00 + 0,60 × 0,80 × 0,50 = 25,24 у победительницы.
+        кубок_игроки = {}
+        for suffix, name in (("11", "Бекова Алия"), ("12", "Нурпеисова Жанар")):
+            user, _ = User.objects.get_or_create(phone=ПРЕФИКС + suffix, defaults={"name": name})
+            get_or_create_profile(
+                user, origin=engine.ORIGIN_LEGACY, legacy=25,
+                region="Костанай", sex="f", birth_year=2003,
+            )
+            кубок_игроки[suffix] = user
+        кубок = Tournament.objects.create(
+            name="[demo] Кубок Костанайской области",
+            created_by=кубок_игроки["11"],
+            status=Tournament.STATUS_FINISHED,
+            level="region",
+            starts_at=timezone.now(),
+        )
+        for user in кубок_игроки.values():
+            TournamentParticipant.objects.create(tournament=кубок, user=user)
+        Match.objects.create(
+            tournament=кубок, round_number=1, match_number=1,
+            player1=кубок_игроки["11"], player2=кубок_игроки["12"],
+            score1=3, score2=1, winner=кубок_игроки["11"], status=Match.FINISHED,
+        )
+        apply_tournament(кубок)
+
         self.stdout.write("Коэффициенты: D=%s K=%s" % (params.d, params.k_standard))
         self.stdout.write("Записей в журнале: %d" % written)
         for suffix, _, _, _, _, _, _ in СОСТАВ:

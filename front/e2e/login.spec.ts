@@ -148,3 +148,27 @@ test('председатель объединяет дубль: история �
   await expect(строка(page, 'Сейтказы Арман')).toHaveCount(1);
   await expect(строка(page, 'Сейтказы Арман (дубль)')).toHaveCount(0);
 });
+
+/* Утверждение протокола (п. 10, 13). Засев завёл «[demo] Кубок Костанайской
+   области» уровня «областные»: у победительницы Бековой 25,00 + 0,60 × 0,80 ×
+   0,50 = 25,24. Утверждаем как «высшие» с Бековой на первом месте: 0,60 ×
+   1,20 × 1,20 × 0,50 = 0,432 → 25,43 — от значения до турнира, не от 25,24. */
+test('председатель утверждает протокол: уровень и место пересчитывают турнир', async ({ page }) => {
+  await войти(page);
+  await карточка(page, 'Бекова Алия');
+  await expect(текущий(page)).toContainText('25,24');
+
+  await page.goto('/rating/protocols');
+  await page.locator('[data-testid="protocol-row"][data-tournament="[demo] Кубок Костанайской области"]').click();
+  const уровень = page.getByTestId('protocol-level');
+  await уровень.getByRole('button').first().click();
+  await уровень.getByRole('button', { name: /Чемпионат и кубок РК/ }).click();
+  const первое = page.getByTestId('protocol-place-1');
+  await первое.getByRole('button').first().click();
+  await первое.getByRole('button', { name: 'Бекова Алия' }).click();
+  await page.getByTestId('protocol-save').click();
+  await expect(page.getByTestId('protocol-result')).toContainText('Утверждён и пересчитан');
+
+  await карточка(page, 'Бекова Алия');
+  await expect(текущий(page)).toContainText('25,43');
+});

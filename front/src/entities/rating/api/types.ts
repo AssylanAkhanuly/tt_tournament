@@ -113,6 +113,27 @@ export type RatingJournalPage = {
   results: RatingJournalEntry[];
 };
 
+/** Участник в протоколе: место даёт коэффициент P (п. 10). */
+export type ProtocolParticipant = {
+  userId: string;
+  name: string;
+  place: number | null;
+  ratingChange: number | null;
+};
+
+/** Протокол для рейтинга: уровень (C, п. 13), места (P, п. 10) и учтён ли
+    турнир в рейтинге. */
+export type RatingProtocol = {
+  id: string;
+  name: string;
+  date: string | null;
+  level: CompetitionLevel;
+  levelLabel: string;
+  noThirdPlaceMatch: boolean;
+  applied: boolean;
+  participants: ProtocolParticipant[];
+};
+
 export type AppealStatus = 'pending' | 'upheld' | 'rejected';
 
 /** Апелляция на выпуск (п. 21): что требует п. 21.2, сроки и решение. */

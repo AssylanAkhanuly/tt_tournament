@@ -491,3 +491,85 @@ class RatingMergeView(APIView):
         except services.MergeError as e:
             return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
         return Response(RatingProfileSerializer(profile).data)
+
+
+def _protocol(t) -> dict:
+    """Протокол для рейтинга: уровень, места, учтён ли турнир в рейтинге."""
+    from django.utils import timezone
+
+    when = t.starts_at or t.created_at
+    return {
+        "id": t.pk,
+        "name": t.name,
+        "date": timezone.localdate(when) if when else None,
+        "level": t.level,
+        "level_label": engine.LEVEL_LABELS.get(t.level, t.level),
+        "no_third_place_match": t.no_third_place_match,
+        "applied": RatingEntry.objects.filter(tournament=t, is_reverted=False).exists(),
+        "participants": [
+            {
+                "user_id": str(p.user_id),
+                "name": p.user.name,
+                "place": p.place,
+                "rating_change": str(p.rating_change) if p.rating_change is not None else None,
+            }
+            for p in t.participants.select_related("user").order_by("place", "user__name")
+        ],
+    }
+
+
+class RatingProtocolsView(APIView):
+    """Завершённые рейтинговые турниры — уровень и места для C и P (п. 10, 13).
+
+    Председатель ГСК утверждает протокол для рейтинга: без уровня и призовой
+    тройки коэффициенты в настоящих турнирах были бы 1,00.
+    """
+
+    permission_classes = [IsGskChairman]
+
+    def get(self, request):
+        from tournaments.models import Tournament
+
+        qs = Tournament.objects.filter(status=Tournament.STATUS_FINISHED, is_rating=True).order_by(
+            "-starts_at", "-created_at"
+        )
+        return Response([_protocol(t) for t in qs])
+
+
+class RatingProtocolView(APIView):
+    """Утвердить протокол: уровень, места, «матча за 3-е место не было» — и пересчёт."""
+
+    permission_classes = [IsGskChairman]
+
+    def post(self, request, pk):
+        from django.core.exceptions import ValidationError
+        from tournaments.models import Tournament
+
+        try:
+            t = Tournament.objects.filter(pk=pk).first()
+        except (ValueError, ValidationError):
+            t = None
+        if not t:
+            return Response({"detail": "Турнир не найден"}, status=status.HTTP_404_NOT_FOUND)
+
+        places = {}
+        for uid, place in (request.data.get("places") or {}).items():
+            if place in (None, ""):
+                continue
+            try:
+                places[str(uid)] = int(place)
+            except (TypeError, ValueError):
+                return Response({"detail": "Место — целое число"}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            services.set_protocol(
+                t,
+                level=request.data.get("level") or t.level,
+                places=places,
+                no_third_place_match=bool(request.data.get("no_third_place_match")),
+                actor=request.user,
+            )
+        except services.ProtocolError as e:
+            return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        t.refresh_from_db()
+        return Response(_protocol(t))

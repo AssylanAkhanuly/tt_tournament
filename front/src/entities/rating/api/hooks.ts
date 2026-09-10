@@ -13,6 +13,7 @@ import {
   fetchEditionDraft,
   fetchEditions,
   fetchJournal,
+  fetchProtocols,
   type JournalQuery,
   fetchRatingCard,
   fetchRatingList,
@@ -94,6 +95,11 @@ export function useEditionDraft(): AsyncState<EditionDraftRow[]> {
 /** Апелляции (п. 21) — только председателю ГСК; фильтр по вкладке — на экране. */
 export function useAppeals() {
   return useAsync(() => fetchAppeals(), []);
+}
+
+/** Протоколы для рейтинга (п. 10, 13) — только председателю ГСК. */
+export function useProtocols() {
+  return useAsync(() => fetchProtocols(), []);
 }
 
 /** Журнал изменений (п. 20, 22.2) — только председателю ГСК. */
