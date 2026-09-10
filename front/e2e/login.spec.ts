@@ -153,21 +153,30 @@ test('председатель объединяет дубль: история �
    области» уровня «областные»: у победительницы Бековой 25,00 + 0,60 × 0,80 ×
    0,50 = 25,24. Утверждаем как «высшие» с Бековой на первом месте: 0,60 ×
    1,20 × 1,20 × 0,50 = 0,432 → 25,43 — от значения до турнира, не от 25,24. */
-test('председатель утверждает протокол: уровень и место пересчитывают турнир', async ({ page }) => {
+test('председатель утверждает протокол на странице турнира: предпросмотр, потом пересчёт', async ({ page }) => {
   await войти(page);
   await карточка(page, 'Бекова Алия');
   await expect(текущий(page)).toContainText('25,24');
 
   await page.goto('/rating/protocols');
   await page.locator('[data-testid="protocol-row"][data-tournament="[demo] Кубок Костанайской области"]').click();
+  await page.waitForURL(/\/rating\/protocols\/[^/]+$/);
+  // Матч протокола виден со счётом.
+  await expect(page.getByTestId('protocol-match').first()).toContainText('3:1');
+
   const уровень = page.getByTestId('protocol-level');
   await уровень.getByRole('button').first().click();
   await уровень.getByRole('button', { name: /Чемпионат и кубок РК/ }).click();
-  const первое = page.getByTestId('protocol-place-1');
-  await первое.getByRole('button').first().click();
-  await первое.getByRole('button', { name: 'Бекова Алия' }).click();
+  const бекова = page.locator('[data-testid="protocol-participant"][data-player="Бекова Алия"]');
+  await бекова.getByRole('button').first().click();
+  await бекова.getByRole('button', { name: '1', exact: true }).click();
+
+  // Предпросмотр: новые числа видны до сохранения.
+  await expect(page.getByTestId('protocol-dirty')).toBeVisible();
+  await expect(бекова).toContainText('25,43');
   await page.getByTestId('protocol-save').click();
   await expect(page.getByTestId('protocol-result')).toContainText('Утверждён и пересчитан');
+  await expect(page.getByTestId('protocol-dirty')).toHaveCount(0);
 
   await карточка(page, 'Бекова Алия');
   await expect(текущий(page)).toContainText('25,43');

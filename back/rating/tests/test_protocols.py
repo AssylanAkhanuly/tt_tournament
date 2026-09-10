@@ -167,3 +167,93 @@ def test_список_и_утверждение_через_api(params):
     assert d.data["level"] == "top"
     # C = 1,20 и P = 1,20: 0,60 × 1,20 × 1,20 × 0,50 = 0,432 → +0,43.
     assert значение(a) == Decimal("20.43")
+
+
+# ── Места: один первый, один второй, два третьих — только без матча за бронзу ──
+
+
+def test_двух_первых_мест_не_бывает(params):
+    a = игрок("+7705000015", "А")
+    b = игрок("+7705000016", "Б")
+    t = турнир_с_матчем(a, b)
+
+    with pytest.raises(services.ProtocolError, match="1 место"):
+        services.set_protocol(t, level="top", places={str(a.pk): 1, str(b.pk): 1},
+                              no_third_place_match=False, actor=None)
+
+
+def test_два_третьих_места_только_без_матча_за_бронзу(params):
+    a = игрок("+7705000017", "А")
+    b = игрок("+7705000018", "Б")
+    t = турнир_с_матчем(a, b)
+    двое = {str(a.pk): 3, str(b.pk): 3}
+
+    with pytest.raises(services.ProtocolError, match="3 место"):
+        services.set_protocol(t, level="top", places=двое, no_third_place_match=False, actor=None)
+    # п. 10.4: матча за 3-е место не было — бронзовые оба полуфиналиста.
+    services.set_protocol(t, level="top", places=двое, no_third_place_match=True, actor=None)
+    assert TournamentParticipant.objects.filter(tournament=t, place=3).count() == 2
+
+
+# ── Страница протокола: участники, матчи, предпросмотр ──────────────
+
+
+def test_страница_протокола_показывает_участников_и_матчи(params):
+    a = игрок("+7705000019", "Победитель")
+    b = игрок("+7705000020", "Соперник")
+    t = турнир_с_матчем(a, b)
+    api = APIClient()
+    api.force_authenticate(председатель())
+
+    r = api.get("/api/rating/protocols/%s/" % t.pk)
+    assert r.status_code == 200, r.data
+    assert r.data["blocked"] is None
+    люди = {p["name"]: p for p in r.data["participants"]}
+    assert (люди["Победитель"]["before"], люди["Победитель"]["change"], люди["Победитель"]["after"]) == (
+        "20.00", "0.30", "20.30",
+    )
+    [матч] = r.data["matches"]
+    assert (матч["a_name"], матч["score"], матч["b_name"], матч["counted"]) == ("Победитель", "3:1", "Соперник", True)
+    assert (матч["a"]["delta"], матч["b"]["delta"], матч["a"]["c"]) == ("0.30", "-0.30", "1.00")
+
+
+def test_предпросмотр_показывает_новые_числа_и_ничего_не_сохраняет(params):
+    a = игрок("+7705000021", "Победитель")
+    b = игрок("+7705000022", "Соперник")
+    t = турнир_с_матчем(a, b)
+    api = APIClient()
+    api.force_authenticate(председатель())
+
+    r = api.post(
+        "/api/rating/protocols/%s/preview/" % t.pk,
+        {"level": "top", "places": {str(a.pk): 1}, "no_third_place_match": False},
+        format="json",
+    )
+    assert r.status_code == 200, r.data
+    люди = {p["name"]: p for p in r.data["participants"]}
+    assert люди["Победитель"]["change"] == "0.43"  # 0,60 × 1,20 × 1,20 × 0,50
+    assert r.data["level"] == "top"
+    # Ничего не сохранилось: ни значение, ни уровень, ни место.
+    assert значение(a) == Decimal("20.30")
+    t.refresh_from_db()
+    assert t.level == "republic"
+    assert TournamentParticipant.objects.get(tournament=t, user=a).place is None
+
+
+def test_предпросмотр_называет_причину_отказа(params):
+    a = игрок("+7705000023", "Победитель")
+    b = игрок("+7705000024", "Соперник")
+    c = игрок("+7705000025", "Третий")
+    первый = турнир_с_матчем(a, b, name="Первый")
+    турнир_с_матчем(a, c, name="Второй")
+    api = APIClient()
+    api.force_authenticate(председатель())
+
+    страница = api.get("/api/rating/protocols/%s/" % первый.pk)
+    assert "другие" in страница.data["blocked"]
+    r = api.post(
+        "/api/rating/protocols/%s/preview/" % первый.pk,
+        {"level": "top", "places": {}, "no_third_place_match": False},
+        format="json",
+    )
+    assert "другие" in r.data["blocked"]

@@ -13,6 +13,7 @@ from .views import (
     RatingNoShowView,
     RatingParamsView,
     RatingPreviewView,
+    RatingProtocolPreviewView,
     RatingProtocolsView,
     RatingProtocolView,
 )
@@ -26,6 +27,7 @@ urlpatterns = [
     path("merge/", RatingMergeView.as_view(), name="rating-merge"),
     path("protocols/", RatingProtocolsView.as_view(), name="rating-protocols"),
     path("protocols/<str:pk>/", RatingProtocolView.as_view(), name="rating-protocol"),
+    path("protocols/<str:pk>/preview/", RatingProtocolPreviewView.as_view(), name="rating-protocol-preview"),
     path("editions/", RatingEditionsView.as_view(), name="rating-editions"),
     path("editions/draft/", RatingEditionDraftView.as_view(), name="rating-edition-draft"),
     path("journal/", RatingJournalView.as_view(), name="rating-journal"),

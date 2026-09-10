@@ -643,24 +643,21 @@ def set_protocol(tournament, *, level: str, places: Dict[str, int], no_third_pla
             raise ProtocolError("Место указано не участнику турнира")
         if not isinstance(place, int) or place < 1:
             raise ProtocolError("Место — целое число от 1")
-
-    rows = RatingEntry.objects.filter(tournament=tournament, is_reverted=False)
-    first = rows.order_by("created_at").values_list("created_at", flat=True).first()
-    if first is not None:
-        later = (
-            RatingEntry.objects.filter(
-                profile_id__in=rows.values_list("profile_id", flat=True),
-                is_reverted=False,
-                created_at__gt=first,
-            )
-            .exclude(tournament=tournament)
-            .exclude(kind__in=[RatingEntry.KIND_START, RatingEntry.KIND_MERGE])
+    taken = list(places.values())
+    for place in (1, 2):
+        if taken.count(place) > 1:
+            raise ProtocolError("%s место может быть только у одного участника" % place)
+    if taken.count(3) > (2 if no_third_place_match else 1):
+        raise ProtocolError(
+            "3 место не больше чем у двоих (п. 10.4)"
+            if no_third_place_match
+            else "3 место у двоих — только если матча за 3-е место не было (п. 10.4)"
         )
-        if later.exists():
-            raise ProtocolError(
-                "После этого турнира у участников были другие изменения рейтинга — пересчёт "
-                "задел бы их (п. 21.6). Поправьте значения исправлениями"
-            )
+
+    blocked = protocol_block_reason(tournament)
+    if blocked:
+        raise ProtocolError(blocked)
+    if RatingEntry.objects.filter(tournament=tournament, is_reverted=False).exists():
         revert_tournament(tournament, actor=actor)
 
     tournament.level = level
@@ -674,6 +671,145 @@ def set_protocol(tournament, *, level: str, places: Dict[str, int], no_third_pla
 
     apply_tournament(tournament, actor=actor)
     return tournament
+
+
+def protocol_block_reason(tournament) -> Optional[str]:
+    """Почему турнир нельзя пересчитать — или None.
+
+    Пересчёт идёт от текущих значений участников, поэтому честен только для их
+    последнего турнира. Если после него у кого-то появились другие строки
+    (турнир, неявка, исправление), поздние начисления остались бы посчитанными
+    от старых чисел, а каскадного исправления (п. 21.6) нет.
+    """
+    rows = RatingEntry.objects.filter(tournament=tournament, is_reverted=False)
+    first = rows.order_by("created_at").values_list("created_at", flat=True).first()
+    if first is None:
+        return None
+    later = (
+        RatingEntry.objects.filter(
+            profile_id__in=rows.values_list("profile_id", flat=True),
+            is_reverted=False,
+            created_at__gt=first,
+        )
+        .exclude(tournament=tournament)
+        .exclude(kind__in=[RatingEntry.KIND_START, RatingEntry.KIND_MERGE])
+    )
+    if later.exists():
+        return (
+            "После этого турнира у участников были другие изменения рейтинга — пересчёт "
+            "задел бы их (п. 21.6). Поправьте значения исправлениями"
+        )
+    return None
+
+
+def _num(x) -> Optional[str]:
+    return None if x is None else str(x)
+
+
+def _side(entry) -> Optional[dict]:
+    """Что матч дал одному игроку и из чего это сложилось (п. 4.6)."""
+    if entry is None:
+        return None
+    return {
+        "delta": str(entry.delta),
+        "before": str(entry.before),
+        "after": str(entry.after),
+        "expected": _num(entry.expected),
+        "k": _num(entry.k),
+        "c": _num(entry.c),
+        "p": _num(entry.p),
+        "capped": entry.capped,
+        "transition": entry.transition,
+    }
+
+
+def protocol_detail(tournament) -> dict:
+    """Протокол целиком — для страницы председателя ✳ (11.09.2026).
+
+    Участники с местом и тем, что турнир дал их рейтингу; все матчи протокола
+    с изменением у обоих игроков. Матч без строк журнала — неучтённый (неявка,
+    нет счёта, п. 16.3): его видно, чтобы было понятно, почему он не посчитан.
+    `blocked` — почему утвердить нельзя, или None.
+    """
+    parts = list(tournament.participants.select_related("user"))
+    names = {p.user_id: p.user.name for p in parts}
+
+    by_match: Dict[str, Dict[object, RatingEntry]] = {}
+    entries = RatingEntry.objects.filter(
+        tournament=tournament, is_reverted=False, kind=RatingEntry.KIND_MATCH
+    ).select_related("profile")
+    for e in entries:
+        key = ("b%s" % e.match_id) if e.match_id else ("g%s" % e.group_match_id)
+        by_match.setdefault(key, {})[e.profile.user_id] = e
+
+    matches = []
+    for m in _collect_matches(tournament):
+        sides = by_match.get(m["id"], {})
+        source = m["match"] or m["group_match"]
+        matches.append(
+            {
+                "id": m["id"],
+                "a_id": str(m["a"]),
+                "a_name": names.get(m["a"], "—"),
+                "b_id": str(m["b"]),
+                "b_name": names.get(m["b"], "—"),
+                "score": "%s:%s" % tuple(m["games"]),
+                "winner_id": str(source.winner_id) if source is not None and source.winner_id else None,
+                "counted": bool(sides),
+                "a": _side(sides.get(m["a"])),
+                "b": _side(sides.get(m["b"])),
+            }
+        )
+
+    def after(p):
+        if p.rating_before is None or p.rating_change is None:
+            return None
+        return str(p.rating_before + p.rating_change)
+
+    when = getattr(tournament, "starts_at", None) or getattr(tournament, "created_at", None)
+    ordered = sorted(parts, key=lambda p: (p.place is None, p.place or 0, p.user.name))
+    return {
+        "id": tournament.pk,
+        "name": tournament.name,
+        "date": timezone.localdate(when) if when else None,
+        "level": tournament.level,
+        "level_label": engine.LEVEL_LABELS.get(tournament.level, tournament.level),
+        "no_third_place_match": tournament.no_third_place_match,
+        "applied": RatingEntry.objects.filter(tournament=tournament, is_reverted=False).exists(),
+        "blocked": protocol_block_reason(tournament),
+        "participants": [
+            {
+                "user_id": str(p.user_id),
+                "name": p.user.name,
+                "place": p.place,
+                "before": _num(p.rating_before),
+                "change": _num(p.rating_change),
+                "after": after(p),
+            }
+            for p in ordered
+        ],
+        "matches": matches,
+    }
+
+
+def preview_protocol(tournament, *, level: str, places: Dict[str, int], no_third_place_match: bool) -> dict:
+    """Предпросмотр утверждения — считается по-настоящему и откатывается.
+
+    Второго расчёта нет: внутри транзакции выполняется ровно то же
+    `set_protocol()`, что и при сохранении, снимается `protocol_detail()`, и
+    всё откатывается. Числа предпросмотра поэтому те же, что даст сохранение.
+    Если утвердить нельзя, в `blocked` — причина, а числа прежние.
+    """
+    with transaction.atomic():
+        try:
+            set_protocol(tournament, level=level, places=places, no_third_place_match=no_third_place_match)
+            detail = protocol_detail(tournament)
+        except ProtocolError as e:
+            detail = protocol_detail(tournament)
+            detail["blocked"] = str(e)
+        transaction.set_rollback(True)
+    tournament.refresh_from_db()
+    return detail
 
 
 def preview(players: Sequence[dict], tournaments: Sequence[dict], matches: Sequence[dict],

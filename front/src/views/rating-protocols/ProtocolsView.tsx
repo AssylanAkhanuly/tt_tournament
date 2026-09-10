@@ -5,16 +5,18 @@
    Первый шаг потока рейтинга: турнир завершён → председатель утверждает
    протокол — уровень соревнования (C, п. 13) и призовую тройку (P, п. 10) —
    и турнир пересчитывается. Дальше изменения видны в черновике выпуска.
-   По образцу Э5.4 «Протокол на утверждении»: список, строка открывает окно.
+
+   Здесь только список; строка открывает страницу протокола — там матчи,
+   участники, предпросмотр и утверждение. Окна поверх списка больше нет: в нём
+   не помещались результаты, из которых строится рейтинг.
 
    Раздел только председателю: гостя уводим на вход. Права проверяет сервер. */
 
 import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 
-import { ruDate, useProtocols, type RatingProtocol } from '@/entities/rating';
+import { ruDate, useProtocols } from '@/entities/rating';
 import { useSession } from '@/entities/session';
-import { ProtocolDialog } from '@/features/rating-admin';
 import { EmptyBox, Panel, Sheet } from '@/shared/kit/app';
 import { RatingShell } from '@/views/rating';
 
@@ -24,8 +26,6 @@ export function ProtocolsView() {
   const router = useRouter();
   const { loading: sessionLoading, isGskChairman } = useSession();
   const protocols = useProtocols();
-  const [open, setOpen] = useState<RatingProtocol | null>(null);
-  const [done, setDone] = useState<string | null>(null);
 
   useEffect(() => {
     if (!sessionLoading && !isGskChairman) router.replace('/login?next=/rating/protocols');
@@ -35,15 +35,6 @@ export function ProtocolsView() {
 
   return (
     <RatingShell active="Протоколы">
-      {done && (
-        <p
-          data-testid="protocol-result"
-          className="mb-4 rounded-lg border border-green-200 bg-green-50 px-3.5 py-2.5 text-[13px] text-green-800"
-        >
-          {done}
-        </p>
-      )}
-
       <Panel title={'Турниров: ' + rows.length} flush>
         {protocols.error ? (
           <div className="p-4">
@@ -58,7 +49,7 @@ export function ProtocolsView() {
                 data-row
                 data-testid="protocol-row"
                 data-tournament={t.name}
-                onClick={() => setOpen(t)}
+                onClick={() => router.push('/rating/protocols/' + t.id)}
                 className="grid w-full items-center gap-3 px-4 py-2 text-left text-[13px] tabular-nums hover:bg-neutral-50"
                 style={{ gridTemplateColumns: GRID }}
               >
@@ -76,18 +67,6 @@ export function ProtocolsView() {
           </div>
         )}
       </Panel>
-
-      {open && (
-        <ProtocolDialog
-          protocol={open}
-          onClose={() => setOpen(null)}
-          onDone={(p) => {
-            setOpen(null);
-            setDone('Утверждён и пересчитан: ' + p.name + ' · ' + p.levelLabel);
-            protocols.reload();
-          }}
-        />
-      )}
     </RatingShell>
   );
 }

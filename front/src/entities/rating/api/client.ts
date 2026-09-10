@@ -11,6 +11,9 @@ import type {
   AppealInput,
   EditionDraftRow,
   RatingAppeal,
+  ProtocolDetail,
+  ProtocolInput,
+  ProtocolMatchSide,
   RatingJournalPage,
   RatingProtocol,
   PreviewMatch,
@@ -300,20 +303,73 @@ export async function fetchProtocols(): Promise<RatingProtocol[]> {
   return (await request<Record<string, unknown>[]>('/protocols/')).map(toProtocol);
 }
 
+const toSide = (s: unknown): ProtocolMatchSide | null => {
+  if (!s) return null;
+  const r = s as Record<string, unknown>;
+  return {
+    delta: n(r.delta),
+    before: n(r.before),
+    after: n(r.after),
+    expected: nOrNull(r.expected),
+    k: nOrNull(r.k),
+    c: nOrNull(r.c),
+    p: nOrNull(r.p),
+    capped: Boolean(r.capped),
+    transition: Boolean(r.transition),
+  };
+};
+
+const toProtocolDetail = (r: Record<string, unknown>): ProtocolDetail => ({
+  id: String(r.id ?? ''),
+  name: String(r.name ?? ''),
+  date: (r.date as string) ?? null,
+  level: r.level as ProtocolDetail['level'],
+  levelLabel: String(r.level_label ?? ''),
+  noThirdPlaceMatch: Boolean(r.no_third_place_match),
+  applied: Boolean(r.applied),
+  blocked: (r.blocked as string) ?? null,
+  participants: ((r.participants as Record<string, unknown>[]) ?? []).map((p) => ({
+    userId: String(p.user_id ?? ''),
+    name: String(p.name ?? ''),
+    place: nOrNull(p.place),
+    before: nOrNull(p.before),
+    change: nOrNull(p.change),
+    after: nOrNull(p.after),
+  })),
+  matches: ((r.matches as Record<string, unknown>[]) ?? []).map((m) => ({
+    id: String(m.id ?? ''),
+    aId: String(m.a_id ?? ''),
+    aName: String(m.a_name ?? ''),
+    bId: String(m.b_id ?? ''),
+    bName: String(m.b_name ?? ''),
+    score: String(m.score ?? ''),
+    winnerId: (m.winner_id as string) ?? null,
+    counted: Boolean(m.counted),
+    a: toSide(m.a),
+    b: toSide(m.b),
+  })),
+});
+
+const protocolBody = (body: ProtocolInput) =>
+  JSON.stringify({ level: body.level, places: body.places, no_third_place_match: body.noThirdPlaceMatch });
+
+/** Страница протокола: участники с изменением рейтинга и матчи. */
+export async function fetchProtocol(id: string): Promise<ProtocolDetail> {
+  return toProtocolDetail(await request<Record<string, unknown>>('/protocols/' + id + '/'));
+}
+
+/** Предпросмотр: сервер считает утверждение по-настоящему и откатывает —
+    числа те же, что дало бы сохранение. Ничего не сохраняет. */
+export async function previewProtocol(id: string, body: ProtocolInput): Promise<ProtocolDetail> {
+  return toProtocolDetail(
+    await request<Record<string, unknown>>('/protocols/' + id + '/preview/', { method: 'POST', body: protocolBody(body) }),
+  );
+}
+
 /** Утвердить протокол: уровень, места, «матча за 3-е место не было» — и пересчёт. */
-export async function saveProtocol(
-  id: string,
-  body: { level: string; places: Record<string, number>; noThirdPlaceMatch: boolean },
-): Promise<RatingProtocol> {
-  return toProtocol(
-    await request<Record<string, unknown>>('/protocols/' + id + '/', {
-      method: 'POST',
-      body: JSON.stringify({
-        level: body.level,
-        places: body.places,
-        no_third_place_match: body.noThirdPlaceMatch,
-      }),
-    }),
+export async function saveProtocol(id: string, body: ProtocolInput): Promise<ProtocolDetail> {
+  return toProtocolDetail(
+    await request<Record<string, unknown>>('/protocols/' + id + '/', { method: 'POST', body: protocolBody(body) }),
   );
 }
 

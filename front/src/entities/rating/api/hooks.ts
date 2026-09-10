@@ -13,7 +13,9 @@ import {
   fetchEditionDraft,
   fetchEditions,
   fetchJournal,
+  fetchProtocol,
   fetchProtocols,
+  previewProtocol,
   type JournalQuery,
   fetchRatingCard,
   fetchRatingList,
@@ -100,6 +102,51 @@ export function useAppeals() {
 /** Протоколы для рейтинга (п. 10, 13) — только председателю ГСК. */
 export function useProtocols() {
   return useAsync(() => fetchProtocols(), []);
+}
+
+/** Страница протокола: участники, матчи, причина отказа. */
+export function useProtocol(id: string) {
+  return useAsync(() => fetchProtocol(id), [id]);
+}
+
+/** Предпросмотр утверждения — с задержкой, как калибровка: сервер считает
+    по-настоящему и откатывает. `enabled` — есть несохранённые правки. */
+export function useProtocolPreview(
+  id: string,
+  input: Parameters<typeof previewProtocol>[1],
+  enabled: boolean,
+  delayMs = 250,
+) {
+  const [data, setData] = useState<Awaited<ReturnType<typeof previewProtocol>> | null>(null);
+  const [loading, setLoading] = useState(false);
+  const key = JSON.stringify(input);
+  const latest = useRef(0);
+
+  useEffect(() => {
+    const seq = ++latest.current;
+    if (!enabled) {
+      setData(null);
+      setLoading(false);
+      return;
+    }
+    setLoading(true);
+    const timer = setTimeout(() => {
+      previewProtocol(id, input)
+        .then((value) => {
+          if (seq === latest.current) setData(value);
+        })
+        .catch(() => {
+          if (seq === latest.current) setData(null);
+        })
+        .finally(() => {
+          if (seq === latest.current) setLoading(false);
+        });
+    }, delayMs);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id, key, enabled, delayMs]);
+
+  return { data, loading };
 }
 
 /** Журнал изменений (п. 20, 22.2) — только председателю ГСК. */

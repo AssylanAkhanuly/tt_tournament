@@ -572,4 +572,51 @@ class RatingProtocolView(APIView):
         except services.ProtocolError as e:
             return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
         t.refresh_from_db()
-        return Response(_protocol(t))
+        return Response(services.protocol_detail(t))
+
+    def get(self, request, pk):
+        """Страница протокола: участники с изменением рейтинга, матчи, причина отказа."""
+        t = _tournament_or_none(pk)
+        if not t:
+            return Response({"detail": "Турнир не найден"}, status=status.HTTP_404_NOT_FOUND)
+        return Response(services.protocol_detail(t))
+
+
+def _tournament_or_none(pk):
+    from django.core.exceptions import ValidationError
+    from tournaments.models import Tournament
+
+    try:
+        return Tournament.objects.filter(pk=pk).first()
+    except (ValueError, ValidationError):
+        return None
+
+
+class RatingProtocolPreviewView(APIView):
+    """Предпросмотр утверждения: те же числа, что даст сохранение, но ничего
+    не сохраняется. Если утвердить нельзя — в `blocked` причина."""
+
+    permission_classes = [IsGskChairman]
+
+    def post(self, request, pk):
+        t = _tournament_or_none(pk)
+        if not t:
+            return Response({"detail": "Турнир не найден"}, status=status.HTTP_404_NOT_FOUND)
+
+        places = {}
+        for uid, place in (request.data.get("places") or {}).items():
+            if place in (None, ""):
+                continue
+            try:
+                places[str(uid)] = int(place)
+            except (TypeError, ValueError):
+                return Response({"detail": "Место — целое число"}, status=status.HTTP_400_BAD_REQUEST)
+
+        return Response(
+            services.preview_protocol(
+                t,
+                level=request.data.get("level") or t.level,
+                places=places,
+                no_third_place_match=bool(request.data.get("no_third_place_match")),
+            )
+        )

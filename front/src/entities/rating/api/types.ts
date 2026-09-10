@@ -134,6 +134,64 @@ export type RatingProtocol = {
   participants: ProtocolParticipant[];
 };
 
+/** Одна сторона матча в протоколе: что матч дал этому игроку и из чего. */
+export type ProtocolMatchSide = {
+  delta: number;
+  before: number;
+  after: number;
+  expected: number | null;
+  k: number | null;
+  c: number | null;
+  p: number | null;
+  capped: boolean;
+  transition: boolean;
+};
+
+/** Матч протокола. `counted` — учтён ли в рейтинге (неявки и матчи без
+    счёта не учитываются, п. 16.3). */
+export type ProtocolMatch = {
+  id: string;
+  aId: string;
+  aName: string;
+  bId: string;
+  bName: string;
+  score: string;
+  winnerId: string | null;
+  counted: boolean;
+  a: ProtocolMatchSide | null;
+  b: ProtocolMatchSide | null;
+};
+
+export type ProtocolDetailParticipant = {
+  userId: string;
+  name: string;
+  place: number | null;
+  before: number | null;
+  change: number | null;
+  after: number | null;
+};
+
+/** Страница протокола: уровень, места, участники с изменением рейтинга, матчи.
+    `blocked` — почему утвердить нельзя (после турнира были другие изменения). */
+export type ProtocolDetail = {
+  id: string;
+  name: string;
+  date: string | null;
+  level: CompetitionLevel;
+  levelLabel: string;
+  noThirdPlaceMatch: boolean;
+  applied: boolean;
+  blocked: string | null;
+  participants: ProtocolDetailParticipant[];
+  matches: ProtocolMatch[];
+};
+
+export type ProtocolInput = {
+  level: string;
+  places: Record<string, number>;
+  noThirdPlaceMatch: boolean;
+};
+
 export type AppealStatus = 'pending' | 'upheld' | 'rejected';
 
 /** Апелляция на выпуск (п. 21): что требует п. 21.2, сроки и решение. */
