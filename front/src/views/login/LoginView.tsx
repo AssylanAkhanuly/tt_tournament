@@ -54,10 +54,7 @@ export function LoginView() {
       <AuthScreen>
         <div className="mb-5 flex flex-col items-center gap-4 text-center">
           <Brand size="lg" />
-          <div>
-            <div className="text-xl font-semibold tracking-tight">Вход в систему</div>
-            <div className="mt-1 text-[12.5px] text-neutral-500">Председатель ГСК — по почте и паролю</div>
-          </div>
+          <div className="text-xl font-semibold tracking-tight">Вход в систему</div>
         </div>
 
         {!loading && user ? (
