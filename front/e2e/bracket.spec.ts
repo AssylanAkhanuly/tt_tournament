@@ -2,9 +2,9 @@ import { expect, test } from '@playwright/test';
 
 // E2E турнирной сетки (React Flow). Проверяем реальный рендер и интерактив,
 // а не только typecheck — по правилу из корневого CLAUDE.md.
-test.describe('Турнирная сетка /setka', () => {
+test.describe('Турнирная сетка /bracket', () => {
   test('рендерит сетку: карточки, коннекторы, без подписей кругов', async ({ page }) => {
-    await page.goto('/setka');
+    await page.goto('/bracket');
 
     // 7 матчей (4 четвертьфинала + 2 полуфинала + финал)
     const nodes = page.locator('.react-flow__node-match');
@@ -32,7 +32,7 @@ test.describe('Турнирная сетка /setka', () => {
   });
 
   test('кнопка зума меняет масштаб холста', async ({ page }) => {
-    await page.goto('/setka');
+    await page.goto('/bracket');
     const viewport = page.locator('.react-flow__viewport');
     await expect(viewport).toBeVisible();
 

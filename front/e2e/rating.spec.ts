@@ -57,7 +57,7 @@ async function ожидатьДемо(page: Page, ожидание: string[]) {
 }
 
 test('лист открыт без входа и отсортирован по убыванию рейтинга', async ({ page }) => {
-  await page.goto('/reyting');
+  await page.goto('/rating');
   await expect(page.locator('[data-testid="rating-row"]').first()).toBeVisible();
 
   await ожидатьДемо(page, ДЕМО);
@@ -70,7 +70,7 @@ test('лист открыт без входа и отсортирован по �
 });
 
 test('фильтр по полу оставляет только женщин', async ({ page }) => {
-  await page.goto('/reyting');
+  await page.goto('/rating');
   await фильтр(page, /Пол/, 'Женщины');
 
   // Из показательных остаются две женщины и ни одного мужчины: не сработай
@@ -79,7 +79,7 @@ test('фильтр по полу оставляет только женщин', 
 });
 
 test('возрастная выборка сужает список, не меняя значений', async ({ page }) => {
-  await page.goto('/reyting');
+  await page.goto('/rating');
   const общий = await строка(page, 'Оспанов Тимур').getByTestId('rating-value').textContent();
 
   await фильтр(page, /Возраст/, 'U15');
@@ -91,7 +91,7 @@ test('возрастная выборка сужает список, не мен
 });
 
 test('поиск находит спортсмена по фамилии', async ({ page }) => {
-  await page.goto('/reyting');
+  await page.goto('/rating');
   await page.getByPlaceholder('Фамилия или регион').fill('Ким');
 
   await expect(строка(page, 'Ким Виктор')).toBeVisible();
@@ -99,17 +99,17 @@ test('поиск находит спортсмена по фамилии', async
 });
 
 test('строка листа открывает карточку спортсмена', async ({ page }) => {
-  await page.goto('/reyting');
+  await page.goto('/rating');
   await строка(page, 'Ким Виктор').click();
 
-  await page.waitForURL(/\/reyting\/[0-9a-f-]{36}$/);
+  await page.waitForURL(/\/rating\/[0-9a-f-]{36}$/);
   // Заголовок страницы, а не заголовок карточки внутри: фамилия стоит и там,
   // и там, и без уточнения локатор находит оба.
   await expect(page.locator('h1')).toHaveText('Ким Виктор');
 });
 
 test('карточка сходится: рейтинг равен сумме изменений в истории', async ({ page }) => {
-  await page.goto('/reyting');
+  await page.goto('/rating');
   await строка(page, 'Оспанов Тимур').click();
   await expect(page.getByTestId('card-history-row').first()).toBeVisible();
 
@@ -134,7 +134,7 @@ test('карточка сходится: рейтинг равен сумме и
 });
 
 test('в карточке новичка виден переходный период и стартовое значение 1,00', async ({ page }) => {
-  await page.goto('/reyting');
+  await page.goto('/rating');
   await строка(page, 'Оспанов Тимур').click();
 
   await expect(page.getByText('Стартовое значение', { exact: true })).toBeVisible();
@@ -144,7 +144,7 @@ test('в карточке новичка виден переходный пер�
 });
 
 test('в карточке легионера видно, что старт посчитан из позиции ITTF', async ({ page }) => {
-  await page.goto('/reyting');
+  await page.goto('/rating');
   await строка(page, 'Ли Александр').click();
 
   // Rmax = 90, k = 10, позиция 100: 90 − 10 × ln(100) = 43,95 (пример п. 17.12).
@@ -153,6 +153,6 @@ test('в карточке легионера видно, что старт по�
 });
 
 test('у спортсмена без рейтинга карточки нет, и это сказано прямо', async ({ page }) => {
-  await page.goto('/reyting/00000000-0000-0000-0000-000000000000');
+  await page.goto('/rating/00000000-0000-0000-0000-000000000000');
   await expect(page.getByText('Карточки нет')).toBeVisible();
 });

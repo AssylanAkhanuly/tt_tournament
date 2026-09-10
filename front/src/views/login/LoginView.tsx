@@ -26,8 +26,8 @@ export function LoginView() {
   const params = useSearchParams();
   // Возврат только внутрь сайта: адрес из строки запроса мог прийти из чужой
   // ссылки, и уводить по нему после входа на внешний сайт нельзя.
-  const raw = params.get('next') || '/reyting';
-  const next = raw.startsWith('/') && !raw.startsWith('//') ? raw : '/reyting';
+  const raw = params.get('next') || '/rating';
+  const next = raw.startsWith('/') && !raw.startsWith('//') ? raw : '/rating';
 
   const { user, loading, isGskChairman, signIn, signOut } = useSession();
   const [email, setEmail] = useState('');

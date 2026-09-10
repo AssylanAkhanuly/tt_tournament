@@ -24,14 +24,14 @@ import { AppChrome, BackLink, FullScreen, SiteHeader, type RoleUI } from '@/shar
 
 /** Разделы кабинета председателя, которые уже есть в приложении. */
 const NAV: [string, string, ReactNode][] = [
-  ['Рейтинг игроков', '/reyting', <BarChart3 size={16} key="r" />],
-  ['Калибровка', '/reyting/kalibrovka', <SlidersHorizontal size={16} key="k" />],
+  ['Рейтинг игроков', '/rating', <BarChart3 size={16} key="r" />],
+  ['Калибровка', '/rating/calibration', <SlidersHorizontal size={16} key="k" />],
 ];
 
 /** Разделы публичного сайта, которые уже есть. Календарь и новости — позже. */
 const SITE: [string, string][] = [
   ['Главная', '/'],
-  ['Рейтинги', '/reyting'],
+  ['Рейтинги', '/rating'],
 ];
 
 export function RatingShell({
@@ -56,7 +56,7 @@ export function RatingShell({
   children: ReactNode;
 }) {
   const router = useRouter();
-  const path = usePathname() || '/reyting';
+  const path = usePathname() || '/rating';
   const { user, loading, isGskChairman, signOut } = useSession();
 
   const body = (
@@ -112,7 +112,7 @@ export function RatingShell({
               size="sm"
               variant="primary"
               data-testid="login-link"
-              onPress={() => router.push('/vhod?next=' + encodeURIComponent(path))}
+              onPress={() => router.push('/login?next=' + encodeURIComponent(path))}
             >
               <LogIn size={14} /> Войти
             </Button>

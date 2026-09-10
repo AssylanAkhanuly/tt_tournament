@@ -60,7 +60,7 @@ export function RatingListView() {
           Национальный рейтинг спортсменов Республики Казахстан. Значение одно на человека и меняется по итогам
           рейтинговых соревнований; возрастные списки — выборка из общего рейтинга, а не отдельный рейтинг.
           Строка открывает карточку с историей всех начислений.{' '}
-          <Link href="/reyting/kalibrovka" className="text-blue-600 hover:underline">
+          <Link href="/rating/calibration" className="text-blue-600 hover:underline">
             Коэффициенты расчёта
           </Link>
           .

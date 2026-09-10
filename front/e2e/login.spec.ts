@@ -15,8 +15,8 @@ const строка = (page: Page, имя: string) =>
 
 const текущий = (page: Page) => page.getByText('Текущий рейтинг').locator('..');
 
-async function войти(page: Page, next = '/reyting') {
-  await page.goto('/vhod?next=' + encodeURIComponent(next));
+async function войти(page: Page, next = '/rating') {
+  await page.goto('/login?next=' + encodeURIComponent(next));
   await page.getByLabel('Эл. почта').fill(E2E_GSK.email);
   await page.getByLabel('Пароль').fill(E2E_GSK.password);
   await page.getByRole('button', { name: 'Войти' }).click();
@@ -26,10 +26,10 @@ async function войти(page: Page, next = '/reyting') {
 }
 
 async function карточка(page: Page, имя: string) {
-  await page.goto('/reyting');
+  await page.goto('/rating');
   await page.getByPlaceholder('Фамилия или регион').fill(имя);
   await строка(page, имя).click();
-  await page.waitForURL(/\/reyting\/[0-9a-f-]{36}$/);
+  await page.waitForURL(/\/rating\/[0-9a-f-]{36}$/);
   await expect(page.locator('h1')).toHaveText(имя);
 }
 
@@ -41,13 +41,13 @@ test('гость видит шапку сайта с «Войти» и не ви
 });
 
 test('неверный пароль не пускает и говорит об этом', async ({ page }) => {
-  await page.goto('/vhod');
+  await page.goto('/login');
   await page.getByLabel('Эл. почта').fill(E2E_GSK.email);
   await page.getByLabel('Пароль').fill('не-тот-пароль');
   await page.getByRole('button', { name: 'Войти' }).click();
 
   await expect(page.getByTestId('login-error')).toHaveText('Неверная почта или пароль');
-  await expect(page).toHaveURL(/\/vhod/);
+  await expect(page).toHaveURL(/\/login/);
 });
 
 test('председатель фиксирует неявку: рейтинг падает на 0,20, в истории — основание', async ({ page }) => {
@@ -95,12 +95,12 @@ test('председатель исправляет значение: оно с�
 });
 
 test('калибровка: гостю — ссылка на вход, председателю — «Сделать действующими»', async ({ page }) => {
-  await page.goto('/reyting/kalibrovka');
+  await page.goto('/rating/calibration');
   await expect(page.getByTestId('param-D')).toHaveValue('15');
   await expect(page.getByTestId('publish-login')).toBeVisible();
   await expect(page.getByTestId('publish-params')).toHaveCount(0);
 
-  await войти(page, '/reyting/kalibrovka');
+  await войти(page, '/rating/calibration');
   await expect(page.getByTestId('publish-params')).toBeVisible();
   await expect(page.getByTestId('publish-login')).toHaveCount(0);
 });
@@ -108,7 +108,7 @@ test('калибровка: гостю — ссылка на вход, пред�
 test('разделы бокового меню переводят между экранами председателя', async ({ page }) => {
   await войти(page);
   await page.getByRole('button', { name: 'Калибровка' }).click();
-  await page.waitForURL((url) => url.pathname === '/reyting/kalibrovka');
+  await page.waitForURL((url) => url.pathname === '/rating/calibration');
   await expect(page.locator('h1')).toHaveText('Калибровка рейтинга');
 });
 

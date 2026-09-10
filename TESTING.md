@@ -9,7 +9,7 @@
 - **`front/`** — обвязка есть и работает: `npm test` (vitest + Testing Library)
   и `npm run test:e2e` (Playwright). Покрыто пока три файла: модель сетки
   (`src/entities/bracket/model.test.ts`), проверка самой тестовой обвязки и один
-  сквозной сценарий сетки (`e2e/setka.spec.ts`).
+  сквозной сценарий сетки (`e2e/bracket.spec.ts`).
 - **`back/`** — тестов нет, хотя именно там лежит логика с высокой ценой ошибки:
   движок сеток `back/tournaments/bracket.py`. Его и рейтинг покрываем в первую
   очередь.

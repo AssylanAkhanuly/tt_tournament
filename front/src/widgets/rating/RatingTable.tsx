@@ -106,7 +106,7 @@ export function RatingTable({
             {rows.map((r, i) => (
               <Link
                 key={r.userId}
-                href={'/reyting/' + r.userId}
+                href={'/rating/' + r.userId}
                 data-row
                 data-testid="rating-row"
                 data-player={r.name}

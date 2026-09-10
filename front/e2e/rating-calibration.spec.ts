@@ -18,7 +18,7 @@ const рейтинг = (page: Page, имя: string) => строка(page, имя
 
 /** Два равных соперника в одном матче — самая проверяемая точка формулы. */
 async function двоеРавных(page: Page) {
-  await page.goto('/reyting/kalibrovka');
+  await page.goto('/rating/calibration');
   // Ждём, пока приедут коэффициенты: до них расчёта нет и полей тоже.
   await expect(page.getByTestId('param-D')).toHaveValue('15');
   await page.getByRole('button', { name: 'Очистить' }).click();
@@ -48,7 +48,7 @@ test('любительский турнир вдвое дешевле респу
 });
 
 test('масштаб D меняет ожидаемый результат, а с ним и изменение', async ({ page }) => {
-  await page.goto('/reyting/kalibrovka');
+  await page.goto('/rating/calibration');
   await expect(page.getByTestId('param-D')).toHaveValue('15');
   await page.getByRole('button', { name: 'Очистить' }).click();
   await page.getByLabel('Прежний рейтинг: Спортсмен А').fill('20');
@@ -76,7 +76,7 @@ test('потолок п. 12.1 режет изменение и помечает 
 });
 
 test('история п. 20 сходится: рейтинг до плюс изменение равен рейтингу после', async ({ page }) => {
-  await page.goto('/reyting/kalibrovka');
+  await page.goto('/rating/calibration');
   await expect(page.getByTestId('param-D')).toHaveValue('15');
   await page.getByTestId('fill-round-robin').click();
 
@@ -96,7 +96,7 @@ test('история п. 20 сходится: рейтинг до плюс из�
 });
 
 test('новичок идёт по переходному периоду п. 11 и это видно в таблице', async ({ page }) => {
-  await page.goto('/reyting/kalibrovka');
+  await page.goto('/rating/calibration');
   await expect(строка(page, 'Новичок')).toContainText('переходный период, ещё 20');
 
   await page.getByTestId('fill-round-robin').click();
@@ -104,7 +104,7 @@ test('новичок идёт по переходному периоду п. 11 
 });
 
 test('стартовое значение легионера считает сервер по п. 17.4', async ({ page }) => {
-  await page.goto('/reyting/kalibrovka');
+  await page.goto('/rating/calibration');
   // Rmax = 90, k = 10, позиция 100: 90 − 10 × ln(100) = 43,95 (пример п. 17.12).
   await expect(строка(page, 'Легионер (ITTF 100)')).toContainText('43,95');
 
@@ -113,7 +113,7 @@ test('стартовое значение легионера считает се
 });
 
 test('введённое имя спортсмена доходит до таблицы прогона', async ({ page }) => {
-  await page.goto('/reyting/kalibrovka');
+  await page.goto('/rating/calibration');
   await expect(строка(page, 'Спортсмен А')).toBeVisible();
   await page.getByLabel('Фамилия и имя спортсмена').first().fill('Ахметов Ерлан');
 
@@ -131,7 +131,7 @@ test('коэффициент места п. 10 применяется к поб�
 });
 
 test('наблюдения по шкале приходят с сервера и меняются вместе с D', async ({ page }) => {
-  await page.goto('/reyting/kalibrovka');
+  await page.goto('/rating/calibration');
   await expect(page.getByTestId('param-D')).toHaveValue('15');
   await expect(page.getByText('МС против КМС при этом D')).toBeVisible();
   await expect(page.getByText('82 %')).toBeVisible();

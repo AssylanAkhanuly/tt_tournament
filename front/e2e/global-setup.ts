@@ -19,7 +19,7 @@ import path from 'node:path';
 
 const PYTHON = 'C:/apps/tt_back/venv/Scripts/python.exe';
 
-/** Учётка председателя для сквозных проверок — та же, что в `vhod.spec.ts`. */
+/** Учётка председателя для сквозных проверок — та же, что в `login.spec.ts`. */
 export const E2E_GSK = { email: 'e2e-gsk@fnt.kz', password: 'E2e-Gsk-2026' };
 
 function manage(...args: string[]) {

@@ -127,7 +127,7 @@ export function ParamsPanel({
             /* Не прячем возможность совсем: иначе коэффициенты казались бы
                неизменяемыми. Показываем, кто их меняет и где войти. */
             <a
-              href="/vhod?next=/reyting/kalibrovka"
+              href="/login?next=/rating/calibration"
               data-testid="publish-login"
               className="self-center text-[12.5px] text-blue-600 hover:underline"
             >

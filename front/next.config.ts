@@ -19,6 +19,18 @@ const nextConfig: NextConfig = {
       { source: "/api/:path*", destination: `${BACKEND}/api/:path*` },
     ];
   },
+  // Routes are English since 10.09.2026 (product owner's decision). The old
+  // transliterated paths were already shared, so they redirect; the query
+  // string (e.g. /vhod?next=…) is carried over by Next.
+  async redirects() {
+    return [
+      { source: "/reyting/kalibrovka", destination: "/rating/calibration", permanent: true },
+      { source: "/reyting/:id", destination: "/rating/:id", permanent: true },
+      { source: "/reyting", destination: "/rating", permanent: true },
+      { source: "/vhod", destination: "/login", permanent: true },
+      { source: "/setka", destination: "/bracket", permanent: true },
+    ];
+  },
 };
 
 export default nextConfig;
