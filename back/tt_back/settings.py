@@ -71,6 +71,13 @@ DATABASES = {
     )
 }
 
+# Локальный SQLite (без DATABASE_URL): запись — с BEGIN IMMEDIATE, и второй
+# писатель ждёт до 20 с, а не падает с «database is locked». Почему —
+# tt_back/sqlite/base.py. Боевой PostgreSQL это не трогает.
+if DATABASES["default"]["ENGINE"] == "django.db.backends.sqlite3":
+    DATABASES["default"]["ENGINE"] = "tt_back.sqlite"
+    DATABASES["default"].setdefault("OPTIONS", {})["timeout"] = 20
+
 AUTH_USER_MODEL = "users.User"
 
 AUTH_PASSWORD_VALIDATORS = [

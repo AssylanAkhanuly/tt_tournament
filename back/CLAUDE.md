@@ -23,6 +23,16 @@
 ## Stack
 - **Django 5** + **Django REST Framework** + **SimpleJWT** (cookie-based auth)
 - **Python 3.9**, venv at `C:\apps\tt_back\venv\Scripts\python.exe`
+- ⚠ **Локально стоит Django 4.2.15, а не 5.x.** `requirements.txt` просит `>=5.0`, но
+  Django 5 требует Python 3.10+, и на 3.9 не ставится. Код держим совместимым с обеими
+  версиями; возможности Django 5.1+ (например `OPTIONS["transaction_mode"]`) локально
+  недоступны.
+- **Локальная база — SQLite, запись с `BEGIN IMMEDIATE`** ✳ (10.09.2026). Без
+  `DATABASE_URL` настройки подменяют движок на `tt_back.sqlite`: транзакция сразу берёт
+  право на запись, и второй писатель ждёт (до 20 с), а не падает с «database is locked».
+  С обычным `BEGIN` так падала неявка, записанная в одну секунду с исправлением из
+  соседней сквозной проверки. Боевой базы (PostgreSQL) это не касается. Проверка —
+  `tt_back/test_sqlite.py`.
 - Run server: `venv\Scripts\python.exe manage.py runserver`
 - Run migrations: `venv\Scripts\python.exe manage.py makemigrations && venv\Scripts\python.exe manage.py migrate`
 - Django check: `venv\Scripts\python.exe manage.py check`
