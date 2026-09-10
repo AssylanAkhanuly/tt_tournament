@@ -8,24 +8,17 @@
    в одном месте. */
 
 import type {
-  AppealInput,
-  EditionDraftRow,
-  RatingAppeal,
+  NewAthlete,
+  NewMatch,
+  NewTournament,
   ProtocolDetail,
   ProtocolInput,
   ProtocolMatchSide,
-  RatingJournalPage,
-  RatingProtocol,
-  PreviewMatch,
-  PreviewPlayer,
-  PreviewResult,
-  PreviewTournament,
   RatingCard,
-  RatingEdition,
   RatingEntry,
   RatingList,
-  RatingParams,
   RatingProfile,
+  RatingProtocol,
 } from './types';
 
 const BASE = '/api/rating';
@@ -53,7 +46,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
       headers: { 'Content-Type': 'application/json', ...(init?.headers ?? {}) },
       credentials: 'same-origin',
     });
-  } catch (cause) {
+  } catch {
     // Сеть не ответила вовсе: сервер не поднят или адрес не проксируется.
     // Экран обязан сказать это прямо, а не показать пустую таблицу.
     throw new RatingApiError('Рейтинговый сервис недоступен', 0);
@@ -120,41 +113,7 @@ const toEntry = (raw: Record<string, unknown>): RatingEntry => ({
   createdAt: String(raw.created_at ?? ''),
 });
 
-const toParams = (raw: Record<string, unknown>): RatingParams => ({
-  id: n(raw.id),
-  name: String(raw.name ?? ''),
-  d: n(raw.d),
-  kStandard: n(raw.k_standard),
-  kTransition: n(raw.k_transition),
-  transitionMatches: n(raw.transition_matches),
-  maxDelta: n(raw.max_delta),
-  capInTransition: Boolean(raw.cap_in_transition),
-  cTop: n(raw.c_top),
-  cRepublic: n(raw.c_republic),
-  cRegion: n(raw.c_region),
-  cAmateur: n(raw.c_amateur),
-  pFirst: n(raw.p_first),
-  pSecond: n(raw.p_second),
-  pThird: n(raw.p_third),
-  prizeMode: raw.prize_mode as RatingParams['prizeMode'],
-  baseline: raw.baseline as RatingParams['baseline'],
-  minRating: n(raw.min_rating),
-  ittfRMax: n(raw.ittf_r_max),
-  ittfK: n(raw.ittf_k),
-  updatedAt: String(raw.updated_at ?? ''),
-  sources: (raw.sources ?? {}) as RatingParams['sources'],
-});
-
-const toEdition = (raw: Record<string, unknown>): RatingEdition => ({
-  id: n(raw.id),
-  number: n(raw.number),
-  publishedAt: String(raw.published_at ?? ''),
-  publishedByName: (raw.published_by_name as string) ?? null,
-  appealUntil: String(raw.appeal_until ?? ''),
-  rows: n(raw.rows),
-});
-
-/* ── Ручки ──────────────────────────────────────────────────────── */
+/* ── Лист и карточка ────────────────────────────────────────────── */
 
 export type RatingListQuery = {
   sex?: string;
@@ -165,8 +124,6 @@ export type RatingListQuery = {
   all?: boolean;
   page?: number;
   pageSize?: number;
-  /** Номер записи выпуска или `live` — живые значения. Без него — последний выпуск. */
-  edition?: string;
 };
 
 /** Рейтинг-лист (Э0.4). По умолчанию активный: неактивные исключены из текущей
@@ -181,7 +138,6 @@ export async function fetchRatingList(query: RatingListQuery = {}): Promise<Rati
   if (query.all) params.set('all', '1');
   if (query.page) params.set('page', String(query.page));
   if (query.pageSize) params.set('page_size', String(query.pageSize));
-  if (query.edition) params.set('edition', query.edition);
 
   const raw = await request<Record<string, unknown>>('/?' + params.toString());
   return {
@@ -189,7 +145,6 @@ export async function fetchRatingList(query: RatingListQuery = {}): Promise<Rati
     page: n(raw.page),
     pageSize: n(raw.page_size),
     results: (raw.results as RawProfile[]).map(toProfile),
-    edition: raw.edition ? toEdition(raw.edition as Record<string, unknown>) : null,
     updatedAt: (raw.updated_at as string) ?? null,
   };
 }
@@ -205,36 +160,8 @@ export async function fetchRatingCard(userId: string): Promise<RatingCard> {
   };
 }
 
-/** Действующие коэффициенты вместе с происхождением каждого числа. */
-export async function fetchRatingParams(): Promise<RatingParams> {
-  return toParams(await request<Record<string, unknown>>('/params/'));
-}
-
-/** Правка коэффициентов — только федерация (на сервере `IsAdminUser`). */
-export async function saveRatingParams(patch: Record<string, unknown>): Promise<RatingParams> {
-  return toParams(
-    await request<Record<string, unknown>>('/params/', {
-      method: 'PATCH',
-      body: JSON.stringify(patch),
-    }),
-  );
-}
-
-/** Предпросчёт: сервер считает присланный набор и ничего не сохраняет.
-
-    Это и есть боевой движок — по решению владельца продукта (10.09.2026)
-    реализация одна, на Python. Отсюда и цена: калибровка ходит по сети. */
-export async function previewRating(body: {
-  players: PreviewPlayer[];
-  tournaments: PreviewTournament[];
-  matches: PreviewMatch[];
-  params?: Record<string, unknown>;
-}): Promise<PreviewResult> {
-  return request<PreviewResult>('/preview/', { method: 'POST', body: JSON.stringify(body) });
-}
-
 /* ── Правки председателя ГСК ✳ (10.09.2026) ─────────────────────────
-   Обе ручки сервер пускает только председателю ГСК. Отказ приходит текстом
+   Ручки сервер пускает только председателю ГСК. Отказ приходит текстом
    сервера — его экран и показывает, а не придумывает свой. */
 
 /** Неявка без уважительной причины (п. 15.4–15.6). Основание обязательно. */
@@ -255,32 +182,18 @@ export async function correctRating(userId: string, value: number, reason: strin
   return toEntry(raw);
 }
 
-/* ── Выпуски (п. 8.2) ✳ (11.09.2026) ──────────────────────────────── */
-
-/** Все выпуски, новые первыми. Открыто всем: по ним выбирают таблицу. */
-export async function fetchEditions(): Promise<RatingEdition[]> {
-  const raw = await request<Record<string, unknown>[]>('/editions/');
-  return raw.map(toEdition);
+/** Объединить дубль с основной карточкой (п. 5.3). Возвращает основную карточку
+    после пересчёта. */
+export async function mergeProfiles(keepUserId: string, dropUserId: string, reason: string): Promise<RatingProfile> {
+  return toProfile(
+    await request<Record<string, unknown>>('/merge/', {
+      method: 'POST',
+      body: JSON.stringify({ keep_user_id: keepUserId, drop_user_id: dropUserId, reason }),
+    }),
+  );
 }
 
-/** Опубликовать выпуск — только председатель ГСК. */
-export async function publishEdition(): Promise<RatingEdition> {
-  return toEdition(await request<Record<string, unknown>>('/editions/', { method: 'POST' }));
-}
-
-/** Что уйдёт в следующий выпуск: кто сдвинулся с прошлого и кто новый. */
-export async function fetchEditionDraft(): Promise<EditionDraftRow[]> {
-  const raw = await request<Record<string, unknown>[]>('/editions/draft/');
-  return raw.map((r) => ({
-    userId: String(r.user_id ?? ''),
-    name: String(r.name ?? ''),
-    before: nOrNull(r.before),
-    after: n(r.after),
-    delta: nOrNull(r.delta),
-  }));
-}
-
-/* ── Протоколы: уровень и места (п. 10, 13) ✳ (11.09.2026) ─────────── */
+/* ── Протоколы турниров: уровень и места (п. 10, 13) ✳ (11.09.2026) ─── */
 
 const toProtocol = (r: Record<string, unknown>): RatingProtocol => ({
   id: String(r.id ?? ''),
@@ -290,6 +203,8 @@ const toProtocol = (r: Record<string, unknown>): RatingProtocol => ({
   levelLabel: String(r.level_label ?? ''),
   noThirdPlaceMatch: Boolean(r.no_third_place_match),
   applied: Boolean(r.applied),
+  manual: Boolean(r.manual),
+  editable: Boolean(r.editable),
   participants: ((r.participants as Record<string, unknown>[]) ?? []).map((p) => ({
     userId: String(p.user_id ?? ''),
     name: String(p.name ?? ''),
@@ -298,7 +213,7 @@ const toProtocol = (r: Record<string, unknown>): RatingProtocol => ({
   })),
 });
 
-/** Завершённые рейтинговые турниры — только председателю ГСК. */
+/** Рейтинговые турниры — только председателю ГСК. */
 export async function fetchProtocols(): Promise<RatingProtocol[]> {
   return (await request<Record<string, unknown>[]>('/protocols/')).map(toProtocol);
 }
@@ -327,6 +242,8 @@ const toProtocolDetail = (r: Record<string, unknown>): ProtocolDetail => ({
   levelLabel: String(r.level_label ?? ''),
   noThirdPlaceMatch: Boolean(r.no_third_place_match),
   applied: Boolean(r.applied),
+  manual: Boolean(r.manual),
+  editable: Boolean(r.editable),
   blocked: (r.blocked as string) ?? null,
   participants: ((r.participants as Record<string, unknown>[]) ?? []).map((p) => ({
     userId: String(p.user_id ?? ''),
@@ -366,105 +283,73 @@ export async function previewProtocol(id: string, body: ProtocolInput): Promise<
   );
 }
 
-/** Утвердить протокол: уровень, места, «матча за 3-е место не было» — и пересчёт. */
+/** Утвердить протокол: уровень, места, «матча за 3-е место не было» — и пересчёт.
+    Турнир вручную при этом завершается и учитывается в рейтинге. */
 export async function saveProtocol(id: string, body: ProtocolInput): Promise<ProtocolDetail> {
   return toProtocolDetail(
     await request<Record<string, unknown>>('/protocols/' + id + '/', { method: 'POST', body: protocolBody(body) }),
   );
 }
 
-/* ── Объединение дублей (п. 5.3) ✳ (11.09.2026) ───────────────────── */
+/* ── Заведение председателем ГСК ✳ (11.09.2026) ─────────────────── */
 
-/** Объединить дубль с основной карточкой — только председатель ГСК.
-    Возвращает основную карточку после пересчёта. */
-export async function mergeProfiles(keepUserId: string, dropUserId: string, reason: string): Promise<RatingProfile> {
-  return toProfile(
-    await request<Record<string, unknown>>('/merge/', {
-      method: 'POST',
-      body: JSON.stringify({ keep_user_id: keepUserId, drop_user_id: dropUserId, reason }),
-    }),
-  );
-}
-
-/* ── Журнал изменений (п. 20, 22.2) ✳ (11.09.2026) ───────────────── */
-
-export type JournalQuery = { kind?: string; q?: string; page?: number };
-
-/** Все строки истории всех спортсменов, новые первыми — председателю ГСК. */
-export async function fetchJournal(query: JournalQuery = {}): Promise<RatingJournalPage> {
-  const params = new URLSearchParams();
-  if (query.kind) params.set('kind', query.kind);
-  if (query.q) params.set('q', query.q);
-  if (query.page) params.set('page', String(query.page));
-  const raw = await request<Record<string, unknown>>('/journal/?' + params.toString());
-  return {
-    count: n(raw.count),
-    page: n(raw.page),
-    pageSize: n(raw.page_size),
-    results: (raw.results as Record<string, unknown>[]).map((r) => ({
-      ...toEntry(r),
-      athleteId: String(r.athlete_id ?? ''),
-      athleteName: String(r.athlete_name ?? ''),
-      createdByName: (r.created_by_name as string) ?? null,
-    })),
-  };
-}
-
-/* ── Апелляции (п. 21) ✳ (11.09.2026) ─────────────────────────────── */
-
-const toAppeal = (r: Record<string, unknown>): RatingAppeal => ({
-  id: n(r.id),
-  userId: String(r.user_id ?? ''),
-  name: String(r.name ?? ''),
-  editionNumber: n(r.edition_number),
-  applicant: String(r.applicant ?? ''),
-  subject: String(r.subject ?? ''),
-  circumstances: String(r.circumstances ?? ''),
-  demand: String(r.demand ?? ''),
-  documents: String(r.documents ?? ''),
-  receivedAt: String(r.received_at ?? ''),
-  reviewUntil: String(r.review_until ?? ''),
-  status: r.status as RatingAppeal['status'],
-  statusLabel: String(r.status_label ?? ''),
-  decision: String(r.decision ?? ''),
-  decidedAt: (r.decided_at as string) ?? null,
-  decidedByName: (r.decided_by_name as string) ?? null,
-  correctionAfter: nOrNull(r.correction_after),
+const athleteBody = (a: NewAthlete) => ({
+  name: a.name,
+  region: a.region,
+  sex: a.sex,
+  birth_year: a.birthYear,
+  origin: a.origin,
+  legacy: a.legacy,
+  ittf_position: a.ittfPosition,
 });
 
-/** Апелляции — только председателю ГСК. `status` — pending | upheld | rejected. */
-export async function fetchAppeals(status?: string): Promise<RatingAppeal[]> {
-  const raw = await request<Record<string, unknown>[]>('/appeals/' + (status ? '?status=' + status : ''));
-  return raw.map(toAppeal);
-}
-
-/** Зарегистрировать письменную апелляцию на последний выпуск (п. 21.2). */
-export async function registerAppeal(input: AppealInput): Promise<RatingAppeal> {
-  return toAppeal(
-    await request<Record<string, unknown>>('/appeals/', {
-      method: 'POST',
-      body: JSON.stringify({
-        user_id: input.userId,
-        received_at: input.receivedAt || undefined,
-        applicant: input.applicant,
-        subject: input.subject,
-        circumstances: input.circumstances,
-        demand: input.demand,
-        documents: input.documents,
-      }),
-    }),
+/** Завести спортсмена в рейтинге. Стартовое значение считает сервер. */
+export async function createAthlete(a: NewAthlete): Promise<RatingProfile> {
+  return toProfile(
+    await request<Record<string, unknown>>('/athletes/', { method: 'POST', body: JSON.stringify(athleteBody(a)) }),
   );
 }
 
-/** Решение по апелляции (п. 21.4): удовлетворить — с исправленным значением. */
-export async function decideAppeal(
-  id: number,
-  decision: { upheld: boolean; decision: string; value?: number },
-): Promise<RatingAppeal> {
-  return toAppeal(
-    await request<Record<string, unknown>>('/appeals/' + id + '/decision/', {
-      method: 'POST',
-      body: JSON.stringify(decision),
+const protocolCall = async (path: string, method: string, body?: unknown): Promise<ProtocolDetail> =>
+  toProtocolDetail(
+    await request<Record<string, unknown>>('/protocols/' + path, {
+      method,
+      body: body === undefined ? undefined : JSON.stringify(body),
     }),
   );
+
+/** Завести турнир протоколом вручную. */
+export function createProtocol(t: NewTournament): Promise<ProtocolDetail> {
+  return protocolCall('', 'POST', t);
+}
+
+/** Добавить участника: из рейтинга (`userId`) или нового спортсмена. */
+export function addProtocolParticipant(
+  id: string,
+  who: { userId: string } | { athlete: NewAthlete },
+): Promise<ProtocolDetail> {
+  return protocolCall(
+    id + '/participants/',
+    'POST',
+    'userId' in who ? { user_id: who.userId } : { new: athleteBody(who.athlete) },
+  );
+}
+
+/** Убрать участника — сервер откажет, если у него есть матчи. */
+export function removeProtocolParticipant(id: string, userId: string): Promise<ProtocolDetail> {
+  return protocolCall(id + '/participants/' + userId + '/', 'DELETE');
+}
+
+/** Внести матч: кто с кем и счёт. */
+export function addProtocolMatch(id: string, m: NewMatch): Promise<ProtocolDetail> {
+  return protocolCall(id + '/matches/', 'POST', { a: m.a, b: m.b, score_a: m.scoreA, score_b: m.scoreB });
+}
+
+export function removeProtocolMatch(id: string, matchId: string): Promise<ProtocolDetail> {
+  return protocolCall(id + '/matches/' + matchId + '/', 'DELETE');
+}
+
+/** Вернуть на доработку: учёт турнира снимается, участники и матчи снова правятся. */
+export function reworkProtocol(id: string): Promise<ProtocolDetail> {
+  return protocolCall(id + '/rework/', 'POST');
 }

@@ -36,7 +36,8 @@ export default defineConfig({
     {
       command: 'C:/apps/tt_back/venv/Scripts/python.exe manage.py runserver 8000 --noreload',
       cwd: '../back',
-      url: 'http://localhost:8000/api/rating/params/',
+      // Публичный лист: ручка коэффициентов снята вместе с калибровкой (11.09.2026).
+      url: 'http://localhost:8000/api/rating/',
       reuseExistingServer: true,
       timeout: 120_000,
     },

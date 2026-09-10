@@ -24,11 +24,13 @@ const nextConfig: NextConfig = {
   // string (e.g. /vhod?next=…) is carried over by Next.
   async redirects() {
     return [
-      { source: "/reyting/kalibrovka", destination: "/rating/calibration", permanent: true },
       { source: "/reyting/:id", destination: "/rating/:id", permanent: true },
       { source: "/reyting", destination: "/rating", permanent: true },
       { source: "/vhod", destination: "/login", permanent: true },
       { source: "/setka", destination: "/bracket", permanent: true },
+      // «Протоколы» became «Турниры» on 11.09.2026 (manual tournaments).
+      { source: "/rating/protocols/:id", destination: "/rating/tournaments/:id", permanent: true },
+      { source: "/rating/protocols", destination: "/rating/tournaments", permanent: true },
     ];
   },
 };

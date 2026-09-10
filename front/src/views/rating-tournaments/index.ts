@@ -1,0 +1,1 @@
+export { TournamentsView } from './TournamentsView';

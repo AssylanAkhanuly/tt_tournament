@@ -1,1 +1,0 @@
-export { RatingLabView } from './RatingLabView';

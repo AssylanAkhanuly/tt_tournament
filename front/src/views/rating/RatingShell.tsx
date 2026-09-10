@@ -18,30 +18,23 @@
    решение владельца продукта): между разделами ведут меню роли и шапка сайта. */
 
 import { Button } from '@heroui/react';
-import { BarChart3, ClipboardCheck, LogIn, Newspaper, Scale, ScrollText, SlidersHorizontal } from 'lucide-react';
+import { BarChart3, ClipboardCheck, LogIn } from 'lucide-react';
 import { usePathname, useRouter } from 'next/navigation';
 import type { ReactNode } from 'react';
 
 import { useSession } from '@/entities/session';
 import { AppChrome, FullScreen, SiteHeader, type RoleUI } from '@/shared/kit/app';
 
-/** Разделы кабинета председателя, которые уже есть в приложении. Порядок —
-    поток рейтинга: лист → протокол турнира → выпуск → апелляции на выпуск →
-    журнал всех правок → коэффициенты. */
+/** Разделы кабинета председателя. «Выпуски», «Апелляции», «Журнал» и
+    «Калибровка» сняты ✳ (11.09.2026, решение владельца продукта). */
 const NAV: [string, string, ReactNode][] = [
   ['Рейтинг игроков', '/rating', <BarChart3 size={16} key="r" />],
-  ['Протоколы', '/rating/protocols', <ClipboardCheck size={16} key="p" />],
-  ['Выпуски', '/rating/editions', <Newspaper size={16} key="e" />],
-  ['Апелляции', '/rating/appeals', <Scale size={16} key="a" />],
-  ['Журнал', '/rating/journal', <ScrollText size={16} key="j" />],
-  ['Калибровка', '/rating/calibration', <SlidersHorizontal size={16} key="k" />],
+  ['Турниры', '/rating/tournaments', <ClipboardCheck size={16} key="p" />],
 ];
 
-/** Разделы публичного сайта, которые уже есть. Календарь и новости — позже. */
-const SITE: [string, string][] = [
-  ['Главная', '/'],
-  ['Рейтинги', '/rating'],
-];
+/** Разделы публичного сайта, которые уже есть. Главной нет ✳ (11.09.2026):
+    корень ведёт на вход. Календарь и новости — позже. */
+const SITE: [string, string][] = [['Рейтинги', '/rating']];
 
 export function RatingShell({
   title,

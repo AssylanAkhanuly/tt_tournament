@@ -2,39 +2,21 @@
 
 /* Хуки транспорта: экран зовёт их, а не `fetch`.
 
-   Один общий `useAsync` вместо трёх почти одинаковых хуков — иначе состояние
+   Один общий `useAsync` вместо почти одинаковых хуков — иначе состояние
    «грузится / ошибка / данные» пришлось бы писать в каждом заново, и в одном
-   из трёх оно оказалось бы другим. */
+   из них оно оказалось бы другим. */
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import {
-  fetchAppeals,
-  fetchEditionDraft,
-  fetchEditions,
-  fetchJournal,
   fetchProtocol,
   fetchProtocols,
-  previewProtocol,
-  type JournalQuery,
   fetchRatingCard,
   fetchRatingList,
-  fetchRatingParams,
-  previewRating,
-  saveRatingParams,
+  previewProtocol,
   type RatingListQuery,
 } from './client';
-import type {
-  EditionDraftRow,
-  PreviewMatch,
-  PreviewPlayer,
-  PreviewResult,
-  PreviewTournament,
-  RatingCard,
-  RatingEdition,
-  RatingList,
-  RatingParams,
-} from './types';
+import type { ProtocolDetail, ProtocolInput, RatingCard, RatingList } from './types';
 
 export type AsyncState<T> = {
   data: T | null;
@@ -84,144 +66,46 @@ export function useRatingCard(userId: string): AsyncState<RatingCard> {
   return useAsync(() => fetchRatingCard(userId), [userId]);
 }
 
-/** Выпуски, новые первыми (п. 8.2). */
-export function useEditions(): AsyncState<RatingEdition[]> {
-  return useAsync(() => fetchEditions(), []);
-}
-
-/** Черновик следующего выпуска — только председателю ГСК. */
-export function useEditionDraft(): AsyncState<EditionDraftRow[]> {
-  return useAsync(() => fetchEditionDraft(), []);
-}
-
-/** Апелляции (п. 21) — только председателю ГСК; фильтр по вкладке — на экране. */
-export function useAppeals() {
-  return useAsync(() => fetchAppeals(), []);
-}
-
-/** Протоколы для рейтинга (п. 10, 13) — только председателю ГСК. */
+/** Протоколы турниров (п. 10, 13) — только председателю ГСК. */
 export function useProtocols() {
   return useAsync(() => fetchProtocols(), []);
 }
 
 /** Страница протокола: участники, матчи, причина отказа. */
-export function useProtocol(id: string) {
+export function useProtocol(id: string): AsyncState<ProtocolDetail> {
   return useAsync(() => fetchProtocol(id), [id]);
 }
 
-/** Предпросмотр утверждения — с задержкой, как калибровка: сервер считает
-    по-настоящему и откатывает. `enabled` — есть несохранённые правки. */
-export function useProtocolPreview(
-  id: string,
-  input: Parameters<typeof previewProtocol>[1],
-  enabled: boolean,
-  delayMs = 250,
-) {
-  const [data, setData] = useState<Awaited<ReturnType<typeof previewProtocol>> | null>(null);
-  const [loading, setLoading] = useState(false);
-  const key = JSON.stringify(input);
-  const latest = useRef(0);
+/** Предпросмотр утверждения — с задержкой: сервер считает по-настоящему и
+    откатывает. `enabled` — есть что предпросчитать; `rev` — счётчик правок
+    состава и матчей: при тех же уровне и местах числа другие. */
+export function useProtocolPreview(id: string, input: ProtocolInput, enabled: boolean, rev = 0, delayMs = 250) {
+  // Ответ помнит, на какой запрос он пришёл: «грузится» — это когда последний
+  // ответ не на текущий запрос. Состояние в самом эффекте не трогаем.
+  const [result, setResult] = useState<{ key: string; data: ProtocolDetail | null } | null>(null);
+  const key = JSON.stringify([id, input, rev]);
 
   useEffect(() => {
-    const seq = ++latest.current;
-    if (!enabled) {
-      setData(null);
-      setLoading(false);
-      return;
-    }
-    setLoading(true);
+    if (!enabled) return;
+    let live = true; // ответ на устаревший запрос не перетирает свежий
     const timer = setTimeout(() => {
       previewProtocol(id, input)
-        .then((value) => {
-          if (seq === latest.current) setData(value);
+        .then((data) => {
+          if (live) setResult({ key, data });
         })
         .catch(() => {
-          if (seq === latest.current) setData(null);
-        })
-        .finally(() => {
-          if (seq === latest.current) setLoading(false);
+          if (live) setResult({ key, data: null });
         });
     }, delayMs);
-    return () => clearTimeout(timer);
+    return () => {
+      live = false;
+      clearTimeout(timer);
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [id, key, enabled, delayMs]);
+  }, [key, enabled, delayMs]);
 
-  return { data, loading };
-}
-
-/** Журнал изменений (п. 20, 22.2) — только председателю ГСК. */
-export function useJournal(query: JournalQuery) {
-  const key = JSON.stringify(query);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  return useAsync(() => fetchJournal(query), [key]);
-}
-
-export function useRatingParams() {
-  const state = useAsync(() => fetchRatingParams(), []);
-  const [saving, setSaving] = useState(false);
-  const [saveError, setSaveError] = useState<string | null>(null);
-
-  const save = useCallback(
-    async (patch: Record<string, unknown>) => {
-      setSaving(true);
-      setSaveError(null);
-      try {
-        await saveRatingParams(patch);
-        state.reload();
-      } catch (e) {
-        setSaveError((e as Error).message);
-      } finally {
-        setSaving(false);
-      }
-    },
-    [state],
-  );
-
-  return { ...state, save, saving, saveError };
-}
-
-export type PreviewInput = {
-  players: PreviewPlayer[];
-  tournaments: PreviewTournament[];
-  matches: PreviewMatch[];
-  params?: Record<string, unknown>;
-};
-
-/** Предпросчёт с задержкой: расчёт живёт на сервере, и слать запрос на каждое
-    нажатие клавиши в поле коэффициента незачем. */
-export function usePreview(input: PreviewInput, delayMs = 250) {
-  const [data, setData] = useState<PreviewResult | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const key = JSON.stringify(input);
-  const latest = useRef(0);
-
-  useEffect(() => {
-    if (!input.players.length) {
-      setData(null);
-      setError(null);
-      return;
-    }
-    const seq = ++latest.current;
-    setLoading(true);
-    const timer = setTimeout(() => {
-      previewRating(input)
-        .then((value) => {
-          if (seq !== latest.current) return;
-          setData(value);
-          setError(null);
-        })
-        .catch((e: Error) => {
-          if (seq !== latest.current) return;
-          setError(e.message);
-        })
-        .finally(() => {
-          if (seq === latest.current) setLoading(false);
-        });
-    }, delayMs);
-    return () => clearTimeout(timer);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [key, delayMs]);
-
-  return { data, loading, error };
+  return {
+    data: enabled && result ? result.data : null,
+    loading: enabled && result?.key !== key,
+  };
 }

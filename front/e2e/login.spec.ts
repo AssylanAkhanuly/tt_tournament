@@ -94,23 +94,31 @@ test('председатель исправляет значение: оно с�
   ).toBeVisible();
 });
 
-test('калибровка — раздел председателя: гостя уводит на вход, председатель видит «Сделать действующими»', async ({ page }) => {
-  await page.goto('/rating/calibration');
-  await page.waitForURL(
-    (url) => url.pathname === '/login' && url.searchParams.get('next') === '/rating/calibration',
-  );
-
-  await войти(page, '/rating/calibration');
-  await expect(page.getByTestId('param-D')).toHaveValue('15');
-  await expect(page.getByTestId('publish-params')).toBeVisible();
-});
-
 test('разделы бокового меню переводят между экранами председателя', async ({ page }) => {
   await войти(page);
-  await page.getByRole('button', { name: 'Калибровка' }).click();
-  await page.waitForURL((url) => url.pathname === '/rating/calibration');
-  // Заголовка у калибровки нет — узнаём её по полю коэффициента D.
-  await expect(page.getByTestId('param-D')).toHaveValue('15');
+  await page.getByRole('button', { name: 'Турниры' }).click();
+  await page.waitForURL((url) => url.pathname === '/rating/tournaments');
+  await expect(page.getByTestId('tournament-row').first()).toBeVisible();
+});
+
+test('корень сайта ведёт на вход', async ({ page }) => {
+  await page.goto('/');
+  await page.waitForURL((url) => url.pathname === '/login');
+  await expect(page.getByLabel('Эл. почта')).toBeVisible();
+});
+
+/* Выбор аккаунта ✳ (11.09.2026): вместо «Вы вошли как …» и «Продолжить» —
+   карточка открытой сессии; клик по ней входит. */
+test('вошедший на странице входа видит карточку аккаунта и входит по клику', async ({ page }) => {
+  await войти(page);
+  await page.goto('/login?next=/rating/tournaments');
+  const карточка = page.locator('[data-testid="account-card"][data-account="' + E2E_GSK.email + '"]');
+  await expect(карточка).toContainText('Председатель ГСК (проверки)');
+  await expect(page.getByRole('button', { name: 'Продолжить' })).toHaveCount(0);
+  await expect(page.getByText('Вы вошли как')).toHaveCount(0);
+
+  await карточка.click();
+  await page.waitForURL((url) => url.pathname === '/rating/tournaments');
 });
 
 test('выход из карточки человека возвращает гостя', async ({ page }) => {
@@ -158,9 +166,9 @@ test('председатель утверждает протокол на стр
   await карточка(page, 'Бекова Алия');
   await expect(текущий(page)).toContainText('25,24');
 
-  await page.goto('/rating/protocols');
-  await page.locator('[data-testid="protocol-row"][data-tournament="[demo] Кубок Костанайской области"]').click();
-  await page.waitForURL(/\/rating\/protocols\/[^/]+$/);
+  await page.goto('/rating/tournaments');
+  await page.locator('[data-testid="tournament-row"][data-tournament="[demo] Кубок Костанайской области"]').click();
+  await page.waitForURL(/\/rating\/tournaments\/[^/]+$/);
   // Матч протокола виден со счётом.
   await expect(page.getByTestId('protocol-match').first()).toContainText('3:1');
 

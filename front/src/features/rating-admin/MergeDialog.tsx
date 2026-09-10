@@ -31,7 +31,7 @@ export function MergeDialog({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const query = useMemo(() => ({ q: q.trim(), edition: 'live', all: true, pageSize: 8 }), [q]);
+  const query = useMemo(() => ({ q: q.trim(), all: true, pageSize: 8 }), [q]);
   const found = useRatingList(query);
   const candidates = q.trim().length >= 2 ? (found.data?.results ?? []).filter((p) => p.userId !== userId) : [];
 

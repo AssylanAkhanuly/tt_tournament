@@ -3,19 +3,20 @@
 /* Рейтинг игроков — публичная страница (ТЗ §3, экран Э0.4).
 
    Открыта без входа: таблица с фильтрами, строка ведёт в карточку спортсмена.
-   Данные приходят с бэкенда; расчёта на фронте нет вовсе.
+   Данные приходят с бэкенда; расчёта на фронте нет вовсе. Значение живое:
+   посчитали — сразу действует.
 
-   Лист — последний опубликованный выпуск (п. 8.2) ✳ (11.09.2026). Прошлый
-   выпуск выбирается справа в строке фильтров; председатель ГСК там же видит
-   текущие, ещё не опубликованные значения. Выпуск из адреса (`?edition=`)
-   открывается сразу — так в лист ведёт строка раздела «Выпуски». */
+   Председателю ГСК ✳ (11.09.2026) — «Добавить спортсмена»: карточка
+   заводится со стартом по Положению, и сразу открывается. */
 
-import { useSearchParams } from 'next/navigation';
+import { Button } from '@heroui/react';
+import { UserPlus } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 import { useCallback, useMemo, useState } from 'react';
 
-import { ruDate, useEditions, useRatingList, type RatingEdition } from '@/entities/rating';
+import { createAthlete, useRatingList } from '@/entities/rating';
 import { useSession } from '@/entities/session';
-import { FilterSeg } from '@/shared/kit/app';
+import { AthleteDialog } from '@/features/rating-admin';
 import { RatingTable, type RatingFilters } from '@/widgets/rating';
 import { RatingShell } from './RatingShell';
 
@@ -31,15 +32,10 @@ const STATUS_QUERY: Record<string, { status?: string; all?: boolean }> = {
   Все: { all: true },
 };
 
-/** Живые, ещё не опубликованные значения — пункт выбора только председателю. */
-const LIVE = 'текущие значения';
-const editionLabel = (e: RatingEdition) => '№' + e.number + ' · ' + ruDate(e.publishedAt);
-
 export function RatingListView() {
-  const params = useSearchParams();
+  const router = useRouter();
   const { isGskChairman } = useSession();
-  const editions = useEditions();
-
+  const [adding, setAdding] = useState(false);
   const [filters, setFilters] = useState<RatingFilters>({
     sex: 'Все',
     age: 'Все возрасты',
@@ -47,9 +43,6 @@ export function RatingListView() {
     q: '',
   });
   const [page, setPage] = useState(1);
-  // '' — последний выпуск (так отвечает сервер без параметра), 'live' — живые
-  // значения, иначе номер записи выпуска.
-  const [edition, setEdition] = useState<string>(params.get('edition') ?? '');
 
   const query = useMemo(
     () => ({
@@ -59,9 +52,8 @@ export function RatingListView() {
       ...STATUS_QUERY[filters.status],
       page,
       pageSize: 100,
-      edition: edition || undefined,
     }),
-    [filters, page, edition],
+    [filters, page],
   );
 
   const { data, loading, error } = useRatingList(query);
@@ -71,34 +63,18 @@ export function RatingListView() {
     setPage(1); // сменили отбор — страница снова первая, иначе список пуст
   }, []);
 
-  const list = editions.data ?? [];
-  const items = [...(isGskChairman ? [LIVE] : []), ...list.map(editionLabel)];
-  const active =
-    edition === 'live' || (!data?.edition && !list.length)
-      ? LIVE
-      : data?.edition
-        ? editionLabel(data.edition)
-        : editionLabel(list[0]);
-
-  const picker = list.length ? (
-    <div data-testid="edition-picker">
-      <FilterSeg
-        items={items}
-        active={active}
-        label="Выпуск"
-        onPick={(label) => {
-          const picked = list.find((e) => editionLabel(e) === label);
-          setEdition(label === LIVE ? 'live' : picked ? String(picked.id) : '');
-          setPage(1);
-        }}
-      />
-    </div>
-  ) : undefined;
-
   return (
     /* Без заголовка и пояснений ✳ (10.09.2026, решение владельца продукта):
        экран начинается прямо с поиска и таблицы. */
-    <RatingShell>
+    <RatingShell
+      actions={
+        isGskChairman ? (
+          <Button variant="primary" data-testid="athlete-open" onPress={() => setAdding(true)}>
+            <UserPlus size={15} /> Добавить спортсмена
+          </Button>
+        ) : undefined
+      }
+    >
       <RatingTable
         data={data}
         loading={loading}
@@ -107,8 +83,16 @@ export function RatingListView() {
         page={page}
         onFilters={onFilters}
         onPage={setPage}
-        extra={picker}
       />
+      {adding && (
+        <AthleteDialog
+          onClose={() => setAdding(false)}
+          onSubmit={async (athlete) => {
+            const created = await createAthlete(athlete);
+            router.push('/rating/' + created.userId);
+          }}
+        />
+      )}
     </RatingShell>
   );
 }

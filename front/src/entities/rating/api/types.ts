@@ -64,56 +64,26 @@ export type RatingEntry = {
   createdAt: string;
 };
 
-/** Выпуск рейтинговой таблицы (п. 8.2): снимок на дату публикации. От неё
-    считается срок апелляции (п. 21.2). */
-export type RatingEdition = {
-  id: number;
-  number: number;
-  publishedAt: string;
-  publishedByName: string | null;
-  /** Последний день приёма апелляций — 5 рабочих дней с публикации. */
-  appealUntil: string;
-  rows: number;
-};
-
+/** Рейтинг-лист. Значение живое: посчитали — сразу действует. */
 export type RatingList = {
   count: number;
   page: number;
   pageSize: number;
   results: RatingProfile[];
-  /** Какой выпуск показан; `null` — живые значения (выпусков ещё нет или
-      председатель смотрит текущие). */
-  edition: RatingEdition | null;
-  /** Дата выпуска или последнего пересчёта. */
+  /** Дата последнего пересчёта. */
   updatedAt: string | null;
 };
 
-/** Строка черновика выпуска: было в прошлом выпуске → стало сейчас.
-    `before` и `delta` — `null` у того, кого в прошлом выпуске не было. */
-export type EditionDraftRow = {
-  userId: string;
-  name: string;
-  before: number | null;
-  after: number;
-  delta: number | null;
+export type RatingCard = {
+  profile: RatingProfile;
+  history: RatingEntry[];
+  place: number;
+  of: number;
 };
 
-/** Строка журнала изменений (п. 20, 22.2): строка истории плюс чья она и кто
-    её внёс. Отменённые строки остаются с `isReverted`. */
-export type RatingJournalEntry = RatingEntry & {
-  athleteId: string;
-  athleteName: string;
-  createdByName: string | null;
-};
+/* ── Протоколы турниров (п. 10, 13) ─────────────────────────────── */
 
-export type RatingJournalPage = {
-  count: number;
-  page: number;
-  pageSize: number;
-  results: RatingJournalEntry[];
-};
-
-/** Участник в протоколе: место даёт коэффициент P (п. 10). */
+/** Участник в списке протоколов: место даёт коэффициент P (п. 10). */
 export type ProtocolParticipant = {
   userId: string;
   name: string;
@@ -121,8 +91,7 @@ export type ProtocolParticipant = {
   ratingChange: number | null;
 };
 
-/** Протокол для рейтинга: уровень (C, п. 13), места (P, п. 10) и учтён ли
-    турнир в рейтинге. */
+/** Строка списка протоколов: уровень (C, п. 13) и учтён ли турнир в рейтинге. */
 export type RatingProtocol = {
   id: string;
   name: string;
@@ -131,6 +100,10 @@ export type RatingProtocol = {
   levelLabel: string;
   noThirdPlaceMatch: boolean;
   applied: boolean;
+  /** Турнир заведён протоколом вручную ✳ (11.09.2026). */
+  manual: boolean;
+  /** Участников и матчи можно править: вручную и ещё не учтён. */
+  editable: boolean;
   participants: ProtocolParticipant[];
 };
 
@@ -181,6 +154,8 @@ export type ProtocolDetail = {
   levelLabel: string;
   noThirdPlaceMatch: boolean;
   applied: boolean;
+  manual: boolean;
+  editable: boolean;
   blocked: string | null;
   participants: ProtocolDetailParticipant[];
   matches: ProtocolMatch[];
@@ -192,154 +167,32 @@ export type ProtocolInput = {
   noThirdPlaceMatch: boolean;
 };
 
-export type AppealStatus = 'pending' | 'upheld' | 'rejected';
+/* ── Заведение председателем ГСК ✳ (11.09.2026) ─────────────────── */
 
-/** Апелляция на выпуск (п. 21): что требует п. 21.2, сроки и решение. */
-export type RatingAppeal = {
-  id: number;
-  userId: string;
+/** Новый спортсмен. Стартовое значение считает сервер по происхождению:
+    новый — 1,00 (п. 6.1), перенос — прежний рейтинг (п. 6.3), ITTF — из
+    позиции (п. 17.4). */
+export type NewAthlete = {
   name: string;
-  editionNumber: number;
-  applicant: string;
-  subject: string;
-  circumstances: string;
-  demand: string;
-  documents: string;
-  receivedAt: string;
-  /** Рассмотреть до — 10 рабочих дней с получения (п. 21.3). */
-  reviewUntil: string;
-  status: AppealStatus;
-  statusLabel: string;
-  decision: string;
-  decidedAt: string | null;
-  decidedByName: string | null;
-  /** Значение после исправления, если апелляцию удовлетворили. */
-  correctionAfter: number | null;
-};
-
-export type AppealInput = {
-  userId: string;
-  receivedAt?: string;
-  applicant: string;
-  subject: string;
-  circumstances: string;
-  demand: string;
-  documents: string;
-};
-
-export type RatingCard = {
-  profile: RatingProfile;
-  history: RatingEntry[];
-  place: number;
-  of: number;
-};
-
-/** Откуда взято значение коэффициента: из Положения или наше допущение. */
-export type ParamSource = { fixed: boolean; clause: string };
-
-export type RatingParams = {
-  id: number;
-  name: string;
-  d: number;
-  kStandard: number;
-  kTransition: number;
-  transitionMatches: number;
-  maxDelta: number;
-  capInTransition: boolean;
-  cTop: number;
-  cRepublic: number;
-  cRegion: number;
-  cAmateur: number;
-  pFirst: number;
-  pSecond: number;
-  pThird: number;
-  prizeMode: 'match' | 'tournament' | 'none';
-  baseline: 'sequential' | 'pre_tournament';
-  minRating: number;
-  ittfRMax: number;
-  ittfK: number;
-  updatedAt: string;
-  sources: Record<string, ParamSource>;
-};
-
-/* ── Предпросчёт: вход и выход ручки калибровки ─────────────────── */
-
-export type PreviewPlayer = {
-  id: string;
-  name: string;
+  region: string;
+  sex: '' | 'm' | 'f';
+  birthYear: number | null;
   origin: RatingOrigin;
-  start: number;
-  played: number;
-  ittf_position?: number | null;
+  legacy: number | null;
+  ittfPosition: number | null;
 };
 
-export type PreviewTournament = {
-  id: string;
+/** Турнир протоколом вручную: название, дата, уровень (C, п. 13). */
+export type NewTournament = {
   name: string;
+  date: string;
   level: CompetitionLevel;
-  places?: Record<string, number>;
-  no_third_place_match?: boolean;
 };
 
-export type PreviewMatch = {
-  id: string;
-  tournament: string;
+/** Матч протокола вручную: кто с кем и счёт по партиям. */
+export type NewMatch = {
   a: string;
   b: string;
-  games: [number, number];
-};
-
-export type PreviewHistoryRow = {
-  match_id: string;
-  tournament: string;
-  tournament_name: string;
-  player: string;
-  player_name: string;
-  opponent: string;
-  opponent_name: string;
-  score: string;
-  won: boolean;
-  before: number;
-  delta: number;
-  after: number;
-  expected: number;
-  k: number;
-  c: number;
-  p: number;
-  capped: boolean;
-  transition: boolean;
-};
-
-export type PreviewStanding = {
-  id: string;
-  name: string;
-  origin: RatingOrigin;
-  start: number;
-  rating: number;
-  delta: number;
-  matches: number;
-  wins: number;
-  losses: number;
-  transition_left: number;
-  prize_bonus: number;
-};
-
-/** Что выбранные коэффициенты значат на практике. Считает сервер: это та же
-    формула п. 9.3, и копия на фронте разошлась бы с боевой. */
-export type PreviewInsights = {
-  /** Доля ожидаемых побед МС (50,00) над КМС (40,00) при текущем D. */
-  win_share_ms_over_kms: number;
-  win_share_gap_5: number;
-  win_share_gap_20: number;
-  /** Побед подряд, чтобы дойти со старта 1,00 до уровня КМС. null — никогда. */
-  matches_new_to_kms: number | null;
-};
-
-export type PreviewResult = {
-  history: PreviewHistoryRow[];
-  table: PreviewStanding[];
-  /** Сколько баллов шкала создала из ниоткуда — показатель инфляции. */
-  injected: number;
-  skipped: { match_id: string; reason: string }[];
-  insights: PreviewInsights;
+  scoreA: number;
+  scoreB: number;
 };
