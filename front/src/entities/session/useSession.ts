@@ -10,6 +10,7 @@
 
 import { useCallback, useEffect, useSyncExternalStore } from 'react';
 
+import { rememberAccount } from './accounts';
 import { fetchMe, loginByEmail, logout, ROLE_GSK_CHAIRMAN, type SessionUser } from './api';
 
 type State = { user: SessionUser | null; loaded: boolean };
@@ -38,7 +39,11 @@ let inflight: Promise<void> | null = null;
 function load(): Promise<void> {
   if (inflight) return inflight;
   inflight = fetchMe()
-    .then((user) => set({ user, loaded: true }))
+    .then((user) => {
+      // Открытая сессия попадает в карточки входа, даже если вошли до них.
+      if (user) rememberAccount(user);
+      set({ user, loaded: true });
+    })
     .catch(() => set({ user: null, loaded: true }))
     .finally(() => {
       inflight = null;
@@ -55,6 +60,7 @@ export function useSession() {
 
   const signIn = useCallback(async (email: string, password: string) => {
     const user = await loginByEmail(email, password);
+    rememberAccount(user);
     set({ user, loaded: true });
     return user;
   }, []);
