@@ -19,7 +19,7 @@ from django.db.models import Q
 from django.utils import timezone
 
 from . import engine
-from .models import RatingEntry, RatingParams, RatingProfile
+from .models import RatingEdition, RatingEditionRow, RatingEntry, RatingParams, RatingProfile
 
 
 def _dec(x: float, places: str = "0.01") -> Decimal:
@@ -385,6 +385,82 @@ def refresh_activity(now: Optional[date] = None) -> Dict[str, int]:
 
 
 # ── Предпросчёт для калькулятора (ничего не сохраняет) ──────────────
+
+
+# ── Выпуски (п. 8.2) ────────────────────────────────────────────────
+
+#: Кто стоит в текущей таблице: неактивные и аннулированные исключены (п. 18.2).
+_OUT_OF_TABLE = (engine.STATUS_INACTIVE, engine.STATUS_VOID)
+
+
+@transaction.atomic
+def publish_edition(actor=None) -> RatingEdition:
+    """Опубликовать выпуск: снимок всех карточек на эту минуту (п. 8.2).
+
+    Места считаются только среди стоящих в таблице, по убыванию значения, при
+    равенстве — по алфавиту (как в листе). Неактивные хранятся без места: они
+    исключены из текущей таблицы, но их значение сохраняется (п. 18.2).
+    """
+    now = timezone.now()
+    last = RatingEdition.objects.order_by("-number").first()
+    edition = RatingEdition.objects.create(
+        number=(last.number + 1) if last else 1,
+        published_at=now,
+        published_by=actor,
+        appeal_until=engine.add_working_days(timezone.localdate(now), engine.APPEAL_WORKING_DAYS),
+    )
+
+    rows = []
+    place = 0
+    for p in RatingProfile.objects.select_related("user").order_by("-value", "user__name"):
+        in_table = p.status not in _OUT_OF_TABLE
+        if in_table:
+            place += 1
+        rows.append(
+            RatingEditionRow(
+                edition=edition,
+                user=p.user,
+                place=place if in_table else None,
+                value=p.value,
+                matches_played=p.matches_played,
+                wins=p.wins,
+                losses=p.losses,
+                status=p.status,
+                sex=p.sex,
+                birth_year=p.birth_year,
+                region=p.region,
+            )
+        )
+    RatingEditionRow.objects.bulk_create(rows)
+    return edition
+
+
+def edition_draft() -> List[dict]:
+    """Что уйдёт в следующий выпуск: кто сдвинулся с прошлого и кто новый.
+
+    Председатель смотрит на это перед публикацией. Без изменений спортсмена
+    здесь нет — черновик отвечает на вопрос «что поменялось», а не повторяет
+    таблицу. Сначала самые большие сдвиги, новые — в конце по алфавиту.
+    """
+    last = RatingEdition.objects.order_by("-number").first()
+    before = {r.user_id: r.value for r in last.rows.all()} if last else {}
+
+    out = []
+    for p in RatingProfile.objects.select_related("user"):
+        was = before.get(p.user_id)
+        if was is not None and was == p.value:
+            continue
+        out.append(
+            {
+                "user_id": str(p.user_id),
+                "name": p.user.name,
+                "before": was,
+                "after": p.value,
+                "delta": None if was is None else p.value - was,
+            }
+        )
+    out.sort(key=lambda d: (d["before"] is None, -abs(d["delta"] or 0), d["name"]))
+    return out
 
 
 def preview(players: Sequence[dict], tournaments: Sequence[dict], matches: Sequence[dict],

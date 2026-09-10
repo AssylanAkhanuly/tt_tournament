@@ -780,6 +780,28 @@ storage: "7 · ДАННЫЕ · два разных хранилища" {
       created_by: uuid {constraint: foreign_key}
     }
 
+    # Выпуск рейтинговой таблицы (п. 8.2) ✳ 11.09.2026: снимок на минуту публикации.
+    # Живая карточка меняется дальше, выпуск — нет; от его даты срок апелляции.
+    rating_edition: RATING_EDITION {
+      shape: sql_table
+      id: uuid {constraint: primary_key}
+      number: "номер выпуска, подряд"
+      published_at: datetime
+      published_by: uuid {constraint: foreign_key}
+      appeal_until: "date — приём апелляций до: +5 рабочих дней (п. 21.2)"
+    }
+
+    rating_edition_row: RATING_EDITION_ROW {
+      shape: sql_table
+      id: uuid {constraint: primary_key}
+      edition_id: uuid {constraint: foreign_key}
+      user_id: uuid {constraint: foreign_key}
+      place: "место в таблице; у неактивного пусто (п. 18.2)"
+      value: "рейтинг на дату выпуска"
+      counters: "матчи, победы, поражения, статус"
+      filters: "пол, год рождения, регион — выборки листа по выпуску"
+    }
+
     # Обе таблицы появились после ревизии дизайна: на схеме архитектуры была
     # «лента уведомлений» и «регистрация токена», а хранилища под ними — не было.
     notification: NOTIFICATION {

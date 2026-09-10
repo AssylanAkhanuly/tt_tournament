@@ -1015,6 +1015,10 @@ sequenceDiagram
 - **`RATING_PARAMS`** — коэффициенты расчёта. Их вводит федерация, а не
   программист: шесть значений Положение называет и не задаёт. Подробности —
   [RATING.md](RATING.md).
+- **`RATING_EDITION`** и **`RATING_EDITION_ROW`** ✳ (11.09.2026) — выпуск
+  рейтинговой таблицы (п. 8.2) и его строки: снимок значений и мест на минуту
+  публикации. Публичный лист показывает последний выпуск; от даты выпуска
+  считается срок апелляции (п. 21.2), он же хранится в выпуске.
 
 ```mermaid
 erDiagram
@@ -1065,6 +1069,9 @@ erDiagram
     RATING_PROFILE ||--o{ RATING_ENTRY : "история изменений"
     TOURNAMENT ||--o{ RATING_ENTRY : "пересчёт по протоколу"
     MATCH ||--o{ RATING_ENTRY : "изменение привязано к матчу"
+    RATING_EDITION ||--o{ RATING_EDITION_ROW : "снимок таблицы"
+    USER ||--o{ RATING_EDITION_ROW : "строка выпуска"
+    USER ||--o{ RATING_EDITION : "опубликовал"
     TOURNAMENT }o--o| BRACKET_TEMPLATE : "собрана по шаблону"
     USER ||--o{ BRACKET_TEMPLATE : "автор шаблона"
     TOURNAMENT }o--o| TOURNAMENT_TEMPLATE : "заведён по пресету регламента"
@@ -1314,6 +1321,25 @@ erDiagram
         decimal ittfRMax "верхняя граница перевода из ITTF (п. 17.4)"
         decimal ittfK "коэффициент перевода из ITTF (п. 17.4)"
         uuid updatedBy FK
+    }
+    RATING_EDITION {
+        uuid id PK
+        int number "номер выпуска, подряд"
+        datetime publishedAt
+        uuid publishedBy FK
+        date appealUntil "приём апелляций до: +5 рабочих дней (п. 21.2)"
+    }
+    RATING_EDITION_ROW {
+        uuid id PK
+        uuid editionId FK
+        uuid userId FK
+        int place "место; у неактивного пусто (п. 18.2)"
+        decimal value "рейтинг на дату выпуска"
+        int matchesPlayed
+        string status
+        string sex "поля выборок — лист выпуска фильтруется как живой"
+        int birthYear
+        string region
     }
     BRACKET_TEMPLATE {
         uuid id PK

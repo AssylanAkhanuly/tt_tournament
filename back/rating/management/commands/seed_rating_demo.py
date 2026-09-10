@@ -71,6 +71,12 @@ class Command(BaseCommand):
             # показательные числа зависели бы от того, что кто-то накрутил в
             # калибровке, и сквозные проверки перестали бы что-либо проверять.
             RatingParams.objects.all().delete()
+            # Выпуски — тоже все: лист показывает последний выпуск, и снимок,
+            # сделанный до засева, спрятал бы показательные числа. Команда
+            # показательная и на боевой базе не запускается.
+            from rating.models import RatingEdition
+
+            RatingEdition.objects.all().delete()
 
         params = RatingParams.active()
         users = {}

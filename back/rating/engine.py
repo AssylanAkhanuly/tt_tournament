@@ -260,6 +260,29 @@ def activity_status(last_match: Optional[date], now: Optional[date] = None) -> A
     return Activity(STATUS_ACTIVE, months, True)
 
 
+# ── Сроки апелляции (п. 21.2–21.3) ──────────────────────────────────
+
+#: Подать апелляцию — 5 рабочих дней с официального опубликования (п. 21.2).
+APPEAL_WORKING_DAYS = 5
+#: Рассмотреть — 10 рабочих дней с получения (п. 21.3).
+APPEAL_REVIEW_WORKING_DAYS = 10
+
+
+def add_working_days(start: date, days: int) -> date:
+    """День, в который истекают `days` рабочих дней, считая со следующего.
+
+    ⚠ Рабочий день здесь — понедельник–пятница. Праздники РК не учитываются:
+    календаря в Положении нет, и какой брать — решение федерации. Значение наше.
+    """
+    current = start
+    left = days
+    while left > 0:
+        current = date.fromordinal(current.toordinal() + 1)
+        if current.weekday() < 5:
+            left -= 1
+    return current
+
+
 # Порог «Un = разница не больше n−1» взят по правилу ITTF: п. 7.4 задаёт только
 # саму разность «год соревнования минус год рождения», границы ступеней в
 # Положении не написаны. ⚠ Требует подтверждения федерации (QUESTIONS 5.12).

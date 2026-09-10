@@ -1,13 +1,14 @@
 """API Национального рейтинга.
 
-Шесть ручек: список, карточка, коэффициенты (чтение и правка), предпросчёт для
-калибровки, фиксация неявки и исправление начисления. Расчёта здесь нет — он в `engine.py`, сборка в
-`services.py`; вьюха только принимает запрос и отдаёт ответ.
+Ручки: список (живой или выпуск), карточка, коэффициенты (чтение и правка),
+предпросчёт для калибровки, неявка, исправление, выпуски и черновик выпуска.
+Расчёта здесь нет — он в `engine.py`, сборка в `services.py`; вьюха только
+принимает запрос и отдаёт ответ.
 
 Рейтинг открыт без входа (ТЗ §3, экран Э0.4): таблица и карточка спортсмена —
 публичные страницы. Править рейтинговые данные — коэффициенты, неявки,
-исправления — может только председатель ГСК ✳ (10.09.2026, решение владельца
-продукта): по Положению он ведёт базу и историю рейтинга (п. 8.3, 22).
+исправления, выпуски — может только председатель ГСК ✳ (10.09.2026, решение
+владельца продукта): по Положению он ведёт базу и историю рейтинга (п. 8.3, 22).
 """
 from dataclasses import asdict
 
@@ -20,9 +21,12 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from . import analysis, engine, services
-from .models import RatingEntry, RatingParams, RatingProfile
+from .models import RatingEdition, RatingEntry, RatingParams, RatingProfile
 from .serializers import (
+    EditionDraftRowSerializer,
     PreviewRequestSerializer,
+    RatingEditionRowSerializer,
+    RatingEditionSerializer,
     RatingEntrySerializer,
     RatingParamsSerializer,
     RatingProfileSerializer,
@@ -33,43 +37,42 @@ PAGE_SIZE_MAX = 500
 PAGE_SIZE_DEFAULT = 100
 
 
+def _edition_from(param):
+    """Какой выпуск показывать. Без параметра — последний; `live` — живые
+    значения; иначе номер записи выпуска. Выпусков ещё нет — лист живой."""
+    if param == "live":
+        return None
+    if param:
+        try:
+            return RatingEdition.objects.filter(pk=int(param)).first()
+        except (TypeError, ValueError):
+            return None
+    return RatingEdition.objects.order_by("-number").first()
+
+
 class RatingListView(APIView):
     """Рейтинг-лист.
 
-    Возрастные категории — выборка из общего рейтинга, а не отдельный рейтинг
-    (п. 7.2–7.3): фильтр `age` сужает список, значения при этом те же.
+    Публичный лист — последний опубликованный выпуск (п. 8.2): спорят и
+    обжалуют опубликованное число, а не то, что успело пересчитаться. До
+    первого выпуска лист живой. Возрастные категории — выборка из общего
+    рейтинга, а не отдельный рейтинг (п. 7.2–7.3): фильтр `age` сужает список,
+    значения при этом те же. Поля выборок у строки выпуска те же, что у
+    карточки, поэтому фильтры одни.
     """
 
     permission_classes = [AllowAny]
 
     def get(self, request):
-        qs = RatingProfile.objects.select_related("user")
+        edition = _edition_from(request.query_params.get("edition"))
+        if edition:
+            qs = edition.rows.select_related("user")
+            row_serializer = RatingEditionRowSerializer
+        else:
+            qs = RatingProfile.objects.select_related("user")
+            row_serializer = RatingProfileSerializer
 
-        sex = request.query_params.get("sex")
-        if sex:
-            qs = qs.filter(sex=sex)
-
-        region = request.query_params.get("region")
-        if region:
-            qs = qs.filter(region__icontains=region)
-
-        state = request.query_params.get("status")
-        if state:
-            qs = qs.filter(status=state)
-        elif request.query_params.get("all") != "1":
-            # По умолчанию лист активный: неактивные исключаются из текущей
-            # таблицы (п. 18.2), но остаются доступны через ?status=inactive.
-            qs = qs.exclude(status__in=[engine.STATUS_INACTIVE, engine.STATUS_VOID])
-
-        search = request.query_params.get("q")
-        if search:
-            qs = qs.filter(Q(user__name__icontains=search) | Q(region__icontains=search))
-
-        age = request.query_params.get("age")
-        if age:
-            qs = _filter_age(qs, age)
-
-        qs = qs.order_by("-value", "user__name")
+        qs = _apply_filters(qs, request.query_params).order_by("-value", "user__name")
         total = qs.count()
 
         try:
@@ -84,12 +87,43 @@ class RatingListView(APIView):
                 "count": total,
                 "page": page,
                 "page_size": size,
-                "results": RatingProfileSerializer(rows, many=True).data,
-                # Публикации снимками нет — решение владельца продукта
-                # (10.09.2026): значение живое, «опубликовано» это дата расчёта.
-                "updated_at": qs.order_by("-updated_at").values_list("updated_at", flat=True).first(),
+                "results": row_serializer(rows, many=True).data,
+                "edition": RatingEditionSerializer(edition).data if edition else None,
+                "updated_at": (
+                    edition.published_at
+                    if edition
+                    else qs.order_by("-updated_at").values_list("updated_at", flat=True).first()
+                ),
             }
         )
+
+
+def _apply_filters(qs, params):
+    """Пол, регион, статус, поиск, возраст — одинаково для живого листа и выпуска."""
+    sex = params.get("sex")
+    if sex:
+        qs = qs.filter(sex=sex)
+
+    region = params.get("region")
+    if region:
+        qs = qs.filter(region__icontains=region)
+
+    state = params.get("status")
+    if state:
+        qs = qs.filter(status=state)
+    elif params.get("all") != "1":
+        # По умолчанию лист активный: неактивные исключаются из текущей
+        # таблицы (п. 18.2), но остаются доступны через ?status=inactive.
+        qs = qs.exclude(status__in=[engine.STATUS_INACTIVE, engine.STATUS_VOID])
+
+    search = params.get("q")
+    if search:
+        qs = qs.filter(Q(user__name__icontains=search) | Q(region__icontains=search))
+
+    age = params.get("age")
+    if age:
+        qs = _filter_age(qs, age)
+    return qs
 
 
 def _filter_age(qs, age: str):
@@ -258,3 +292,30 @@ class RatingCorrectionView(APIView):
 
         entry = services.register_correction(user, value, reason=reason, actor=request.user)
         return Response(RatingEntrySerializer(entry).data, status=status.HTTP_201_CREATED)
+
+
+class RatingEditionsView(APIView):
+    """Выпуски (п. 8.2): список открыт всем, публикует председатель ГСК.
+
+    Список открыт, потому что по нему выбирают, какую таблицу смотреть, и от
+    даты выпуска считают срок апелляции (п. 21.2).
+    """
+
+    def get_permissions(self):
+        return [AllowAny()] if self.request.method == "GET" else [IsGskChairman()]
+
+    def get(self, request):
+        return Response(RatingEditionSerializer(RatingEdition.objects.all(), many=True).data)
+
+    def post(self, request):
+        edition = services.publish_edition(actor=request.user)
+        return Response(RatingEditionSerializer(edition).data, status=status.HTTP_201_CREATED)
+
+
+class RatingEditionDraftView(APIView):
+    """Черновик следующего выпуска: кто сдвинулся с прошлого и кто новый."""
+
+    permission_classes = [IsGskChairman]
+
+    def get(self, request):
+        return Response(EditionDraftRowSerializer(services.edition_draft(), many=True).data)

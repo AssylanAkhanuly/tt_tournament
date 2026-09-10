@@ -7,7 +7,7 @@
 from rest_framework import serializers
 
 from . import engine
-from .models import RatingEntry, RatingParams, RatingProfile
+from .models import RatingEdition, RatingEditionRow, RatingEntry, RatingParams, RatingProfile
 
 
 class RatingProfileSerializer(serializers.ModelSerializer):
@@ -60,6 +60,52 @@ class RatingCardSerializer(serializers.Serializer):
     history = RatingEntrySerializer(many=True, read_only=True)
     place = serializers.IntegerField(read_only=True)
     of = serializers.IntegerField(read_only=True)
+
+
+# ── Выпуски (п. 8.2) ────────────────────────────────────────────────
+
+
+class RatingEditionSerializer(serializers.ModelSerializer):
+    """Выпуск: номер, дата, кто опубликовал и до какого дня принимаются апелляции."""
+
+    published_by_name = serializers.CharField(source="published_by.name", read_only=True, default=None)
+    rows = serializers.SerializerMethodField()
+
+    class Meta:
+        model = RatingEdition
+        fields = ["id", "number", "published_at", "published_by_name", "appeal_until", "rows"]
+        read_only_fields = fields
+
+    def get_rows(self, obj) -> int:
+        return obj.rows.count()
+
+
+class RatingEditionRowSerializer(serializers.ModelSerializer):
+    """Строка листа из выпуска — те же ключи, что у живой строки, чтобы экран
+    не различал, откуда пришёл лист."""
+
+    user_id = serializers.CharField(source="user.id", read_only=True)
+    name = serializers.CharField(source="user.name", read_only=True)
+    age_category = serializers.CharField(read_only=True)
+    status_label = serializers.CharField(source="get_status_display", read_only=True)
+
+    class Meta:
+        model = RatingEditionRow
+        fields = [
+            "user_id", "name", "place", "value", "matches_played", "wins", "losses",
+            "status", "status_label", "sex", "birth_year", "age_category", "region",
+        ]
+        read_only_fields = fields
+
+
+class EditionDraftRowSerializer(serializers.Serializer):
+    """Строка черновика: было в прошлом выпуске → стало сейчас."""
+
+    user_id = serializers.CharField()
+    name = serializers.CharField()
+    before = serializers.DecimalField(max_digits=6, decimal_places=2, allow_null=True)
+    after = serializers.DecimalField(max_digits=6, decimal_places=2)
+    delta = serializers.DecimalField(max_digits=6, decimal_places=2, allow_null=True)
 
 
 class RatingParamsSerializer(serializers.ModelSerializer):

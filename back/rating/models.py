@@ -315,3 +315,69 @@ class RatingEntry(models.Model):
 
     def __str__(self) -> str:
         return "%s %s%s" % (self.occurred_at, "+" if self.delta >= 0 else "", self.delta)
+
+
+class RatingEdition(models.Model):
+    """Выпуск рейтинговой таблицы — п. 8.2: «обновляется и публикуется
+    еженедельно».
+
+    Выпуск — снимок на момент публикации: живая карточка дальше меняется, а
+    выпуск нет. Иначе не от чего считать срок апелляции (п. 21.2 — 5 рабочих
+    дней с официального опубликования), и спор шёл бы о числе, которое успело
+    пересчитаться. Прежнее решение «значение живое, публикация — дата пересчёта»
+    (10.09.2026) заменено выпусками ✳ (11.09.2026, карта функций рейтинга).
+    """
+
+    number = models.PositiveIntegerField(unique=True, verbose_name="Номер выпуска")
+    published_at = models.DateTimeField(verbose_name="Опубликован")
+    published_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, null=True, blank=True,
+        on_delete=models.SET_NULL, related_name="rating_editions",
+    )
+    appeal_until = models.DateField(verbose_name="Приём апелляций до (п. 21.2)")
+
+    class Meta:
+        verbose_name = "Выпуск рейтинга"
+        verbose_name_plural = "Выпуски рейтинга"
+        ordering = ["-number"]
+
+    def __str__(self) -> str:
+        return "Выпуск №%s" % self.number
+
+
+class RatingEditionRow(models.Model):
+    """Строка выпуска: значение и место спортсмена на дату публикации.
+
+    Поля выборок (пол, год рождения, регион) копируются сюда же: лист прошлого
+    выпуска фильтруется так же, как живой, и не должен меняться от того, что
+    спортсмен потом сменил регион (п. 5.4 — на рейтинг это и так не влияет).
+    """
+
+    edition = models.ForeignKey(RatingEdition, on_delete=models.CASCADE, related_name="rows")
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="rating_edition_rows",
+    )
+    # Неактивные хранятся, но места в текущей таблице у них нет (п. 18.2).
+    place = models.PositiveIntegerField(null=True, blank=True, verbose_name="Место")
+    value = models.DecimalField(max_digits=6, decimal_places=2, verbose_name="Рейтинг")
+    matches_played = models.PositiveIntegerField(default=0)
+    wins = models.PositiveIntegerField(default=0)
+    losses = models.PositiveIntegerField(default=0)
+    status = models.CharField(max_length=12, choices=RatingProfile.STATUS_CHOICES)
+    sex = models.CharField(max_length=1, choices=RatingProfile.SEX_CHOICES, blank=True)
+    birth_year = models.PositiveIntegerField(null=True, blank=True)
+    region = models.CharField(max_length=120, blank=True)
+
+    class Meta:
+        verbose_name = "Строка выпуска"
+        verbose_name_plural = "Строки выпуска"
+        unique_together = ("edition", "user")
+        ordering = ["edition", "place"]
+
+    @property
+    def age_category(self):
+        from datetime import date
+
+        if not self.birth_year:
+            return None
+        return engine.age_category(date.today().year, self.birth_year)
