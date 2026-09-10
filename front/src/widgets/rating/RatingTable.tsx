@@ -11,9 +11,12 @@ import Link from 'next/link';
 import { Avatar } from '@heroui/react';
 
 import { num2, type RatingList, type RatingProfile } from '@/entities/rating';
-import { EmptyBox, FilterBar, FilterSeg, Pager, Panel, SearchInput, Sheet } from '@/shared/kit/app';
+import { EmptyBox, FilterBar, FilterSeg, Pager, Panel, SearchInput, Sheet, useNarrow } from '@/shared/kit/app';
 
 const GRID = '56px minmax(0,1.9fr) minmax(0,1fr) 58px 74px 58px 66px 88px';
+/** Телефон ✳ (11.09.2026): место, спортсмен с регионом, рейтинг — восемь
+    колонок на 360 px сжимали фамилию до нуля. Остальное — в карточке. */
+const GRID_NARROW = '32px minmax(0,1fr) 64px';
 
 export const SEX_ITEMS = ['Все', 'Мужчины', 'Женщины'];
 export const AGE_ITEMS = ['Все возрасты', 'U11', 'U13', 'U15', 'U17', 'U19', 'U21'];
@@ -45,6 +48,7 @@ export function RatingTable({
   onFilters: (patch: Partial<RatingFilters>) => void;
   onPage: (p: number) => void;
 }) {
+  const narrow = useNarrow();
   const rows = data?.results ?? [];
   const pages = data ? Math.max(1, Math.ceil(data.count / data.pageSize)) : 1;
   const first = data ? (data.page - 1) * data.pageSize : 0;
@@ -82,19 +86,45 @@ export function RatingTable({
         ) : (
           <Sheet
             flush
-            grid={GRID}
-            cols={[
-              'Место',
-              'Спортсмен',
-              'Регион',
-              'Возраст',
-              <span key="v" className="text-right block">Рейтинг</span>,
-              <span key="m" className="text-right block">Матчи</span>,
-              <span key="w" className="text-right block">В / П</span>,
-              'Статус',
-            ]}
+            grid={narrow ? GRID_NARROW : GRID}
+            cols={
+              narrow
+                ? ['#', 'Спортсмен', <span key="v" className="text-right block">Рейтинг</span>]
+                : [
+                    'Место',
+                    'Спортсмен',
+                    'Регион',
+                    'Возраст',
+                    <span key="v" className="text-right block">Рейтинг</span>,
+                    <span key="m" className="text-right block">Матчи</span>,
+                    <span key="w" className="text-right block">В / П</span>,
+                    'Статус',
+                  ]
+            }
           >
-            {rows.map((r, i) => (
+            {rows.map((r, i) =>
+              narrow ? (
+                <Link
+                  key={r.userId}
+                  href={'/rating/' + r.userId}
+                  data-row
+                  data-testid="rating-row"
+                  data-player={r.name}
+                  className="grid w-full items-center gap-3 px-4 py-2.5 text-left text-[13px] tabular-nums"
+                  style={{ gridTemplateColumns: GRID_NARROW }}
+                >
+                  <span className="text-neutral-500">{first + i + 1}</span>
+                  <span className="min-w-0 leading-tight">
+                    <span className="block truncate font-medium">{r.name}</span>
+                    <span className="block truncate text-[11.5px] text-neutral-500">
+                      {[r.region, r.ageCategory].filter(Boolean).join(' · ') || '—'}
+                    </span>
+                  </span>
+                  <span className="text-right font-semibold" data-testid="rating-value">
+                    {num2(r.value)}
+                  </span>
+                </Link>
+              ) : (
               <Link
                 key={r.userId}
                 href={'/rating/' + r.userId}
@@ -124,7 +154,8 @@ export function RatingTable({
                 </span>
                 <span className={'truncate text-[12.5px] ' + STATUS_TONE[r.status]}>{r.statusLabel}</span>
               </Link>
-            ))}
+              ),
+            )}
           </Sheet>
         )}
 

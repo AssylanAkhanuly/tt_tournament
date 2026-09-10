@@ -11,7 +11,7 @@
    - строки уведомлений несут `data-to` — переход в ленту (Э0.3);
    - возврат «← …» над заголовком несёт `data-to` экрана-родителя. */
 
-import { useState, type ReactNode } from 'react';
+import { useState, useSyncExternalStore, type ReactNode } from 'react';
 import { ArrowLeft, Bell, Check, ChevronDown, ChevronsUpDown, LogOut, MoreHorizontal, User } from 'lucide-react';
 import { Avatar, Chip, Separator } from '@heroui/react';
 import { Brand } from '../brand';
@@ -435,35 +435,95 @@ export function WebApp(props: Parameters<typeof AppChrome>[0]) {
   );
 }
 
-/** Телефонная оболочка роли ✳ (30.08.2026): тот же экран, что на десктопе, но
-    в телефоне.
+/** Узкий экран — телефон ✳ (11.09.2026): по нему приложение берёт телефонную
+    оболочку вместо десктопной. На сервере экран считается широким; после
+    гидратации значение уточняется. */
+const NARROW = '(max-width: 767px)';
+const subscribeNarrow = (cb: () => void) => {
+  const m = window.matchMedia(NARROW);
+  m.addEventListener('change', cb);
+  return () => m.removeEventListener('change', cb);
+};
+export function useNarrow(): boolean {
+  return useSyncExternalStore(subscribeNarrow, () => window.matchMedia(NARROW).matches, () => false);
+}
+
+/** Карточка человека в шапке телефона: аватар, по нажатию — кто вошёл и
+    «Выйти». Бокового меню на телефоне нет, и место выхода — здесь. */
+const PhonePerson = ({ person, onSignOut }: { person: Person; onSignOut: () => void }) => {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="relative">
+      <button
+        type="button"
+        aria-expanded={open}
+        aria-label={person.nm}
+        data-testid="phone-person"
+        onClick={() => setOpen(!open)}
+        className="flex h-9 w-9 items-center justify-center rounded-full"
+      >
+        <Avatar size="sm">
+          <Avatar.Image alt={person.nm} src={person.av} />
+          <Avatar.Fallback>{person.nm.slice(0, 1)}</Avatar.Fallback>
+        </Avatar>
+      </button>
+      {open && (
+        <div className="absolute right-0 top-[44px] z-30 w-60 rounded-xl border border-neutral-200 bg-white p-1.5 shadow-xl">
+          <div className="px-2 pb-1 pt-1 text-[11px] uppercase tracking-wider text-neutral-400">Вы вошли как</div>
+          <div className="truncate px-2 text-[12.5px] font-semibold">{person.nm}</div>
+          {person.email && <div className="truncate px-2 pb-1 text-[11px] text-neutral-500">{person.email}</div>}
+          <Separator className="my-1" />
+          <button
+            type="button"
+            onClick={onSignOut}
+            className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-[12.5px] text-red-600 hover:bg-red-50"
+          >
+            <LogOut size={14} /> Выйти
+          </button>
+        </div>
+      )}
+    </div>
+  );
+};
+
+/** Телефонная оболочка роли без рамки ✳ (11.09.2026) — приложение на узком
+    экране. Та же, что `PhoneRoleApp` в макетах (он теперь её и рисует, в рамке
+    телефона), плюс то, что есть только в приложении: переход по вкладкам и
+    выход из карточки человека в шапке — как `AppChrome` у `WebApp`.
 
     Вкладки строятся из разделов роли (`role.nav`), а не пишутся руками: иначе
     у семнадцати ролей появится семнадцать разных нижних панелей. Больше пяти
     вкладок на 392 px не помещается — лишние сворачиваются в «Ещё», а активный
     раздел, если он попал под свёртку, показывается вместо четвёртой вкладки:
     человек должен видеть, где он находится. */
-export function PhoneRoleApp({
+export function PhoneChrome({
   role,
   nav,
   title,
   sub,
   back,
-  hint,
   actions,
+  onNavigate,
+  onSignOut,
+  bell = true,
   children,
 }: {
   role: RoleUI;
   nav: string;
-  title: string;
+  /** Без заголовка экран начинается прямо с содержимого — как у `AppChrome`. */
+  title?: string;
   sub?: string;
-  back?: { label: string; to?: string };
-  /** ⚠ Больше не рисуется ✳ (01.09.2026), см. `WebApp`. */
-  hint?: string;
+  back?: { label: string; to?: string; onPress?: () => void };
   /** Главные кнопки экрана ✳ (03.09.2026): прилипают к низу, над вкладками. На
       телефоне это важнее, чем на десктопе: экран короткий, и кнопка в потоке
       уезжает за первым же списком. */
   actions?: ReactNode;
+  /** Переход по вкладке — только в приложении; в макетах его ловит карта флоу. */
+  onNavigate?: (label: string) => void;
+  /** Выход — только в приложении: аватар в шапке открывает «Выйти». */
+  onSignOut?: () => void;
+  /** Колокол уведомлений — см. `AppChrome`. */
+  bell?: boolean;
   children: ReactNode;
 }) {
   /* Кнопок в полосе не больше четырёх ✳ (31.08.2026, решение владельца
@@ -488,7 +548,7 @@ export function PhoneRoleApp({
     : [...shown, [<MoreHorizontal size={17} key="more" />, 'Ещё']];
 
   return (
-    <Phone>
+    <>
       <div className="flex shrink-0 items-center justify-between gap-2 px-4 py-2">
         <Brand size="sm" sub={role.brandName} />
         <div className="flex items-center gap-1">
@@ -498,23 +558,30 @@ export function PhoneRoleApp({
               {role.badge ?? 'ИДЁТ'}
             </Chip>
           )}
-          <button
-            type="button"
-            className="relative flex h-9 w-9 items-center justify-center rounded-full text-neutral-600"
-          >
-            <Bell size={17} />
-            <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-red-500 ring-2 ring-white" />
-          </button>
+          {bell && (
+            <button
+              type="button"
+              className="relative flex h-9 w-9 items-center justify-center rounded-full text-neutral-600"
+            >
+              <Bell size={17} />
+              <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-red-500 ring-2 ring-white" />
+            </button>
+          )}
+          {onSignOut && <PhonePerson person={role.person} onSignOut={onSignOut} />}
         </div>
       </div>
 
       {/* Блоки не ужимаются — см. пояснение в `RoleApp`. */}
       <div className="flex min-h-0 flex-1 flex-col overflow-auto px-4 pb-3 [--kit-gut:1rem] [--kit-gutb:0.75rem] [&>*]:shrink-0">
-        <div className="pb-3 pt-1">
-          {back && <BackLink label={back.label} to={back.to} />}
-          <h1 className="text-[19px] font-semibold leading-tight tracking-tight">{title}</h1>
-          {sub && <p className="mt-0.5 text-[12.5px] leading-snug text-neutral-500">{sub}</p>}
-        </div>
+        {back || title || sub ? (
+          <div className="pb-3 pt-1">
+            {back && <BackLink label={back.label} to={back.to} onPress={back.onPress} />}
+            {title && <h1 className="text-[19px] font-semibold leading-tight tracking-tight">{title}</h1>}
+            {sub && <p className="mt-0.5 text-[12.5px] leading-snug text-neutral-500">{sub}</p>}
+          </div>
+        ) : (
+          <div className="pt-1" />
+        )}
         {children}
       </div>
 
@@ -531,6 +598,7 @@ export function PhoneRoleApp({
             type="button"
             data-nav
             aria-current={label === nav || undefined}
+            onClick={onNavigate ? () => onNavigate(label) : undefined}
             className={
               'flex flex-1 flex-col items-center gap-0.5 rounded-lg py-1.5 text-[10px] font-medium ' +
               (label === nav ? 'text-blue-600' : 'text-neutral-400')
@@ -541,6 +609,30 @@ export function PhoneRoleApp({
           </button>
         ))}
       </div>
+    </>
+  );
+}
+
+/** Телефонная оболочка роли в рамке телефона — для макетов ✳ (30.08.2026):
+    тот же экран, что на десктопе, но в телефоне. Рисует `PhoneChrome`, как
+    `WebApp` рисует `AppChrome`: вид один у макета и у приложения. */
+export function PhoneRoleApp({
+  hint: _hint,
+  ...props
+}: {
+  role: RoleUI;
+  nav: string;
+  title: string;
+  sub?: string;
+  back?: { label: string; to?: string };
+  /** ⚠ Больше не рисуется ✳ (01.09.2026), см. `WebApp`. */
+  hint?: string;
+  actions?: ReactNode;
+  children: ReactNode;
+}) {
+  return (
+    <Phone>
+      <PhoneChrome {...props} />
     </Phone>
   );
 }

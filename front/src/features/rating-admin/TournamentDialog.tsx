@@ -1,7 +1,8 @@
 'use client';
 
-/* Завести турнир протоколом вручную ✳ (11.09.2026): название, дата, уровень.
-   Участники и матчи вносятся уже на странице турнира. */
+/* Завести турнир протоколом вручную ✳ (11.09.2026): название, дата, уровень
+   и до скольких побед играется матч. Участники и матчи вносятся уже на
+   странице турнира. */
 
 import { Button } from '@heroui/react';
 import { useState } from 'react';
@@ -9,6 +10,12 @@ import { useState } from 'react';
 import { createProtocol, type CompetitionLevel, type ProtocolDetail } from '@/entities/rating';
 import { DateInput, FormGrid, InlineDialog, QuietAction, TextInput } from '@/shared/kit/app';
 import { FormError, LEVELS, SelectField } from './fields';
+
+const GAMES: ['2' | '3' | '4', string][] = [
+  ['3', 'До 3 побед'],
+  ['4', 'До 4 побед'],
+  ['2', 'До 2 побед'],
+];
 
 /** Сегодня по местному времени — `toISOString` дал бы дату по Гринвичу. */
 const today = () => {
@@ -26,6 +33,7 @@ export function TournamentDialog({
   const [name, setName] = useState('');
   const [date, setDate] = useState(today);
   const [level, setLevel] = useState<CompetitionLevel>('republic');
+  const [games, setGames] = useState<'2' | '3' | '4'>('3');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -33,7 +41,7 @@ export function TournamentDialog({
     setBusy(true);
     setError(null);
     try {
-      onDone(await createProtocol({ name: name.trim(), date, level }));
+      onDone(await createProtocol({ name: name.trim(), date, level, gamesToWin: Number(games) }));
     } catch (e) {
       setError((e as Error).message);
     } finally {
@@ -62,6 +70,7 @@ export function TournamentDialog({
       <FormGrid>
         <TextInput label="Название" value={name} onChange={setName} wide />
         <DateInput label="Дата" value={date} onChange={setDate} />
+        <SelectField label="Матч" value={games} options={GAMES} onChange={setGames} />
         <SelectField label="Уровень" value={level} options={LEVELS} onChange={setLevel} wide />
       </FormGrid>
       <FormError text={error} />

@@ -6,7 +6,7 @@
    «грузится / ошибка / данные» пришлось бы писать в каждом заново, и в одном
    из них оно оказалось бы другим. */
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 
 import {
   fetchProtocol,
@@ -26,39 +26,40 @@ export type AsyncState<T> = {
 };
 
 function useAsync<T>(run: () => Promise<T>, deps: unknown[]): AsyncState<T> {
-  const [data, setData] = useState<T | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [tick, setTick] = useState(0);
-  // Ответ на устаревший запрос не должен перетирать свежий: при быстрой смене
-  // фильтров порядок ответов не совпадает с порядком запросов.
-  const latest = useRef(0);
+  // Ответ помнит, на какой запрос он пришёл: «грузится» — пока последний ответ
+  // не на текущий запрос. Состояние в самом эффекте не трогаем, прежние данные
+  // видны до прихода новых.
+  const [result, setResult] = useState<{ key: string; data: T | null; error: string | null } | null>(null);
+  const key = JSON.stringify([deps, tick]);
 
   useEffect(() => {
-    const seq = ++latest.current;
-    setLoading(true);
+    // Ответ на устаревший запрос не перетирает свежий: при быстрой смене
+    // фильтров порядок ответов не совпадает с порядком запросов.
+    let live = true;
     run()
-      .then((value) => {
-        if (seq !== latest.current) return;
-        setData(value);
-        setError(null);
+      .then((data) => {
+        if (live) setResult({ key, data, error: null });
       })
       .catch((e: Error) => {
-        if (seq !== latest.current) return;
-        setError(e.message);
-      })
-      .finally(() => {
-        if (seq === latest.current) setLoading(false);
+        if (live) setResult((prev) => ({ key, data: prev?.data ?? null, error: e.message }));
       });
+    return () => {
+      live = false;
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [...deps, tick]);
+  }, [key]);
 
-  return { data, loading, error, reload: useCallback(() => setTick((t) => t + 1), []) };
+  return {
+    data: result?.data ?? null,
+    loading: result?.key !== key,
+    error: result?.error ?? null,
+    reload: useCallback(() => setTick((t) => t + 1), []),
+  };
 }
 
 export function useRatingList(query: RatingListQuery): AsyncState<RatingList> {
   const key = JSON.stringify(query);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   return useAsync(() => fetchRatingList(query), [key]);
 }
 

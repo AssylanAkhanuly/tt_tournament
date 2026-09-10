@@ -244,6 +244,7 @@ const toProtocolDetail = (r: Record<string, unknown>): ProtocolDetail => ({
   applied: Boolean(r.applied),
   manual: Boolean(r.manual),
   editable: Boolean(r.editable),
+  gamesToWin: n(r.games_to_win) || 3,
   blocked: (r.blocked as string) ?? null,
   participants: ((r.participants as Record<string, unknown>[]) ?? []).map((p) => ({
     userId: String(p.user_id ?? ''),
@@ -320,7 +321,7 @@ const protocolCall = async (path: string, method: string, body?: unknown): Promi
 
 /** Завести турнир протоколом вручную. */
 export function createProtocol(t: NewTournament): Promise<ProtocolDetail> {
-  return protocolCall('', 'POST', t);
+  return protocolCall('', 'POST', { name: t.name, date: t.date, level: t.level, games_to_win: t.gamesToWin });
 }
 
 /** Добавить участника: из рейтинга (`userId`) или нового спортсмена. */

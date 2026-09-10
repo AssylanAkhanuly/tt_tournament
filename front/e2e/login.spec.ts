@@ -157,10 +157,10 @@ test('председатель объединяет дубль: история �
   await expect(строка(page, 'Сейтказы Арман (дубль)')).toHaveCount(0);
 });
 
-/* Утверждение протокола (п. 10, 13). Засев завёл «[demo] Кубок Костанайской
+/* Утверждение протокола (п. 13). Засев завёл «[demo] Кубок Костанайской
    области» уровня «областные»: у победительницы Бековой 25,00 + 0,60 × 0,80 ×
-   0,50 = 25,24. Утверждаем как «высшие» с Бековой на первом месте: 0,60 ×
-   1,20 × 1,20 × 0,50 = 0,432 → 25,43 — от значения до турнира, не от 25,24. */
+   0,50 = 25,24. Утверждаем как «высшие»: 0,60 × 1,20 × 0,50 = 0,36 → 25,36 —
+   от значения до турнира, не от 25,24. Мест на экране нет ✳ (11.09.2026). */
 test('председатель утверждает протокол на странице турнира: предпросмотр, потом пересчёт', async ({ page }) => {
   await войти(page);
   await карточка(page, 'Бекова Алия');
@@ -176,16 +176,14 @@ test('председатель утверждает протокол на стр
   await уровень.getByRole('button').first().click();
   await уровень.getByRole('button', { name: /Чемпионат и кубок РК/ }).click();
   const бекова = page.locator('[data-testid="protocol-participant"][data-player="Бекова Алия"]');
-  await бекова.getByRole('button').first().click();
-  await бекова.getByRole('button', { name: '1', exact: true }).click();
 
   // Предпросмотр: новые числа видны до сохранения.
   await expect(page.getByTestId('protocol-dirty')).toBeVisible();
-  await expect(бекова).toContainText('25,43');
+  await expect(бекова).toContainText('25,36');
   await page.getByTestId('protocol-save').click();
   await expect(page.getByTestId('protocol-result')).toContainText('Утверждён и пересчитан');
   await expect(page.getByTestId('protocol-dirty')).toHaveCount(0);
 
   await карточка(page, 'Бекова Алия');
-  await expect(текущий(page)).toContainText('25,43');
+  await expect(текущий(page)).toContainText('25,36');
 });

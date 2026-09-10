@@ -156,6 +156,8 @@ export type ProtocolDetail = {
   applied: boolean;
   manual: boolean;
   editable: boolean;
+  /** До скольких побед играется матч: по нему проверяется счёт. */
+  gamesToWin: number;
   blocked: string | null;
   participants: ProtocolDetailParticipant[];
   matches: ProtocolMatch[];
@@ -187,6 +189,8 @@ export type NewTournament = {
   name: string;
   date: string;
   level: CompetitionLevel;
+  /** Матч до 2, 3 или 4 побед. */
+  gamesToWin: number;
 };
 
 /** Матч протокола вручную: кто с кем и счёт по партиям. */

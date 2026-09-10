@@ -12,7 +12,7 @@
    Крючки карты флоу: переходы — `data-to`, строки списков — `data-row`,
    переключатели — `data-seg` на обёртке. */
 
-import { useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { ArrowRight, Check, ChevronDown, ChevronRight, Search as SearchIcon, X } from 'lucide-react';
 import { Avatar, Button, Chip, Input, InputGroup, Separator } from '@heroui/react';
 
@@ -529,9 +529,29 @@ export function FilterSeg({
   label?: string;
 }) {
   const [open, setOpen] = useState(false);
+  const box = useRef<HTMLDivElement>(null);
   const on = active !== items[0];
+
+  // Закрывается кликом мимо и Esc ✳ (11.09.2026): иначе открытыми оставались
+  // сразу несколько списков, и один ложился поверх другого.
+  useEffect(() => {
+    if (!open) return;
+    const away = (e: PointerEvent) => {
+      if (!box.current?.contains(e.target as Node)) setOpen(false);
+    };
+    const esc = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setOpen(false);
+    };
+    document.addEventListener('pointerdown', away);
+    document.addEventListener('keydown', esc);
+    return () => {
+      document.removeEventListener('pointerdown', away);
+      document.removeEventListener('keydown', esc);
+    };
+  }, [open]);
+
   return (
-    <div className="relative" data-filter>
+    <div ref={box} className="relative" data-filter>
       <button
         type="button"
         aria-expanded={open}

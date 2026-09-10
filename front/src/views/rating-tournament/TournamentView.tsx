@@ -2,10 +2,15 @@
 
 /* Страница турнира — раздел председателя ГСК ✳ (11.09.2026).
 
-   Протокол — документ: уровень соревнования (C, п. 13), итоговые места
-   (P, п. 10), участники и то, что турнир дал их рейтингу, и все матчи с
-   изменением у обоих игроков (п. 4.6: каждое изменение связано с матчем).
-   По образцу Э5.4 «Протокол на утверждении» и Э5.10 «Карточка турнира».
+   Протокол — документ: уровень соревнования (C, п. 13), участники и то, что
+   турнир дал их рейтингу, и все матчи с изменением у обоих игроков (п. 4.6:
+   каждое изменение связано с матчем). По образцу Э5.4 «Протокол на
+   утверждении» и Э5.10 «Карточка турнира».
+
+   Мест на экране нет ✳ (11.09.2026, решение владельца продукта): итоговых
+   мест в протоколах пилота не ведут. Сохранённые места (у турнира из сетки
+   их ставит сетка) уходят в утверждение как есть; у турнира вручную их нет,
+   и коэффициент призёра P у всех 1,00.
 
    Турнир протоколом вручную, пока не учтён, правится здесь же: участники из
    рейтинга или новые спортсмены, матчи — кто с кем и счёт. Утверждение
@@ -14,8 +19,8 @@
 
    Предпросмотр: сервер считает утверждение по-настоящему и откатывает, и в
    таблицах сразу те числа, что даст сохранение. У черновика — всегда, у
-   учтённого — когда изменили уровень или места. Если утвердить нельзя, сервер
-   называет причину, кнопка неактивна.
+   учтённого — когда изменили уровень. Если утвердить нельзя, сервер называет
+   причину, кнопка неактивна.
 
    Раздел только председателю: гостя уводим на вход. Права проверяет сервер. */
 
@@ -41,15 +46,23 @@ import {
 } from '@/entities/rating';
 import { useSession } from '@/entities/session';
 import { AthleteDialog, LEVELS, MatchDialog, ParticipantDialog } from '@/features/rating-admin';
-import { EmptyBox, FilterBar, FilterSeg, Panel, Pill, Sheet } from '@/shared/kit/app';
+import { EmptyBox, FilterBar, FilterSeg, Panel, Pill, Sheet, useNarrow } from '@/shared/kit/app';
 import { RatingShell } from '@/views/rating';
 
-/** Место в строке участника: P есть только у призовой тройки (п. 10.5). */
-const PLACES = ['—', '1', '2', '3'];
-
-const P_GRID = '108px minmax(0,1fr) 84px 96px 84px';
+const P_GRID = 'minmax(0,1fr) 84px 96px 84px';
 const M_GRID = 'minmax(0,1fr) 90px 60px minmax(0,1fr) 90px 60px 60px';
+/** Телефон ✳ (11.09.2026): у участника — изменение и итог; в матче —
+    игроки с изменением под фамилией и счёт между ними. C и E — на десктопе. */
+const P_GRID_NARROW = 'minmax(0,1fr) 88px 60px';
+const M_GRID_NARROW = 'minmax(0,1fr) 36px minmax(0,1fr)';
 const EDIT_COL = ' 32px';
+
+const MatchSide = ({ name, won, delta }: { name: string; won: boolean; delta?: number }) => (
+  <span className="min-w-0 leading-tight">
+    <span className={'block truncate ' + (won ? 'font-semibold' : '')}>{name}</span>
+    <span className={'block text-[11.5px] ' + tone(delta)}>{delta === undefined ? '—' : signed2(delta)}</span>
+  </span>
+);
 
 type Ask = 'participant' | 'athlete' | 'match' | null;
 
@@ -73,11 +86,10 @@ export function TournamentView({ id }: { id: string }) {
   const { loading: sessionLoading, isGskChairman } = useSession();
   const saved = useProtocol(id);
   const base = saved.data;
+  const narrow = useNarrow();
 
-  // Правки поверх сохранённого; null — «как сохранено».
+  // Уровень поверх сохранённого; null — «как сохранено».
   const [level, setLevel] = useState<string | null>(null);
-  const [places, setPlaces] = useState<Record<string, number | null> | null>(null);
-  const [noThird, setNoThird] = useState<boolean | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState<string | null>(null);
@@ -91,26 +103,18 @@ export function TournamentView({ id }: { id: string }) {
 
   const editable = !!base?.editable;
   const lvl = level ?? base?.level ?? 'republic';
-  const nt = noThird ?? base?.noThirdPlaceMatch ?? false;
-  const pls = useMemo(
-    () => places ?? Object.fromEntries((base?.participants ?? []).map((p) => [p.userId, p.place])),
-    [places, base],
-  );
-  const dirty =
-    !!base &&
-    (lvl !== base.level ||
-      nt !== base.noThirdPlaceMatch ||
-      base.participants.some((p) => (pls[p.userId] ?? null) !== p.place));
+  const dirty = !!base && lvl !== base.level;
 
   const input: ProtocolInput = useMemo(
     () => ({
       level: lvl,
+      // Сохранённые места — как есть: на экране их не правят.
       places: Object.fromEntries(
-        Object.entries(pls).filter(([, v]) => v !== null && v !== undefined) as [string, number][],
+        (base?.participants ?? []).filter((p) => p.place !== null).map((p) => [p.userId, p.place as number]),
       ),
-      noThirdPlaceMatch: nt,
+      noThirdPlaceMatch: base?.noThirdPlaceMatch ?? false,
     }),
-    [lvl, pls, nt],
+    [lvl, base],
   );
 
   const previewOn = dirty || (editable && (base?.matches.length ?? 0) > 0);
@@ -124,12 +128,6 @@ export function TournamentView({ id }: { id: string }) {
     setRev((r) => r + 1);
     saved.reload();
   }, [saved]);
-
-  function reset() {
-    setLevel(null);
-    setPlaces(null);
-    setNoThird(null);
-  }
 
   /** Действие на странице (не в диалоге): ошибка — плашкой над таблицами. */
   async function act(run: () => Promise<unknown>, message?: string) {
@@ -152,15 +150,15 @@ export function TournamentView({ id }: { id: string }) {
     const draft = editable;
     await act(async () => {
       const d = await saveProtocol(id, input);
-      reset();
+      setLevel(null);
       setDone(draft ? 'Утверждён и учтён в рейтинге' : 'Утверждён и пересчитан · ' + d.levelLabel);
     });
   }
 
   const levelLabel = LEVELS.find(([code]) => code === lvl)?.[1] ?? base?.levelLabel ?? '';
   const byId = new Map((shown?.participants ?? []).map((p) => [p.userId, p]));
-  const pGrid = P_GRID + (editable ? EDIT_COL : '');
-  const mGrid = M_GRID + (editable ? EDIT_COL : '');
+  const pGrid = (narrow ? P_GRID_NARROW : P_GRID) + (editable ? EDIT_COL : '');
+  const mGrid = (narrow ? M_GRID_NARROW : M_GRID) + (editable ? EDIT_COL : '');
 
   return (
     <RatingShell
@@ -170,7 +168,7 @@ export function TournamentView({ id }: { id: string }) {
         base ? (
           <>
             {dirty && (
-              <Button variant="ghost" onPress={reset}>
+              <Button variant="ghost" onPress={() => setLevel(null)}>
                 <RotateCcw size={15} /> Отменить изменения
               </Button>
             )}
@@ -243,10 +241,6 @@ export function TournamentView({ id }: { id: string }) {
                 onPick={(label) => setLevel(LEVELS.find(([, l]) => l === label)?.[0] ?? lvl)}
               />
             </div>
-            <label className="flex items-center gap-2 text-[13px]">
-              <input type="checkbox" checked={nt} onChange={(e) => setNoThird(e.target.checked)} />
-              Матча за 3-е место не было — оба полуфиналиста бронзовые
-            </label>
           </FilterBar>
 
           <Panel
@@ -254,12 +248,30 @@ export function TournamentView({ id }: { id: string }) {
             flush
             extra={
               editable ? (
+                /* На телефоне — только значки: подписи не помещались рядом с
+                   заголовком и обрезались. Имя кнопки остаётся в aria-label. */
                 <div className="flex gap-2">
-                  <Button size="sm" variant="ghost" data-testid="participant-add" onPress={() => setAsk('participant')}>
-                    <Search size={14} /> Из рейтинга
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    aria-label="Из рейтинга"
+                    isIconOnly={narrow}
+                    data-testid="participant-add"
+                    onPress={() => setAsk('participant')}
+                  >
+                    <Search size={14} />
+                    {!narrow && ' Из рейтинга'}
                   </Button>
-                  <Button size="sm" variant="ghost" data-testid="participant-new" onPress={() => setAsk('athlete')}>
-                    <UserPlus size={14} /> Новый спортсмен
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    aria-label="Новый спортсмен"
+                    isIconOnly={narrow}
+                    data-testid="participant-new"
+                    onPress={() => setAsk('athlete')}
+                  >
+                    <UserPlus size={14} />
+                    {!narrow && ' Новый спортсмен'}
                   </Button>
                 </div>
               ) : undefined
@@ -270,9 +282,8 @@ export function TournamentView({ id }: { id: string }) {
                 flush
                 grid={pGrid}
                 cols={[
-                  'Место',
                   'Спортсмен',
-                  <span key="b" className="block text-right">До</span>,
+                  ...(narrow ? [] : [<span key="b" className="block text-right">До</span>]),
                   <span key="d" className="block text-right">Изменение</span>,
                   <span key="a" className="block text-right">После</span>,
                   ...(editable ? [''] : []),
@@ -280,7 +291,6 @@ export function TournamentView({ id }: { id: string }) {
               >
                 {base.participants.map((p) => {
                   const s = byId.get(p.userId);
-                  const place = pls[p.userId] ?? null;
                   return (
                     <div
                       key={p.userId}
@@ -290,13 +300,10 @@ export function TournamentView({ id }: { id: string }) {
                       className="grid w-full items-center gap-3 px-4 py-2 text-left text-[13px] tabular-nums"
                       style={{ gridTemplateColumns: pGrid }}
                     >
-                      <FilterSeg
-                        items={PLACES}
-                        active={place ? String(place) : '—'}
-                        onPick={(v) => setPlaces({ ...pls, [p.userId]: v === '—' ? null : Number(v) })}
-                      />
                       <span className="min-w-0 truncate font-medium">{p.name}</span>
-                      <span className="text-right text-neutral-500">{s?.before === null || !s ? '—' : num2(s.before)}</span>
+                      {!narrow && (
+                        <span className="text-right text-neutral-500">{s?.before === null || !s ? '—' : num2(s.before)}</span>
+                      )}
                       <span className={'text-right font-semibold ' + tone(s?.change)}>
                         {s?.change === null || !s ? '—' : signed2(s.change)}
                       </span>
@@ -333,16 +340,20 @@ export function TournamentView({ id }: { id: string }) {
               <Sheet
                 flush
                 grid={mGrid}
-                cols={[
-                  'Спортсмен',
-                  <span key="da" className="block text-right">Изменение</span>,
-                  'Счёт',
-                  'Соперник',
-                  <span key="db" className="block text-right">Изменение</span>,
-                  <span key="c" className="block text-right">C</span>,
-                  <span key="e" className="block text-right">E</span>,
-                  ...(editable ? [''] : []),
-                ]}
+                cols={
+                  narrow
+                    ? ['Спортсмен', 'Счёт', 'Соперник', ...(editable ? [''] : [])]
+                    : [
+                        'Спортсмен',
+                        <span key="da" className="block text-right">Изменение</span>,
+                        'Счёт',
+                        'Соперник',
+                        <span key="db" className="block text-right">Изменение</span>,
+                        <span key="c" className="block text-right">C</span>,
+                        <span key="e" className="block text-right">E</span>,
+                        ...(editable ? [''] : []),
+                      ]
+                }
               >
                 {shown.matches.map((m) => (
                   <div
@@ -355,13 +366,23 @@ export function TournamentView({ id }: { id: string }) {
                     }
                     style={{ gridTemplateColumns: mGrid }}
                   >
-                    <span className={'min-w-0 truncate ' + (m.winnerId === m.aId ? 'font-semibold' : '')}>{m.aName}</span>
-                    <span className={'text-right ' + tone(m.a?.delta)}>{m.a ? signed2(m.a.delta) : '—'}</span>
-                    <span className="text-neutral-600">{m.score}</span>
-                    <span className={'min-w-0 truncate ' + (m.winnerId === m.bId ? 'font-semibold' : '')}>{m.bName}</span>
-                    <span className={'text-right ' + tone(m.b?.delta)}>{m.b ? signed2(m.b.delta) : '—'}</span>
-                    <span className="text-right text-neutral-500">{coeff(m.a?.c ?? null)}</span>
-                    <span className="text-right text-neutral-500">{coeff(m.a?.expected ?? null)}</span>
+                    {narrow ? (
+                      <>
+                        <MatchSide name={m.aName} won={m.winnerId === m.aId} delta={m.a?.delta} />
+                        <span className="text-center text-neutral-600">{m.score}</span>
+                        <MatchSide name={m.bName} won={m.winnerId === m.bId} delta={m.b?.delta} />
+                      </>
+                    ) : (
+                      <>
+                        <span className={'min-w-0 truncate ' + (m.winnerId === m.aId ? 'font-semibold' : '')}>{m.aName}</span>
+                        <span className={'text-right ' + tone(m.a?.delta)}>{m.a ? signed2(m.a.delta) : '—'}</span>
+                        <span className="text-neutral-600">{m.score}</span>
+                        <span className={'min-w-0 truncate ' + (m.winnerId === m.bId ? 'font-semibold' : '')}>{m.bName}</span>
+                        <span className={'text-right ' + tone(m.b?.delta)}>{m.b ? signed2(m.b.delta) : '—'}</span>
+                        <span className="text-right text-neutral-500">{coeff(m.a?.c ?? null)}</span>
+                        <span className="text-right text-neutral-500">{coeff(m.a?.expected ?? null)}</span>
+                      </>
+                    )}
                     {editable && (
                       <RemoveButton testId="match-remove" onPress={() => void act(() => removeProtocolMatch(id, m.id))} />
                     )}
@@ -399,6 +420,7 @@ export function TournamentView({ id }: { id: string }) {
           {ask === 'match' && (
             <MatchDialog
               players={base.participants.map((p) => [p.userId, p.name])}
+              gamesToWin={base.gamesToWin}
               onClose={() => setAsk(null)}
               onSubmit={async (m) => {
                 await addProtocolMatch(id, m);

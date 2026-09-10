@@ -74,8 +74,13 @@ test('председатель заводит турнир, вносит уча�
   await page.getByTestId('match-add').click();
   await page.getByLabel('Спортсмен', { exact: true }).selectOption({ label: а });
   await page.getByLabel('Соперник', { exact: true }).selectOption({ label: б });
-  await page.getByLabel('Партии спортсмена').fill('3');
-  await page.getByLabel('Партии соперника').fill('1');
+  // Счёт — ступенями; матч до 3 побед, больше трёх не набрать.
+  const партии = (кто: string) => page.getByRole('group', { name: кто });
+  await expect(page.getByTestId('match-submit')).toBeDisabled();
+  for (let i = 0; i < 3; i++) await партии('Партии спортсмена').getByRole('button', { name: 'Увеличить' }).click();
+  await expect(партии('Партии спортсмена').getByRole('button', { name: 'Увеличить' })).toBeDisabled();
+  await партии('Партии соперника').getByRole('button', { name: 'Увеличить' }).click();
+  await expect(партии('Партии спортсмена')).toContainText('3');
   await page.getByTestId('match-submit').click();
 
   const строкаА = page.locator('[data-testid="protocol-participant"][data-player="' + а + '"]');

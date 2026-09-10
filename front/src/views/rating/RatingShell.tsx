@@ -23,7 +23,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import type { ReactNode } from 'react';
 
 import { useSession } from '@/entities/session';
-import { AppChrome, FullScreen, SiteHeader, type RoleUI } from '@/shared/kit/app';
+import { AppChrome, FullScreen, PhoneChrome, SiteHeader, useNarrow, type RoleUI } from '@/shared/kit/app';
 
 /** Разделы кабинета председателя. «Выпуски», «Апелляции», «Журнал» и
     «Калибровка» сняты ✳ (11.09.2026, решение владельца продукта). */
@@ -53,6 +53,10 @@ export function RatingShell({
   const router = useRouter();
   const path = usePathname() || '/rating';
   const { user, loading, isGskChairman, signOut } = useSession();
+  // Телефон ✳ (11.09.2026): оболочка роли как `PhoneRoleApp` в Storybook —
+  // шапка, заголовок, кнопки внизу, вкладки разделов. Десктопная с боковым
+  // меню на узком экране сжимала рабочую область до полоски.
+  const narrow = useNarrow();
 
   // Пока сессия не известна — никакой оболочки ✳ (11.09.2026). Иначе председатель
   // сначала видел шапку сайта, потом страница пересобиралась в его оболочку, и
@@ -70,9 +74,10 @@ export function RatingShell({
       badge: false,
       nav: NAV.map(([label, , icon]) => [icon, label]),
     };
+    const Chrome = narrow ? PhoneChrome : AppChrome;
     return (
       <FullScreen>
-        <AppChrome
+        <Chrome
           role={role}
           nav={active}
           title={title}
@@ -85,7 +90,7 @@ export function RatingShell({
           onSignOut={() => void signOut()}
         >
           {children}
-        </AppChrome>
+        </Chrome>
       </FullScreen>
     );
   }
@@ -108,7 +113,7 @@ export function RatingShell({
           )
         }
       />
-      <div className="min-h-0 flex-1 overflow-auto bg-neutral-50 px-6 pb-6 [&>*]:shrink-0">
+      <div className="min-h-0 flex-1 overflow-auto bg-neutral-50 px-4 pb-6 md:px-6 [&>*]:shrink-0">
         {title ? (
           <h1 className="pb-4 pt-5 text-xl font-semibold tracking-tight">{title}</h1>
         ) : (
