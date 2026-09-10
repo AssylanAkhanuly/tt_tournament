@@ -332,6 +332,7 @@ class RatingProtocolsView(APIView):
                 name=request.data.get("name") or "",
                 when=parse_date(raw) if raw else None,
                 level=request.data.get("level") or "republic",
+                games_to_win=request.data.get("games_to_win", 3),
                 actor=request.user,
             )
         except manual.ManualError as e:

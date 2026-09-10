@@ -76,6 +76,10 @@ class Tournament(models.Model):
     no_third_place_match = models.BooleanField(
         default=False, verbose_name="Матча за 3-е место не было (п. 10.4)",
     )
+    # До скольких побед играется матч (domain.d2: games_to_win). Протокол
+    # вручную по нему проверяет счёт ✳ (11.09.2026): 3:1 в матче до трёх побед,
+    # 2:1 — нет.
+    games_to_win = models.PositiveSmallIntegerField(default=3, verbose_name="Партий до победы в матче")
 
     class Meta:
         verbose_name = "Турнир"

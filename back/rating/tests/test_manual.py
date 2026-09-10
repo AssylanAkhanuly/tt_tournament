@@ -268,3 +268,72 @@ def test_возврат_отказан_если_после_турнира_у_у�
     d = api.get("/api/rating/protocols/%s/" % t["id"]).data
     assert (d["applied"], d["editable"]) == (True, False)
     assert значение(а) == Decimal("25.00")
+
+
+# ── Дата турнира и число партий до победы ───────────────────────────
+
+
+def test_дата_турнира_не_позже_сегодняшней(params, api):
+    r = api.post("/api/rating/protocols/", {"name": "Будущий", "date": "2099-01-01", "level": "republic"}, format="json")
+    assert r.status_code == 400
+    assert "дат" in r.data["detail"].lower()
+
+
+def test_турнир_раньше_уже_учтённого_у_участника_не_утверждается(params, api):
+    а, б, в = игрок("+7701", "А"), игрок("+7702", "Б"), игрок("+7703", "В")
+    поздний = завести(api, name="Поздний")  # 10.09.2026
+    добавить(api, поздний["id"], а)
+    добавить(api, поздний["id"], б)
+    матч(api, поздний["id"], а, б)
+    утвердить = {"level": "republic", "places": {}}
+    assert api.post("/api/rating/protocols/%s/" % поздний["id"], утвердить, format="json").status_code == 200
+    после_позднего = значение(а)
+
+    r = api.post("/api/rating/protocols/", {"name": "Ранний", "date": "2026-09-01", "level": "republic"}, format="json")
+    ранний = r.data
+    добавить(api, ранний["id"], а)
+    добавить(api, ранний["id"], в)
+    матч(api, ранний["id"], а, в)
+    r = api.post("/api/rating/protocols/%s/" % ранний["id"], утвердить, format="json")
+    assert r.status_code == 400
+    assert "после даты" in r.data["detail"]
+    assert "А" in r.data["detail"]
+    assert значение(а) == после_позднего
+
+    # Предпросмотр называет ту же причину.
+    p = api.post("/api/rating/protocols/%s/preview/" % ранний["id"], утвердить, format="json")
+    assert "после даты" in p.data["blocked"]
+
+
+def test_счёт_по_числу_партий_до_победы(params, api):
+    а, б = игрок("+7701", "А"), игрок("+7702", "Б")
+    t = завести(api)
+    assert t["games_to_win"] == 3
+    добавить(api, t["id"], а)
+    добавить(api, t["id"], б)
+    for плохой in [(2, 1), (4, 1), (3, 3), (5, 2)]:
+        r = матч(api, t["id"], а, б, *плохой)
+        assert r.status_code == 400, плохой
+    assert "до 3" in матч(api, t["id"], а, б, 2, 1).data["detail"]
+    assert матч(api, t["id"], а, б, 1, 3).status_code == 200
+
+    r = api.post(
+        "/api/rating/protocols/",
+        {"name": "До двух", "date": "2026-09-10", "level": "amateur", "games_to_win": 2},
+        format="json",
+    )
+    assert r.status_code == 201 and r.data["games_to_win"] == 2
+    добавить(api, r.data["id"], а)
+    добавить(api, r.data["id"], б)
+    assert матч(api, r.data["id"], а, б, 2, 0).status_code == 200
+    assert матч(api, r.data["id"], а, б, 3, 0).status_code == 400
+
+
+def test_число_партий_до_победы_из_допустимых(params, api):
+    for n in (1, 5, "x"):
+        r = api.post(
+            "/api/rating/protocols/",
+            {"name": "Странный", "date": "2026-09-10", "level": "republic", "games_to_win": n},
+            format="json",
+        )
+        assert r.status_code == 400, n

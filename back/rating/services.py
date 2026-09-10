@@ -676,6 +676,7 @@ def protocol_detail(tournament) -> dict:
         # только пока он не учтён (rating/manual.py).
         "editable": getattr(tournament, "format", "") == "manual" and not applied,
         "manual": getattr(tournament, "format", "") == "manual",
+        "games_to_win": getattr(tournament, "games_to_win", 3),
         "status": tournament.status,
         "blocked": protocol_block_reason(tournament),
         "participants": [
