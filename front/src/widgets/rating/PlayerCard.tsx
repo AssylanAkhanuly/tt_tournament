@@ -5,13 +5,18 @@
    заполняет руками, она собирается из турниров.
 
    История — таблица п. 20 Положения со слагаемыми изменения: п. 4.6 требует,
-   чтобы каждое изменение было связано с конкретным матчем и объяснимо. */
+   чтобы каждое изменение было связано с конкретным матчем и объяснимо.
+
+   Ссылок на пункты Положения на экране нет ✳ (10.09.2026, решение владельца
+   продукта): подписи видов записей приходят с сервера вместе с «(п. …)» — их
+   отрезает `plainLabel`, а происхождение старта не показывается вовсе. */
 
 import { Avatar } from '@heroui/react';
 
 import {
   coeff,
   num2,
+  plainLabel,
   ruDate,
   signed2,
   type RatingCard,
@@ -69,27 +74,16 @@ export function PlayerCard({ card }: { card: RatingCard }) {
 
         <KV
           items={[
-            ['Стартовое значение', num2(p.startValue) + ' · ' + p.originLabel],
+            ['Стартовое значение', num2(p.startValue)],
             ...(p.ittfPosition ? ([['Позиция в ITTF на момент входа', String(p.ittfPosition)]] as [string, string][]) : []),
             ['Последний рейтинговый матч', ruDate(p.lastMatchAt) || 'матчей ещё не было'],
             ['Побед и поражений', p.wins + ' / ' + p.losses],
-            ...(p.noShows
-              ? ([['Подтверждённых неявок', String(p.noShows) + ' (п. 15.4–15.6)']] as [string, string][])
-              : []),
+            ...(p.noShows ? ([['Подтверждённых неявок', String(p.noShows)]] as [string, string][]) : []),
           ]}
         />
-
-        <p className="mt-3 text-[12px] leading-snug text-neutral-500">
-          Карточку никто не заполняет руками: она собирается из протоколов турниров и обновляется сама после
-          каждого пересчёта. Значение всегда равно сумме изменений в истории ниже.
-        </p>
       </Panel>
 
-      <Panel
-        title={'История изменения рейтинга · ' + history.length + ' записей'}
-        sub="Таблица п. 20 Положения: из чего сложилось каждое изменение"
-        flush
-      >
+      <Panel title={'История изменения рейтинга · ' + history.length + ' записей'} flush>
         {history.length ? (
           <div className="overflow-x-auto">
             <div className="min-w-[980px]">
@@ -123,8 +117,12 @@ export function PlayerCard({ card }: { card: RatingCard }) {
                   >
                     <span className="text-neutral-500">{ruDate(h.occurredAt)}</span>
                     <span className="min-w-0 truncate">
-                      {h.tournamentName ?? <span className={KIND_TONE[h.kind]}>{h.kindLabel}</span>}
-                      {h.reason && <span className="block truncate text-[11px] text-neutral-400">{h.reason}</span>}
+                      {h.tournamentName ?? <span className={KIND_TONE[h.kind]}>{plainLabel(h.kindLabel)}</span>}
+                      {/* У стартовой строки основание — служебное происхождение
+                          старта; основание неявки и исправления пишет человек. */}
+                      {h.reason && h.kind !== 'start' && (
+                        <span className="block truncate text-[11px] text-neutral-400">{h.reason}</span>
+                      )}
                     </span>
                     <span className="min-w-0 truncate text-neutral-600">{h.opponentName ?? '—'}</span>
                     <span className={h.won ? 'text-green-700' : 'text-neutral-500'}>{h.score || '—'}</span>

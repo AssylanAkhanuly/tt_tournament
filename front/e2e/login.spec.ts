@@ -109,7 +109,8 @@ test('разделы бокового меню переводят между э�
   await войти(page);
   await page.getByRole('button', { name: 'Калибровка' }).click();
   await page.waitForURL((url) => url.pathname === '/rating/calibration');
-  await expect(page.locator('h1')).toHaveText('Калибровка рейтинга');
+  // Заголовка у калибровки нет — узнаём её по полю коэффициента D.
+  await expect(page.getByTestId('param-D')).toHaveValue('15');
 });
 
 test('выход из карточки человека возвращает гостя', async ({ page }) => {

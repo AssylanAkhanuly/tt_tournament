@@ -7,4 +7,3 @@ export * from './ParamsPanel';
 export * from './StandingsPanel';
 export * from './HistoryPanel';
 export * from './FindingsPanel';
-export * from './OpenQuestionsPanel';

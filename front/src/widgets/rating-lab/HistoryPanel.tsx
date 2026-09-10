@@ -26,7 +26,6 @@ export function HistoryPanel({
   return (
     <Panel
       title="История изменения рейтинга"
-      sub="Таблица п. 20 Положения: каждое изменение привязано к конкретному матчу (п. 4.6)"
       extra={
         <div className="w-64">
           <Select
@@ -100,10 +99,6 @@ export function HistoryPanel({
           Изменений нет: добавьте матчи, и каждая строка появится здесь.
         </p>
       )}
-
-      <p className="mt-3 text-[11.5px] leading-snug text-neutral-500">
-        ⛔ — изменение обрезано потолком п. 12.1. ● — матч переходного периода п. 11.2.
-      </p>
     </Panel>
   );
 }

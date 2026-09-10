@@ -34,7 +34,6 @@ export function PlayersPanel({
   return (
     <Panel
       title="Спортсмены"
-      sub="Стартовое значение выводит сервер — п. 6.1, п. 6.3, п. 17.4"
       extra={
         <Btn onClick={onAdd} tone="primary" testId="add-player">
           Добавить спортсмена

@@ -151,9 +151,9 @@ export const Source = ({ fixed, clause }: { fixed: boolean; clause: string }) =>
       'inline-flex shrink-0 items-center gap-1 rounded px-1.5 py-0.5 text-[10.5px] font-semibold uppercase tracking-wide ' +
       (fixed ? 'bg-green-50 text-green-700' : 'bg-amber-50 text-amber-700')
     }
-    title={fixed ? 'Значение задано Положением' : 'В Положении значение не задано — величина наша, требует решения федерации'}
+    title={(fixed ? 'Значение задано Положением' : 'В Положении значение не задано — величина наша, требует решения федерации') + (clause ? ', ' + clause : '')}
   >
-    {fixed ? 'по Положению' : 'не задано'} {clause}
+    {fixed ? 'по Положению' : 'не задано'}
   </span>
 );
 

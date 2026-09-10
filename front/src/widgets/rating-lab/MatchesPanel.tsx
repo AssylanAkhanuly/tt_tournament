@@ -45,7 +45,6 @@ export function MatchesPanel({
   return (
     <Panel
       title="Матчи"
-      sub="Одиночный разряд рейтингового соревнования (п. 14.1); счёт обязателен (п. 14.3)"
       extra={
         <div className="flex gap-2">
           <Btn onClick={onRoundRobin} testId="fill-round-robin">

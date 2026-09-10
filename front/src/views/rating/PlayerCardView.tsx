@@ -53,7 +53,6 @@ export function PlayerCardView({ userId }: { userId: string }) {
   return (
     <RatingShell
       title={data?.profile.name ?? 'Карточка спортсмена'}
-      back={{ href: '/rating', label: 'Рейтинг игроков' }}
       actions={actions}
     >
       {done && (

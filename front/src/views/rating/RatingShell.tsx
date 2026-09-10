@@ -12,7 +12,10 @@
 
    В меню председателя только те разделы, что есть в приложении. Разделы его
    кабинета из макета (панель, соревнования, судьи…) появятся вместе с
-   экранами — пустые пункты сейчас вели бы в никуда. */
+   экранами — пустые пункты сейчас вели бы в никуда.
+
+   Ни пояснений под заголовком, ни плашек, ни ссылки «назад» ✳ (10.09.2026,
+   решение владельца продукта): между разделами ведут меню роли и шапка сайта. */
 
 import { Button } from '@heroui/react';
 import { BarChart3, LogIn, SlidersHorizontal } from 'lucide-react';
@@ -20,7 +23,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import type { ReactNode } from 'react';
 
 import { useSession } from '@/entities/session';
-import { AppChrome, BackLink, FullScreen, SiteHeader, type RoleUI } from '@/shared/kit/app';
+import { AppChrome, FullScreen, SiteHeader, type RoleUI } from '@/shared/kit/app';
 
 /** Разделы кабинета председателя, которые уже есть в приложении. */
 const NAV: [string, string, ReactNode][] = [
@@ -36,19 +39,12 @@ const SITE: [string, string][] = [
 
 export function RatingShell({
   title,
-  lead,
-  back,
-  note,
   active = 'Рейтинг игроков',
   actions,
   children,
 }: {
-  title: string;
-  lead?: ReactNode;
-  /** Возврат наверх раздела: подпись и адрес. */
-  back?: { href: string; label: string };
-  /** Предупреждение над содержимым — например, что числа условны. */
-  note?: ReactNode;
+  /** Заголовок — только когда он и есть содержание (имя спортсмена). */
+  title?: string;
   /** Активный раздел в меню председателя. */
   active?: string;
   /** Главные кнопки экрана — полоса внизу рабочей области (только председателю). */
@@ -58,18 +54,6 @@ export function RatingShell({
   const router = useRouter();
   const path = usePathname() || '/rating';
   const { user, loading, isGskChairman, signOut } = useSession();
-
-  const body = (
-    <>
-      {lead && <p className="-mt-2 mb-4 max-w-3xl text-[13px] leading-snug text-neutral-600">{lead}</p>}
-      {note && (
-        <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-3.5 py-2.5 text-[12.5px] leading-snug text-amber-900">
-          {note}
-        </div>
-      )}
-      {children}
-    </>
-  );
 
   if (!loading && user && isGskChairman) {
     const role: RoleUI = {
@@ -86,7 +70,6 @@ export function RatingShell({
           role={role}
           nav={active}
           title={title}
-          back={back ? { label: back.label, onPress: () => router.push(back.href) } : undefined}
           actions={actions}
           bell={false}
           onNavigate={(label) => {
@@ -95,7 +78,7 @@ export function RatingShell({
           }}
           onSignOut={() => void signOut()}
         >
-          {body}
+          {children}
         </AppChrome>
       </FullScreen>
     );
@@ -120,11 +103,12 @@ export function RatingShell({
         }
       />
       <div className="min-h-0 flex-1 overflow-auto bg-neutral-50 px-6 pb-6 [&>*]:shrink-0">
-        <div className="pb-4 pt-5">
-          {back && <BackLink label={back.label} onPress={() => router.push(back.href)} />}
-          <h1 className="text-xl font-semibold tracking-tight">{title}</h1>
-        </div>
-        {body}
+        {title ? (
+          <h1 className="pb-4 pt-5 text-xl font-semibold tracking-tight">{title}</h1>
+        ) : (
+          <div className="pt-5" />
+        )}
+        {children}
       </div>
     </FullScreen>
   );

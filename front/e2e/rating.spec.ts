@@ -133,12 +133,16 @@ test('карточка сходится: рейтинг равен сумме и
   expect(значение).toBeCloseTo(сумма, 2);
 });
 
+/** Строка «подпись — значение» в паспортной части карточки. Первая по порядку:
+    ниже в истории стартовая запись называется так же. */
+const поле = (page: Page, подпись: string) => page.getByText(подпись, { exact: true }).first().locator('..');
+
 test('в карточке новичка виден переходный период и стартовое значение 1,00', async ({ page }) => {
   await page.goto('/rating');
   await строка(page, 'Оспанов Тимур').click();
 
-  await expect(page.getByText('Стартовое значение', { exact: true })).toBeVisible();
-  await expect(page.getByText(/1,00 · Новый/)).toBeVisible();
+  // Происхождение старта на экран не выводится ✳ (10.09.2026) — только число.
+  await expect(поле(page, 'Стартовое значение')).toContainText('1,00');
   // ● — пометка матча переходного периода (п. 11.2).
   await expect(page.getByTestId('card-history-row').filter({ hasText: '●' }).first()).toBeVisible();
 });
@@ -148,8 +152,8 @@ test('в карточке легионера видно, что старт по�
   await строка(page, 'Ли Александр').click();
 
   // Rmax = 90, k = 10, позиция 100: 90 − 10 × ln(100) = 43,95 (пример п. 17.12).
-  await expect(page.getByText(/43,95 · Из позиции ITTF/)).toBeVisible();
-  await expect(page.getByText('Позиция в ITTF на момент входа')).toBeVisible();
+  await expect(поле(page, 'Стартовое значение')).toContainText('43,95');
+  await expect(поле(page, 'Позиция в ITTF на момент входа')).toContainText('100');
 });
 
 test('у спортсмена без рейтинга карточки нет, и это сказано прямо', async ({ page }) => {

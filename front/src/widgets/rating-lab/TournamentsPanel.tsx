@@ -40,7 +40,6 @@ export function TournamentsPanel({
   return (
     <Panel
       title="Соревнования"
-      sub="Уровень задаёт коэффициент C (п. 13), призовая тройка — коэффициент P (п. 10)"
       extra={
         <Btn onClick={onAdd} testId="add-tournament">
           Добавить соревнование
@@ -105,7 +104,7 @@ export function TournamentsPanel({
                 onChange={(e) => onUpdate(t.id, { noThirdPlaceMatch: e.target.checked })}
                 aria-label={'Матча за третье место не было: ' + t.name}
               />
-              Матча за 3-е место не было — оба полуфиналиста бронзовые (п. 10.4)
+              Матча за 3-е место не было — оба полуфиналиста бронзовые
             </label>
           </div>
         ))}

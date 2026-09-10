@@ -282,7 +282,10 @@ export function AppChrome({
   role: RoleUI;
   /** Активный пункт сайдбара. */
   nav: string;
-  title: string;
+  /** Заголовок экрана. Без него ✳ (10.09.2026) экран начинается прямо с
+      содержимого — так у рейтинг-листа: раздел уже подсвечен в меню, и
+      заголовок повторял бы его. */
+  title?: string;
   sub?: string;
   back?: { label: string; to?: string; onPress?: () => void };
   /** ⚠ Больше не рисуется ✳ (01.09.2026): правило под заголовком читалось как
@@ -389,11 +392,15 @@ export function AppChrome({
              и сделана. Правило на контейнере, а не на панели: следующий блок
              рабочей области получит его сам, не вспоминая про этот случай. */}
           <div className="flex min-h-0 flex-1 flex-col overflow-auto px-6 pb-6 [--kit-gut:1.5rem] [--kit-gutb:1.5rem] [&>*]:shrink-0">
-            <div className="pb-4 pt-5">
-              {back && <BackLink label={back.label} to={back.to} onPress={back.onPress} />}
-              <h1 className="text-xl font-semibold tracking-tight">{title}</h1>
-              {sub && <p className="mt-0.5 text-[13px] text-neutral-500">{sub}</p>}
-            </div>
+            {back || title || sub ? (
+              <div className="pb-4 pt-5">
+                {back && <BackLink label={back.label} to={back.to} onPress={back.onPress} />}
+                {title && <h1 className="text-xl font-semibold tracking-tight">{title}</h1>}
+                {sub && <p className="mt-0.5 text-[13px] text-neutral-500">{sub}</p>}
+              </div>
+            ) : (
+              <div className="pt-5" />
+            )}
             {children}
           </div>
           {actions && (

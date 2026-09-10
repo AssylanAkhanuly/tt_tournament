@@ -2,20 +2,17 @@
 
 /* Итоговая таблица прогона — колонки Приложения 1 Положения: место, ФИО,
    рейтинг, матчи, победы, поражения, статус. Плюс старт и изменение: без них
-   не видно главного — куда шкала сдвинула человека. */
+   не видно главного — куда шкала сдвинула человека.
 
-import { num2, signed2, type PreviewStanding, type RatingOrigin } from '@/entities/rating';
+   Под фамилией пометок нет ✳ (10.09.2026, решение владельца продукта): ни
+   происхождения старта, ни остатка переходного периода, ни надбавки за место.
+   Надбавка уже в колонке «Изменение», переходный период виден значком ● в
+   истории. */
+
+import { num2, signed2, type PreviewStanding } from '@/entities/rating';
 import { Panel } from '@/shared/kit/app';
 
-/* Фамилия забирает всю свободную ширину, служебные пометки уходят второй
-   строкой под неё: колонкой они не помещались. */
 const GRID = '24px minmax(0,1fr) 56px 66px 70px 44px 52px 62px';
-
-const ORIGIN_LABEL: Record<RatingOrigin, string> = {
-  new: 'старт 1,00 · п. 6.1',
-  legacy: 'перенос · п. 6.3',
-  ittf: 'ITTF · п. 17',
-};
 
 export function StandingsPanel({ table, calculating }: { table: PreviewStanding[]; calculating: boolean }) {
   const rows = [...table].sort((a, b) => b.rating - a.rating);
@@ -23,7 +20,6 @@ export function StandingsPanel({ table, calculating }: { table: PreviewStanding[
   return (
     <Panel
       title="Рейтинговая таблица после прогона"
-      sub="Приложение 1 Положения: место, рейтинг, матчи, статус"
       extra={calculating ? <span className="text-[12px] text-neutral-400">считает сервер…</span> : undefined}
     >
       <div
@@ -50,16 +46,7 @@ export function StandingsPanel({ table, calculating }: { table: PreviewStanding[
             data-player={r.name}
           >
             <span className="text-neutral-400 tabular-nums">{i + 1}</span>
-            <span className="flex min-w-0 flex-col">
-              <span className="truncate font-medium">{r.name}</span>
-              <span className="flex flex-wrap items-center gap-x-2 text-[11px] leading-tight text-neutral-400">
-                <span>{ORIGIN_LABEL[r.origin]}</span>
-                {r.transition_left > 0 && (
-                  <span className="text-amber-700">переходный период, ещё {r.transition_left}</span>
-                )}
-                {!!r.prize_bonus && <span className="text-blue-700">за место {signed2(r.prize_bonus)}</span>}
-              </span>
-            </span>
+            <span className="min-w-0 truncate font-medium">{r.name}</span>
             <span className="text-right tabular-nums text-neutral-500">{num2(r.start)}</span>
             <span className="text-right font-semibold tabular-nums" data-testid="rating-value">
               {num2(r.rating)}

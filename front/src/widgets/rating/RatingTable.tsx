@@ -10,7 +10,7 @@
 import Link from 'next/link';
 import { Avatar } from '@heroui/react';
 
-import { num2, ruDate, type RatingList, type RatingProfile } from '@/entities/rating';
+import { num2, type RatingList, type RatingProfile } from '@/entities/rating';
 import { EmptyBox, FilterBar, FilterSeg, Pager, Panel, SearchInput, Sheet } from '@/shared/kit/app';
 
 const GRID = '56px minmax(0,1.9fr) minmax(0,1fr) 58px 74px 58px 66px 88px';
@@ -51,15 +51,7 @@ export function RatingTable({
 
   return (
     <>
-      <FilterBar
-        right={
-          data?.updatedAt ? (
-            <span className="text-[12.5px] text-neutral-500">
-              обновлён {ruDate(data.updatedAt)}
-            </span>
-          ) : undefined
-        }
-      >
+      <FilterBar>
         <SearchInput
           value={filters.q}
           onChange={(v) => onFilters({ q: v })}
@@ -78,7 +70,6 @@ export function RatingTable({
 
       <Panel
         title={data ? 'Спортсменов в листе: ' + data.count : 'Рейтинг'}
-        sub="Рейтинг один на человека; возрастные списки — выборка из него (п. 7.2)"
         flush
       >
         {error ? (
@@ -120,7 +111,6 @@ export function RatingTable({
                   </Avatar>
                   <span className="min-w-0 leading-tight">
                     <span className="block truncate font-medium">{r.name}</span>
-                    <span className="block truncate text-xs text-neutral-500">{r.originLabel}</span>
                   </span>
                 </span>
                 <span className="truncate text-neutral-600">{r.region || '—'}</span>

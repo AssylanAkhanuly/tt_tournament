@@ -12,6 +12,11 @@ export const signed2 = (x: number): string =>
 /** Коэффициент как 1,20 — те же правила, что у рейтинга. */
 export const coeff = (x: number | null): string => (x === null ? '—' : x.toFixed(2).replace('.', ','));
 
+/** Подпись с сервера без ссылки на пункт: «Стартовое значение (п. 6, 17)» →
+    «Стартовое значение». Ссылок на пункты документов в интерфейсе нет
+    ✳ (10.09.2026), а подписи сервер отдаёт те же, что и админке. */
+export const plainLabel = (label: string): string => label.replace(/\s*\(п\.[^)]*\)/g, '').trim();
+
 /** Дата ДД.ММ.ГГГГ из ISO. Пустая строка, если даты нет. */
 export const ruDate = (iso: string | null): string => {
   if (!iso) return '';

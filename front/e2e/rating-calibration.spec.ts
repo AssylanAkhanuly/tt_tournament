@@ -95,12 +95,16 @@ test('история п. 20 сходится: рейтинг до плюс из�
   }
 });
 
-test('новичок идёт по переходному периоду п. 11 и это видно в таблице', async ({ page }) => {
+test('новичок идёт по переходному периоду п. 11: его матчи отмечены в истории', async ({ page }) => {
   await page.goto('/rating/calibration');
-  await expect(строка(page, 'Новичок')).toContainText('переходный период, ещё 20');
+  await expect(строка(page, 'Новичок')).toBeVisible();
 
   await page.getByTestId('fill-round-robin').click();
-  await expect(строка(page, 'Новичок')).toContainText('переходный период, ещё 15'); // сыграл 5
+  await page.getByTestId('history-filter').selectOption({ label: 'Новичок' });
+  // Круговая шестерых — у новичка 5 матчей, и все в переходном периоде (●).
+  const rows = page.getByTestId('history-row');
+  await expect(rows).toHaveCount(5);
+  await expect(rows.filter({ hasText: '●' })).toHaveCount(5);
 });
 
 test('стартовое значение легионера считает сервер по п. 17.4', async ({ page }) => {

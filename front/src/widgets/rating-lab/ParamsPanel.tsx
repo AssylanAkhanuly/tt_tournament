@@ -7,7 +7,9 @@
    подобранное как действующее.
 
    Рядом с каждым полем стоит происхождение: шесть значений Положение называет
-   и не задаёт, и число, не взятое из документа, обязано быть видно как наше. */
+   и не задаёт, и число, не взятое из документа, обязано быть видно как наше.
+   Пояснений под полями нет ✳ (10.09.2026, решение владельца продукта): что
+   значит каждый коэффициент и откуда он взялся — RATING.md, раздел 3. */
 
 import type { ReactNode } from 'react';
 
@@ -17,44 +19,24 @@ import { Panel } from '@/shared/kit/app';
 import { Btn, Num, Select, Source } from './controls';
 
 const PRIZE: { value: ParamOverrides['prize_mode']; label: string }[] = [
-  { value: 'match', label: 'P в формуле каждого матча (п. 9.2)' },
-  { value: 'tournament', label: 'P к итогу турнира (п. 10.6)' },
+  { value: 'match', label: 'P в формуле каждого матча' },
+  { value: 'tournament', label: 'P к итогу турнира' },
   { value: 'none', label: 'Без коэффициента места' },
 ];
 
 const BASELINE: { value: ParamOverrides['baseline']; label: string }[] = [
-  { value: 'sequential', label: 'Поматчево — как в примере п. 20' },
-  { value: 'pre_tournament', label: 'От рейтинга до турнира — как в п. 8.1' },
+  { value: 'sequential', label: 'Поматчево' },
+  { value: 'pre_tournament', label: 'От рейтинга до турнира' },
 ];
-
-/** Пояснение к полю: чем оно управляет и почему стоит именно столько. */
-const NOTES: Record<string, string> = {
-  d: 'Параметр масштаба назван, значение не задано. Чем меньше D, тем резче шкала делит игроков; чем больше — тем ближе исход к монетке.',
-  k_standard: 'Значение не задано. Задаёт цену обычного матча: при 0,60 равные соперники расходятся на ±0,30.',
-  k_transition:
-    '⚠ В Положении написано «пониженный коэффициент, обеспечивающий ускоренную адаптацию» — это противоречие: пониженный K замедляет. Для заявленной цели нужен повышенный.',
-  transition_matches: '20 официальных матчей, считая с первого учтённого.',
-  max_delta: 'Потолок объявлен, число отсутствует (пункт 12.2 в документе пропущен). 0 — считать без потолка.',
-  cap_in_transition:
-    'В Положении не разделено. Если потолок действует и в переходном периоде, новичок со старта 1,00 идёт до своего уровня втрое дольше.',
-  prize_mode:
-    'Два прочтения одного правила. Без потолка числа совпадают, но во втором надбавка не привязана к матчу, чего требует п. 4.6.',
-  baseline: 'От какого значения считать матчи одного турнира. В Положении прямо не сказано.',
-  ittf: 'Rmax = 90 и k = 10 приведены в Положении как значения «для целей примера», не как норма.',
-  level_c: 'Таблица уровней соревнований задана полностью.',
-  prize_p: '1 место — 1,20; 2 — 1,15; 3 — 1,10; 4 и ниже — 1,00.',
-};
 
 function Row({
   label,
   source,
-  note,
   children,
   wide,
 }: {
   label: string;
   source?: ParamSource;
-  note: string;
   children: ReactNode;
   /** Поле шире подписи (выбор из списка) — тогда оно уходит строкой ниже. */
   wide?: boolean;
@@ -69,7 +51,6 @@ function Row({
         </div>
       </div>
       {wide && <div className="mt-1.5">{children}</div>}
-      <p className="mt-1 max-w-prose text-[11.5px] leading-snug text-neutral-500">{note}</p>
     </div>
   );
 }
@@ -115,7 +96,6 @@ export function ParamsPanel({
   return (
     <Panel
       title="Параметры расчёта"
-      sub="Зелёное — из Положения, жёлтое — не задано в нём и требует решения федерации"
       extra={
         <div className="flex gap-2">
           <Btn onClick={onReset}>Вернуть действующие</Btn>
@@ -140,10 +120,10 @@ export function ParamsPanel({
       <div data-testid="params">
         {saveError && <p className="mb-2 text-[12.5px] text-red-600">Не сохранилось: {saveError}</p>}
 
-        <Row label="D — масштаб шкалы" source={sources.d} note={NOTES.d}>
+        <Row label="D — масштаб шкалы" source={sources.d}>
           <Num value={params.d} onChange={(v) => onChange({ d: v })} ariaLabel="Параметр D" step={1} min={1} testId="param-D" />
         </Row>
-        <Row label="K стандартный (с 21-го матча)" source={sources.k_standard} note={NOTES.k_standard}>
+        <Row label="K стандартный (с 21-го матча)" source={sources.k_standard}>
           <Num
             value={params.k_standard}
             onChange={(v) => onChange({ k_standard: v })}
@@ -153,7 +133,7 @@ export function ParamsPanel({
             testId="param-k"
           />
         </Row>
-        <Row label="K переходного периода" source={sources.k_transition} note={NOTES.k_transition}>
+        <Row label="K переходного периода" source={sources.k_transition}>
           <Num
             value={params.k_transition}
             onChange={(v) => onChange({ k_transition: v })}
@@ -162,11 +142,7 @@ export function ParamsPanel({
             min={0}
           />
         </Row>
-        <Row
-          label="Длина переходного периода, матчей"
-          source={sources.transition_matches}
-          note={NOTES.transition_matches}
-        >
+        <Row label="Длина переходного периода, матчей" source={sources.transition_matches}>
           <Num
             value={params.transition_matches}
             onChange={(v) => onChange({ transition_matches: Math.max(0, Math.round(v)) })}
@@ -174,7 +150,7 @@ export function ParamsPanel({
             min={0}
           />
         </Row>
-        <Row label="Потолок изменения за матч (0 — без потолка)" source={sources.max_delta} note={NOTES.max_delta}>
+        <Row label="Потолок изменения за матч (0 — без потолка)" source={sources.max_delta}>
           <Num
             value={params.max_delta}
             onChange={(v) => onChange({ max_delta: Math.max(0, v) })}
@@ -184,11 +160,7 @@ export function ParamsPanel({
             testId="param-cap"
           />
         </Row>
-        <Row
-          label="Резать потолком и переходный период"
-          source={sources.cap_in_transition}
-          note={NOTES.cap_in_transition}
-        >
+        <Row label="Резать потолком и переходный период" source={sources.cap_in_transition}>
           <label className="flex items-center justify-end gap-2 text-[13px]">
             <input
               type="checkbox"
@@ -199,7 +171,7 @@ export function ParamsPanel({
             {params.cap_in_transition ? 'да' : 'нет'}
           </label>
         </Row>
-        <Row label="Коэффициент места" source={sources.prize_mode} note={NOTES.prize_mode} wide>
+        <Row label="Коэффициент места" source={sources.prize_mode} wide>
           <Select
             value={params.prize_mode}
             onChange={(v) => onChange({ prize_mode: v })}
@@ -208,7 +180,7 @@ export function ParamsPanel({
             testId="param-prize"
           />
         </Row>
-        <Row label="База расчёта внутри турнира" source={sources.baseline} note={NOTES.baseline} wide>
+        <Row label="База расчёта внутри турнира" source={sources.baseline} wide>
           <Select
             value={params.baseline}
             onChange={(v) => onChange({ baseline: v })}
@@ -216,7 +188,7 @@ export function ParamsPanel({
             ariaLabel="База расчёта внутри турнира"
           />
         </Row>
-        <Row label="Перевод из ITTF: Rmax и k" source={sources.ittf_r_max} note={NOTES.ittf}>
+        <Row label="Перевод из ITTF: Rmax и k" source={sources.ittf_r_max}>
           <div className="flex gap-1.5">
             <Num
               value={params.ittf_r_max}
