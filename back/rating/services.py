@@ -555,6 +555,62 @@ def decide_appeal(appeal: RatingAppeal, *, upheld: bool, decision: str, value=No
     return appeal
 
 
+# ── Объединение дублей (п. 5.3) ─────────────────────────────────────
+
+
+class MergeError(ValueError):
+    """Карточки нельзя объединить. Текст объясняет почему."""
+
+
+@transaction.atomic
+def merge_profiles(keep_user, drop_user, *, reason: str, actor=None) -> RatingProfile:
+    """Объединить дублирующую карточку с основной (п. 5.3).
+
+    История дубля переходит к основной целиком — «сохраняется полная
+    рейтинговая история». Кроме старта: у каждой карточки своя стартовая
+    строка, и сложи их — стартовое значение удвоилось бы. Поэтому старт дубля
+    остаётся в истории отменённым, а считаются только его изменения после
+    старта. Апелляции дубля переходят к основной, счётчик неявок
+    складывается, карточка дубля исчезает — параллельных карточек не бывает.
+    Сведения об объединении — нулевой строкой журнала с основанием и автором.
+
+    Выпуски не трогаются: что было опубликовано, то и было.
+    """
+    if keep_user.pk == drop_user.pk:
+        raise MergeError("Карточку нельзя объединить саму с собой")
+    reason = (reason or "").strip()
+    if not reason:
+        raise MergeError("Основание объединения обязательно (п. 5.3)")
+    keep = RatingProfile.objects.filter(user=keep_user).first()
+    drop = RatingProfile.objects.filter(user=drop_user).first()
+    if not keep or not drop:
+        raise MergeError("У одного из спортсменов нет рейтинговой карточки")
+
+    drop.entries.filter(kind=RatingEntry.KIND_START, is_reverted=False).update(
+        is_reverted=True, reverted_at=timezone.now(), reverted_by=actor
+    )
+    RatingEntry.objects.filter(profile=drop).update(profile=keep)
+    RatingAppeal.objects.filter(user=drop_user).update(user=keep_user)
+
+    keep.no_shows += drop.no_shows
+    keep.save(update_fields=["no_shows", "updated_at"])
+    drop_name = drop_user.name
+    drop.delete()
+
+    recalc_profile(keep)
+    RatingEntry.objects.create(
+        profile=keep,
+        kind=RatingEntry.KIND_MERGE,
+        occurred_at=timezone.localdate(),
+        before=keep.value,
+        delta=Decimal("0.00"),
+        after=keep.value,
+        reason="Объединена карточка «%s»: %s" % (drop_name, reason),
+        created_by=actor,
+    )
+    return keep
+
+
 def preview(players: Sequence[dict], tournaments: Sequence[dict], matches: Sequence[dict],
             params: Optional[dict] = None):
     """Посчитать присланный набор, не трогая базу.

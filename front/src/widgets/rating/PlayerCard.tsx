@@ -34,6 +34,7 @@ const KIND_TONE: Record<RatingEntry['kind'], string> = {
   no_show: 'text-red-600',
   correction: 'text-amber-700',
   void: 'text-red-600',
+  merge: 'text-blue-700',
 };
 
 export function PlayerCard({ card }: { card: RatingCard }) {

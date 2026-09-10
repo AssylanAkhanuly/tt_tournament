@@ -35,7 +35,7 @@ export type RatingProfile = {
   updatedAt: string;
 };
 
-export type RatingEntryKind = 'start' | 'match' | 'prize' | 'no_show' | 'correction' | 'void';
+export type RatingEntryKind = 'start' | 'match' | 'prize' | 'no_show' | 'correction' | 'void' | 'merge';
 
 /** Строка истории — колонки таблицы п. 20 плюс слагаемые изменения. */
 export type RatingEntry = {

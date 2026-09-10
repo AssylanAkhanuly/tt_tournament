@@ -244,6 +244,7 @@ class RatingEntry(models.Model):
     KIND_CORRECTION = "correction"
     KIND_START = "start"
     KIND_VOID = "void"
+    KIND_MERGE = "merge"
     KIND_CHOICES = [
         (KIND_MATCH, "Матч"),
         (KIND_NO_SHOW, "Неявка без уважительной причины (п. 15.4–15.6)"),
@@ -251,6 +252,9 @@ class RatingEntry(models.Model):
         (KIND_CORRECTION, "Исправление (п. 21.5–21.6)"),
         (KIND_START, "Стартовое значение (п. 6, 17)"),
         (KIND_VOID, "Аннулирование за неактивность (п. 18.4)"),
+        # Нулевая строка-отметка: при объединении дублей п. 5.3 требует
+        # отразить сведения об объединении в журнале ✳ (11.09.2026).
+        (KIND_MERGE, "Объединение карточек (п. 5.3)"),
     ]
 
     profile = models.ForeignKey(RatingProfile, on_delete=models.CASCADE, related_name="entries")

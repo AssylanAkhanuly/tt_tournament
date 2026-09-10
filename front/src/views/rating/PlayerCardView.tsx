@@ -9,23 +9,31 @@
 
    Председателю ГСК ✳ (10.09.2026) на той же карточке открываются правки — по
    образцу макетов его роли: главные кнопки в полосе действий внизу, каждая
-   открывает диалог. Здесь же он регистрирует письменную апелляцию (п. 21.2)
-   ✳ (11.09.2026) — решает её потом в очереди «Апелляции». Отдельного экрана
-   под правки нет намеренно: править значение, не видя истории, из которой оно
-   сложилось, нельзя. Права всё равно проверяет сервер. */
+   открывает диалог. Здесь же он регистрирует письменную апелляцию (п. 21.2) и
+   объединяет дубль с этой карточкой (п. 5.3) ✳ (11.09.2026). Отдельного
+   экрана под правки нет намеренно: править значение, не видя истории, из
+   которой оно сложилось, нельзя. Права всё равно проверяет сервер. */
 
 import { Button } from '@heroui/react';
-import { Ban, PenLine, Scale } from 'lucide-react';
+import { Ban, Merge, PenLine, Scale } from 'lucide-react';
 import { useState } from 'react';
 
-import { num2, ruDate, signed2, useRatingCard, type RatingAppeal, type RatingEntry } from '@/entities/rating';
+import {
+  num2,
+  ruDate,
+  signed2,
+  useRatingCard,
+  type RatingAppeal,
+  type RatingEntry,
+  type RatingProfile,
+} from '@/entities/rating';
 import { useSession } from '@/entities/session';
-import { AppealDialog, CorrectionDialog, NoShowDialog } from '@/features/rating-admin';
+import { AppealDialog, CorrectionDialog, MergeDialog, NoShowDialog } from '@/features/rating-admin';
 import { EmptyBox } from '@/shared/kit/app';
 import { PlayerCard } from '@/widgets/rating';
 import { RatingShell } from './RatingShell';
 
-type Ask = 'no_show' | 'correction' | 'appeal' | null;
+type Ask = 'no_show' | 'correction' | 'appeal' | 'merge' | null;
 
 export function PlayerCardView({ userId }: { userId: string }) {
   const { data, loading, error, reload } = useRatingCard(userId);
@@ -44,9 +52,18 @@ export function PlayerCardView({ userId }: { userId: string }) {
     setDone('Апелляция №' + appeal.id + ' · рассмотреть до ' + ruDate(appeal.reviewUntil));
   };
 
+  const merged = (kept: RatingProfile, droppedName: string) => {
+    setAsk(null);
+    setDone('Объединено: ' + droppedName + ' → ' + num2(kept.value));
+    reload();
+  };
+
   const actions =
     data && isGskChairman ? (
       <>
+        <Button variant="ghost" data-testid="merge-open" onPress={() => setAsk('merge')}>
+          <Merge size={15} /> Объединить
+        </Button>
         <Button variant="ghost" data-testid="appeal-open" onPress={() => setAsk('appeal')}>
           <Scale size={15} /> Апелляция
         </Button>
@@ -96,6 +113,9 @@ export function PlayerCardView({ userId }: { userId: string }) {
       )}
       {data && ask === 'appeal' && (
         <AppealDialog userId={userId} name={data.profile.name} onClose={() => setAsk(null)} onDone={appealed} />
+      )}
+      {data && ask === 'merge' && (
+        <MergeDialog userId={userId} name={data.profile.name} onClose={() => setAsk(null)} onDone={merged} />
       )}
     </RatingShell>
   );

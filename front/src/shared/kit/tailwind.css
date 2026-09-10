@@ -514,6 +514,9 @@
 .max-h-44 {
   max-height: calc(var(--spacing) * 44);
 }
+.max-h-48 {
+  max-height: calc(var(--spacing) * 48);
+}
 .max-h-\[88\%\] {
   max-height: 88%;
 }

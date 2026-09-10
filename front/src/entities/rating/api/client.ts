@@ -276,6 +276,19 @@ export async function fetchEditionDraft(): Promise<EditionDraftRow[]> {
   }));
 }
 
+/* ── Объединение дублей (п. 5.3) ✳ (11.09.2026) ───────────────────── */
+
+/** Объединить дубль с основной карточкой — только председатель ГСК.
+    Возвращает основную карточку после пересчёта. */
+export async function mergeProfiles(keepUserId: string, dropUserId: string, reason: string): Promise<RatingProfile> {
+  return toProfile(
+    await request<Record<string, unknown>>('/merge/', {
+      method: 'POST',
+      body: JSON.stringify({ keep_user_id: keepUserId, drop_user_id: dropUserId, reason }),
+    }),
+  );
+}
+
 /* ── Журнал изменений (п. 20, 22.2) ✳ (11.09.2026) ───────────────── */
 
 export type JournalQuery = { kind?: string; q?: string; page?: number };

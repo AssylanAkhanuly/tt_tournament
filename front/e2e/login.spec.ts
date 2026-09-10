@@ -119,3 +119,32 @@ test('выход из карточки человека возвращает г�
   await page.getByRole('button', { name: 'Выйти' }).click();
   await expect(page.getByTestId('login-link')).toBeVisible();
 });
+
+/* Объединение дублей (п. 5.3). Пара заведена засевом: «Сейтказы Арман» —
+   30,00, его дубль — 28,00 с одной неявкой (27,80). После объединения у
+   основной должно стать ровно 29,80: старт дубля не прибавился (было бы
+   57,80), а его неявка перешла (без неё осталось бы 30,00). */
+test('председатель объединяет дубль: история переходит без удвоения старта', async ({ page }) => {
+  await войти(page);
+  await карточка(page, 'Сейтказы Арман');
+  await expect(текущий(page)).toContainText('30,00');
+
+  await page.getByTestId('merge-open').click();
+  await expect(page.getByTestId('merge-submit')).toBeDisabled();
+  await page.getByPlaceholder('Фамилия дубля').fill('Сейтказы');
+  await page.locator('[data-testid="merge-candidate"][data-player="Сейтказы Арман (дубль)"]').click();
+  await page.getByLabel('Основание объединения').fill('Один человек, две карточки');
+  await page.getByTestId('merge-submit').click();
+
+  await expect(page.getByTestId('chairman-result')).toContainText('Объединено');
+  await expect(текущий(page)).toContainText('29,80');
+  await expect(
+    page.getByTestId('card-history-row').filter({ hasText: 'Объединение карточек' }),
+  ).toBeVisible();
+
+  // Карточки дубля в живом листе больше нет.
+  await page.goto('/rating?edition=live');
+  await page.getByPlaceholder('Фамилия или регион').fill('Сейтказы');
+  await expect(строка(page, 'Сейтказы Арман')).toHaveCount(1);
+  await expect(строка(page, 'Сейтказы Арман (дубль)')).toHaveCount(0);
+});

@@ -17,7 +17,7 @@ from django.utils import timezone
 
 from rating import engine
 from rating.models import RatingEntry, RatingParams, RatingProfile
-from rating.services import apply_tournament, get_or_create_profile
+from rating.services import apply_tournament, get_or_create_profile, register_no_show
 from tournaments.models import Match, Tournament, TournamentParticipant
 from users.models import User
 
@@ -33,6 +33,14 @@ from users.models import User
     ("06", "Ли Александр", engine.ORIGIN_ITTF, 0, "Алматы", "m", 2000),
     ("07", "Жумабаева Айна", engine.ORIGIN_LEGACY, 47, "Алматы", "f", 2002),
     ("08", "Оралбек Дана", engine.ORIGIN_LEGACY, 38, "Астана", "f", 2008),
+]
+
+#: Пара дублей для показа объединения (п. 5.3): один человек — две карточки.
+#: В турнир не входят. У дубля одна неявка — чтобы объединение было видно по
+#: числу: 30,00 − 0,20 = 29,80, а не 30,00 и не 57,80.
+ДУБЛИ = [
+    ("09", "Сейтказы Арман", 30),
+    ("10", "Сейтказы Арман (дубль)", 28),
 ]
 
 #: Матчи турнира: кто, с кем, счёт. Победы распределены так, чтобы в истории
@@ -123,6 +131,15 @@ class Command(BaseCommand):
             )
 
         written = apply_tournament(tournament)
+
+        for suffix, name, value in ДУБЛИ:
+            user, _ = User.objects.get_or_create(phone=ПРЕФИКС + suffix, defaults={"name": name})
+            profile = get_or_create_profile(
+                user, origin=engine.ORIGIN_LEGACY, legacy=value,
+                region="Павлодар", sex="m", birth_year=2004,
+            )
+            if "(дубль)" in name and not profile.no_shows:
+                register_no_show(user, reason="Показательная неявка дубля")
 
         self.stdout.write("Коэффициенты: D=%s K=%s" % (params.d, params.k_standard))
         self.stdout.write("Записей в журнале: %d" % written)

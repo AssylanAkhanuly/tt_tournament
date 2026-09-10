@@ -762,7 +762,7 @@ storage: "7 · ДАННЫЕ · два разных хранилища" {
       class: audit
       id: uuid {constraint: primary_key}
       profile_id: uuid {constraint: foreign_key}
-      kind: "стартовое | матч | место за турнир | неявка | исправление | аннулирование"
+      kind: "стартовое | матч | место за турнир | неявка | исправление | аннулирование | объединение дублей (п. 5.3)"
       occurred_at: date
       tournament_id: uuid {constraint: foreign_key}
       match_id: uuid {constraint: foreign_key}

@@ -460,3 +460,34 @@ class RatingAppealDecisionView(APIView):
         except services.AppealError as e:
             return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
         return Response(RatingAppealSerializer(appeal).data)
+
+
+class RatingMergeView(APIView):
+    """Объединить дублирующие карточки (п. 5.3) — председатель ГСК.
+
+    `keep_user_id` — чья карточка остаётся, `drop_user_id` — дубль, `reason`
+    обязателен: объединение без основания ничем не отличается от подмены.
+    """
+
+    permission_classes = [IsGskChairman]
+
+    def post(self, request):
+        from django.contrib.auth import get_user_model
+        from django.core.exceptions import ValidationError
+
+        users = get_user_model().objects
+        try:
+            keep = users.filter(pk=request.data.get("keep_user_id")).first()
+            drop = users.filter(pk=request.data.get("drop_user_id")).first()
+        except (ValueError, ValidationError):
+            keep = drop = None
+        if not keep or not drop:
+            return Response({"detail": "Спортсмен не найден"}, status=status.HTTP_404_NOT_FOUND)
+
+        try:
+            profile = services.merge_profiles(
+                keep, drop, reason=request.data.get("reason") or "", actor=request.user
+            )
+        except services.MergeError as e:
+            return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        return Response(RatingProfileSerializer(profile).data)
