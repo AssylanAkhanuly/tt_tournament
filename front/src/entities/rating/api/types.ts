@@ -30,6 +30,8 @@ export type RatingProfile = {
   statusLabel: string;
   sex: string;
   birthYear: number | null;
+  /** ISO-дата; у перенесённых из прежнего рейтинга бывает только год. */
+  birthDate: string | null;
   ageCategory: AgeCategory | null;
   region: string;
   updatedAt: string;
@@ -142,6 +144,21 @@ export type ProtocolDetailParticipant = {
   before: number | null;
   change: number | null;
   after: number | null;
+  /** 'm' | 'f' | '' — по нему отбор «Пол» на странице турнира. */
+  sex: string;
+  birthYear: number | null;
+  birthDate: string | null;
+  region: string;
+  /** В какие возрастные категории турнира попадает — решает сервер. */
+  categories: number[];
+};
+
+/** Возрастная категория соревнования ✳ (15.09.2026): диапазон дат рождения. */
+export type TournamentAgeCategory = {
+  id: number;
+  name: string;
+  bornFrom: string;
+  bornTo: string;
 };
 
 /** Страница протокола: уровень, места, участники с изменением рейтинга, матчи.
@@ -158,6 +175,7 @@ export type ProtocolDetail = {
   editable: boolean;
   /** До скольких побед играется матч: по нему проверяется счёт. */
   gamesToWin: number;
+  ageCategories: TournamentAgeCategory[];
   blocked: string | null;
   participants: ProtocolDetailParticipant[];
   matches: ProtocolMatch[];
@@ -178,7 +196,8 @@ export type NewAthlete = {
   name: string;
   region: string;
   sex: '' | 'm' | 'f';
-  birthYear: number | null;
+  /** ISO-дата рождения; год сервер выводит из неё. */
+  birthDate: string | null;
   origin: RatingOrigin;
   legacy: number | null;
   ittfPosition: number | null;
@@ -191,6 +210,8 @@ export type NewTournament = {
   level: CompetitionLevel;
   /** Матч до 2, 3 или 4 побед. */
   gamesToWin: number;
+  /** Возрастные ограничения: сколько угодно диапазонов дат рождения. */
+  ageCategories: { name: string; bornFrom: string; bornTo: string }[];
 };
 
 /** Матч протокола вручную: кто с кем и счёт по партиям. */

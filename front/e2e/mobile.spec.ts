@@ -19,7 +19,7 @@ test('на телефоне — вкладки разделов вместо б�
   await expect(page.getByTestId('phone-person')).toBeVisible();
   // Строка листа — фамилия и рейтинг видны целиком, не сжаты до нуля.
   const ахметов = page.locator('[data-testid="rating-row"][data-player="Ахметов Ерлан"]');
-  await expect(ахметов).toContainText('Ахметов Ерлан');
+  await expect(ахметов).toContainText('АХМЕТОВ Ерлан');
   await expect(ахметов.getByTestId('rating-value')).toHaveText('82,01');
   expect((await ахметов.boundingBox())!.width).toBeLessThanOrEqual(390);
   await expect(page.getByTestId('athlete-open')).toBeVisible();

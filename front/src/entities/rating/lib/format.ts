@@ -17,6 +17,17 @@ export const coeff = (x: number | null): string => (x === null ? '—' : x.toFix
     ✳ (10.09.2026), а подписи сервер отдаёт те же, что и админке. */
 export const plainLabel = (label: string): string => label.replace(/\s*\(п\.[^)]*\)/g, '').trim();
 
+/** «Ахметов Ерлан Серикович» → «АХМЕТОВ Ерлан Серикович» ✳ (15.09.2026,
+    замечания федерации): фамилия прописными. Фамилия — первое слово, так имя и
+    хранится. Строка не с буквы (служебная метка) остаётся как есть. */
+export const fio = (name: string): string => {
+  const s = name.trim();
+  const gap = s.search(/\s/);
+  const surname = gap < 0 ? s : s.slice(0, gap);
+  if (!/^\p{L}/u.test(surname)) return s;
+  return surname.toLocaleUpperCase('ru-RU') + (gap < 0 ? '' : s.slice(gap));
+};
+
 /** Дата ДД.ММ.ГГГГ из ISO. Пустая строка, если даты нет. */
 export const ruDate = (iso: string | null): string => {
   if (!iso) return '';

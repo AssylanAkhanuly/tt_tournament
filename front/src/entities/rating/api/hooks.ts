@@ -9,14 +9,16 @@
 import { useCallback, useEffect, useState } from 'react';
 
 import {
+  fetchCandidates,
   fetchProtocol,
   fetchProtocols,
   fetchRatingCard,
   fetchRatingList,
   previewProtocol,
+  type CandidateQuery,
   type RatingListQuery,
 } from './client';
-import type { ProtocolDetail, ProtocolInput, RatingCard, RatingList } from './types';
+import type { ProtocolDetail, ProtocolInput, RatingCard, RatingList, RatingProfile } from './types';
 
 export type AsyncState<T> = {
   data: T | null;
@@ -65,6 +67,13 @@ export function useRatingList(query: RatingListQuery): AsyncState<RatingList> {
 
 export function useRatingCard(userId: string): AsyncState<RatingCard> {
   return useAsync(() => fetchRatingCard(userId), [userId]);
+}
+
+/** Кандидаты в участники турнира из рейтинга; `rev` — счётчик добавлений:
+    добавленный уходит из выдачи. */
+export function useCandidates(id: string, query: CandidateQuery, rev = 0): AsyncState<RatingProfile[]> {
+  const key = JSON.stringify([query, rev]);
+  return useAsync(() => fetchCandidates(id, query), [id, key]);
 }
 
 /** Протоколы турниров (п. 10, 13) — только председателю ГСК. */

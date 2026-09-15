@@ -82,6 +82,7 @@ const toProfile = (raw: RawProfile): RatingProfile => ({
   statusLabel: String(raw.status_label ?? ''),
   sex: String(raw.sex ?? ''),
   birthYear: nOrNull(raw.birth_year),
+  birthDate: (raw.birth_date as string) ?? null,
   ageCategory: (raw.age_category as RatingProfile['ageCategory']) ?? null,
   region: String(raw.region ?? ''),
   updatedAt: String(raw.updated_at ?? ''),
@@ -245,6 +246,12 @@ const toProtocolDetail = (r: Record<string, unknown>): ProtocolDetail => ({
   manual: Boolean(r.manual),
   editable: Boolean(r.editable),
   gamesToWin: n(r.games_to_win) || 3,
+  ageCategories: ((r.age_categories as Record<string, unknown>[]) ?? []).map((c) => ({
+    id: n(c.id),
+    name: String(c.name ?? ''),
+    bornFrom: String(c.born_from ?? ''),
+    bornTo: String(c.born_to ?? ''),
+  })),
   blocked: (r.blocked as string) ?? null,
   participants: ((r.participants as Record<string, unknown>[]) ?? []).map((p) => ({
     userId: String(p.user_id ?? ''),
@@ -253,6 +260,11 @@ const toProtocolDetail = (r: Record<string, unknown>): ProtocolDetail => ({
     before: nOrNull(p.before),
     change: nOrNull(p.change),
     after: nOrNull(p.after),
+    sex: String(p.sex ?? ''),
+    birthYear: nOrNull(p.birth_year),
+    birthDate: (p.birth_date as string) ?? null,
+    region: String(p.region ?? ''),
+    categories: ((p.categories as unknown[]) ?? []).map(Number),
   })),
   matches: ((r.matches as Record<string, unknown>[]) ?? []).map((m) => ({
     id: String(m.id ?? ''),
@@ -298,7 +310,7 @@ const athleteBody = (a: NewAthlete) => ({
   name: a.name,
   region: a.region,
   sex: a.sex,
-  birth_year: a.birthYear,
+  birth_date: a.birthDate,
   origin: a.origin,
   legacy: a.legacy,
   ittf_position: a.ittfPosition,
@@ -321,7 +333,26 @@ const protocolCall = async (path: string, method: string, body?: unknown): Promi
 
 /** Завести турнир протоколом вручную. */
 export function createProtocol(t: NewTournament): Promise<ProtocolDetail> {
-  return protocolCall('', 'POST', { name: t.name, date: t.date, level: t.level, games_to_win: t.gamesToWin });
+  return protocolCall('', 'POST', {
+    name: t.name,
+    date: t.date,
+    level: t.level,
+    games_to_win: t.gamesToWin,
+    age_categories: t.ageCategories.map((c) => ({ name: c.name, born_from: c.bornFrom, born_to: c.bornTo })),
+  });
+}
+
+export type CandidateQuery = { q?: string; sex?: string; category?: number | null };
+
+/** Кандидаты в участники из рейтинга ✳ (15.09.2026): сервер уже отобрал их по
+    возрастным категориям турнира, полу и поиску и убрал добавленных. */
+export async function fetchCandidates(id: string, query: CandidateQuery = {}): Promise<RatingProfile[]> {
+  const params = new URLSearchParams();
+  if (query.q) params.set('q', query.q);
+  if (query.sex) params.set('sex', query.sex);
+  if (query.category) params.set('category', String(query.category));
+  const raw = await request<RawProfile[]>('/protocols/' + id + '/candidates/?' + params.toString());
+  return raw.map(toProfile);
 }
 
 /** Добавить участника: из рейтинга (`userId`) или нового спортсмена. */

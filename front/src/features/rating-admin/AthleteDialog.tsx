@@ -7,13 +7,16 @@
    решает тот, кто открыл (`onSubmit`); диалог только собирает поля.
 
    Старт по Положению: новый — 1,00 (п. 6.1), перенос прежнего рейтинга
-   (п. 6.3), позиция ITTF (п. 17.4). Число считает сервер. */
+   (п. 6.3), позиция ITTF (п. 17.4). Число считает сервер.
+
+   Дата рождения, а не год ✳ (15.09.2026): возрастные категории соревнования —
+   диапазоны дат (замечания федерации). Год сервер выводит из даты. */
 
 import { Button } from '@heroui/react';
 import { useState } from 'react';
 
 import type { NewAthlete, RatingOrigin } from '@/entities/rating';
-import { FormGrid, InlineDialog, QuietAction, TextInput } from '@/shared/kit/app';
+import { DateInput, FormGrid, InlineDialog, QuietAction, TextInput } from '@/shared/kit/app';
 import { FormError, parseNum, SelectField } from './fields';
 
 const ORIGINS: [RatingOrigin, string][] = [
@@ -29,18 +32,21 @@ const SEXES: [NewAthlete['sex'], string][] = [
 
 export function AthleteDialog({
   sub,
+  initialSex = '',
   onClose,
   onSubmit,
 }: {
   sub?: string;
+  /** Пол, уже выбранный в отборе страницы турнира. */
+  initialSex?: NewAthlete['sex'];
   onClose: () => void;
   /** Завести; ошибка сервера — брошенным исключением, диалог её покажет. */
   onSubmit: (athlete: NewAthlete) => Promise<void>;
 }) {
   const [name, setName] = useState('');
   const [region, setRegion] = useState('');
-  const [sex, setSex] = useState<NewAthlete['sex']>('');
-  const [year, setYear] = useState('');
+  const [sex, setSex] = useState<NewAthlete['sex']>(initialSex);
+  const [birthDate, setBirthDate] = useState('');
   const [origin, setOrigin] = useState<RatingOrigin>('new');
   const [start, setStart] = useState('');
   const [busy, setBusy] = useState(false);
@@ -57,7 +63,7 @@ export function AthleteDialog({
         name: name.trim(),
         region: region.trim(),
         sex,
-        birthYear: parseNum(year),
+        birthDate: birthDate || null,
         origin,
         legacy: origin === 'legacy' ? startNum : null,
         ittfPosition: origin === 'ittf' ? startNum : null,
@@ -89,9 +95,9 @@ export function AthleteDialog({
       }
     >
       <FormGrid>
-        <TextInput label="Фамилия и имя" value={name} onChange={setName} wide />
+        <TextInput label="Фамилия Имя Отчество" value={name} onChange={setName} wide />
         <TextInput label="Регион" value={region} onChange={setRegion} />
-        <TextInput label="Год рождения" value={year} onChange={setYear} />
+        <DateInput label="Дата рождения" value={birthDate} onChange={setBirthDate} />
         <SelectField label="Пол" value={sex} options={SEXES} onChange={setSex} />
         <SelectField label="Старт" value={origin} options={ORIGINS} onChange={setOrigin} />
         {origin !== 'new' && (

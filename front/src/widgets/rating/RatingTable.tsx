@@ -1,33 +1,25 @@
 'use client';
 
-/* Рейтинг-лист. Устроен как лист судей (Э0.12): строка ведёт в карточку, и
-   слагаемые видны прямо в списке — «чем один выше другого» читается без
-   перехода. Для игрока это матчи, победы и поражения рядом со значением.
+/* Рейтинг-лист. Колонки — по замечаниям федерации ✳ (15.09.2026,
+   docs/refs/zamechaniya-reyting-i-vvod-rezultatov-2026-09-15.md): № по порядку в
+   показанном списке, рейтинг, ФАМИЛИЯ Имя Отчество, год рождения, регион.
+   Матчи, победы и история — в карточке спортсмена, куда ведёт строка.
 
    Возрастная категория здесь — выборка из общего рейтинга, а не отдельный
    рейтинг (п. 7.2–7.3 Положения): фильтр сужает список, значения те же. */
 
 import Link from 'next/link';
-import { Avatar } from '@heroui/react';
 
-import { num2, type RatingList, type RatingProfile } from '@/entities/rating';
+import { fio, num2, type RatingList } from '@/entities/rating';
 import { EmptyBox, FilterBar, FilterSeg, Pager, Panel, SearchInput, Sheet, useNarrow } from '@/shared/kit/app';
 
-const GRID = '56px minmax(0,1.9fr) minmax(0,1fr) 58px 74px 58px 66px 88px';
-/** Телефон ✳ (11.09.2026): место, спортсмен с регионом, рейтинг — восемь
-    колонок на 360 px сжимали фамилию до нуля. Остальное — в карточке. */
+const GRID = '56px 96px minmax(0,2fr) 120px minmax(0,1fr)';
+/** Телефон ✳ (11.09.2026): №, спортсмен с годом рождения и регионом, рейтинг. */
 const GRID_NARROW = '32px minmax(0,1fr) 64px';
 
 export const SEX_ITEMS = ['Все', 'Мужчины', 'Женщины'];
 export const AGE_ITEMS = ['Все возрасты', 'U11', 'U13', 'U15', 'U17', 'U19', 'U21'];
 export const STATUS_ITEMS = ['Активные', 'Неактивные', 'Все'];
-
-const STATUS_TONE: Record<RatingProfile['status'], string> = {
-  active: 'text-neutral-600',
-  inactive: 'text-amber-700',
-  void: 'text-red-600',
-  no_matches: 'text-neutral-400',
-};
 
 export type RatingFilters = { sex: string; age: string; status: string; q: string };
 
@@ -72,16 +64,10 @@ export function RatingTable({
         />
       </FilterBar>
 
-      <Panel
-        title={data ? 'Спортсменов в листе: ' + data.count : 'Рейтинг'}
-        flush
-      >
+      <Panel title={data ? 'Спортсменов в листе: ' + data.count : 'Рейтинг'} flush>
         {error ? (
           <div className="p-4">
-            <EmptyBox
-              title="Рейтинг не загрузился"
-              text={error + '. Проверьте, что рейтинговый сервис запущен.'}
-            />
+            <EmptyBox title="Рейтинг не загрузился" text={error + '. Проверьте, что рейтинговый сервис запущен.'} />
           </div>
         ) : (
           <Sheet
@@ -89,42 +75,17 @@ export function RatingTable({
             grid={narrow ? GRID_NARROW : GRID}
             cols={
               narrow
-                ? ['#', 'Спортсмен', <span key="v" className="text-right block">Рейтинг</span>]
+                ? ['№', 'Спортсмен', <span key="v" className="block text-right">Рейтинг</span>]
                 : [
-                    'Место',
-                    'Спортсмен',
+                    '№',
+                    <span key="v" className="block text-right">Рейтинг</span>,
+                    'Фамилия Имя Отчество',
+                    'Год рождения',
                     'Регион',
-                    'Возраст',
-                    <span key="v" className="text-right block">Рейтинг</span>,
-                    <span key="m" className="text-right block">Матчи</span>,
-                    <span key="w" className="text-right block">В / П</span>,
-                    'Статус',
                   ]
             }
           >
-            {rows.map((r, i) =>
-              narrow ? (
-                <Link
-                  key={r.userId}
-                  href={'/rating/' + r.userId}
-                  data-row
-                  data-testid="rating-row"
-                  data-player={r.name}
-                  className="grid w-full items-center gap-3 px-4 py-2.5 text-left text-[13px] tabular-nums"
-                  style={{ gridTemplateColumns: GRID_NARROW }}
-                >
-                  <span className="text-neutral-500">{first + i + 1}</span>
-                  <span className="min-w-0 leading-tight">
-                    <span className="block truncate font-medium">{r.name}</span>
-                    <span className="block truncate text-[11.5px] text-neutral-500">
-                      {[r.region, r.ageCategory].filter(Boolean).join(' · ') || '—'}
-                    </span>
-                  </span>
-                  <span className="text-right font-semibold" data-testid="rating-value">
-                    {num2(r.value)}
-                  </span>
-                </Link>
-              ) : (
+            {rows.map((r, i) => (
               <Link
                 key={r.userId}
                 href={'/rating/' + r.userId}
@@ -132,30 +93,33 @@ export function RatingTable({
                 data-testid="rating-row"
                 data-player={r.name}
                 className="grid w-full items-center gap-3 px-4 py-2.5 text-left text-[13px] tabular-nums"
-                style={{ gridTemplateColumns: GRID }}
+                style={{ gridTemplateColumns: narrow ? GRID_NARROW : GRID }}
               >
-                <span className="text-neutral-600">{first + i + 1}</span>
-                <span className="flex min-w-0 items-center gap-2.5">
-                  <Avatar size="sm">
-                    <Avatar.Fallback>{r.name.slice(0, 1)}</Avatar.Fallback>
-                  </Avatar>
-                  <span className="min-w-0 leading-tight">
-                    <span className="block truncate font-medium">{r.name}</span>
-                  </span>
-                </span>
-                <span className="truncate text-neutral-600">{r.region || '—'}</span>
-                <span className="text-neutral-600">{r.ageCategory ?? '—'}</span>
-                <span className="text-right font-semibold" data-testid="rating-value">
-                  {num2(r.value)}
-                </span>
-                <span className="text-right text-neutral-600">{r.matchesPlayed}</span>
-                <span className="text-right text-neutral-600">
-                  {r.wins} / {r.losses}
-                </span>
-                <span className={'truncate text-[12.5px] ' + STATUS_TONE[r.status]}>{r.statusLabel}</span>
+                <span className="text-neutral-500">{first + i + 1}</span>
+                {narrow ? (
+                  <>
+                    <span className="min-w-0 leading-tight">
+                      <span className="block truncate font-medium">{fio(r.name)}</span>
+                      <span className="block truncate text-[11.5px] text-neutral-500">
+                        {[r.birthYear, r.region].filter(Boolean).join(' · ') || '—'}
+                      </span>
+                    </span>
+                    <span className="text-right font-semibold" data-testid="rating-value">
+                      {num2(r.value)}
+                    </span>
+                  </>
+                ) : (
+                  <>
+                    <span className="text-right font-semibold" data-testid="rating-value">
+                      {num2(r.value)}
+                    </span>
+                    <span className="min-w-0 truncate font-medium">{fio(r.name)}</span>
+                    <span className="text-neutral-600">{r.birthYear ?? '—'}</span>
+                    <span className="min-w-0 truncate text-neutral-600">{r.region || '—'}</span>
+                  </>
+                )}
               </Link>
-              ),
-            )}
+            ))}
           </Sheet>
         )}
 

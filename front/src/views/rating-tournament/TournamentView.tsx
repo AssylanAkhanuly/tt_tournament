@@ -57,6 +57,15 @@ const P_GRID_NARROW = 'minmax(0,1fr) 88px 60px';
 const M_GRID_NARROW = 'minmax(0,1fr) 36px minmax(0,1fr)';
 const EDIT_COL = ' 32px';
 
+/** Отбор «Пол» и «Возрастная категория» ✳ (15.09.2026, замечания федерации):
+    при выборе пола спортсмены другого пола не показываются вовсе. */
+const SEXES: ['' | 'm' | 'f', string][] = [
+  ['', 'Все'],
+  ['m', 'Мужчины / мальчики'],
+  ['f', 'Женщины / девочки'],
+];
+const ANY_AGE = 'Любые возраста';
+
 const MatchSide = ({ name, won, delta }: { name: string; won: boolean; delta?: number }) => (
   <span className="min-w-0 leading-tight">
     <span className={'block truncate ' + (won ? 'font-semibold' : '')}>{name}</span>
@@ -87,6 +96,8 @@ export function TournamentView({ id }: { id: string }) {
   const saved = useProtocol(id);
   const base = saved.data;
   const narrow = useNarrow();
+  const [sex, setSex] = useState<'' | 'm' | 'f'>('');
+  const [category, setCategory] = useState<number | null>(null);
 
   // Уровень поверх сохранённого; null — «как сохранено».
   const [level, setLevel] = useState<string | null>(null);
@@ -157,6 +168,18 @@ export function TournamentView({ id }: { id: string }) {
 
   const levelLabel = LEVELS.find(([code]) => code === lvl)?.[1] ?? base?.levelLabel ?? '';
   const byId = new Map((shown?.participants ?? []).map((p) => [p.userId, p]));
+
+  // Отбор страницы: участники по полу и категории (в какие категории кто
+  // попадает, сказал сервер), матчи — где оба игрока проходят отбор.
+  const ageCategories = base?.ageCategories ?? [];
+  const visible = (base?.participants ?? []).filter(
+    (p) => (!sex || p.sex === sex) && (category === null || p.categories.includes(category)),
+  );
+  const visibleIds = new Set(visible.map((p) => p.userId));
+  const visibleMatches = (shown?.matches ?? []).filter((m) => visibleIds.has(m.aId) && visibleIds.has(m.bId));
+  const sexLabel = SEXES.find(([v]) => v === sex)?.[1] ?? 'Все';
+  const categoryLabel = ageCategories.find((c) => c.id === category)?.name ?? ANY_AGE;
+  const filterSub = [sex ? sexLabel : '', category !== null ? categoryLabel : ''].filter(Boolean).join(' · ');
   const pGrid = (narrow ? P_GRID_NARROW : P_GRID) + (editable ? EDIT_COL : '');
   const mGrid = (narrow ? M_GRID_NARROW : M_GRID) + (editable ? EDIT_COL : '');
 
@@ -233,6 +256,22 @@ export function TournamentView({ id }: { id: string }) {
           )}
 
           <FilterBar>
+            <div data-testid="filter-sex">
+              <FilterSeg
+                items={SEXES.map(([, l]) => l)}
+                active={sexLabel}
+                label="Пол"
+                onPick={(l) => setSex(SEXES.find(([, x]) => x === l)?.[0] ?? '')}
+              />
+            </div>
+            <div data-testid="filter-age">
+              <FilterSeg
+                items={[ANY_AGE, ...ageCategories.map((c) => c.name)]}
+                active={categoryLabel}
+                label="Возрастная категория"
+                onPick={(l) => setCategory(ageCategories.find((c) => c.name === l)?.id ?? null)}
+              />
+            </div>
             <div data-testid="protocol-level">
               <FilterSeg
                 items={LEVELS.map(([, label]) => label)}
@@ -244,7 +283,7 @@ export function TournamentView({ id }: { id: string }) {
           </FilterBar>
 
           <Panel
-            title={'Участники · ' + base.participants.length}
+            title={'Участники · ' + visible.length}
             flush
             extra={
               editable ? (
@@ -277,7 +316,7 @@ export function TournamentView({ id }: { id: string }) {
               ) : undefined
             }
           >
-            {base.participants.length ? (
+            {visible.length ? (
               <Sheet
                 flush
                 grid={pGrid}
@@ -289,7 +328,7 @@ export function TournamentView({ id }: { id: string }) {
                   ...(editable ? [''] : []),
                 ]}
               >
-                {base.participants.map((p) => {
+                {visible.map((p) => {
                   const s = byId.get(p.userId);
                   return (
                     <div
@@ -326,17 +365,17 @@ export function TournamentView({ id }: { id: string }) {
           </Panel>
 
           <Panel
-            title={'Матчи · ' + (shown?.matches.length ?? 0)}
+            title={'Матчи · ' + visibleMatches.length}
             flush
             extra={
-              editable && base.participants.length >= 2 ? (
+              editable && visible.length >= 2 ? (
                 <Button size="sm" variant="ghost" data-testid="match-add" onPress={() => setAsk('match')}>
                   <Plus size={14} /> Матч
                 </Button>
               ) : undefined
             }
           >
-            {shown?.matches.length ? (
+            {visibleMatches.length ? (
               <Sheet
                 flush
                 grid={mGrid}
@@ -355,7 +394,7 @@ export function TournamentView({ id }: { id: string }) {
                       ]
                 }
               >
-                {shown.matches.map((m) => (
+                {visibleMatches.map((m) => (
                   <div
                     key={m.id}
                     data-row
@@ -398,7 +437,10 @@ export function TournamentView({ id }: { id: string }) {
 
           {ask === 'participant' && (
             <ParticipantDialog
-              exclude={base.participants.map((p) => p.userId)}
+              tournamentId={id}
+              sex={sex}
+              category={category}
+              sub={filterSub || undefined}
               onClose={() => setAsk(null)}
               onPick={async (userId) => {
                 await addProtocolParticipant(id, { userId });
@@ -409,6 +451,7 @@ export function TournamentView({ id }: { id: string }) {
           {ask === 'athlete' && (
             <AthleteDialog
               sub={base.name}
+              initialSex={sex}
               onClose={() => setAsk(null)}
               onSubmit={async (athlete) => {
                 await addProtocolParticipant(id, { athlete });
@@ -419,7 +462,7 @@ export function TournamentView({ id }: { id: string }) {
           )}
           {ask === 'match' && (
             <MatchDialog
-              players={base.participants.map((p) => [p.userId, p.name])}
+              players={visible.map((p) => [p.userId, p.name])}
               gamesToWin={base.gamesToWin}
               onClose={() => setAsk(null)}
               onSubmit={async (m) => {

@@ -1,40 +1,48 @@
 'use client';
 
-/* Добавить участника из рейтинга ✳ (11.09.2026) — поиск по живому листу.
+/* Добавить участника из рейтинга ✳ (11.09.2026).
 
-   Список виден сразу — лист по убыванию рейтинга, ввод его сужает ✳
-   (11.09.2026): пустой диалог до первых букв выглядел сломанным. Строка
-   добавляет сразу, и диалог остаётся открытым: состав турнира вносят подряд,
-   и открывать диалог на каждого — лишние клики. Уже добавленные в выдаче не
-   показываются. Спортсмена, которого в листе нет, заводят кнопкой «Новый
-   спортсмен» на странице турнира. */
+   Список виден сразу — лист по убыванию рейтинга, ввод его сужает: пустой
+   диалог до первых букв выглядел сломанным. Строка добавляет сразу, и диалог
+   остаётся открытым: состав турнира вносят подряд.
+
+   Кого показывать, решает сервер ✳ (15.09.2026, замечания федерации):
+   спортсменов, подходящих по возрастным категориям турнира (выбранной в отборе
+   страницы или любой из них) и по полу, без уже добавленных. Правило возраста
+   одно — на сервере (`back/rating/ages.py`); экран его не повторяет. */
 
 import { Button } from '@heroui/react';
 import { useMemo, useState } from 'react';
 
-import { num2, useRatingList } from '@/entities/rating';
+import { fio, num2, useCandidates } from '@/entities/rating';
 import { InlineDialog, SearchInput } from '@/shared/kit/app';
 import { FormError } from './fields';
 
 export function ParticipantDialog({
-  exclude,
+  tournamentId,
+  sex,
+  category,
+  sub,
   onClose,
   onPick,
 }: {
-  /** Кто уже в турнире. */
-  exclude: string[];
+  tournamentId: string;
+  /** Отбор страницы турнира: пол ('' — любой) и возрастная категория (null — любая). */
+  sex: string;
+  category: number | null;
+  sub?: string;
   onClose: () => void;
   /** Добавить; ошибка сервера — брошенным исключением. */
   onPick: (userId: string) => Promise<void>;
 }) {
   const [q, setQ] = useState('');
+  const [rev, setRev] = useState(0);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const query = useMemo(() => ({ q: q.trim() || undefined, all: true, pageSize: 30 }), [q]);
-  const found = useRatingList(query);
-  const taken = new Set(exclude);
-  const candidates = (found.data?.results ?? []).filter((p) => !taken.has(p.userId));
+  const query = useMemo(() => ({ q: q.trim() || undefined, sex: sex || undefined, category }), [q, sex, category]);
+  const found = useCandidates(tournamentId, query, rev);
+  const candidates = found.data ?? [];
 
   async function pick(userId: string) {
     setBusy(true);
@@ -42,6 +50,7 @@ export function ParticipantDialog({
     try {
       await onPick(userId);
       setQ('');
+      setRev((r) => r + 1);
     } catch (e) {
       setError((e as Error).message);
     } finally {
@@ -52,6 +61,7 @@ export function ParticipantDialog({
   return (
     <InlineDialog
       title="Участник из рейтинга"
+      sub={sub}
       wide
       onClose={onClose}
       foot={
@@ -78,9 +88,9 @@ export function ParticipantDialog({
               onClick={() => void pick(p.userId)}
               className="flex items-center justify-between gap-3 px-3 py-2 text-left text-[13px] hover:bg-neutral-50"
             >
-              <span className="min-w-0 truncate font-medium">{p.name}</span>
+              <span className="min-w-0 truncate font-medium">{fio(p.name)}</span>
               <span className="shrink-0 tabular-nums text-neutral-500">
-                {[p.region, num2(p.value)].filter(Boolean).join(' · ')}
+                {[p.birthYear, p.region, num2(p.value)].filter(Boolean).join(' · ')}
               </span>
             </button>
           ))}

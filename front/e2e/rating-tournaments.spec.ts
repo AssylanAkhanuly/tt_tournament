@@ -24,7 +24,7 @@ async function войти(page: Page, next: string) {
 }
 
 async function новыйСпортсмен(page: Page, имя: string, прежний: string) {
-  await page.getByLabel('Фамилия и имя').fill(имя);
+  await page.getByLabel('Фамилия Имя Отчество').fill(имя);
   await page.getByLabel('Старт', { exact: true }).selectOption('legacy');
   await page.getByLabel('Прежний рейтинг').fill(прежний);
   await page.getByTestId('athlete-submit').click();
@@ -125,4 +125,53 @@ test('участник из рейтинга: список виден сразу
   await page.getByPlaceholder('Фамилия или регион').last().fill('Ким Виктор');
   await expect(page.getByTestId('participant-none')).toBeVisible();
   await expect(page.locator('[data-testid="participant-candidate"][data-player="Ким Виктор"]')).toHaveCount(0);
+});
+
+/* Возрастные ограничения и отбор ✳ (15.09.2026, замечания федерации). Из засева:
+   Оспанов Тимур (2012, м) и Нурланов Данияр (2010, м) — 2009 г.р. и моложе;
+   Ахметов Ерлан (1998) и Оралбек Дана (2008) — нет. */
+async function выбрать(page: Page, фильтр: string, значение: string) {
+  await expect(async () => {
+    await page.getByTestId(фильтр).getByRole('button').first().click();
+    await expect(page.getByRole('button', { name: значение, exact: true })).toBeVisible({ timeout: 1000 });
+  }).toPass();
+  await page.getByRole('button', { name: значение, exact: true }).click();
+}
+
+test('возрастная категория турнира отбирает рейтинг, пол скрывает другой пол', async ({ page }) => {
+  await войти(page, '/rating/tournaments');
+  await page.getByTestId('tournament-create-open').click();
+  await page.getByLabel('Название турнира').fill('[e2e] Первенство 2009 г.р. ' + метка());
+  await page.getByTestId('age-category-add').click();
+  const категория = page.getByTestId('age-category');
+  await категория.getByLabel('Название категории').fill('2009 г.р. и моложе');
+  await категория.getByLabel('Дата рождения от').fill('2009-01-01');
+  await page.getByTestId('tournament-submit').click();
+  await page.waitForURL(/\/rating\/tournaments\/[^/]+$/);
+
+  // Из рейтинга — только родившиеся в диапазоне.
+  await page.getByTestId('participant-add').click();
+  const поиск = page.getByPlaceholder('Фамилия или регион').last();
+  for (const старше of ['Ахметов', 'Оралбек']) {
+    await поиск.fill(старше);
+    await expect(page.getByTestId('participant-none')).toBeVisible();
+  }
+  for (const имя of ['Оспанов Тимур', 'Нурланов Данияр']) {
+    await поиск.fill(имя.split(' ')[0]);
+    await page.locator('[data-testid="participant-candidate"][data-player="' + имя + '"]').click();
+    await expect(page.locator('[data-testid="protocol-participant"][data-player="' + имя + '"]')).toBeVisible();
+  }
+  await page.getByRole('button', { name: 'Готово' }).click();
+
+  // Отбор «Пол»: у девочек мальчиков нет вовсе, «Все» возвращает их.
+  const участники = page.getByTestId('protocol-participant');
+  await expect(участники).toHaveCount(2);
+  await выбрать(page, 'filter-sex', 'Женщины / девочки');
+  await expect(участники).toHaveCount(0);
+  await выбрать(page, 'filter-sex', 'Мужчины / мальчики');
+  await expect(участники).toHaveCount(2);
+
+  // Категория из турнира — в выпадающем списке; оба в неё попадают.
+  await выбрать(page, 'filter-age', '2009 г.р. и моложе');
+  await expect(участники).toHaveCount(2);
 });
