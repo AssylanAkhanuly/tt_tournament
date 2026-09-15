@@ -187,3 +187,25 @@ def test_кандидатов_видит_только_председатель(p
     t = завести(api)
     r = APIClient().get("/api/rating/protocols/%s/candidates/" % t["id"])
     assert r.status_code in (401, 403)
+
+
+def test_категории_турнира_различимы_по_названию(params, api):
+    """В отборе страницы категория выбирается по подписи: две одинаковые не
+    различить. Одинаковые подписи — и у безымянных с одним диапазоном."""
+    for дубли in (
+        [
+            {"name": "Ветераны", "born_from": "1977-01-01", "born_to": "1986-12-31"},
+            {"name": " Ветераны ", "born_from": "1967-01-01", "born_to": "1976-12-31"},
+        ],
+        [
+            {"name": "", "born_from": "1977-01-01", "born_to": "1986-12-31"},
+            {"name": "", "born_from": "1977-01-01", "born_to": "1986-12-31"},
+        ],
+    ):
+        r = api.post(
+            "/api/rating/protocols/",
+            {"name": "Кубок", "date": "2026-09-14", "level": "republic", "age_categories": дубли},
+            format="json",
+        )
+        assert r.status_code == 400, дубли
+        assert "назван" in r.data["detail"]

@@ -73,6 +73,14 @@ def _parse_age_categories(raw) -> list:
         if born_from > born_to:
             raise ManualError("Категория %d: дата «от» позже даты «до»" % i)
         out.append((str(item.get("name") or "").strip()[:80], born_from, born_to))
+    # В отборе страницы категория выбирается по подписи — две одинаковые не
+    # различить. Подпись безымянной категории — её диапазон дат.
+    seen = {}
+    for i, (name, a, b) in enumerate(out, 1):
+        key = (name or ages.label(a, b)).casefold()
+        if key in seen:
+            raise ManualError("Категории %d и %d: одинаковое название — в отборе их не различить" % (seen[key], i))
+        seen[key] = i
     return out
 
 
