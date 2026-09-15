@@ -21,9 +21,9 @@ from django.db import transaction
 from django.db.models import Max, Q
 from django.utils import timezone
 
-from tournaments.models import Match, Tournament, TournamentParticipant
+from tournaments.models import Match, Tournament, TournamentAgeCategory, TournamentParticipant
 
-from . import engine, services
+from . import ages, engine, services
 from .models import RatingEntry
 
 
@@ -49,12 +49,40 @@ def _check_editable(tournament) -> None:
 
 #: До скольких побед играется матч: до двух, трёх или четырёх выигранных партий.
 GAMES_TO_WIN = (2, 3, 4)
+#: Возрастных категорий у соревнования — не больше: наш предел против опечатки.
+MAX_AGE_CATEGORIES = 12
 
 
-def create_tournament(*, name: str, when: Optional[date], level: str, actor, games_to_win=3) -> Tournament:
-    """Завести турнир протоколом: название, дата, уровень (C, п. 13) и до
-    скольких побед играется матч. Дата — не позже сегодняшней: вносится
-    сыгранный турнир."""
+def _parse_age_categories(raw) -> list:
+    """Возрастные ограничения ✳ (15.09.2026): список диапазонов дат рождения
+    [(название, от, до)]. Пустой список — без ограничений."""
+    if raw in (None, ""):
+        return []
+    if not isinstance(raw, (list, tuple)):
+        raise ManualError("Возрастные ограничения — список диапазонов дат рождения")
+    if len(raw) > MAX_AGE_CATEGORIES:
+        raise ManualError("Возрастных категорий не больше %d" % MAX_AGE_CATEGORIES)
+    out = []
+    for i, item in enumerate(raw, 1):
+        if not isinstance(item, dict):
+            raise ManualError("Категория %d: нужны даты рождения «от» и «до»" % i)
+        born_from = ages.parse_date(item.get("born_from"))
+        born_to = ages.parse_date(item.get("born_to"))
+        if born_from is None or born_to is None:
+            raise ManualError("Категория %d: даты рождения «от» и «до» обязательны" % i)
+        if born_from > born_to:
+            raise ManualError("Категория %d: дата «от» позже даты «до»" % i)
+        out.append((str(item.get("name") or "").strip()[:80], born_from, born_to))
+    return out
+
+
+@transaction.atomic
+def create_tournament(
+    *, name: str, when: Optional[date], level: str, actor, games_to_win=3, age_categories=None
+) -> Tournament:
+    """Завести турнир протоколом: название, дата, уровень (C, п. 13), до
+    скольких побед играется матч и возрастные категории. Дата — не позже
+    сегодняшней: вносится сыгранный турнир."""
     name = (name or "").strip()
     if not name:
         raise ManualError("Название турнира обязательно")
@@ -70,7 +98,8 @@ def create_tournament(*, name: str, when: Optional[date], level: str, actor, gam
     when = when or today
     if when > today:
         raise ManualError("Дата турнира — не позже сегодняшней: вносится сыгранный турнир")
-    return Tournament.objects.create(
+    categories = _parse_age_categories(age_categories)
+    tournament = Tournament.objects.create(
         name=name,
         created_by=actor,
         starts_at=timezone.make_aware(datetime.combine(when, time(12, 0))),
@@ -80,6 +109,11 @@ def create_tournament(*, name: str, when: Optional[date], level: str, actor, gam
         status=Tournament.STATUS_OPEN,
         games_to_win=games_to_win,
     )
+    TournamentAgeCategory.objects.bulk_create(
+        TournamentAgeCategory(tournament=tournament, name=label, born_from=a, born_to=b, order=i)
+        for i, (label, a, b) in enumerate(categories)
+    )
+    return tournament
 
 
 @transaction.atomic

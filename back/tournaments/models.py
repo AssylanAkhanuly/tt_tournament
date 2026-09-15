@@ -90,6 +90,37 @@ class Tournament(models.Model):
         return self.name
 
 
+class TournamentAgeCategory(models.Model):
+    """Возрастная категория соревнования ✳ (15.09.2026, замечания федерации).
+
+    Диапазон дат рождения, границы включительно: «2009 г.р. и моложе» =
+    01.01.2009 — сегодня, «Ветераны 40–49» = 01.01.1977 — 31.12.1986. Категорий у
+    соревнования может быть несколько. Сверка спортсмена с категорией —
+    `rating/ages.py`.
+    """
+
+    tournament = models.ForeignKey(
+        Tournament, on_delete=models.CASCADE, related_name="age_categories", verbose_name="Турнир",
+    )
+    name = models.CharField(max_length=80, blank=True, verbose_name="Название")
+    born_from = models.DateField(verbose_name="Дата рождения от")
+    born_to = models.DateField(verbose_name="Дата рождения до")
+    order = models.PositiveSmallIntegerField(default=0, verbose_name="Порядок")
+
+    class Meta:
+        verbose_name = "Возрастная категория"
+        verbose_name_plural = "Возрастные категории"
+        ordering = ["order", "id"]
+
+    @property
+    def label(self) -> str:
+        """Название, а без него — диапазон дат."""
+        return self.name or "%s — %s" % (self.born_from.strftime("%d.%m.%Y"), self.born_to.strftime("%d.%m.%Y"))
+
+    def __str__(self):
+        return self.label
+
+
 class TournamentParticipant(models.Model):
     tournament = models.ForeignKey(
         Tournament,

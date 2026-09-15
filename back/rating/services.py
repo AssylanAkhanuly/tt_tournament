@@ -402,6 +402,7 @@ def create_athlete(
     region: str = "",
     sex: str = "",
     birth_year=None,
+    birth_date=None,
     origin: str = engine.ORIGIN_NEW,
     legacy=None,
     ittf_position=None,
@@ -422,6 +423,19 @@ def create_athlete(
         raise AthleteError("Фамилия и имя обязательны")
     if sex not in ("", "m", "f"):
         raise AthleteError("Пол — «m» или «f»")
+    # Дата рождения ✳ (15.09.2026) — год выводится из неё (rating/ages.py).
+    if birth_date not in (None, ""):
+        from .ages import parse_date
+
+        birth_date = parse_date(birth_date)
+        if birth_date is None:
+            raise AthleteError("Дата рождения — настоящая дата")
+        if not (1920 <= birth_date.year and birth_date <= timezone.localdate()):
+            raise AthleteError("Дата рождения вне разумных границ: не раньше 1920 года и не позже сегодняшней")
+        birth_year = birth_date.year
+    else:
+        birth_date = None
+
     if birth_year not in (None, ""):
         try:
             birth_year = int(birth_year)
@@ -432,7 +446,7 @@ def create_athlete(
     else:
         birth_year = None
 
-    extra = {"region": (region or "").strip(), "sex": sex, "birth_year": birth_year}
+    extra = {"region": (region or "").strip(), "sex": sex, "birth_year": birth_year, "birth_date": birth_date}
     if origin == engine.ORIGIN_LEGACY:
         try:
             value = float(str(legacy).replace(",", "."))
@@ -661,9 +675,37 @@ def protocol_detail(tournament) -> dict:
             return None
         return str(p.rating_before + p.rating_change)
 
+    from . import ages
+
     applied = RatingEntry.objects.filter(tournament=tournament, is_reverted=False).exists()
     when = getattr(tournament, "starts_at", None) or getattr(tournament, "created_at", None)
     ordered = sorted(parts, key=lambda p: (p.place is None, p.place or 0, p.user.name))
+
+    # Пол, год рождения и возрастные категории участника ✳ (15.09.2026): по ним
+    # страница турнира отбирает спортсменов. Какая категория кому подходит —
+    # решает сервер (rating/ages.py), а не экран.
+    user_ids = [p.user_id for p in parts]
+    profiles = {pr.user_id: pr for pr in RatingProfile.objects.filter(user_id__in=user_ids)}
+    manager = getattr(tournament, "age_categories", None)
+    categories = list(manager.all()) if manager is not None else []
+    member = ages.membership(categories, user_ids)
+
+    def person(p):
+        prof = profiles.get(p.user_id)
+        return {
+            "user_id": str(p.user_id),
+            "name": p.user.name,
+            "place": p.place,
+            "before": _num(p.rating_before),
+            "change": _num(p.rating_change),
+            "after": after(p),
+            "sex": prof.sex if prof else "",
+            "birth_year": prof.birth_year if prof else None,
+            "birth_date": prof.birth_date.isoformat() if prof and prof.birth_date else None,
+            "region": prof.region if prof else "",
+            "categories": member.get(p.user_id, []),
+        }
+
     return {
         "id": tournament.pk,
         "name": tournament.name,
@@ -679,17 +721,11 @@ def protocol_detail(tournament) -> dict:
         "games_to_win": getattr(tournament, "games_to_win", 3),
         "status": tournament.status,
         "blocked": protocol_block_reason(tournament),
-        "participants": [
-            {
-                "user_id": str(p.user_id),
-                "name": p.user.name,
-                "place": p.place,
-                "before": _num(p.rating_before),
-                "change": _num(p.rating_change),
-                "after": after(p),
-            }
-            for p in ordered
+        "age_categories": [
+            {"id": c.pk, "name": c.label, "born_from": c.born_from.isoformat(), "born_to": c.born_to.isoformat()}
+            for c in categories
         ],
+        "participants": [person(p) for p in ordered],
         "matches": matches,
     }
 

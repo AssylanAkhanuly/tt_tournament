@@ -7,6 +7,7 @@ from .views import (
     RatingListView,
     RatingMergeView,
     RatingNoShowView,
+    RatingProtocolCandidatesView,
     RatingProtocolMatchesView,
     RatingProtocolMatchView,
     RatingProtocolParticipantsView,
@@ -27,6 +28,7 @@ urlpatterns = [
     path("protocols/<str:pk>/", RatingProtocolView.as_view(), name="rating-protocol"),
     path("protocols/<str:pk>/preview/", RatingProtocolPreviewView.as_view(), name="rating-protocol-preview"),
     path("protocols/<str:pk>/rework/", RatingProtocolReworkView.as_view(), name="rating-protocol-rework"),
+    path("protocols/<str:pk>/candidates/", RatingProtocolCandidatesView.as_view(), name="rating-protocol-candidates"),
     path("protocols/<str:pk>/participants/", RatingProtocolParticipantsView.as_view(), name="rating-protocol-participants"),
     path(
         "protocols/<str:pk>/participants/<uuid:user_id>/",

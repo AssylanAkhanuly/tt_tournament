@@ -333,6 +333,7 @@ class RatingProtocolsView(APIView):
                 when=parse_date(raw) if raw else None,
                 level=request.data.get("level") or "republic",
                 games_to_win=request.data.get("games_to_win", 3),
+                age_categories=request.data.get("age_categories"),
                 actor=request.user,
             )
         except manual.ManualError as e:
@@ -426,6 +427,7 @@ class RatingProtocolParticipantsView(APIView):
                     region=new.get("region") or "",
                     sex=new.get("sex") or "",
                     birth_year=new.get("birth_year"),
+                    birth_date=new.get("birth_date"),
                     origin=origin,
                     legacy=new.get("legacy"),
                     ittf_position=new.get("ittf_position"),
@@ -438,6 +440,48 @@ class RatingProtocolParticipantsView(APIView):
         except (manual.ManualError, services.AthleteError) as e:
             return _bad(e)
         return Response(services.protocol_detail(t))
+
+
+class RatingProtocolCandidatesView(APIView):
+    """Кандидаты в участники из рейтинга ✳ (15.09.2026, замечания федерации).
+
+    Спортсмены листа, которых ещё нет в турнире, по убыванию рейтинга, уже
+    отобранные сервером: по возрастным категориям турнира (`category` — одна
+    из них; без неё — любая из категорий, а у турнира без категорий — все), по
+    полу (`sex`) и поиску (`q`). Правило возраста — `rating/ages.py`.
+    """
+
+    permission_classes = [IsGskChairman]
+
+    def get(self, request, pk):
+        from . import ages
+
+        t = _tournament_or_none(pk)
+        if not t:
+            return _missing()
+        qs = RatingProfile.objects.select_related("user").exclude(
+            user_id__in=t.participants.values_list("user_id", flat=True)
+        )
+        categories = list(t.age_categories.all())
+        chosen = request.query_params.get("category")
+        if chosen:
+            categories = [c for c in categories if str(c.pk) == str(chosen)]
+            if not categories:
+                return _bad("У турнира нет такой возрастной категории")
+        if categories:
+            qs = qs.filter(ages.any_category_q(categories))
+        sex = request.query_params.get("sex")
+        if sex:
+            qs = qs.filter(sex=sex)
+        search = request.query_params.get("q")
+        if search:
+            qs = qs.filter(Q(user__name__icontains=search) | Q(region__icontains=search))
+        try:
+            size = min(int(request.query_params.get("page_size", 30)), PAGE_SIZE_MAX)
+        except (TypeError, ValueError):
+            size = 30
+        rows = qs.order_by("-value", "user__name")[:size]
+        return Response(RatingProfileSerializer(rows, many=True).data)
 
 
 class RatingProtocolParticipantView(APIView):
@@ -540,6 +584,7 @@ class RatingAthletesView(APIView):
                 region=request.data.get("region") or "",
                 sex=request.data.get("sex") or "",
                 birth_year=request.data.get("birth_year"),
+                birth_date=request.data.get("birth_date"),
                 origin=request.data.get("origin") or engine.ORIGIN_NEW,
                 legacy=request.data.get("legacy"),
                 ittf_position=request.data.get("ittf_position"),

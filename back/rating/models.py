@@ -194,6 +194,10 @@ class RatingProfile(models.Model):
     # Нужны выборкам рейтинг-листа: пол, возрастная категория, регион (п. 7.2, 19).
     sex = models.CharField(max_length=1, choices=SEX_CHOICES, blank=True, verbose_name="Пол")
     birth_year = models.PositiveIntegerField(null=True, blank=True, verbose_name="Год рождения")
+    # Дата рождения ✳ (15.09.2026): возрастная категория соревнования — диапазон
+    # дат, а не лет (замечания федерации). Год остаётся — он выводится из даты и
+    # один известен у перенесённых из прежнего рейтинга (rating/ages.py).
+    birth_date = models.DateField(null=True, blank=True, verbose_name="Дата рождения")
     region = models.CharField(max_length=120, blank=True, verbose_name="Регион")
 
     updated_at = models.DateTimeField(auto_now=True)

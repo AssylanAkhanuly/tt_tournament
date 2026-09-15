@@ -24,7 +24,7 @@ class RatingProfileSerializer(serializers.ModelSerializer):
         fields = [
             "user_id", "name", "value", "origin", "origin_label", "start_value",
             "ittf_position", "matches_played", "wins", "losses", "no_shows",
-            "last_match_at", "status", "status_label", "sex", "birth_year",
+            "last_match_at", "status", "status_label", "sex", "birth_year", "birth_date",
             "age_category", "region", "updated_at",
         ]
         read_only_fields = fields
