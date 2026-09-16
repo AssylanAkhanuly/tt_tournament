@@ -40,7 +40,7 @@ import Link from 'next/link';
 import { useMemo } from 'react';
 
 import { fio, num2, type RatingList, type RatingProfile } from '@/entities/rating';
-import { EmptyBox, FilterBar, FilterSeg, Pager, Panel, SearchInput, Sheet, useNarrow } from '@/shared/kit/app';
+import { EmptyBox, FilterBar, FilterMenu, Pager, Panel, SearchInput, Sheet, useNarrow } from '@/shared/kit/app';
 
 const GRID = '56px 96px minmax(0,2fr) 120px minmax(0,1fr)';
 /** Телефон ✳ (11.09.2026): №, спортсмен с годом рождения и регионом, рейтинг. */
@@ -214,13 +214,12 @@ export function RatingTable({
           placeholder="Фамилия или регион"
           className="w-64"
         />
-        <FilterSeg items={SEX_ITEMS} active={facets.sex} onPick={(v) => onFacets({ sex: v })} label="Пол" />
-        <FilterSeg items={AGE_ITEMS} active={facets.age} onPick={(v) => onFacets({ age: v })} label="Возраст" />
-        <FilterSeg
-          items={STATUS_ITEMS}
-          active={facets.status}
-          onPick={(v) => onFacets({ status: v })}
-          label="Статус"
+        <FilterMenu
+          groups={[
+            { label: 'Пол', items: SEX_ITEMS, active: facets.sex, onPick: (v) => onFacets({ sex: v }) },
+            { label: 'Возраст', items: AGE_ITEMS, active: facets.age, onPick: (v) => onFacets({ age: v }) },
+            { label: 'Статус', items: STATUS_ITEMS, active: facets.status, onPick: (v) => onFacets({ status: v }) },
+          ]}
         />
       </FilterBar>
 

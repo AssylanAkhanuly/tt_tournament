@@ -10,20 +10,22 @@ import { expect, test, type Page } from '@playwright/test';
 const строка = (page: Page, имя: string) =>
   page.locator('[data-testid="rating-row"][data-player="' + имя + '"]');
 
-/** Выбрать значение в фильтре.
+/** Выбрать значение в отборе ✳ (16.09.2026): отборы собраны под кнопкой
+    «Фильтры», значения — в подменю группы.
 
-    Открытие списка держится на React, а под дев-сервером с восемью
-    работниками страница успевает отрисоваться раньше, чем к ней подключится
-    обработчик: первый клик тогда уходит в никуда. Поэтому клик по кнопке
-    фильтра повторяется, пока список не откроется. */
-async function фильтр(page: Page, подпись: RegExp, значение: string) {
+    Открытие держится на React, а под дев-сервером страница успевает
+    отрисоваться раньше, чем к ней подключится обработчик: первый клик тогда
+    уходит в никуда. Поэтому нажатие повторяется, пока меню не откроется. */
+async function фильтр(page: Page, группа: string, значение: string) {
+  const пункт = page.getByRole('menuitemradio', { name: значение, exact: true });
   await expect(async () => {
-    await page.getByRole('button', { name: подпись }).click();
-    await expect(page.getByRole('button', { name: значение, exact: true })).toBeVisible({
-      timeout: 1000,
-    });
+    if (!(await пункт.isVisible())) {
+      await page.getByTestId('filters-open').click();
+      await page.getByRole('menuitem', { name: new RegExp('^' + группа) }).click();
+    }
+    await expect(пункт).toBeVisible({ timeout: 1000 });
   }).toPass();
-  await page.getByRole('button', { name: значение, exact: true }).click();
+  await пункт.click();
 }
 
 /** Показательные спортсмены (`seed_rating_demo`) — по убыванию рейтинга. */
@@ -71,7 +73,7 @@ test('лист открыт без входа и отсортирован по �
 
 test('фильтр по полу оставляет только женщин', async ({ page }) => {
   await page.goto('/rating');
-  await фильтр(page, /Пол/, 'Женщины');
+  await фильтр(page, 'Пол', 'Женщины');
 
   // Из показательных остаются две женщины и ни одного мужчины: не сработай
   // фильтр — в порядке окажутся все восемь.
@@ -82,7 +84,7 @@ test('возрастная выборка сужает список, не мен
   await page.goto('/rating');
   const общий = await строка(page, 'Оспанов Тимур').getByTestId('rating-value').textContent();
 
-  await фильтр(page, /Возраст/, 'U15');
+  await фильтр(page, 'Возраст', 'U15');
 
   await expect(строка(page, 'Оспанов Тимур')).toBeVisible();
   await expect(строка(page, 'Ахметов Ерлан')).toHaveCount(0); // 1998 года — не U15

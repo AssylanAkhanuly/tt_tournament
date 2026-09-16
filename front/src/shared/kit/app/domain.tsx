@@ -13,8 +13,8 @@
    переключатели — `data-seg` на обёртке. */
 
 import { useEffect, useRef, useState, type ReactNode } from 'react';
-import { ArrowRight, Check, ChevronDown, ChevronRight, Search as SearchIcon, X } from 'lucide-react';
-import { Avatar, Button, Chip, Input, InputGroup, Separator } from '@heroui/react';
+import { ArrowRight, Check, ChevronDown, ChevronRight, Search as SearchIcon, SlidersHorizontal, X } from 'lucide-react';
+import { Avatar, Button, Chip, Dropdown, Input, InputGroup, Separator } from '@heroui/react';
 
 /* ── Словари состояний ───────────────────────────────────────────────
    Перенесены из старого слоя как есть: словарь — проектное решение (порядок
@@ -588,6 +588,96 @@ export function FilterSeg({
           ))}
         </div>
       )}
+    </div>
+  );
+}
+
+/** Отбор одной кнопкой с подменю ✳ (16.09.2026, решение владельца продукта).
+
+    Ряд выпадающих списков занимал всю полосу над таблицей, а открыт из них
+    всегда один; на узком экране ряд переносился на вторую строку и отодвигал
+    саму таблицу. «Фильтры» собирают их в одно меню: пункт на группу, значения
+    — в подменю, на кнопке видно, сколько отборов включено, и сбросить их можно
+    разом.
+
+    Собрано на `Dropdown` из HeroUI (react-aria-components внутри): клавиатура,
+    закрытие по клику мимо и по Esc, фокус и роли меню — из библиотеки, а не
+    свои. У `FilterSeg` рядом всё это написано руками; переписывать его не
+    стали, но новые отборы делаются так.
+
+    Значения живут снаружи, как у `FilterSeg`: у каждой группы список строк и
+    выбранная. Первая строка группы — сброс («Все …»). */
+export function FilterMenu({
+  groups,
+  label = 'Фильтры',
+}: {
+  groups: { label: string; items: string[]; active: string; onPick: (v: string) => void }[];
+  label?: string;
+}) {
+  const on = groups.filter((g) => g.active !== g.items[0]);
+  return (
+    <div data-filter>
+      <Dropdown>
+        <Dropdown.Trigger
+          data-testid="filters-open"
+          className={
+            'inline-flex h-9 items-center gap-1.5 rounded-lg border px-3 text-[13px] font-medium ' +
+            (on.length
+              ? 'border-blue-200 bg-blue-50 text-blue-700'
+              : 'border-neutral-200 bg-white text-neutral-700 hover:bg-neutral-50')
+          }
+        >
+          <SlidersHorizontal size={14} className={on.length ? 'text-blue-500' : 'text-neutral-400'} />
+          {label}
+          {on.length > 0 && (
+            <span className="rounded-full bg-blue-100 px-1.5 text-[11px] font-semibold text-blue-700">
+              {on.length}
+            </span>
+          )}
+          <ChevronDown size={14} className={on.length ? 'text-blue-500' : 'text-neutral-400'} />
+        </Dropdown.Trigger>
+
+        <Dropdown.Popover placement="bottom start">
+          <Dropdown.Menu>
+            {groups.map((g) => (
+              <Dropdown.SubmenuTrigger key={g.label}>
+                <Dropdown.Item textValue={g.label}>
+                  <span className="flex-1">{g.label}</span>
+                  {/* Выбранное значение видно, не открывая подменю. */}
+                  <span className="text-[12px] text-neutral-400">{g.active}</span>
+                  <Dropdown.SubmenuIndicator />
+                </Dropdown.Item>
+                <Dropdown.Popover>
+                  <Dropdown.Menu
+                    selectionMode="single"
+                    selectedKeys={[g.active]}
+                    onSelectionChange={(keys) => {
+                      const picked = [...(keys as Set<string | number>)][0];
+                      if (picked !== undefined) g.onPick(String(picked));
+                    }}
+                  >
+                    {g.items.map((t) => (
+                      <Dropdown.Item key={t} id={t} textValue={t}>
+                        {t}
+                        <Dropdown.ItemIndicator />
+                      </Dropdown.Item>
+                    ))}
+                  </Dropdown.Menu>
+                </Dropdown.Popover>
+              </Dropdown.SubmenuTrigger>
+            ))}
+            {on.length > 0 && (
+              <Dropdown.Item
+                textValue="Сбросить"
+                data-testid="filters-reset"
+                onAction={() => groups.forEach((g) => g.onPick(g.items[0]))}
+              >
+                Сбросить
+              </Dropdown.Item>
+            )}
+          </Dropdown.Menu>
+        </Dropdown.Popover>
+      </Dropdown>
     </div>
   );
 }
