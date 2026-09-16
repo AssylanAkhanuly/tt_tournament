@@ -18,6 +18,7 @@
    Палитра берётся из токенов, сырых цветов здесь нет. */
 
 import { useCallback, type ReactNode } from 'react';
+import type { ChartTypeRegistry, TooltipItem } from 'chart.js';
 import { ChartBox, soft, token } from '../chart';
 
 /** Доли кольца по умолчанию — шкала акцента, а не светофор ✳. Слагаемые
@@ -167,3 +168,118 @@ export function Bars({
 export const ChartRow = ({ children }: { children: ReactNode }) => (
   <div className="grid gap-4 md:grid-cols-2">{children}</div>
 );
+
+/** Точка линии: значение на дату плюс то, что за ней стоит. */
+export type Point = {
+  /** Подпись на оси: дата. */
+  t: string;
+  v: number;
+  /** Заголовок подсказки: турнир или основание записи. */
+  note?: string;
+  /** Строки подсказки: значение с изменением, соперник, основание. */
+  lines?: string[];
+  /** Чем кончилось: в плюс или в минус — этим красится точка. */
+  tone?: 'up' | 'down';
+};
+
+/** Линия: как менялось значение во времени ✳ (16.09.2026).
+
+    Вид взят у кривой рейтинга из макетов профиля спортсмена (`design/src/design/
+    role14h2h.tsx`, `role14mobile5.tsx`): сглаженная линия с мягкой заливкой,
+    точки покрашены по знаку изменения — зелёная в плюс, красная в минус, — так
+    видно не только уровень, но и чем кончился каждый турнир.
+
+    Таблица отвечает «что было в каждой записи», линия — «куда движется»: по ней
+    видно провал после неявки и рост за сезон, чего в столбце чисел не
+    разглядеть. Что стоит за точкой (турнир, неявка, исправление), говорит
+    подсказка: подписей столько же, сколько точек, и на оси они не помещаются. */
+export function Line({
+  points,
+  height = 240,
+  label,
+}: {
+  points: Point[];
+  height?: number;
+  label: string;
+}) {
+  const make = useCallback(
+    (el: HTMLCanvasElement) => {
+      const values = points.map((p) => p.v);
+      /* Шкала по данным, а не от нуля, и с запасом: у рейтинга изменения в
+         сотых, и на плотной шкале ступенька в 0,01 выглядела бы обрывом. */
+      const span = Math.max(...values) - Math.min(...values);
+      const pad = Math.max(0.3, span * 0.2);
+      return {
+        type: 'line' as const,
+        data: {
+          labels: points.map((p) => p.t),
+          datasets: [
+            {
+              data: values,
+              borderColor: token('--c-accent', el, '--primary'),
+              backgroundColor: soft('--c-accent', 14, el, '--primary'),
+              fill: true,
+              tension: 0.3,
+              borderWidth: 2,
+              /* Точки у длинной истории не рисуются: полсотни кружков сливаются
+                 в пунктир. Подсказка работает всё равно — она по индексу. */
+              pointRadius: points.length > 40 ? 0 : 4,
+              pointHoverRadius: 6,
+              pointBorderWidth: 2,
+              pointBorderColor: token('--c-panel', el, '--card'),
+              pointBackgroundColor: points.map((p) =>
+                p.tone === 'up'
+                  ? token('--c-success', el, '--success')
+                  : p.tone === 'down'
+                    ? token('--c-danger', el, '--danger')
+                    : token('--c-accent', el, '--primary'),
+              ),
+            },
+          ],
+        },
+        options: {
+          maintainAspectRatio: false,
+          /* Подсказка ловится по вертикали: попасть мышью в кружок трудно, а
+             ответ нужен про дату под курсором. */
+          interaction: { mode: 'index' as const, intersect: false },
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              callbacks: {
+                title: (items: TooltipItem<keyof ChartTypeRegistry>[]) =>
+                  points[items[0]?.dataIndex ?? 0]?.note ?? '',
+                label: (item: TooltipItem<keyof ChartTypeRegistry>) => points[item.dataIndex]?.lines ?? [],
+              },
+            },
+          },
+          scales: {
+            x: {
+              grid: { display: false },
+              border: { display: false },
+              ticks: {
+                color: token('--c-dim', el, '--muted'),
+                font: { size: 10 },
+                maxRotation: 0,
+                autoSkipPadding: 16,
+              },
+            },
+            y: {
+              min: Math.min(...values) - pad,
+              max: Math.max(...values) + pad,
+              border: { display: false },
+              grid: { color: token('--c-line', el, '--line') },
+              ticks: {
+                color: token('--c-dim', el, '--muted'),
+                font: { size: 10 },
+                // Разделитель — запятая: рейтинг всюду пишется 50,30 (п. 6.4).
+                callback: (v: string | number) => Number(v).toFixed(2).replace('.', ','),
+              },
+            },
+          },
+        },
+      };
+    },
+    [points],
+  );
+  return <ChartBox make={make} height={height} label={label} />;
+}

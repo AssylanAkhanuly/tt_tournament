@@ -11,6 +11,7 @@
    продукта): подписи видов записей приходят с сервера вместе с «(п. …)» — их
    отрезает `plainLabel`, а происхождение старта не показывается вовсе. */
 
+import { useState } from 'react';
 import { Avatar } from '@heroui/react';
 
 import {
@@ -22,7 +23,7 @@ import {
   type RatingCard,
   type RatingEntry,
 } from '@/entities/rating';
-import { EmptyBox, KV, Panel, Pill, Sheet, StatTiles } from '@/shared/kit/app';
+import { EmptyBox, KV, Line, Panel, Pill, Segmented, Sheet, StatTiles } from '@/shared/kit/app';
 
 const GRID = '82px minmax(0,1.5fr) minmax(0,1.3fr) 52px 62px 74px 66px 48px 44px 44px 44px';
 
@@ -40,6 +41,28 @@ const KIND_TONE: Record<RatingEntry['kind'], string> = {
 export function PlayerCard({ card }: { card: RatingCard }) {
   const { profile: p, history, place, of } = card;
   const доля = p.matchesPlayed ? Math.round((p.wins / p.matchesPlayed) * 100) : null;
+
+  // Таблица и график — два взгляда на одну историю ✳ (16.09.2026, решение
+  // владельца продукта): в таблице видно каждую запись со слагаемыми, на
+  // графике — куда движется значение. Отменённые строки в линию не идут:
+  // значение карточки — сумма неотменённых, и ступенька от отката была бы
+  // изменением, которого не было.
+  const [view, setView] = useState('Таблица');
+  const points = [...history]
+    .filter((h) => !h.isReverted)
+    .reverse()
+    .map((h) => ({
+      t: ruDate(h.occurredAt),
+      v: h.after,
+      note: h.tournamentName ?? plainLabel(h.kindLabel),
+      tone: h.delta > 0 ? ('up' as const) : h.delta < 0 ? ('down' as const) : undefined,
+      lines: [
+        ruDate(h.occurredAt),
+        'рейтинг ' + num2(h.after) + (h.kind === 'start' ? '' : ' · ' + signed2(h.delta)),
+        ...(h.opponentName ? [h.opponentName + (h.score ? ' · ' + h.score : '')] : []),
+        ...(h.reason && h.kind !== 'start' ? [h.reason] : []),
+      ],
+    }));
 
   return (
     <>
@@ -84,8 +107,20 @@ export function PlayerCard({ card }: { card: RatingCard }) {
         />
       </Panel>
 
-      <Panel title={'История изменения рейтинга · ' + history.length + ' записей'} flush>
-        {history.length ? (
+      <Panel
+        title={'История изменения рейтинга · ' + history.length + ' записей'}
+        flush
+        extra={
+          history.length ? (
+            <Segmented items={['Таблица', 'График']} value={view} onPick={setView} ariaLabel="Вид истории" />
+          ) : undefined
+        }
+      >
+        {history.length && view === 'График' ? (
+          <div className="p-4">
+            <Line points={points} label="История рейтинга" />
+          </div>
+        ) : history.length ? (
           <div className="overflow-x-auto">
             <div className="min-w-[980px]">
               <Sheet

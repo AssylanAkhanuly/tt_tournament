@@ -160,3 +160,19 @@ test('у спортсмена без рейтинга карточки нет, �
   await page.goto('/rating/00000000-0000-0000-0000-000000000000');
   await expect(page.getByText('Карточки нет')).toBeVisible();
 });
+
+test('история рейтинга переключается на график ✳ (16.09.2026)', async ({ page }) => {
+  await page.goto('/rating');
+  await строка(page, 'Ахметов Ерлан').click();
+  await page.waitForURL(/\/rating\/[0-9a-f-]{36}$/);
+  await expect(page.getByTestId('card-history-row').first()).toBeVisible();
+
+  await page.getByRole('tab', { name: 'График' }).click();
+  await expect(page.getByRole('img', { name: 'История рейтинга' })).toBeVisible();
+  // Вкладка именно переключает: таблицы под графиком нет.
+  await expect(page.getByTestId('card-history-row')).toHaveCount(0);
+
+  await page.getByRole('tab', { name: 'Таблица' }).click();
+  await expect(page.getByTestId('card-history-row').first()).toBeVisible();
+  await expect(page.getByRole('img', { name: 'История рейтинга' })).toHaveCount(0);
+});
