@@ -706,6 +706,9 @@
 .max-w-\[46\%\] {
   max-width: 46%;
 }
+.max-w-\[108px\] {
+  max-width: 108px;
+}
 .max-w-\[164px\] {
   max-width: 164px;
 }
@@ -738,6 +741,9 @@
 }
 .min-w-\[188px\] {
   min-width: 188px;
+}
+.min-w-\[228px\] {
+  min-width: 228px;
 }
 .min-w-\[980px\] {
   min-width: 980px;
@@ -880,6 +886,9 @@
 }
 .justify-start {
   justify-content: flex-start;
+}
+.gap-0 {
+  gap: 0px;
 }
 .gap-0\.5 {
   gap: calc(var(--spacing) * 0.5);
@@ -1445,6 +1454,9 @@
 }
 .object-cover {
   object-fit: cover;
+}
+.p-0 {
+  padding: 0px;
 }
 .p-0\.5 {
   padding: calc(var(--spacing) * 0.5);
@@ -2179,6 +2191,22 @@
 }
 :is(.\*\*\:data-seg\:flex-nowrap *)[data-seg] {
   flex-wrap: nowrap;
+}
+.data-\[focused\]\:bg-neutral-50[data-focused] {
+  background-color: var(--color-neutral-50);
+}
+.data-\[hovered\]\:bg-neutral-50[data-hovered] {
+  background-color: var(--color-neutral-50);
+}
+.data-\[selected\]\:bg-blue-50[data-selected] {
+  background-color: var(--color-blue-50);
+}
+.data-\[selected\]\:font-medium[data-selected] {
+  --tw-font-weight: var(--font-weight-medium);
+  font-weight: var(--font-weight-medium);
+}
+.data-\[selected\]\:text-blue-700[data-selected] {
+  color: var(--color-blue-700);
 }
 @media (width >= 48rem) {
   .md\:grid-cols-2 {

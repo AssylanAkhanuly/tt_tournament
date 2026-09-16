@@ -607,6 +607,19 @@ export function FilterSeg({
 
     Значения живут снаружи, как у `FilterSeg`: у каждой группы список строк и
     выбранная. Первая строка группы — сброс («Все …»). */
+/* Вид меню — свой, а не заводской HeroUI ✳ (16.09.2026): у библиотеки радиус
+   32 px, крупные строки и своя тень, и рядом с плоскими списками отбора и
+   таблицами это выглядело чужим. Углы, рамка, размер строки и подсветка — те
+   же, что у `FilterSeg` рядом. Классы перебивают заводские без `!important`:
+   утилиты Tailwind подключены вне слоёв, а стили HeroUI — в `layer(components)`
+   (`kit/tailwind.src.css`), и неслоёное правило в каскаде сильнее. */
+const MENU_BOX = 'rounded-lg border border-neutral-200 bg-white p-0 shadow-lg';
+const MENU_LIST = 'min-w-[228px] gap-0 p-1';
+const MENU_ITEM =
+  'min-h-0 gap-2 rounded-md px-2.5 py-1.5 text-[13px] text-neutral-700 ' +
+  'data-[hovered]:bg-neutral-50 data-[focused]:bg-neutral-50 ' +
+  'data-[selected]:bg-blue-50 data-[selected]:font-medium data-[selected]:text-blue-700';
+
 export function FilterMenu({
   groups,
   label = 'Фильтры',
@@ -637,18 +650,21 @@ export function FilterMenu({
           <ChevronDown size={14} className={on.length ? 'text-blue-500' : 'text-neutral-400'} />
         </Dropdown.Trigger>
 
-        <Dropdown.Popover placement="bottom start">
-          <Dropdown.Menu>
+        <Dropdown.Popover placement="bottom start" className={MENU_BOX}>
+          <Dropdown.Menu className={MENU_LIST}>
             {groups.map((g) => (
               <Dropdown.SubmenuTrigger key={g.label}>
-                <Dropdown.Item textValue={g.label}>
+                <Dropdown.Item className={MENU_ITEM} textValue={g.label}>
                   <span className="flex-1">{g.label}</span>
                   {/* Выбранное значение видно, не открывая подменю. */}
-                  <span className="text-[12px] text-neutral-400">{g.active}</span>
-                  <Dropdown.SubmenuIndicator />
+                  <span className="max-w-[108px] truncate text-[12.5px] text-neutral-400">{g.active}</span>
+                  {/* Стрелка своя: у `SubmenuIndicator` из HeroUI свой отступ и
+                      размер, и в плоской строке отбора она терялась. */}
+                  <ChevronRight size={14} className="shrink-0 text-neutral-400" />
                 </Dropdown.Item>
-                <Dropdown.Popover>
+                <Dropdown.Popover className={MENU_BOX}>
                   <Dropdown.Menu
+                    className={MENU_LIST}
                     selectionMode="single"
                     selectedKeys={[g.active]}
                     onSelectionChange={(keys) => {
@@ -657,9 +673,11 @@ export function FilterMenu({
                     }}
                   >
                     {g.items.map((t) => (
-                      <Dropdown.Item key={t} id={t} textValue={t}>
-                        {t}
-                        <Dropdown.ItemIndicator />
+                      <Dropdown.Item key={t} id={t} textValue={t} className={MENU_ITEM}>
+                        <span className="flex-1 truncate">{t}</span>
+                        {/* Галочка своя и справа — как в остальных списках отбора;
+                            у `ItemIndicator` из HeroUI место слева и свой отступ. */}
+                        {t === g.active && <Check size={14} className="shrink-0 text-blue-600" />}
                       </Dropdown.Item>
                     ))}
                   </Dropdown.Menu>
@@ -667,13 +685,17 @@ export function FilterMenu({
               </Dropdown.SubmenuTrigger>
             ))}
             {on.length > 0 && (
-              <Dropdown.Item
-                textValue="Сбросить"
-                data-testid="filters-reset"
-                onAction={() => groups.forEach((g) => g.onPick(g.items[0]))}
-              >
-                Сбросить
-              </Dropdown.Item>
+              <>
+                <Separator className="my-1" />
+                <Dropdown.Item
+                  textValue="Сбросить"
+                  data-testid="filters-reset"
+                  className={MENU_ITEM + ' text-neutral-500'}
+                  onAction={() => groups.forEach((g) => g.onPick(g.items[0]))}
+                >
+                  Сбросить
+                </Dropdown.Item>
+              </>
             )}
           </Dropdown.Menu>
         </Dropdown.Popover>
