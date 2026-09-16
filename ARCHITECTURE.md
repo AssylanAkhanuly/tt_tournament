@@ -460,7 +460,7 @@ Android и iOS — не альтернатива друг другу и не «�
 | База | **PostgreSQL**, доступ через psycopg2, адрес из `DATABASE_URL` | `tt_back`: psycopg2-binary, dj-database-url |
 | Файлы | **Cloudflare R2** — документы к заявкам, фото. S3-совместимый API, поэтому boto3 работает без правок | `tt_back`: boto3, `AWS_STORAGE_BUCKET_NAME`, `AWS_S3_ENDPOINT_URL` |
 | Статика | whitenoise | `tt_back`: requirements.txt |
-| Веб | Next.js 16, React 19, TypeScript; стили — **Tailwind + HeroUI** (кит и новые экраны), CSS Modules на экранах до кита, нативный CSS там, где Tailwind не тянет; структура — **Feature-Sliced Design** (`src/{shared,entities,features,widgets,views}`, `app/` — только роутинг) | `front/`: package.json |
+| Веб | Next.js 16, React 19, TypeScript; стили — **Tailwind + HeroUI** (кит и новые экраны), CSS Modules на экранах до кита, нативный CSS там, где Tailwind не тянет; таблицы — **TanStack Table** в ручном режиме ✳ (16.09.2026); структура — **Feature-Sliced Design** (`src/{shared,entities,features,widgets,views}`, `app/` — только роутинг) | `front/`: package.json |
 | Приложение игрока | Expo (React Native), TypeScript; стили — штатный `StyleSheet` из React Native (Unistyles не подключён); Android и iOS, те же сервисы и данные (§1) | `tt_tournament/mobile`; [TZ.md](TZ.md) §10 |
 | Push | **Expo Push Service** поверх FCM и APNs; на устройстве `expo-notifications` | решение этого документа, см. «Уведомления» |
 | CMS · контент | **Wagtail** (в том же Django) — новости, анонсы, статические страницы; медиа в R2 | `tt_back`; см. «Новости и анонсы» |
@@ -545,6 +545,17 @@ Router. Правила и приёмы — [front/CLAUDE.md](front/CLAUDE.md), �
 `src/shared → entities → features → widgets → views`, импорт только «вниз»;
 Next-роутинг (`app/`) остаётся тонким и лишь зовёт вью. Так фичи изолированы, а
 рефактор одной не задевает соседние.
+
+**Таблицы — TanStack Table, в ручном режиме** ✳ (16.09.2026, решение владельца
+продукта: «таблицы — библиотекой, а не своей разметкой»). Библиотека держит
+колонки и состояние (сортировка, фильтр колонки, страница), а **сортировку и
+страницы считает сервер** (`manualSorting` / `manualFiltering` /
+`manualPagination`): реестры постраничные, и порядок, посчитанный на клиенте,
+переставлял бы строки внутри показанной страницы, а не по всему списку.
+Разметку библиотека не забирает — рисует китовый `Sheet`. В кит она не
+переехала: кит импортируют макеты (`design/`), этой зависимости у них нет,
+поэтому таблицы живут слоем `widgets`. Правила и разбор —
+[front/CLAUDE.md](front/CLAUDE.md), раздел «Стек».
 
 **Приложение — Expo (React Native).** Главное отличие: **серверной половины
 здесь нет вообще**. Ни RSC, ни Server Actions, ни ISR — все экраны рендерятся на
