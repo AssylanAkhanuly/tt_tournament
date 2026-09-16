@@ -36,7 +36,7 @@ test('председатель заводит спортсмена с перен
 
   await page.getByTestId('athlete-open').click();
   await expect(page.getByTestId('athlete-submit')).toBeDisabled();
-  await page.getByLabel('Регион', { exact: true }).fill('Павлодар');
+  await page.getByLabel('Регион', { exact: true }).selectOption('Павлодарская область');
   await новыйСпортсмен(page, имя, '33,5');
 
   // Сразу открывается его карточка: старт — ровно перенесённое значение.

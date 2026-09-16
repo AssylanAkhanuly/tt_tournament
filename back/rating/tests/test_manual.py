@@ -109,7 +109,7 @@ def test_новый_спортсмен_с_прежним_рейтингом_и_�
     t = завести(api)
     r = api.post(
         "/api/rating/protocols/%s/participants/" % t["id"],
-        {"new": {"name": "Новиков Пётр", "region": "Павлодар", "sex": "m", "birth_year": 2005, "legacy": "30"}},
+        {"new": {"name": "Новиков Пётр", "region": "Павлодарская область", "sex": "m", "birth_year": 2005, "legacy": "30"}},
         format="json",
     )
     assert r.status_code == 200, r.data
@@ -121,7 +121,7 @@ def test_новый_спортсмен_с_прежним_рейтингом_и_�
     assert r.status_code == 200, r.data
 
     новиков = RatingProfile.objects.get(user__name="Новиков Пётр")
-    assert (новиков.value, новиков.origin, новиков.region) == (Decimal("30.00"), engine.ORIGIN_LEGACY, "Павлодар")
+    assert (новиков.value, новиков.origin, новиков.region) == (Decimal("30.00"), engine.ORIGIN_LEGACY, "Павлодарская область")
     первая = RatingProfile.objects.get(user__name="Первая Анна")
     assert (первая.value, первая.origin) == (Decimal("1.00"), engine.ORIGIN_NEW)  # п. 6.1
     assert {p["name"] for p in r.data["participants"]} == {"Новиков Пётр", "Первая Анна"}
@@ -317,6 +317,18 @@ def test_счёт_по_числу_партий_до_победы(params, api):
     assert "до 3" in матч(api, t["id"], а, б, 2, 1).data["detail"]
     assert матч(api, t["id"], а, б, 1, 3).status_code == 200
 
+    # Матч до 5 побед ✳ (16.09.2026, замечания федерации).
+    до_пяти = api.post(
+        "/api/rating/protocols/",
+        {"name": "До пяти", "date": "2026-09-10", "level": "amateur", "games_to_win": 5},
+        format="json",
+    )
+    assert до_пяти.status_code == 201 and до_пяти.data["games_to_win"] == 5
+    добавить(api, до_пяти.data["id"], а)
+    добавить(api, до_пяти.data["id"], б)
+    assert матч(api, до_пяти.data["id"], а, б, 5, 3).status_code == 200
+    assert матч(api, до_пяти.data["id"], а, б, 4, 3).status_code == 400
+
     r = api.post(
         "/api/rating/protocols/",
         {"name": "До двух", "date": "2026-09-10", "level": "amateur", "games_to_win": 2},
@@ -330,7 +342,7 @@ def test_счёт_по_числу_партий_до_победы(params, api):
 
 
 def test_число_партий_до_победы_из_допустимых(params, api):
-    for n in (1, 5, "x"):
+    for n in (1, 6, "x"):
         r = api.post(
             "/api/rating/protocols/",
             {"name": "Странный", "date": "2026-09-10", "level": "republic", "games_to_win": n},

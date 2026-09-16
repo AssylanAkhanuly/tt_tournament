@@ -18,9 +18,11 @@ import { createProtocol, type CompetitionLevel, type NewTournament, type Protoco
 import { DateInput, FormGrid, InlineDialog, QuietAction, TextInput } from '@/shared/kit/app';
 import { FormError, LEVELS, SelectField } from './fields';
 
-const GAMES: ['2' | '3' | '4', string][] = [
+/** До скольких побед играется матч. Пять — ✳ (16.09.2026, замечания федерации). */
+const GAMES: ['2' | '3' | '4' | '5', string][] = [
   ['3', 'До 3 побед'],
   ['4', 'До 4 побед'],
+  ['5', 'До 5 побед'],
   ['2', 'До 2 побед'],
 ];
 
@@ -41,7 +43,7 @@ export function TournamentDialog({
   const [name, setName] = useState('');
   const [date, setDate] = useState(today);
   const [level, setLevel] = useState<CompetitionLevel>('republic');
-  const [games, setGames] = useState<'2' | '3' | '4'>('3');
+  const [games, setGames] = useState<'2' | '3' | '4' | '5'>('3');
   const [categories, setCategories] = useState<Category[]>([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);

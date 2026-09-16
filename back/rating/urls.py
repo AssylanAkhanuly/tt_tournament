@@ -16,11 +16,13 @@ from .views import (
     RatingProtocolReworkView,
     RatingProtocolsView,
     RatingProtocolView,
+    RatingRegionsView,
 )
 
 urlpatterns = [
     path("", RatingListView.as_view(), name="rating-list"),
     path("athletes/", RatingAthletesView.as_view(), name="rating-athletes"),
+    path("regions/", RatingRegionsView.as_view(), name="rating-regions"),
     path("no-show/", RatingNoShowView.as_view(), name="rating-no-show"),
     path("correction/", RatingCorrectionView.as_view(), name="rating-correction"),
     path("merge/", RatingMergeView.as_view(), name="rating-merge"),

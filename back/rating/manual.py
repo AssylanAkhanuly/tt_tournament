@@ -47,8 +47,9 @@ def _check_editable(tournament) -> None:
         raise ManualError("Турнир уже учтён в рейтинге — чтобы править, верните его на доработку")
 
 
-#: До скольких побед играется матч: до двух, трёх или четырёх выигранных партий.
-GAMES_TO_WIN = (2, 3, 4)
+#: До скольких побед играется матч: до двух, трёх, четырёх или пяти выигранных
+#: партий ✳ (до пяти — 16.09.2026, замечания федерации).
+GAMES_TO_WIN = (2, 3, 4, 5)
 #: Возрастных категорий у соревнования — не больше: наш предел против опечатки.
 MAX_AGE_CATEGORIES = 12
 
@@ -101,7 +102,7 @@ def create_tournament(
     except (TypeError, ValueError):
         games_to_win = 0
     if games_to_win not in GAMES_TO_WIN:
-        raise ManualError("Матч играется до 2, 3 или 4 побед")
+        raise ManualError("Матч играется до 2, 3, 4 или 5 побед")
     today = timezone.localdate()
     when = when or today
     if when > today:

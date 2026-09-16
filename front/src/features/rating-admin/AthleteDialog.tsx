@@ -10,12 +10,16 @@
    (п. 6.3), позиция ITTF (п. 17.4). Число считает сервер.
 
    Дата рождения, а не год ✳ (15.09.2026): возрастные категории соревнования —
-   диапазоны дат (замечания федерации). Год сервер выводит из даты. */
+   диапазоны дат (замечания федерации). Год сервер выводит из даты.
+
+   Регион — выбор из закреплённого списка ✳ (16.09.2026, замечания федерации):
+   три города и семнадцать областей. Список приходит с сервера, где стоит и
+   проверка, — иначе написания разойдутся, и выборка по региону развалится. */
 
 import { Button } from '@heroui/react';
 import { useState } from 'react';
 
-import type { NewAthlete, RatingOrigin } from '@/entities/rating';
+import { useRegions, type NewAthlete, type RatingOrigin } from '@/entities/rating';
 import { DateInput, FormGrid, InlineDialog, QuietAction, TextInput } from '@/shared/kit/app';
 import { FormError, parseNum, SelectField } from './fields';
 
@@ -43,6 +47,7 @@ export function AthleteDialog({
   /** Завести; ошибка сервера — брошенным исключением, диалог её покажет. */
   onSubmit: (athlete: NewAthlete) => Promise<void>;
 }) {
+  const regions = useRegions();
   const [name, setName] = useState('');
   const [region, setRegion] = useState('');
   const [sex, setSex] = useState<NewAthlete['sex']>(initialSex);
@@ -96,7 +101,12 @@ export function AthleteDialog({
     >
       <FormGrid>
         <TextInput label="Фамилия Имя Отчество" value={name} onChange={setName} wide />
-        <TextInput label="Регион" value={region} onChange={setRegion} />
+        <SelectField
+          label="Регион"
+          value={region}
+          options={[['', '—'], ...(regions.data ?? []).map((r) => [r, r] as [string, string])]}
+          onChange={setRegion}
+        />
         <DateInput label="Дата рождения" value={birthDate} onChange={setBirthDate} />
         <SelectField label="Пол" value={sex} options={SEXES} onChange={setSex} />
         <SelectField label="Старт" value={origin} options={ORIGINS} onChange={setOrigin} />

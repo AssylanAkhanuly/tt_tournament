@@ -446,7 +446,14 @@ def create_athlete(
     else:
         birth_year = None
 
-    extra = {"region": (region or "").strip(), "sex": sex, "birth_year": birth_year, "birth_date": birth_date}
+    from .regions import clean as clean_region
+
+    # Регион — из закреплённого списка ✳ (16.09.2026, замечания федерации).
+    region = clean_region(region)
+    if region is None:
+        raise AthleteError("Регион — из списка: три города республиканского значения и семнадцать областей")
+
+    extra = {"region": region, "sex": sex, "birth_year": birth_year, "birth_date": birth_date}
     if origin == engine.ORIGIN_LEGACY:
         try:
             value = float(str(legacy).replace(",", "."))

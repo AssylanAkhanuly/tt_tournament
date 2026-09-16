@@ -442,6 +442,22 @@ class RatingProtocolParticipantsView(APIView):
         return Response(services.protocol_detail(t))
 
 
+class RatingRegionsView(APIView):
+    """Регионы для выбора ✳ (16.09.2026): три города и семнадцать областей.
+
+    Список живёт на сервере (`rating/regions.py`) и отдаётся экрану — иначе он
+    разошёлся бы с проверкой, которая стоит при заведении спортсмена. Открыт
+    без входа: рейтинг-лист отбирает по региону и гостю.
+    """
+
+    permission_classes = [AllowAny]
+
+    def get(self, request):
+        from .regions import REGIONS
+
+        return Response(REGIONS)
+
+
 class RatingProtocolCandidatesView(APIView):
     """Кандидаты в участники из рейтинга ✳ (15.09.2026, замечания федерации).
 

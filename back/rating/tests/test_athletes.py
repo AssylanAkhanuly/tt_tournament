@@ -35,11 +35,11 @@ def завести(api, **body):
 
 
 def test_перенос_прежнего_рейтинга(params, api):
-    r = завести(api, name="Серикбаев Нурлан", region="Караганда", sex="m", birth_year=2004,
+    r = завести(api, name="Серикбаев Нурлан", region="Карагандинская область", sex="m", birth_year=2004,
                 origin="legacy", legacy="42.5")
     assert r.status_code == 201, r.data
     assert (r.data["name"], r.data["value"], r.data["origin"], r.data["region"]) == (
-        "Серикбаев Нурлан", "42.50", engine.ORIGIN_LEGACY, "Караганда",
+        "Серикбаев Нурлан", "42.50", engine.ORIGIN_LEGACY, "Карагандинская область",
     )
     # Сразу виден в листе.
     лист = api.get("/api/rating/", {"q": "Серикбаев"}).data["results"]

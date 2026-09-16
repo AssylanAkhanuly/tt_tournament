@@ -462,8 +462,9 @@ export function TournamentView({ id }: { id: string }) {
           )}
           {ask === 'match' && (
             <MatchDialog
-              players={visible.map((p) => [p.userId, p.name])}
+              players={visible.map((p) => ({ id: p.userId, name: p.name, sex: p.sex }))}
               gamesToWin={base.gamesToWin}
+              initialSex={sex}
               onClose={() => setAsk(null)}
               onSubmit={async (m) => {
                 await addProtocolMatch(id, m);

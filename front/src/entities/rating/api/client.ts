@@ -342,6 +342,12 @@ export function createProtocol(t: NewTournament): Promise<ProtocolDetail> {
   });
 }
 
+/** Регионы для выбора ✳ (16.09.2026, замечания федерации): три города и
+    семнадцать областей. Список отдаёт сервер — у него же стоит проверка. */
+export async function fetchRegions(): Promise<string[]> {
+  return request<string[]>('/regions/');
+}
+
 export type CandidateQuery = { q?: string; sex?: string; category?: number | null };
 
 /** Кандидаты в участники из рейтинга ✳ (15.09.2026): сервер уже отобрал их по

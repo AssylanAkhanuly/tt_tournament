@@ -10,6 +10,7 @@ import { useCallback, useEffect, useState } from 'react';
 
 import {
   fetchCandidates,
+  fetchRegions,
   fetchProtocol,
   fetchProtocols,
   fetchRatingCard,
@@ -67,6 +68,11 @@ export function useRatingList(query: RatingListQuery): AsyncState<RatingList> {
 
 export function useRatingCard(userId: string): AsyncState<RatingCard> {
   return useAsync(() => fetchRatingCard(userId), [userId]);
+}
+
+/** Регионы для выбора: список живёт на сервере, экран его не повторяет. */
+export function useRegions(): AsyncState<string[]> {
+  return useAsync(() => fetchRegions(), []);
 }
 
 /** Кандидаты в участники турнира из рейтинга; `rev` — счётчик добавлений:
