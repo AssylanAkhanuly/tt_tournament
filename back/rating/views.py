@@ -41,7 +41,7 @@ class RatingListView(APIView):
     def get(self, request):
         qs = RatingProfile.objects.select_related("user")
 
-        qs = _apply_filters(qs, request.query_params).order_by("-value", "user__name")
+        qs = _apply_filters(qs, request.query_params).order_by(*_order(request.query_params))
         total = qs.count()
 
         try:
@@ -60,6 +60,34 @@ class RatingListView(APIView):
                 "updated_at": qs.order_by("-updated_at").values_list("updated_at", flat=True).first(),
             }
         )
+
+
+#: По каким колонкам таблица даёт сортировать ✳ (16.09.2026). Ключ — id колонки
+#: на экране (его шлёт таблица), значение — поля модели. Вторым полем всегда имя:
+#: у равных значений порядок иначе менялся бы от запроса к запросу.
+SORT_FIELDS = {
+    "value": ["value", "user__name"],
+    "name": ["user__name"],
+    "birth_year": ["birth_year", "user__name"],
+    "region": ["region", "user__name"],
+}
+#: Лист — таблица рейтинга: без спроса он идёт по убыванию значения (п. 19).
+DEFAULT_ORDER = ["-value", "user__name"]
+
+
+def _order(params) -> list:
+    """Порядок строк из `sort=колонка` / `sort=-колонка`.
+
+    Сортирует сервер, а не экран: лист постраничный, и сортировка страницы
+    переставляла бы сто строк вместо всего листа. Чужая колонка — порядок по
+    умолчанию: имя поля из запроса в `order_by` не попадает.
+    """
+    raw = (params.get("sort") or "").strip()
+    desc = raw.startswith("-")
+    fields = SORT_FIELDS.get(raw[1:] if desc else raw)
+    if not fields:
+        return DEFAULT_ORDER
+    return [("-" + fields[0]) if desc else fields[0]] + fields[1:]
 
 
 def _apply_filters(qs, params):

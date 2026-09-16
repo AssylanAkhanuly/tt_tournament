@@ -51,6 +51,36 @@ def test_лист_отсортирован_по_убыванию_рейтинг�
     assert r.data["count"] == 3
 
 
+def test_лист_сортируется_по_колонке(api, params):
+    """Сортировку задаёт колонка таблицы ✳ (16.09.2026): считает её сервер —
+    лист постраничный, и сортировка по странице переставляла бы строки внутри
+    ста, а не по всему листу."""
+    игрок("+7710000004", "Ярмуханбетов Асхат", 12, birth_year=2005, region="Астана")
+    игрок("+7710000005", "Абдиров Ерлан", 55, birth_year=1999, region="Шымкент")
+    игрок("+7710000006", "Иванов Пётр", 33, birth_year=2012, region="Алматы")
+
+    по_имени = [x["name"] for x in api.get("/api/rating/", {"sort": "name"}).data["results"]]
+    assert по_имени == ["Абдиров Ерлан", "Иванов Пётр", "Ярмуханбетов Асхат"]
+    обратно = [x["name"] for x in api.get("/api/rating/", {"sort": "-name"}).data["results"]]
+    assert обратно == по_имени[::-1]
+
+    по_году = [x["birth_year"] for x in api.get("/api/rating/", {"sort": "birth_year"}).data["results"]]
+    assert по_году == [1999, 2005, 2012]
+
+    по_региону = [x["region"] for x in api.get("/api/rating/", {"sort": "region"}).data["results"]]
+    assert по_региону == ["Алматы", "Астана", "Шымкент"]
+
+    # По возрастанию рейтинга — снизу вверх; без параметра и с чужим значением
+    # порядок прежний: по убыванию рейтинга.
+    assert [x["value"] for x in api.get("/api/rating/", {"sort": "value"}).data["results"]] == [
+        "12.00", "33.00", "55.00",
+    ]
+    for чужой in ("", "; drop table", "unknown"):
+        assert [x["value"] for x in api.get("/api/rating/", {"sort": чужой}).data["results"]] == [
+            "55.00", "33.00", "12.00",
+        ], чужой
+
+
 def test_лист_открыт_без_входа(api, params):
     игрок("+7710000010", "Кто угодно", 20)
     assert api.get("/api/rating/").status_code == 200

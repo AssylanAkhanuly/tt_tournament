@@ -118,6 +118,8 @@ const toEntry = (raw: Record<string, unknown>): RatingEntry => ({
 
 export type RatingListQuery = {
   sex?: string;
+  /** Колонка сортировки: `name`, `-value`, `birth_year`… Считает сервер. */
+  sort?: string;
   region?: string;
   status?: string;
   age?: string;
@@ -132,6 +134,7 @@ export type RatingListQuery = {
 export async function fetchRatingList(query: RatingListQuery = {}): Promise<RatingList> {
   const params = new URLSearchParams();
   if (query.sex) params.set('sex', query.sex);
+  if (query.sort) params.set('sort', query.sort);
   if (query.region) params.set('region', query.region);
   if (query.status) params.set('status', query.status);
   if (query.age) params.set('age', query.age);

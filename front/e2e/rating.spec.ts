@@ -176,3 +176,54 @@ test('история рейтинга переключается на графи
   await expect(page.getByTestId('card-history-row').first()).toBeVisible();
   await expect(page.getByRole('img', { name: 'История рейтинга' })).toHaveCount(0);
 });
+
+/* Сортировка колонкой ✳ (16.09.2026). Считает её сервер: таблица (TanStack)
+   держит состояние, а порядок приходит из `GET /api/rating/?sort=…`. Сравнение
+   строк — по кодам символов, как сортирует локальная SQLite (на боевой
+   PostgreSQL сортировка по правилам языка, и порядок казахских букв может
+   отличаться — проверка живёт на дев-базе). */
+const имена = (page: Page) =>
+  page.locator('[data-testid="rating-row"]').evaluateAll((els) => els.map((e) => e.getAttribute('data-player') ?? ''));
+
+test('сортировка колонкой идёт по всему листу', async ({ page }) => {
+  await page.goto('/rating');
+  await expect(page.locator('[data-testid="rating-row"]').first()).toBeVisible();
+  // Без спроса лист по убыванию рейтинга: первый — сильнейший показательный.
+  await ожидатьДемо(page, ДЕМО);
+
+  await page.getByTestId('sort-name').click();
+  await expect(async () => {
+    const список = await имена(page);
+    expect(список.length).toBeGreaterThan(1);
+    expect([...список].sort()).toEqual(список);
+  }).toPass();
+
+  await page.getByTestId('sort-name').click();
+  await expect(async () => {
+    const список = await имена(page);
+    expect([...список].sort().reverse()).toEqual(список);
+  }).toPass();
+
+  /* Колонка «Рейтинг» с первого клика идёт по убыванию: у числовой колонки это
+     умолчание TanStack, и для рейтинга оно верное — сильнейший сверху. Второй
+     клик разворачивает, и слабейшие оказываются на первой странице: значит
+     сортировал сервер, а не страница (на ней сотня из ста двадцати пяти). */
+  const значения = async () =>
+    page
+      .locator('[data-testid="rating-value"]')
+      .evaluateAll((els) => els.map((e) => Number((e.textContent ?? '').replace(',', '.'))));
+
+  await page.getByTestId('sort-value').click();
+  await expect(async () => {
+    const список = await значения();
+    expect([...список].sort((a, b) => b - a)).toEqual(список);
+    expect(список[0]).toBeGreaterThan(50);
+  }).toPass();
+
+  await page.getByTestId('sort-value').click();
+  await expect(async () => {
+    const список = await значения();
+    expect([...список].sort((a, b) => a - b)).toEqual(список);
+    expect(список[0]).toBeLessThan(50);
+  }).toPass();
+});
