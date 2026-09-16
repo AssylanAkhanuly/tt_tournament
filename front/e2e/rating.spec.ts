@@ -23,9 +23,11 @@ async function фильтр(page: Page, группа: string, значение: 
       await page.getByTestId('filters-open').click();
       await page.getByRole('menuitem', { name: new RegExp('^' + группа) }).click();
     }
-    await expect(пункт).toBeVisible({ timeout: 1000 });
+    /* Клик внутри повтора: подменю появляется с анимацией, и элемент,
+       найденный до её конца, успевает смениться («element was detached»).
+       Повторный выбор того же значения ничего не портит — оно одно. */
+    await пункт.click({ timeout: 1500 });
   }).toPass();
-  await пункт.click();
 }
 
 /** Показательные спортсмены (`seed_rating_demo`) — по убыванию рейтинга. */

@@ -130,12 +130,18 @@ test('участник из рейтинга: список виден сразу
 /* Возрастные ограничения и отбор ✳ (15.09.2026, замечания федерации). Из засева:
    Оспанов Тимур (2012, м) и Нурланов Данияр (2010, м) — 2009 г.р. и моложе;
    Ахметов Ерлан (1998) и Оралбек Дана (2008) — нет. */
-async function выбрать(page: Page, фильтр: string, значение: string) {
+async function выбрать(page: Page, группа: string, значение: string) {
+  const пункт = page.getByRole('menuitemradio', { name: значение, exact: true });
   await expect(async () => {
-    await page.getByTestId(фильтр).getByRole('button').first().click();
-    await expect(page.getByRole('button', { name: значение, exact: true })).toBeVisible({ timeout: 1000 });
+    if (!(await пункт.isVisible())) {
+      await page.getByTestId('filters-open').click();
+      await page.getByRole('menuitem', { name: new RegExp('^' + группа) }).click();
+    }
+    /* Клик внутри повтора: подменю появляется с анимацией, и элемент,
+       найденный до её конца, успевает смениться («element was detached»).
+       Повторный выбор того же значения ничего не портит — оно одно. */
+    await пункт.click({ timeout: 1500 });
   }).toPass();
-  await page.getByRole('button', { name: значение, exact: true }).click();
 }
 
 test('возрастная категория турнира отбирает рейтинг, пол скрывает другой пол', async ({ page }) => {
@@ -166,12 +172,12 @@ test('возрастная категория турнира отбирает р
   // Отбор «Пол»: у девочек мальчиков нет вовсе, «Все» возвращает их.
   const участники = page.getByTestId('protocol-participant');
   await expect(участники).toHaveCount(2);
-  await выбрать(page, 'filter-sex', 'Женщины / девочки');
+  await выбрать(page, 'Пол', 'Женщины / девочки');
   await expect(участники).toHaveCount(0);
-  await выбрать(page, 'filter-sex', 'Мужчины / мальчики');
+  await выбрать(page, 'Пол', 'Мужчины / мальчики');
   await expect(участники).toHaveCount(2);
 
   // Категория из турнира — в выпадающем списке; оба в неё попадают.
-  await выбрать(page, 'filter-age', '2009 г.р. и моложе');
+  await выбрать(page, 'Возрастная категория', '2009 г.р. и моложе');
   await expect(участники).toHaveCount(2);
 });

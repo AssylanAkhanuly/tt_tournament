@@ -46,7 +46,7 @@ import {
 } from '@/entities/rating';
 import { useSession } from '@/entities/session';
 import { AthleteDialog, LEVELS, MatchDialog, ParticipantDialog } from '@/features/rating-admin';
-import { EmptyBox, FilterBar, FilterSeg, Panel, Pill, Sheet, useNarrow } from '@/shared/kit/app';
+import { EmptyBox, FilterBar, FilterMenu, FilterSeg, Panel, Pill, Sheet, useNarrow } from '@/shared/kit/app';
 import { RatingShell } from '@/views/rating';
 
 const P_GRID = 'minmax(0,1fr) 84px 96px 84px';
@@ -256,22 +256,25 @@ export function TournamentView({ id }: { id: string }) {
           )}
 
           <FilterBar>
-            <div data-testid="filter-sex">
-              <FilterSeg
-                items={SEXES.map(([, l]) => l)}
-                active={sexLabel}
-                label="Пол"
-                onPick={(l) => setSex(SEXES.find(([, x]) => x === l)?.[0] ?? '')}
-              />
-            </div>
-            <div data-testid="filter-age">
-              <FilterSeg
-                items={[ANY_AGE, ...ageCategories.map((c) => c.name)]}
-                active={categoryLabel}
-                label="Возрастная категория"
-                onPick={(l) => setCategory(ageCategories.find((c) => c.name === l)?.id ?? null)}
-              />
-            </div>
+            {/* Пол и возрастная категория — под одной кнопкой ✳ (16.09.2026),
+                как в рейтинг-листе. «Уровень» рядом отдельно: он не отбор, а
+                поле протокола — от него считается коэффициент C. */}
+            <FilterMenu
+              groups={[
+                {
+                  label: 'Пол',
+                  items: SEXES.map(([, l]) => l),
+                  active: sexLabel,
+                  onPick: (l) => setSex(SEXES.find(([, x]) => x === l)?.[0] ?? ''),
+                },
+                {
+                  label: 'Возрастная категория',
+                  items: [ANY_AGE, ...ageCategories.map((c) => c.name)],
+                  active: categoryLabel,
+                  onPick: (l) => setCategory(ageCategories.find((c) => c.name === l)?.id ?? null),
+                },
+              ]}
+            />
             <div data-testid="protocol-level">
               <FilterSeg
                 items={LEVELS.map(([, label]) => label)}
