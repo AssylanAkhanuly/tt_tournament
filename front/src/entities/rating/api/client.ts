@@ -129,9 +129,9 @@ export type RatingListQuery = {
   pageSize?: number;
 };
 
-/** Рейтинг-лист (Э0.4). По умолчанию активный: неактивные исключены из текущей
-    таблицы (п. 18.2), но доступны через `status`. */
-export async function fetchRatingList(query: RatingListQuery = {}): Promise<RatingList> {
+/** Отбор и сортировка листа — параметрами запроса. Одни на лист и на его
+    выгрузку: файл обязан содержать тот же список, что показан на экране. */
+function selectionParams(query: RatingListQuery): URLSearchParams {
   const params = new URLSearchParams();
   if (query.sex) params.set('sex', query.sex);
   if (query.sort) params.set('sort', query.sort);
@@ -140,6 +140,13 @@ export async function fetchRatingList(query: RatingListQuery = {}): Promise<Rati
   if (query.age) params.set('age', query.age);
   if (query.q) params.set('q', query.q);
   if (query.all) params.set('all', '1');
+  return params;
+}
+
+/** Рейтинг-лист (Э0.4). По умолчанию активный: неактивные исключены из текущей
+    таблицы (п. 18.2), но доступны через `status`. */
+export async function fetchRatingList(query: RatingListQuery = {}): Promise<RatingList> {
+  const params = selectionParams(query);
   if (query.page) params.set('page', String(query.page));
   if (query.pageSize) params.set('page_size', String(query.pageSize));
 
@@ -151,6 +158,14 @@ export async function fetchRatingList(query: RatingListQuery = {}): Promise<Rati
     results: (raw.results as RawProfile[]).map(toProfile),
     updatedAt: (raw.updated_at as string) ?? null,
   };
+}
+
+/** Адрес выгрузки листа в Excel ✳ (01.10.2026). Файл собирает сервер: на
+    экране одна страница, а в файл идёт весь отбор — поэтому страницы в адрес
+    не попадают. Это ссылка, а не `fetch`: скачивание ведёт сам браузер. */
+export function ratingExportUrl(query: RatingListQuery = {}): string {
+  const params = selectionParams(query).toString();
+  return BASE + '/export/' + (params ? '?' + params : '');
 }
 
 /** Карточка спортсмена: профиль, история со слагаемыми, место в листе. */

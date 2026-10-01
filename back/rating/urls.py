@@ -4,6 +4,7 @@ from .views import (
     RatingAthletesView,
     RatingCardView,
     RatingCorrectionView,
+    RatingExportView,
     RatingListView,
     RatingMergeView,
     RatingNoShowView,
@@ -21,6 +22,7 @@ from .views import (
 
 urlpatterns = [
     path("", RatingListView.as_view(), name="rating-list"),
+    path("export/", RatingExportView.as_view(), name="rating-export"),
     path("athletes/", RatingAthletesView.as_view(), name="rating-athletes"),
     path("regions/", RatingRegionsView.as_view(), name="rating-regions"),
     path("no-show/", RatingNoShowView.as_view(), name="rating-no-show"),

@@ -11,6 +11,9 @@
    постраничный, и сортировка на клиенте переставляла бы строки внутри
    страницы, а не по всему листу.
 
+   Выгрузка в Excel ✳ (01.10.2026) берёт тот же запрос без страницы: в файле
+   весь отбор в показанном порядке, собирает его сервер.
+
    Председателю ГСК ✳ (11.09.2026) — «Добавить спортсмена»: карточка
    заводится со стартом по Положению, и сразу открывается. */
 
@@ -20,7 +23,7 @@ import { UserPlus } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useMemo, useState } from 'react';
 
-import { createAthlete, useRatingList } from '@/entities/rating';
+import { createAthlete, ratingExportUrl, useRatingList } from '@/entities/rating';
 import { useSession } from '@/entities/session';
 import { AthleteDialog } from '@/features/rating-admin';
 import { RatingTable, type RatingFacets } from '@/widgets/rating';
@@ -101,6 +104,7 @@ export function RatingListView() {
         sorting={sorting}
         columnFilters={columnFilters}
         pagination={pagination}
+        exportHref={ratingExportUrl(query)}
         onFacets={(patch) => {
           setFacets((f) => ({ ...f, ...patch }));
           toFirstPage();

@@ -18,7 +18,7 @@ from users.permissions import IsGskChairman
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from . import engine, services
+from . import engine, export, services
 from .models import RatingEntry, RatingProfile
 from .serializers import RatingEntrySerializer, RatingProfileSerializer
 
@@ -60,6 +60,35 @@ class RatingListView(APIView):
                 "updated_at": qs.order_by("-updated_at").values_list("updated_at", flat=True).first(),
             }
         )
+
+
+class RatingExportView(APIView):
+    """Рейтинг-лист файлом Excel ✳ (01.10.2026).
+
+    Отбор и порядок — те же, что у листа (`_apply_filters`, `_order`), только
+    без страниц: экран держит сотню строк, а в файл идёт весь отбор, поэтому
+    собирает его сервер. Открыта без входа, как и лист: в файле те же пять
+    колонок, что видит гость. Сборка файла — `export.py`.
+    """
+
+    permission_classes = [AllowAny]
+
+    def get(self, request):
+        from django.http import HttpResponse
+        from django.utils import timezone
+
+        qs = _apply_filters(RatingProfile.objects.all(), request.query_params)
+        rows = qs.order_by(*_order(request.query_params)).values_list(
+            "value", "user__name", "birth_year", "region"
+        )
+        response = HttpResponse(export.rating_xlsx(rows), content_type=export.CONTENT_TYPE)
+        response["Content-Disposition"] = 'attachment; filename="rating-%s.xlsx"' % (
+            timezone.localdate().isoformat()
+        )
+        # Значение живое: вчерашний файл из кэша браузера выдавал бы себя за
+        # сегодняшний.
+        response["Cache-Control"] = "no-store"
+        return response
 
 
 #: По каким колонкам таблица даёт сортировать ✳ (16.09.2026). Ключ — id колонки

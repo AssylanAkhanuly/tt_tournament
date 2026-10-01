@@ -20,7 +20,11 @@
    библиотеки у него нет; за таблицами приложения остаётся этот слой.
 
    Возрастная категория здесь — выборка из общего рейтинга, а не отдельный
-   рейтинг (п. 7.2–7.3 Положения): отбор сужает список, значения те же. */
+   рейтинг (п. 7.2–7.3 Положения): отбор сужает список, значения те же.
+
+   «Выгрузить в Excel» ✳ (01.10.2026) — ссылка на файл, который собирает
+   сервер: на экране одна страница листа, а в файл идёт весь отбор в том же
+   порядке. Адрес приходит от экрана вместе с остальным состоянием запроса. */
 
 import {
   columnFilteringFeature,
@@ -35,7 +39,7 @@ import {
   type PaginationState,
   type SortingState,
 } from '@tanstack/react-table';
-import { ArrowDown, ArrowUp, ChevronsUpDown } from 'lucide-react';
+import { ArrowDown, ArrowUp, ChevronsUpDown, Download } from 'lucide-react';
 import Link from 'next/link';
 import { useMemo } from 'react';
 
@@ -102,6 +106,7 @@ export function RatingTable({
   sorting,
   columnFilters,
   pagination,
+  exportHref,
   onFacets,
   onSortingChange,
   onColumnFiltersChange,
@@ -110,6 +115,8 @@ export function RatingTable({
   data: RatingList | null;
   loading: boolean;
   error: string | null;
+  /** Адрес файла Excel с показанным отбором и сортировкой. */
+  exportHref: string;
   facets: RatingFacets;
   sorting: SortingState;
   columnFilters: ColumnFiltersState;
@@ -207,7 +214,24 @@ export function RatingTable({
 
   return (
     <>
-      <FilterBar>
+      <FilterBar
+        right={
+          // Выгружать нечего — кнопки нет: файл из одних заголовков никому не нужен.
+          !error && !!data?.count && (
+            <a
+              href={exportHref}
+              download
+              data-testid="rating-export"
+              aria-label="Выгрузить в Excel"
+              className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-neutral-200 bg-white px-3 text-[13px] font-medium text-neutral-700 hover:bg-neutral-50"
+            >
+              <Download size={14} className="text-neutral-400" />
+              {/* Телефон: полоса отбора и так занята поиском и «Фильтрами». */}
+              {!narrow && 'Выгрузить в Excel'}
+            </a>
+          )
+        }
+      >
         <SearchInput
           value={(name?.getFilterValue() as string) ?? ''}
           onChange={(v) => name?.setFilterValue(v)}

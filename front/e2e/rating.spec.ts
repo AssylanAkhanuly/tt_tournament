@@ -1,4 +1,8 @@
+import { readFileSync } from 'node:fs';
+
 import { expect, test, type Page } from '@playwright/test';
+
+import { xlsxColumn } from './xlsx';
 
 /* Рейтинг игроков: лист и карточка спортсмена — сквозная проверка в браузере.
 
@@ -230,4 +234,62 @@ test('сортировка колонкой идёт по всему листу'
     expect([...список].sort((a, b) => a - b)).toEqual(список);
     expect(список[0]).toBeLessThan(50);
   }).toPass();
+});
+
+/* Выгрузка в Excel ✳ (01.10.2026). Файл собирает сервер по тому же отбору и
+   сортировке, что стоят на экране. Проверка открывает скачанный файл: «что-то
+   скачалось» прошло бы и на файле с чужим списком. */
+
+/** Колонка «Фамилия Имя Отчество» на экране — как показана, фамилия прописными. */
+const фио = (page: Page) => page.locator('[data-testid="rating-row"] > span:nth-child(3)').allTextContents();
+
+async function выгрузить(page: Page) {
+  const [файл] = await Promise.all([page.waitForEvent('download'), page.getByTestId('rating-export').click()]);
+  expect(файл.suggestedFilename()).toMatch(/^rating-\d{4}-\d{2}-\d{2}\.xlsx$/);
+  return readFileSync(await файл.path());
+}
+
+test('выгрузка в Excel повторяет отбор на экране', async ({ page }) => {
+  await page.goto('/rating');
+  await page.getByPlaceholder('Фамилия или регион').fill('Ким');
+  await expect(строка(page, 'Ким Виктор')).toBeVisible();
+  await expect(строка(page, 'Ахметов Ерлан')).toHaveCount(0);
+
+  const наЭкране = await фио(page);
+  const книга = await выгрузить(page);
+
+  // Заголовки — те же пять колонок, что в таблице.
+  expect(['A', 'B', 'C', 'D', 'E'].map((c) => xlsxColumn(книга, c)[0])).toEqual([
+    '№',
+    'Рейтинг',
+    'Фамилия Имя Отчество',
+    'Год рождения',
+    'Регион',
+  ]);
+  // В файле ровно найденные поиском: не дойди отбор до сервера — там был бы
+  // весь лист с Ахметовым во главе.
+  expect(наЭкране).toContain('КИМ Виктор');
+  expect(xlsxColumn(книга, 'C').slice(1)).toEqual(наЭкране);
+});
+
+test('в выгрузку идёт весь лист в показанном порядке, а не страница', async ({ page }) => {
+  await page.goto('/rating');
+  await expect(page.locator('[data-testid="rating-row"]').first()).toBeVisible();
+
+  /* По фамилии с конца алфавита: спортсмены соседних проверок помечены
+     «[e2e] » и при таком порядке встают в хвост, первой страницы не трогая. */
+  await page.getByTestId('sort-name').click();
+  await page.getByTestId('sort-name').click();
+  await expect(async () => {
+    const список = await имена(page);
+    expect(список.length).toBe(100);
+    expect([...список].sort().reverse()).toEqual(список);
+  }).toPass();
+
+  const наЭкране = await фио(page);
+  const вФайле = xlsxColumn(await выгрузить(page), 'C').slice(1);
+
+  // Порядок экрана дошёл до файла, и строк в нём больше страницы.
+  expect(вФайле.slice(0, 100)).toEqual(наЭкране);
+  expect(вФайле.length).toBeGreaterThan(100);
 });
