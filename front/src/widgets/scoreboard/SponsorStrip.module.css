@@ -1,0 +1,49 @@
+/* Полоса партнёров для эфира. Размеры — от той же --sb-unit, что и у плашки
+   счёта: обе масштабируются одной переменной. */
+
+.strip {
+  --sb-unit: var(--sb-scale, 1px);
+  --sp-gap: calc(22 * var(--sb-unit));
+  --sp-hair: calc(2 * var(--sb-unit));
+
+  display: inline-flex;
+  align-items: center;
+  height: calc(100 * var(--sb-unit));
+  padding: 0 calc(10 * var(--sb-unit));
+  color: var(--sb-ink);
+  font-family: "Arial Narrow", "Segoe UI", var(--font);
+  font-weight: 800;
+  line-height: 1;
+  white-space: nowrap;
+  /* Подложки нет, поэтому на светлом кадре знаки держит тень: без неё белый
+     на белом столе или форме пропадает. */
+  filter: drop-shadow(0 calc(1 * var(--sb-unit)) calc(3 * var(--sb-unit)) color-mix(in srgb, var(--sb-navy) 70%, transparent));
+}
+
+.label {
+  font-size: calc(34 * var(--sb-unit));
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+/* Высота у каждого знака своя (оптическая, задана в sponsors.ts). */
+.logo {
+  display: block;
+  flex: none;
+  width: auto;
+  height: calc(var(--sp-h) * var(--sb-unit));
+}
+
+/* Разделители — тонкие линии между соседями, как в вещательных плашках. Линия
+   одной высоты у всех, а не по росту знака: иначе ряд выглядит рваным. */
+.strip > * + * {
+  box-sizing: content-box;
+  margin-left: var(--sp-gap);
+  padding-left: var(--sp-gap);
+  background:
+    linear-gradient(
+        color-mix(in srgb, var(--sb-ink) 70%, transparent),
+        color-mix(in srgb, var(--sb-ink) 70%, transparent)
+      )
+      left center / var(--sp-hair) calc(52 * var(--sb-unit)) no-repeat;
+}
