@@ -1,0 +1,82 @@
+/* Кадр эфира 1920 × 1080, вписанный в окно. Плашки масштабируются той же
+   переменной --sb-scale, что и в OBS: одна единица плашки = 1/1920 ширины
+   кадра, поэтому пропорции в предпросмотре те же, что в трансляции. */
+
+.screen {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: color-mix(in srgb, var(--sb-navy) 25%, black);
+}
+
+.frame {
+  --frame-w: min(100vw, calc(100vh * 16 / 9));
+  --sb-scale: calc(var(--frame-w) / 1920);
+
+  position: relative;
+  width: var(--frame-w);
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+}
+
+/* Зал нарисован, а не снят: трибуны в тени, пол, стол с сеткой. Цвета — от
+   вещательной палитры, чтобы сырых значений в коде не было. */
+.hall {
+  --hall-top: color-mix(in srgb, var(--sb-navy) 45%, black);
+  --hall-floor: color-mix(in srgb, var(--sb-red) 38%, black);
+  --hall-table: color-mix(in srgb, var(--sb-azure-deep) 70%, var(--sb-navy));
+
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(var(--hall-top), color-mix(in srgb, var(--hall-top) 60%, black) 46%);
+}
+
+.frame[data-light] .hall {
+  --hall-top: color-mix(in srgb, var(--sb-ink-dim) 80%, var(--sb-navy));
+  --hall-floor: color-mix(in srgb, var(--sb-ink-dim) 55%, white);
+  --hall-table: color-mix(in srgb, var(--sb-azure) 75%, white);
+}
+
+.floor {
+  position: absolute;
+  inset: 44% 0 0;
+  background: linear-gradient(color-mix(in srgb, var(--hall-floor) 70%, black), var(--hall-floor));
+}
+
+/* Стол в перспективе: дальний край уже ближнего. */
+.table {
+  position: absolute;
+  left: 27%;
+  right: 27%;
+  top: 47%;
+  height: 27%;
+  background:
+    linear-gradient(90deg, transparent calc(50% - 0.12%), var(--sb-ink) 0 calc(50% + 0.12%), transparent 0),
+    linear-gradient(color-mix(in srgb, var(--hall-table) 75%, black), var(--hall-table));
+  clip-path: polygon(17% 0, 83% 0, 100% 100%, 0 100%);
+}
+
+.net {
+  position: absolute;
+  left: 30.5%;
+  right: 30.5%;
+  top: 56%;
+  height: 2.2%;
+  border-top: calc(3 * var(--sb-scale)) solid var(--sb-ink);
+  background: color-mix(in srgb, var(--sb-navy) 55%, transparent);
+}
+
+.board,
+.sponsors {
+  position: absolute;
+  left: calc(48 * var(--sb-scale));
+}
+
+.board {
+  top: calc(40 * var(--sb-scale));
+}
+
+.sponsors {
+  bottom: calc(36 * var(--sb-scale));
+}
