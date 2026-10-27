@@ -38,6 +38,22 @@
   color: var(--text);
 }
 
+/* ── верхняя строка: разряд, тип матча, круг ──
+   Поля прижаты к низу строки, чтобы стоять вровень с таббаром: у них над
+   полем подпись, у таббара её нет. */
+.top {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  gap: var(--gap);
+}
+
+.labels {
+  display: grid;
+  grid-template-columns: repeat(2, clamp(84px, 11vw, 140px));
+  gap: clamp(8px, 1vw, 12px);
+}
+
 /* Тап не должен ждать «а вдруг это двойной» и подсвечиваться серым. */
 .page button,
 .page input {

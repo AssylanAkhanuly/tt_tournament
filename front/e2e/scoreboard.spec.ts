@@ -64,6 +64,32 @@ test.describe('Табло трансляции /scoreboard', () => {
     await expect(overlay.getByText('ТОМОКАДЗУ ХАРИМОТО')).toBeVisible();
   });
 
+  test('тип матча и круг правятся с пульта', async ({ page, request }) => {
+    const overlay = await openBoth(page);
+    await expect(overlay.getByText('MT', { exact: true })).toBeVisible();
+    await expect(overlay.getByText('R 16', { exact: true })).toBeVisible();
+
+    // «Q» и «P» — горячие клавиши очков; в поле они должны печататься, а не считать.
+    await page.getByLabel('Тип матча').fill('QF');
+    await page.getByLabel('Круг').fill('R 8');
+
+    await expect(overlay.getByText('QF', { exact: true })).toBeVisible();
+    await expect(overlay.getByText('R 8', { exact: true })).toBeVisible();
+    await expect(overlay.getByText('MT', { exact: true })).toHaveCount(0);
+    await expect(overlay.getByTestId('points-left')).toHaveText('0');
+
+    // Пустое поле убирает подпись из эфира совсем.
+    await page.getByLabel('Круг').fill('');
+    await expect(overlay.getByText('R 8', { exact: true })).toHaveCount(0);
+
+    // Значения лежат в доске, а не в странице: переживают перезагрузку.
+    await expect
+      .poll(async () => (await (await request.get(BOARD_URL)).json()).round_label)
+      .toBe('');
+    await page.reload();
+    await expect(page.getByLabel('Тип матча')).toHaveValue('QF');
+  });
+
   test('очки, сетбол и завершение партии доезжают в эфир', async ({ page }) => {
     const overlay = await openBoth(page);
 

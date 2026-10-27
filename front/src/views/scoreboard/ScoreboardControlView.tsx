@@ -13,9 +13,10 @@
 // Плашка в предпросмотре при этом ОСТАЁТСЯ тёмной: это вещательная графика для
 // OBS, её смотрят поверх видео, и с интерфейсом она совпадать не обязана.
 //
-// На экране только то, чем ведут счёт: разряд встречи, предпросмотр эфира, две
-// стороны и действия над партией. Остальные параметры матча (тип, круг, до
-// скольких партий, коды стран) живут в состоянии доски и правятся через API.
+// На экране только то, чем ведут счёт: разряд встречи с типом матча и кругом,
+// предпросмотр эфира, две стороны и действия над партией. Остальные параметры
+// матча (до скольких партий, коды стран) живут в состоянии доски и правятся
+// через API.
 
 import { useEffect } from 'react';
 
@@ -309,16 +310,35 @@ export function ScoreboardControlView({ initial }: { initial: ScoreboardState })
        локальный сброс вместо preflight, без него кнопки и поля HeroUI
        приезжают с браузерными стилями. */
     <main className={`${styles.page} hero-scope`} data-theme="light">
-      <Segmented
-        ariaLabel="Разряд встречи"
-        items={MODES.map((m) => m.label)}
-        value={MODES.find((m) => m.value === state.mode)?.label ?? MODES[0].label}
-        wide
-        onPick={(label) => {
-          const hit = MODES.find((m) => m.label === label);
-          if (hit) send({ type: 'patch', patch: { mode: hit.value } });
-        }}
-      />
+      {/* Тип матча и круг — подписи в шапке плашки («MT», «R 16»). Их меняют
+          между матчами, а не посреди розыгрыша, поэтому они в одной строке с
+          разрядом, а не в панелях сторон. Пустое поле убирает подпись из эфира. */}
+      <div className={styles.top}>
+        <Segmented
+          ariaLabel="Разряд встречи"
+          items={MODES.map((m) => m.label)}
+          value={MODES.find((m) => m.value === state.mode)?.label ?? MODES[0].label}
+          wide
+          onPick={(label) => {
+            const hit = MODES.find((m) => m.label === label);
+            if (hit) send({ type: 'patch', patch: { mode: hit.value } });
+          }}
+        />
+        <div className={styles.labels}>
+          <TextInput
+            label="Тип матча"
+            placeholder="MT"
+            value={state.match_label}
+            onChange={(value) => send({ type: 'patch', patch: { match_label: value } })}
+          />
+          <TextInput
+            label="Круг"
+            placeholder="R 16"
+            value={state.round_label}
+            onChange={(value) => send({ type: 'patch', patch: { round_label: value } })}
+          />
+        </div>
+      </div>
 
       {/* Предпросмотр эфира: плашка как есть, на клетчатом поле — так видно, что
           фон у неё прозрачный, и оператор понимает, что уйдёт в OBS. */}
