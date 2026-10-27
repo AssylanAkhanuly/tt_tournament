@@ -11,12 +11,15 @@ export type Sponsor = {
   height: number;
 };
 
+// Порядок задал владелец продукта 28.10.2026.
 export const SPONSORS: readonly Sponsor[] = [
   { id: 'ministry', name: 'Министерство туризма и спорта Республики Казахстан', height: 78 },
   { id: 'fnt', name: 'Федерация настольного тенниса Республики Казахстан', height: 70 },
-  { id: 'halyk', name: 'Halyk', height: 40 },
-  { id: 'erg', name: 'ERG', height: 60 },
-  { id: 'kazakhmys', name: 'Kazakhmys', height: 56 },
   { id: 'add-capital', name: 'ADD Capital', height: 54 },
+  { id: 'samruk', name: 'Самрук-Қазына', height: 66 },
+  { id: 'sportqory', name: 'Sport Qory', height: 60 },
   { id: 'allur', name: 'Allur', height: 32 },
+  { id: 'erg', name: 'ERG', height: 60 },
+  { id: 'halyk', name: 'Halyk', height: 40 },
+  { id: 'kazakhmys', name: 'Kazakhmys', height: 56 },
 ];

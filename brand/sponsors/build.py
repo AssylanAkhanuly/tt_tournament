@@ -193,11 +193,36 @@ def allur() -> None:
     save(svg_png(ai8_to_svg(text, red), 2), "allur", svg_png(ai8_to_svg(text, white), 2), "allur")
 
 
+def samruk() -> None:
+    # цветной PNG на прозрачном: эмблема, SAMRUK KAZYNA и «GENERAL PARTNER»
+    logo = Image.open(SRC / "Лого Самрук-Казына General_1.png").convert("RGBA")
+    save(logo, "samruk", whiten(logo), "samruk")
+
+
+def light_to_hole(im: Image.Image, start: int = 160) -> Image.Image:
+    """Белые буквы на цветной плашке → просвет в белой плашке. Плотность — по
+    самому тёмному каналу: у голубого и синего он низкий (≈90), у белого 255.
+    Простой силуэт тут не годится — буквы, белые в исходнике, слились бы с
+    плашкой и пропали."""
+    r, g, b = im.convert("RGB").split()
+    lo = ImageChops.darker(ImageChops.darker(r, g), b)
+    keep = lo.point(lambda v: max(0, min(255, (255 - v) * 255 // (255 - start))))
+    out = Image.new("RGBA", im.size, (255, 255, 255, 0))
+    out.putalpha(ImageChops.multiply(im.getchannel("A"), keep))
+    return out
+
+
+def sportqory() -> None:
+    # «Sport» синим на прозрачном, «Qory» белым поверх голубого параллелограмма
+    logo = Image.open(SRC / "Sport Qory-01.png").convert("RGBA")
+    save(logo, "sportqory", light_to_hole(logo), "sportqory")
+
+
 def fnt() -> None:
     logo = Image.open(FNT).convert("RGBA")  # PNG-версия уже лежит в brand/fnt/png
     save(logo, None, logo, "fnt")
 
 
 if __name__ == "__main__":
-    for build in (ministry, fnt, halyk, erg, kazakhmys, add_capital, allur):
+    for build in (ministry, fnt, add_capital, samruk, sportqory, allur, erg, halyk, kazakhmys):
         build()

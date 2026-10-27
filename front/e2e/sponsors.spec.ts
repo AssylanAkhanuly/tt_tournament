@@ -6,7 +6,17 @@ import { expect, test } from '@playwright/test';
 // и размер, под который настроен источник.
 
 const SHOTS = 'test-results/scoreboard';
-const ORDER = ['ministry', 'fnt', 'halyk', 'erg', 'kazakhmys', 'add-capital', 'allur'];
+const ORDER = [
+  'ministry',
+  'fnt',
+  'add-capital',
+  'samruk',
+  'sportqory',
+  'allur',
+  'erg',
+  'halyk',
+  'kazakhmys',
+];
 // Размер источника в OBS (SPONSOR_STRIP_SIZE в виджете).
 const SOURCE = { width: 1400, height: 100 };
 
@@ -57,9 +67,11 @@ test.describe('Полоса партнёров /scoreboard/sponsors', () => {
     expect(labelBox!.x + labelBox!.width).toBeLessThan(firstBox!.x);
   });
 
-  test('полоса с подписью помещается в источник OBS; снимок поверх кадра', async ({ page }) => {
+  // Без подписи — так полоса идёт в эфир с 28.10.2026 (владелец продукта снял
+  // «ASTANA»). С подписью девять знаков в 1400 px уже не помещаются.
+  test('полоса помещается в источник OBS; снимок поверх кадра', async ({ page }) => {
     await page.setViewportSize({ width: 1920, height: 1080 });
-    await page.goto('/scoreboard/sponsors?label=Astana');
+    await page.goto('/scoreboard/sponsors');
     for (const id of ORDER) {
       await expect
         .poll(() =>
