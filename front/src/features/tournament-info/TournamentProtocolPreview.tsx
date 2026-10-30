@@ -156,8 +156,15 @@ export function TournamentProtocolPreview({
           aria-label="Проект протокола турнира"
           data-testid="protocol-document"
         >
-          {/* Скачать — в углу листа; в сам файл кнопка не попадает (`data-export-skip`). */}
-          <div className="absolute right-3 top-3 font-sans" data-export-skip>
+          {/* Скачать — в правом верхнем углу листа и остаётся там при прокрутке ✳
+              (30.10.2026, решение владельца продукта): липкая полоса нулевой высоты
+              (текст не сдвигает), отрицательные поля выносят кнопку из полей листа
+              в угол, на 12 px от края. В файл кнопка не попадает (`data-export-skip`). */}
+          <div
+            className="sticky top-3 z-10 -mr-2 -mt-5 flex h-0 justify-end font-sans sm:-mr-5"
+            data-export-skip
+            data-testid="protocol-download-bar"
+          >
             <Tooltip>
               <Button
                 isIconOnly

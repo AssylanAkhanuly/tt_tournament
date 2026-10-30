@@ -613,6 +613,14 @@ test('протокол на «Сведениях» скачивается PDF-ф
   const к = (await кнопка.boundingBox())!;
   expect(к.x + к.width).toBeGreaterThan(л.x + л.width - 24);
   expect(к.y).toBeLessThan(л.y + 24);
+  // Лист прокрутили — кнопка на том же месте экрана, а не уехала вверх с листом.
+  const прокрутка = page.getByTestId('protocol-scroll');
+  await прокрутка.evaluate((el) => el.scrollTo(0, 300));
+  await expect.poll(async () => прокрутка.evaluate((el) => el.scrollTop)).toBeGreaterThan(100);
+  const после = (await кнопка.boundingBox())!;
+  expect(Math.abs(после.y - к.y)).toBeLessThan(2);
+  expect(Math.abs(после.x - к.x)).toBeLessThan(2);
+  await page.screenshot({ path: 'test-results/dashboard/protocol-scrolled.png' });
 
   const [файл] = await Promise.all([page.waitForEvent('download'), кнопка.click()]);
   expect(файл.suggestedFilename()).toBe(`Протокол — ${имя}.pdf`);
