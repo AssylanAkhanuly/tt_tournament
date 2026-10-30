@@ -15,11 +15,10 @@
    весь отбор в показанном порядке, собирает его сервер.
 
    Председателю ГСК ✳ (11.09.2026) — «Добавить спортсмена»: карточка
-   заводится со стартом по Положению, и сразу открывается. */
+   заводится со стартом по Положению, и сразу открывается. С 28.10.2026 пункт
+   вместе с выгрузкой — в меню «⋯» над таблицей. */
 
 import type { ColumnFiltersState, OnChangeFn, PaginationState, SortingState } from '@tanstack/react-table';
-import { Button } from '@heroui/react';
-import { UserPlus } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useMemo, useState } from 'react';
 
@@ -87,15 +86,7 @@ export function RatingListView() {
   return (
     /* Без заголовка и пояснений ✳ (10.09.2026, решение владельца продукта):
        экран начинается прямо с отбора и таблицы. */
-    <RatingShell
-      actions={
-        isGskChairman ? (
-          <Button variant="primary" data-testid="athlete-open" onPress={() => setAdding(true)}>
-            <UserPlus size={15} /> Добавить спортсмена
-          </Button>
-        ) : undefined
-      }
-    >
+    <RatingShell bleed>
       <RatingTable
         data={data}
         loading={loading}
@@ -105,6 +96,7 @@ export function RatingListView() {
         columnFilters={columnFilters}
         pagination={pagination}
         exportHref={ratingExportUrl(query)}
+        onAddAthlete={isGskChairman ? () => setAdding(true) : undefined}
         onFacets={(patch) => {
           setFacets((f) => ({ ...f, ...patch }));
           toFirstPage();

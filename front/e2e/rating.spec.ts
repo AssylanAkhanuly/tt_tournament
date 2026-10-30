@@ -241,9 +241,11 @@ test('сортировка колонкой идёт по всему листу'
    скачалось» прошло бы и на файле с чужим списком. */
 
 /** Колонка «Фамилия Имя Отчество» на экране — как показана, фамилия прописными. */
-const фио = (page: Page) => page.locator('[data-testid="rating-row"] > span:nth-child(3)').allTextContents();
+const фио = (page: Page) => page.locator('[data-testid="rating-row"] > td:nth-child(3)').allTextContents();
 
 async function выгрузить(page: Page) {
+  // Выгрузка — пункт меню «⋯» над таблицей ✳ (28.10.2026).
+  await page.getByTestId('rating-more').click();
   const [файл] = await Promise.all([page.waitForEvent('download'), page.getByTestId('rating-export').click()]);
   expect(файл.suggestedFilename()).toMatch(/^rating-\d{4}-\d{2}-\d{2}\.xlsx$/);
   return readFileSync(await файл.path());
@@ -292,4 +294,20 @@ test('в выгрузку идёт весь лист в показанном п�
   // Порядок экрана дошёл до файла, и строк в нём больше страницы.
   expect(вФайле.slice(0, 100)).toEqual(наЭкране);
   expect(вФайле.length).toBeGreaterThan(100);
+});
+
+/* Страницы листа ✳ (28.10.2026): по центру под таблицей, «назад/вперёд» —
+   значками. Лист по 100 строк, засев даёт больше сотни: вторая страница
+   начинается со 101-го номера — номер сквозной по листу, а не по странице. */
+test('вторая страница листа продолжает нумерацию', async ({ page }) => {
+  await page.goto('/rating');
+  const первая = page.locator('[data-testid="rating-row"]').first();
+  await expect(первая.locator('td').first()).toHaveText('1');
+  await expect(page.getByRole('button', { name: 'Предыдущая страница' })).toBeDisabled();
+  await page.getByRole('button', { name: 'Следующая страница' }).click();
+  await expect(первая.locator('td').first()).toHaveText('101');
+  // По центру под таблицей: середина страниц совпадает с серединой таблицы.
+  const p = (await page.getByTestId('pagination').boundingBox())!;
+  const t = (await page.getByRole('grid', { name: 'Рейтинг-лист' }).boundingBox())!;
+  expect(Math.abs(p.x + p.width / 2 - (t.x + t.width / 2))).toBeLessThan(20);
 });

@@ -96,9 +96,15 @@ test('председатель исправляет значение: оно с�
 
 test('разделы бокового меню переводят между экранами председателя', async ({ page }) => {
   await войти(page);
-  await page.getByRole('button', { name: 'Турниры' }).click();
-  await page.waitForURL((url) => url.pathname === '/rating/tournaments');
-  await expect(page.getByTestId('tournament-row').first()).toBeVisible();
+  // Рейтинг-лист у председателя — на всю рабочую область, как таблица турниров.
+  await expect(page.locator('[data-testid="rating-row"]').first()).toBeVisible();
+  await page.screenshot({ path: 'test-results/rating/gsk-list.png' });
+  await page.getByRole('button', { name: 'Календарь', exact: true }).click();
+  await page.waitForURL((url) => url.pathname === '/calendar');
+  // Раздела «Турниры» у председателя нет ✳ (28.10.2026), старый адрес ведёт в календарь.
+  await expect(page.getByRole('button', { name: 'Турниры', exact: true })).toHaveCount(0);
+  await page.goto('/rating/tournaments');
+  await page.waitForURL((url) => url.pathname === '/calendar');
 });
 
 test('корень сайта ведёт на вход', async ({ page }) => {
@@ -111,20 +117,20 @@ test('корень сайта ведёт на вход', async ({ page }) => {
    карточка открытой сессии; клик по ней входит. */
 test('вошедший на странице входа видит карточку аккаунта и входит по клику', async ({ page }) => {
   await войти(page);
-  await page.goto('/login?next=/rating/tournaments');
+  await page.goto('/login?next=/calendar');
   const карточка = page.locator('[data-testid="account-card"][data-account="' + E2E_GSK.email + '"]');
   await expect(карточка).toContainText('Председатель ГСК (проверки)');
   await expect(page.getByRole('button', { name: 'Продолжить' })).toHaveCount(0);
   await expect(page.getByText('Вы вошли как')).toHaveCount(0);
 
   await карточка.click();
-  await page.waitForURL((url) => url.pathname === '/rating/tournaments');
+  await page.waitForURL((url) => url.pathname === '/calendar');
 });
 
 test('выход из карточки человека возвращает гостя', async ({ page }) => {
   await войти(page);
   await page.getByTestId('side-person').click();
-  await page.getByRole('button', { name: 'Выйти' }).click();
+  await page.getByRole('menuitem', { name: 'Выйти' }).click();
   await expect(page.getByTestId('login-link')).toBeVisible();
 });
 
@@ -155,35 +161,4 @@ test('председатель объединяет дубль: история �
   await page.getByPlaceholder('Фамилия или регион').fill('Сейтказы');
   await expect(строка(page, 'Сейтказы Арман')).toHaveCount(1);
   await expect(строка(page, 'Сейтказы Арман (дубль)')).toHaveCount(0);
-});
-
-/* Утверждение протокола (п. 13). Засев завёл «[demo] Кубок Костанайской
-   области» уровня «областные»: у победительницы Бековой 25,00 + 0,60 × 0,80 ×
-   0,50 = 25,24. Утверждаем как «высшие»: 0,60 × 1,20 × 0,50 = 0,36 → 25,36 —
-   от значения до турнира, не от 25,24. Мест на экране нет ✳ (11.09.2026). */
-test('председатель утверждает протокол на странице турнира: предпросмотр, потом пересчёт', async ({ page }) => {
-  await войти(page);
-  await карточка(page, 'Бекова Алия');
-  await expect(текущий(page)).toContainText('25,24');
-
-  await page.goto('/rating/tournaments');
-  await page.locator('[data-testid="tournament-row"][data-tournament="[demo] Кубок Костанайской области"]').click();
-  await page.waitForURL(/\/rating\/tournaments\/[^/]+$/);
-  // Матч протокола виден со счётом.
-  await expect(page.getByTestId('protocol-match').first()).toContainText('3:1');
-
-  const уровень = page.getByTestId('protocol-level');
-  await уровень.getByRole('button').first().click();
-  await уровень.getByRole('button', { name: /Чемпионат и кубок РК/ }).click();
-  const бекова = page.locator('[data-testid="protocol-participant"][data-player="Бекова Алия"]');
-
-  // Предпросмотр: новые числа видны до сохранения.
-  await expect(page.getByTestId('protocol-dirty')).toBeVisible();
-  await expect(бекова).toContainText('25,36');
-  await page.getByTestId('protocol-save').click();
-  await expect(page.getByTestId('protocol-result')).toContainText('Утверждён и пересчитан');
-  await expect(page.getByTestId('protocol-dirty')).toHaveCount(0);
-
-  await карточка(page, 'Бекова Алия');
-  await expect(текущий(page)).toContainText('25,36');
 });

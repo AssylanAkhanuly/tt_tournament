@@ -6,8 +6,9 @@
    Две оболочки, как в макетах:
    - гость — публичный сайт (Э0.4): шапка с разделами и «Войти», без бокового
      меню. Роли нет — это отсутствие роли (ТЗ §3);
-   - председатель ГСК после входа — оболочка роли `AppChrome`: та же, что
-     `WebApp` в макетах, только без рамки ноутбука. Сверху меню — роль, снизу —
+   - председатель ГСК после входа — на десктопе `AppShell` ✳ (28.10.2026,
+     HeroUI + Tailwind, общая с кабинетом администратора), на телефоне —
+     `PhoneChrome` из кита. Сверху меню — роль, снизу —
      человек и «Выйти», главные кнопки экрана прилипают к низу.
 
    В меню председателя только те разделы, что есть в приложении. Разделы его
@@ -18,18 +19,24 @@
    решение владельца продукта): между разделами ведут меню роли и шапка сайта. */
 
 import { Button } from '@heroui/react';
-import { BarChart3, ClipboardCheck, LogIn } from 'lucide-react';
+import { BarChart3, CalendarDays, LogIn } from 'lucide-react';
 import { usePathname, useRouter } from 'next/navigation';
 import type { ReactNode } from 'react';
 
-import { useSession } from '@/entities/session';
-import { AppChrome, FullScreen, PhoneChrome, SiteHeader, useNarrow, type RoleUI } from '@/shared/kit/app';
+import { useSession, workspacesOf } from '@/entities/session';
+import { FullScreen, PhoneChrome, SiteHeader, useNarrow, type RoleUI } from '@/shared/kit/app';
+import { AppShell, type ShellSubItem } from '@/widgets/app-shell';
 
 /** Разделы кабинета председателя. «Выпуски», «Апелляции», «Журнал» и
-    «Калибровка» сняты ✳ (11.09.2026, решение владельца продукта). */
-const NAV: [string, string, ReactNode][] = [
+    «Калибровка» сняты ✳ (11.09.2026), «Турниры» — ✳ (28.10.2026): решения
+    владельца продукта. */
+/** Раздел меню: подпись, адрес, значок и — по желанию — подпункты (`ShellSubItem`). */
+export type RatingNavItem = [string, string, ReactNode, ShellSubItem[]?];
+
+const NAV: RatingNavItem[] = [
   ['Рейтинг игроков', '/rating', <BarChart3 size={16} key="r" />],
-  ['Турниры', '/rating/tournaments', <ClipboardCheck size={16} key="p" />],
+  // Тот же раздел, что главная у администратора федерации ✳ (28.10.2026).
+  ['Календарь', '/calendar', <CalendarDays size={16} key="c" />],
 ];
 
 /** Разделы публичного сайта, которые уже есть. Главной нет ✳ (11.09.2026):
@@ -40,6 +47,10 @@ export function RatingShell({
   title,
   active = 'Рейтинг игроков',
   actions,
+  bleed,
+  nav = NAV,
+  sub,
+  context,
   children,
 }: {
   /** Заголовок — только когда он и есть содержание (имя спортсмена). */
@@ -48,6 +59,14 @@ export function RatingShell({
   active?: string;
   /** Главные кнопки экрана — полоса внизу рабочей области (только председателю). */
   actions?: ReactNode;
+  /** Содержимое на всю рабочую область (календарь) — только на десктопе. */
+  bleed?: boolean;
+  /** Свои разделы вместо разделов кабинета — внутри турнира: [подпись, адрес, значок]. */
+  nav?: RatingNavItem[];
+  /** Подпункты активного раздела (вид экрана: «Месяц», «Таблица») ✳ 30.10.2026. */
+  sub?: ShellSubItem[];
+  /** Шапка сайдбара над разделами (страница турнира). */
+  context?: ReactNode;
   children: ReactNode;
 }) {
   const router = useRouter();
@@ -66,31 +85,56 @@ export function RatingShell({
   if (loading) return <FullScreen>{null}</FullScreen>;
 
   if (user && isGskChairman) {
+    const onNavigate = (label: string) => {
+      const href = nav.find(([l]) => l === label)?.[1];
+      if (href) router.push(href);
+    };
+
+    // Десктоп — оболочка на HeroUI ✳ (28.10.2026): та же, что у кабинета
+    // администратора, с меню человека и сменой роли. Телефон пока на ките.
+    if (!narrow) {
+      return (
+        <AppShell
+          role={{ title: 'Председатель ГСК' }}
+          roles={workspacesOf(user)}
+          person={{ name: user.name, email: user.email }}
+          nav={nav.map(([label, , icon, children]) => ({ label, icon, children: label === active && sub ? sub : children }))}
+          active={active}
+          title={title}
+          actions={actions}
+          bleed={bleed}
+          context={context}
+          onNavigate={onNavigate}
+          onOpen={(href) => router.push(href)}
+          onSwitchRole={(to) => router.push(to)}
+          onSignOut={() => void signOut()}
+        >
+          {children}
+        </AppShell>
+      );
+    }
+
     const role: RoleUI = {
       num: '5',
       title: 'Председатель ГСК',
       person: { nm: user.name, rl: 'Председатель ГСК', av: '', email: user.email ?? undefined },
       brandName: 'Национальный рейтинг',
       badge: false,
-      nav: NAV.map(([label, , icon]) => [icon, label]),
+      nav: nav.map(([label, , icon]) => [icon, label]),
     };
-    const Chrome = narrow ? PhoneChrome : AppChrome;
     return (
       <FullScreen>
-        <Chrome
+        <PhoneChrome
           role={role}
           nav={active}
           title={title}
           actions={actions}
           bell={false}
-          onNavigate={(label) => {
-            const href = NAV.find(([l]) => l === label)?.[1];
-            if (href) router.push(href);
-          }}
+          onNavigate={onNavigate}
           onSignOut={() => void signOut()}
         >
           {children}
-        </Chrome>
+        </PhoneChrome>
       </FullScreen>
     );
   }

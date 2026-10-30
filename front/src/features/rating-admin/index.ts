@@ -1,16 +1,11 @@
 /* Правки рейтинга председателем ГСК: неявка, исправление и объединение
-   дублей — диалогами по образцу макетов председателя (Э5.4, Э5.9). Утверждение
-   протокола — не диалог, а своя страница (`views/rating-tournament`).
-
-   Заведение ✳ (11.09.2026): спортсмен, турнир протоколом вручную, его
-   участники и матчи. */
+   дублей — диалогами по образцу макетов председателя (Э5.4, Э5.9). Заведение
+   спортсмена ✳ (11.09.2026). Диалоги турнира протоколом вручную (турнир,
+   участник, матч) удалены вместе с разделом «Турниры» ✳ (28.10.2026, решение
+   владельца продукта). */
 
 export { NoShowDialog } from './NoShowDialog';
 export { CorrectionDialog } from './CorrectionDialog';
 export { MergeDialog } from './MergeDialog';
 export { AthleteDialog } from './AthleteDialog';
-export { TournamentDialog } from './TournamentDialog';
-export { ParticipantDialog } from './ParticipantDialog';
-export { MatchDialog } from './MatchDialog';
-export { LEVELS } from './fields';
 export { useRatingActions } from './useRatingActions';

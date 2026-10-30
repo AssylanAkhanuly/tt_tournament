@@ -22,12 +22,14 @@ test('на телефоне — вкладки разделов вместо б�
   await expect(ахметов).toContainText('АХМЕТОВ Ерлан');
   await expect(ахметов.getByTestId('rating-value')).toHaveText('82,01');
   expect((await ахметов.boundingBox())!.width).toBeLessThanOrEqual(390);
+  // «Добавить спортсмена» — в меню «⋯» над таблицей ✳ (28.10.2026).
+  await page.getByTestId('rating-more').click();
   await expect(page.getByTestId('athlete-open')).toBeVisible();
+  await page.keyboard.press('Escape');
 
-  await page.getByRole('button', { name: 'Турниры' }).click();
-  await page.waitForURL((url) => url.pathname === '/rating/tournaments');
-  await expect(page.getByRole('button', { name: 'Турниры' })).toHaveAttribute('aria-current', 'true');
-  await expect(page.getByTestId('tournament-create-open')).toBeVisible();
+  await page.getByRole('button', { name: 'Календарь', exact: true }).click();
+  await page.waitForURL((url) => url.pathname === '/calendar');
+  await expect(page.getByRole('button', { name: 'Календарь', exact: true })).toHaveAttribute('aria-current', 'true');
 
   await page.getByTestId('phone-person').click();
   await page.getByRole('button', { name: 'Выйти' }).click();

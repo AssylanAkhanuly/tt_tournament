@@ -1,0 +1,1 @@
+export { TournamentLinkView } from './TournamentLinkView';

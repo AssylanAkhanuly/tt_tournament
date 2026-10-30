@@ -11,7 +11,14 @@
 import { useCallback, useEffect, useSyncExternalStore } from 'react';
 
 import { rememberAccount } from './accounts';
-import { fetchMe, loginByEmail, logout, ROLE_GSK_CHAIRMAN, type SessionUser } from './api';
+import {
+  fetchMe,
+  loginByEmail,
+  logout,
+  ROLE_FEDERATION_ADMIN,
+  ROLE_GSK_CHAIRMAN,
+  type SessionUser,
+} from './api';
 
 type State = { user: SessionUser | null; loaded: boolean };
 
@@ -75,6 +82,9 @@ export function useSession() {
     loading: !s.loaded,
     /** По роли экран решает, что показать. Права всё равно проверяет сервер. */
     isGskChairman: !!s.user?.roles.some((r) => r.kind === ROLE_GSK_CHAIRMAN),
+    isFederationAdmin: !!s.user?.roles.some((r) => r.kind === ROLE_FEDERATION_ADMIN),
+    /** Есть ли у человека роль этого вида — для кабинетов без своего флага. */
+    hasRole: (kind: string) => !!s.user?.roles.some((r) => r.kind === kind),
     signIn,
     signOut,
     reload: load,

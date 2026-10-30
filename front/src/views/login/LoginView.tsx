@@ -19,7 +19,7 @@ import { ChevronRight, LogIn } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useState, type FormEvent } from 'react';
 
-import { useKnownAccounts, useSession, type KnownAccount } from '@/entities/session';
+import { homeFor, useKnownAccounts, useSession, type KnownAccount } from '@/entities/session';
 import { AuthScreen, FullScreen, TextInput } from '@/shared/kit/app';
 import { Brand } from '@/shared/kit/brand';
 
@@ -57,8 +57,10 @@ export function LoginView() {
   const params = useSearchParams();
   // Возврат только внутрь сайта: адрес из строки запроса мог прийти из чужой
   // ссылки, и уводить по нему после входа на внешний сайт нельзя.
-  const raw = params.get('next') || '/rating';
-  const next = raw.startsWith('/') && !raw.startsWith('//') ? raw : '/rating';
+  // Без адреса возврата — в кабинет роли ✳ (28.10.2026): администратора
+  // федерации в `/federation`, остальных в рейтинг (`homeFor`).
+  const raw = params.get('next');
+  const asked = raw && raw.startsWith('/') && !raw.startsWith('//') ? raw : null;
 
   const { user, loading, signIn, signOut } = useSession();
   const [email, setEmail] = useState('');
@@ -73,8 +75,8 @@ export function LoginView() {
     setBusy(true);
     setError(null);
     try {
-      await signIn(email.trim(), password);
-      router.push(next);
+      const signedIn = await signIn(email.trim(), password);
+      router.push(asked ?? homeFor(signedIn));
     } catch (e) {
       setError((e as Error).message);
     } finally {
@@ -103,7 +105,7 @@ export function LoginView() {
 
         {!loading && current ? (
           <div className="flex flex-col gap-2" data-testid="already-in">
-            <AccountCard account={current} onPress={() => router.push(next)} />
+            <AccountCard account={current} onPress={() => router.push(asked ?? homeFor(user))} />
             {others.map((a) => (
               <AccountCard key={a.email} account={a} onPress={() => void switchTo(a)} />
             ))}

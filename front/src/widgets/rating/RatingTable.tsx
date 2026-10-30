@@ -5,50 +5,30 @@
    показанном списке, рейтинг, ФАМИЛИЯ Имя Отчество, год рождения, регион.
    Матчи, победы и история — в карточке спортсмена, куда ведёт строка.
 
-   Таблица на TanStack Table ✳ (16.09.2026, решение владельца продукта): колонки
-   объявлены один раз, сортировка, поиск и страница живут состоянием таблицы, а
-   не набором отдельных `useState` вокруг разметки.
-
-   **Считает сервер, а не таблица.** `manualSorting`, `manualFiltering`,
-   `manualPagination`: лист постраничный, и сортировка на клиенте переставляла
-   бы строки внутри страницы, а не по всему листу — первым оказался бы не первый
-   в рейтинге. Таблица отвечает за состояние и разметку, запрос собирает экран
-   (`views/rating`), считает бэкенд (`GET /api/rating/?sort=…`).
-
-   Рисуется китовым `Sheet`, а не своей разметкой: вид один с остальными
-   реестрами. В кит TanStack не переезжает — кит импортирует Storybook, а этой
-   библиотеки у него нет; за таблицами приложения остаётся этот слой.
+   Рисуется общим `DataTable` ✳ (28.10.2026, решение владельца продукта: все
+   таблицы одинаковые) — в **серверном режиме**: лист постраничный, и сортировка
+   на клиенте переставляла бы строки внутри страницы, а не по всему листу —
+   первым оказался бы не первый в рейтинге. Таблица показывает состояние и
+   сообщает о его смене; запрос собирает экран (`views/rating`), считает бэкенд
+   (`GET /api/rating/?sort=…`). Состояние у экрана — в типах TanStack Table
+   (`SortingState`, `ColumnFiltersState`, `PaginationState`, решение 16.09.2026),
+   здесь оно переводится в язык `DataTable` и обратно.
 
    Возрастная категория здесь — выборка из общего рейтинга, а не отдельный
    рейтинг (п. 7.2–7.3 Положения): отбор сужает список, значения те же.
 
-   «Выгрузить в Excel» ✳ (01.10.2026) — ссылка на файл, который собирает
-   сервер: на экране одна страница листа, а в файл идёт весь отбор в том же
-   порядке. Адрес приходит от экрана вместе с остальным состоянием запроса. */
+   «Выгрузить в Excel» ✳ (01.10.2026) — файл собирает сервер: на экране одна
+   страница листа, а в файл идёт весь отбор в том же порядке. С 28.10.2026
+   выгрузка и «Добавить спортсмена» — в меню «⋯» справа над таблицей. */
 
-import {
-  columnFilteringFeature,
-  flexRender,
-  rowPaginationFeature,
-  rowSortingFeature,
-  useTable,
-  type ColumnDef,
-  type ColumnFiltersState,
-  type Header,
-  type OnChangeFn,
-  type PaginationState,
-  type SortingState,
-} from '@tanstack/react-table';
-import { ArrowDown, ArrowUp, ChevronsUpDown, Download } from 'lucide-react';
-import Link from 'next/link';
-import { useMemo } from 'react';
+import { Button, Dropdown, Label } from '@heroui/react';
+import type { ColumnFiltersState, OnChangeFn, PaginationState, SortingState } from '@tanstack/react-table';
+import { Download, MoreHorizontal, UserPlus } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 
 import { fio, num2, type RatingList, type RatingProfile } from '@/entities/rating';
-import { EmptyBox, FilterBar, FilterMenu, Pager, Panel, SearchInput, Sheet, useNarrow } from '@/shared/kit/app';
-
-const GRID = '56px 96px minmax(0,2fr) 120px minmax(0,1fr)';
-/** Телефон ✳ (11.09.2026): №, спортсмен с годом рождения и регионом, рейтинг. */
-const GRID_NARROW = '32px minmax(0,1fr) 64px';
+import { FilterMenu, useNarrow } from '@/shared/kit/app';
+import { DataTable, type DataColumn } from '@/shared/ui/DataTable';
 
 export const SEX_ITEMS = ['Все', 'Мужчины', 'Женщины'];
 export const AGE_ITEMS = ['Все возрасты', 'U11', 'U13', 'U15', 'U17', 'U19', 'U21'];
@@ -58,44 +38,81 @@ export const STATUS_ITEMS = ['Активные', 'Неактивные', 'Все
     фильтр колонки «Фамилия Имя Отчество»: он про неё и есть. */
 export type RatingFacets = { sex: string; age: string; status: string };
 
-/** Возможности таблицы объявляются явно ✳ (TanStack Table 9): сортировка,
-    фильтр колонки и страницы. Всё три — в ручном режиме, считает сервер. */
-const FEATURES = { rowSortingFeature, columnFilteringFeature, rowPaginationFeature };
-type Features = typeof FEATURES;
-type Col = ColumnDef<Features, RatingProfile>;
+/** Скачать файл по адресу, не уходя со страницы: сервер отдаёт его вложением. */
+function download(href: string) {
+  const a = document.createElement('a');
+  a.href = href;
+  a.download = '';
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+}
 
-/** Колонка выровнена по правому краю — число читается по разряду. */
-type Meta = { right?: boolean };
-
-const Sort = ({ dir }: { dir: false | 'asc' | 'desc' }) =>
-  dir === 'asc' ? (
-    <ArrowUp size={12} className="text-blue-600" />
-  ) : dir === 'desc' ? (
-    <ArrowDown size={12} className="text-blue-600" />
-  ) : (
-    <ChevronsUpDown size={12} className="text-neutral-300" />
-  );
-
-function HeaderCell({ header }: { header: Header<Features, RatingProfile, unknown> }) {
-  const right = (header.column.columnDef.meta as Meta | undefined)?.right;
-  const label = flexRender(header.column.columnDef.header, header.getContext());
-  if (!header.column.getCanSort()) {
-    return <span className={'min-w-0 ' + (right ? 'block text-right' : '')}>{label}</span>;
+function columns(narrow: boolean, offset: number): DataColumn<RatingProfile>[] {
+  const num: DataColumn<RatingProfile> = {
+    id: 'num',
+    label: '№',
+    // Номер сквозной по листу, а не по странице: на второй сотне идёт 101-й.
+    render: (_, i) => <span className="text-neutral-500">{offset + i + 1}</span>,
+    className: narrow ? 'w-12' : 'w-16',
+  };
+  const value: DataColumn<RatingProfile> = {
+    id: 'value',
+    label: 'Рейтинг',
+    align: 'right',
+    sortable: true,
+    // У рейтинга первый щелчок — по убыванию: сильнейший сверху.
+    descFirst: true,
+    className: narrow ? 'w-20' : 'w-28',
+    render: (r) => (
+      <span className="font-semibold" data-testid="rating-value">
+        {num2(r.value)}
+      </span>
+    ),
+  };
+  if (narrow) {
+    return [
+      num,
+      {
+        id: 'name',
+        label: 'Спортсмен',
+        rowHeader: true,
+        sortable: true,
+        render: (r) => (
+          <span className="block min-w-0 leading-tight">
+            <span className="block truncate font-medium">{fio(r.name)}</span>
+            <span className="block truncate text-[11.5px] text-neutral-500">
+              {[r.birthYear, r.region].filter(Boolean).join(' · ') || '—'}
+            </span>
+          </span>
+        ),
+      },
+      value,
+    ];
   }
-  return (
-    <button
-      type="button"
-      data-testid={'sort-' + header.column.id}
-      onClick={header.column.getToggleSortingHandler()}
-      className={
-        'flex min-w-0 items-center gap-1 uppercase tracking-wider hover:text-neutral-700 ' +
-        (right ? 'justify-end' : '')
-      }
-    >
-      <span className="min-w-0 truncate">{label}</span>
-      <Sort dir={header.column.getIsSorted()} />
-    </button>
-  );
+  return [
+    num,
+    value,
+    {
+      id: 'name',
+      label: 'Фамилия Имя Отчество',
+      rowHeader: true,
+      sortable: true,
+      render: (r) => <span className="font-medium">{fio(r.name)}</span>,
+    },
+    {
+      id: 'birth_year',
+      label: 'Год рождения',
+      sortable: true,
+      render: (r) => <span className="text-neutral-600">{r.birthYear ?? '—'}</span>,
+    },
+    {
+      id: 'region',
+      label: 'Регион',
+      sortable: true,
+      render: (r) => <span className="text-neutral-600">{r.region || '—'}</span>,
+    },
+  ];
 }
 
 export function RatingTable({
@@ -107,6 +124,7 @@ export function RatingTable({
   columnFilters,
   pagination,
   exportHref,
+  onAddAthlete,
   onFacets,
   onSortingChange,
   onColumnFiltersChange,
@@ -117,6 +135,8 @@ export function RatingTable({
   error: string | null;
   /** Адрес файла Excel с показанным отбором и сортировкой. */
   exportHref: string;
+  /** «Добавить спортсмена» — только председателю ГСК; нет — пункта нет. */
+  onAddAthlete?: () => void;
   facets: RatingFacets;
   sorting: SortingState;
   columnFilters: ColumnFiltersState;
@@ -127,117 +147,23 @@ export function RatingTable({
   onPaginationChange: OnChangeFn<PaginationState>;
 }) {
   const narrow = useNarrow();
-  const rows = useMemo(() => data?.results ?? [], [data]);
-
-  const columns = useMemo<Col[]>(() => {
-    const num: Col = {
-      id: 'num',
-      header: '№',
-      enableSorting: false,
-      // Номер сквозной по листу, а не по странице: на второй сотне идёт 101-й.
-      cell: ({ row }) => (
-        <span className="text-neutral-500">{pagination.pageIndex * pagination.pageSize + row.index + 1}</span>
-      ),
-    };
-    const value: Col = {
-      id: 'value',
-      accessorKey: 'value',
-      header: 'Рейтинг',
-      meta: { right: true } satisfies Meta,
-      cell: (info) => (
-        <span className="block text-right font-semibold" data-testid="rating-value">
-          {num2(info.getValue<number>())}
-        </span>
-      ),
-    };
-    if (narrow) {
-      return [
-        num,
-        {
-          id: 'name',
-          accessorKey: 'name',
-          header: 'Спортсмен',
-          cell: ({ row }) => (
-            <span className="min-w-0 leading-tight">
-              <span className="block truncate font-medium">{fio(row.original.name)}</span>
-              <span className="block truncate text-[11.5px] text-neutral-500">
-                {[row.original.birthYear, row.original.region].filter(Boolean).join(' · ') || '—'}
-              </span>
-            </span>
-          ),
-        },
-        value,
-      ];
-    }
-    return [
-      num,
-      value,
-      {
-        id: 'name',
-        accessorKey: 'name',
-        header: 'Фамилия Имя Отчество',
-        cell: (info) => <span className="block truncate font-medium">{fio(info.getValue<string>())}</span>,
-      },
-      {
-        id: 'birth_year',
-        accessorKey: 'birthYear',
-        header: 'Год рождения',
-        cell: (info) => <span className="text-neutral-600">{info.getValue<number | null>() ?? '—'}</span>,
-      },
-      {
-        id: 'region',
-        accessorKey: 'region',
-        header: 'Регион',
-        cell: (info) => <span className="block truncate text-neutral-600">{info.getValue<string>() || '—'}</span>,
-      },
-    ];
-  }, [narrow, pagination.pageIndex, pagination.pageSize]);
-
-  const table = useTable({
-    features: FEATURES,
-    data: rows,
-    columns,
-    state: { sorting, columnFilters, pagination },
-    onSortingChange,
-    onColumnFiltersChange,
-    onPaginationChange,
-    // Считает сервер: таблица только хранит состояние и рисует (см. шапку).
-    manualSorting: true,
-    manualFiltering: true,
-    manualPagination: true,
-    rowCount: data?.count ?? 0,
-  });
-
-  const name = table.getColumn('name');
-  const grid = narrow ? GRID_NARROW : GRID;
-  const headers = table.getHeaderGroups()[0]?.headers ?? [];
+  const router = useRouter();
+  const rows = data?.results ?? [];
+  const query = String(columnFilters.find((f) => f.id === 'name')?.value ?? '');
+  const canExport = !error && !!data?.count;
 
   return (
-    <>
-      <FilterBar
-        right={
-          // Выгружать нечего — кнопки нет: файл из одних заголовков никому не нужен.
-          !error && !!data?.count && (
-            <a
-              href={exportHref}
-              download
-              data-testid="rating-export"
-              aria-label="Выгрузить в Excel"
-              className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-neutral-200 bg-white px-3 text-[13px] font-medium text-neutral-700 hover:bg-neutral-50"
-            >
-              <Download size={14} className="text-neutral-400" />
-              {/* Телефон: полоса отбора и так занята поиском и «Фильтрами». */}
-              {!narrow && 'Выгрузить в Excel'}
-            </a>
-          )
-        }
-      >
-        <SearchInput
-          value={(name?.getFilterValue() as string) ?? ''}
-          onChange={(v) => name?.setFilterValue(v)}
-          placeholder="Фамилия или регион"
-          className="w-64"
-        />
+    <DataTable
+      ariaLabel="Рейтинг-лист"
+      rows={rows}
+      columns={columns(narrow, pagination.pageIndex * pagination.pageSize)}
+      getId={(r) => r.userId}
+      fixed={narrow}
+      loading={loading}
+      error={error ? 'Рейтинг не загрузился: ' + error : null}
+      empty="По такому отбору никого нет"
+      search={{ placeholder: 'Фамилия или регион' }}
+      filters={
         <FilterMenu
           groups={[
             { label: 'Пол', items: SEX_ITEMS, active: facets.sex, onPick: (v) => onFacets({ sex: v }) },
@@ -245,52 +171,53 @@ export function RatingTable({
             { label: 'Статус', items: STATUS_ITEMS, active: facets.status, onPick: (v) => onFacets({ status: v }) },
           ]}
         />
-      </FilterBar>
-
-      <Panel title={data ? 'Спортсменов в листе: ' + data.count : 'Рейтинг'} flush>
-        {error ? (
-          <div className="p-4">
-            <EmptyBox title="Рейтинг не загрузился" text={error + '. Проверьте, что рейтинговый сервис запущен.'} />
-          </div>
-        ) : (
-          <Sheet flush grid={grid} cols={headers.map((h) => <HeaderCell key={h.id} header={h} />)}>
-            {table.getRowModel().rows.map((row) => (
-              <Link
-                key={row.id}
-                href={'/rating/' + row.original.userId}
-                data-row
-                data-testid="rating-row"
-                data-player={row.original.name}
-                className="grid w-full items-center gap-3 px-4 py-2.5 text-left text-[13px] tabular-nums"
-                style={{ gridTemplateColumns: grid }}
+      }
+      count={narrow ? undefined : () => 'Спортсменов: ' + (data?.count ?? 0)}
+      actions={
+        // Редкие действия — под «⋯» ✳ (28.10.2026, решение владельца продукта):
+        // на виду только поиск и отбор. Пустой отбор выгружать незачем.
+        (onAddAthlete || canExport) && (
+          <Dropdown>
+            <Button isIconOnly variant="tertiary" aria-label="Ещё" className="rounded-xl" data-testid="rating-more">
+              <MoreHorizontal size={18} />
+            </Button>
+            <Dropdown.Popover placement="bottom end" className="rounded-xl">
+              <Dropdown.Menu
+                aria-label="Действия"
+                onAction={(key) => {
+                  if (key === 'add') onAddAthlete?.();
+                  if (key === 'export') download(exportHref);
+                }}
               >
-                {row.getAllCells().map((cell) => (
-                  <span key={cell.id} className="min-w-0">
-                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                  </span>
-                ))}
-              </Link>
-            ))}
-          </Sheet>
-        )}
-
-        {!error && !rows.length && (
-          <div className="p-4">
-            <EmptyBox
-              title={loading ? 'Загружается' : 'Пусто'}
-              text={
-                loading
-                  ? 'Рейтинг-лист загружается.'
-                  : 'По такому отбору никого нет. Снимите фильтры или измените поиск.'
-              }
-            />
-          </div>
-        )}
-      </Panel>
-
-      {table.getPageCount() > 1 && (
-        <Pager page={pagination.pageIndex} pages={table.getPageCount()} onPick={(p) => table.setPageIndex(p)} />
-      )}
-    </>
+                {onAddAthlete ? (
+                  <Dropdown.Item id="add" textValue="Добавить спортсмена" className="rounded-xl" data-testid="athlete-open">
+                    <UserPlus size={16} />
+                    <Label>Добавить спортсмена</Label>
+                  </Dropdown.Item>
+                ) : null}
+                {canExport ? (
+                  <Dropdown.Item id="export" textValue="Выгрузить в Excel" className="rounded-xl" data-testid="rating-export">
+                    <Download size={16} />
+                    <Label>Выгрузить в Excel</Label>
+                  </Dropdown.Item>
+                ) : null}
+              </Dropdown.Menu>
+            </Dropdown.Popover>
+          </Dropdown>
+        )
+      }
+      onRowAction={(r) => router.push('/rating/' + r.userId)}
+      rowProps={(r) => ({ 'data-testid': 'rating-row', 'data-player': r.name })}
+      server={{
+        query,
+        // Поиск — фильтр колонки «Фамилия Имя Отчество» (состояние экрана).
+        onQuery: (q) => onColumnFiltersChange((old) => [...old.filter((f) => f.id !== 'name'), { id: 'name', value: q }]),
+        sort: sorting[0] ? { column: sorting[0].id, direction: sorting[0].desc ? 'descending' : 'ascending' } : null,
+        onSort: (d) => onSortingChange([{ id: String(d.column), desc: d.direction === 'descending' }]),
+        page: pagination.pageIndex,
+        pages: Math.ceil((data?.count ?? 0) / pagination.pageSize),
+        onPage: (p) => onPaginationChange((old) => ({ ...old, pageIndex: p })),
+      }}
+    />
   );
 }
