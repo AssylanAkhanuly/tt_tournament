@@ -262,6 +262,20 @@ test('главный судья: черновик расписания, прав
     await админ.getByTestId('nav-sub').filter({ hasText: 'Матчи' }).click();
     await админ.waitForURL((url) => url.search === '');
     await expect(админ.locator(`[data-testid="schedule-match"][data-id="${сыгран.id}"] [data-testid="match-result"]`)).toHaveText('3:1');
+
+    // «Сетка» — карта плей-офф: выходят двое (наше значение), A1–B2 и B1–A2.
+    // Группа A сыграна целиком — в её позициях фамилии; у B — метки.
+    const третий = итог.matches.filter((m) => m.group === группаA.id).find((m) => m.id !== сыгран.id && m.id !== неявка.id)!;
+    expect((await счёт(третий, { score1: 3, score2: 0 })).status()).toBe(200);
+    await админ.getByTestId('nav-sub').filter({ hasText: 'Сетка' }).click();
+    await админ.waitForURL((url) => url.search === '?view=bracket');
+    await админ.reload(); // счёт записан мимо экрана — свежее расписание
+    const карта = админ.getByTestId('playoff-map');
+    await expect(карта.getByText(/^A1 · \S+ [А-ЯЁA-Z]\./)).toBeVisible();
+    await expect(карта.getByText(/^A2 · \S+ [А-ЯЁA-Z]\./)).toBeVisible();
+    await expect(карта.getByText('B1', { exact: true })).toBeVisible();
+    await expect(карта.getByText('B2', { exact: true })).toBeVisible();
+    await админ.screenshot({ path: 'test-results/schedule/playoff.png' });
     await админ.context().close();
   } finally {
     await page.request.post('/api/auth/login/email/', { data: E2E_ADMIN });

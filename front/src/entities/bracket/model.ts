@@ -9,6 +9,9 @@ export type Side = {
   name: string;
   seed?: number;
   avatarUrl?: string;
+  /** Место известно, человек ещё нет (карта плей-офф: «A1», пока группа
+   *  не сыграна) — без кружка фото. */
+  placeholder?: boolean;
 };
 
 export type MatchStatus = 'pending' | 'live' | 'done';

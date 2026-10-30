@@ -1,5 +1,6 @@
 'use client';
 
+import { UserRound } from 'lucide-react';
 import { useEffect, useMemo } from 'react';
 import {
   Background,
@@ -46,8 +47,9 @@ function Row({
   score?: number | null;
   light: boolean;
 }) {
-  /* Пустое место («—») окрашено как «ещё не определён», даже у победителя. */
-  const nameColor = !side
+  /* Пустое место («—») и метка без человека («A1») окрашены как «ещё не
+     определён», даже у победителя. */
+  const nameColor = !side || side.placeholder
     ? light
       ? 'text-[color:var(--muted,#737373)]'
       : 'text-[color:var(--c-dim,#6b7691)]'
@@ -67,16 +69,28 @@ function Row({
       : 'text-[color:var(--c-dim,#6b7691)]';
   return (
     <div className="flex h-[27px] items-center gap-[10px]">
-      <span
-        className={cx(
-          'h-[22px] w-[22px] flex-none overflow-hidden rounded-[50%]',
-          side
-            ? 'bg-[color:var(--c-avatar-bg,#141b2b)]'
-            : 'bg-[color:var(--c-glass-seg,rgba(255,255,255,0.05))]',
-        )}
-      >
-        {side?.avatarUrl ? <img className="h-full w-full object-cover" src={side.avatarUrl} alt="" /> : null}
-      </span>
+      {/* Фото; человека без снимка — силуэт (как `PersonAvatar` в приложении);
+          у метки без человека кружка нет — фото ещё некого показать. */}
+      {side?.placeholder ? (
+        <span className="w-[22px] flex-none" />
+      ) : (
+        <span
+          className={cx(
+            'flex h-[22px] w-[22px] flex-none items-center justify-center overflow-hidden rounded-[50%]',
+            !side
+              ? 'bg-[color:var(--c-glass-seg,rgba(255,255,255,0.05))]'
+              : side.avatarUrl || !light
+                ? 'bg-[color:var(--c-avatar-bg,#141b2b)]'
+                : 'bg-neutral-200 text-neutral-500',
+          )}
+        >
+          {side?.avatarUrl ? (
+            <img className="h-full w-full object-cover" src={side.avatarUrl} alt="" />
+          ) : side ? (
+            <UserRound size={13} aria-hidden />
+          ) : null}
+        </span>
+      )}
       <span
         className={cx('min-w-0 flex-1 truncate text-[13px]', nameColor, win && 'font-semibold')}
         title={side?.name}

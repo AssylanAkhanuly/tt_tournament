@@ -304,9 +304,17 @@ const matchColumns = (groups: Schedule['groups']): DataColumn<ScheduledMatch>[] 
   },
 ];
 
-type View = 'matches' | 'day' | 'groups';
+type View = 'matches' | 'day' | 'groups' | 'bracket';
 
-export function ScheduleSection({ tournamentId }: { tournamentId: string }) {
+export function ScheduleSection({
+  tournamentId,
+  playoff,
+}: {
+  tournamentId: string;
+  /** Вид «Сетка» — карта плей-офф; рисует её виджет сетки, а не фича
+   *  (фича не знает о виджетах), поэтому её передаёт страница. */
+  playoff?: (s: Schedule) => ReactNode;
+}) {
   const loaded = useSchedule(tournamentId);
   // Ответ правки — свежее расписание целиком; держим его поверх загруженного.
   const [fresh, setFresh] = useState<Schedule | null>(null);
@@ -315,7 +323,7 @@ export function ScheduleSection({ tournamentId }: { tournamentId: string }) {
   // перезагрузку и ссылку. Выбирают его подпункты «Расписания» в сайдбаре.
   const params = useSearchParams();
   const asked = params.get('view');
-  const view: View = asked === 'day' || asked === 'groups' ? asked : 'matches';
+  const view: View = asked === 'day' || asked === 'groups' || asked === 'bracket' ? asked : 'matches';
   const [open, setOpen] = useState<number | null>(null);
   const [draft, setDraft] = useState<ScheduleSettings | null>(null);
   const [busy, setBusy] = useState(false);
@@ -473,6 +481,11 @@ export function ScheduleSection({ tournamentId }: { tournamentId: string }) {
         />
       ) : view === 'day' ? (
         <ScheduleDay schedule={s} toolbar={toolbar} onOpen={s.canEdit ? setOpen : undefined} />
+      ) : view === 'bracket' ? (
+        <>
+          <div className="flex shrink-0 flex-wrap items-center justify-end gap-3 border-b border-neutral-200 px-6 py-3">{toolbar}</div>
+          {playoff?.(s)}
+        </>
       ) : (
         <>
           <div className="flex shrink-0 flex-wrap items-center justify-end gap-3 border-b border-neutral-200 px-6 py-3">{toolbar}</div>

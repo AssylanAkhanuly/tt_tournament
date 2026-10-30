@@ -562,8 +562,19 @@ export type ScheduledMatch = {
 /** Итог игрока в группе: место, очки (победа 2, поражение 1, неявка 0), победы,
  *  поражения, разница партий. */
 export type GroupStanding = { place: number; points: number; wins: number; losses: number; diff: number };
+/** Позиция карты плей-офф: метка «A1»; игрок — когда его группа сыграна. */
+export type PlayoffSide = { label: string; player: SchedulePerson | null };
+/** Карта плей-офф по итогам групп ✳ (30.10.2026): первый круг по посеву, дальше
+ *  пустые матчи до финала; пропуск круга (`null`) проводит игрока дальше. */
+export type PlayoffMap = {
+  /** Выходят из группы — наше значение (QUESTIONS 10.2). */
+  advance: number;
+  rounds: number;
+  matches: { round: number; slot: number; a: PlayoffSide | null; b: PlayoffSide | null }[];
+};
 export type Schedule = {
   status: 'none' | 'draft' | 'final';
+  playoff: PlayoffMap;
   /** Править может только главный судья, пока не отправлено. */
   canEdit: boolean;
   settings: ScheduleSettings;
@@ -586,6 +597,7 @@ type RawSchedule = Omit<Schedule, 'canEdit' | 'settings' | 'matches'> & {
 
 const toSchedule = (r: RawSchedule): Schedule => ({
   status: r.status,
+  playoff: r.playoff,
   canEdit: r.can_edit,
   settings: {
     tables: r.settings.tables,

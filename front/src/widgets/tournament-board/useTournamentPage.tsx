@@ -51,7 +51,7 @@ export function useTournamentPage({
   const pending = usePendingRefereeApplications(id, !sections || sections.includes('referees'));
   const at: SectionView = {
     tab: params.get('tab') === 'applications' ? 'applications' : 'roster',
-    view: view === 'day' || view === 'groups' ? view : 'matches',
+    view: view === 'day' || view === 'groups' || view === 'bracket' ? view : 'matches',
     pending,
   };
   return {

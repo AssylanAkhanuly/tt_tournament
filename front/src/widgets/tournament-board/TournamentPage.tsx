@@ -35,6 +35,7 @@ import {
 import { ApplicationDrawer } from '@/features/referee-recruitment';
 import { TournamentInfoForm } from '@/features/tournament-info';
 import { ScheduleSection } from '@/features/tournament-schedule';
+import { PlayoffMap } from '@/widgets/bracket/PlayoffMap';
 import { AddToRosterDialog, PlayerDrawer, RefereeDrawer } from '@/features/tournament-roster';
 import { RecruitmentSettings, SettingsButton } from '@/features/tournament-settings';
 import { DataTable, type DataColumn } from '@/shared/ui/DataTable';
@@ -57,7 +58,11 @@ const SECTIONS: { id: TournamentSectionId; label: string; icon: ReactNode }[] = 
 /** Подпункт раздела — той же формы, что подпункт сайдбара (`AppShell`). */
 type NavSubItem = { label: string; href: string; active?: boolean; badge?: number };
 
-export type SectionView = { tab: 'roster' | 'applications'; view: 'matches' | 'day' | 'groups'; pending: number };
+export type SectionView = {
+  tab: 'roster' | 'applications';
+  view: 'matches' | 'day' | 'groups' | 'bracket';
+  pending: number;
+};
 
 /** Разделы турнира для сайдбара: подпись, адрес, значок и подпункты. Каждый
  *  раздел — своя страница ✳ (28.10.2026, решение владельца продукта):
@@ -75,6 +80,8 @@ export function tournamentNav(pageHref: string, only?: TournamentSectionId[], at
         { label: 'Матчи', href: base, active: !at || at.view === 'matches' },
         { label: 'День', href: base + '?view=day', active: at?.view === 'day' },
         { label: 'Группы', href: base + '?view=groups', active: at?.view === 'groups' },
+        // Карта плей-офф по итогам групп ✳ (30.10.2026).
+        { label: 'Сетка', href: base + '?view=bracket', active: at?.view === 'bracket' },
       ];
     return undefined;
   };
@@ -408,6 +415,6 @@ export function TournamentSection({
   recruitment?: boolean;
 }) {
   if (section === 'info') return <InfoSection id={id} />;
-  if (section === 'schedule') return <ScheduleSection tournamentId={id} />;
+  if (section === 'schedule') return <ScheduleSection tournamentId={id} playoff={(s) => <PlayoffMap playoff={s.playoff} />} />;
   return section === 'referees' ? <Referees id={id} /> : <Players id={id} recruitment={recruitment} />;
 }

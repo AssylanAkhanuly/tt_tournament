@@ -32,7 +32,7 @@ from django.utils import timezone
 
 from users.models import Role
 
-from . import roster
+from . import playoff, roster
 from .models import GroupMatch, GroupParticipant, Tournament, TournamentGroup
 
 # ── Чистая часть (без базы) ───────────────────────────────────────────────
@@ -407,14 +407,15 @@ def snapshot(t: Tournament, user) -> dict:
     # ENGINE.md, «Круговая», открытый вопрос.
     standing = {}
     for g in groups:
-        ranked = sorted(
-            (m for m in members if m.group_id == g.id), key=lambda m: (-m.points, -m.wins, -m.diff, m.seed)
-        )
+        ranked = sorted((m for m in members if m.group_id == g.id), key=playoff.rank_key)
         for place, m in enumerate(ranked, start=1):
             standing[m.id] = {"place": place, "points": m.points, "wins": m.wins, "losses": m.losses, "diff": m.diff}
+    members, matches = list(members), list(matches)
     return {
         "status": t.schedule_status,
         "can_edit": t.schedule_status != FINAL and is_chief(t, user),
+        # Карта плей-офф по итогам групп ✳ (30.10.2026) — только смотреть.
+        "playoff": playoff.playoff_preview(groups, members, matches, _person),
         "settings": {
             "tables": t.schedule_tables,
             # Нет черновика — дни по умолчанию (даты турнира): с них начинают.

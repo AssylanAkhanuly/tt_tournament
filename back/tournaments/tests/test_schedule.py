@@ -292,3 +292,38 @@ def test_расписание_отдаёт_счёт_матча_и_таблицу
     assert sorted(s["place"] for s in st.values()) == list(range(1, len(st) + 1))
     leader = max(st, key=lambda k: (st[k]["points"], st[k]["wins"], st[k]["diff"]))
     assert st[leader]["place"] == 1
+
+
+def test_карта_плей_офф_метки_до_итогов_игроки_после(мир):
+    """Две группы по четыре, выходят двое (наше значение, QUESTIONS 10.2):
+    полуфиналы A1–B2 и B1–A2, затем финал. Пока группа не сыграна — метки;
+    сыграна целиком — её игроки по местам, у соседней группы метки остаются."""
+    d = собрать(мир).data
+    po = d["playoff"]
+    assert (po["advance"], po["rounds"], len(po["matches"])) == (2, 2, 3)
+    первый = [(m["a"]["label"], m["b"]["label"]) for m in po["matches"] if m["round"] == 0]
+    assert первый == [("A1", "B2"), ("B1", "A2")]
+    assert all(m["a"]["player"] is None and m["b"]["player"] is None for m in po["matches"] if m["round"] == 0)
+    финал = next(m for m in po["matches"] if m["round"] == 1)
+    assert финал["a"] is None and финал["b"] is None
+
+    # Группа A сыграна целиком: первый номер посева выигрывает всё, и так далее.
+    группа = next(g for g in d["groups"] if g["name"] == "A")
+    порядок = [p["id"] for p in группа["players"]]
+    # Счёт пишет организатор (`_can_manage_tournament`: is_staff или админ клуба).
+    мир["админ"].is_staff = True
+    мир["админ"].save(update_fields=["is_staff"])
+    админ = клиент(мир["админ"])
+    for m in (x for x in d["matches"] if x["group"] == группа["id"]):
+        сильнее_первый = порядок.index(m["player1"]["id"]) < порядок.index(m["player2"]["id"])
+        r = админ.post(
+            f"/api/tournaments/{мир['t'].id}/groups/{группа['id']}/matches/{m['id']}/score/",
+            {"score1": 3 if сильнее_первый else 0, "score2": 0 if сильнее_первый else 3},
+            format="json",
+        )
+        assert r.status_code == 200, r.data
+    po = клиент(мир["главный"]).get(url(мир["t"])).data["playoff"]
+    первый = [m for m in po["matches"] if m["round"] == 0]
+    assert первый[0]["a"]["player"]["id"] == порядок[0]  # A1 — победитель группы
+    assert первый[1]["b"]["player"]["id"] == порядок[1]  # A2
+    assert первый[0]["b"]["player"] is None and первый[0]["b"]["label"] == "B2"
