@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
-import "./globals.css";
+// Tailwind — собирается PostCSS при сборке (postcss.config.mjs), файла в репозитории нет.
+// В нём же базовый сброс и палитра приложения (бывший `globals.css`).
+import "@/shared/kit/tailwind.src.css";
 
 export const metadata: Metadata = {
   title: "ФНТ РК",
@@ -12,7 +14,9 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="ru">
+    // `data-app` — к нему привязаны сброс и палитра в `tailwind.src.css`: тот
+    // же файл грузит Storybook, и там они действовать не должны.
+    <html lang="ru" data-app="">
       <body>{children}</body>
     </html>
   );

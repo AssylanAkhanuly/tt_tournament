@@ -47,3 +47,7 @@ yarn-error.log*
 next-env.d.ts
 
 .vercel
+
+# Tailwind: CSS собирается при сборке, в репозитории его нет ✳ (28.10.2026).
+# Приложение — PostCSS внутри next dev/build; Storybook — `npm run kit:css`.
+/src/shared/kit/tailwind.css

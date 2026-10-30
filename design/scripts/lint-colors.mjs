@@ -30,6 +30,10 @@ const TOKENS_FILE = '../front/src/shared/kit/theme/tokens.css';
    токены. */
 const SKIP_RAW = new Set([
   TOKENS_FILE,
+  // Вход Tailwind приложения ✳ (28.10.2026): после перевода на Tailwind в нём
+  // живут палитра приложения и вещательная палитра табло (`@theme`) — это
+  // определение токенов, как tokens.css, а не их использование.
+  '../front/src/shared/kit/tailwind.src.css',
   '../front/src/shared/kit/theme/themes.ts',
   '../front/src/shared/kit/theme/custom.ts',
   'src/theme/Builder.tsx',

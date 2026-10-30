@@ -33,10 +33,26 @@ import { useScoreboardControl } from '@/features/scoreboard-live/useScoreboardCh
 import { Button } from '@heroui/react';
 
 import { Panel, Segmented, TextInput } from '@/shared/kit/app';
-import '@/shared/kit/tailwind.css';
 import { ScoreboardBoard } from '@/widgets/scoreboard/ScoreboardBoard';
 
-import styles from './ScoreboardControlView.module.css';
+/* Пульт метит в планшет — им ведут счёт стоя у стола, поэтому:
+   — экран не прокручивается, а раскладывается по высоте окна (всё видно сразу,
+     не надо искать кнопку скроллом посреди розыгрыша);
+   — размеры считаются от vh/vw, чтобы одна раскладка жила и на 1024×768,
+     и на 1280×800, и на большом мониторе;
+   — кнопки крупные: по ним попадают пальцем не глядя.
+   Строки сетки: разряд, предпросмотр, стороны, действия. `h-dvh`, а не
+   `100vh`: на планшете панели браузера съедают часть 100vh. Тап не должен
+   ждать «а вдруг это двойной» и подсвечиваться серым — отсюда
+   `touch-manipulation` и прозрачная подсветка у кнопок и полей. */
+const PAGE =
+  '[--gap:clamp(10px,1.6vh,18px)] [--pad-x:clamp(12px,2vw,24px)] [--pad-y:clamp(10px,1.6vh,20px)] ' +
+  'mx-auto grid h-dvh max-w-[1400px] grid-rows-[auto_auto_minmax(0,1fr)_auto] gap-(--gap) ' +
+  'overflow-hidden overscroll-none bg-(--bg) px-(--pad-x) py-(--pad-y) text-(--text) ' +
+  '[&_:is(button,input)]:touch-manipulation [&_:is(button,input)]:[-webkit-tap-highlight-color:transparent]';
+
+/** Поля типа матча и круга — две узкие колонки рядом с таббаром. */
+const LABEL_FIELDS = 'grid grid-cols-[repeat(2,clamp(84px,11vw,140px))] gap-[clamp(8px,1vw,12px)]';
 
 // Разряд встречи выбирают таббаром сверху: он решает, что спрашивать у
 // оператора (второго игрока пары, названия команд) и что показывать в эфире.
@@ -309,11 +325,13 @@ export function ScoreboardControlView({ initial }: { initial: ScoreboardState })
     /* `hero-scope` — тот же скоуп, в котором живут макеты: под ним лежит
        локальный сброс вместо preflight, без него кнопки и поля HeroUI
        приезжают с браузерными стилями. */
-    <main className={`${styles.page} hero-scope`} data-theme="light">
+    <main className={`${PAGE} hero-scope`} data-theme="light">
       {/* Тип матча и круг — подписи в шапке плашки («MT», «R 16»). Их меняют
           между матчами, а не посреди розыгрыша, поэтому они в одной строке с
-          разрядом, а не в панелях сторон. Пустое поле убирает подпись из эфира. */}
-      <div className={styles.top}>
+          разрядом, а не в панелях сторон. Пустое поле убирает подпись из эфира.
+          Поля прижаты к низу строки, чтобы стоять вровень с таббаром: у них
+          над полем подпись, у таббара её нет. */}
+      <div className="grid grid-cols-[minmax(0,1fr)_auto] [align-items:end] gap-(--gap)">
         <Segmented
           ariaLabel="Разряд встречи"
           items={MODES.map((m) => m.label)}
@@ -324,7 +342,7 @@ export function ScoreboardControlView({ initial }: { initial: ScoreboardState })
             if (hit) send({ type: 'patch', patch: { mode: hit.value } });
           }}
         />
-        <div className={styles.labels}>
+        <div className={LABEL_FIELDS}>
           <TextInput
             label="Тип матча"
             placeholder="MT"
@@ -342,13 +360,25 @@ export function ScoreboardControlView({ initial }: { initial: ScoreboardState })
 
       {/* Предпросмотр эфира: плашка как есть, на клетчатом поле — так видно, что
           фон у неё прозрачный, и оператор понимает, что уйдёт в OBS. */}
-      <section className={styles.previewWrap} aria-label="Предпросмотр плашки">
-        <div className={styles.preview}>
+      <section
+        className={
+          'grid place-items-center rounded-[12px] border border-(--line) p-[clamp(6px,1vh,14px)] ' +
+          '[background:repeating-conic-gradient(var(--elevated)_0%_25%,var(--bg)_0%_50%)_50%/24px_24px]'
+        }
+        aria-label="Предпросмотр плашки"
+      >
+        {/* Плашка нарисована в «единицах» (860 × 160). Ужимаем её под то, что
+            реально осталось по ширине и по высоте, но крупнее натуральной не
+            растягиваем. */}
+        <div className="max-w-full overflow-hidden [--sb-scale:min(1px,calc((100vw_-_2*var(--pad-x)_-_2rem)/860),calc(16vh/160))]">
           <ScoreboardBoard state={state} />
         </div>
       </section>
 
-      <div className={styles.sides}>
+      {/* Панель по своей высоте, а не растянутая на всю строку. Панели кита
+          несут собственный нижний отступ (они рассчитаны на поток блоков сверху
+          вниз), здесь они стоят в сетке, и отступ снизу лишний. */}
+      <div className="grid min-h-0 grid-cols-2 [align-items:start] gap-(--gap) overflow-auto [&>*]:mb-0">
         {sideBlock('left', 'Слева')}
         {sideBlock('right', 'Справа')}
       </div>
@@ -356,7 +386,7 @@ export function ScoreboardControlView({ initial }: { initial: ScoreboardState })
       {/* Решения над партией и матчем. «Завершить партию» становится главной
           кнопкой ровно тогда, когда партия доиграна: до этого она такая же, как
           соседние, и нажимать её незачем. */}
-      <section className={styles.actions}>
+      <section className="grid grid-cols-3 gap-[clamp(8px,1vw,12px)]">
         <Button
           className="h-12 w-full"
           variant={isGameOver(state) ? 'primary' : 'outline'}

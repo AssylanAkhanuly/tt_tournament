@@ -17,7 +17,7 @@ import Chart, { type ChartConfiguration } from 'chart.js/auto';
 
     `fallback` — имя запасного токена ✳ (16.09.2026. Палитра кита
     (`theme/tokens.css`) грузится в Storybook, а приложение держит свою в
-    `app/globals.css`, и `--c-accent` там пуст. Пустая строка для Chart.js —
+    входе Tailwind (`tailwind.src.css`, `[data-app]`), и `--c-accent` там пуст. Пустая строка для Chart.js —
     чёрный: график в приложении выходил залитым чёрным. Запасной — тоже токен,
     сырых цветов в ките по-прежнему нет. */
 export const token = (name: string, el?: HTMLElement, fallback?: string) => {

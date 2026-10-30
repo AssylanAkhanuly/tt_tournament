@@ -4,7 +4,9 @@
 
 import { DEFAULT_STATE, type ScoreboardState } from './model';
 
-const BACKEND = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+// 127.0.0.1, а не localhost: Node сначала идёт на ::1, а runserver слушает
+// только IPv4 — см. next.config.ts.
+const BACKEND = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8000';
 
 export async function fetchBoard(key: string): Promise<ScoreboardState> {
   try {

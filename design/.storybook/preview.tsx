@@ -2,6 +2,9 @@ import type { Preview } from '@storybook/react';
 import React from 'react';
 import '@/shared/kit/theme/tokens.css';
 import '../src/ui/ui.css';
+// Tailwind кита. Собирается `npm run kit:css` перед storybook dev/build и в
+// git не лежит ✳ (28.10.2026); приложение собирает его само через PostCSS.
+import '@/shared/kit/tailwind.css';
 import { DEFAULT_FONT, FONTS, ensureFontsLoaded, fontStack } from '../src/fonts';
 import { DEFAULT_THEME, THEMES, applyTheme } from '@/shared/kit/theme/themes';
 

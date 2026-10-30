@@ -4,11 +4,14 @@
 
 import { SponsorStrip } from '@/widgets/scoreboard/SponsorStrip';
 
-import styles from './ScoreboardOverlayView.module.css';
+// Сцена — как у плашки счёта (`ScoreboardOverlayView`): прозрачный фон
+// страницы, полоса прижата к левому верхнему углу. Класс повторён, а не
+// импортирован: тот модуль клиентский, а эта страница серверная.
+const STAGE = 'inline-block overflow-hidden [:where(:is(html,body):has(&))]:[background:transparent]';
 
 export function ScoreboardSponsorsView({ label }: { label?: string }) {
   return (
-    <div className={styles.stage}>
+    <div className={STAGE}>
       <SponsorStrip label={label} />
     </div>
   );

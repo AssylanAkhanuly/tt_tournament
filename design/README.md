@@ -893,9 +893,9 @@ npm run lint:colors   # сырые цвета, сырые радиусы, нес
 
 ### Сетка из `front/`
 
-`front/src/widgets/bracket/BracketFlow.module.css` тоже переведён на токены,
+`front/src/widgets/bracket/BracketFlow.tsx` (с 28.10.2026 — утилиты Tailwind, CSS-модуля нет) тоже переведён на токены,
 но с запасными значениями (`var(--c-accent, #6f9bff)`): в Storybook цвет берётся
-из темы, в самом фронте (там пока только заготовка токенов в `app/globals.css`)
+из темы, в самом фронте (палитра приложения — во входе Tailwind `front/src/shared/kit/tailwind.src.css`)
 остаётся прежним.
 
 ## Примерка шрифтов
