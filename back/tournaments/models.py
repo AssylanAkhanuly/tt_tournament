@@ -43,6 +43,15 @@ class Tournament(models.Model):
     )
     created_at = models.DateTimeField(auto_now_add=True)
     starts_at = models.DateTimeField(null=True, blank=True, verbose_name="Дата начала")
+    # Сведения о турнире ✳ (29.10.2026, решение владельца продукта): окончание,
+    # где и возраст участников. Возраст — простые границы в годах («от–до»,
+    # пусто — без границы) для раздела «Сведения»; возрастные категории
+    # протокола (диапазоны дат рождения, `TournamentAgeCategory`) — отдельно.
+    ends_at = models.DateField(null=True, blank=True, verbose_name="Дата окончания")
+    city = models.CharField(max_length=120, blank=True, verbose_name="Город")
+    venue = models.CharField(max_length=200, blank=True, verbose_name="Место проведения")
+    age_min = models.PositiveSmallIntegerField(null=True, blank=True, verbose_name="Возраст от, лет")
+    age_max = models.PositiveSmallIntegerField(null=True, blank=True, verbose_name="Возраст до, лет")
     status = models.CharField(
         max_length=20,
         choices=STATUS_CHOICES,
@@ -81,6 +90,29 @@ class Tournament(models.Model):
     # 2:1 — нет.
     games_to_win = models.PositiveSmallIntegerField(default=3, verbose_name="Партий до победы в матче")
 
+    # Приём заявок судей ✳ (29.10.2026, решение владельца продукта; ТЗ §4.3):
+    # переключатель и необязательный срок. Открыт, пока переключатель включён и
+    # срок (включительно) не прошёл. Правила заявок — `recruitment.py`.
+    referee_recruitment_open = models.BooleanField(default=False, verbose_name="Приём заявок судей открыт")
+    referee_recruitment_until = models.DateField(null=True, blank=True, verbose_name="Приём заявок судей до")
+    # Приём заявок игроков ✳ (29.10.2026) — тот же переключатель со сроком, но
+    # решения нет: игрок записывается сам (`participants/join/`, ссылка-
+    # приглашение). Открыт по умолчанию: так записывались и до него.
+    player_recruitment_open = models.BooleanField(default=True, verbose_name="Приём заявок игроков открыт")
+    player_recruitment_until = models.DateField(null=True, blank=True, verbose_name="Приём заявок игроков до")
+
+    # Расписание ✳ (30.10.2026, решение владельца продукта; `schedule.py`):
+    # строит главный судья — черновик, потом отправка; отправленное не меняется.
+    # Параметры по умолчанию — наши (у федерации их нет): 4 стола, игровой день
+    # 10:00–18:00, матч ≈ 30 минут (ENGINE.md R3 — норматив, а не факт).
+    SCHEDULE_CHOICES = [("none", "Нет"), ("draft", "Черновик"), ("final", "Отправлено")]
+    schedule_status = models.CharField(max_length=8, choices=SCHEDULE_CHOICES, default="none", verbose_name="Расписание")
+    schedule_tables = models.PositiveSmallIntegerField(default=4, verbose_name="Столов")
+    # Игровые дни ✳ (30.10.2026): [{date: ГГГГ-ММ-ДД, start: ЧЧ:ММ, end: ЧЧ:ММ}],
+    # по порядку дат; часы у каждого дня свои (`schedule.play_slots`).
+    schedule_days = models.JSONField(default=list, blank=True, verbose_name="Игровые дни")
+    schedule_match_minutes = models.PositiveSmallIntegerField(default=30, verbose_name="Матч, минут")
+
     class Meta:
         verbose_name = "Турнир"
         verbose_name_plural = "Турниры"
@@ -88,6 +120,69 @@ class Tournament(models.Model):
 
     def __str__(self):
         return self.name
+
+    def referee_recruitment_active(self, today=None) -> bool:
+        """Идёт ли приём заявок судей сегодня (день срока — ещё да)."""
+        return _active(self.referee_recruitment_open, self.referee_recruitment_until, today)
+
+    def player_recruitment_active(self, today=None) -> bool:
+        """Идёт ли приём заявок игроков сегодня (день срока — ещё да)."""
+        return _active(self.player_recruitment_open, self.player_recruitment_until, today)
+
+
+def _active(is_open, until, today=None) -> bool:
+    """Приём идёт: переключатель включён и срок (включительно) не прошёл."""
+    if not is_open:
+        return False
+    if until is None:
+        return True
+    from django.utils import timezone
+
+    return (today or timezone.localdate()) <= until
+
+
+class RefereeApplication(models.Model):
+    """Заявка судьи на судейство турнира ✳ (29.10.2026, Э0.10). Одна на человека
+    и турнир: после отказа подаётся та же заявка заново, второй не заводится.
+    `positions` — отмеченные должности по старшинству (`roster.POSITIONS`);
+    назначенная — `position`, судья тогда уже в коллегии турнира (роль с
+    областью «турнир»). Правила — `recruitment.py`."""
+
+    STATUS_PENDING = "pending"
+    STATUS_ACCEPTED = "accepted"
+    STATUS_REJECTED = "rejected"
+    STATUS_CHOICES = [
+        (STATUS_PENDING, "Ждёт решения"),
+        (STATUS_ACCEPTED, "Назначен"),
+        (STATUS_REJECTED, "Отклонена"),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    tournament = models.ForeignKey(
+        Tournament, on_delete=models.CASCADE, related_name="referee_applications", verbose_name="Турнир"
+    )
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="referee_applications",
+        verbose_name="Судья",
+    )
+    positions = models.JSONField(default=list, verbose_name="Должности")
+    status = models.CharField(max_length=16, choices=STATUS_CHOICES, default=STATUS_PENDING, verbose_name="Решение")
+    position = models.CharField(max_length=32, blank=True, verbose_name="Назначен на должность")
+    created_at = models.DateTimeField(auto_now_add=True)
+    decided_at = models.DateTimeField(null=True, blank=True)
+    decided_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name="+",
+        verbose_name="Кем решена",
+    )
+
+    class Meta:
+        verbose_name = "Заявка судьи"
+        verbose_name_plural = "Заявки судей"
+        unique_together = ("tournament", "user")
+        ordering = ["created_at"]
+
+    def __str__(self):
+        return "%s — %s" % (self.user, self.tournament)
 
 
 class TournamentAgeCategory(models.Model):
@@ -340,6 +435,13 @@ class GroupMatch(models.Model):
     winner = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name='gm_won')
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=PENDING)
     table_number = models.PositiveIntegerField(null=True, blank=True, verbose_name="Стол")
+    # Расписание ✳ (30.10.2026, `schedule.py`): круг, время начала и судья стола.
+    round_number = models.PositiveSmallIntegerField(null=True, blank=True, verbose_name="Круг")
+    scheduled_at = models.DateTimeField(null=True, blank=True, verbose_name="Начало по расписанию")
+    referee = models.ForeignKey(
+        settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name='gm_refereed',
+        verbose_name="Судья стола",
+    )
     # Walkover: auto-recorded when an opponent is marked absent. Reverted to
     # pending if the absent flag is cleared.
     is_walkover = models.BooleanField(default=False, verbose_name="Неявка")

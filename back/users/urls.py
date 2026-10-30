@@ -9,6 +9,7 @@ from .views import (
     TokenRefreshCookieView,
     UploadAvatarView,
     UserSearchView,
+    PersonView,
 )
 
 urlpatterns = [
@@ -21,4 +22,5 @@ urlpatterns = [
     path("token/refresh/", TokenRefreshCookieView.as_view(), name="auth-token-refresh"),
     path("check-phone/", CheckPhoneView.as_view(), name="auth-check-phone"),
     path("users/", UserSearchView.as_view(), name="auth-user-search"),
+    path("people/<uuid:pk>/", PersonView.as_view(), name="auth-person"),
 ]

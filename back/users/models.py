@@ -65,8 +65,29 @@ class Role(models.Model):
     """
 
     KIND_GSK_CHAIRMAN = "gsk_chairman"
+    # Роль 1 ✳ (28.10.2026). Экранов Э1.x ещё нет: пока это права председателя
+    # ГСК плюс Django-админка (`users/permissions.py`, `create_federation_admin`).
+    # Кабинет на фронте — `/dashboard`, разделы задаст владелец продукта.
+    KIND_FEDERATION_ADMIN = "federation_admin"
+    # Спортсмен и судья ✳ (28.10.2026): роли заведены, кабинеты пустые
+    # (`/player`, `/referee` на фронте), прав сверх входа у них пока нет.
+    KIND_PLAYER = "player"
+    KIND_REFEREE = "referee"
+    # Судейские должности турнира ✳ (28.10.2026, ТЗ §2, роли 6–8): у каждого
+    # турнира по одному главному судье, заместителю и главному секретарю —
+    # роль с областью «турнир». Судья стола — `KIND_REFEREE` (роль 9) с той же
+    # областью, их сколько угодно. Правила — `tournaments/roster.py`.
+    KIND_CHIEF_REFEREE = "chief_referee"
+    KIND_DEPUTY_CHIEF_REFEREE = "deputy_chief_referee"
+    KIND_CHIEF_SECRETARY = "chief_secretary"
     KIND_CHOICES = [
         (KIND_GSK_CHAIRMAN, "Председатель Главной судейской коллегии"),
+        (KIND_FEDERATION_ADMIN, "Администратор федерации"),
+        (KIND_PLAYER, "Спортсмен"),
+        (KIND_REFEREE, "Судья"),
+        (KIND_CHIEF_REFEREE, "Главный судья соревнований"),
+        (KIND_DEPUTY_CHIEF_REFEREE, "Заместитель главного судьи"),
+        (KIND_CHIEF_SECRETARY, "Главный секретарь соревнований"),
     ]
 
     SCOPE_SYSTEM = "system"

@@ -21,7 +21,10 @@ class UserSerializer(serializers.ModelSerializer):
 
     def get_roles(self, obj):
         return [
-            {"kind": r.kind, "label": r.get_kind_display(), "scope": r.scope}
+            # `scope_id` ✳ (30.10.2026): у ролей турнира — какого (кабинет главного
+            # судьи показывает свои турниры).
+            {"kind": r.kind, "label": r.get_kind_display(), "scope": r.scope,
+             "scope_id": str(r.scope_id) if r.scope_id else None}
             for r in obj.roles.all()
         ]
 

@@ -1,3 +1,4 @@
+import re
 from django.conf import settings
 from django.contrib.auth import authenticate, get_user_model
 from django.db.models import Q
@@ -193,3 +194,50 @@ class TokenRefreshCookieView(APIView):
                 {"detail": "Недействительный или истёкший refresh-токен."},
                 status=status.HTTP_401_UNAUTHORIZED,
             )
+
+
+class PersonView(APIView):
+    """Профиль человека ✳ (28.10.2026): имя, почта, телефон и роли (у ролей
+    турнира — какого). Телефон — персональные данные: смотрят председатель ГСК
+    и администратор федерации (`IsGskChairman`)."""
+
+    def get_permissions(self):
+        from .permissions import IsGskChairman
+
+        return [IsGskChairman()]
+
+    def get(self, request, pk):
+        from django.shortcuts import get_object_or_404
+
+        from tournaments.models import Tournament
+
+        person = get_object_or_404(User, pk=pk)
+        roles = list(person.roles.all())
+        names = {
+            t.id: t.name
+            for t in Tournament.objects.filter(id__in=[r.scope_id for r in roles if r.scope == "tournament"])
+        }
+        return Response(
+            {
+                "id": str(person.id),
+                "name": person.name,
+                "email": person.email,
+                # Учёткам по почте телефон ставится служебной меткой
+                # («feder-1a2b…», «referee-demo-1»): поле обязательно и
+                # уникально. Это не номер — не показываем.
+                "phone": person.phone if re.match(r"^\+?\d", person.phone) else None,
+                "roles": [
+                    {
+                        "kind": r.kind,
+                        "label": r.get_kind_display(),
+                        "scope": r.scope,
+                        "tournament": (
+                            {"id": str(r.scope_id), "name": names.get(r.scope_id, "")}
+                            if r.scope == "tournament"
+                            else None
+                        ),
+                    }
+                    for r in roles
+                ],
+            }
+        )

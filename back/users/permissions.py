@@ -10,11 +10,11 @@ from rest_framework.permissions import BasePermission
 from .models import Role
 
 
-def has_role(user, kind: str) -> bool:
-    """Есть ли у пользователя действующая роль этого вида."""
+def has_role(user, *kinds: str) -> bool:
+    """Есть ли у пользователя действующая роль одного из этих видов."""
     if not user or not user.is_authenticated:
         return False
-    return user.roles.filter(kind=kind).exists()
+    return user.roles.filter(kind__in=kinds).exists()
 
 
 class IsGskChairman(BasePermission):
@@ -23,9 +23,21 @@ class IsGskChairman(BasePermission):
     По Положению о Национальном рейтинге он ведёт базу и историю рейтинга и
     отвечает за достоверность результатов (п. 8.3, 22) — отсюда и право править
     рейтинговые данные: коэффициенты, неявки, исправления.
+
+    Администратор федерации проходит тоже ✳ (28.10.2026): его роль «правит всё»
+    (ROLES.md, роль 1), а своих экранов у неё пока нет.
     """
 
     message = "Действие доступно только председателю Главной судейской коллегии."
 
     def has_permission(self, request, view):
-        return has_role(request.user, Role.KIND_GSK_CHAIRMAN)
+        return has_role(request.user, Role.KIND_GSK_CHAIRMAN, Role.KIND_FEDERATION_ADMIN)
+
+
+class IsReferee(BasePermission):
+    """Судья — подаёт заявки на судейство ✳ (29.10.2026, Э0.10)."""
+
+    message = "Действие доступно только судье."
+
+    def has_permission(self, request, view):
+        return has_role(request.user, Role.KIND_REFEREE)

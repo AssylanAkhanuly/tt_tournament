@@ -9,6 +9,8 @@ class TournamentSerializer(serializers.ModelSerializer):
     club_id           = serializers.SerializerMethodField()
     club_name         = serializers.SerializerMethodField()
     is_registered     = serializers.SerializerMethodField()
+    referee_recruitment_active = serializers.SerializerMethodField()
+    player_recruitment_active = serializers.SerializerMethodField()
 
     class Meta:
         model  = Tournament
@@ -19,8 +21,24 @@ class TournamentSerializer(serializers.ModelSerializer):
             "club_id", "club_name",
             "format", "group_size",
             "is_registered",
+            "referee_recruitment_open", "referee_recruitment_until", "referee_recruitment_active",
+            "player_recruitment_open", "player_recruitment_until", "player_recruitment_active",
+            "ends_at", "city", "venue", "age_min", "age_max",
+            "level", "games_to_win", "is_rating",
         ]
-        read_only_fields = ["id", "join_token", "created_by", "created_at", "participant_count", "status", "is_registered"]
+        read_only_fields = [
+            "id", "join_token", "created_by", "created_at", "participant_count", "status", "is_registered",
+            "referee_recruitment_open", "referee_recruitment_until",
+            "player_recruitment_open", "player_recruitment_until",
+        ]
+
+    def get_referee_recruitment_active(self, obj):
+        """Приём заявок судей идёт сегодня: переключатель и срок (`recruitment.py`)."""
+        return obj.referee_recruitment_active()
+
+    def get_player_recruitment_active(self, obj):
+        """Приём заявок игроков идёт сегодня: переключатель и срок."""
+        return obj.player_recruitment_active()
 
     def get_participant_count(self, obj):
         # List views annotate this to avoid an N+1 COUNT per tournament; single-
@@ -65,9 +83,63 @@ class TournamentCreateSerializer(serializers.ModelSerializer):
 
 
 class TournamentUpdateSerializer(serializers.ModelSerializer):
+    """Сведения о турнире ✳ (29.10.2026): раздел «Сведения» на странице турнира."""
+
+    # Границы возраста — разумные, а не из документа федерации (наше значение).
+    AGE_LIMITS = (1, 99)
+    GAMES_TO_WIN = (2, 3, 4, 5)
+
     class Meta:
         model  = Tournament
-        fields = ["name", "description", "starts_at"]
+        fields = [
+            "name", "description", "starts_at", "ends_at", "city", "venue", "age_min", "age_max",
+            "format", "group_size", "games_to_win", "level", "is_rating",
+        ]
+
+    def _value(self, attrs, name):
+        return attrs[name] if name in attrs else getattr(self.instance, name, None)
+
+    def validate_age_min(self, v):
+        return self._age(v)
+
+    def validate_age_max(self, v):
+        return self._age(v)
+
+    def _age(self, v):
+        lo, hi = self.AGE_LIMITS
+        if v is not None and not lo <= v <= hi:
+            raise serializers.ValidationError(f"Возраст — от {lo} до {hi} лет.")
+        return v
+
+    def validate_games_to_win(self, v):
+        if v not in self.GAMES_TO_WIN:
+            raise serializers.ValidationError("Матч — до 2, 3, 4 или 5 побед.")
+        return v
+
+    def validate_group_size(self, v):
+        if v < 2:
+            raise serializers.ValidationError("В группе — хотя бы двое.")
+        return v
+
+    def validate_format(self, v):
+        t = self.instance
+        if t and v != t.format:
+            if v == Tournament.FORMAT_MANUAL or t.format == Tournament.FORMAT_MANUAL:
+                raise serializers.ValidationError("Протокол вручную заводится и ведётся в рейтинге.")
+            if t.status != Tournament.STATUS_OPEN or t.matches.exists() or t.groups.exists():
+                raise serializers.ValidationError("Турнир уже начат — формат не меняется.")
+        return v
+
+    def validate(self, attrs):
+        from django.utils import timezone
+
+        starts, ends = self._value(attrs, "starts_at"), self._value(attrs, "ends_at")
+        if starts and ends and ends < timezone.localdate(starts):
+            raise serializers.ValidationError({"ends_at": "Окончание — не раньше начала."})
+        lo, hi = self._value(attrs, "age_min"), self._value(attrs, "age_max")
+        if lo is not None and hi is not None and lo > hi:
+            raise serializers.ValidationError({"age_max": "Возраст «до» — не меньше «от»."})
+        return attrs
 
 
 class ParticipantSerializer(serializers.ModelSerializer):

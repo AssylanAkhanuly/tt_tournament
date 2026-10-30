@@ -1,5 +1,11 @@
 from django.urls import path
 from .views import (
+    MyRefereeApplicationView,
+    RefereeApplicationDecisionView,
+    RefereeApplicationsView,
+    RecruitmentView,
+    ScheduleMatchView,
+    ScheduleView,
     AddParticipantView,
     AssignTableView,
     ElevenLabsVoicesView,
@@ -26,6 +32,9 @@ from .views import (
     TournamentJoinView,
     TournamentListCreateView,
     TournamentParticipantsView,
+    TournamentRefereesView,
+    TournamentRefereeView,
+    TournamentCandidatesView,
     TournamentStateView,
     TournamentTableDetailView,
     TournamentTableListCreateView,
@@ -40,6 +49,28 @@ urlpatterns = [
     path("<uuid:pk>/", TournamentDetailView.as_view(), name="tournament-detail"),
     path("<uuid:pk>/update/", TournamentUpdateDeleteView.as_view(), name="tournament-update-delete"),
     path("<uuid:pk>/participants/", TournamentParticipantsView.as_view(), name="tournament-participants"),
+    path("<uuid:pk>/referees/", TournamentRefereesView.as_view(), name="tournament-referees"),
+    path("<uuid:pk>/referees/<uuid:user_id>/", TournamentRefereeView.as_view(), name="tournament-referee"),
+    path("<uuid:pk>/candidates/", TournamentCandidatesView.as_view(), name="tournament-candidates"),
+    path("<uuid:pk>/referee-recruitment/", RecruitmentView.as_view(), {"who": "referee"}, name="tournament-referee-recruitment"),
+    path("<uuid:pk>/schedule/", ScheduleView.as_view(), name="tournament-schedule"),
+    *[
+        path(f"<uuid:pk>/schedule/{action}/", ScheduleView.as_view(), {"action": action}, name=f"tournament-schedule-{action}")
+        for action in ("build", "move", "finalize")
+    ],
+    path("<uuid:pk>/schedule/matches/<int:match_id>/", ScheduleMatchView.as_view(), name="tournament-schedule-match"),
+    path("<uuid:pk>/player-recruitment/", RecruitmentView.as_view(), {"who": "player"}, name="tournament-player-recruitment"),
+    path("<uuid:pk>/referee-applications/", RefereeApplicationsView.as_view(), name="tournament-referee-applications"),
+    path("<uuid:pk>/referee-applications/my/", MyRefereeApplicationView.as_view(), name="tournament-referee-application-my"),
+    *[
+        path(
+            f"<uuid:pk>/referee-applications/<uuid:application_id>/{decision}/",
+            RefereeApplicationDecisionView.as_view(),
+            {"decision": decision},
+            name=f"tournament-referee-application-{decision}",
+        )
+        for decision in ("accept", "reject")
+    ],
     path("<uuid:pk>/participants/add/", AddParticipantView.as_view(), name="tournament-add-participant"),
     path("<uuid:pk>/participants/join/", JoinTournamentSelfView.as_view(), name="tournament-join-self"),
     path("<uuid:pk>/participants/<int:participant_id>/remove/", RemoveParticipantView.as_view(), name="tournament-remove-participant"),

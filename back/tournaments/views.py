@@ -65,6 +65,10 @@ def _can_create_tournament(user, club=None):
     return False
 
 
+# Приём заявок игроков закрыт ✳ (29.10.2026): переключатель выключен или срок прошёл.
+PLAYERS_CLOSED = "Приём заявок игроков закрыт."
+
+
 def _clean_tts_name(value):
     name = " ".join(str(value or "").strip().split())
     if not name:
@@ -322,8 +326,19 @@ class TournamentUpdateDeleteView(APIView):
         return get_object_or_404(Tournament.objects.select_related('club'), pk=pk)
 
     def patch(self, request, pk):
+        from users.models import Role
+        from users.permissions import has_role
+
         tournament = self.get_tournament(pk)
-        if not _can_manage_tournament(request.user, tournament):
+        # Сведения правят ещё председатель ГСК и администратор федерации ✳
+        # (29.10.2026): раздел «Сведения» — в их кабинетах.
+        from . import schedule
+
+        if not (
+            _can_manage_tournament(request.user, tournament)
+            or has_role(request.user, Role.KIND_GSK_CHAIRMAN, Role.KIND_FEDERATION_ADMIN)
+            or schedule.is_chief(tournament, request.user)  # главный судья ✳ 30.10.2026
+        ):
             return Response({"detail": "Нет прав."}, status=status.HTTP_403_FORBIDDEN)
         serializer = TournamentUpdateSerializer(tournament, data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
@@ -360,6 +375,8 @@ class TournamentJoinView(APIView):
                 {"detail": "Регистрация закрыта — турнир уже начался."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
+        if not tournament.player_recruitment_active():
+            return Response({"detail": PLAYERS_CLOSED}, status=status.HTTP_400_BAD_REQUEST)
         participant, created = TournamentParticipant.objects.get_or_create(
             tournament=tournament, user=request.user,
         )
@@ -379,6 +396,8 @@ class RegisterAndJoinView(APIView):
                 {"detail": "Регистрация закрыта — турнир уже начался."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
+        if not tournament.player_recruitment_active():
+            return Response({"detail": PLAYERS_CLOSED}, status=status.HTTP_400_BAD_REQUEST)
 
         # An existing phone can't register again — tell the frontend to switch
         # to the login-and-join flow instead of failing on the unique constraint.
@@ -404,16 +423,374 @@ class RegisterAndJoinView(APIView):
         return _set_auth_cookies(response, refresh)
 
 
-class TournamentParticipantsView(generics.ListAPIView):
-    serializer_class   = ParticipantSerializer
-    permission_classes = [IsAuthenticated]
+def _person(u):
+    return {"id": str(u.id), "name": u.name, "email": u.email}
 
-    def get_queryset(self):
-        tournament = get_object_or_404(Tournament, pk=self.kwargs["pk"])
-        return (
+
+class IsGskChairmanOrChief(IsAuthenticated):
+    """Председатель ГСК и администратор федерации — или главный судья этого
+    турнира ✳ (30.10.2026: он ведёт состав и сведения своего турнира)."""
+
+    def has_permission(self, request, view):
+        from users.models import Role
+        from users.permissions import has_role
+
+        from . import schedule
+
+        if has_role(request.user, Role.KIND_GSK_CHAIRMAN, Role.KIND_FEDERATION_ADMIN):
+            return True
+        t = Tournament.objects.filter(pk=view.kwargs.get("pk")).first()
+        return t is not None and schedule.is_chief(t, request.user)
+
+
+class _RosterView(APIView):
+    """Состав турнира ✳ (28.10.2026): смотреть и править — председатель ГСК и
+    администратор федерации (`IsGskChairman`). Судье состав не виден ✳
+    (29.10.2026, решение владельца продукта): у него страница турнира только со
+    сведениями и заявкой. Правила — `roster.py`."""
+
+    def get_permissions(self):
+        from users.permissions import IsGskChairman
+
+        return [IsGskChairman()]
+
+    def _user(self, request):
+        user = User.objects.filter(pk=request.data.get("user_id")).first()
+        if user is None:
+            return None, Response({"detail": "Учётка не найдена."}, status=status.HTTP_400_BAD_REQUEST)
+        return user, None
+
+
+class TournamentRefereesView(_RosterView):
+    """Судьи турнира — судейские должности в области этого турнира
+    (`roster.POSITIONS`). `POST {user_id, position}` — назначить."""
+
+    def get(self, request, pk):
+        from . import roster
+
+        tournament = get_object_or_404(Tournament, pk=pk)
+        return Response(
+            [{**_person(r.user), "position": r.kind, "position_label": r.get_kind_display()} for r in roster.referees(tournament)]
+        )
+
+    def post(self, request, pk):
+        from . import roster
+
+        tournament = get_object_or_404(Tournament, pk=pk)
+        user, error = self._user(request)
+        if error:
+            return error
+        try:
+            role = roster.add_referee(tournament, user, request.data.get("position") or "")
+        except roster.RosterError as e:
+            return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        return Response(
+            {**_person(user), "position": role.kind, "position_label": role.get_kind_display()},
+            status=status.HTTP_201_CREATED,
+        )
+
+
+class TournamentRefereeView(_RosterView):
+    """Карточка судьи турнира ✳ (28.10.2026): кто он, его должность здесь и
+    другие турниры, где он судит; `PATCH {position}` — сменить должность;
+    `DELETE` — убрать из коллегии турнира."""
+
+    def _role(self, pk, user_id):
+        from . import roster
+
+        tournament = get_object_or_404(Tournament, pk=pk)
+        role = roster.referee_role(tournament, user_id)
+        if role is None:
+            from django.http import Http404
+
+            raise Http404("Не судья этого турнира.")
+        return tournament, role
+
+    def _card(self, role):
+        from . import roster
+
+        return {
+            **_person(role.user),
+            "position": role.kind,
+            "position_label": role.get_kind_display(),
+            "tournaments": [
+                {
+                    "id": str(t.id),
+                    "name": t.name,
+                    "starts_at": t.starts_at,
+                    "position": r.kind,
+                    "position_label": r.get_kind_display(),
+                }
+                for t, r in roster.other_tournaments(role)
+            ],
+        }
+
+    def get(self, request, pk, user_id):
+        _, role = self._role(pk, user_id)
+        return Response(self._card(role))
+
+    def patch(self, request, pk, user_id):
+        from . import roster
+
+        tournament, role = self._role(pk, user_id)
+        try:
+            roster.change_referee(tournament, role, request.data.get("position") or "")
+        except roster.RosterError as e:
+            return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        return Response(self._card(role))
+
+    def delete(self, request, pk, user_id):
+        """Убрать из судейской коллегии этого турнира; в других турнирах он
+        остаётся."""
+        _, role = self._role(pk, user_id)
+        role.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class TournamentParticipantsView(_RosterView):
+    """Спортсмены турнира: ещё и главный судья этого турнира ✳ (30.10.2026)."""
+
+    def get_permissions(self):
+        return [IsGskChairmanOrChief()]
+
+    def get(self, request, pk):
+        tournament = get_object_or_404(Tournament, pk=pk)
+        qs = (
             TournamentParticipant.objects.filter(tournament=tournament)
             .select_related("user").prefetch_related("user__club_admin_roles")
         )
+        return Response(ParticipantSerializer(qs, many=True).data)
+
+    def post(self, request, pk):
+        from . import roster
+
+        tournament = get_object_or_404(Tournament, pk=pk)
+        user, error = self._user(request)
+        if error:
+            return error
+        try:
+            participant = roster.add_participant(tournament, user)
+        except roster.RosterError as e:
+            return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        return Response(ParticipantSerializer(participant).data, status=status.HTTP_201_CREATED)
+
+
+# ─── Приём заявок судей ✳ (29.10.2026) ───────────────────────────────────────
+# Правила — `recruitment.py`; ручки только переводят их в HTTP.
+
+def _application(a):
+    return {
+        "id": str(a.id),
+        **{k: v for k, v in _person(a.user).items() if k != "id"},
+        "user_id": str(a.user_id),
+        "positions": a.positions,
+        "status": a.status,
+        "position": a.position or None,
+        "created_at": a.created_at,
+    }
+
+
+class RecruitmentView(APIView):
+    """`PATCH {open, until}` — открыть или закрыть приём заявок и задать срок
+    (`until: null` — без срока): судей — `…/referee-recruitment/`, игроков ✳
+    (29.10.2026) — `…/player-recruitment/` (`who` из адреса). Председатель ГСК и
+    администратор федерации."""
+
+    def get_permissions(self):
+        from users.permissions import IsGskChairman
+
+        return [IsGskChairman()]
+
+    def patch(self, request, pk, who):
+        import datetime
+
+        tournament = get_object_or_404(Tournament, pk=pk)
+        prefix = who + "_recruitment_"
+        fields = []
+        if "open" in request.data:
+            setattr(tournament, prefix + "open", bool(request.data["open"]))
+            fields.append(prefix + "open")
+        if "until" in request.data:
+            until = request.data["until"]
+            try:
+                setattr(tournament, prefix + "until", datetime.date.fromisoformat(until) if until else None)
+            except (TypeError, ValueError):
+                return Response({"detail": "Срок — дата ГГГГ-ММ-ДД."}, status=status.HTTP_400_BAD_REQUEST)
+            fields.append(prefix + "until")
+        tournament.save(update_fields=fields)
+        return Response(TournamentSerializer(tournament, context={"request": request}).data)
+
+
+class RefereeApplicationsView(APIView):
+    """Заявки судей на турнир — председателю ГСК и администратору федерации."""
+
+    def get_permissions(self):
+        from users.permissions import IsGskChairman
+
+        return [IsGskChairman()]
+
+    def get(self, request, pk):
+        tournament = get_object_or_404(Tournament, pk=pk)
+        return Response([_application(a) for a in tournament.referee_applications.select_related("user")])
+
+
+class MyRefereeApplicationView(APIView):
+    """Своя заявка судьи: `GET` — `{application: … | null}`, `POST {positions}`
+    — подать, `DELETE` — отозвать, пока решения нет."""
+
+    def get_permissions(self):
+        from users.permissions import IsReferee
+
+        return [IsReferee()]
+
+    def get(self, request, pk):
+        from . import recruitment
+
+        tournament = get_object_or_404(Tournament, pk=pk)
+        a = recruitment.mine(tournament, request.user)
+        return Response({"application": _application(a) if a else None})
+
+    def post(self, request, pk):
+        from . import recruitment
+
+        tournament = get_object_or_404(Tournament, pk=pk)
+        try:
+            a = recruitment.apply(tournament, request.user, request.data.get("positions"))
+        except recruitment.RecruitmentError as e:
+            return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        return Response(_application(a), status=status.HTTP_201_CREATED)
+
+    def delete(self, request, pk):
+        from . import recruitment
+
+        tournament = get_object_or_404(Tournament, pk=pk)
+        try:
+            recruitment.withdraw(tournament, request.user)
+        except recruitment.RecruitmentError as e:
+            return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class RefereeApplicationDecisionView(APIView):
+    """`POST …/<id>/accept/ {position}` — назначить на должность из заявки,
+    `POST …/<id>/reject/` — отклонить."""
+
+    def get_permissions(self):
+        from users.permissions import IsGskChairman
+
+        return [IsGskChairman()]
+
+    def post(self, request, pk, application_id, decision):
+        from . import recruitment
+        from .models import RefereeApplication
+
+        a = get_object_or_404(
+            RefereeApplication.objects.select_related("user", "tournament"), pk=application_id, tournament_id=pk
+        )
+        try:
+            if decision == "accept":
+                recruitment.accept(a, request.data.get("position") or "", request.user)
+            else:
+                recruitment.reject(a, request.user)
+        except recruitment.RecruitmentError as e:
+            return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        return Response(_application(a))
+
+
+# ─── Расписание ✳ (30.10.2026) ──────────────────────────────────────────────
+# Правила — `schedule.py`; ручки только переводят их в HTTP.
+
+class ScheduleView(APIView):
+    """`GET` — расписание: главному судье турнира, председателю ГСК и
+    администратору федерации (`can_edit` — только главному судье, пока не
+    отправлено). `POST build|move|finalize`, `PATCH matches/<id>/` — только
+    главный судья."""
+
+    permission_classes = [IsAuthenticated]
+
+    def _tournament(self, request, pk, edit):
+        from users.models import Role
+        from users.permissions import has_role
+
+        from . import schedule
+
+        t = get_object_or_404(Tournament, pk=pk)
+        chief = schedule.is_chief(t, request.user)
+        if edit and not chief:
+            return t, Response({"detail": "Расписание правит только главный судья турнира."}, status=status.HTTP_403_FORBIDDEN)
+        if not edit and not (chief or has_role(request.user, Role.KIND_GSK_CHAIRMAN, Role.KIND_FEDERATION_ADMIN)):
+            return t, Response({"detail": "Нет прав."}, status=status.HTTP_403_FORBIDDEN)
+        return t, None
+
+    def _run(self, request, pk, action):
+        from . import schedule
+
+        t, denied = self._tournament(request, pk, edit=True)
+        if denied:
+            return denied
+        try:
+            action(schedule, t)
+        except schedule.ScheduleError as e:
+            return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        t.refresh_from_db()
+        return Response(schedule.snapshot(t, request.user))
+
+    def get(self, request, pk):
+        from . import schedule
+
+        t, denied = self._tournament(request, pk, edit=False)
+        return denied or Response(schedule.snapshot(t, request.user))
+
+    def post(self, request, pk, action):
+        d = request.data
+        if action == "build":
+            return self._run(
+                request, pk,
+                lambda s, t: s.build(
+                    t, tables=d.get("tables"), match_minutes=d.get("match_minutes"), days=d.get("days"),
+                ),
+            )
+        if action == "move":
+            return self._run(request, pk, lambda s, t: s.move(t, d.get("user_id"), d.get("group_id")))
+        return self._run(request, pk, lambda s, t: s.finalize(t))
+
+
+class ScheduleMatchView(ScheduleView):
+    """`PATCH {referee_id, table, scheduled_at}` — правка матча в черновике."""
+
+    def patch(self, request, pk, match_id):
+        from .models import GroupMatch
+
+        def edit(s, t):
+            m = get_object_or_404(GroupMatch, pk=match_id, group__tournament=t)
+            s.edit_match(
+                t, m, referee_id=request.data.get("referee_id"), table=request.data.get("table"),
+                scheduled_at=request.data.get("scheduled_at"),
+            )
+
+        return self._run(request, pk, edit)
+
+
+class TournamentCandidatesView(APIView):
+    """Кого можно добавить в турнир: `?role=player|referee&q=…` — учётки, которых
+    в этом списке ещё нет. Только тем, кто правит состав: судей — председатель ГСК
+    и администратор, спортсменов — ещё и главный судья турнира ✳ (30.10.2026)."""
+
+    def get_permissions(self):
+        return [IsGskChairmanOrChief()]
+
+    def get(self, request, pk):
+        from users.models import Role
+        from users.permissions import has_role
+
+        from . import roster
+
+        tournament = get_object_or_404(Tournament, pk=pk)
+        role = "referee" if request.query_params.get("role") == "referee" else "player"
+        if role == "referee" and not has_role(request.user, Role.KIND_GSK_CHAIRMAN, Role.KIND_FEDERATION_ADMIN):
+            return Response({"detail": "Судей добавляет председатель ГСК."}, status=status.HTTP_403_FORBIDDEN)
+        found = roster.candidates(tournament, role, request.query_params.get("q", ""))
+        return Response([_person(u) for u in found])
 
 
 def _is_group_stage(tournament):
@@ -518,8 +895,20 @@ class RemoveParticipantView(APIView):
     permission_classes = [IsAuthenticated]
 
     def delete(self, request, pk, participant_id):
+        from users.models import Role
+        from users.permissions import has_role
+
+        from . import schedule
+
         tournament = get_object_or_404(Tournament.objects.select_related('club'), pk=pk)
-        if not _can_manage_tournament(request.user, tournament):
+        # Убрать спортсмена может и председатель ГСК / администратор федерации ✳
+        # (29.10.2026): карточка спортсмена в разделе «Спортсмены»; и главный
+        # судья этого турнира ✳ (30.10.2026).
+        if not (
+            _can_manage_tournament(request.user, tournament)
+            or has_role(request.user, Role.KIND_GSK_CHAIRMAN, Role.KIND_FEDERATION_ADMIN)
+            or schedule.is_chief(tournament, request.user)
+        ):
             return Response({"detail": "Нет прав."}, status=status.HTTP_403_FORBIDDEN)
         if tournament.status != Tournament.STATUS_OPEN:
             return Response(
@@ -568,6 +957,10 @@ class JoinTournamentSelfView(APIView):
 
         if tournament.status == Tournament.STATUS_FINISHED:
             return Response({"detail": "Турнир завершён — нельзя зарегистрироваться."}, status=status.HTTP_400_BAD_REQUEST)
+        if not tournament.player_recruitment_active():
+            return Response({"detail": PLAYERS_CLOSED}, status=status.HTTP_400_BAD_REQUEST)
+        if tournament.schedule_status == "final":
+            return Response({"detail": "Расписание отправлено — состав не меняется."}, status=status.HTTP_400_BAD_REQUEST)
         if tournament.status == Tournament.STATUS_IN_PROGRESS:
             group_stage = TournamentGroup.objects.filter(tournament=tournament).exists()
             if not group_stage:
