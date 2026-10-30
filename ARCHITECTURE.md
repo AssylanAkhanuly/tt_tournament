@@ -460,7 +460,7 @@ Android и iOS — не альтернатива друг другу и не «�
 | База | **PostgreSQL**, доступ через psycopg2, адрес из `DATABASE_URL` | `tt_back`: psycopg2-binary, dj-database-url |
 | Файлы | **Cloudflare R2** — документы к заявкам, фото. S3-совместимый API, поэтому boto3 работает без правок | `tt_back`: boto3, `AWS_STORAGE_BUCKET_NAME`, `AWS_S3_ENDPOINT_URL` |
 | Статика | whitenoise | `tt_back`: requirements.txt |
-| Веб | Next.js 16, React 19, TypeScript; стили — **Tailwind + HeroUI** (кит и новые экраны), CSS Modules на экранах до кита, нативный CSS там, где Tailwind не тянет; таблицы — **TanStack Table** в ручном режиме ✳ (16.09.2026); структура — **Feature-Sliced Design** (`src/{shared,entities,features,widgets,views}`, `app/` — только роутинг) | `front/`: package.json |
+| Веб | Next.js 16, React 19, TypeScript; стили — **только Tailwind + HeroUI** ✳ (28.10.2026): рукописного CSS нет, Tailwind собирается при сборке (PostCSS); таблицы — **TanStack Table** в ручном режиме ✳ (16.09.2026); структура — **Feature-Sliced Design** (`src/{shared,entities,features,widgets,views}`, `app/` — только роутинг) | `front/`: package.json |
 | Приложение игрока | Expo (React Native), TypeScript; стили — штатный `StyleSheet` из React Native (Unistyles не подключён); Android и iOS, те же сервисы и данные (§1) | `tt_tournament/mobile`; [TZ.md](TZ.md) §10 |
 | Push | **Expo Push Service** поверх FCM и APNs; на устройстве `expo-notifications` | решение этого документа, см. «Уведомления» |
 | CMS · контент | **Wagtail** (в том же Django) — новости, анонсы, статические страницы; медиа в R2 | `tt_back`; см. «Новости и анонсы» |
@@ -527,7 +527,15 @@ CORS настраивается с `credentials`. Токен при этом о�
 JavaScript не попадает. Серверу Next при рендере куку по-прежнему пробрасываем
 вручную — автоматически она в его исходящий запрос не уходит.
 
-**Стили — Tailwind + HeroUI, нативный CSS там, где Tailwind не тянет** ✳
+**Стили — только Tailwind + HeroUI** ✳ (28.10.2026, решение владельца
+продукта). Рукописных `.css` / `.module.css` больше нет: экраны до кита, плашка
+табло и сетка переведены на утилиты, `app/globals.css` — во вход Tailwind.
+Чего утилиты не выражают — произвольными значениями; палитры и сброс — во входе
+Tailwind (`@theme`), это его настройка в v4. CSS генерируется при сборке
+(`@tailwindcss/postcss` в Next), в репозитории его нет. Ниже — прежнее
+решение от 30.08.2026, оставлено как история.
+
+~~**Стили — Tailwind + HeroUI, нативный CSS там, где Tailwind не тянет**~~ ✳
 (30.08.2026). Решение принято вместе с подключением библиотеки компонентов
 HeroUI (`@heroui/react`), которая на Tailwind и построена, и отменило прежнее
 «PostCSS + нативный CSS, Tailwind убран». Граница — по происхождению разметки:
@@ -1166,6 +1174,14 @@ erDiagram
         string status "состояния, см. ТЗ §4.3"
         int gamesToWin
         datetime startsAt
+        date endsAt "окончание, включительно"
+        string scheduleStatus "нет | черновик | отправлено"
+        int scheduleTables "столов"
+        json scheduleDays "игровые дни: дата, начало, конец"
+        int scheduleMatchMinutes "норматив длительности матча, минут"
+        string venue "место проведения: зал, адрес"
+        int ageMin "возраст от, лет; пусто — без границы"
+        int ageMax "возраст до, лет; пусто — без границы"
         string category "главный республиканский | евразийская лига | открытый республиканский | клубный"
         string gender "мужской | женский | смешанный"
         string approvalBy "none | collegium — кто утверждает систему и протокол"
@@ -1178,6 +1194,10 @@ erDiagram
         string ratingLimit "ценз по рейтингу, если задан"
         string level "чемпионат РК | республиканские | областные | любительские"
         boolean noThirdPlaceMatch "матча за 3-е место не было, бронзовых двое (п. 10.4)"
+        boolean refereeRecruitmentOpen "приём заявок судей открыт"
+        date refereeRecruitmentUntil "срок приёма, включительно; пусто — без срока"
+        boolean playerRecruitmentOpen "приём заявок игроков открыт"
+        date playerRecruitmentUntil "срок приёма игроков, включительно"
     }
     TOURNAMENT_AGE_CATEGORY {
         uuid id PK
@@ -1200,8 +1220,12 @@ erDiagram
         uuid id PK
         uuid tournamentId FK
         uuid userId FK "судья-заявитель"
-        string status "подана | принята | отклонена"
+        string positions "список: главный судья | зам | секретарь | судья стола"
+        string status "ждёт решения | назначен | отклонена"
+        string position "должность, на которую назначен"
         string rejectReason
+        uuid decidedBy FK "коллегия или главный судья"
+        datetime decidedAt
     }
     TOURNAMENT_TABLE {
         uuid id PK
@@ -1272,7 +1296,9 @@ erDiagram
         uuid tournamentId FK
         uuid teamMatchId FK "личная встреча внутри командной (Евразийская лига); пусто на личном турнире"
         uuid tableId FK
-        string round "1/8 | 1/4 | 1/2 | финал"
+        string round "1/8 | 1/4 | 1/2 | финал · у группы — номер круга"
+        datetime scheduledAt "начало по расписанию"
+        uuid refereeId FK "судья стола этого матча"
         uuid sideAId FK "ENTRY"
         uuid sideBId FK "ENTRY"
         uuid servingPlayerId FK "кто подаёт сейчас — игрок, даже в паре"
