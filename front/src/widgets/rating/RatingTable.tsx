@@ -21,14 +21,16 @@
    страница листа, а в файл идёт весь отбор в том же порядке. С 28.10.2026
    выгрузка и «Добавить спортсмена» — в меню «⋯» справа над таблицей. */
 
-import { Button, Dropdown, Label } from '@heroui/react';
 import type { ColumnFiltersState, OnChangeFn, PaginationState, SortingState } from '@tanstack/react-table';
-import { Download, MoreHorizontal, UserPlus } from 'lucide-react';
+import { Download, UserPlus } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
-import { fio, num2, type RatingList, type RatingProfile } from '@/entities/rating';
-import { FilterMenu, useNarrow } from '@/shared/kit/app';
+import { fio, num2, type NewAthlete, type RatingList, type RatingProfile } from '@/entities/rating';
+import { useNarrow } from '@/shared/kit/app';
 import { DataTable, type DataColumn } from '@/shared/ui/DataTable';
+import { TableTools, type TableAction } from '@/shared/ui/TableTools';
+import { AthleteForm } from '@/features/rating-admin';
+import { Button } from '@heroui/react';
 
 export const SEX_ITEMS = ['Все', 'Мужчины', 'Женщины'];
 export const AGE_ITEMS = ['Все возрасты', 'U11', 'U13', 'U15', 'U17', 'U19', 'U21'];
@@ -125,6 +127,7 @@ export function RatingTable({
   pagination,
   exportHref,
   onAddAthlete,
+  onCreateAthlete,
   onFacets,
   onSortingChange,
   onColumnFiltersChange,
@@ -137,6 +140,8 @@ export function RatingTable({
   exportHref: string;
   /** «Добавить спортсмена» — только председателю ГСК; нет — пункта нет. */
   onAddAthlete?: () => void;
+  /** Завести спортсмена из панели настроек на телефоне ✳ (03.11.2026). */
+  onCreateAthlete?: (athlete: NewAthlete) => Promise<void>;
   facets: RatingFacets;
   sorting: SortingState;
   columnFilters: ColumnFiltersState;
@@ -152,6 +157,83 @@ export function RatingTable({
   const query = String(columnFilters.find((f) => f.id === 'name')?.value ?? '');
   const canExport = !error && !!data?.count;
 
+  // Отбор и действия — данными: на телефоне они уходят в одну панель
+  // настроек (`TableTools`), на десктопе — «Фильтры» и «⋯» ✳ (03.11.2026).
+  const groups = [
+    { label: 'Пол', items: SEX_ITEMS, active: facets.sex, onPick: (v: string) => onFacets({ sex: v }) },
+    { label: 'Возраст', items: AGE_ITEMS, active: facets.age, onPick: (v: string) => onFacets({ age: v }) },
+    { label: 'Статус', items: STATUS_ITEMS, active: facets.status, onPick: (v: string) => onFacets({ status: v }) },
+  ];
+  // Редкие действия — не на виду ✳ (28.10.2026). Пустой отбор выгружать
+  // незачем. На телефоне у каждого — свой вид в панели ✳ (03.11.2026): форма
+  // спортсмена и что уйдёт в файл.
+  const summary = groups.filter((g) => g.active !== g.items[0]).map((g) => g.active);
+  const actions: TableAction[] = [
+    ...(onAddAthlete
+      ? [
+          {
+            id: 'add',
+            label: 'Добавить спортсмена',
+            icon: <UserPlus size={16} />,
+            testId: 'athlete-open',
+            onAction: onAddAthlete,
+            panel: onCreateAthlete
+              ? ({ close }: { close: () => void }) => (
+                  <AthleteForm
+                    onSubmit={async (a) => {
+                      await onCreateAthlete(a);
+                      close();
+                    }}
+                  />
+                )
+              : undefined,
+          },
+        ]
+      : []),
+    ...(canExport
+      ? [
+          {
+            id: 'export',
+            label: 'Выгрузить в Excel',
+            icon: <Download size={16} />,
+            testId: 'rating-export',
+            onAction: () => download(exportHref),
+            panel: ({ close }: { close: () => void }) => (
+              <div className="flex flex-col gap-5" data-testid="export-details">
+                <dl className="m-0 text-[14px]">
+                  {(
+                    [
+                      ['Спортсменов в файле', String(data?.count ?? 0)],
+                      ['Отбор', summary.length ? summary.join(' · ') : 'Без отбора'],
+                      ['Поиск', query || '—'],
+                      ['Колонки', '№, рейтинг, ФИО, год рождения, регион'],
+                      ['Файл', 'Excel, .xlsx'],
+                    ] as [string, string][]
+                  ).map(([k, v]) => (
+                    <div key={k} className="grid grid-cols-[9rem_1fr] gap-3 border-b border-neutral-100 py-2.5 last:border-b-0">
+                      <dt className="text-neutral-500">{k}</dt>
+                      <dd className="m-0 min-w-0">{v}</dd>
+                    </div>
+                  ))}
+                </dl>
+                <Button
+                  variant="primary"
+                  className="w-full rounded-xl"
+                  data-testid="export-download"
+                  onPress={() => {
+                    download(exportHref);
+                    close();
+                  }}
+                >
+                  <Download size={16} /> Скачать
+                </Button>
+              </div>
+            ),
+          },
+        ]
+      : []),
+  ];
+
   return (
     <DataTable
       ariaLabel="Рейтинг-лист"
@@ -163,49 +245,8 @@ export function RatingTable({
       error={error ? 'Рейтинг не загрузился: ' + error : null}
       empty="По такому отбору никого нет"
       search={{ placeholder: 'Фамилия или регион' }}
-      filters={
-        <FilterMenu
-          groups={[
-            { label: 'Пол', items: SEX_ITEMS, active: facets.sex, onPick: (v) => onFacets({ sex: v }) },
-            { label: 'Возраст', items: AGE_ITEMS, active: facets.age, onPick: (v) => onFacets({ age: v }) },
-            { label: 'Статус', items: STATUS_ITEMS, active: facets.status, onPick: (v) => onFacets({ status: v }) },
-          ]}
-        />
-      }
-      count={narrow ? undefined : () => 'Спортсменов: ' + (data?.count ?? 0)}
-      actions={
-        // Редкие действия — под «⋯» ✳ (28.10.2026, решение владельца продукта):
-        // на виду только поиск и отбор. Пустой отбор выгружать незачем.
-        (onAddAthlete || canExport) && (
-          <Dropdown>
-            <Button isIconOnly variant="tertiary" aria-label="Ещё" className="rounded-xl" data-testid="rating-more">
-              <MoreHorizontal size={18} />
-            </Button>
-            <Dropdown.Popover placement="bottom end" className="rounded-xl">
-              <Dropdown.Menu
-                aria-label="Действия"
-                onAction={(key) => {
-                  if (key === 'add') onAddAthlete?.();
-                  if (key === 'export') download(exportHref);
-                }}
-              >
-                {onAddAthlete ? (
-                  <Dropdown.Item id="add" textValue="Добавить спортсмена" className="rounded-xl" data-testid="athlete-open">
-                    <UserPlus size={16} />
-                    <Label>Добавить спортсмена</Label>
-                  </Dropdown.Item>
-                ) : null}
-                {canExport ? (
-                  <Dropdown.Item id="export" textValue="Выгрузить в Excel" className="rounded-xl" data-testid="rating-export">
-                    <Download size={16} />
-                    <Label>Выгрузить в Excel</Label>
-                  </Dropdown.Item>
-                ) : null}
-              </Dropdown.Menu>
-            </Dropdown.Popover>
-          </Dropdown>
-        )
-      }
+      filters={<TableTools place="filters" groups={groups} actions={actions} />}
+      actions={<TableTools place="actions" groups={groups} actions={actions} />}
       onRowAction={(r) => router.push('/rating/' + r.userId)}
       rowProps={(r) => ({ 'data-testid': 'rating-row', 'data-player': r.name })}
       server={{

@@ -14,10 +14,13 @@
 
    Регион — выбор из закреплённого списка ✳ (16.09.2026, замечания федерации):
    три города и семнадцать областей. Список приходит с сервера, где стоит и
-   проверка, — иначе написания разойдутся, и выборка по региону развалится. */
+   проверка, — иначе написания разойдутся, и выборка по региону развалится.
+
+   Поля и «Завести» — `AthleteForm` ✳ (03.11.2026): тот же набор живёт и в окне
+   (`AthleteDialog`, десктоп), и в панели настроек таблицы на телефоне. */
 
 import { Button } from '@heroui/react';
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 
 import { useRegions, type NewAthlete, type RatingOrigin } from '@/entities/rating';
 import { DateInput, FormGrid, InlineDialog, QuietAction, TextInput } from '@/shared/kit/app';
@@ -34,18 +37,17 @@ const SEXES: [NewAthlete['sex'], string][] = [
   ['f', 'Женский'],
 ];
 
-export function AthleteDialog({
-  sub,
+/** Поля нового спортсмена и «Завести». `foot` — что встать слева от главной
+    кнопки (в окне — «Закрыть»). */
+export function AthleteForm({
   initialSex = '',
-  onClose,
   onSubmit,
+  foot,
 }: {
-  sub?: string;
-  /** Пол, уже выбранный в отборе страницы турнира. */
   initialSex?: NewAthlete['sex'];
-  onClose: () => void;
-  /** Завести; ошибка сервера — брошенным исключением, диалог её покажет. */
+  /** Завести; ошибка сервера — брошенным исключением, форма её покажет. */
   onSubmit: (athlete: NewAthlete) => Promise<void>;
+  foot?: ReactNode;
 }) {
   const regions = useRegions();
   const [name, setName] = useState('');
@@ -81,24 +83,7 @@ export function AthleteDialog({
   }
 
   return (
-    <InlineDialog
-      title="Новый спортсмен"
-      sub={sub}
-      onClose={onClose}
-      foot={
-        <>
-          <QuietAction onPress={onClose}>Закрыть</QuietAction>
-          <Button
-            variant="primary"
-            data-testid="athlete-submit"
-            isDisabled={busy || !ready}
-            onPress={() => void submit()}
-          >
-            Завести
-          </Button>
-        </>
-      }
-    >
+    <div className="flex flex-col gap-4" data-testid="athlete-form">
       <FormGrid>
         <TextInput label="Фамилия Имя Отчество" value={name} onChange={setName} wide />
         <SelectField
@@ -119,6 +104,31 @@ export function AthleteDialog({
         )}
       </FormGrid>
       <FormError text={error} />
+      <div className="flex justify-end gap-2 [&>*]:max-md:flex-1">
+        {foot}
+        <Button variant="primary" className="rounded-xl" data-testid="athlete-submit" isDisabled={busy || !ready} onPress={() => void submit()}>
+          Завести
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+export function AthleteDialog({
+  sub,
+  initialSex = '',
+  onClose,
+  onSubmit,
+}: {
+  sub?: string;
+  /** Пол, уже выбранный в отборе страницы турнира. */
+  initialSex?: NewAthlete['sex'];
+  onClose: () => void;
+  onSubmit: (athlete: NewAthlete) => Promise<void>;
+}) {
+  return (
+    <InlineDialog title="Новый спортсмен" sub={sub} onClose={onClose}>
+      <AthleteForm initialSex={initialSex} onSubmit={onSubmit} foot={<QuietAction onPress={onClose}>Закрыть</QuietAction>} />
     </InlineDialog>
   );
 }

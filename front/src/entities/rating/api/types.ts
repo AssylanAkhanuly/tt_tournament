@@ -221,3 +221,129 @@ export type NewMatch = {
   scoreA: number;
   scoreB: number;
 };
+
+/* ── Журнал и калибровка ✳ (восстановлены 03.11.2026) ── */
+
+/** Строка журнала изменений (п. 20, 22.2): строка истории плюс чья она и кто
+    её внёс. Отменённые строки остаются с `isReverted`. */
+export type RatingJournalEntry = RatingEntry & {
+  athleteId: string;
+  athleteName: string;
+  createdByName: string | null;
+};
+
+export type RatingJournalPage = {
+  count: number;
+  page: number;
+  pageSize: number;
+  results: RatingJournalEntry[];
+};
+
+export type ParamSource = { fixed: boolean; clause: string };
+
+export type RatingParams = {
+  id: number;
+  name: string;
+  d: number;
+  kStandard: number;
+  kTransition: number;
+  transitionMatches: number;
+  maxDelta: number;
+  capInTransition: boolean;
+  cTop: number;
+  cRepublic: number;
+  cRegion: number;
+  cAmateur: number;
+  pFirst: number;
+  pSecond: number;
+  pThird: number;
+  prizeMode: 'match' | 'tournament' | 'none';
+  baseline: 'sequential' | 'pre_tournament';
+  minRating: number;
+  ittfRMax: number;
+  ittfK: number;
+  updatedAt: string;
+  sources: Record<string, ParamSource>;
+};
+
+/* ── Предпросчёт: вход и выход ручки калибровки ─────────────────── */
+
+export type PreviewPlayer = {
+  id: string;
+  name: string;
+  origin: RatingOrigin;
+  start: number;
+  played: number;
+  ittf_position?: number | null;
+};
+
+export type PreviewTournament = {
+  id: string;
+  name: string;
+  level: CompetitionLevel;
+  places?: Record<string, number>;
+  no_third_place_match?: boolean;
+};
+
+export type PreviewMatch = {
+  id: string;
+  tournament: string;
+  a: string;
+  b: string;
+  games: [number, number];
+};
+
+export type PreviewHistoryRow = {
+  match_id: string;
+  tournament: string;
+  tournament_name: string;
+  player: string;
+  player_name: string;
+  opponent: string;
+  opponent_name: string;
+  score: string;
+  won: boolean;
+  before: number;
+  delta: number;
+  after: number;
+  expected: number;
+  k: number;
+  c: number;
+  p: number;
+  capped: boolean;
+  transition: boolean;
+};
+
+export type PreviewStanding = {
+  id: string;
+  name: string;
+  origin: RatingOrigin;
+  start: number;
+  rating: number;
+  delta: number;
+  matches: number;
+  wins: number;
+  losses: number;
+  transition_left: number;
+  prize_bonus: number;
+};
+
+/** Что выбранные коэффициенты значат на практике. Считает сервер: это та же
+    формула п. 9.3, и копия на фронте разошлась бы с боевой. */
+export type PreviewInsights = {
+  /** Доля ожидаемых побед МС (50,00) над КМС (40,00) при текущем D. */
+  win_share_ms_over_kms: number;
+  win_share_gap_5: number;
+  win_share_gap_20: number;
+  /** Побед подряд, чтобы дойти со старта 1,00 до уровня КМС. null — никогда. */
+  matches_new_to_kms: number | null;
+};
+
+export type PreviewResult = {
+  history: PreviewHistoryRow[];
+  table: PreviewStanding[];
+  /** Сколько баллов шкала создала из ниоткуда — показатель инфляции. */
+  injected: number;
+  skipped: { match_id: string; reason: string }[];
+  insights: PreviewInsights;
+};

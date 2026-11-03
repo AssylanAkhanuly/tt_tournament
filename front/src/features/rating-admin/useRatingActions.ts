@@ -1,6 +1,8 @@
 'use client';
 
-/* Действия председателя ГСК над рейтингом спортсмена: неявка и исправление.
+/* Действие председателя ГСК над рейтингом спортсмена: исправление значения
+   («Редактировать» ✳ 03.11.2026; кнопка неявки с карточки снята, ручка
+   `no-show/` на сервере осталась).
 
    Хук держит только состояние действия — идёт ли запрос и чем кончился. Сам
    запрос в транспорте (`entities/rating`), права — на сервере. Возвращает
@@ -9,7 +11,7 @@
 
 import { useCallback, useState } from 'react';
 
-import { correctRating, registerNoShow, type RatingEntry } from '@/entities/rating';
+import { correctRating, type RatingEntry } from '@/entities/rating';
 
 export function useRatingActions(userId: string) {
   const [busy, setBusy] = useState(false);
@@ -28,15 +30,10 @@ export function useRatingActions(userId: string) {
     }
   }, []);
 
-  const noShow = useCallback(
-    (reason: string) => run(() => registerNoShow(userId, reason)),
-    [run, userId],
-  );
-
   const correct = useCallback(
     (value: number, reason: string) => run(() => correctRating(userId, value, reason)),
     [run, userId],
   );
 
-  return { noShow, correct, busy, error };
+  return { correct, busy, error };
 }

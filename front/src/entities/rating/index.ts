@@ -8,5 +8,7 @@
 
 export * from './api/types';
 export * from './api/client';
+export * from './api/journal';
+export * from './api/calibration';
 export * from './api/hooks';
 export * from './lib/format';

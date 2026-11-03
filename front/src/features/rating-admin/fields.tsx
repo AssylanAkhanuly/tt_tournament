@@ -2,16 +2,16 @@
 
 /* Поля диалогов председателя: выбор из списка и число со ступенями.
 
-   Выбор — родной `select`, а не выпадашка кита: `FilterSeg` раскрывается
-   абсолютным слоем и внутри прокручиваемого тела диалога обрезается. Стрелка
-   браузера спрятана, вместо неё — та же, что у полей кита, и рамка та же.
+   Выбор — общий `Picker` ✳ (03.11.2026; раньше — родной `select`): на
+   телефоне он открывает панель снизу, на десктопе — `Select` HeroUI.
 
    Счёт партий — ступенями «− N +» ✳ (11.09.2026, решение владельца продукта):
    число партий маленькое и ограничено сверху, печатать его незачем. */
 
-import { ChevronDown, Minus, Plus } from 'lucide-react';
+import { Minus, Plus } from 'lucide-react';
 
 import type { CompetitionLevel } from '@/entities/rating';
+import { Picker } from '@/shared/ui/Picker';
 
 /** Уровни соревнований — таблица п. 13 (коэффициент C). */
 export const LEVELS: [CompetitionLevel, string][] = [
@@ -38,28 +38,19 @@ export function SelectField<T extends string>({
   onChange: (value: T) => void;
   wide?: boolean;
 }) {
+  // Выбор — общий `Picker` ✳ (03.11.2026): на телефоне — панель снизу, на
+  // десктопе — `Select` HeroUI; его список — слой поверх окна, не обрезается.
+  // Пустое значение («не указан») — ключ «-»: пустая строка ключом не годится.
   return (
-    <label className={'flex min-w-0 flex-col gap-1 ' + (wide ? 'col-span-2' : '')}>
+    <div className={'flex min-w-0 flex-col gap-1 ' + (wide ? 'col-span-2' : '')}>
       <Label>{label}</Label>
-      <span className="relative block">
-        <select
-          aria-label={label}
-          value={value}
-          onChange={(e) => onChange(e.target.value as T)}
-          className="h-9 w-full cursor-pointer appearance-none truncate rounded-lg border border-neutral-300 bg-white pl-3 pr-9 text-sm outline-none hover:border-neutral-400 focus:border-blue-500"
-        >
-          {options.map(([v, t]) => (
-            <option key={v} value={v}>
-              {t}
-            </option>
-          ))}
-        </select>
-        <ChevronDown
-          size={15}
-          className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-neutral-400"
-        />
-      </span>
-    </label>
+      <Picker
+        label={label}
+        value={value === '' ? '-' : value}
+        options={options.map(([v, t]) => ({ id: v === '' ? '-' : v, label: t }))}
+        onChange={(k) => onChange((k === '-' ? '' : k) as T)}
+      />
+    </div>
   );
 }
 

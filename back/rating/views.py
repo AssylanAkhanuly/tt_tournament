@@ -1,15 +1,19 @@
 """API Национального рейтинга.
 
-Ручки: список, карточка, неявка, исправление, объединение дублей и протоколы
-турниров (уровень, места, пересчёт).
+Ручки: список, выгрузка, карточка, неявка, исправление, объединение дублей,
+протоколы турниров (уровень, места, пересчёт), журнал изменений,
+коэффициенты и предпросчёт калибровки (✳ последние три восстановлены
+03.11.2026, решение владельца продукта; выпусков и апелляций нет).
 Расчёта здесь нет — он в `engine.py`, сборка в `services.py`; вьюха только
 принимает запрос и отдаёт ответ.
 
 Рейтинг открыт без входа (ТЗ §3, экран Э0.4): таблица и карточка спортсмена —
 публичные страницы. Править рейтинговые данные — неявки, исправления, дубли,
-протоколы — может только председатель ГСК ✳ (10.09.2026, решение
+протоколы, коэффициенты — может только председатель ГСК ✳ (10.09.2026, решение
 владельца продукта): по Положению он ведёт базу и историю рейтинга (п. 8.3, 22).
 """
+from dataclasses import asdict
+
 from django.db.models import Q
 from rest_framework import status
 from rest_framework.permissions import AllowAny
@@ -18,9 +22,15 @@ from users.permissions import IsGskChairman
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from . import engine, export, services
-from .models import RatingEntry, RatingProfile
-from .serializers import RatingEntrySerializer, RatingProfileSerializer
+from . import analysis, engine, export, services
+from .models import RatingEntry, RatingParams, RatingProfile
+from .serializers import (
+    PreviewRequestSerializer,
+    RatingEntrySerializer,
+    RatingJournalEntrySerializer,
+    RatingParamsSerializer,
+    RatingProfileSerializer,
+)
 
 #: Э0.4: «таблица с фильтрами, постранично до 500 строк».
 PAGE_SIZE_MAX = 500
@@ -666,3 +676,102 @@ class RatingAthletesView(APIView):
             return _bad(e)
         profile = RatingProfile.objects.select_related("user").get(user=user)
         return Response(RatingProfileSerializer(profile).data, status=status.HTTP_201_CREATED)
+
+
+class RatingParamsView(APIView):
+    """Коэффициенты расчёта: читать может любой, править — председатель ГСК.
+
+    Читать открыто намеренно: рядом с рейтингом должно быть видно, по каким
+    числам он посчитан, иначе «прозрачность» из п. 4.6 не работает.
+    """
+
+    def get_permissions(self):
+        return [AllowAny()] if self.request.method == "GET" else [IsGskChairman()]
+
+    def get(self, request):
+        return Response(RatingParamsSerializer(RatingParams.active()).data)
+
+    def patch(self, request):
+        params = RatingParams.active()
+        serializer = RatingParamsSerializer(params, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        serializer.save(updated_by=request.user)
+        return Response(serializer.data)
+
+
+class RatingPreviewView(APIView):
+    """Предпросчёт: считает присланный набор и ничего не сохраняет.
+
+    Ручка калибровки — федерация крутит коэффициенты и смотрит, что получится.
+    Движок тот же, что и боевой: иначе подобранные числа не значили бы ничего.
+    """
+
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        serializer = PreviewRequestSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        data = serializer.validated_data
+
+        result, used = services.preview(
+            players=data["players"],
+            tournaments=data["tournaments"],
+            matches=data["matches"],
+            params=data.get("params"),
+        )
+        return Response(
+            {
+                "history": [asdict(r) for r in result.history],
+                "table": [asdict(r) for r in result.table],
+                "injected": result.injected,
+                "skipped": result.skipped,
+                # Что выбранные коэффициенты значат на практике: доля ожидаемых
+                # побед и путь новичка до уровня КМС. Считается здесь, потому
+                # что это та же формула п. 9.3 — на фронте она была бы копией.
+                "insights": analysis.insights(used),
+            }
+        )
+
+
+#: Журнал постранично: строк много, а смотрят обычно последние.
+JOURNAL_PAGE_DEFAULT = 50
+JOURNAL_PAGE_MAX = 200
+
+
+class RatingJournalView(APIView):
+    """Журнал изменений (п. 20, 21.6, 22.2): все строки истории всех
+    спортсменов, новые первыми, с автором и основанием. Отменённые остаются с
+    пометкой — история хранится без удаления. Только чтение, только
+    председателю ГСК: он обеспечивает сохранность базы и истории (п. 22.2)."""
+
+    permission_classes = [IsGskChairman]
+
+    def get(self, request):
+        qs = RatingEntry.objects.select_related("profile__user", "tournament", "opponent", "created_by")
+        kind = request.query_params.get("kind")
+        if kind:
+            qs = qs.filter(kind=kind)
+        search = request.query_params.get("q")
+        if search:
+            qs = qs.filter(profile__user__name__icontains=search)
+        user_id = request.query_params.get("user_id")
+        if user_id:
+            qs = qs.filter(profile__user_id=user_id)
+
+        qs = qs.order_by("-created_at", "-id")
+        total = qs.count()
+        try:
+            size = min(int(request.query_params.get("page_size", JOURNAL_PAGE_DEFAULT)), JOURNAL_PAGE_MAX)
+            page = max(1, int(request.query_params.get("page", 1)))
+        except (TypeError, ValueError):
+            size, page = JOURNAL_PAGE_DEFAULT, 1
+
+        rows = qs[(page - 1) * size: page * size]
+        return Response(
+            {
+                "count": total,
+                "page": page,
+                "page_size": size,
+                "results": RatingJournalEntrySerializer(rows, many=True).data,
+            }
+        )

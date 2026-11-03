@@ -19,7 +19,7 @@
    решение владельца продукта): между разделами ведут меню роли и шапка сайта. */
 
 import { Button } from '@heroui/react';
-import { BarChart3, CalendarDays, LogIn } from 'lucide-react';
+import { BarChart3, CalendarDays, LogIn, ScrollText, SlidersHorizontal } from 'lucide-react';
 import { usePathname, useRouter } from 'next/navigation';
 import type { ReactNode } from 'react';
 
@@ -28,16 +28,23 @@ import { FullScreen, PhoneChrome, SiteHeader, useNarrow, type RoleUI } from '@/s
 import { AppShell, type ShellSubItem } from '@/widgets/app-shell';
 
 /** Разделы кабинета председателя. «Выпуски», «Апелляции», «Журнал» и
-    «Калибровка» сняты ✳ (11.09.2026), «Турниры» — ✳ (28.10.2026): решения
+    «Калибровка» сняты ✳ (11.09.2026); «Журнал» и «Калибровка» возвращены в
+    новом виде ✳ (03.11.2026), выпусков и апелляций нет — изменение рейтинга
+    видно на карточке спортсмена; «Турниры» сняты ✳ (28.10.2026): решения
     владельца продукта. */
 /** Раздел меню: подпись, адрес, значок и — по желанию — подпункты (`ShellSubItem`). */
 export type RatingNavItem = [string, string, ReactNode, ShellSubItem[]?];
 
 const NAV: RatingNavItem[] = [
   ['Рейтинг игроков', '/rating', <BarChart3 size={16} key="r" />],
+  ['Журнал', '/rating/journal', <ScrollText size={16} key="j" />],
+  ['Калибровка', '/rating/calibration', <SlidersHorizontal size={16} key="k" />],
   // Тот же раздел, что главная у администратора федерации ✳ (28.10.2026).
   ['Календарь', '/calendar', <CalendarDays size={16} key="c" />],
 ];
+
+/** Подписи разделов в полосе вкладок телефона — одним словом. */
+const TAB: Record<string, string> = { 'Рейтинг игроков': 'Рейтинг' };
 
 /** Разделы публичного сайта, которые уже есть. Главной нет ✳ (11.09.2026):
     корень ведёт на вход. Календарь и новости — позже. */
@@ -59,7 +66,7 @@ export function RatingShell({
   active?: string;
   /** Главные кнопки экрана — полоса внизу рабочей области (только председателю). */
   actions?: ReactNode;
-  /** Содержимое на всю рабочую область (календарь) — только на десктопе. */
+  /** Содержимое на всю рабочую область без полей (лист, карточка, календарь). */
   bleed?: boolean;
   /** Свои разделы вместо разделов кабинета — внутри турнира: [подпись, адрес, значок]. */
   nav?: RatingNavItem[];
@@ -120,17 +127,21 @@ export function RatingShell({
       person: { nm: user.name, rl: 'Председатель ГСК', av: '', email: user.email ?? undefined },
       brandName: 'Национальный рейтинг',
       badge: false,
-      nav: nav.map(([label, , icon]) => [icon, label]),
+      // В полосе вкладок — одно слово ✳ (03.11.2026): «Рейтинг игроков» → «Рейтинг».
+      nav: nav.map(([label, , icon]) => [icon, TAB[label] ?? label]),
     };
+    const fromTab = (tab: string) => Object.keys(TAB).find((l) => TAB[l] === tab) ?? tab;
     return (
       <FullScreen>
         <PhoneChrome
           role={role}
-          nav={active}
+          nav={TAB[active] ?? active}
+          header={false}
           title={title}
           actions={actions}
           bell={false}
-          onNavigate={onNavigate}
+          bleed={bleed}
+          onNavigate={(tab) => onNavigate(fromTab(tab))}
           onSignOut={() => void signOut()}
         >
           {children}
@@ -157,6 +168,14 @@ export function RatingShell({
           )
         }
       />
+      {/* На всю ширину без полей ✳ (03.11.2026) — как у председателя: лист и
+          карточка спортсмена у гостя тоже без обёрток. */}
+      {bleed ? (
+        <div className="flex min-h-0 flex-1 flex-col overflow-hidden bg-white">
+          {title && <h1 className="px-6 pb-4 pt-5 text-xl font-semibold tracking-tight">{title}</h1>}
+          {children}
+        </div>
+      ) : (
       <div className="min-h-0 flex-1 overflow-auto bg-neutral-50 px-4 pb-6 md:px-6 [&>*]:shrink-0">
         {title ? (
           <h1 className="pb-4 pt-5 text-xl font-semibold tracking-tight">{title}</h1>
@@ -165,6 +184,7 @@ export function RatingShell({
         )}
         {children}
       </div>
+      )}
     </FullScreen>
   );
 }

@@ -7,97 +7,68 @@
    публиковать только то, что нужно для идентификации спортсмена и работы
    рейтинга. Контакты и документы сюда не попадают вовсе — их нет в ответе.
 
-   Председателю ГСК ✳ (10.09.2026) на той же карточке открываются правки — по
-   образцу макетов его роли: главные кнопки в полосе действий внизу, каждая
-   открывает диалог. Здесь же он объединяет дубль с этой карточкой (п. 5.3)
-   ✳ (11.09.2026). Отдельного экрана под правки нет намеренно: править
+   Председателю ГСК ✳ (10.09.2026) на той же карточке открывается правка — в
+   полосе действий внизу одна кнопка «Редактировать» ✳ (03.11.2026, решение
+   владельца продукта): исправленное значение и основание. «Зафиксировать
+   неявку» и «Объединить» с карточки сняты тем же решением (ручки `no-show/` и
+   `merge/` на сервере остались). Изменение рейтинга видно только здесь, в
+   истории карточки: выпусков и апелляций нет.
+   Отдельного экрана под правки нет намеренно: править
    значение, не видя истории, из которой оно сложилось, нельзя. Права всё
    равно проверяет сервер. */
 
-import { Button } from '@heroui/react';
-import { Ban, Merge, PenLine } from 'lucide-react';
 import { useState } from 'react';
 
-import { num2, signed2, useRatingCard, type RatingEntry, type RatingProfile } from '@/entities/rating';
+import { num2, signed2, useRatingCard, type RatingEntry } from '@/entities/rating';
 import { useSession } from '@/entities/session';
-import { CorrectionDialog, MergeDialog, NoShowDialog } from '@/features/rating-admin';
-import { EmptyBox } from '@/shared/kit/app';
+import { CorrectionDialog } from '@/features/rating-admin';
+import { EmptyBox, useNarrow } from '@/shared/kit/app';
 import { PlayerCard } from '@/widgets/rating';
 import { RatingShell } from './RatingShell';
-
-type Ask = 'no_show' | 'correction' | 'merge' | null;
 
 export function PlayerCardView({ userId }: { userId: string }) {
   const { data, loading, error, reload } = useRatingCard(userId);
   const { isGskChairman } = useSession();
-  const [ask, setAsk] = useState<Ask>(null);
+  const narrow = useNarrow();
   const [done, setDone] = useState<string | null>(null);
 
   const finish = (entry: RatingEntry) => {
-    setAsk(null);
     setDone(entry.kindLabel.replace(/\s*\(.*\)$/, '') + ': ' + signed2(entry.delta) + ' → ' + num2(entry.after));
     reload();
   };
 
-  const merged = (kept: RatingProfile, droppedName: string) => {
-    setAsk(null);
-    setDone('Объединено: ' + droppedName + ' → ' + num2(kept.value));
-    reload();
-  };
-
+  // Одна кнопка — «Редактировать» ✳ (03.11.2026, решение владельца продукта).
   const actions =
     data && isGskChairman ? (
-      <>
-        <Button variant="ghost" data-testid="merge-open" onPress={() => setAsk('merge')}>
-          <Merge size={15} /> Объединить
-        </Button>
-        <Button variant="ghost" data-testid="noshow-open" onPress={() => setAsk('no_show')}>
-          <Ban size={15} /> Зафиксировать неявку
-        </Button>
-        <Button variant="primary" data-testid="correction-open" onPress={() => setAsk('correction')}>
-          <PenLine size={15} /> Исправить значение
-        </Button>
-      </>
+      <CorrectionDialog userId={userId} name={data.profile.name} current={data.profile.value} onDone={finish} />
     ) : undefined;
 
+  // На всю рабочую область, без полей ✳ (03.11.2026): имя — в шапке карточки.
+  // На телефоне имя несёт заголовок оболочки, и в карточке его не повторяем.
   return (
-    <RatingShell title={data?.profile.name ?? 'Карточка спортсмена'} actions={actions}>
+    <RatingShell title={narrow ? (data?.profile.name ?? 'Карточка спортсмена') : undefined} actions={actions} bleed>
       {done && (
         <p
           data-testid="chairman-result"
-          className="mb-4 rounded-lg border border-green-200 bg-green-50 px-3.5 py-2.5 text-[13px] text-green-800"
+          className="shrink-0 border-b border-green-200 bg-green-50 px-6 py-2.5 text-[13px] text-green-800"
         >
           Записано — {done}
         </p>
       )}
       {error && (
-        <EmptyBox
-          title={error.includes('карточк') ? 'Карточки нет' : 'Карточка не загрузилась'}
-          text={
-            error.includes('карточк')
-              ? 'У этого спортсмена ещё нет рейтинговой карточки — он не сыграл ни одного рейтингового матча.'
-              : error + '. Проверьте, что рейтинговый сервис запущен.'
-          }
-        />
+        <div className="p-6">
+          <EmptyBox
+            title={error.includes('карточк') ? 'Карточки нет' : 'Карточка не загрузилась'}
+            text={
+              error.includes('карточк')
+                ? 'У этого спортсмена ещё нет рейтинговой карточки — он не сыграл ни одного рейтингового матча.'
+                : error + '. Проверьте, что рейтинговый сервис запущен.'
+            }
+          />
+        </div>
       )}
-      {!error && loading && !data && <p className="py-6 text-[13px] text-neutral-500">Карточка загружается…</p>}
-      {!error && data && <PlayerCard card={data} />}
-
-      {data && ask === 'no_show' && (
-        <NoShowDialog userId={userId} name={data.profile.name} onClose={() => setAsk(null)} onDone={finish} />
-      )}
-      {data && ask === 'correction' && (
-        <CorrectionDialog
-          userId={userId}
-          name={data.profile.name}
-          current={data.profile.value}
-          onClose={() => setAsk(null)}
-          onDone={finish}
-        />
-      )}
-      {data && ask === 'merge' && (
-        <MergeDialog userId={userId} name={data.profile.name} onClose={() => setAsk(null)} onDone={merged} />
-      )}
+      {!error && loading && !data && <p className="px-6 py-6 text-[13px] text-neutral-500">Карточка загружается…</p>}
+      {!error && data && <PlayerCard card={data} showName={!narrow} />}
     </RatingShell>
   );
 }

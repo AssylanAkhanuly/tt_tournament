@@ -34,3 +34,12 @@ export const ruDate = (iso: string | null): string => {
   const [y, m, d] = iso.slice(0, 10).split('-');
   return d && m && y ? d + '.' + m + '.' + y : '';
 };
+
+/** Дата и время по местному времени: «03.11.2026, 14:05». Для отметок времени
+    (`published_at`, `created_at`) — их сервер отдаёт в UTC. */
+export const ruDateTime = (iso: string | null): string => {
+  if (!iso) return '';
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return '';
+  return d.toLocaleString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+};

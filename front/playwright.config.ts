@@ -18,7 +18,20 @@ export default defineConfig({
     baseURL: 'http://localhost:3000',
     trace: 'on-first-retry',
   },
-  projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
+  /* Выпуски, апелляции и калибровка ✳ (03.11.2026) — отдельным проектом после
+     остальных: выпуск меняет то, что показывает публичный лист, а сохранённые
+     коэффициенты — каждый следующий расчёт. Запусти их параллельно с проверками
+     листа и неявок, и те сверяли бы числа со снимком, а не с живыми значениями.
+     База снова чистая на следующем прогоне: засев сносит выпуски. */
+  projects: [
+    { name: 'chromium', use: { ...devices['Desktop Chrome'] }, testIgnore: /rating-governance\.spec\.ts/ },
+    {
+      name: 'rating-governance',
+      use: { ...devices['Desktop Chrome'] },
+      testMatch: /rating-governance\.spec\.ts/,
+      dependencies: ['chromium'],
+    },
+  ],
   /* Два сервера ✳ (10.09.2026): фронт и Django.
 
      Раньше поднимался только Next, и наборы, которым нужен бэкенд (табло,
@@ -36,7 +49,7 @@ export default defineConfig({
     {
       command: 'C:/apps/tt_back/venv/Scripts/python.exe manage.py runserver 8000 --noreload',
       cwd: '../back',
-      // Публичный лист: ручка коэффициентов снята вместе с калибровкой (11.09.2026).
+      // Публичный лист — открыт без входа, по нему и видно, что Django поднялся.
       url: 'http://localhost:8000/api/rating/',
       reuseExistingServer: true,
       timeout: 120_000,

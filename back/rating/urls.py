@@ -1,6 +1,9 @@
 from django.urls import path
 
 from .views import (
+    RatingJournalView,
+    RatingParamsView,
+    RatingPreviewView,
     RatingAthletesView,
     RatingCardView,
     RatingCorrectionView,
@@ -41,5 +44,9 @@ urlpatterns = [
     ),
     path("protocols/<str:pk>/matches/", RatingProtocolMatchesView.as_view(), name="rating-protocol-matches"),
     path("protocols/<str:pk>/matches/<str:mid>/", RatingProtocolMatchView.as_view(), name="rating-protocol-match"),
+    # Журнал и калибровка ✳ (восстановлены 03.11.2026).
+    path("params/", RatingParamsView.as_view(), name="rating-params"),
+    path("preview/", RatingPreviewView.as_view(), name="rating-preview"),
+    path("journal/", RatingJournalView.as_view(), name="rating-journal"),
     path("<uuid:user_id>/", RatingCardView.as_view(), name="rating-card"),
 ]

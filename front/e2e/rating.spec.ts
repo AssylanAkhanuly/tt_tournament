@@ -128,7 +128,7 @@ test('карточка сходится: рейтинг равен сумме и
   const n = await rows.count();
   let сумма = 0;
   for (let i = 0; i < n; i++) {
-    const cells = await rows.nth(i).locator(':scope > span').allTextContents();
+    const cells = await rows.nth(i).locator(':scope > td, :scope > th').allTextContents();
     const [до, изм, после] = [число(cells[4]), число(cells[5]), число(cells[6])];
     // Каждая строка сходится сама по себе — требование таблицы п. 20.
     expect(до + изм).toBeCloseTo(после, 6);
@@ -310,4 +310,17 @@ test('вторая страница листа продолжает нумера
   const p = (await page.getByTestId('pagination').boundingBox())!;
   const t = (await page.getByRole('grid', { name: 'Рейтинг-лист' }).boundingBox())!;
   expect(Math.abs(p.x + p.width / 2 - (t.x + t.width / 2))).toBeLessThan(20);
+});
+
+test('карточка спортсмена — на всю рабочую область, без обёрток ✳ (03.11.2026)', async ({ page }) => {
+  await page.goto('/rating');
+  await строка(page, 'Ахметов Ерлан').click();
+  const карточка = page.getByTestId('player-card');
+  await expect(карточка.locator('h1')).toHaveText('Ахметов Ерлан');
+  await expect(page.getByTestId('card-fact').filter({ hasText: 'Место в листе' })).toContainText('№1 из');
+  // Статус — точкой на фото, плашки «Активен» нет.
+  await expect(карточка.getByTestId('card-status')).toHaveAttribute('data-status', 'active');
+  await expect(карточка.getByTestId('card-status')).toHaveAttribute('aria-label', 'Активен');
+  await expect(карточка.getByText('Активен', { exact: true })).toHaveCount(0);
+  await page.screenshot({ path: 'test-results/rating/card.png' });
 });

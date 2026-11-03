@@ -388,6 +388,65 @@ def refresh_activity(now: Optional[date] = None) -> Dict[str, int]:
     return counts
 
 
+# ── Предпросчёт для калибровки (ничего не сохраняет) ✳ (восст. 03.11.2026) ──
+
+
+def preview(players: Sequence[dict], tournaments: Sequence[dict], matches: Sequence[dict],
+            params: Optional[dict] = None):
+    """Посчитать присланный набор, не трогая базу.
+
+    Это ручка калибровки: федерация крутит коэффициенты и смотрит, что получится,
+    на своих данных. Расчёт тот же самый, что и боевой, — движок один.
+    """
+    base = RatingParams.active().to_engine()
+    if params:
+        clean = {k: v for k, v in params.items() if v is not None and hasattr(base, k)}
+        if "prize_p" in clean:
+            clean["prize_p"] = {int(k): float(v) for k, v in clean["prize_p"].items()}
+        if "level_c" in clean:
+            clean["level_c"] = {str(k): float(v) for k, v in clean["level_c"].items()}
+        base = base.replace(**clean)
+
+    # Стартовое значение выводится ЗДЕСЬ, а не на клиенте: новичок входит с
+    # 1,00 (п. 6.1), легионер — по формуле перевода из ITTF (п. 17.4). Считай
+    # это фронт сам, формула Положения оказалась бы в двух местах сразу.
+    lab_players = []
+    for p in players:
+        player = engine.LabPlayer(
+            id=str(p["id"]),
+            name=p.get("name") or str(p["id"]),
+            origin=p.get("origin") or engine.ORIGIN_LEGACY,
+            start=float(p.get("start") or 1),
+            played=int(p.get("played", 0) or 0),
+            ittf_position=p.get("ittf_position"),
+        )
+        player.start = engine.start_rating(player, base)
+        lab_players.append(player)
+    lab_tournaments = [
+        engine.LabTournament(
+            id=str(t["id"]),
+            name=t.get("name") or str(t["id"]),
+            level=t.get("level") or engine.LEVEL_REPUBLIC,
+            places={str(k): int(v) for k, v in (t.get("places") or {}).items()},
+            no_third_place_match=bool(t.get("no_third_place_match")),
+        )
+        for t in tournaments
+    ]
+    lab_matches = [
+        engine.LabMatch(
+            id=str(m["id"]),
+            tournament=str(m["tournament"]),
+            a=str(m["a"]),
+            b=str(m["b"]),
+            games=(int(m["games"][0]), int(m["games"][1])),
+        )
+        for m in matches
+    ]
+    # Возвращаем и применённые коэффициенты: по ним считаются наблюдения, и
+    # брать их второй раз из настроек — значит разойтись с тем, чем считали.
+    return engine.run_series(lab_players, lab_tournaments, lab_matches, base), base
+
+
 # ── Новый спортсмен (п. 6.1, 6.3, 17.4) ─────────────────────────────
 
 

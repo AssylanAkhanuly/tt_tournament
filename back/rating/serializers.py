@@ -7,7 +7,11 @@
 from rest_framework import serializers
 
 from . import engine
-from .models import RatingEntry, RatingProfile
+from .models import (
+    RatingEntry,
+    RatingParams,
+    RatingProfile,
+)
 
 
 class RatingProfileSerializer(serializers.ModelSerializer):
@@ -53,6 +57,18 @@ class RatingEntrySerializer(serializers.ModelSerializer):
         read_only_fields = fields
 
 
+class RatingJournalEntrySerializer(RatingEntrySerializer):
+    """Строка журнала: та же строка истории плюс чья она и кто её внёс."""
+
+    athlete_id = serializers.CharField(source="profile.user.id", read_only=True)
+    athlete_name = serializers.CharField(source="profile.user.name", read_only=True)
+    created_by_name = serializers.CharField(source="created_by.name", read_only=True, default=None)
+
+    class Meta(RatingEntrySerializer.Meta):
+        fields = RatingEntrySerializer.Meta.fields + ["athlete_id", "athlete_name", "created_by_name"]
+        read_only_fields = fields
+
+
 class RatingCardSerializer(serializers.Serializer):
     """Карточка спортсмена целиком: шапка плюс история изменений."""
 
@@ -60,3 +76,87 @@ class RatingCardSerializer(serializers.Serializer):
     history = RatingEntrySerializer(many=True, read_only=True)
     place = serializers.IntegerField(read_only=True)
     of = serializers.IntegerField(read_only=True)
+
+
+class RatingParamsSerializer(serializers.ModelSerializer):
+    """Коэффициенты расчёта плюс происхождение каждого числа.
+
+    `sources` — не украшение: шесть значений Положение называет, но не задаёт,
+    и экран обязан показывать, что стоит за числом — документ или наше
+    допущение. Без этого пилотные числа выдаются за норму.
+    """
+
+    sources = serializers.SerializerMethodField()
+
+    class Meta:
+        model = RatingParams
+        fields = [
+            "id", "name", "is_active",
+            "d", "k_standard", "k_transition", "transition_matches",
+            "max_delta", "cap_in_transition",
+            "c_top", "c_republic", "c_region", "c_amateur",
+            "p_first", "p_second", "p_third",
+            "prize_mode", "baseline", "min_rating",
+            "ittf_r_max", "ittf_k",
+            "updated_at", "sources",
+        ]
+        read_only_fields = ["id", "updated_at", "sources"]
+
+    def get_sources(self, obj):
+        """{поле: {fixed, clause}} — где fixed = «задано Положением»."""
+        out = {}
+        # Коэффициенты уровня и места разложены по полям, а в движке это словари.
+        alias = {
+            "c_top": "level_c", "c_republic": "level_c", "c_region": "level_c",
+            "c_amateur": "level_c", "p_first": "prize_p", "p_second": "prize_p",
+            "p_third": "prize_p",
+        }
+        for name in self.Meta.fields:
+            key = alias.get(name, name)
+            if key in engine.PARAM_SOURCES:
+                fixed, clause = engine.PARAM_SOURCES[key]
+                out[name] = {"fixed": fixed, "clause": clause}
+        return out
+
+
+# ── Предпросчёт (калибровка) ────────────────────────────────────────
+
+
+class PreviewPlayerSerializer(serializers.Serializer):
+    id = serializers.CharField()
+    name = serializers.CharField(required=False, allow_blank=True)
+    origin = serializers.ChoiceField(
+        choices=[engine.ORIGIN_NEW, engine.ORIGIN_LEGACY, engine.ORIGIN_ITTF],
+        required=False,
+    )
+    start = serializers.FloatField(required=False, default=1)
+    played = serializers.IntegerField(required=False, default=0, min_value=0)
+    ittf_position = serializers.IntegerField(required=False, allow_null=True, min_value=1)
+
+
+class PreviewTournamentSerializer(serializers.Serializer):
+    id = serializers.CharField()
+    name = serializers.CharField(required=False, allow_blank=True)
+    level = serializers.ChoiceField(choices=list(engine.LEVELS), required=False)
+    places = serializers.DictField(child=serializers.IntegerField(min_value=1), required=False)
+    no_third_place_match = serializers.BooleanField(required=False, default=False)
+
+
+class PreviewMatchSerializer(serializers.Serializer):
+    id = serializers.CharField()
+    tournament = serializers.CharField()
+    a = serializers.CharField()
+    b = serializers.CharField()
+    games = serializers.ListField(
+        child=serializers.IntegerField(min_value=0), min_length=2, max_length=2
+    )
+
+
+class PreviewRequestSerializer(serializers.Serializer):
+    """Вход предпросчёта: он ничего не сохраняет, поэтому и участники здесь
+    произвольные — это площадка калибровки, а не боевой протокол."""
+
+    players = PreviewPlayerSerializer(many=True)
+    tournaments = PreviewTournamentSerializer(many=True)
+    matches = PreviewMatchSerializer(many=True)
+    params = serializers.DictField(required=False)

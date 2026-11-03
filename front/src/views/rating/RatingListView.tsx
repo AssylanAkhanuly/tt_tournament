@@ -22,7 +22,7 @@ import type { ColumnFiltersState, OnChangeFn, PaginationState, SortingState } fr
 import { useRouter } from 'next/navigation';
 import { useMemo, useState } from 'react';
 
-import { createAthlete, ratingExportUrl, useRatingList } from '@/entities/rating';
+import { createAthlete, ratingExportUrl, useRatingList, type NewAthlete } from '@/entities/rating';
 import { useSession } from '@/entities/session';
 import { AthleteDialog } from '@/features/rating-admin';
 import { RatingTable, type RatingFacets } from '@/widgets/rating';
@@ -46,6 +46,11 @@ export function RatingListView() {
   const router = useRouter();
   const { isGskChairman } = useSession();
   const [adding, setAdding] = useState(false);
+  /** Завести и сразу открыть карточку — из окна и из панели на телефоне. */
+  const create = async (athlete: NewAthlete) => {
+    const created = await createAthlete(athlete);
+    router.push('/rating/' + created.userId);
+  };
 
   const [facets, setFacets] = useState<RatingFacets>({ sex: 'Все', age: 'Все возрасты', status: 'Активные' });
   const [sorting, setSorting] = useState<SortingState>([]);
@@ -97,6 +102,7 @@ export function RatingListView() {
         pagination={pagination}
         exportHref={ratingExportUrl(query)}
         onAddAthlete={isGskChairman ? () => setAdding(true) : undefined}
+        onCreateAthlete={isGskChairman ? create : undefined}
         onFacets={(patch) => {
           setFacets((f) => ({ ...f, ...patch }));
           toFirstPage();
@@ -108,10 +114,7 @@ export function RatingListView() {
       {adding && (
         <AthleteDialog
           onClose={() => setAdding(false)}
-          onSubmit={async (athlete) => {
-            const created = await createAthlete(athlete);
-            router.push('/rating/' + created.userId);
-          }}
+          onSubmit={create}
         />
       )}
     </RatingShell>

@@ -37,7 +37,7 @@ test('гость видит шапку сайта с «Войти» и не ви
   await карточка(page, 'Ким Виктор');
   await expect(page.getByTestId('login-link')).toBeVisible();
   await expect(page.getByTestId('side-person')).toHaveCount(0);
-  await expect(page.getByTestId('noshow-open')).toHaveCount(0);
+  await expect(page.getByTestId('correction-open')).toHaveCount(0);
 });
 
 test('неверный пароль не пускает и говорит об этом', async ({ page }) => {
@@ -50,31 +50,23 @@ test('неверный пароль не пускает и говорит об �
   await expect(page).toHaveURL(/\/login/);
 });
 
-test('председатель фиксирует неявку: рейтинг падает на 0,20, в истории — основание', async ({ page }) => {
-  await войти(page);
-  await карточка(page, 'Ким Виктор');
-  // Ким Виктор в показательном наборе: 40,00 + 0,20 за турнир = 40,20.
-  await expect(текущий(page)).toContainText('40,20');
-
-  await page.getByTestId('noshow-open').click();
-  await page.getByLabel('Основание неявки').fill('Не явился на кубок РК, уведомления о снятии нет');
-  await page.getByTestId('noshow-submit').click();
-
-  // Первая неявка — −0,20 (п. 15.4); размер прислал сервер, экран не считал.
-  await expect(page.getByTestId('chairman-result')).toContainText('−0,20');
-  await expect(текущий(page)).toContainText('40,00');
-  await expect(
-    page.getByTestId('card-history-row').filter({ hasText: 'уведомления о снятии нет' }),
-  ).toBeVisible();
-});
-
-test('без основания неявку не зафиксировать', async ({ page }) => {
+test('у председателя на карточке одна кнопка — «Редактировать»; без основания не сохранить', async ({ page }) => {
   await войти(page);
   await карточка(page, 'Оралбек Дана');
-  await page.getByTestId('noshow-open').click();
-  await expect(page.getByTestId('noshow-submit')).toBeDisabled();
-  await page.getByRole('button', { name: 'Закрыть' }).last().click();
-  await expect(page.getByTestId('noshow-submit')).toHaveCount(0);
+  await expect(page.getByTestId('correction-open')).toHaveText(/Редактировать/);
+  await expect(page.getByTestId('noshow-open')).toHaveCount(0);
+  await expect(page.getByTestId('merge-open')).toHaveCount(0);
+
+  await page.getByTestId('correction-open').click();
+  // Поле одно и уже с текущим значением; пока оно то же — сохранять нечего.
+  const поле = page.getByTestId('correction-value');
+  await expect(поле).toHaveValue((await текущий(page).textContent())!.match(/\d+,\d\d/)![0]);
+  await expect(page.getByTestId('correction-submit')).toBeDisabled();
+  // «+» — шаг 0,01; без основания всё равно не сохранить.
+  await page.getByRole('button', { name: 'Увеличить рейтинг' }).click();
+  await expect(page.getByTestId('correction-submit')).toBeDisabled();
+  await page.getByRole('button', { name: 'Отмена' }).click();
+  await expect(page.getByTestId('correction-dialog')).toHaveCount(0);
 });
 
 test('председатель исправляет значение: оно становится ровно введённым', async ({ page }) => {
@@ -82,8 +74,8 @@ test('председатель исправляет значение: оно с�
   await карточка(page, 'Нурланов Данияр');
 
   await page.getByTestId('correction-open').click();
-  await page.getByLabel('Исправленное значение').fill('33,50');
-  await page.getByLabel('Основание исправления').fill('Опечатка при переносе прежнего рейтинга');
+  await page.getByTestId('correction-value').fill('33,50');
+  await page.getByTestId('correction-reason').fill('Опечатка при переносе прежнего рейтинга');
   await page.getByTestId('correction-submit').click();
 
   await expect(page.getByTestId('chairman-result')).toContainText('→ 33,50');
@@ -132,33 +124,4 @@ test('выход из карточки человека возвращает г�
   await page.getByTestId('side-person').click();
   await page.getByRole('menuitem', { name: 'Выйти' }).click();
   await expect(page.getByTestId('login-link')).toBeVisible();
-});
-
-/* Объединение дублей (п. 5.3). Пара заведена засевом: «Сейтказы Арман» —
-   30,00, его дубль — 28,00 с одной неявкой (27,80). После объединения у
-   основной должно стать ровно 29,80: старт дубля не прибавился (было бы
-   57,80), а его неявка перешла (без неё осталось бы 30,00). */
-test('председатель объединяет дубль: история переходит без удвоения старта', async ({ page }) => {
-  await войти(page);
-  await карточка(page, 'Сейтказы Арман');
-  await expect(текущий(page)).toContainText('30,00');
-
-  await page.getByTestId('merge-open').click();
-  await expect(page.getByTestId('merge-submit')).toBeDisabled();
-  await page.getByPlaceholder('Фамилия дубля').fill('Сейтказы');
-  await page.locator('[data-testid="merge-candidate"][data-player="Сейтказы Арман (дубль)"]').click();
-  await page.getByLabel('Основание объединения').fill('Один человек, две карточки');
-  await page.getByTestId('merge-submit').click();
-
-  await expect(page.getByTestId('chairman-result')).toContainText('Объединено');
-  await expect(текущий(page)).toContainText('29,80');
-  await expect(
-    page.getByTestId('card-history-row').filter({ hasText: 'Объединение карточек' }),
-  ).toBeVisible();
-
-  // Карточки дубля в живом листе больше нет.
-  await page.goto('/rating?edition=live');
-  await page.getByPlaceholder('Фамилия или регион').fill('Сейтказы');
-  await expect(строка(page, 'Сейтказы Арман')).toHaveCount(1);
-  await expect(строка(page, 'Сейтказы Арман (дубль)')).toHaveCount(0);
 });
