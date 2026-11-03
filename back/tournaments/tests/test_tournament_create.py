@@ -44,3 +44,26 @@ def test_окончание_раньше_начала_отбивается(api):
     assert r.status_code == 400
     assert "ends_at" in r.data
     assert not Tournament.objects.filter(name="Назад").exists()
+
+
+def test_председатель_гск_заводит_турнир():
+    """✳ 03.11.2026, решение владельца продукта: «Новый турнир» — и у председателя ГСК."""
+    from users.models import Role
+
+    u = User.objects.create_user(phone="+77008880002", name="Председатель", password="x")
+    Role.objects.create(user=u, kind=Role.KIND_GSK_CHAIRMAN)
+    c = APIClient()
+    c.force_authenticate(u)
+    r = c.post("/api/tournaments/", {"name": "Кубок ГСК", "starts_at": START, "format": "single_elimination"}, format="json")
+    assert r.status_code == 201, r.data
+    assert Tournament.objects.get(name="Кубок ГСК").created_by == u
+
+
+def test_спортсмен_турнир_не_заводит():
+    from users.models import Role
+
+    u = User.objects.create_user(phone="+77008880003", name="Спортсмен", password="x")
+    Role.objects.create(user=u, kind=Role.KIND_PLAYER)
+    c = APIClient()
+    c.force_authenticate(u)
+    assert c.post("/api/tournaments/", {"name": "Нельзя", "starts_at": START, "format": "single_elimination"}, format="json").status_code == 403

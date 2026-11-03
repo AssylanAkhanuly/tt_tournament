@@ -56,10 +56,15 @@ def _can_manage_tournament(user, tournament):
 
 
 def _can_create_tournament(user, club=None):
-    """True for staff (any club) or club admin of the given club."""
+    """True for staff (any club) or club admin of the given club — and, ✳ 03.11.2026
+    (решение владельца продукта), председатель ГСК и администратор федерации:
+    «Новый турнир» в их «Календаре»."""
+    from users.models import Role
+    from users.permissions import has_role
+
     if not user.is_authenticated:
         return False
-    if user.is_staff:
+    if user.is_staff or has_role(user, Role.KIND_GSK_CHAIRMAN, Role.KIND_FEDERATION_ADMIN):
         return True
     if club and club.is_admin(user):
         return True

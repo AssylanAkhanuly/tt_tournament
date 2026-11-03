@@ -502,8 +502,18 @@ test('у председателя ГСК тот же «Календарь»: с�
   await page.waitForURL((url) => url.pathname === '/calendar');
   await expect(page.getByRole('grid')).toBeVisible();
   await expect(page.getByTestId('calendar-month')).toBeVisible();
-  // Заводить турниры председателю сервер не разрешает — кнопки нет.
-  await expect(page.getByRole('button', { name: 'Новый турнир' })).toHaveCount(0);
+  // «Новый турнир» — и у председателя ✳ (03.11.2026): заводит, и турнир встаёт на свой день.
+  const name = `[e2e] Турнир председателя ${Date.now()}`;
+  const сегодня = new Date();
+  await page.getByRole('button', { name: 'Новый турнир' }).click();
+  const форма = page.getByTestId('tournament-create');
+  await форма.getByLabel('Название').fill(name);
+  await форма.getByRole('button', { name: 'Завести' }).click();
+  await expect(форма).toHaveCount(0);
+  // Сегодняшняя клетка бывает тесной («Ещё N»), поэтому заведённый сверяем по ответу сервера.
+  const все = (await (await page.request.get('/api/tournaments/')).json()) as { name: string; starts_at: string }[];
+  const заведён = все.find((t) => t.name === name)!;
+  expect(new Date(заведён.starts_at).toDateString()).toBe(сегодня.toDateString());
   await page.screenshot({ path: 'test-results/dashboard/gsk-calendar.png' });
 
   await page.getByTestId('nav-sub').filter({ hasText: 'Таблица' }).click();

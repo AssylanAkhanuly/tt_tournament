@@ -200,7 +200,7 @@
 
 ## Permissions
 - `_can_manage_tournament(user, tournament)` — True if `is_staff` OR `ClubAdmin` of tournament's club
-- `_can_create_tournament(user, club)` — True if `is_staff` OR `ClubAdmin` of that club
+- `_can_create_tournament(user, club)` — True if `is_staff` OR `ClubAdmin` of that club OR ✳ (03.11.2026) председатель ГСК / администратор федерации (`has_role`); тесты — `tournaments/tests/test_tournament_create.py`
 
 ## Key Endpoints
 ```

@@ -17,7 +17,7 @@ import { boardViews, TournamentBoard, useBoardView } from '@/widgets/tournament-
 
 export function CalendarView() {
   const router = useRouter();
-  const { loading, isGskChairman, isFederationAdmin } = useSession();
+  const { loading, isGskChairman } = useSession();
 
   useEffect(() => {
     if (!loading && !isGskChairman) router.replace('/login?next=/calendar');
@@ -28,7 +28,8 @@ export function CalendarView() {
       {isGskChairman && (
         <TournamentBoard
           detailsPath={(id) => tournamentHref('gsk', id)}
-          canCreate={isFederationAdmin}
+          // «Новый турнир» — и председателю ГСК ✳ (03.11.2026, решение владельца продукта).
+          canCreate
         />
       )}
     </RatingShell>
