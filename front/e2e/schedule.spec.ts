@@ -106,7 +106,8 @@ test('главный судья: черновик расписания, прав
     await page.getByTestId('schedule-build').click();
     const расписание = page.getByTestId('schedule');
     await expect(расписание).toHaveAttribute('data-status', 'draft');
-    await expect(page.getByTestId('schedule-status')).toHaveText('Черновик');
+    await expect(page.getByTestId('schedule-params')).toBeVisible();
+    await expect(page.getByTestId('schedule-status')).toHaveCount(0); // у черновика значка нет
     const матчи = page.getByTestId('schedule-match');
     await expect(матчи).toHaveCount(12); // две группы по четыре — по шесть матчей
     // У каждого матча — стол 1 или 2 и судья стола.

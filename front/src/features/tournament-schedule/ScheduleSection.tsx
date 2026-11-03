@@ -14,7 +14,7 @@
    в сайдбаре, вкладок на экране нет (решение владельца продукта). HeroUI +
    Tailwind. */
 
-import { AlertDialog, Button, Chip, Drawer, ListBox, NumberField, Select } from '@heroui/react';
+import { AlertDialog, Button, Chip, Drawer, NumberField } from '@heroui/react';
 import { CalendarClock, Send, SlidersHorizontal } from 'lucide-react';
 import { useSearchParams } from 'next/navigation';
 import { useState, type ReactNode } from 'react';
@@ -30,6 +30,7 @@ import {
 } from '@/entities/tournament';
 import { shortName } from '@/shared/lib/name';
 import { DataTable, type DataColumn } from '@/shared/ui/DataTable';
+import { Picker } from '@/shared/ui/Picker';
 
 import { groupTone } from './groupTone';
 import { MatchPair } from './MatchPlayer';
@@ -37,6 +38,7 @@ import { MatchResult } from './MatchResult';
 import { PlayDays } from './PlayDays';
 import { ScheduleDay } from './ScheduleDay';
 import { ScheduleGroups } from './ScheduleGroups';
+import { AlertSheet } from '@/shared/ui/ModalSheet';
 
 const pad = (n: number) => String(n).padStart(2, '0');
 const hm = (d: Date) => pad(d.getHours()) + ':' + pad(d.getMinutes());
@@ -57,31 +59,19 @@ function Pick<T extends string | number>({
   testId?: string;
   width?: string;
 }) {
+  // Один выбор на всё приложение: на телефоне — панель снизу (`Picker`).
   return (
-    <Select
-      aria-label={label}
-      selectedKey={value === null ? null : String(value)}
-      onSelectionChange={(k) => {
-        const o = options.find((x) => String(x.id) === String(k));
+    <Picker
+      label={label}
+      value={value === null ? null : String(value)}
+      options={options.map((o) => ({ id: String(o.id), label: o.label }))}
+      onChange={(k) => {
+        const o = options.find((x) => String(x.id) === k);
         if (o) onChange(o.id);
       }}
       className={width}
-    >
-      <Select.Trigger className="rounded-xl" data-testid={testId}>
-        <Select.Value />
-        <Select.Indicator />
-      </Select.Trigger>
-      <Select.Popover className="rounded-xl">
-        <ListBox>
-          {options.map((o) => (
-            <ListBox.Item key={String(o.id)} id={String(o.id)} textValue={o.label} className="rounded-xl">
-              {o.label}
-              <ListBox.ItemIndicator />
-            </ListBox.Item>
-          ))}
-        </ListBox>
-      </Select.Popover>
-    </Select>
+      testId={testId}
+    />
   );
 }
 
@@ -378,9 +368,11 @@ export function ScheduleSection({
 
   const toolbar = (
     <>
-      <Chip size="sm" variant="soft" color={s.status === 'final' ? 'success' : 'warning'} data-testid="schedule-status">
-        {s.status === 'final' ? 'Отправлено' : 'Черновик'}
-      </Chip>
+      {s.status === 'final' && (
+        <Chip size="sm" variant="soft" color="success" data-testid="schedule-status">
+          Отправлено
+        </Chip>
+      )}
       {s.canEdit && (
         <>
           <Drawer>
@@ -429,9 +421,7 @@ export function ScheduleSection({
             <Button variant="primary" size="sm" className="rounded-xl" isDisabled={busy} data-testid="schedule-finalize">
               <Send size={16} /> Отправить
             </Button>
-            <AlertDialog.Backdrop>
-              <AlertDialog.Container>
-                <AlertDialog.Dialog className="rounded-xl" data-testid="schedule-finalize-confirm">
+            <AlertSheet className="rounded-xl" testId="schedule-finalize-confirm">
                   <AlertDialog.Header>
                     <AlertDialog.Icon status="warning" />
                     <AlertDialog.Heading>Отправить расписание?</AlertDialog.Heading>
@@ -447,13 +437,15 @@ export function ScheduleSection({
                       Отправить
                     </Button>
                   </AlertDialog.Footer>
-                </AlertDialog.Dialog>
-              </AlertDialog.Container>
-            </AlertDialog.Backdrop>
+                </AlertSheet>
           </AlertDialog>
         </>
       )}
     </>
+  );
+  // Черновик без права правки — кнопок нет, пустой полосы тоже.
+  const toolbarStrip = (s.status === 'final' || s.canEdit) && (
+    <div className="flex shrink-0 flex-wrap items-center justify-end gap-3 border-b border-neutral-200 px-6 py-3">{toolbar}</div>
   );
 
   return (
@@ -483,12 +475,12 @@ export function ScheduleSection({
         <ScheduleDay schedule={s} toolbar={toolbar} onOpen={s.canEdit ? setOpen : undefined} />
       ) : view === 'bracket' ? (
         <>
-          <div className="flex shrink-0 flex-wrap items-center justify-end gap-3 border-b border-neutral-200 px-6 py-3">{toolbar}</div>
+          {toolbarStrip}
           {playoff?.(s)}
         </>
       ) : (
         <>
-          <div className="flex shrink-0 flex-wrap items-center justify-end gap-3 border-b border-neutral-200 px-6 py-3">{toolbar}</div>
+          {toolbarStrip}
           <ScheduleGroups schedule={s} tournamentId={tournamentId} onChanged={setFresh} />
         </>
       )}

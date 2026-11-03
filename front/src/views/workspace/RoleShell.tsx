@@ -25,6 +25,7 @@ export function RoleShell({
   bleed,
   context,
   sub,
+  actions,
   children,
 }: {
   /** Вид роли (`Role.kind` на сервере), без которой в кабинет не пускаем. */
@@ -40,6 +41,8 @@ export function RoleShell({
   context?: ReactNode;
   /** Подпункты активного раздела (вид экрана: «Месяц», «Таблица») ✳ 30.10.2026. */
   sub?: ShellSubItem[];
+  /** Полоса внизу рабочей области. */
+  actions?: ReactNode;
   children?: ReactNode;
 }) {
   const router = useRouter();
@@ -62,6 +65,7 @@ export function RoleShell({
       active={active}
       title={pageTitle}
       bleed={bleed}
+      actions={actions}
       context={context}
       onNavigate={(label) => {
         const href = nav.find((n) => n.label === label)?.href;

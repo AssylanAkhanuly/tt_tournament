@@ -19,6 +19,7 @@ export function RefereeShell({
   nav = NAV,
   context,
   sub,
+  actions,
   children,
 }: {
   active: string;
@@ -28,10 +29,12 @@ export function RefereeShell({
   context?: ReactNode;
   /** Подпункты активного раздела (вид экрана: «Месяц», «Таблица») ✳ 30.10.2026. */
   sub?: ShellSubItem[];
+  /** Полоса внизу рабочей области. */
+  actions?: ReactNode;
   children: ReactNode;
 }) {
   return (
-    <RoleShell sub={sub} kind={ROLE_REFEREE} title="Судья" nav={nav} context={context} active={active} bleed={bleed}>
+    <RoleShell sub={sub} kind={ROLE_REFEREE} title="Судья" nav={nav} context={context} active={active} bleed={bleed} actions={actions}>
       {children}
     </RoleShell>
   );

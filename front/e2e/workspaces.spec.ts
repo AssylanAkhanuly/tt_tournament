@@ -81,7 +81,7 @@ test('судья: «Календарь» без «Нового турнира»,
   // Приём закрыт — подать нечего.
   const панель = page.getByTestId('application-panel');
   await expect(панель.getByTestId('recruitment-state')).toHaveText('Приём закрыт');
-  await expect(панель.getByTestId('application-submit')).toHaveCount(0);
+  await expect(панель.getByTestId('application-apply')).toHaveCount(0);
   await expect(панель.getByTestId('application-pick')).toHaveCount(0);
 });
 
@@ -90,9 +90,10 @@ test('приём заявок судей: председатель открыв�
   browser,
 }, info) => {
   test.setTimeout(60_000); // два окна, два входа и весь путь заявки
+  const название = `[e2e] Приём ${Date.now()}`;
   await сессия(page, E2E_ADMIN);
   const created = await page.request.post('/api/tournaments/', {
-    data: { name: `[e2e] Приём ${Date.now()}`, starts_at: new Date().toISOString(), format: 'single_elimination' },
+    data: { name: название, starts_at: new Date().toISOString(), format: 'single_elimination' },
   });
   const { id } = (await created.json()) as { id: string };
   await page.context().clearCookies();
@@ -164,12 +165,28 @@ test('приём заявок судей: председатель открыв�
   await page.waitForURL((url) => url.pathname === `/referee/tournaments/${id}`);
   const панель = page.getByTestId('application-panel');
   await expect(панель.getByTestId('recruitment-state')).toHaveText('Приём до ' + подпись);
-  const подать = панель.getByTestId('application-submit');
+  // Сведения — название и строки «поле — значение». Заявка — полоса у нижнего
+  // края окна, блока с должностями на странице нет.
+  await expect(page.getByTestId('tournament-about')).toContainText(название);
+  await expect(page.getByTestId('tournament-fact').filter({ hasText: 'Система проведения' })).toContainText('Олимпийская система');
+  await expect(панель.getByRole('checkbox')).toHaveCount(0);
+  const полоса = (await панель.boundingBox())!;
+  expect(полоса.y + полоса.height).toBeGreaterThan(page.viewportSize()!.height - 40);
+  await page.waitForTimeout(400);
+  await page.screenshot({ path: 'test-results/workspaces/referee-tournament.png' });
+  // Окно: сведения о турнире и должности; без отмеченной не подать.
+  await панель.getByTestId('application-apply').click();
+  const окно = page.getByTestId('application-dialog');
+  await expect(окно.getByTestId('application-tournament')).toContainText(название);
+  await expect(окно.getByTestId('application-tournament')).toContainText('Приём до ' + подпись);
+  const подать = окно.getByTestId('application-submit');
   await expect(подать).toBeDisabled();
-  await панель.getByText('Судья стола').click();
-  await панель.getByText('Главный судья соревнований').click();
+  await окно.getByText('Судья стола').click();
+  await окно.getByText('Главный судья соревнований').click();
+  await page.waitForTimeout(400);
   await page.screenshot({ path: 'test-results/workspaces/referee-apply.png' });
   await подать.click();
+  await expect(окно).toHaveCount(0);
   await expect(панель).toHaveAttribute('data-status', 'pending');
   await expect(панель.getByTestId('application-mine')).toContainText('Ждёт решения');
   // Должности — по старшинству, а не в порядке отметки.
@@ -178,8 +195,9 @@ test('приём заявок судей: председатель открыв�
   // Отозвать — и форма снова на месте; подаём ещё раз.
   await панель.getByTestId('application-withdraw').click();
   await expect(панель).toHaveAttribute('data-status', 'none');
-  await панель.getByText('Главный судья соревнований').click();
-  await панель.getByTestId('application-submit').click();
+  await панель.getByTestId('application-apply').click();
+  await окно.getByText('Главный судья соревнований').click();
+  await подать.click();
   await expect(панель).toHaveAttribute('data-status', 'pending');
 
   // Администратор видит заявку и назначает на отмеченную должность. У подпункта
@@ -234,7 +252,7 @@ test('приём заявок судей: председатель открыв�
   await page.reload();
   await expect(панель).toHaveAttribute('data-status', 'accepted');
   await expect(панель.getByTestId('application-mine')).toContainText('Назначен: Главный судья соревнований');
-  await expect(панель.getByTestId('application-submit')).toHaveCount(0);
+  await expect(панель.getByTestId('application-apply')).toHaveCount(0);
   await page.screenshot({ path: 'test-results/workspaces/referee-accepted.png' });
 
   // Срок необязателен: «Без срока» — приём открыт, пока его не выключат.
@@ -249,7 +267,8 @@ test('приём заявок судей: председатель открыв�
   await expect(админ.getByTestId('tournament-settings-drawer')).toHaveCount(0);
   expect((await сохранено()).referee_recruitment_until).toBe(null);
   await page.reload();
-  await expect(панель.getByTestId('recruitment-state')).toHaveText('Приём открыт');
+  // Приём без срока — без подписи: кнопка на месте, значка нет.
+  await expect(панель.getByTestId('recruitment-state')).toHaveCount(0);
   await админ.context().close();
 });
 
