@@ -2,20 +2,22 @@
 
 /* «Новый турнир» в кабинете администратора ✳ (28.10.2026). HeroUI + Tailwind.
 
-   Поля — те, что принимает `POST /api/tournaments/`: название, день начала,
-   формат, размер группы (только для «Группы и плей-офф») и описание. Турнир
-   протоколом вручную здесь не заводится — у него свой путь через рейтинг. */
+   Поля — те, что принимает `POST /api/tournaments/`: название, даты —
+   диапазоном, как в «Сведениях» ✳ (03.11.2026, решение владельца продукта:
+   начало и окончание сразу; однодневный — оба конца в один день), формат и
+   размер группы (только для «Группы и плей-офф»). Описания здесь нет
+   ✳ (03.11.2026) — оно правится в «Сведениях». Турнир протоколом вручную здесь
+   не заводится — у него свой путь через рейтинг. */
 
 import {
   Button,
-  Calendar,
   DateField,
-  DatePicker,
+  DateRangePicker,
   I18nProvider,
   Input,
   Label,
   Modal,
-  TextArea,
+  RangeCalendar,
   TextField,
   useOverlayState,
 } from '@heroui/react';
@@ -49,9 +51,9 @@ const today = () => {
 const EMPTY = (): NewTournament => ({
   name: '',
   date: today(),
+  endsAt: today(),
   format: 'single_elimination',
   groupSize: 4,
-  description: '',
 });
 
 export function CreateTournamentDialog({ onCreated }: { onCreated: (t: TournamentSummary) => void }) {
@@ -117,41 +119,43 @@ export function CreateTournamentDialog({ onCreated }: { onCreated: (t: Tournamen
                   <Input className="rounded-xl" />
                 </TextField>
 
-                {/* DatePicker HeroUI, а не `<input type="date">`: родное поле пишет
-                      дату по языку браузера (в английском Chrome — 10/20/2026). */}
+                {/* Диапазон HeroUI, как в «Сведениях», а не `<input type="date">`:
+                    родное поле пишет дату по языку браузера (10/20/2026). */}
                 <I18nProvider locale="ru-RU">
-                  <DatePicker
+                  <DateRangePicker
                     isRequired
-                    value={form.date ? parseDate(form.date) : null}
-                    onChange={(v) => set('date', v ? v.toString() : '')}
+                    value={form.date ? { start: parseDate(form.date), end: parseDate(form.endsAt || form.date) } : null}
+                    onChange={(v) =>
+                      setForm((f) => ({ ...f, date: v ? v.start.toString() : '', endsAt: v ? v.end.toString() : '' }))
+                    }
                   >
-                    <Label>Дата начала</Label>
-                    <DateField.Group fullWidth className="rounded-xl" data-testid="tournament-date">
-                      <DateField.Input>
-                        {(segment) => <DateField.Segment segment={segment} />}
-                      </DateField.Input>
+                    <Label>Даты</Label>
+                    <DateField.Group fullWidth className="w-full min-w-0 rounded-xl" data-testid="tournament-date">
+                      <DateField.Input slot="start">{(seg) => <DateField.Segment segment={seg} />}</DateField.Input>
+                      <DateRangePicker.RangeSeparator />
+                      <DateField.Input slot="end">{(seg) => <DateField.Segment segment={seg} />}</DateField.Input>
                       <DateField.Suffix>
-                        <DatePicker.Trigger aria-label="Выбрать дату">
-                          <DatePicker.TriggerIndicator />
-                        </DatePicker.Trigger>
+                        <DateRangePicker.Trigger aria-label="Выбрать даты">
+                          <DateRangePicker.TriggerIndicator />
+                        </DateRangePicker.Trigger>
                       </DateField.Suffix>
                     </DateField.Group>
-                    <DatePicker.Popover className="rounded-xl">
-                      <Calendar aria-label="Дата начала">
-                        <Calendar.Header>
-                          <Calendar.Heading />
-                          <Calendar.NavButton slot="previous" />
-                          <Calendar.NavButton slot="next" />
-                        </Calendar.Header>
-                        <Calendar.Grid>
-                          <Calendar.GridHeader>
-                            {(day) => <Calendar.HeaderCell>{day}</Calendar.HeaderCell>}
-                          </Calendar.GridHeader>
-                          <Calendar.GridBody>{(date) => <Calendar.Cell date={date} />}</Calendar.GridBody>
-                        </Calendar.Grid>
-                      </Calendar>
-                    </DatePicker.Popover>
-                  </DatePicker>
+                    <DateRangePicker.Popover className="rounded-xl">
+                      <RangeCalendar aria-label="Даты турнира">
+                        <RangeCalendar.Header>
+                          <RangeCalendar.Heading />
+                          <RangeCalendar.NavButton slot="previous" />
+                          <RangeCalendar.NavButton slot="next" />
+                        </RangeCalendar.Header>
+                        <RangeCalendar.Grid>
+                          <RangeCalendar.GridHeader>
+                            {(d) => <RangeCalendar.HeaderCell>{d}</RangeCalendar.HeaderCell>}
+                          </RangeCalendar.GridHeader>
+                          <RangeCalendar.GridBody>{(date) => <RangeCalendar.Cell date={date} />}</RangeCalendar.GridBody>
+                        </RangeCalendar.Grid>
+                      </RangeCalendar>
+                    </DateRangePicker.Popover>
+                  </DateRangePicker>
                 </I18nProvider>
 
                 <Picker
@@ -171,11 +175,6 @@ export function CreateTournamentDialog({ onCreated }: { onCreated: (t: Tournamen
                     <Input inputMode="numeric" className="rounded-xl" />
                   </TextField>
                 )}
-
-                <TextField value={form.description} onChange={(v) => set('description', v)}>
-                  <Label>Описание</Label>
-                  <TextArea rows={3} className="rounded-xl" />
-                </TextField>
 
                 {error && (
                   <p className="text-[13px] text-red-600" data-testid="tournament-create-error">

@@ -182,12 +182,17 @@ test('«Новый турнир» заводит турнир, и он вста�
   await expect(сохранить).toBeDisabled(); // без названия не заводится
 
   await форма.getByLabel('Название').fill(name);
-  // Дата — DatePicker HeroUI по-русски: день.месяц.год, сегменты вводятся подряд.
+  // Даты — диапазон HeroUI по-русски, как в «Сведениях» ✳ (03.11.2026): начало и
+  // окончание, сегменты день.месяц.год вводятся подряд. Описания в окне нет.
+  await expect(форма.getByLabel('Описание')).toHaveCount(0);
   const дата = форма.getByTestId('tournament-date');
-  await дата.locator('[data-type="day"]').click();
-  await page.keyboard.type('20' + String(день.getMonth() + 1).padStart(2, '0') + день.getFullYear());
-  await expect(дата).toContainText('20');
-  await expect(дата.locator('[data-type="day"]')).toHaveText('20');
+  const мм = String(день.getMonth() + 1).padStart(2, '0');
+  await дата.locator('[data-type="day"]').first().click();
+  await page.keyboard.type('20' + мм + день.getFullYear());
+  await дата.locator('[data-type="day"]').nth(1).click();
+  await page.keyboard.type('22' + мм + день.getFullYear());
+  await expect(дата.locator('[data-type="day"]').first()).toHaveText('20');
+  await expect(дата.locator('[data-type="day"]').nth(1)).toHaveText('22');
   await expect(форма.getByLabel('Игроков в группе')).toHaveCount(0);
   await форма.getByRole('button', { name: /Олимпийская система/ }).click();
   await page.getByRole('option', { name: 'Группы и плей-офф' }).click();
@@ -199,6 +204,10 @@ test('«Новый турнир» заводит турнир, и он вста�
   await expect(page.locator(`[data-day="${ключ(день)}"]`).getByText(name)).toBeVisible();
   await page.locator(`[data-day="${ключ(день)}"]`).getByText(name).click();
   await expect(page.getByTestId('tournament-details')).toContainText('Группы и плей-офф');
+  const заведён = ((await (await page.request.get('/api/tournaments/')).json()) as { name: string; ends_at: string | null }[]).find(
+    (t) => t.name === name,
+  )!;
+  expect(заведён.ends_at).toBe(`${день.getFullYear()}-${мм}-22`);
 });
 
 test('вид «Таблица»: поиск сужает, строка открывает турнир, вид переживает перезагрузку', async ({ page }) => {

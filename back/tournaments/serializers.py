@@ -72,7 +72,16 @@ class TournamentCreateSerializer(serializers.ModelSerializer):
 
     class Meta:
         model  = Tournament
-        fields = ["name", "description", "starts_at", "club_id", "format", "group_size"]
+        # Окончание ✳ (03.11.2026): «Новый турнир» спрашивает даты диапазоном.
+        fields = ["name", "description", "starts_at", "ends_at", "club_id", "format", "group_size"]
+
+    def validate(self, attrs):
+        from django.utils import timezone
+
+        starts, ends = attrs.get("starts_at"), attrs.get("ends_at")
+        if starts and ends and ends < timezone.localdate(starts):
+            raise serializers.ValidationError({"ends_at": "Окончание — не раньше начала."})
+        return attrs
 
     def create(self, validated_data):
         club_id = validated_data.pop('club_id', None)
