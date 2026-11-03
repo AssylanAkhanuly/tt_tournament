@@ -11,8 +11,8 @@ import { E2E_GSK } from './global-setup';
    Жумабаева Айна: её не трогает ни одна другая проверка.
 
    Утверждения конкретные: исправление на 49,50 видно в листе сразу и в журнале
-   строкой с основанием, автором и изменением; D = 10 даёт 90,9 % вместо 82,3 %
-   (таблица D в RATING.md), а в подсказке у D выделено именно D. */
+   строкой с основанием, автором и изменением; в подсказке у D выделено именно
+   D; сохранённое D = 10 переживает перезагрузку. */
 
 test.describe.configure({ mode: 'serial' });
 
@@ -93,12 +93,12 @@ test('журнал: исправление — строкой с основан�
   await expect(записи).toHaveCount(0);
 });
 
-test('калибровка: формула у коэффициента, D меняет долю побед, сохранение делает действующим', async ({ page }) => {
+test('калибровка: формула у коэффициента, без панели доли побед, сохранение делает действующим', async ({ page }) => {
   await войти(page, '/rating/calibration');
-  // «Прогона» нет ✳ (03.11.2026): у раздела нет подпунктов.
+  // «Прогона» и «Ожидаемой доли побед» нет ✳ (03.11.2026).
   await expect(page.getByTestId('nav-sub')).toHaveCount(0);
-  const доля = page.getByTestId('insight').first();
-  await expect(доля).toHaveText('82,3 %'); // D = 15 по умолчанию
+  await expect(page.getByTestId('calibration-insights')).toHaveCount(0);
+  await expect(page.getByText('Ожидаемая доля побед')).toHaveCount(0);
   await expect(page.getByTestId('params-save')).toBeDisabled();
   // Число не обрезано: поле ввода — между «−» и «+», а не в колонке в 40px.
   const k = page.getByTestId('param-k');
@@ -116,15 +116,12 @@ test('калибровка: формула у коэффициента, D мен
   const формула = page.getByTestId('formula');
   await expect(формула).toContainText('E = 1 / (1 + 10');
   await expect(формула.getByTestId('formula-mark')).toHaveText('D');
-  await page.screenshot({ path: 'test-results/rating-governance/formula.png' });
 
   const d = page.getByTestId('param-d');
   await d.fill('10');
   await d.blur();
-  await expect(доля).toHaveText('90,9 %');
   await expect(page.getByTestId('params-save')).toBeEnabled();
   await page.screenshot({ path: 'test-results/rating-governance/calibration.png', fullPage: true });
-
   await page.getByTestId('params-save').click();
   await expect(page.getByTestId('params-save')).toBeDisabled();
   await page.reload();
@@ -135,5 +132,6 @@ test('калибровка: формула у коэффициента, D мен
   await page.getByTestId('param-d').blur();
   await page.getByTestId('params-save').click();
   await expect(page.getByTestId('params-save')).toBeDisabled();
-  await expect(доля).toHaveText('82,3 %');
+  await page.reload();
+  await expect(page.getByTestId('param-d')).toHaveValue('15');
 });

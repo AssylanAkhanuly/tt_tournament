@@ -4,15 +4,13 @@
    «Прогона» на выдуманном наборе нет ✳ (03.11.2026, решение владельца продукта).
 
    Черновик стартует с действующих коэффициентов — калибровка это «а что если
-   подвинуть вот от этого». Что значат числа (ожидаемая доля побед, путь
-   новичка до КМС) считает сервер той же формулой п. 9.3: экран шлёт черновик в
-   ручку предпросчёта без спортсменов и берёт из ответа `insights`.
-   «Сохранить» делает черновик действующим (только председатель ГСК, сервер
-   проверит). */
+   подвинуть вот от этого». Панели «Ожидаемая доля побед» нет ✳ (03.11.2026,
+   решение владельца продукта). «Сохранить» делает черновик действующим (только
+   председатель ГСК, сервер проверит). */
 
 import { useCallback, useMemo, useState } from 'react';
 
-import { saveRatingParams, usePreview, useRatingParams, type CompetitionLevel, type RatingParams } from '@/entities/rating';
+import { saveRatingParams, useRatingParams, type CompetitionLevel, type RatingParams } from '@/entities/rating';
 
 /** Черновик коэффициентов. Имена — как у движка и ручки предпросчёта. */
 export type ParamDraft = {
@@ -99,19 +97,11 @@ export function useCalibration() {
     }
   }, [own, server]);
 
-  const input = useMemo(
-    () => (draft ? { players: [], tournaments: [], matches: [], params: draft as unknown as Record<string, unknown> } : null),
-    [draft],
-  );
-  const preview = usePreview(input);
-
   return {
     params: { draft, loading: server.loading, error: server.error, changed, saving, saveError },
     setParams,
     resetParams,
     saveParams,
-    insights: preview.data?.insights ?? null,
-    insightsError: preview.error,
   };
 }
 

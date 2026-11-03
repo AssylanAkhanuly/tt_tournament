@@ -1,11 +1,9 @@
-/* Калибровка ✳ (восстановлена 03.11.2026): действующие коэффициенты и
-   предпросчёт набора тем же движком, что и боевой рейтинг.
-
-   Расчёта на фронте нет: сервер считает присланный набор и ничего не
-   сохраняет. Коэффициенты читаются всеми, правит председатель ГСК. */
+/* Калибровка ✳ (восстановлена 03.11.2026): действующие коэффициенты.
+   Читаются всеми, правит председатель ГСК. Ручка предпросчёта на сервере
+   осталась, экран её больше не зовёт ✳ (03.11.2026). */
 
 import { n, request } from './http';
-import type { PreviewMatch, PreviewPlayer, PreviewResult, PreviewTournament, RatingParams } from './types';
+import type { RatingParams } from './types';
 
 const toParams = (raw: Record<string, unknown>): RatingParams => ({
   id: n(raw.id),
@@ -42,16 +40,4 @@ export async function saveRatingParams(patch: Record<string, unknown>): Promise<
   return toParams(
     await request<Record<string, unknown>>('/params/', { method: 'PATCH', body: JSON.stringify(patch) }),
   );
-}
-
-export type PreviewInput = {
-  players: PreviewPlayer[];
-  tournaments: PreviewTournament[];
-  matches: PreviewMatch[];
-  params?: Record<string, unknown>;
-};
-
-/** Предпросчёт: сервер считает набор и ничего не сохраняет. */
-export async function previewRating(body: PreviewInput): Promise<PreviewResult> {
-  return request<PreviewResult>('/preview/', { method: 'POST', body: JSON.stringify(body) });
 }

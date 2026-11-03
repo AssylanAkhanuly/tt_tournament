@@ -20,9 +20,9 @@ import {
   type RatingListQuery,
 } from './client';
 import type { ProtocolDetail, ProtocolInput, RatingCard, RatingList, RatingProfile } from './types';
-import { fetchRatingParams, previewRating, type PreviewInput } from './calibration';
+import { fetchRatingParams } from './calibration';
 import { fetchJournal, type JournalQuery } from './journal';
-import type { PreviewResult, RatingJournalPage, RatingParams } from './types';
+import type { RatingJournalPage, RatingParams } from './types';
 
 export type AsyncState<T> = {
   data: T | null;
@@ -140,37 +140,4 @@ export function useJournal(query: JournalQuery): AsyncState<RatingJournalPage> {
 /** Действующие коэффициенты с происхождением каждого числа. */
 export function useRatingParams(): AsyncState<RatingParams> {
   return useAsync(() => fetchRatingParams(), []);
-}
-
-/** Предпросчёт с задержкой: расчёт живёт на сервере, и слать запрос на каждое
-    нажатие клавиши в поле коэффициента незачем. `null` — считать нечего. */
-export function usePreview(input: PreviewInput | null, delayMs = 250) {
-  const [result, setResult] = useState<{ key: string; data: PreviewResult | null; error: string | null } | null>(null);
-  const key = JSON.stringify(input);
-  const enabled = !!input;
-
-  useEffect(() => {
-    if (!enabled || !input) return;
-    let live = true; // ответ на устаревший запрос не перетирает свежий
-    const timer = setTimeout(() => {
-      previewRating(input)
-        .then((data) => {
-          if (live) setResult({ key, data, error: null });
-        })
-        .catch((e: Error) => {
-          if (live) setResult((prev) => ({ key, data: prev?.data ?? null, error: e.message }));
-        });
-    }, delayMs);
-    return () => {
-      live = false;
-      clearTimeout(timer);
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [key, enabled, delayMs]);
-
-  return {
-    data: enabled ? (result?.data ?? null) : null,
-    error: enabled ? (result?.error ?? null) : null,
-    loading: enabled && result?.key !== key,
-  };
 }
