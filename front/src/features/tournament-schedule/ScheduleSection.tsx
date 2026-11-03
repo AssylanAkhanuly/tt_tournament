@@ -15,7 +15,7 @@
    Tailwind. */
 
 import { AlertDialog, Button, Chip, Drawer, NumberField } from '@heroui/react';
-import { CalendarClock, Send, SlidersHorizontal } from 'lucide-react';
+import { ArrowLeft, CalendarClock, PenLine, Send, SlidersHorizontal } from 'lucide-react';
 import { useSearchParams } from 'next/navigation';
 import { useState, type ReactNode } from 'react';
 
@@ -23,6 +23,7 @@ import {
   buildSchedule,
   editScheduledMatch,
   finalizeSchedule,
+  setManualResults,
   useSchedule,
   type Schedule,
   type ScheduledMatch,
@@ -35,6 +36,7 @@ import { Picker } from '@/shared/ui/Picker';
 import { groupTone } from './groupTone';
 import { MatchPair } from './MatchPlayer';
 import { MatchResult } from './MatchResult';
+import { ManualResults } from './ManualResults';
 import { PlayDays } from './PlayDays';
 import { ScheduleDay } from './ScheduleDay';
 import { ScheduleGroups } from './ScheduleGroups';
@@ -316,6 +318,8 @@ export function ScheduleSection({
   const view: View = asked === 'day' || asked === 'groups' || asked === 'bracket' ? asked : 'matches';
   const [open, setOpen] = useState<number | null>(null);
   const [draft, setDraft] = useState<ScheduleSettings | null>(null);
+  // Выбранный способ до сборки расписания: «Автоматически» ведёт к параметрам.
+  const [way, setWay] = useState<'auto' | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -335,12 +339,57 @@ export function ScheduleSection({
   if (!s) return null;
   const settings = draft ?? s.settings;
 
+  // Результаты вручную ✳ (03.11.2026) — таблица матчей вместо расписания.
+  if (s.status === 'none' && s.mode === 'manual') {
+    return <ManualResults s={s} tournamentId={tournamentId} onChange={setFresh} />;
+  }
+
+  // Расписания ещё нет. Способ не выбран — две большие кнопки ✳ (03.11.2026):
+  // «Автоматически» (расписание; собирает главный судья) и «Вручную».
+  if (s.status === 'none' && !way && (s.canManual || s.canBuild)) {
+    return (
+      <div className="flex min-h-0 flex-1 flex-col bg-white" data-testid="schedule" data-status="none">
+        {/* По центру области — и по высоте, и по ширине ✳ (03.11.2026). */}
+        <div className="m-auto grid w-full max-w-2xl gap-4 p-6 max-md:p-4 sm:grid-cols-2" data-testid="results-way">
+          {(
+            [
+              ['auto', 'Автоматически', <CalendarClock size={28} key="a" />, s.canBuild],
+              ['manual', 'Вручную', <PenLine size={28} key="m" />, s.canManual],
+            ] as const
+          ).map(([id, label, icon, allowed]) => (
+            <button
+              key={id}
+              type="button"
+              disabled={!allowed || busy}
+              onClick={() => (id === 'auto' ? setWay('auto') : void run(() => setManualResults(tournamentId, true)))}
+              data-testid={'results-way-' + id}
+              className="flex min-h-40 flex-col items-center justify-center gap-3 rounded-xl border border-neutral-200 bg-white px-6 py-8 text-[17px] font-semibold text-neutral-800 hover:border-blue-300 hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:border-neutral-200 disabled:hover:bg-white"
+            >
+              <span className="flex size-14 items-center justify-center rounded-full bg-blue-50 text-blue-600">{icon}</span>
+              {label}
+            </button>
+          ))}
+        </div>
+        {error && (
+          <p className="px-6 text-[13px] text-red-600" data-testid="schedule-error">
+            {error}
+          </p>
+        )}
+      </div>
+    );
+  }
+
   // Расписания ещё нет: главному судье — параметры и «Сформировать», остальным — пустое состояние.
   if (s.status === 'none') {
     return (
       <div className="flex min-h-0 flex-1 flex-col bg-white" data-testid="schedule" data-status="none">
-        {s.canEdit ? (
+        {s.canBuild ? (
           <div className="max-w-xl p-6">
+            {s.canManual && (
+              <Button variant="tertiary" size="sm" className="mb-4 rounded-xl" onPress={() => setWay(null)} data-testid="results-way-back">
+                <ArrowLeft size={15} /> Способ
+              </Button>
+            )}
             <SettingsFields value={settings} onChange={setDraft} />
             {error && (
               <p className="mt-3 text-[13px] text-red-600" data-testid="schedule-error">

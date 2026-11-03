@@ -64,7 +64,9 @@ test('главный судья: черновик расписания, прав
     await войти(админ, E2E_ADMIN);
     await админ.waitForURL((url) => url.pathname === '/dashboard');
     await админ.goto(`/dashboard/tournaments/${id}/schedule`);
-    await expect(админ.getByTestId('schedule-empty')).toHaveText('Расписания пока нет');
+    // Два способа ✳ (03.11.2026): «Автоматически» собирает только главный судья.
+    await expect(админ.getByTestId('results-way-auto')).toBeDisabled();
+    await expect(админ.getByTestId('results-way-manual')).toBeEnabled();
     await expect(админ.getByTestId('schedule-build')).toHaveCount(0);
 
     // ── Главный судья: кабинет «Главный судья», его турнир, «Расписание» ──
@@ -85,7 +87,8 @@ test('главный судья: черновик расписания, прав
     await page.getByRole('button', { name: 'Расписание', exact: true }).click();
     await page.waitForURL((url) => url.pathname === `/chief/tournaments/${id}/schedule`);
 
-    // Параметры → «Сформировать»: два стола и два игровых дня со своими часами.
+    // «Автоматически» → параметры → «Сформировать»: два стола и два игровых дня.
+    await page.getByTestId('results-way-auto').click();
     const столов = page.getByTestId('schedule-tables');
     await столов.fill('2');
     await столов.press('Tab');

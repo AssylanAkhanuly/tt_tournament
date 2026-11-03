@@ -1180,6 +1180,7 @@ erDiagram
         int scheduleTables "столов"
         json scheduleDays "игровые дни: дата, начало, конец"
         int scheduleMatchMinutes "норматив длительности матча, минут"
+        string resultsMode "не выбран | вручную — матчи со счётом без расписания"
         string venue "место проведения: зал, адрес"
         int ageMin "возраст от, лет; пусто — без границы"
         int ageMax "возраст до, лет; пусто — без границы"

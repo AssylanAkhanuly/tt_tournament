@@ -5,6 +5,7 @@ from .views import (
     RefereeApplicationDecisionView,
     RefereeApplicationsView,
     RecruitmentView,
+    ManualResultsView,
     ScheduleMatchView,
     ScheduleView,
     AddParticipantView,
@@ -61,6 +62,11 @@ urlpatterns = [
         for action in ("build", "move", "finalize")
     ],
     path("<uuid:pk>/schedule/matches/<int:match_id>/", ScheduleMatchView.as_view(), name="tournament-schedule-match"),
+    # Результаты без расписания ✳ (03.11.2026).
+    path("<uuid:pk>/schedule/manual/", ManualResultsView.as_view(), name="tournament-results-manual"),
+    path("<uuid:pk>/schedule/manual/matches/", ManualResultsView.as_view(), name="tournament-results-manual-matches"),
+    path("<uuid:pk>/schedule/manual/finish/", ManualResultsView.as_view(), name="tournament-results-manual-finish"),
+    path("<uuid:pk>/schedule/manual/matches/<int:match_id>/", ManualResultsView.as_view(), name="tournament-results-manual-match"),
     path("<uuid:pk>/player-recruitment/", RecruitmentView.as_view(), {"who": "player"}, name="tournament-player-recruitment"),
     path("<uuid:pk>/referee-applications/", RefereeApplicationsView.as_view(), name="tournament-referee-applications"),
     path("<uuid:pk>/referee-applications/my/", MyRefereeApplicationView.as_view(), name="tournament-referee-application-my"),

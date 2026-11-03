@@ -265,6 +265,8 @@ def _clean_days(days) -> list:
 
 @transaction.atomic
 def build(t: Tournament, *, tables, match_minutes, days=None) -> None:
+    if t.results_mode == "manual":
+        raise ScheduleError("Результаты этого турнира вносятся вручную — расписание не формируется.")
     """Черновик заново: группы, пары, время, столы, судьи. Прежний черновик — прочь."""
     if t.schedule_status == FINAL:
         raise ScheduleError("Расписание отправлено — его уже не изменить.")
@@ -411,9 +413,27 @@ def snapshot(t: Tournament, user) -> dict:
         for place, m in enumerate(ranked, start=1):
             standing[m.id] = {"place": place, "points": m.points, "wins": m.wins, "losses": m.losses, "diff": m.diff}
     members, matches = list(members), list(matches)
+    from . import manual_results
+
+    can_manual = (
+        t.schedule_status == "none" and t.status != Tournament.STATUS_FINISHED and manual_results.can_enter(t, user)
+    )
     return {
         "status": t.schedule_status,
         "can_edit": t.schedule_status != FINAL and is_chief(t, user),
+        # Способ ✳ (03.11.2026): «» — не выбран, «manual» — вручную, без расписания.
+        "mode": t.results_mode,
+        "can_manual": can_manual,
+        "can_build": t.schedule_status == "none" and t.results_mode != "manual" and is_chief(t, user),
+        "manual_matches": manual_results.manual_snapshot(t),
+        "can_finish": manual_results.can_finish(t, user),
+        "tournament_status": t.status,
+        "rating_changes": manual_results.rating_changes(t) if t.results_mode == "manual" else [],
+        "games_to_win": t.games_to_win,
+        # Из кого выбрать при ручном вводе — участники турнира.
+        "players": (
+            [_person(p.user) for p in t.participants.select_related("user").order_by("user__name")] if can_manual else []
+        ),
         # Карта плей-офф по итогам групп ✳ (30.10.2026) — только смотреть.
         "playoff": playoff.playoff_preview(groups, members, matches, _person),
         "settings": {

@@ -756,6 +756,41 @@ class ScheduleView(APIView):
         return self._run(request, pk, lambda s, t: s.finalize(t))
 
 
+class ManualResultsView(APIView):
+    """Результаты без расписания ✳ (03.11.2026, `manual_results.py`):
+    `POST schedule/manual/` `{on}` — выбрать «вручную» или вернуться к выбору;
+    `POST schedule/manual/matches/` `{a, b, score_a, score_b}` — внести матч;
+    `DELETE schedule/manual/matches/<id>/` — убрать; `POST schedule/manual/finish/`
+    — завершить турнир и пересчитать рейтинг. Главный судья турнира,
+    председатель ГСК, администратор федерации. Ответ — расписание целиком."""
+
+    permission_classes = [IsAuthenticated]
+
+    def _run(self, request, pk, action):
+        from . import manual_results, schedule
+
+        t = get_object_or_404(Tournament, pk=pk)
+        if not manual_results.can_enter(t, request.user):
+            return Response({"detail": "Нет прав."}, status=status.HTTP_403_FORBIDDEN)
+        try:
+            action(manual_results, t)
+        except manual_results.ResultsError as e:
+            return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        t.refresh_from_db()
+        return Response(schedule.snapshot(t, request.user))
+
+    def post(self, request, pk, match_id=None):
+        d = request.data
+        if request.path.rstrip("/").endswith("/finish"):
+            return self._run(request, pk, lambda m, t: m.finish(t, actor=request.user))
+        if request.path.rstrip("/").endswith("/matches"):
+            return self._run(request, pk, lambda m, t: m.add_match(t, d.get("a"), d.get("b"), d.get("score_a"), d.get("score_b")))
+        return self._run(request, pk, lambda m, t: m.set_manual(t, bool(d.get("on"))))
+
+    def delete(self, request, pk, match_id):
+        return self._run(request, pk, lambda m, t: m.remove_match(t, match_id))
+
+
 class ScheduleMatchView(ScheduleView):
     """`PATCH {referee_id, table, scheduled_at}` — правка матча в черновике."""
 

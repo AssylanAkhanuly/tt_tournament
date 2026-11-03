@@ -255,9 +255,10 @@ export type NewTournament = {
   name: string;
   /** День начала, `ГГГГ-ММ-ДД`. */
   date: string;
+  /** День окончания, `ГГГГ-ММ-ДД`, включительно ✳ 03.11.2026; пусто — однодневный. */
+  endsAt: string;
   format: Exclude<TournamentFormat, 'manual'>;
   groupSize: number;
-  description: string;
 };
 
 /** Завести турнир (`POST /api/tournaments/`, право — `is_staff` или админ клуба).
@@ -275,7 +276,7 @@ export async function createTournament(input: NewTournament): Promise<Tournament
       starts_at: new Date(y, m - 1, d, 12).toISOString(),
       format: input.format,
       group_size: input.groupSize,
-      description: input.description.trim(),
+      ends_at: input.endsAt || null,
     }),
   });
   const body = await res.json().catch(() => ({}));
@@ -597,10 +598,51 @@ export type Schedule = {
   matches: ScheduledMatch[];
   /** Судьи стола — кого можно поставить на матч. */
   referees: SchedulePerson[];
+  /** Способ ✳ (03.11.2026): «» — не выбран, «manual» — результаты вручную, без расписания. */
+  mode: '' | 'manual';
+  /** Можно ли выбрать «вручную» и вносить матчи (главный судья, председатель, администратор). */
+  canManual: boolean;
+  /** Можно ли собрать расписание — главному судье, пока способ не «вручную». */
+  canBuild: boolean;
+  /** Матчи, внесённые вручную, по порядку ввода. */
+  manualMatches: ManualMatch[];
+  /** Участники турнира — из кого выбрать пару при ручном вводе. */
+  players: SchedulePerson[];
+  /** Матч до N побед — граница счёта при ручном вводе. */
+  gamesToWin: number;
+  /** Можно ли завершить турнир (вручную, есть матчи, ещё не завершён) ✳ 03.11.2026. */
+  canFinish: boolean;
+  tournamentStatus: TournamentStatus;
+  /** После завершения — изменение рейтинга участников по турниру. */
+  ratingChanges: RatingChange[];
 };
 
-type RawSchedule = Omit<Schedule, 'canEdit' | 'settings' | 'matches'> & {
+/** Изменение рейтинга участника по турниру: было, изменение, стало. */
+export type RatingChange = { player: SchedulePerson; before: number; delta: number; after: number };
+
+/** Матч, внесённый вручную: пара и счёт в партиях, победитель. */
+export type ManualMatch = {
+  id: number;
+  number: number;
+  player1: SchedulePerson;
+  player2: SchedulePerson;
+  score1: number;
+  score2: number;
+  winner: string | null;
+};
+
+type RawSchedule = Omit<
+  Schedule,
+  'canEdit' | 'settings' | 'matches' | 'canManual' | 'canBuild' | 'manualMatches' | 'gamesToWin' | 'canFinish' | 'tournamentStatus' | 'ratingChanges'
+> & {
+  games_to_win: number;
+  can_finish: boolean;
+  tournament_status: TournamentStatus;
+  rating_changes: { player: SchedulePerson; before: string; delta: string; after: string }[];
   can_edit: boolean;
+  can_manual: boolean;
+  can_build: boolean;
+  manual_matches: ManualMatch[];
   settings: { tables: number; match_minutes: number; days: PlayDay[] };
   matches: (Omit<ScheduledMatch, 'groupName' | 'scheduledAt' | 'isWalkover'> & {
     group_name: string;
@@ -637,6 +679,20 @@ const toSchedule = (r: RawSchedule): Schedule => ({
     isWalkover: m.is_walkover,
   })),
   referees: r.referees,
+  mode: r.mode ?? '',
+  canManual: r.can_manual,
+  canBuild: r.can_build,
+  manualMatches: r.manual_matches ?? [],
+  players: r.players ?? [],
+  gamesToWin: r.games_to_win ?? 3,
+  canFinish: r.can_finish ?? false,
+  tournamentStatus: r.tournament_status,
+  ratingChanges: (r.rating_changes ?? []).map((c) => ({
+    player: c.player,
+    before: Number(c.before),
+    delta: Number(c.delta),
+    after: Number(c.after),
+  })),
 });
 
 const scheduleUrl = (id: string, tail = '') => `/api/tournaments/${id}/schedule/${tail}`;
@@ -674,6 +730,36 @@ export async function editScheduledMatch(
       scheduled_at: change.scheduledAt?.toISOString(),
     }),
   );
+}
+
+/** Выбрать «вручную» или вернуться к выбору (пока матчей нет) ✳ 03.11.2026. */
+export async function setManualResults(id: string, on: boolean): Promise<Schedule> {
+  return toSchedule(await send<RawSchedule>(scheduleUrl(id, 'manual/'), 'POST', { on }));
+}
+
+/** Внести матч вручную: кто с кем и счёт в партиях. */
+export async function addManualMatch(
+  id: string,
+  m: { a: string; b: string; scoreA: number; scoreB: number },
+): Promise<Schedule> {
+  return toSchedule(
+    await send<RawSchedule>(scheduleUrl(id, 'manual/matches/'), 'POST', {
+      a: m.a,
+      b: m.b,
+      score_a: m.scoreA,
+      score_b: m.scoreB,
+    }),
+  );
+}
+
+/** Убрать матч, внесённый вручную. */
+export async function removeManualMatch(id: string, matchId: number): Promise<Schedule> {
+  return toSchedule(await send<RawSchedule>(scheduleUrl(id, `manual/matches/${matchId}/`), 'DELETE'));
+}
+
+/** Завершить турнир, внесённый вручную, — и пересчитать рейтинг участников. */
+export async function finishManualResults(id: string): Promise<Schedule> {
+  return toSchedule(await send<RawSchedule>(scheduleUrl(id, 'manual/finish/'), 'POST'));
 }
 
 /** Отправить: расписание и состав запираются, турнир начинается. */

@@ -114,6 +114,13 @@ class Tournament(models.Model):
     # по порядку дат; часы у каждого дня свои (`schedule.play_slots`).
     schedule_days = models.JSONField(default=list, blank=True, verbose_name="Игровые дни")
     schedule_match_minutes = models.PositiveSmallIntegerField(default=30, verbose_name="Матч, минут")
+    # Способ внести результаты ✳ (03.11.2026, решение владельца продукта;
+    # `manual_results.py`): пусто — не выбран (расписание по-прежнему можно
+    # собрать), «manual» — матчи вносятся сразу со счётом, расписания нет.
+    RESULTS_CHOICES = [("", "Не выбран"), ("manual", "Вручную")]
+    results_mode = models.CharField(
+        max_length=8, choices=RESULTS_CHOICES, default="", blank=True, verbose_name="Результаты вносятся"
+    )
 
     class Meta:
         verbose_name = "Турнир"
