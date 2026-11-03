@@ -25,6 +25,7 @@ import {
   type RosterCandidate,
   type RosterRole,
 } from '@/entities/tournament';
+import { ModalSheet } from '@/shared/ui/ModalSheet';
 
 
 const TITLE: Record<RosterRole, string> = { player: 'Добавить спортсменов', referee: 'Добавить судью' };
@@ -144,9 +145,7 @@ export function AddToRosterDialog({
       <Button variant="primary" size="sm" className="rounded-xl" data-testid={`roster-add-${role}`}>
         <UserPlus size={16} /> Добавить
       </Button>
-      <Modal.Backdrop>
-        <Modal.Container size="md">
-          <Modal.Dialog className="rounded-xl" data-testid="roster-dialog">
+      <ModalSheet size="md" className="rounded-xl" testId="roster-dialog" tall>
             <Modal.CloseTrigger aria-label="Закрыть" />
             <Modal.Header className="flex flex-col items-start gap-3">
               <Modal.Heading className="text-lg font-semibold">{TITLE[role]}</Modal.Heading>
@@ -163,8 +162,9 @@ export function AddToRosterDialog({
                       <SearchField.ClearButton />
                     </SearchField.Group>
                   </SearchField>
-                  {/* Выдача ограничена по высоте и прокручивается сама — окно не растёт. */}
-                  <div className="h-72 overflow-y-auto">
+                  {/* Выдача ограничена по высоте и прокручивается сама — окно не растёт.
+                      На телефоне панель — 90 % экрана, выдача занимает всё под поиском. */}
+                  <div className="h-72 overflow-y-auto max-md:h-auto max-md:min-h-0 max-md:flex-1">
                     {found.error ? (
                       <p className="py-6 text-center text-[13px] text-red-600">{found.error}</p>
                     ) : !found.list ? (
@@ -259,9 +259,7 @@ export function AddToRosterDialog({
                 </Button>
               )}
             </Modal.Footer>
-          </Modal.Dialog>
-        </Modal.Container>
-      </Modal.Backdrop>
+          </ModalSheet>
     </Modal>
   );
 }

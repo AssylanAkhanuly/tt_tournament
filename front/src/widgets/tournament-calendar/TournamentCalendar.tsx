@@ -12,7 +12,7 @@
    дня — как в Google Календаре: в клетке столько, сколько помещается, последняя
    строка — «Ещё N», по ней — карточка дня со всеми турнирами (`DayMore`). */
 
-import { Button, ButtonGroup, CloseButton, Popover } from '@heroui/react';
+import { Button, ButtonGroup, CloseButton, Drawer, Popover } from '@heroui/react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode, type RefObject } from 'react';
 
@@ -22,6 +22,9 @@ import {
   type TournamentStatus,
   type TournamentSummary,
 } from '@/entities/tournament';
+
+import { useNarrow } from '@/shared/kit/app';
+import { BottomSheet } from '@/shared/ui/BottomSheet';
 
 import { dayKey, monthGrid } from './grid';
 
@@ -93,6 +96,61 @@ function useRowsPerCell(grid: RefObject<HTMLDivElement | null>) {
   return rows;
 }
 
+/** Карточка у клетки календаря ✳ (03.11.2026, решение владельца продукта): на
+ *  десктопе — `Popover` рядом с триггером, как у Google Календаря; на телефоне
+ *  поповер уезжал за край экрана, поэтому там — панель снизу (`Drawer`) с
+ *  ручкой. Содержимое одно; заголовок — `heading`, крестик — только у поповера
+ *  (панель закрывается жестом, кликом мимо и Esc). */
+function CellCard({
+  trigger,
+  triggerClass,
+  triggerProps,
+  placement,
+  width,
+  testId,
+  heading,
+  children,
+}: {
+  trigger: ReactNode;
+  triggerClass: string;
+  triggerProps?: Record<string, string>;
+  placement: 'bottom' | 'right top';
+  width: string;
+  testId: string;
+  heading: (as: 'popover' | 'drawer') => ReactNode;
+  children: ReactNode;
+}) {
+  const narrow = useNarrow();
+  const [open, setOpen] = useState(false);
+  if (narrow) {
+    return (
+      <>
+        <button type="button" className={triggerClass} onClick={() => setOpen(true)} {...triggerProps}>
+          {trigger}
+        </button>
+        <BottomSheet isOpen={open} onOpenChange={setOpen} testId={testId} bodyClassName="px-6 pb-6">
+          {heading('drawer')}
+          {children}
+        </BottomSheet>
+      </>
+    );
+  }
+  return (
+    <Popover>
+      <Popover.Trigger className={triggerClass} {...triggerProps}>
+        {trigger}
+      </Popover.Trigger>
+      <Popover.Content placement={placement} className={width + ' rounded-xl'}>
+        <Popover.Dialog data-testid={testId} className="relative p-5">
+          <CloseButton slot="close" aria-label="Закрыть" className="absolute right-3 top-3" />
+          {heading('popover')}
+          {children}
+        </Popover.Dialog>
+      </Popover.Content>
+    </Popover>
+  );
+}
+
 /** «Ещё N» — карточка дня со всеми турнирами, как у Google Календаря: день
  *  недели, число, список; турнир из списка открывает свою карточку. */
 function DayMore({
@@ -107,30 +165,32 @@ function DayMore({
   onOpen: (id: string) => void;
 }) {
   return (
-    <Popover>
-      <Popover.Trigger
-        data-testid="calendar-more"
-        className="w-full shrink-0 cursor-pointer truncate rounded-md px-1.5 py-0.5 text-left text-[12px] font-medium text-neutral-700 hover:bg-neutral-100"
-      >
-        Ещё {hidden}
-      </Popover.Trigger>
-      <Popover.Content placement="bottom" className="w-64 rounded-xl">
-        <Popover.Dialog data-testid="calendar-day" className="relative p-3">
-          <CloseButton slot="close" aria-label="Закрыть" className="absolute right-2 top-2" />
-          <div className="mb-3 flex flex-col items-center">
-            <span className="text-[11px] font-semibold uppercase tracking-wider text-neutral-500">
-              {WEEKDAYS[(date.getDay() + 6) % 7]}
-            </span>
+    <CellCard
+      trigger={'Ещё ' + hidden}
+      triggerClass="w-full shrink-0 cursor-pointer truncate rounded-md px-1.5 py-0.5 text-left text-[12px] font-medium text-neutral-700 hover:bg-neutral-100"
+      triggerProps={{ 'data-testid': 'calendar-more' }}
+      placement="bottom"
+      width="w-64"
+      testId="calendar-day"
+      heading={(as) => (
+        <div className="mb-3 flex flex-col items-center">
+          <span className="text-[11px] font-semibold uppercase tracking-wider text-neutral-500">
+            {WEEKDAYS[(date.getDay() + 6) % 7]}
+          </span>
+          {as === 'popover' ? (
             <Popover.Heading className="text-2xl font-medium tabular-nums">{date.getDate()}</Popover.Heading>
-          </div>
-          <div className="flex max-h-80 flex-col gap-1 overflow-y-auto">
-            {items.map((t) => (
-              <TournamentEvent key={t.id} t={t} onOpen={onOpen} />
-            ))}
-          </div>
-        </Popover.Dialog>
-      </Popover.Content>
-    </Popover>
+          ) : (
+            <Drawer.Heading className="text-2xl font-medium tabular-nums">{date.getDate()}</Drawer.Heading>
+          )}
+        </div>
+      )}
+    >
+      <div className="flex max-h-80 flex-col gap-1 overflow-y-auto">
+        {items.map((t) => (
+          <TournamentEvent key={t.id} t={t} onOpen={onOpen} />
+        ))}
+      </div>
+    </CellCard>
   );
 }
 
@@ -139,51 +199,47 @@ const monthTitle = (d: Date) =>
   capital(d.toLocaleDateString('ru-RU', { month: 'long', year: 'numeric' }).replace(' г.', ''));
 
 /** Турнир в клетке дня. По клику — карточка подробностей рядом с ним, как у
- *  событий в Google Календаре (образец владельца продукта, 28.10.2026):
- *  `Popover` из HeroUI, закрывается крестиком, кликом мимо и Esc. «Подробнее»
- *  ведёт на страницу турнира — куда именно, решает экран (`onOpen`). */
+ *  событий в Google Календаре (образец владельца продукта, 28.10.2026), на
+ *  телефоне — панель снизу (`CellCard`). «Подробнее» ведёт на страницу
+ *  турнира — куда именно, решает экран (`onOpen`). */
 function TournamentEvent({ t, onOpen }: { t: TournamentSummary; onOpen: (id: string) => void }) {
   return (
-    <Popover>
-      <Popover.Trigger
-        data-testid="calendar-tournament"
-        data-status={t.status}
-        title={t.name}
-        className={
-          'w-full shrink-0 cursor-pointer truncate rounded-md px-1.5 py-0.5 text-left text-[12px] font-medium ' +
-          STATUS_TONE[t.status]
-        }
-      >
-        {t.name}
-      </Popover.Trigger>
-      <Popover.Content placement="right top" className="w-[26rem] rounded-xl">
-        <Popover.Dialog data-testid="tournament-details" className="p-5">
-          <div className="flex justify-end">
-            <CloseButton slot="close" aria-label="Закрыть" />
-          </div>
-          <div className="flex gap-4">
-            {/* Точка в колонке шириной со значок строк ниже — колонки совпадают. */}
-            <span className="flex w-[18px] shrink-0 justify-center pt-2">
-              <span className={'h-3.5 w-3.5 rounded ' + STATUS_DOT[t.status]} />
-            </span>
-            <div className="min-w-0">
+    <CellCard
+      trigger={t.name}
+      triggerClass={
+        'w-full shrink-0 cursor-pointer truncate rounded-md px-1.5 py-0.5 text-left text-[12px] font-medium ' +
+        STATUS_TONE[t.status]
+      }
+      triggerProps={{ 'data-testid': 'calendar-tournament', 'data-status': t.status, title: t.name }}
+      placement="right top"
+      width="w-[26rem]"
+      testId="tournament-details"
+      heading={(as) => (
+        <div className="flex gap-4 pr-8">
+          {/* Точка в колонке шириной со значок строк ниже — колонки совпадают. */}
+          <span className="flex w-[18px] shrink-0 justify-center pt-2">
+            <span className={'h-3.5 w-3.5 rounded ' + STATUS_DOT[t.status]} />
+          </span>
+          <div className="min-w-0">
+            {as === 'popover' ? (
               <Popover.Heading className="text-xl font-semibold leading-snug">{t.name}</Popover.Heading>
-              <p className="mt-0.5 text-[14px] text-neutral-600">
-                {t.startsAt ? tournamentDate(t.startsAt) : 'Без даты'}
-              </p>
-            </div>
+            ) : (
+              <Drawer.Heading className="text-xl font-semibold leading-snug">{t.name}</Drawer.Heading>
+            )}
+            <p className="mt-0.5 text-[14px] text-neutral-600">{t.startsAt ? tournamentDate(t.startsAt) : 'Без даты'}</p>
           </div>
-          <div className="mt-5">
-            <TournamentFacts t={t} />
-          </div>
-          <div className="mt-5 flex justify-end">
-            <Button variant="primary" size="sm" className="rounded-xl" onPress={() => onOpen(t.id)}>
-              Подробнее
-            </Button>
-          </div>
-        </Popover.Dialog>
-      </Popover.Content>
-    </Popover>
+        </div>
+      )}
+    >
+      <div className="mt-5">
+        <TournamentFacts t={t} />
+      </div>
+      <div className="mt-5 flex justify-end">
+        <Button variant="primary" size="sm" className="rounded-xl max-md:w-full" onPress={() => onOpen(t.id)}>
+          Подробнее
+        </Button>
+      </div>
+    </CellCard>
   );
 }
 
@@ -201,6 +257,7 @@ export function TournamentCalendar({
   today?: Date;
 }) {
   const [cursor, setCursor] = useState(() => new Date(today.getFullYear(), today.getMonth(), 1));
+  const narrow = useNarrow();
   const grid = monthGrid(cursor.getFullYear(), cursor.getMonth());
   const todayKey = dayKey(today);
   const gridRef = useRef<HTMLDivElement>(null);
@@ -220,10 +277,12 @@ export function TournamentCalendar({
   const step = (months: number) => setCursor(new Date(cursor.getFullYear(), cursor.getMonth() + months, 1));
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col bg-white">
-      <div className="flex shrink-0 items-center justify-between border-b border-neutral-200 px-6 py-3">
-        <h2 className="text-xl font-semibold tracking-tight" data-testid="calendar-month">
-          {monthTitle(cursor)}
+    <div className="relative flex min-h-0 flex-1 flex-col bg-white">
+      <div className="flex shrink-0 items-center justify-between border-b border-neutral-200 px-6 py-3 max-md:px-4">
+        {/* На телефоне — только месяц, мельче, без года ✳ (03.11.2026): иначе
+            заголовок переносился в две строки и теснил кнопки. */}
+        <h2 className="text-xl font-semibold tracking-tight max-md:text-base" data-testid="calendar-month">
+          {narrow ? capital(cursor.toLocaleDateString('ru-RU', { month: 'long' })) : monthTitle(cursor)}
         </h2>
         <div className="flex items-center gap-3">
           <ButtonGroup variant="outline" size="sm">

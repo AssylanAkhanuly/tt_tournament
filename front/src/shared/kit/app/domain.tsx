@@ -13,8 +13,12 @@
    переключатели — `data-seg` на обёртке. */
 
 import { useEffect, useRef, useState, type ReactNode } from 'react';
-import { ArrowRight, Check, ChevronDown, ChevronRight, Search as SearchIcon, SlidersHorizontal, X } from 'lucide-react';
+import { ArrowRight, Check, ChevronDown, ChevronRight, Search as SearchIcon, Settings2, SlidersHorizontal, X } from 'lucide-react';
 import { Avatar, Button, Chip, Dropdown, Input, InputGroup, Separator } from '@heroui/react';
+
+import { BottomSheet } from '@/shared/ui/BottomSheet';
+
+import { useNarrow } from './chrome';
 
 /* ── Словари состояний ───────────────────────────────────────────────
    Перенесены из старого слоя как есть: словарь — проектное решение (порядок
@@ -620,34 +624,124 @@ const MENU_ITEM =
   'data-[hovered]:bg-neutral-50 data-[focused]:bg-neutral-50 ' +
   'data-[selected]:bg-blue-50 data-[selected]:font-medium data-[selected]:text-blue-700';
 
-export function FilterMenu({
-  groups,
-  label = 'Фильтры',
-}: {
-  groups: { label: string; items: string[]; active: string; onPick: (v: string) => void }[];
-  label?: string;
-}) {
+export type FilterGroup = { label: string; items: string[]; active: string; onPick: (v: string) => void };
+
+const triggerClass = (on: number) =>
+  'inline-flex h-9 items-center gap-1.5 rounded-lg border px-3 text-[13px] font-medium ' +
+  (on ? 'border-blue-200 bg-blue-50 text-blue-700' : 'border-neutral-200 bg-white text-neutral-700 hover:bg-neutral-50');
+
+/** Подпись кнопки «Фильтры»: значок, текст, сколько включено. */
+const TriggerFace = ({ label, on, chevron }: { label: string; on: number; chevron: boolean }) => (
+  <>
+    <SlidersHorizontal size={14} className={on ? 'text-blue-500' : 'text-neutral-400'} />
+    {label}
+    {on > 0 && <span className="rounded-full bg-blue-100 px-1.5 text-[11px] font-semibold text-blue-700">{on}</span>}
+    {chevron && <ChevronDown size={14} className={on ? 'text-blue-500' : 'text-neutral-400'} />}
+  </>
+);
+
+/** Группы отбора кнопками в ряд — тело панели «Фильтры» на телефоне. Выбор
+    применяется сразу. Им же пользуется общая панель таблицы (`TableTools`). */
+export function FilterGroups({ groups }: { groups: FilterGroup[] }) {
+  return (
+    <>
+    {groups.map((g) => (
+      <section key={g.label} role="radiogroup" aria-label={g.label} data-testid="filters-group">
+        <h3 className="mb-2 text-[13px] font-medium text-neutral-700">{g.label}</h3>
+        {/* Ровная сетка: значения разной длины выстраиваются в колонки. */}
+        <div className="grid grid-cols-[repeat(auto-fill,minmax(5.25rem,1fr))] gap-2">
+          {g.items.map((t) => (
+            <button
+              key={t}
+              type="button"
+              role="radio"
+              aria-checked={t === g.active}
+              onClick={() => g.onPick(t)}
+              className={
+                // Длинное значение занимает две колонки, а не обрезается.
+                'h-10 rounded-lg border px-2 text-[14px] ' +
+                (t.length > 8 ? 'col-span-2 ' : '') +
+                (t === g.active
+                  ? 'border-blue-300 bg-blue-50 font-medium text-blue-700'
+                  : 'border-neutral-200 bg-white text-neutral-700')
+              }
+            >
+              {t}
+            </button>
+          ))}
+        </div>
+      </section>
+    ))}
+    </>
+  );
+}
+
+/** Телефон ✳ (03.11.2026, решение владельца продукта): вложенные выпадающие
+    списки на узком экране налезали друг на друга и уезжали за край, поэтому
+    «Фильтры» открывают панель снизу (`Drawer` HeroUI): группа — подпись и
+    значения кнопками в ряд, выбранное подсвечено и применяется сразу; внизу
+    «Сбросить» (если что-то включено) и «Готово». */
+function FilterDrawer({ groups, label }: { groups: FilterGroup[]; label: string }) {
+  const [open, setOpen] = useState(false);
   const on = groups.filter((g) => g.active !== g.items[0]);
   return (
     <div data-filter>
-      <Dropdown>
-        <Dropdown.Trigger
+      {/* Один значок настроек ✳ (03.11.2026): подпись «Фильтры» не помещалась
+          в строку с поиском. Число включённых отборов — на значке. */}
+      <span className="relative inline-flex">
+        <button
+          type="button"
           data-testid="filters-open"
-          className={
-            'inline-flex h-9 items-center gap-1.5 rounded-lg border px-3 text-[13px] font-medium ' +
-            (on.length
-              ? 'border-blue-200 bg-blue-50 text-blue-700'
-              : 'border-neutral-200 bg-white text-neutral-700 hover:bg-neutral-50')
-          }
+          aria-label={label}
+          className="inline-flex size-10 items-center justify-center rounded-xl text-neutral-700 hover:bg-neutral-100"
+          onClick={() => setOpen(true)}
         >
-          <SlidersHorizontal size={14} className={on.length ? 'text-blue-500' : 'text-neutral-400'} />
-          {label}
-          {on.length > 0 && (
-            <span className="rounded-full bg-blue-100 px-1.5 text-[11px] font-semibold text-blue-700">
-              {on.length}
-            </span>
-          )}
-          <ChevronDown size={14} className={on.length ? 'text-blue-500' : 'text-neutral-400'} />
+          <Settings2 size={18} />
+        </button>
+        {on.length > 0 && (
+          <span className="pointer-events-none absolute -right-1 -top-1 rounded-full bg-blue-600 px-1.5 text-[11px] font-semibold text-white">
+            {on.length}
+          </span>
+        )}
+      </span>
+      <BottomSheet
+        isOpen={open}
+        onOpenChange={setOpen}
+        title={label}
+        testId="filters-drawer"
+        bodyClassName="flex flex-col gap-4 px-6 pb-6"
+        footer={
+          <>
+            <Button
+              variant="tertiary"
+              className="flex-1 rounded-xl"
+              isDisabled={on.length === 0}
+              data-testid="filters-reset"
+              onPress={() => groups.forEach((g) => g.onPick(g.items[0]))}
+            >
+              Сбросить
+            </Button>
+            <Button variant="primary" className="flex-1 rounded-xl" data-testid="filters-done" onPress={() => setOpen(false)}>
+              Готово
+            </Button>
+          </>
+        }
+      >
+        <FilterGroups groups={groups} />
+      </BottomSheet>
+    </div>
+  );
+}
+
+export function FilterMenu({ groups, label = 'Фильтры' }: { groups: FilterGroup[]; label?: string }) {
+  const narrow = useNarrow();
+  const on = groups.filter((g) => g.active !== g.items[0]);
+  if (narrow) return <FilterDrawer groups={groups} label={label} />;
+  return (
+    <div data-filter>
+      <Dropdown>
+        <Dropdown.Trigger data-testid="filters-open" className={triggerClass(on.length)}>
+          <TriggerFace label={label} on={on.length} chevron />
         </Dropdown.Trigger>
 
         <Dropdown.Popover placement="bottom start" className={MENU_BOX}>

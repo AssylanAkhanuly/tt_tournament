@@ -208,7 +208,6 @@ function Players({ id, recruitment }: { id: string; recruitment: boolean }) {
         columns={PLAYER_COLUMNS}
         getId={(p) => String(p.id)}
         search={{ placeholder: 'Фамилия или имя', text: (p) => p.name, testId: 'participants-search' }}
-        count={(n) => 'Спортсменов: ' + n}
         actions={
           <>
             {!recruitment ? null : tournament.data ? (

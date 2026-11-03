@@ -19,6 +19,7 @@ import {
   useRefereeCard,
   type RefereePosition,
 } from '@/entities/tournament';
+import { AlertSheet } from '@/shared/ui/ModalSheet';
 
 
 function Card({
@@ -125,9 +126,7 @@ function Card({
             </Button>
             <Tooltip.Content>Убрать из турнира</Tooltip.Content>
           </Tooltip>
-          <AlertDialog.Backdrop>
-            <AlertDialog.Container>
-              <AlertDialog.Dialog className="rounded-xl" data-testid="referee-remove-confirm">
+          <AlertSheet className="rounded-xl" testId="referee-remove-confirm">
                 <AlertDialog.Header>
                   <AlertDialog.Icon status="danger" />
                   <AlertDialog.Heading>Убрать из турнира?</AlertDialog.Heading>
@@ -148,9 +147,7 @@ function Card({
                     Убрать
                   </Button>
                 </AlertDialog.Footer>
-              </AlertDialog.Dialog>
-            </AlertDialog.Container>
-          </AlertDialog.Backdrop>
+              </AlertSheet>
         </AlertDialog>
 
         <div className="flex-1" />

@@ -9,7 +9,8 @@
      `secondary`, концы шапки не скруглены, поля по краям — как у шапки экрана);
    - сверху одна полоса: поиск, отбор, «N всего», справа действия;
    - заголовок сортируемой колонки — щелчок, значок направления — `SortIcon`;
-   - страницы — по центру снизу, «назад/вперёд» значками (`TablePagination`).
+   - страницы — по центру после последней строки, прокручиваются вместе со
+     списком ✳ 03.11.2026, «назад/вперёд» значками (`TablePagination`).
 
    Два режима. **Клиентский** (по умолчанию): весь список уже пришёл — поиск,
    сортировка и страницы считаются здесь же. **Серверный** (`server`): список
@@ -88,7 +89,8 @@ export function DataTable<T>({
   search?: { placeholder: string; text?: (row: T) => string; testId?: string };
   /** Отбор рядом с поиском («Фильтры»). */
   filters?: ReactNode;
-  /** Подпись числа строк, например `n => 'Спортсменов: ' + n`. */
+  /** Подпись числа строк, например `n => 'Судей: ' + n`. У спортсменов её нет
+      ✳ (03.11.2026, решение владельца продукта). */
   count?: (n: number) => string;
   /** Действия справа в полосе. */
   actions?: ReactNode;
@@ -150,12 +152,13 @@ export function DataTable<T>({
     '[&_th]:rounded-none [&_th:first-child]:pl-6 [&_td:first-child]:pl-6 [&_th:last-child]:pr-6 [&_td:last-child]:pr-6';
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col bg-white" data-testid={testId}>
+    <div className="relative flex min-h-0 flex-1 flex-col bg-white" data-testid={testId}>
       {(search || filters || count || actions) && (
-        <div className="flex shrink-0 flex-wrap items-center gap-3 border-b border-neutral-200 px-6 py-3">
+        <div className="flex shrink-0 flex-wrap items-center gap-3 border-b border-neutral-200 px-6 py-3 max-md:flex-nowrap max-md:px-4">
           {search && (
-            <SearchField aria-label="Поиск" value={query} onChange={onQuery} className="w-72 max-w-full">
-              <SearchField.Group className="rounded-xl">
+            // На телефоне поиск — на всю строку, значок настроек рядом.
+            <SearchField aria-label="Поиск" value={query} onChange={onQuery} className="min-w-0 max-md:flex-1 md:w-72">
+              <SearchField.Group className="w-full rounded-xl">
                 <SearchField.SearchIcon />
                 <SearchField.Input placeholder={search.placeholder} data-testid={search.testId} />
                 <SearchField.ClearButton />
@@ -168,7 +171,8 @@ export function DataTable<T>({
               {count(view.total)}
             </span>
           )}
-          <div className="flex-1" />
+          {/* На телефоне место отдаётся поиску. */}
+          <div className="flex-1 max-md:hidden" />
           {actions}
         </div>
       )}
@@ -244,9 +248,10 @@ export function DataTable<T>({
             </Table.ScrollContainer>
           </Table>
         )}
+        {/* Страницы — в самом конце списка, после последней строки, а не
+            прибиты к низу области ✳ (03.11.2026, решение владельца продукта). */}
+        <TablePagination page={view.page} pages={view.pages} onPage={onPage} />
       </div>
-
-      <TablePagination page={view.page} pages={view.pages} onPage={onPage} />
     </div>
   );
 }

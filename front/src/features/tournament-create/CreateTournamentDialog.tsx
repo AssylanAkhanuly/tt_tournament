@@ -14,9 +14,7 @@ import {
   I18nProvider,
   Input,
   Label,
-  ListBox,
   Modal,
-  Select,
   TextArea,
   TextField,
   useOverlayState,
@@ -31,6 +29,9 @@ import {
   type NewTournament,
   type TournamentSummary,
 } from '@/entities/tournament';
+import { useNarrow } from '@/shared/kit/app';
+import { Picker } from '@/shared/ui/Picker';
+import { ModalSheet } from '@/shared/ui/ModalSheet';
 
 const FORMATS: NewTournament['format'][] = ['single_elimination', 'group_playoff'];
 
@@ -55,6 +56,7 @@ const EMPTY = (): NewTournament => ({
 
 export function CreateTournamentDialog({ onCreated }: { onCreated: (t: TournamentSummary) => void }) {
   const state = useOverlayState();
+  const narrow = useNarrow();
   const [form, setForm] = useState<NewTournament>(EMPTY);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -85,12 +87,25 @@ export function CreateTournamentDialog({ onCreated }: { onCreated: (t: Tournamen
     // открытием через состояние, react-aria ругается «PressResponder without a
     // pressable child».
     <Modal state={state}>
-      <Button variant="primary" size="sm" className="rounded-xl">
-        <Plus size={16} /> Новый турнир
-      </Button>
-      <Modal.Backdrop>
-        <Modal.Container size="md">
-          <Modal.Dialog className="rounded-xl" data-testid="tournament-create">
+      {/* На телефоне — круглая кнопка «+» в правом нижнем углу области
+          ✳ (03.11.2026, решение владельца продукта): в шапке месяца ей не
+          хватало места. Родитель области — `relative`. */}
+      {narrow ? (
+        <Button
+          isIconOnly
+          variant="primary"
+          aria-label="Новый турнир"
+          className="absolute bottom-4 right-4 z-20 size-14 rounded-full shadow-lg"
+          data-testid="tournament-create-open"
+        >
+          <Plus size={24} />
+        </Button>
+      ) : (
+        <Button variant="primary" size="sm" className="rounded-xl" data-testid="tournament-create-open">
+          <Plus size={16} /> Новый турнир
+        </Button>
+      )}
+      <ModalSheet size="md" className="rounded-xl" testId="tournament-create">
             <Modal.CloseTrigger />
             <Modal.Header>
               <Modal.Heading className="text-lg font-semibold">Новый турнир</Modal.Heading>
@@ -139,26 +154,13 @@ export function CreateTournamentDialog({ onCreated }: { onCreated: (t: Tournamen
                   </DatePicker>
                 </I18nProvider>
 
-                <Select
-                  selectedKey={form.format}
-                  onSelectionChange={(k) => k && set('format', k as NewTournament['format'])}
-                >
-                  <Label>Формат</Label>
-                  <Select.Trigger className="rounded-xl">
-                    <Select.Value />
-                    <Select.Indicator />
-                  </Select.Trigger>
-                  <Select.Popover className="rounded-xl">
-                    <ListBox>
-                      {FORMATS.map((f) => (
-                        <ListBox.Item key={f} id={f} textValue={FORMAT_LABEL[f]} className="rounded-xl">
-                          {FORMAT_LABEL[f]}
-                          <ListBox.ItemIndicator />
-                        </ListBox.Item>
-                      ))}
-                    </ListBox>
-                  </Select.Popover>
-                </Select>
+                <Picker
+                  label="Формат"
+                  showLabel
+                  value={form.format}
+                  options={FORMATS.map((f) => ({ id: f, label: FORMAT_LABEL[f] }))}
+                  onChange={(k) => set('format', k as NewTournament['format'])}
+                />
 
                 {form.format === 'group_playoff' && (
                   <TextField
@@ -190,9 +192,7 @@ export function CreateTournamentDialog({ onCreated }: { onCreated: (t: Tournamen
                 </Button>
               </Modal.Footer>
             </form>
-          </Modal.Dialog>
-        </Modal.Container>
-      </Modal.Backdrop>
+          </ModalSheet>
     </Modal>
   );
 }

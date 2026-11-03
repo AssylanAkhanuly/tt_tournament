@@ -14,6 +14,7 @@ import { useState, type ReactNode } from 'react';
 
 import { removeParticipant, type TournamentParticipant } from '@/entities/tournament';
 import { PersonAvatar } from '@/shared/ui/PersonAvatar';
+import { AlertSheet } from '@/shared/ui/ModalSheet';
 
 const num = (v: number | null, signed = false) =>
   v === null ? '—' : (signed && v > 0 ? '+' : v < 0 ? '−' : '') + Math.abs(v).toFixed(2).replace('.', ',');
@@ -132,9 +133,7 @@ export function PlayerDrawer({
                     </Button>
                     <Tooltip.Content>Убрать из турнира</Tooltip.Content>
                   </Tooltip>
-                  <AlertDialog.Backdrop>
-                    <AlertDialog.Container>
-                      <AlertDialog.Dialog className="rounded-xl" data-testid="player-remove-confirm">
+                  <AlertSheet className="rounded-xl" testId="player-remove-confirm">
                         <AlertDialog.Header>
                           <AlertDialog.Icon status="danger" />
                           <AlertDialog.Heading>Убрать из турнира?</AlertDialog.Heading>
@@ -150,9 +149,7 @@ export function PlayerDrawer({
                             Убрать
                           </Button>
                         </AlertDialog.Footer>
-                      </AlertDialog.Dialog>
-                    </AlertDialog.Container>
-                  </AlertDialog.Backdrop>
+                      </AlertSheet>
                 </AlertDialog>
               </Drawer.Footer>
             </>

@@ -14,6 +14,8 @@
 import { useState, useSyncExternalStore, type ReactNode } from 'react';
 import { ArrowLeft, Bell, Check, ChevronDown, ChevronsUpDown, LogOut, MoreHorizontal, User } from 'lucide-react';
 import { Avatar, Chip, Separator } from '@heroui/react';
+
+import { BottomSheet } from '@/shared/ui/BottomSheet';
 import { Brand } from '../brand';
 import { Laptop, Phone } from './frame';
 
@@ -506,10 +508,19 @@ export function PhoneChrome({
   onNavigate,
   onSignOut,
   bell = true,
+  bleed = false,
+  header = true,
   children,
 }: {
   role: RoleUI;
   nav: string;
+  /** Шапка со знаком и аватаром. В приложении её нет ✳ (03.11.2026, решение
+      владельца продукта): кто вошёл и «Выйти» — во вкладке «Ещё». Макеты
+      Storybook рисуют шапку как раньше. */
+  header?: boolean;
+  /** Содержимое во всю ширину, без полей ✳ (03.11.2026): таблицы и графики
+      встают от края до края; поля остаются только у заголовка. */
+  bleed?: boolean;
   /** Без заголовка экран начинается прямо с содержимого — как у `AppChrome`. */
   title?: string;
   sub?: string;
@@ -537,7 +548,9 @@ export function PhoneChrome({
      где он. Такой раздел встаёт третьим, вытесняя предыдущего. */
   const MAX = 4;
   const items = role.nav;
-  const fits = items.length <= MAX;
+  // Без шапки человеку с «Выйти» нужно место — оно в «Ещё», и «Ещё» есть всегда.
+  const person = !header && !!onSignOut;
+  const fits = items.length <= MAX && !person;
   let shown = items.slice(0, fits ? MAX : MAX - 1);
   if (!fits && !shown.some(([, l]) => l === nav)) {
     const cur = items.find(([, l]) => l === nav);
@@ -547,8 +560,12 @@ export function PhoneChrome({
     ? shown
     : [...shown, [<MoreHorizontal size={17} key="more" />, 'Ещё']];
 
+  const [more, setMore] = useState(false);
+  const rest = items.filter(([, l]) => !shown.some(([, s]) => s === l));
+
   return (
     <>
+      {header && (
       <div className="flex shrink-0 items-center justify-between gap-2 px-4 py-2">
         <Brand size="sm" sub={role.brandName} />
         <div className="flex items-center gap-1">
@@ -570,11 +587,17 @@ export function PhoneChrome({
           {onSignOut && <PhonePerson person={role.person} onSignOut={onSignOut} />}
         </div>
       </div>
+      )}
 
       {/* Блоки не ужимаются — см. пояснение в `RoleApp`. */}
-      <div className="flex min-h-0 flex-1 flex-col overflow-auto px-4 pb-3 [--kit-gut:1rem] [--kit-gutb:0.75rem] [&>*]:shrink-0">
+      <div
+        className={
+          'flex min-h-0 flex-1 flex-col overflow-auto [--kit-gut:1rem] [--kit-gutb:0.75rem] [&>*]:shrink-0 ' +
+          (bleed ? '' : 'px-4 pb-3')
+        }
+      >
         {back || title || sub ? (
-          <div className="pb-3 pt-1">
+          <div className={'pb-3 pt-1 ' + (bleed ? 'px-4' : '')}>
             {back && <BackLink label={back.label} to={back.to} onPress={back.onPress} />}
             {title && <h1 className="text-[19px] font-semibold leading-tight tracking-tight">{title}</h1>}
             {sub && <p className="mt-0.5 text-[12.5px] leading-snug text-neutral-500">{sub}</p>}
@@ -597,8 +620,9 @@ export function PhoneChrome({
             key={label}
             type="button"
             data-nav
+            data-testid={label === 'Ещё' ? 'phone-more' : undefined}
             aria-current={label === nav || undefined}
-            onClick={onNavigate ? () => onNavigate(label) : undefined}
+            onClick={label === 'Ещё' && person ? () => setMore(true) : onNavigate ? () => onNavigate(label) : undefined}
             className={
               'flex flex-1 flex-col items-center gap-0.5 rounded-lg py-1.5 text-[10px] font-medium ' +
               (label === nav ? 'text-blue-600' : 'text-neutral-400')
@@ -609,6 +633,47 @@ export function PhoneChrome({
           </button>
         ))}
       </div>
+
+      {/* «Ещё» — панель снизу ✳ (03.11.2026): разделы, что не влезли в полосу,
+          кто вошёл и «Выйти». */}
+      {person && (
+        <BottomSheet isOpen={more} onOpenChange={setMore} testId="phone-more-sheet" bodyClassName="px-0 pb-4">
+          {rest.map(([icon, label]) => (
+            <button
+              key={label}
+              type="button"
+              onClick={() => {
+                setMore(false);
+                onNavigate?.(label);
+              }}
+              className="flex w-full items-center gap-3 border-b border-neutral-100 px-6 py-3.5 text-left text-[15px] text-neutral-800"
+            >
+              {icon}
+              {label}
+            </button>
+          ))}
+          <div className="flex items-center gap-3 px-6 pb-2 pt-4" data-testid="phone-person">
+            <Avatar size="sm">
+              <Avatar.Image alt={role.person.nm} src={role.person.av} />
+              <Avatar.Fallback>{role.person.nm.slice(0, 1)}</Avatar.Fallback>
+            </Avatar>
+            <span className="min-w-0 leading-tight">
+              <span className="block truncate text-[14px] font-semibold">{role.person.nm}</span>
+              {role.person.email && <span className="block truncate text-[12px] text-neutral-500">{role.person.email}</span>}
+            </span>
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              setMore(false);
+              onSignOut?.();
+            }}
+            className="flex w-full items-center gap-3 px-6 py-3.5 text-left text-[15px] text-red-600"
+          >
+            <LogOut size={17} /> Выйти
+          </button>
+        </BottomSheet>
+      )}
     </>
   );
 }

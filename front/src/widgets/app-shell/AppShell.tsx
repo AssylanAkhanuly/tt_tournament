@@ -17,8 +17,11 @@ import { Avatar, Button, Chip, Dropdown, Label, Modal, Separator, useOverlayStat
 import { ChevronDown, ChevronsUpDown, LogOut, User } from 'lucide-react';
 import { useState, type ReactNode } from 'react';
 
+import { useNarrow } from '@/shared/kit/app';
 import { assetUrl } from '@/shared/kit/asset';
 import markUrl from '@/shared/kit/brand/fnt-mark.svg';
+import { MenuSheet } from '@/shared/ui/MenuSheet';
+import { ModalSheet } from '@/shared/ui/ModalSheet';
 
 /** Знак ФНТ РК — тот же файл, что у `Brand` в ките (`public/logo.png` — знак
  *  прототипа SpinCoach). */
@@ -77,6 +80,8 @@ export function AppShell({
   children: ReactNode;
 }) {
   const profile = useOverlayState();
+  const narrow = useNarrow();
+  const [personSheet, setPersonSheet] = useState(false);
   // Разделы с подпунктами складываются и раскрываются ✳ (30.10.2026, решение
   // владельца продукта). Тот, где человек сейчас, раскрыт, пока его не сложили;
   // прочие сложены, пока их не раскрыли. Помним только сделанное руками.
@@ -184,6 +189,51 @@ export function AppShell({
           )}
 
           <div className="max-md:absolute max-md:right-4 max-md:top-2 max-md:w-10 md:mt-auto md:pt-3">
+            {/* Телефон ✳ (03.11.2026, решение владельца продукта): меню человека —
+                панелью снизу, а не выпадающим списком. */}
+            {narrow ? (
+              <>
+                <button
+                  type="button"
+                  data-testid="side-person"
+                  onClick={() => setPersonSheet(true)}
+                  className="flex w-full items-center gap-2.5 rounded-xl border border-neutral-200 px-2.5 py-2 text-left hover:bg-neutral-50 max-md:size-10 max-md:justify-center max-md:p-0"
+                  aria-label={person.name}
+                >
+                <Avatar size="sm">
+                  <Avatar.Fallback>{person.name.slice(0, 1)}</Avatar.Fallback>
+                </Avatar>
+                <span className="min-w-0 flex-1 leading-tight max-md:hidden">
+                  <span className="block truncate text-[12.5px] font-semibold">{person.name}</span>
+                  {person.email && <span className="block truncate text-[11px] text-neutral-500">{person.email}</span>}
+                </span>
+                <ChevronsUpDown size={14} className="shrink-0 text-neutral-400 max-md:hidden" />
+              </button>
+                <MenuSheet
+                  isOpen={personSheet}
+                  onOpenChange={setPersonSheet}
+                  title={person.name}
+                  testId="person-menu"
+                  sections={[
+                    {
+                      label: 'Работать как',
+                      items: roles.map((r) => ({
+                        id: r.to,
+                        label: r.title,
+                        selected: r.title === role.title,
+                        onAction: () => r.title !== role.title && onSwitchRole(r.to),
+                      })),
+                    },
+                    {
+                      items: [
+                        { id: 'profile', label: 'Профиль', icon: <User size={18} />, testId: 'person-profile', onAction: profile.open },
+                        { id: 'out', label: 'Выйти', icon: <LogOut size={18} />, danger: true, onAction: onSignOut },
+                      ],
+                    },
+                  ]}
+                />
+              </>
+            ) : (
             <Dropdown>
               <Dropdown.Trigger
                 data-testid="side-person"
@@ -251,6 +301,7 @@ export function AppShell({
                 </Dropdown.Menu>
               </Dropdown.Popover>
             </Dropdown>
+            )}
           </div>
         </aside>
 
@@ -278,9 +329,7 @@ export function AppShell({
           оболочка, а профиль один на человека. */}
       {/* Без `Modal`-обёртки: она — триггер (DialogTrigger) и ждёт кнопку
           внутри, а профиль открывается пунктом меню. Окно ведёт состояние. */}
-      <Modal.Backdrop isOpen={profile.isOpen} onOpenChange={profile.setOpen}>
-        <Modal.Container size="sm">
-          <Modal.Dialog className={RADIUS} data-testid="profile">
+      <ModalSheet isOpen={profile.isOpen} onOpenChange={profile.setOpen} size="sm" className={RADIUS} testId="profile">
             <Modal.CloseTrigger />
             <Modal.Header className="flex flex-col items-center gap-3 pt-2 text-center">
               <Avatar size="lg">
@@ -296,9 +345,7 @@ export function AppShell({
                 </Chip>
               ))}
             </Modal.Body>
-          </Modal.Dialog>
-        </Modal.Container>
-      </Modal.Backdrop>
+          </ModalSheet>
     </div>
   );
 }
