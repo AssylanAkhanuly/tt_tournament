@@ -1168,7 +1168,8 @@ erDiagram
         string name
         uuid templateId FK "из какого шаблона засеян регламент"
         string govtype "официальный | клубный — копия kind шаблона, денормализация под фильтр"
-        string city
+        string region "из закреплённого списка: 3 города и 17 областей"
+        string city "город этого региона из справочника"
         string format "олимпийка | круговая | швейцарка | протокол вручную"
         string discipline "одиночный | парный | командный"
         string status "состояния, см. ТЗ §4.3"

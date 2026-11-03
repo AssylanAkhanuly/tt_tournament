@@ -48,6 +48,8 @@ class Tournament(models.Model):
     # пусто — без границы) для раздела «Сведения»; возрастные категории
     # протокола (диапазоны дат рождения, `TournamentAgeCategory`) — отдельно.
     ends_at = models.DateField(null=True, blank=True, verbose_name="Дата окончания")
+    # Регион и город — из справочника `places.py` ✳ (01.11.2026); проверка — в сериализаторе правки.
+    region = models.CharField(max_length=120, blank=True, verbose_name="Регион")
     city = models.CharField(max_length=120, blank=True, verbose_name="Город")
     venue = models.CharField(max_length=200, blank=True, verbose_name="Место проведения")
     age_min = models.PositiveSmallIntegerField(null=True, blank=True, verbose_name="Возраст от, лет")

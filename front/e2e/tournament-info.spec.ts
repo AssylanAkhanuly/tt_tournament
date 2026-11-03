@@ -39,7 +39,6 @@ test.describe('сведения и живой протокол', () => {
     for (const [testId, key, value] of [
       ['info-name', 'name', 'Кубок Казахстана'],
       ['info-description', 'description', 'Открытый турнир\nЛичный зачёт'],
-      ['info-city', 'city', 'Астана'],
       ['info-venue', 'venue', 'Дворец спорта'],
     ]) {
       const input = page.getByTestId(testId);
@@ -50,6 +49,31 @@ test.describe('сведения и живой протокол', () => {
       await expect(field(key)).toContainText(value);
       await expect(page.locator('[data-protocol-field][data-active="true"]')).toHaveCount(1);
     }
+
+    // Город — выбор с поиском: ищет и по городу, и по области; свободной строки нет.
+    const место = page.getByTestId('info-place');
+    await место.focus();
+    await expect(field('city')).toHaveAttribute('data-active', 'true');
+    await место.fill('Павлодарская');
+    const варианты = page.getByTestId('info-place-options').getByRole('option');
+    await expect(варианты).toHaveCount(4); // область и её три города
+    await page.waitForTimeout(300);
+    await page.screenshot({ path: 'test-results/tournament-info/place-select.png' });
+    await место.fill('Нью-Йорк');
+    await expect(page.getByTestId('info-place-options')).toContainText('Ничего не найдено');
+    await место.fill('Экибастуз');
+    await expect(варианты).toHaveCount(1);
+    await варианты.first().click();
+    await expect(место).toHaveValue('Экибастуз, Павлодарская область');
+    await expect(field('city')).toContainText('Экибастуз, Павлодарская область');
+    // Только область — тоже можно: турнир в селе.
+    await место.fill('Туркестанская область');
+    await page.getByRole('option', { name: 'Туркестанская область', exact: true }).click();
+    await expect(field('city')).toHaveText(/Туркестанская область/);
+    await место.fill('Астана');
+    await варианты.first().click();
+    await expect(место).toHaveValue('Астана');
+    await expect(field('city')).toContainText('Астана');
 
     // NumberField должен обновлять протокол до blur, по мере набора.
     await page.getByTestId('info-age-min').fill('');
@@ -114,7 +138,12 @@ test.describe('сведения и живой протокол', () => {
   test('на телефоне документ доступен во вкладке, правки сохраняются после перезагрузки', async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
     await page.emulateMedia({ reducedMotion: 'reduce' });
-    await page.getByTestId('info-city').fill('Караганда');
+    // На телефоне место — панель снизу с поиском ✳ (03.11.2026).
+    await page.getByTestId('info-place').click();
+    await page.getByTestId('place-sheet-search').fill('Караганда');
+    await page.getByTestId('info-place-options').getByRole('option').first().click();
+    await expect(page.getByTestId('place-sheet')).toHaveCount(0);
+    await expect(page.getByTestId('info-place')).toContainText('Караганда, Карагандинская область');
     await page.getByRole('tab', { name: 'Протокол', exact: true }).click();
     const city = page.locator('[data-protocol-field="city"]');
     await expect(city).toBeInViewport();
@@ -125,10 +154,10 @@ test.describe('сведения и живой протокол', () => {
     await page.getByTestId('info-save').click();
     await expect(page.getByTestId('info-save')).toBeDisabled();
     await page.reload();
-    await expect(page.getByTestId('info-city')).toHaveValue('Караганда');
+    await expect(page.getByTestId('info-place')).toContainText('Караганда, Карагандинская область');
     await page.getByRole('tab', { name: 'Протокол', exact: true }).click();
     await expect(city).toContainText('Караганда');
     await page.getByRole('tab', { name: 'Сведения', exact: true }).click();
-    await expect(page.getByTestId('info-city')).toBeVisible();
+    await expect(page.getByTestId('info-place')).toBeVisible();
   });
 });

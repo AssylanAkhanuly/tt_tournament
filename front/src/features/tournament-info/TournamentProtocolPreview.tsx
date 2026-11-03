@@ -4,7 +4,7 @@ import { Button, Spinner, Tooltip } from '@heroui/react';
 import { Download } from 'lucide-react';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 
-import { FORMAT_LABEL, LEVEL_LABEL, type TournamentInfo } from '@/entities/tournament';
+import { FORMAT_LABEL, LEVEL_LABEL, placeLabel, type TournamentInfo } from '@/entities/tournament';
 
 import { downloadProtocolPdf, protocolFileName } from './protocolPdf';
 
@@ -25,7 +25,7 @@ export const PROTOCOL_FIELD_LABEL: Record<ProtocolField, string> = {
   name: 'Название',
   description: 'Описание',
   dates: 'Даты проведения',
-  city: 'Город',
+  city: 'Город, область',
   venue: 'Место проведения',
   age: 'Возраст участников',
   format: 'Система проведения',
@@ -203,7 +203,7 @@ export function TournamentProtocolPreview({
               {draft.endsAt && draft.endsAt !== draft.startsOn ? ' — ' + date(draft.endsAt) : ''}
             </Line>
             <Line activeField={activeField} field="city">
-              {draft.city.trim() || '________________'}
+              {placeLabel(draft) || '________________'}
             </Line>
             <Line activeField={activeField} field="venue">
               {draft.venue.trim() || '________________'}

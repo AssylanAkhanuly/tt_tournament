@@ -565,7 +565,12 @@ test('«Сведения»: даты, место, возраст ползунк�
   await expect(page.getByTestId('info-age-min')).toHaveValue('');
   await expect(сохранить).toBeDisabled();
 
-  await page.getByTestId('info-city').fill('Астана');
+  // Как человек: поле на виду, щелчок, набор — прокрутка закрывает открытый список.
+  await page.getByTestId('info-place').scrollIntoViewIfNeeded();
+  await page.getByTestId('info-place').click();
+  await page.getByTestId('info-place').pressSequentially('Темиртау');
+  await expect(page.getByTestId('info-place-options').getByRole('option')).toHaveCount(1);
+  await page.getByTestId('info-place-options').getByRole('option').first().click();
   await page.getByTestId('info-venue').fill('Дворец спорта «Казахстан»');
   await page.getByTestId('info-age-min').fill('12');
   await page.getByTestId('info-age-min').press('Tab');
@@ -585,7 +590,8 @@ test('«Сведения»: даты, место, возраст ползунк�
 
   const d = await (await page.request.get(`/api/tournaments/${t.id}/`)).json();
   expect(d).toMatchObject({
-    city: 'Астана',
+    region: 'Карагандинская область',
+    city: 'Темиртау',
     venue: 'Дворец спорта «Казахстан»',
     age_min: 12,
     age_max: 18,
@@ -593,7 +599,7 @@ test('«Сведения»: даты, место, возраст ползунк�
   });
   // Сохранённое переживает перезагрузку.
   await page.reload();
-  await expect(page.getByTestId('info-city')).toHaveValue('Астана');
+  await expect(page.getByTestId('info-place')).toHaveValue('Темиртау, Карагандинская область');
   await expect(page.getByTestId('info-age-max')).toHaveValue('18');
 });
 

@@ -19,6 +19,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from users.serializers import RegisterSerializer, UserSerializer
 from users.views import _set_auth_cookies
 
+from . import places
 from .bracket import advance_winner, advance_winner_and_loser, generate_bracket, generate_group_bracket, generate_playoff_from_groups, reset_match
 from .models import Match, Tournament, TournamentParticipant, TournamentTable, TournamentGroup, GroupMatch, ScoreLog
 from .serializers import (
@@ -1870,3 +1871,13 @@ class StartPlayoffView(APIView):
             "tournament": TournamentSerializer(tournament, context={"request": request}).data,
             "matches": MatchSerializer(matches, many=True).data,
         })
+
+
+class PlacesView(APIView):
+    """Справочник мест турнира ✳ (01.11.2026): регионы с городами (`places.py`).
+    Открыт без входа: это те же сведения, что в афише."""
+
+    permission_classes = [AllowAny]
+
+    def get(self, request):
+        return Response(places.directory())

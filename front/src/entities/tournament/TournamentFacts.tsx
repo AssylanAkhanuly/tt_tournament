@@ -4,7 +4,7 @@
 import { AlignLeft, Building2, CalendarDays, Cake, Flag, MapPin, Network, Trophy, Users } from 'lucide-react';
 import type { ReactNode } from 'react';
 
-import { FORMAT_LABEL, LEVEL_LABEL, STATUS_LABEL, type TournamentSummary } from './api';
+import { FORMAT_LABEL, LEVEL_LABEL, placeLabel, STATUS_LABEL, type TournamentSummary } from './api';
 
 const capital = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
@@ -32,7 +32,7 @@ export function TournamentFacts({ t, withDate = false }: { t: TournamentSummary;
   // Окончание — если турнир не однодневный.
   if (t.endsAt && (!t.startsAt || t.endsAt !== t.startsAt.toLocaleDateString('sv-SE')))
     rows.push([<CalendarDays key="e" size={18} />, 'До ' + day(t.endsAt)]);
-  const where = [t.city, t.venue].filter(Boolean).join(', ');
+  const where = [placeLabel(t), t.venue].filter(Boolean).join(', ');
   if (where) rows.push([<MapPin key="w" size={18} />, where]);
   const ages = ageRange(t.ageMin, t.ageMax);
   if (ages) rows.push([<Cake key="a" size={18} />, 'Возраст: ' + ages]);

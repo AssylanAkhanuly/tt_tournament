@@ -9,10 +9,8 @@ import {
   DateRangePicker,
   I18nProvider,
   Input,
-  ListBox,
   NumberField,
   RangeCalendar,
-  Select,
   Slider,
   Switch,
   Tabs,
@@ -32,6 +30,8 @@ import {
   type TournamentLevel,
   type TournamentSummary,
 } from '@/entities/tournament';
+import { Picker } from '@/shared/ui/Picker';
+import { PlaceSelect } from './PlaceSelect';
 import { TournamentProtocolPreview, type ProtocolField } from './TournamentProtocolPreview';
 
 const AGE_SCALE = [5, 90] as const;
@@ -48,6 +48,7 @@ const infoOf = (t: TournamentSummary): TournamentInfo => ({
   description: t.description,
   startsOn: dayOf(t.startsAt),
   endsAt: t.endsAt,
+  region: t.region,
   city: t.city,
   venue: t.venue,
   ageMin: t.ageMin,
@@ -257,10 +258,13 @@ export function TournamentInfoForm({
                     </DateRangePicker>
                   </I18nProvider>
                 </Row>
-                <Row label="Город" field="city" onFocus={setActiveField}>
-                  <TextField aria-label="Город" value={draft.city} onChange={(v) => set('city', v)} isDisabled={busy}>
-                    <Input className="rounded-xl" placeholder="Астана" data-testid="info-city" />
-                  </TextField>
+                <Row label="Город, область" field="city" onFocus={setActiveField}>
+                  <PlaceSelect
+                    region={draft.region}
+                    city={draft.city}
+                    isDisabled={busy}
+                    onChange={(place) => setDraft((d) => ({ ...d, ...place }))}
+                  />
                 </Row>
                 <Row label="Место проведения" field="venue" onFocus={setActiveField}>
                   <TextField
@@ -335,28 +339,14 @@ export function TournamentInfoForm({
 
               <Group title="Формат">
                 <Row label="Система" field="format" onFocus={setActiveField}>
-                  <Select
-                    aria-label="Система"
-                    selectedKey={draft.format}
-                    onSelectionChange={(k) => k && set('format', k as TournamentFormat)}
+                  <Picker
+                    label="Система"
+                    value={draft.format}
+                    options={(manual ? (['manual'] as TournamentFormat[]) : FORMATS).map((f) => ({ id: f, label: FORMAT_LABEL[f] }))}
+                    onChange={(k) => set('format', k as TournamentFormat)}
                     isDisabled={manual || busy}
-                    className="w-full min-w-0"
-                  >
-                    <Select.Trigger className="rounded-xl" data-testid="info-format">
-                      <Select.Value />
-                      <Select.Indicator />
-                    </Select.Trigger>
-                    <Select.Popover className="rounded-xl">
-                      <ListBox>
-                        {(manual ? (['manual'] as TournamentFormat[]) : FORMATS).map((f) => (
-                          <ListBox.Item key={f} id={f} textValue={FORMAT_LABEL[f]} className="rounded-xl">
-                            {FORMAT_LABEL[f]}
-                            <ListBox.ItemIndicator />
-                          </ListBox.Item>
-                        ))}
-                      </ListBox>
-                    </Select.Popover>
-                  </Select>
+                    testId="info-format"
+                  />
                 </Row>
                 {draft.format === 'group_playoff' && (
                   <Row label="Игроков в группе" field="groupSize" onFocus={setActiveField}>
@@ -381,52 +371,25 @@ export function TournamentInfoForm({
                   </Row>
                 )}
                 <Row label="Матч до побед" field="gamesToWin" onFocus={setActiveField}>
-                  <Select
-                    aria-label="Матч до побед"
+                  <Picker
+                    label="Матч до побед"
+                    value={String(draft.gamesToWin)}
+                    options={GAMES.map((g) => ({ id: String(g), label: String(g) }))}
+                    onChange={(k) => set('gamesToWin', Number(k))}
                     isDisabled={busy}
-                    selectedKey={String(draft.gamesToWin)}
-                    onSelectionChange={(k) => k && set('gamesToWin', Number(k))}
                     className="w-32"
-                  >
-                    <Select.Trigger className="rounded-xl" data-testid="info-games">
-                      <Select.Value />
-                      <Select.Indicator />
-                    </Select.Trigger>
-                    <Select.Popover className="rounded-xl">
-                      <ListBox>
-                        {GAMES.map((g) => (
-                          <ListBox.Item key={g} id={String(g)} textValue={String(g)} className="rounded-xl">
-                            {g}
-                            <ListBox.ItemIndicator />
-                          </ListBox.Item>
-                        ))}
-                      </ListBox>
-                    </Select.Popover>
-                  </Select>
+                    testId="info-games"
+                  />
                 </Row>
                 <Row label="Уровень" field="level" onFocus={setActiveField}>
-                  <Select
-                    aria-label="Уровень"
-                    selectedKey={draft.level}
-                    onSelectionChange={(k) => k && set('level', k as TournamentLevel)}
+                  <Picker
+                    label="Уровень"
+                    value={draft.level}
+                    options={LEVELS.map((l) => ({ id: l, label: LEVEL_LABEL[l] }))}
+                    onChange={(k) => set('level', k as TournamentLevel)}
                     isDisabled={busy}
-                    className="w-full min-w-0"
-                  >
-                    <Select.Trigger className="rounded-xl" data-testid="info-level">
-                      <Select.Value />
-                      <Select.Indicator />
-                    </Select.Trigger>
-                    <Select.Popover className="rounded-xl">
-                      <ListBox>
-                        {LEVELS.map((l) => (
-                          <ListBox.Item key={l} id={l} textValue={LEVEL_LABEL[l]} className="rounded-xl">
-                            {LEVEL_LABEL[l]}
-                            <ListBox.ItemIndicator />
-                          </ListBox.Item>
-                        ))}
-                      </ListBox>
-                    </Select.Popover>
-                  </Select>
+                    testId="info-level"
+                  />
                 </Row>
                 <Row label="Рейтинговый" field="isRating" onFocus={setActiveField}>
                   <Switch

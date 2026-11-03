@@ -26,6 +26,8 @@ export type TournamentSummary = {
   /** Сведения ✳ (29.10.2026): окончание (`ГГГГ-ММ-ДД`), где, возраст участников
    *  (лет; null — без границы) и общие настройки формата. */
   endsAt: string | null;
+  /** Регион и город — из справочника сервера ✳ (01.11.2026, `usePlaces`). */
+  region: string;
   city: string;
   venue: string;
   ageMin: number | null;
@@ -35,6 +37,13 @@ export type TournamentSummary = {
   isRating: boolean;
   groupSize: number;
 };
+
+/** Регион справочника и его города; у города республиканского значения своих нет. */
+export type Place = { region: string; cities: string[] };
+
+/** «Караганда, Карагандинская область», «Карагандинская область», «Астана». */
+export const placeLabel = ({ region, city }: { region: string; city: string }) =>
+  [city, region === city ? '' : region].filter(Boolean).join(', ');
 
 /** Уровень соревнования — коэффициент C рейтинга (таблица п. 13 Положения). */
 export type TournamentLevel = 'top' | 'republic' | 'region' | 'amateur';
@@ -107,6 +116,7 @@ type Raw = {
   player_recruitment_until: string | null;
   player_recruitment_active: boolean;
   ends_at: string | null;
+  region: string;
   city: string;
   venue: string;
   age_min: number | null;
@@ -145,6 +155,7 @@ const toSummary = (t: Raw): TournamentSummary => ({
     active: t.player_recruitment_active,
   },
   endsAt: t.ends_at,
+  region: t.region,
   city: t.city,
   venue: t.venue,
   ageMin: t.age_min,
@@ -162,6 +173,7 @@ export type TournamentInfo = {
   description: string;
   startsOn: string | null;
   endsAt: string | null;
+  region: string;
   city: string;
   venue: string;
   ageMin: number | null;
@@ -188,6 +200,7 @@ export async function updateTournament(id: string, info: TournamentInfo): Promis
       description: info.description,
       starts_at: info.startsOn ? noon(info.startsOn) : null,
       ends_at: info.endsAt,
+      region: info.region,
       city: info.city,
       venue: info.venue,
       age_min: info.ageMin,
@@ -344,6 +357,7 @@ function useAsync<T>(run: () => Promise<T>, key: string, cache?: Map<string, T>)
 }
 
 export const useTournaments = () => useAsync(fetchTournaments, 'all');
+export const usePlaces = () => useAsync(() => getJson<Place[]>('/api/tournaments/places/', 'Места'), 'all');
 /** Турниры по id — последний ответ: шапка сайдбара турнира не пропадает при смене раздела. */
 const tournamentCache = new Map<string, TournamentSummary>();
 export const useTournament = (id: string) => useAsync(() => fetchTournament(id), id, tournamentCache);

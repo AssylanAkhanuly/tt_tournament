@@ -1,5 +1,6 @@
 from django.urls import path
 from .views import (
+    PlacesView,
     MyRefereeApplicationView,
     RefereeApplicationDecisionView,
     RefereeApplicationsView,
@@ -44,6 +45,7 @@ from .views import (
 urlpatterns = [
     path("", TournamentListCreateView.as_view(), name="tournament-list-create"),
     path("my/", MyTournamentsView.as_view(), name="tournament-my"),
+    path("places/", PlacesView.as_view(), name="tournament-places"),
     path("score-log/", ScoreLogView.as_view(), name="tournament-score-log"),
     path("my/active-match/", MyActiveMatchView.as_view(), name="tournament-my-active-match"),
     path("<uuid:pk>/", TournamentDetailView.as_view(), name="tournament-detail"),

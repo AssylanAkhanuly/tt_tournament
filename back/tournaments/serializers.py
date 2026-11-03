@@ -1,4 +1,5 @@
 from rest_framework import serializers
+from . import places
 from .models import Match, Tournament, TournamentParticipant, TournamentTable, TournamentGroup, GroupParticipant, GroupMatch, ScoreLog
 from users.serializers import UserSerializer
 
@@ -23,7 +24,7 @@ class TournamentSerializer(serializers.ModelSerializer):
             "is_registered",
             "referee_recruitment_open", "referee_recruitment_until", "referee_recruitment_active",
             "player_recruitment_open", "player_recruitment_until", "player_recruitment_active",
-            "ends_at", "city", "venue", "age_min", "age_max",
+            "ends_at", "region", "city", "venue", "age_min", "age_max",
             "level", "games_to_win", "is_rating",
         ]
         read_only_fields = [
@@ -92,7 +93,7 @@ class TournamentUpdateSerializer(serializers.ModelSerializer):
     class Meta:
         model  = Tournament
         fields = [
-            "name", "description", "starts_at", "ends_at", "city", "venue", "age_min", "age_max",
+            "name", "description", "starts_at", "ends_at", "region", "city", "venue", "age_min", "age_max",
             "format", "group_size", "games_to_win", "level", "is_rating",
         ]
 
@@ -139,7 +140,22 @@ class TournamentUpdateSerializer(serializers.ModelSerializer):
         lo, hi = self._value(attrs, "age_min"), self._value(attrs, "age_max")
         if lo is not None and hi is not None and lo > hi:
             raise serializers.ValidationError({"age_max": "Возраст «до» — не меньше «от»."})
+        self._place(attrs)
         return attrs
+
+    def _place(self, attrs):
+        """Регион и город — по справочнику. Проверяем только изменённое: город,
+        записанный строкой до справочника, не мешает править остальные сведения."""
+        if "region" not in attrs and "city" not in attrs:
+            return
+        t = self.instance
+        region, city = attrs.get("region", ""), attrs.get("city", t.city if t else "")
+        if t and city == t.city and region == t.region:
+            return
+        place = places.clean(region, city)
+        if place is None:
+            raise serializers.ValidationError({"city": "Город и регион — из справочника."})
+        attrs["region"], attrs["city"] = place
 
 
 class ParticipantSerializer(serializers.ModelSerializer):
