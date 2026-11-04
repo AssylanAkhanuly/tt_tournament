@@ -98,3 +98,34 @@ def test_wipe_сносит_турниры_и_игроков_но_не_роли(�
     assert not User.objects.filter(pk=игрок.pk).exists()
     assert User.objects.filter(pk__in=[председатель.pk, админ.pk]).count() == 2
     assert RatingProfile.objects.count() == 4
+
+
+# ── Пол — из заголовка листа ✳ (04.11.2026): женский список федерации ──
+
+
+def test_женский_список_заводит_спортсменок(tmp_path):
+    women = лист(tmp_path / "w.xlsx", "женщины", [
+        (1, 72, 72, 20, "АКАШЕВА Зауреш  ", "02.12.2000", "Карагандин. обл."),
+        (2, 50, 50, 10, "ЛУКЬЯНОВА Мария  ", "22.11.2011", "Карагандин. обл."),
+    ])
+    girls = лист(tmp_path / "g.xlsx", "девушки  U - 15", [
+        (1, 50, 50, 10, "ЛУКЬЯНОВА Мария  ", "22.11.2011", "Карагандин. обл."),
+    ])
+    call_command("import_rating_list", women, girls)
+    assert RatingProfile.objects.count() == 2
+    assert set(RatingProfile.objects.values_list("sex", flat=True)) == {"f"}
+    assert RatingProfile.objects.get(user__name="Акашева Зауреш").value == Decimal("72.00")
+
+
+def test_мужской_и_женский_вместе_у_каждого_свой_пол(файлы, tmp_path):
+    women = лист(tmp_path / "w.xlsx", "женщины", [(1, 72, 72, 20, "АКАШЕВА Зауреш", "02.12.2000", "г. Алматы")])
+    call_command("import_rating_list", *файлы, women)
+    assert RatingProfile.objects.get(user__name="Герасименко Кирилл").sex == "m"
+    assert RatingProfile.objects.get(user__name="Акашева Зауреш").sex == "f"
+
+
+def test_незнакомый_заголовок_листа_отменяет_загрузку(tmp_path):
+    odd = лист(tmp_path / "x.xlsx", "ветераны", [(1, 10, 10, 1, "ИВАНОВ Иван", "01.01.1960", "г. Алматы")])
+    with pytest.raises(CommandError, match="ветераны"):
+        call_command("import_rating_list", odd)
+    assert RatingProfile.objects.count() == 0
