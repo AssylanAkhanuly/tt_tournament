@@ -1,86 +1,84 @@
 ...@_theme
 
-direction: right
+direction: down
 
-# Жизненный цикл турнира по ФНТ ТЗ v1.5 — сквозной сценарий через все роли.
+# Жизненный цикл турнира — сквозной сценарий через все роли.
 # ПСК — председатель судейской коллегии, ГС — главный судья турнира,
 # СС — судья стола.
 #
-# Два шлагбаума коллегии: система проведения утверждается ДО публикации,
-# итоговый протокол ПОСЛЕ игры. Первый решает, состоится ли турнир в таком
-# виде, второй решает, попадёт ли он в рейтинг. В обоих случаях решение
-# принимает судья, а председатель его утверждает.
+# Решения совещания федерации 04.11.2026 (docs/refs/soveshchanie-flow-roley-2026-11-04.md):
+# судьи приходят и заявками, и назначением; заявку игрока судья не рассматривает —
+# условия проверяет система; систему проведения решает главный судья; итоговый
+# протокол закрывает главный судья без утверждения коллегией, сутки его ещё можно
+# исправить, и только потом пересчитывается рейтинг.
 
 create: "ПСК: заводит турнир\nназвание · уровень · город · окно дат" { class: step }
 openRef: Приём заявок судей { class: step }
 refApply: "Судья: заявка на судейство" { class: step }
-pickRef: "ПСК: выбирает судью\nрейтинг · категория · история" { class: step }
-
-organize: "ГС: выбирает систему проведения\nформат · дисциплина · расписание · столы" { class: step }
-gateOrg: "ПСК: система проведения утверждена?" { class: decide }
-rework: "Возврат с причиной\nбез утверждения турнир не публикуется" { class: block }
+enough: Заявок хватает? { class: decide }
+assign: "ПСК: назначает недостающих\nсудья подтверждает" { class: step }
+pickRef: "ПСК: собирает коллегию\nглавный судья · секретарь · заместитель · судьи" { class: step }
 
 publish: "Турнир опубликован\nоткрыт приём заявок игроков" { class: step }
-coach: "Тренер: заявка со списком" { class: step }
-self: "Игрок: заявка сам" { class: step }
-review: "ГС: заявка одобрена?" { class: decide }
-reject: Отказ с причиной { class: block }
+coach: "Старший тренер региона:\nзаявка списком (главные старты)" { class: step }
+self: "Игрок: заявка сам\n(открытые турниры)" { class: step }
+check: "Проходит условия?\nвзнос · возраст и категория ·\nпредел участников · квота региона" { class: decide }
+reject: "Не принимается сразу\nс причиной; можно оплатить\nи подать снова" { class: block }
+doctor: "Врач: допуск по справке\nдопущен / не допущен" { class: step }
 squad: Игроки в составе { class: good }
 
-tables: "ГС: назначает судей столов" { class: step }
-gate: У каждого стола есть судья? { class: decide }
-blocked: "Старт заблокирован\nбез судьи стол не принимает матчи" { class: block }
-
-seed: "ГС: посев и запуск" { class: step }
+organize: "ГС: выбирает систему проведения\nпо подсказке или сам" { class: step }
+draw: "ГС: жеребьёвка по рейтингу\nзаранее, за день до старта;\nсекретарь вносит" { class: step }
+tables: "ГС: ставит судей на столы" { class: step }
 bracket: "ДВИЖОК: сетка и распределение по столам" { class: engine }
 
-play: "СС: ведёт матч\nрозыгрыши, партии, подача, смена сторон" { class: step }
+play: "СС: ведёт матч\nпо партиям или по очкам" { class: step }
+noRef: "Матч «без судьи»:\nсчёт вносит игрок" { class: step }
 live: "Счёт в реальном времени\nзрители, гости, YouTube-трансляция" { class: live }
+fixScore: "ГС: исправляет счёт\nна любом этапе" { class: block }
 advance: "ДВИЖОК: продвигает победителя" { class: engine }
 more: Остались матчи? { class: decide }
 
-close: "ГС: формирует итоговый протокол\nввод результатов заблокирован" { class: step }
-gateRes: "ПСК: итоговый протокол утверждён?" { class: decide }
-fix: "Возврат с причиной\nввод открыт, судья исправляет" { class: block }
+close: "ГС: формирует и закрывает\nитоговый протокол" { class: step }
+day: "Сутки на исправление\nпротокола главным судьёй" { class: step }
 
-ratings: "РАСЧЁТ РЕЙТИНГА: по заложенной методике" {
+ratings: "РАСЧЁТ РЕЙТИНГА: по заложенной методике\nодин раз, после суток" {
   style: { fill: "#fffbeb"; stroke: "#f59e0b"; stroke-width: 2 }
 }
-result: "Игрок видит результат и новую аналитику" { class: good }
+result: "Игрок видит результат и новый рейтинг" { class: good }
 
 create -> openRef
 openRef -> refApply
-refApply -> pickRef
-pickRef -> organize
-
-organize -> gateOrg
-gateOrg -> rework: нет { class: back }
-rework -> organize { class: back }
-gateOrg -> publish: да
+refApply -> enough
+enough -> assign: нет
+assign -> pickRef
+enough -> pickRef: да
+pickRef -> publish
 
 publish -> coach
 publish -> self
-coach -> review
-self -> review
-review -> reject: нет { class: back }
+coach -> check
+self -> check
+check -> reject: нет { class: back }
 reject -> publish { class: back }
-review -> squad: да
+check -> doctor: да
+doctor -> squad: допущен
 
-squad -> tables
-tables -> gate
-gate -> blocked: нет { class: back }
-blocked -> tables { class: back }
-gate -> seed: да
-seed -> bracket
+squad -> organize
+organize -> draw
+draw -> tables
+tables -> bracket
 bracket -> play
+bracket -> noRef
 play -> live: в реальном времени { class: loop }
 play -> advance
+noRef -> advance
+advance -> fixScore: ошибка в счёте { class: back }
+fixScore -> advance { class: back }
 advance -> more
 more -> play: да { class: loop }
 more -> close: нет
 
-close -> gateRes
-gateRes -> fix: нет { class: back }
-fix -> close { class: back }
-gateRes -> ratings: да
+close -> day
+day -> ratings
 ratings -> result

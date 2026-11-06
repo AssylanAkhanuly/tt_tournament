@@ -2,52 +2,50 @@
 
 direction: down
 
-# Микрофлоу роли «Главный судья турнира» (ФНТ ТЗ v1.5).
+# Микрофлоу роли «Главный судья турнира».
 # Выделен из общей схемы: глобальный флоу ссылается сюда стрелкой.
+# Решения совещания федерации 04.11.2026: заявки участников судья не
+# рассматривает — их проверяет система; систему проведения решает сам;
+# исправляет счёт на любом этапе; может передать полномочия секретарю или
+# заместителю; протокол закрывает сам, сутки его можно исправить.
 
 login: Вход { class: start }
-apply: Подаёт заявку на судейство { class: step }
+apply: "Подаёт заявку на судейство\nили подтверждает назначение" { class: step }
 got: Назначен на турнир { class: good }
-organize: "Выбирает систему проведения\nформат · дисциплина · число партий" { class: step }
-bracketCfg: "Собирает сетку\nбиблиотека или конструктор" { class: step }
+squad: "Видит состав\nзаявки проверяет система, допуск — врач" { class: step }
+organize: "Выбирает систему проведения\nпо подсказке или сам" { class: step }
+draw: "Проводит жеребьёвку по рейтингу\nсекретарь вносит" { class: step }
 schedule: Расписание по дням и столам { class: step }
-submitOrg: "Отправляет систему проведения\nна утверждение" { class: step }
-inbox: "Заявки: от тренеров и от игроков" { class: step }
-decide: Одобрена? { class: decide }
-reject: Отклоняет с причиной { class: block }
-accept: Игроки в составе { class: good }
-seed: Посев { class: step }
-tables: Назначает судей столов { class: step }
+tables: Ставит судей на столы { class: step }
 gate: Все столы с судьями? { class: decide }
-blocked: Турнир не запустится { class: block }
+noRef: "Вызывает пару «без судьи»\nсчёт вносит игрок" { class: step }
 start: Запускает турнир { class: step }
 engine: "ДВИЖОК: сетка и столы" { class: engine }
 watch: "Ведёт турнир: вызывает пары, следит" { class: step }
-override: "Переопределяет счёт\nвсё пишется в аудит" { class: block }
+delegate: "Передаёт полномочия\nсекретарю или заместителю;\nсам только смотрит" { class: step }
+override: "Исправляет счёт на любом этапе\nвсё пишется в журнал" { class: block }
 allDone: Все матчи сыграны? { class: decide }
-close: "Формирует итоговый протокол\nввод заблокирован, уходит в коллегию" { class: good }
+close: "Формирует и закрывает\nитоговый протокол" { class: good }
+day: "Сутки на исправление,\nпотом пересчитывается рейтинг" { class: good }
 
 login -> apply
 apply -> got
-got -> organize
-organize -> bracketCfg
-bracketCfg -> schedule
-schedule -> submitOrg
-submitOrg -> inbox
-inbox -> decide
-decide -> reject: нет { class: back }
-reject -> inbox { class: back }
-decide -> accept: да
-accept -> seed
-seed -> tables
+got -> squad
+squad -> organize
+organize -> draw
+draw -> schedule
+schedule -> tables
 tables -> gate
-gate -> blocked: нет { class: back }
-blocked -> tables { class: back }
+gate -> noRef: нет
 gate -> start: да
+noRef -> start
 start -> engine
 engine -> watch
 watch -> override
 override -> watch { class: back }
+watch -> delegate
+delegate -> watch: вернул { class: back }
 watch -> allDone
 allDone -> watch: нет { class: loop }
 allDone -> close: да
+close -> day

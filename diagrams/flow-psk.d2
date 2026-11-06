@@ -2,30 +2,27 @@
 
 direction: down
 
-# Микрофлоу роли «Председатель судейской коллегии» (ФНТ ТЗ v1.5).
+# Микрофлоу роли «Председатель судейской коллегии».
 # Выделен из общей схемы: глобальный флоу ссылается сюда стрелкой.
+# Решения совещания федерации 04.11.2026: судьи — и заявками, и назначением;
+# итоговый протокол председатель не утверждает — его закрывает главный судья.
 
 login: Вход { class: start }
 create: "Заводит турнир\nназвание · уровень · город · окно дат" { class: step }
 openRef: Открывает приём заявок судей { class: step }
 inbox: "Заявки судей\nрейтинг · категория · история" { class: step }
-pick: Выбирает судью { class: step }
-gateOrg: "Система проведения утверждена?" { class: decide }
-rework: "Возврат с причиной\nтурнир не публикуется" { class: block }
-publish: "Утверждает — турнир опубликован" { class: good }
-gateRes: "Итоговый протокол утверждён?" { class: decide }
-fix: "Возврат с причиной\nввод открывается снова" { class: block }
-accept: "Утверждает — рейтинг пересчитывается" { class: good }
+pick: "Собирает коллегию из заявок\nглавный судья · секретарь · заместитель · судьи" { class: step }
+enough: Заявок хватает? { class: decide }
+assign: "Назначает недостающих из реестра\nсудья получает уведомление и подтверждает" { class: step }
+gateOrg: "Согласует систему проведения?\nне договорились" { class: block }
+protocol: "Видит закрытый протокол\nтолько чтение" { class: good }
 
 login -> create
 create -> openRef
 openRef -> inbox
 inbox -> pick
-pick -> gateOrg
-gateOrg -> rework: нет { class: back }
-rework -> gateOrg { class: back }
-gateOrg -> publish: да
-publish -> gateRes
-gateRes -> fix: нет { class: back }
-fix -> gateRes { class: back }
-gateRes -> accept: да
+pick -> enough
+enough -> assign: нет
+enough -> gateOrg: да
+assign -> gateOrg
+gateOrg -> protocol
