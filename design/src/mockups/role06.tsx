@@ -15,7 +15,7 @@
 import { useState, type ReactNode } from 'react';
 import {
   Ban, CalendarDays, Check, ChevronRight, ClipboardList, Grid3x3, LayoutDashboard, ListChecks,
-  Pencil, Printer, Radio, Scroll, Shield, Shuffle, Timer, Undo2, X,
+  Pencil, Printer, Radio, Scroll, Shield, Shuffle, Timer, Undo2, Users, X,
 } from 'lucide-react';
 import { Avatar, Button } from '@heroui/react';
 import { A, AW } from '../fedCommon';
@@ -41,7 +41,6 @@ import {
   Rows,
   ScreenScope,
   StatTiles,
-  TextInput,
   TimeGrid,
   WebApp,
   type RoleUI,
@@ -147,7 +146,7 @@ const PhoneTiles = ({ children }: { children: ReactNode }) => (
 );
 
 /** Полоса переключателей на телефоне: не переносится рядами, а уезжает вбок.
-    Подписи вроде «Отклонены судьёй · 3» встают на 392 px в несколько рядов и
+    Подписи со счётчиками вроде «Поданы · 128» встают на 392 px в несколько рядов и
     съедают экран раньше, чем начинается содержимое. */
 const Strip = ({ children }: { children: ReactNode }) => (
   <div className="-mx-4 mb-3 overflow-x-auto px-4 **:data-seg:flex-nowrap">{children}</div>
@@ -393,21 +392,16 @@ export function QueuePanel() {
   );
 }
 
-/* ── Заявки: авто-проверки и состав ─────────────────────────────── */
+/* ── Заявки: состав и медицинский допуск ───────────────────────── */
 
-/** Четыре авто-проверки допуска: у непроходящих — красная пометка. */
+/** Игрок в заявке. `p` — медицинский допуск: его ставит врач соревнований
+    (роль 18), главный судья справок не проверяет (решение совещания
+    04.11.2026).
 
-/** Игрок в заявке. `v` — четыре авто-проверки; `auto` — заявку отклонила
-    система, не дожидаясь судьи, и почему.
-
-    **Заявка разбирается автоматически** ✳ (комментарий федерации, 09.2026):
-    взнос, документы и возраст — величины проверяемые, спорить в них не о чем.
-    Если игрок по ним не проходит, система отклоняет заявку сама и **сразу
-    говорит игроку причину**. Раньше он ждал решения судьи, чтобы узнать то,
-    что известно в момент подачи, — и часто узнавал уже после закрытия приёма.
-
-    Судье остаётся то, что решается человеком: квота региона, спорный документ,
-    заявка не по формату. */
+    Принимать и отклонять заявки судье не нужно (тем же решением): взнос,
+    возраст по категориям турнира, лимит участников и право подачи проверяет
+    автоматический контроль в момент подачи, и не прошедший заявку не подаст
+    вовсе. В составе, дошедшем до судьи, контроль прошли все. */
 type Ply = {
   av: string;
   nm: string;
@@ -420,19 +414,8 @@ const SQUAD: Ply[] = [
   { av: P.kim, nm: 'Ким Георгий', sub: '2003 г.р. · «Алатау» · рейтинг 2401', p: 'ДОПУЩЕН', cls: 'live' },
   { av: P.tok, nm: 'Токаев Марат', sub: '2005 г.р. · «Алатау» · рейтинг 2350', p: 'ДОПУЩЕН', cls: 'live' },
   { av: P.ahm, nm: 'Ахметов Дархан', sub: '2006 г.р. · «Алатау» · рейтинг 2120', p: 'ДОПУЩЕН', cls: 'live' },
-  { av: P.osp, nm: 'Оспанов Тимур', sub: '1979 г.р. · ветеран · рейтинг 2210', p: 'ДОПУЩЕН · ВЕТЕРАН', cls: 'live' },
+  { av: P.osp, nm: 'Оспанов Тимур', sub: '1979 г.р. · «Алатау» · рейтинг 2210', p: 'ЖДЁТ ВРАЧА', cls: 'wait' },
 ];
-
-/** Возрастной ценз работает в одну сторону ✳ (комментарий федерации, 09.2026):
-    **ветеран вправе играть в категории моложе себя, обратное запрещено**. Тот,
-    кто младше нижней границы, не допускается никогда — ни автоматически, ни
-    решением судьи.
-
-    ⚠ Как это ложится на юношеские старты («до 19 лет»), где есть верхняя
-    граница, федерация не сказала: ветеран под неё очевидно не подходит.
-    Уточнить. */
-const AGE_RULE =
-  'Ветеран играет в категории моложе себя — это разрешено. Младше нижней границы не допускается никто.';
 
 /** Игрок в составе на телефоне: значок допуска не влезает в строку рядом с
     фамилией, поэтому стоит под ней. */
@@ -465,7 +448,7 @@ const PhonePly = ({ p }: { p: Ply }) => (
     что видит председатель ГСК (Э5.10), — размер старта, от которого зависит всё
     остальное. Один набор на оба формата. */
 const TILES6_1: Tile[] = [
-  { v: '128 / 112', k: 'Заявок подано / принято' },
+  { v: '128 / 250', k: 'Заявок подано / лимит' },
   { v: '14', k: 'Регионов' },
   { v: '2', k: 'Разряда · одиночный, парный' },
   { v: '14', k: 'Судей в наряде' },
@@ -473,12 +456,47 @@ const TILES6_1: Tile[] = [
   { v: '12.03', k: 'Приём закрывается', tone: 'a' },
 ];
 
+/** Кому главный судья может передать полномочия (решение совещания
+    04.11.2026): ввод и исправление счёта, вызов судей и спортсменов на стол.
+    Править одновременно может один человек; возвращаются полномочия той же
+    кнопкой. Сформировать и закрыть протокол передать нельзя. */
+const DELEGATES6 = ['Ким Л. · главный секретарь', 'Жумабеков Р. · заместитель'];
+
+export function Delegate6_1({ given: given0 = '' }: { given?: string }) {
+  const [given, setGiven] = useState(given0);
+  const [open, setOpen] = useState(false);
+  if (given) {
+    return (
+      <span className="flex items-center gap-2">
+        <Pl t={`ПОЛНОМОЧИЯ У: ${given.split(' · ')[0].toUpperCase()}`} cls="wait" />
+        <Button size="sm" variant="outline" onPress={() => setGiven('')}>
+          <Undo2 size={14} /> Вернуть полномочия
+        </Button>
+      </span>
+    );
+  }
+  return (
+    <span className="flex items-center gap-2">
+      {open &&
+        DELEGATES6.map((d) => (
+          <Button key={d} size="sm" variant="ghost" onPress={() => { setGiven(d); setOpen(false); }}>
+            {d}
+          </Button>
+        ))}
+      <Button size="sm" variant="outline" onPress={() => setOpen(!open)}>
+        <Users size={14} /> Передать полномочия
+      </Button>
+    </span>
+  );
+}
+
 export function Tournament6_1(_props: { variant?: 'desktop' | 'land' } = {}) {
   return (
     <WebApp
       role={at('ПРИЁМ ЗАЯВОК')}
       nav="Мой турнир"
       title="Мой турнир"
+      actions={<Delegate6_1 />}
     >
       <StatTiles items={TILES6_1} />
 
@@ -510,7 +528,7 @@ export function Tournament6_1(_props: { variant?: 'desktop' | 'land' } = {}) {
           <ListChecks size={14} /> Условия допуска
         </QuietAction>
         <Button variant="primary" data-to="Э6.2">
-          <ClipboardList size={15} /> Разобрать заявки
+          <ClipboardList size={15} /> Заявки участников
         </Button>
       </ActionBar>
     </WebApp>
@@ -527,19 +545,15 @@ export function Tournament6_1Phone() {
       nav="Мой турнир"
       title="Мой турнир"
       sub="Одиночный · г. Астана · 12–14 марта"
+      actions={<Delegate6_1 />}
     >
       <PhoneTiles>
         <StatTiles items={TILES6_1} />
       </PhoneTiles>
 
       <Button className="mb-4 w-full" variant="primary" data-to="Э6.2">
-        <ClipboardList size={15} /> Разобрать заявки · 8
+        <ClipboardList size={15} /> Заявки участников · 128
       </Button>
-
-      <div className="mb-2 text-[12.5px] text-neutral-500">
-        Кто подался · <b className="text-neutral-800">8</b> заявок ждут решения, в трёх игроки не
-        проходят допуск
-      </div>
       <Rows>
         {SQUAD.map((p) => <PhonePly key={p.nm} p={p} />)}
       </Rows>
@@ -552,10 +566,10 @@ export function Tournament6_1Phone() {
 
 const Tournament6_1States = () => (
   <States>
-    <Shot tone="info" title="Состояние «Приём заявок игроков»" text="«N заявок ждут решения» со ссылкой на Э6.2.">
+    <Shot tone="info" title="Состояние «Приём заявок игроков»" text="«N заявок из лимита» — ссылка на Э6.2.">
       <Frag>
         <Rows>
-          <Row nm="8 заявок ждут решения" sub="Э6.2 · приём открыт до 12.03, 18:00" pill={{ t: 'СРОЧНО', cls: 'bad' }} />
+          <Row nm="128 заявок из 250" sub="Э6.2 · приём открыт до 12.03, 18:00" pill={{ t: 'ПРИЁМ', cls: 'reg' }} />
         </Rows>
       </Frag>
     </Shot>
@@ -576,6 +590,18 @@ const Tournament6_1States = () => (
         </Rows>
       </Frag>
     </Shot>
+
+    <Shot
+      tone="warning"
+      title="Полномочия переданы"
+      text="У главного судьи — просмотр: кнопки правки на экранах турнира скрыты; вернуть — той же кнопкой."
+    >
+      <Frag>
+        <div className="flex justify-end">
+          <Delegate6_1 given={DELEGATES6[0]} />
+        </div>
+      </Frag>
+    </Shot>
   </States>
 );
 
@@ -589,52 +615,23 @@ const BIDS = [
   { nm: 'Сборная Тараза · 2 игрока', sub: 'Бектұров Р. · 11.03, 08:30', who: 'РЕГИОН' },
 ];
 
-/* Решённые заявки: вкладки «Приняты», «Отклонены» и «Отозваны» — то же
-   соревнование, но заявки, по которым решение уже есть. Судье они нужны, чтобы
-   свериться, кого он допустил и по какой причине отказал: причина отказа видна
-   заявителю, и спорят потом именно о ней. */
-const DECIDED: Record<string, { nm: string; sub: string; p: string; cls: 'live' | 'bad' | 'done' }[]> = {
-  Приняты: [
-    { nm: 'Сборная Астаны · 8 игроков', sub: 'Мукашев Б. · принята 08.03, 12:40', p: 'ПРИНЯТА', cls: 'live' },
-    { nm: 'Сборная Актобе · 5 игроков', sub: 'Ержанов Д. · принята 08.03, 16:05', p: 'ПРИНЯТА', cls: 'live' },
-    { nm: 'Сборная Костаная · 6 игроков', sub: 'Сейтқали А. · принята 09.03, 09:15', p: 'ПРИНЯТА', cls: 'live' },
-  ],
-  'Отклонены судьёй': [
-    { nm: 'Сборная Тараза · 3 игрока', sub: 'причина: «состав подан после закрытия приёма» · 12.03', p: 'ОТКЛОНЕНА', cls: 'bad' },
-  ],
-  Отозваны: [
-    { nm: 'Сборная Уральска · 5 игроков', sub: 'отозвал старший тренер региона · 10.03', p: 'ОТОЗВАНА', cls: 'done' },
-  ],
-};
+/* Отозванные заявки — вкладка «Отозваны»: их снял сам заявитель. Вкладок
+   «Приняты» и «Отклонены судьёй» больше нет (решение совещания 04.11.2026):
+   заявку принимает или не пропускает автоматический контроль при подаче, и
+   решения судьи по ней нет. */
+const WITHDRAWN = [
+  { nm: 'Сборная Уральска · 5 игроков', sub: 'отозвал старший тренер региона · 10.03' },
+];
 
-const DecidedBids = ({ kind }: { kind: string }) => {
-  const auto = false;
-  return (
-    <Panel
-      title={`${kind} · ${DECIDED[kind].length}`}
-      extra={
-        <span className="text-xs text-neutral-500">
-          {auto ? 'игроки уведомлены в момент подачи' : 'решение уже принято, состав не меняется'}
-        </span>
-      }
-    >
-      <Rows>
-        {DECIDED[kind].map((b) => (
-          <Row key={b.nm} nm={b.nm} sub={b.sub} pill={{ t: b.p, cls: b.cls }} />
-        ))}
-      </Rows>
-      {auto && (
-        <div className="mt-4">
-          <Bar>
-            Судья этих заявок не разбирал: взнос, документы и возраст проверяются в момент подачи,
-            и игрок узнаёт причину сразу, а не после закрытия приёма ✳. Пока приём открыт, он
-            может донести документ и подать заново.
-          </Bar>
-        </div>
-      )}
-    </Panel>
-  );
-};
+const WithdrawnBids = () => (
+  <Panel title={`Отозваны · ${WITHDRAWN.length}`}>
+    <Rows>
+      {WITHDRAWN.map((b) => (
+        <Row key={b.nm} nm={b.nm} sub={b.sub} pill={{ t: 'ОТОЗВАНА', cls: 'done' }} />
+      ))}
+    </Rows>
+  </Panel>
+);
 
 /** Склонение по числу: «1 игрок», «2 игрока», «5 игроков». Строка с числом
     попадается в каждой второй сводке, и «без 1 игроков» выдаёт макет за
@@ -648,12 +645,12 @@ const plural = (n: number, one: string, few: string, many: string) => {
   return many;
 };
 
-/** Вкладка «Ждут решения»: сверху очередь заявок, под ней состав выбранной.
+/** Вкладка «Поданы»: сверху заявки, под ними состав выбранной — на чтение.
 
-    Очередь рабочая ✳: строка выбирается, и её состав раскрывается ниже.
-    Раньше она была на чтение, а разбирать можно было только ту заявку, что
-    открыли по умолчанию, — то есть очередь показывала работу, которую нельзя
-    было делать. */
+    Принимать и отклонять заявки судье не нужно (решение совещания 04.11.2026):
+    до этого списка доходит только то, что прошло автоматический контроль при
+    подаче — взнос, возраст по категориям турнира, лимит участников и право
+    подачи. Строка заявки раскрывает её состав, решений на экране нет. */
 const BIDS_SQUADS: Record<string, Ply[]> = {
   'Сборная Алматы': SQUAD,
   'Сборная Караганды': [SQUAD[0], SQUAD[1], SQUAD[2]],
@@ -662,242 +659,25 @@ const BIDS_SQUADS: Record<string, Ply[]> = {
   'Сборная Тараза': [SQUAD[2], SQUAD[0]],
 };
 
-/* Колонке «Состояние» — 180px: пилюля «ДОПУЩЕН · ВЕТЕРАН» должна помещаться
-   целиком, обрезанный краем панели значок читался как дефект. */
+/* Колонке «Медицинский допуск» — 180px: пилюля должна помещаться целиком,
+   обрезанный краем панели значок читался как дефект. */
 const SQUAD_GRID = '1fr 180px';
 
-const Waiting6_2 = () => {
+const Filed6_2 = () => {
   const [cur, setCur] = useState(BIDS[0].nm);
-  /* Решения по заявкам: имя заявки → что с ней. Разобранная не исчезает из
-     очереди, а получает пометку — иначе не видно, что уже сделано. */
-  const [done, setDone] = useState<Record<string, 'ok' | 'no'>>({});
-  /* Кого из состава выбрали. Строка игрока открывает его: по одному человеку и
-     решают, кого исключить, — заявка целиком принимается или отклоняется, но
-     спорный игрок в ней обычно один. */
-  const [pick, setPick] = useState<string | null>(null);
-  /* Исключённые из состава: заявку принимают без них. */
-  const [out, setOut] = useState<string[]>([]);
-
   const bid = BIDS.find((b) => b.nm === cur)!;
   const squad = BIDS_SQUADS[bid.nm.split(' · ')[0]] ?? SQUAD;
-  const verdict = done[cur];
-  const one = squad.find((x) => x.nm === pick);
 
   return (
-    /* Блоки идут один под другим во всю ширину ✳ (30.08.2026): очередь заявок
-       стоит первой — с неё начинают, — а состав выбранной заявки раскрывается
-       под ней. В двух колонках очередь отжимала таблицу состава до колонки, где
-       фамилия не помещалась. Панель сама держит отступ снизу, обёртка не нужна. */
     <>
-      <Panel title="Ждут решения" extra={<Pill t={String(BIDS.length)} color="warning" />} flush>
+      <Panel title="Поданы" extra={<Pill t="128 ИЗ 250" color="accent" />} flush>
         <div className="divide-y divide-neutral-100">
           {BIDS.map((b) => (
             <Row
               key={b.nm}
               nm={b.nm}
               sub={b.sub}
-              pill={
-                done[b.nm] === 'ok'
-                  ? { t: 'ПРИНЯТА', cls: 'live' }
-                  : done[b.nm] === 'no'
-                    ? { t: 'ОТКЛОНЕНА', cls: 'bad' }
-                    : { t: b.who, cls: 'reg' }
-              }
-              on={b.nm === cur}
-              onSelect={() => { setCur(b.nm); setPick(null); }}
-            />
-          ))}
-        </div>
-        <div className="px-4 pb-1 pt-3">
-          <Bar>Строка открывает состав заявки ниже — разбирают их подряд, сверху вниз.</Bar>
-        </div>
-      </Panel>
-
-      <Panel
-        /* Заголовок короткий ✳: кто подал — подписью под названием, это
-           уточнение, а не заголовок. */
-        title={bid.nm}
-        sub={`${bid.who.toLowerCase() === 'регион' ? 'Заявка региона' : bid.who} · подал ${bid.sub}`}
-        extra={
-          <span className="flex items-center gap-2">
-            {/* Исключённые — пометкой в шапке ✳: она меняет то, что произойдёт
-                по «Принять состав». */}
-            {out.length > 0 && !verdict && (
-              <Pl t={`${out.length} ${plural(out.length, 'ИСКЛЮЧЁН', 'ИСКЛЮЧЕНО', 'ИСКЛЮЧЕНО')}`} cls="bad" />
-            )}
-            <Pl
-              t={verdict === 'ok' ? 'СОСТАВ ПРИНЯТ' : verdict === 'no' ? 'ЗАЯВКА ОТКЛОНЕНА' : 'ЖДЁТ РЕШЕНИЯ'}
-              cls={verdict === 'ok' ? 'live' : verdict === 'no' ? 'bad' : 'wait'}
-            />
-          </span>
-        }
-      >
-        {/* Список игроков таблицей ✳: игрок и состояние. Колонки «не пройдено»
-            здесь больше нет — и непроходящих строк тоже ✳ (31.08.2026, решение
-            владельца продукта). Кто не проходит по взносу, документам или
-            возрасту, до судьи не доходит вовсе: система отвечает заявителю в
-            момент подачи и уведомляет игрока сама. Показывать судье тех, по
-            кому он ничего не решает, значило дать ему работу, которой нет. */}
-        <Sheet grid={SQUAD_GRID} cols={['Игрок', 'Состояние']}>
-          {squad.map((pl) => {
-            const excluded = out.includes(pl.nm);
-            return (
-              <div
-                key={pl.nm}
-                role="button"
-                tabIndex={0}
-                onClick={() => setPick(pl.nm === pick ? null : pl.nm)}
-                data-on={pl.nm === pick ? '' : undefined}
-                className={
-                  'grid cursor-pointer items-center gap-3 px-4 py-2.5 text-[13px] ' +
-                  (excluded ? 'opacity-55' : '')
-                }
-                style={{ gridTemplateColumns: SQUAD_GRID }}
-              >
-                <span className="flex min-w-0 items-center gap-2.5">
-                  <Avatar size="sm">
-                    <Avatar.Image alt={pl.nm} src={pl.av} />
-                    <Avatar.Fallback>{pl.nm.slice(0, 1)}</Avatar.Fallback>
-                  </Avatar>
-                  <span className="min-w-0 leading-tight">
-                    <span className="block truncate text-[13.5px] font-medium">{pl.nm}</span>
-                    <span className="block text-xs text-neutral-500">{pl.sub}</span>
-                  </span>
-                </span>
-                <span>
-                  <Pl t={excluded ? 'ИСКЛЮЧЁН' : pl.p} cls={excluded ? 'bad' : pl.cls} />
-                </span>
-              </div>
-            );
-          })}
-        </Sheet>
-
-        {/* Выбранный игрок — решение по одному человеку: исключить его дешевле,
-            чем возвращать весь состав. */}
-        {one && !verdict && (
-          <div className="mt-3 flex items-center justify-between gap-3 rounded-lg bg-neutral-50 px-3 py-2">
-            <span className="text-[12.5px] text-neutral-600">
-              {one.nm} · {out.includes(one.nm) ? 'исключён из состава' : 'проходит допуск'}
-            </span>
-            <Button
-              size="sm"
-              variant="outline"
-              onPress={() => setOut(out.includes(one.nm) ? out.filter((x) => x !== one.nm) : [...out, one.nm])}
-            >
-              {out.includes(one.nm) ? 'Вернуть в состав' : 'Исключить из состава'}
-            </Button>
-          </div>
-        )}
-
-        {verdict ? (
-          <div className="mt-3">
-            <Bar tone={verdict === 'ok' ? 'success' : 'warning'}>
-              {verdict === 'ok'
-                ? `Состав принят${out.length ? ` без ${out.length} ${plural(out.length, 'игрока', 'игроков', 'игроков')}` : ''}. Заявитель уведомлён, участники попадают в состав турнира.`
-                : 'Заявка отклонена с причиной. Причина ушла заявителю — он может исправить и подать снова, пока приём открыт.'}
-            </Bar>
-            <QuietAction
-              onPress={() => {
-                const next = { ...done };
-                delete next[cur];
-                setDone(next);
-              }}
-            >
-              Вернуть заявку в очередь
-            </QuietAction>
-          </div>
-        ) : (
-          <div className="mt-3 flex items-center justify-end gap-2">
-            <Button
-              variant="outline"
-              data-to="Э6.8"
-              onPress={() => { setDone({ ...done, [cur]: 'no' }); setPick(null); }}
-            >
-              Отклонить заявку с причиной
-            </Button>
-            {/* Кнопка говорит, что именно сделает ✳: «принять состав» и «принять
-                состав без двоих» — разные решения, и разница должна стоять на
-                самой кнопке, а не подписью сбоку. */}
-            <Button
-              variant="primary"
-              onPress={() => { setDone({ ...done, [cur]: 'ok' }); setPick(null); }}
-            >
-              <Check size={14} />
-              {out.length
-                ? `Принять состав без ${out.length} ${plural(out.length, 'игрока', 'игроков', 'игроков')}`
-                : 'Принять состав'}
-            </Button>
-          </div>
-        )}
-        <div className="mt-4">
-          <Bar>{AGE_RULE}</Bar>
-        </div>
-      </Panel>
-    </>
-  );
-};
-
-/** Вкладки экрана заявок: подпись и то, какие решённые заявки под ней. Один
-    набор на оба формата — на десктопе `PageTabs`, на телефоне полоса, которая
-    уезжает вбок. Без `kind` — очередь тех, кого ещё разбирают.
-
-    Вкладки «Отклонены системой» здесь нет ✳ (31.08.2026, решение владельца
-    продукта): заявка, не прошедшая по взносу, документам или возрасту, к судье
-    не попадает вовсе — система отвечает заявителю в момент подачи. На экране
-    судьи остаётся то, что решает человек. */
-const BID_TABS: { t: string; kind?: string }[] = [
-  { t: 'Ждут решения · 8' },
-  { t: 'Приняты · 104', kind: 'Приняты' },
-  { t: 'Отклонены судьёй · 3', kind: 'Отклонены судьёй' },
-  { t: 'Отозваны · 4', kind: 'Отозваны' },
-];
-
-export function Bids6_2({ tab }: { tab?: string }) {
-  return (
-    <WebApp
-      role={at('ПРИЁМ ЗАЯВОК')}
-      nav="Заявки"
-      title="Заявки участников"
-      sub="Заявка № 14 · 4 игрока"
-    >
-      <PageTabs
-        active={tab}
-        items={BID_TABS.map((b) => ({
-          t: b.t,
-          view: b.kind ? <DecidedBids kind={b.kind} /> : <Waiting6_2 />,
-        }))}
-      />
-    </WebApp>
-  );
-}
-
-/** Э6.2 на телефоне: очередь заявок, состав выбранной и решение по ней.
-    Таблица состава (игрок · не пройдено · состояние) в 392 px в три колонки не
-    ложится — те же три величины стоят в строке одна под другой. Исключение
-    отдельного игрока из состава остаётся десктопным: это разбор спорной
-    заявки за столом, а не работа на ходу. */
-const Waiting6_2Phone = () => {
-  const [cur, setCur] = useState(BIDS[0].nm);
-  const [done, setDone] = useState<Record<string, 'ok' | 'no'>>({});
-  const bid = BIDS.find((b) => b.nm === cur)!;
-  const squad = BIDS_SQUADS[bid.nm.split(' · ')[0]] ?? SQUAD;
-  const verdict = done[cur];
-  return (
-    <>
-      <Panel title="Ждут решения" extra={<Pill t={String(BIDS.length)} color="warning" />} flush>
-        <div className="divide-y divide-neutral-100">
-          {BIDS.map((b) => (
-            <Row
-              key={b.nm}
-              nm={b.nm}
-              sub={b.sub}
-              pill={
-                done[b.nm] === 'ok'
-                  ? { t: 'ПРИНЯТА', cls: 'live' }
-                  : done[b.nm] === 'no'
-                    ? { t: 'ОТКЛОНЕНА', cls: 'bad' }
-                    : { t: b.who, cls: 'reg' }
-              }
+              pill={{ t: b.who, cls: 'reg' }}
               on={b.nm === cur}
               onSelect={() => setCur(b.nm)}
             />
@@ -908,54 +688,95 @@ const Waiting6_2Phone = () => {
       <Panel
         title={bid.nm}
         sub={`${bid.who.toLowerCase() === 'регион' ? 'Заявка региона' : bid.who} · подал ${bid.sub}`}
-        extra={
-          /* Слова те же, что на десктопе: «состав принят» и «заявка отклонена» —
-             разные решения, и сокращать их до одного слова нельзя. */
-          <Pl
-            t={verdict === 'ok' ? 'СОСТАВ ПРИНЯТ' : verdict === 'no' ? 'ЗАЯВКА ОТКЛОНЕНА' : 'ЖДЁТ РЕШЕНИЯ'}
-            cls={verdict === 'ok' ? 'live' : verdict === 'no' ? 'bad' : 'wait'}
-          />
-        }
+        extra={<Pl t="В СОСТАВЕ" cls="live" />}
+      >
+        <Sheet grid={SQUAD_GRID} cols={['Игрок', 'Медицинский допуск']}>
+          {squad.map((pl) => (
+            <div
+              key={pl.nm}
+              className="grid items-center gap-3 px-4 py-2.5 text-[13px]"
+              style={{ gridTemplateColumns: SQUAD_GRID }}
+            >
+              <span className="flex min-w-0 items-center gap-2.5">
+                <Avatar size="sm">
+                  <Avatar.Image alt={pl.nm} src={pl.av} />
+                  <Avatar.Fallback>{pl.nm.slice(0, 1)}</Avatar.Fallback>
+                </Avatar>
+                <span className="min-w-0 leading-tight">
+                  <span className="block truncate text-[13.5px] font-medium">{pl.nm}</span>
+                  <span className="block text-xs text-neutral-500">{pl.sub}</span>
+                </span>
+              </span>
+              <span>
+                <Pl t={pl.p} cls={pl.cls} />
+              </span>
+            </div>
+          ))}
+        </Sheet>
+      </Panel>
+    </>
+  );
+};
+
+/** Вкладки экрана заявок: подпись и вид под ней. Один набор на оба формата —
+    на десктопе `PageTabs`, на телефоне полоса, которая уезжает вбок. */
+const BID_TABS: { t: string; withdrawn?: boolean }[] = [
+  { t: 'Поданы · 128' },
+  { t: 'Отозваны · 1', withdrawn: true },
+];
+
+export function Bids6_2({ tab }: { tab?: string }) {
+  return (
+    <WebApp
+      role={at('ПРИЁМ ЗАЯВОК')}
+      nav="Заявки"
+      title="Заявки участников"
+      sub="Приём открыт до 12.03, 18:00"
+    >
+      <PageTabs
+        active={tab}
+        items={BID_TABS.map((b) => ({
+          t: b.t,
+          view: b.withdrawn ? <WithdrawnBids /> : <Filed6_2 />,
+        }))}
+      />
+    </WebApp>
+  );
+}
+
+/** Э6.2 на телефоне: заявки и состав выбранной — на чтение. Таблица состава
+    в 392 px в две колонки не ложится — значок допуска стоит под фамилией. */
+const Filed6_2Phone = () => {
+  const [cur, setCur] = useState(BIDS[0].nm);
+  const bid = BIDS.find((b) => b.nm === cur)!;
+  const squad = BIDS_SQUADS[bid.nm.split(' · ')[0]] ?? SQUAD;
+  return (
+    <>
+      <Panel title="Поданы" extra={<Pill t="128 ИЗ 250" color="accent" />} flush>
+        <div className="divide-y divide-neutral-100">
+          {BIDS.map((b) => (
+            <Row
+              key={b.nm}
+              nm={b.nm}
+              sub={b.sub}
+              pill={{ t: b.who, cls: 'reg' }}
+              on={b.nm === cur}
+              onSelect={() => setCur(b.nm)}
+            />
+          ))}
+        </div>
+      </Panel>
+
+      <Panel
+        title={bid.nm}
+        sub={`${bid.who.toLowerCase() === 'регион' ? 'Заявка региона' : bid.who} · подал ${bid.sub}`}
+        extra={<Pl t="В СОСТАВЕ" cls="live" />}
         flush
       >
         <div className="divide-y divide-neutral-100">
           {squad.map((pl) => <PhonePly key={pl.nm} p={pl} />)}
         </div>
       </Panel>
-
-      {verdict ? (
-        <>
-          <Bar tone={verdict === 'ok' ? 'success' : 'warning'}>
-            {verdict === 'ok'
-              ? 'Состав принят. Заявитель уведомлён, участники попадают в состав турнира.'
-              : 'Заявка отклонена с причиной. Причина ушла заявителю — он может исправить и подать снова, пока приём открыт.'}
-          </Bar>
-          <Wide>
-            <QuietAction
-              onPress={() => {
-                const next = { ...done };
-                delete next[cur];
-                setDone(next);
-              }}
-            >
-              Вернуть заявку в очередь
-            </QuietAction>
-          </Wide>
-        </>
-      ) : null}
-      <Bar>{AGE_RULE}</Bar>
-      {/* Решение принято — полосы больше нет: под ней стоит «вернуть заявку в
-          очередь», и это уже другое действие. */}
-      {!verdict && (
-        <ActionBar>
-          <Button variant="outline" data-to="Э6.8" onPress={() => setDone({ ...done, [cur]: 'no' })}>
-            Отклонить заявку с причиной
-          </Button>
-          <Button variant="primary" onPress={() => setDone({ ...done, [cur]: 'ok' })}>
-            <Check size={14} /> Принять состав
-          </Button>
-        </ActionBar>
-      )}
     </>
   );
 };
@@ -968,12 +789,12 @@ export function Bids6_2Phone() {
       role={at('ПРИЁМ ЗАЯВОК')}
       nav="Заявки"
       title="Заявки участников"
-      sub="Заявка № 14 · 4 игрока"
+      sub="Приём открыт до 12.03, 18:00"
     >
       <Strip>
         <FilterSeg items={BID_TABS.map((b) => b.t)} active={tab} onPick={setTab} />
       </Strip>
-      {hit.kind ? <DecidedBids kind={hit.kind} /> : <Waiting6_2Phone />}
+      {hit.withdrawn ? <WithdrawnBids /> : <Filed6_2Phone />}
     </PhoneRoleApp>
   );
 }
@@ -986,14 +807,11 @@ const Bids6_2States = () => (
       </Frag>
     </Shot>
 
-    <Shot tone="warning" title="Заявка с непроходящим игроком" text="Кнопка «Принять» остаётся, но с предупреждением.">
+    <Shot tone="warning" title="Лимит участников набран" text="«Приём заполнен»: новые заявки система не принимает.">
       <Frag>
         <Rows>
-          <Row nm="Жумабеков Расул" sub="взнос не оплачен · медицинский допуск не приложен" pill={{ t: 'НЕ ПРОХОДИТ', cls: 'bad' }} />
+          <Row nm="250 заявок из 250" sub="приём открыт до 12.03, 18:00" pill={{ t: 'ПРИЁМ ЗАПОЛНЕН', cls: 'wait' }} />
         </Rows>
-        <div className="mt-3">
-          <Bar tone="warning">Решение за судьёй: система показывает несоответствие, но не решает за него.</Bar>
-        </div>
       </Frag>
     </Shot>
 
@@ -1017,12 +835,22 @@ const Bids6_2States = () => (
     к любым параметрам турнира у судьи есть** ✳: он отвечает за соревнование
     целиком, но правка после утверждения уходит в журнал с автором (§12).
 
-    Жеребьёвку проводит главный судья ✳ (комментарий федерации, 09.2026):
-    раньше бросал секретарь, а судья утверждал — так была прочитана
-    формулировка документа. Федерация поправила — бросает судья. Здесь же судья
-    задаёт **регламент времени по кругам**: без него расписание не составить. */
+    Жеребьёвку проводит главный судья, данные вносит секретарь (решение
+    совещания 04.11.2026). Посев — автоматически, по рейтингу на начало
+    турнира: в сетке на выбывание сеяных двое (№1 вверх, №2 вниз, остальных
+    тянут), в круговой — «змейка», жребий только среди тех, у кого рейтинга нет
+    или он равный. Переключателя «посев / жребий» больше нет. Систему проведения
+    подсказывает ИИ по дням, столам и участникам, выбирает главный судья — или
+    задаёт сам. Здесь же судья задаёт **регламент времени по кругам**. */
 const DRAW_TABS = ['Жеребьёвка', 'Регламент времени', 'Сетка'];
-const DRAW_WAYS = ['Посев по рейтингу', 'Жребий'];
+
+/** Варианты системы проведения из подсказки ИИ: вводные — дни, столы,
+    участники. ⚠ Полный список вводных напишут судьи. */
+const SYSTEMS6 = [
+  { nm: 'Группы по 4 + плей-офф', sub: '223 матча · 130 стол-часов из 480 · 3 дня', fit: true },
+  { nm: 'Олимпийская с утешительной', sub: '190 матчей · 112 стол-часов из 480 · 2 дня', fit: true },
+  { nm: 'Круговая в 16 группах + плей-офф', sub: '412 матчей · 520 стол-часов из 480', fit: false },
+];
 
 /** Сколько минут на матч в каждом круге. Пример федерации: предварительные
     первые три тура по 25 минут, дальше по 30; в плей-офф до 1/8 по 25, с
@@ -1046,25 +874,86 @@ const tiles6_3 = (n: number): Tile[] => [
   { v: '112', k: 'Участников в составе' },
   { v: '14', k: 'Регионов' },
   { v: '223', k: 'Матча по сетке' },
-  { v: '16', k: 'Сеяных', tone: 'g' },
+  { v: '2', k: 'Сеяных в плей-офф', tone: 'g' },
   { v: String(Math.max(0, n - 1)), k: 'Перебросов', tone: n > 1 ? 'a' : undefined },
 ];
 
 /** Первые слоты: кто где стоит после посева или жребия. Один список на оба
     формата — строки реестра одинаково читаются и на 1200, и на 392 px. */
-const Seeds6_3 = ({ n, lot }: { n: number; lot: boolean }) => (
+const Seeds6_3 = ({ n }: { n: number }) => (
   <Rows>
-    <Row av={P.kim} nm="1 · Ким Георгий" sub="«Алатау» · рейтинг 2401" pill={{ t: 'ПОСЕВ №1', cls: 'reg' }} />
-    <Row av={P.tok} nm="128 · Токаев Марат" sub="«Алатау» · рейтинг 2350" pill={{ t: 'ПОСЕВ №2', cls: 'reg' }} />
-    <Row av={P.ahm} nm="65 · Ахметов Дархан" sub="«Алатау» · рейтинг 2120" pill={{ t: 'ПОСЕВ №3', cls: 'reg' }} />
+    <Row av={P.kim} nm="1 · Ким Георгий" sub="«Алатау» · рейтинг 2401" pill={{ t: 'ПОСЕВ №1 · ВВЕРХ', cls: 'reg' }} />
+    <Row av={P.tok} nm="32 · Токаев Марат" sub="«Алатау» · рейтинг 2350" pill={{ t: 'ПОСЕВ №2 · ВНИЗ', cls: 'reg' }} />
+    <Row
+      av={P.ahm}
+      nm={n ? '17 · Ахметов Дархан' : '— · Ахметов Дархан'}
+      sub="«Алатау» · рейтинг 2120"
+      pill={{ t: n ? 'ЖРЕБИЙ' : 'ЖДЁТ ЖРЕБИЯ', cls: n ? 'wait' : 'done' }}
+    />
     <Row
       av={P.bai}
-      nm={n || !lot ? '12 · Байжанов Асхат' : '— · Байжанов Асхат'}
+      nm={n ? '9 · Байжанов Асхат' : '— · Байжанов Асхат'}
       sub="«Алатау» · рейтинг 2180"
-      pill={lot ? { t: n ? 'ЖРЕБИЙ' : 'ЖДЁТ ЖРЕБИЯ', cls: n ? 'wait' : 'done' } : { t: 'ПОСЕВ №7', cls: 'reg' }}
+      pill={{ t: n ? 'ЖРЕБИЙ' : 'ЖДЁТ ЖРЕБИЯ', cls: n ? 'wait' : 'done' }}
     />
   </Rows>
 );
+
+/** Группы — «змейкой» по рейтингу: 1-й в группу A, 2-й в B, …, 8-й в H, 9-й
+    обратно в H. Жребий — только среди тех, у кого рейтинга нет или он равный. */
+const SNAKE6 = [
+  { g: 'Группа A', rows: 'Ким Г. (1) · Сарсенов А. (16) · Мурат К. (17) · Асан Б. (32)' },
+  { g: 'Группа B', rows: 'Токаев М. (2) · Досжан М. (15) · Абиш Н. (18) · Ли В. (31)' },
+  { g: 'Группа H', rows: 'Ахметов Д. (8) · Байжанов А. (9) · Цой А. (24) · Кайрат А. (25)' },
+];
+
+const Snake6_3 = () => (
+  <Rows>
+    {SNAKE6.map((r) => (
+      <Row key={r.g} nm={r.g} sub={r.rows} pill={{ t: 'ЗМЕЙКА', cls: 'reg' }} />
+    ))}
+    <Row nm="Без рейтинга · 4" sub="Оралбек Д. · Бекзат Ж. · Сериков Н. · Пак С." pill={{ t: 'ЖРЕБИЙ', cls: 'wait' }} />
+  </Rows>
+);
+
+/** Система проведения: подсказка ИИ и ручной выбор. Один блок на оба
+    формата. */
+const System6_3 = ({ phone }: { phone?: boolean }) => {
+  const [pick, setPick] = useState(SYSTEMS6[0].nm);
+  return (
+    <Panel title="Система проведения" extra={<Pl t="ПОДСКАЗКА ИИ" cls="reg" />}>
+      <FormGrid>
+        <FieldView label="Дней" value="3" />
+        <FieldView label="Столов" value="20" />
+        <FieldView label="Участников" value="112" wide={phone} />
+      </FormGrid>
+      <div className="mt-3">
+        <Rows>
+          {SYSTEMS6.map((v) => (
+            <Row
+              key={v.nm}
+              nm={v.nm}
+              sub={v.sub}
+              pill={
+                pick === v.nm
+                  ? { t: 'ВЫБРАНА', cls: 'live' }
+                  : v.fit
+                    ? { t: 'УКЛАДЫВАЕТСЯ', cls: 'reg' }
+                    : { t: 'НЕ ВЛЕЗАЕТ', cls: 'bad' }
+              }
+              action={pick === v.nm ? undefined : 'Выбрать'}
+              onAction={() => setPick(v.nm)}
+            />
+          ))}
+        </Rows>
+      </div>
+      <div className={'mt-3 flex gap-2 ' + (phone ? 'flex-col items-start' : 'items-center justify-end')}>
+        <QuietAction><Pencil size={14} /> Задать группы вручную</QuietAction>
+        <QuietAction><Pencil size={14} /> Нарисовать сетку</QuietAction>
+      </div>
+    </Panel>
+  );
+};
 
 /** Что собрал секретарь: то, под чем судья ставит «утвердить» или «вернуть». */
 const Built6_3 = ({ n }: { n: number }) => (
@@ -1074,7 +963,7 @@ const Built6_3 = ({ n }: { n: number }) => (
       sub="группы по 4 + плей-офф · 223 матча · 130 стол-часов из 480"
       pill={{ t: 'УКЛАДЫВАЕТСЯ', cls: 'live' }}
     />
-    <Row nm="Жеребьёвка" sub={`провёл главный судья · ${n ? `бросков ${n}` : 'посев по рейтингу'}`} val="11.03, 15:40" />
+    <Row nm="Жеребьёвка" sub={`провёл главный судья, внёс секретарь · ${n ? `бросков ${n}` : 'жребий не брошен'}`} val="11.03, 15:40" />
     <Row nm="Сетка" sub="128 слотов · 16 bye добраны автоматически" val="11.03, 16:20" />
     <Row nm="Кто собрал" sub="Ким Лариса · главный секретарь" val="Э7.3" to="Э7.3" />
   </Rows>
@@ -1085,8 +974,6 @@ export function Bracket6_3() {
   /* Утверждена ли сетка. Возврат идёт с замечанием — секретарь должен знать,
      что переделывать. */
   const [ok, setOk] = useState<'' | 'yes' | 'back'>('');
-  const [way, setWay] = useState(DRAW_WAYS[1]);
-  const lot = way === DRAW_WAYS[1];
   /* Сколько раз бросали: первый бросок — не переброс. */
   const [n, setN] = useState(0);
 
@@ -1104,48 +991,28 @@ export function Bracket6_3() {
            в неё не влезала. Панель держит отступ снизу сама. */
         <>
           <Panel
-            title="Распределение по слотам"
-            extra={<Pl t={!lot ? 'ПОСЕВ ГОТОВ' : n ? 'ЖРЕБИЙ ПРОВЕДЁН' : 'ЖРЕБИЙ НЕ БРОШЕН'} cls={!lot || n ? 'live' : 'wait'} />}
+            title="Посев и жребий"
+            extra={<Pl t={n ? 'ЖРЕБИЙ ПРОВЕДЁН' : 'ЖРЕБИЙ НЕ БРОШЕН'} cls={n ? 'live' : 'wait'} />}
           >
-            <div className="mb-3 flex flex-col gap-1">
-              <span className="text-xs font-medium text-neutral-500">Как разводим участников</span>
-              <div><FilterSeg items={DRAW_WAYS} active={way} onPick={(v) => { setWay(v); setN(0); }} /></div>
-            </div>
             <FormGrid>
-              <FieldView label="Основание посева" value="Рейтинг ФНТ РК на 05.03.2026" wide />
-              <FieldView label="Сеяных" value="16 · по разным четвертям" />
-              <FieldView
-                label={lot ? 'Последний жребий' : 'Случайность'}
-                value={lot ? (n ? `бросок ${n} · Оспанов Т.` : 'не бросали') : 'не участвует'}
-              />
+              <FieldView label="Основание посева" value="Рейтинг ФНТ РК на начало турнира · 12.03.2026" wide />
+              <FieldView label="Группы · круговая" value="Змейка по рейтингу" />
+              <FieldView label="Плей-офф · на выбывание" value="2 сеяных: №1 вверх, №2 вниз" />
+              <FieldView label="Последний жребий" value={n ? `бросок ${n} · Оспанов Т.` : 'не бросали'} wide />
             </FormGrid>
-            {/* При посеве по рейтингу бросать нечего: расстановка выводится из
-                рейтинга целиком. Кнопка появляется только у жребия. */}
-            <div className="mt-3">
-              <Bar>
-                Жеребьёвка лежит на главном судье ✳ (комментарий федерации, 09.2026). Секретарь
-                вправе её видеть и с ней работать — бросить, перебросить, пересобрать слоты
-                (Э7.3), — но утверждает только главный судья. Прежний результат каждого броска
-                остаётся в журнале: переигранный жребий участники вправе проверить.
-              </Bar>
-            </div>
           </Panel>
 
-          <Panel title="Кто где стоит" extra={<span className="text-xs text-neutral-500">первые слоты</span>}>
-            <Seeds6_3 n={n} lot={lot} />
-            <div className="mt-3">
-              <Bar>Весь состав со слотами — у секретаря (Э7.3): он собирает по ним сетку.</Bar>
-            </div>
+          <Panel title="Группы" extra={<span className="text-xs text-neutral-500">первые группы</span>}>
+            <Snake6_3 />
+          </Panel>
+
+          <Panel title="Плей-офф" extra={<span className="text-xs text-neutral-500">первые слоты</span>}>
+            <Seeds6_3 n={n} />
           </Panel>
           <ActionBar>
-            <QuietAction>
-              <Pencil size={14} /> {lot ? 'Изменить состав сеяных' : 'Изменить основание посева'}
-            </QuietAction>
-            {lot && (
-              <Button variant="primary" onPress={() => setN(n + 1)}>
-                <Shuffle size={15} /> {n ? 'Перебросить жребий' : 'Провести жеребьёвку'}
-              </Button>
-            )}
+            <Button variant="primary" onPress={() => setN(n + 1)}>
+              <Shuffle size={15} /> {n ? 'Перебросить жребий' : 'Провести жеребьёвку'}
+            </Button>
           </ActionBar>
         </>
       )}
@@ -1196,6 +1063,8 @@ export function Bracket6_3() {
            это судья и отвечает «утвердить» или «вернуть», — а под решением
            параметры турнира, из которых сетка выросла. */
         <>
+          <System6_3 />
+
           <Panel
             title="Что собрал секретарь"
             extra={<Pl t={ok === 'yes' ? 'УТВЕРЖДЕНА' : ok === 'back' ? 'ВОЗВРАЩЕНА' : 'ЖДЁТ УТВЕРЖДЕНИЯ'} cls={ok === 'yes' ? 'live' : ok === 'back' ? 'bad' : 'wait'} />}
@@ -1248,8 +1117,6 @@ export function Bracket6_3() {
 export function Bracket6_3Phone() {
   const [tab, setTab] = useState(DRAW_TABS[0]);
   const [ok, setOk] = useState<'' | 'yes' | 'back'>('');
-  const [way, setWay] = useState(DRAW_WAYS[1]);
-  const lot = way === DRAW_WAYS[1];
   const [n, setN] = useState(0);
 
   return (
@@ -1265,34 +1132,28 @@ export function Bracket6_3Phone() {
       {tab === DRAW_TABS[0] && (
         <>
           <Panel
-            title="Распределение по слотам"
-            extra={<Pl t={!lot ? 'ПОСЕВ ГОТОВ' : n ? 'ЖРЕБИЙ ПРОВЕДЁН' : 'ЖРЕБИЙ НЕ БРОШЕН'} cls={!lot || n ? 'live' : 'wait'} />}
+            title="Посев и жребий"
+            extra={<Pl t={n ? 'ЖРЕБИЙ ПРОВЕДЁН' : 'ЖРЕБИЙ НЕ БРОШЕН'} cls={n ? 'live' : 'wait'} />}
           >
-            <Strip>
-              <FilterSeg items={DRAW_WAYS} active={way} onPick={(v) => { setWay(v); setN(0); }} />
-            </Strip>
             {/* Поля в одну колонку: две на 392 px превращаются в две узкие
                 полосы, где не помещается ни подпись, ни значение. */}
             <FormGrid>
-              <FieldView label="Основание посева" value="Рейтинг ФНТ РК на 05.03.2026" wide />
-              <FieldView label="Сеяных" value="16 · по разным четвертям" wide />
-              <FieldView
-                label={lot ? 'Последний жребий' : 'Случайность'}
-                value={lot ? (n ? `бросок ${n} · Оспанов Т.` : 'не бросали') : 'не участвует'}
-                wide
-              />
+              <FieldView label="Основание посева" value="Рейтинг ФНТ РК на начало турнира · 12.03.2026" wide />
+              <FieldView label="Группы · круговая" value="Змейка по рейтингу" wide />
+              <FieldView label="Плей-офф · на выбывание" value="2 сеяных: №1 вверх, №2 вниз" wide />
+              <FieldView label="Последний жребий" value={n ? `бросок ${n} · Оспанов Т.` : 'не бросали'} wide />
             </FormGrid>
-            {lot && (
-              <Button className="mt-4 w-full" variant="primary" onPress={() => setN(n + 1)}>
-                <Shuffle size={15} /> {n ? 'Перебросить жребий' : 'Провести жеребьёвку'}
-              </Button>
-            )}
+            <Button className="mt-4 w-full" variant="primary" onPress={() => setN(n + 1)}>
+              <Shuffle size={15} /> {n ? 'Перебросить жребий' : 'Провести жеребьёвку'}
+            </Button>
           </Panel>
 
-          <Panel title="Кто где стоит" extra={<span className="text-xs text-neutral-500">первые слоты</span>} flush>
-            <Seeds6_3 n={n} lot={lot} />
+          <Panel title="Группы" extra={<span className="text-xs text-neutral-500">первые группы</span>} flush>
+            <Snake6_3 />
           </Panel>
-          <Bar>Весь состав со слотами — у секретаря (Э7.3): он собирает по ним сетку.</Bar>
+          <Panel title="Плей-офф" extra={<span className="text-xs text-neutral-500">первые слоты</span>} flush>
+            <Seeds6_3 n={n} />
+          </Panel>
         </>
       )}
 
@@ -1322,6 +1183,8 @@ export function Bracket6_3Phone() {
 
       {tab === DRAW_TABS[2] && (
         <>
+          <System6_3 phone />
+
           <Panel
             title="Что собрал секретарь"
             extra={<Pl t={ok === 'yes' ? 'УТВЕРЖДЕНА' : ok === 'back' ? 'ВОЗВРАЩЕНА' : 'ЖДЁТ УТВЕРЖДЕНИЯ'} cls={ok === 'yes' ? 'live' : ok === 'back' ? 'bad' : 'wait'} />}
@@ -1951,18 +1814,11 @@ export function Judges6_5() {
           самих блоках — «2 ПУСТЫХ СЛОТА» на столах зала, «2 СВОБОДНЫ» на
           наряде. Витрина над рабочей частью только отодвигала её вниз. */}
 
-      {/* Игра без судьи — свойство турнира, а не стола ✳ (комментарий
-          федерации, 09.2026): разрешение даётся на соревнование целиком, иначе
-          на одном столе счёт ведёт судья, на соседнем игроки, и протокол
-          собирается из разного. На **официальном** старте разрешить её нельзя
-          вовсе — Чемпионат Казахстана именно такой, поэтому кнопка здесь
-          заблокирована, а живой она бывает только на любительском турнире
-          (кадр в полке состояний). */}
-      <div className="mb-3 flex items-center justify-between gap-3">
+      {/* Тумблера «разрешить игру без судьи» здесь больше нет (решение
+          совещания 04.11.2026): матч без судьи — режим вызова пары на стол
+          (Э6.6), а не свойство турнира. */}
+      <div className="mb-3">
         <Segmented items={JUDGE_VIEWS} value={view} onPick={setView} />
-        <span className="flex-1 text-right text-[12.5px] text-neutral-500">
-        </span>
-        <DisabledAction>Разрешить игру без судьи</DisabledAction>
       </div>
 
       {view === JUDGE_VIEWS[1] ? (
@@ -2062,11 +1918,6 @@ export function Judges6_5Phone() {
             <Crew6_5 />
           </Panel>
 
-          <div className="mb-3 text-[12.5px] text-neutral-500">
-            </div>
-          <Wide>
-            <DisabledAction>Разрешить игру без судьи</DisabledAction>
-          </Wide>
         </>
       )}
     </PhoneRoleApp>
@@ -2086,20 +1937,6 @@ const Judges6_5States = () => (
       </Frag>
     </Shot>
 
-    {/* На официальном старте (макет выше) кнопка заблокирована — живой тумблер
-        существует только здесь, на любительском турнире ✳. */}
-    <Shot tone="info" title="Любительский турнир — игра без судьи разрешена" text="Разрешение — свойство турнира, а не стола; счёт ведут сами игроки.">
-      <Frag>
-        <Rows>
-          <Row
-            nm="Игра без судьи разрешена"
-            sub="стол работает без судьи — счёт ведут сами игроки"
-            pill={{ t: 'ЛЮБИТЕЛЬСКИЙ', cls: 'reg' }}
-            action="Требовать судью"
-          />
-        </Rows>
-      </Frag>
-    </Shot>
   </States>
 );
 
@@ -2120,7 +1957,7 @@ const LivePanel6_6 = () => (
     <LiveCards />
     <div className="mt-3 flex flex-col gap-2">
       <span className="text-[12px] leading-snug text-neutral-500">
-        Правка — в пределах лимита, в журнал с автором
+        Правка — на любом этапе, в журнал с автором
       </span>
       <span className="flex flex-wrap items-center gap-2">
         <Button size="sm" variant="outline"><Pencil size={13} /> Исправить счёт</Button>
@@ -2200,6 +2037,20 @@ const Live6_6States = () => (
         </Rows>
       </Frag>
     </Shot>
+
+    {/* Матч без судьи — режим вызова пары (решение совещания 04.11.2026):
+        счёт вносит любой из игроков, второму уходит уведомление, спор — через
+        главного судью. */}
+    <Shot tone="warning" title="Счёт «без судьи» оспорен" text="Игрок внёс счёт, соперник не согласен — решает главный судья.">
+      <Frag>
+        <Rows>
+          <Row nm="Стол 11 · Ким — Пак" sub="без судьи · счёт 3 : 1 внёс Ким Г. · Пак С. не согласен" pill={{ t: 'ОСПОРЕН', cls: 'wait' }} />
+        </Rows>
+        <div className="mt-3">
+          <Button size="sm" variant="outline"><Pencil size={13} /> Исправить счёт</Button>
+        </div>
+      </Frag>
+    </Shot>
   </States>
 );
 
@@ -2216,7 +2067,7 @@ const PLACES: Place[] = [
   { pl: 6, av: P.sar, nm: 'Сарсенов Абай', club: 'Иртыш · Павлодар', res: '5 матчей · 11 : 12' },
 ];
 
-const PROTO = ['Формируется', 'На утверждении', 'Возвращён', 'Закрыт'];
+const PROTO = ['Формируется', 'Закрыт · правка 24 ч', 'Закрыт окончательно'];
 
 /** Полоса состояний протокола: текущее — заливкой, остальные приглушены. */
 const ProtoStrip = ({ cur }: { cur: string }) => (
@@ -2303,7 +2154,7 @@ export function Protocol6_7() {
       role={at('ИТОГОВЫЙ ПРОТОКОЛ')}
       nav="Протокол"
       title="Итоговый протокол"
-      sub="Все 127 матчей сыграны · ввод результатов заблокирован"
+      sub="Все 127 матчей сыграны"
     >
       {/* Плиток-счётчиков над протоколом больше нет ✳ (30.08.2026): все четыре
           числа стояли в других местах этого же экрана — «127 из 127» в
@@ -2358,8 +2209,8 @@ export function Protocol6_7() {
           />
           <div className="mt-3">
             <Bar>
-              Групповой этап смотрят перед отправкой не ради красоты: спор о месте в плей-офф
-              решается местом в группе, и после утверждения переиграть его нельзя.
+              Групповой этап смотрят перед закрытием протокола не ради красоты: спор о месте в плей-офф
+              решается местом в группе, и после закрытия протокола переиграть его нельзя.
             </Bar>
           </div>
         </>
@@ -2370,13 +2221,12 @@ export function Protocol6_7() {
            судья подписывается, и им нужна вся строка (место, человек, клуб,
            результат). Журнал и отправка — под ними. */
         <>
-          <Panel title="Итоговые места" extra={<Pl t="РЕЙТИНГ ПЕРЕСЧИТАЕТСЯ ПОСЛЕ ЗАКРЫТИЯ" cls="live" />} flush>
+          <Panel title="Итоговые места" extra={<Pl t="РЕЙТИНГ — ЧЕРЕЗ СУТКИ ПОСЛЕ ЗАКРЫТИЯ" cls="live" />} flush>
             <div className="divide-y divide-neutral-100">
               {PLACES.map((p) => <PlaceRow key={p.pl} p={p} />)}
             </div>
-            <div className="flex items-center justify-between gap-3 border-t border-neutral-100 bg-neutral-50 px-4 py-2.5">
-              <span className="text-[12.5px] text-neutral-500">Протокол сформирован — правка результатов закрыта</span>
-              <QuietAction><Printer size={13} /> Печать · после утверждения</QuietAction>
+            <div className="flex items-center justify-end gap-3 border-t border-neutral-100 bg-neutral-50 px-4 py-2.5">
+              <QuietAction><Printer size={13} /> Печать · после закрытия</QuietAction>
             </div>
           </Panel>
 
@@ -2394,7 +2244,7 @@ export function Protocol6_7() {
             </Rows>
 
             <div className="mt-4">
-              <PrimaryAction>Отправить председателю ГСК</PrimaryAction>
+              <PrimaryAction to="Э6.9">Сформировать и закрыть протокол</PrimaryAction>
             </div>
           </Panel>
         </>
@@ -2453,7 +2303,7 @@ export function Protocol6_7Phone() {
       role={at('ИТОГОВЫЙ ПРОТОКОЛ')}
       nav="Протокол"
       title="Итоговый протокол"
-      sub="Все 127 матчей сыграны · ввод результатов заблокирован"
+      sub="Все 127 матчей сыграны"
     >
       <Strip>
         <Segmented items={PROTO_VIEWS} value={view} onPick={setView} />
@@ -2484,8 +2334,8 @@ export function Protocol6_7Phone() {
           </Rows>
           <div className="mt-3">
             <Bar>
-              Спор о месте в плей-офф решается местом в группе, и после утверждения переиграть его
-              нельзя — поэтому группы смотрят до отправки.
+              Спор о месте в плей-офф решается местом в группе, и после закрытия протокола переиграть его
+              нельзя — поэтому группы смотрят до закрытия.
             </Bar>
           </div>
         </>
@@ -2513,7 +2363,7 @@ export function Protocol6_7Phone() {
             </Rows>
             <div className="mt-4">
               <Wide>
-                <PrimaryAction>Отправить председателю ГСК</PrimaryAction>
+                <PrimaryAction to="Э6.9">Сформировать и закрыть протокол</PrimaryAction>
               </Wide>
             </div>
           </Panel>
@@ -2525,104 +2375,23 @@ export function Protocol6_7Phone() {
 
 const Protocol6_7States = () => (
   <States>
-    <Shot tone="info" title="Ожидание решения ГСК" text="Экран «протокол на утверждении» — без кнопок правки." wide>
+    <Shot tone="info" title="Сутки на правку" text="«Правка до …»: исправить может только главный судья; рейтинг ещё не пересчитан." wide>
       <Frag>
+        <ProtoStrip cur="Закрыт · правка 24 ч" />
         <Rows>
-          <Row nm="Протокол отправлен" sub="председателю ГСК · 20.05, 19:10" pill={{ t: 'НА УТВЕРЖДЕНИИ', cls: 'wait' }} />
+          <Row nm="Протокол закрыт" sub="20.05, 19:10 · правка до 21.05, 19:10" pill={{ t: 'ПРАВКА 24 Ч', cls: 'wait' }} />
         </Rows>
-      </Frag>
-    </Shot>
-  </States>
-);
-
-/* ── Э6.8 · Отклонение заявки с причиной ───────────────────────── */
-
-/** Экран под диалогом: две заявки, из которых одну сейчас отклоняют. */
-const Reject6_8Rows = () => (
-  <Rows>
-    <Row nm="Жумабеков Расул" sub="2007 · Караганда · «Шахтёр»" pill={{ t: 'НЕ ПРОХОДИТ', cls: 'bad' }} />
-    <Row nm="Ерлан Бекзат" sub="2006 · Актобе · спортшкола №3" pill={{ t: 'ЗАЯВКА', cls: 'reg' }} />
-  </Rows>
-);
-
-/** Сам диалог отклонения — один на оба формата: на телефоне он же, но во всю
-    ширину кадра (`PhoneDialog`), потому что прибитые 520 px туда не влезают. */
-const RejectDialog6_8 = () => (
-  <InlineDialog
-    title="Отклонить заявку с причиной"
-    sub="Жумабеков Расул · одиночный разряд"
-    to="Э6.2"
-    foot={
-      <>
-        <span className="mr-auto text-xs text-neutral-500">
-          Причина уйдёт заявителю и останется в журнале
-        </span>
-        <QuietAction>Закрыть</QuietAction>
-        <Button variant="danger">Отклонить</Button>
-      </>
-    }
-  >
-    <Rows>
-      <Row nm="Годовой взнос" sub="не оплачен" pill={{ t: 'НЕ ПРОХОДИТ', cls: 'bad' }} />
-      <Row nm="Медицинский допуск" sub="документ не приложен" pill={{ t: 'НЕ ПРОХОДИТ', cls: 'bad' }} />
-      <Row nm="Возраст" sub="2007 · граница «без ограничения»" pill={{ t: 'ПРОХОДИТ', cls: 'live' }} />
-    </Rows>
-    <div className="mt-3">
-      <FormGrid>
-        <TextInput label="Причина" value="нет медицинского допуска и не оплачен годовой взнос" wide />
-      </FormGrid>
-    </div>
-    <div className="mt-3">
-      <Bar tone="warning">Проверку система сделала сама, но решение — судьи: он может принять и с замечанием.</Bar>
-    </div>
-  </InlineDialog>
-);
-
-export function Reject6_8() {
-  return (
-    /* Значок в шапке — «ПРИЁМ ЗАЯВОК», как на Э6.1–Э6.2: отклонение с причиной
-       живёт только пока приём открыт, значок «ИДЁТ» спорил бы с подзаголовком. */
-    <WebApp role={at('ПРИЁМ ЗАЯВОК')} nav="Заявки" title="Заявки участников" sub="Приём открыт до 12.03, 18:00">
-      <Reject6_8Rows />
-      <RejectDialog6_8 />
-    </WebApp>
-  );
-}
-
-/** Э6.8 на телефоне: тот же диалог поверх того же списка заявок.
-    Поле причины стоит во всю ширину — в одну колонку, как все поля формы на
-    392 px. */
-export function Reject6_8Phone() {
-  return (
-    <PhoneRoleApp role={at('ПРИЁМ ЗАЯВОК')} nav="Заявки" title="Заявки участников" sub="Приём открыт до 12.03, 18:00">
-      <Reject6_8Rows />
-      <PhoneDialog>
-        <RejectDialog6_8 />
-      </PhoneDialog>
-    </PhoneRoleApp>
-  );
-}
-
-const Reject6_8States = () => (
-  <States>
-    <Shot tone="danger" title="Причина не заполнена" text="Кнопка неактивна.">
-      <Frag w={480}>
-        <FormGrid>
-          <div className="flex flex-col gap-1">
-            <span className="text-xs font-medium text-neutral-500">Причина</span>
-            <span className="w-full rounded-lg bg-red-50 px-3 py-1.5 text-sm font-medium text-red-700">
-              — не заполнена
-            </span>
-          </div>
-        </FormGrid>
-        <div className="mt-3"><DisabledAction>Отклонить</DisabledAction></div>
+        <div className="mt-3">
+          <Button size="sm" variant="outline"><Pencil size={13} /> Исправить результат</Button>
+        </div>
       </Frag>
     </Shot>
 
-    <Shot tone="warning" title="Приём уже закрыт" text="В уведомлении не обещаем повторную подачу.">
+    <Shot tone="success" title="Сутки прошли" text="«Закрыт окончательно»: рейтинг пересчитан, кнопок правки нет." wide>
       <Frag>
+        <ProtoStrip cur="Закрыт окончательно" />
         <Rows>
-          <Row nm="Приём заявок" sub="закрыт 12.03, 18:00" pill={{ t: 'ЗАКРЫТ', cls: 'done' }} />
+          <Row nm="Протокол закрыт окончательно" sub="21.05, 19:10 · рейтинг пересчитан по 127 матчам" pill={{ t: 'ЗАКРЫТ', cls: 'live' }} />
         </Rows>
       </Frag>
     </Shot>
@@ -2634,16 +2403,13 @@ const Reject6_8States = () => (
 /** Диалог формирования протокола — один на оба формата. */
 const FinishDialog6_9 = () => (
   <InlineDialog
-    title="Сформировать итоговый протокол"
-    sub="Чемпионат Казахстана 2026 · шаг необратим"
+    title="Сформировать и закрыть итоговый протокол"
+    sub="Чемпионат Казахстана 2026"
     to="Э6.7"
     foot={
       <>
-        <span className="mr-auto text-xs text-neutral-500">
-          После формирования ввод результатов закрыт
-        </span>
         <QuietAction>Закрыть</QuietAction>
-        <Button variant="primary">Сформировать</Button>
+        <Button variant="primary">Сформировать и закрыть</Button>
       </>
     }
   >
@@ -2651,13 +2417,9 @@ const FinishDialog6_9 = () => (
       <Row nm="Все матчи сыграны" sub="127 из 127" pill={{ t: 'ДА', cls: 'live' }} />
       <Row nm="Незакрытых протестов нет" sub="проверено" pill={{ t: 'ДА', cls: 'live' }} />
       <Row nm="Столы освобождены" sub="20 из 20" pill={{ t: 'ДА', cls: 'live' }} />
+      <Row nm="Правка результата" sub="до 21.05, 19:10" val="24 ч" />
+      <Row nm="Пересчёт рейтинга" sub="21.05, 19:10" />
     </Rows>
-    <div className="mt-3">
-      <Bar>
-        Ввод результатов закроется, турнир перейдёт в «Итоговый протокол», а сам протокол
-        уйдёт председателю ГСК на утверждение.
-      </Bar>
-    </div>
   </InlineDialog>
 );
 
@@ -2695,14 +2457,14 @@ const Finish6_9States = () => (
         <Rows>
           <Row nm="Не сыграно матчей" sub="стол 4 — 1/4 финала, стол 9 — за 3-е место" val="2" pill={{ t: 'МЕШАЕТ', cls: 'bad' }} />
         </Rows>
-        <div className="mt-3"><DisabledAction>Сформировать</DisabledAction></div>
+        <div className="mt-3"><DisabledAction>Сформировать и закрыть</DisabledAction></div>
       </Frag>
     </Shot>
 
-    <Shot tone="info" title="Протокол уже сформирован" text="Вместо кнопки — состояние «на утверждении».">
+    <Shot tone="info" title="Протокол уже закрыт" text="Вместо кнопки — состояние «правка до …».">
       <Frag>
         <Rows>
-          <Row nm="Протокол отправлен" sub="председателю ГСК · 20.05, 19:10" pill={{ t: 'НА УТВЕРЖДЕНИИ', cls: 'wait' }} />
+          <Row nm="Протокол закрыт" sub="20.05, 19:10 · правка до 21.05, 19:10" pill={{ t: 'ПРАВКА 24 Ч', cls: 'wait' }} />
         </Rows>
       </Frag>
     </Shot>
@@ -2748,7 +2510,7 @@ export const SCREENS: ScreenMap = {
       </>
     ),
     alt: () => <Tournament6_1Phone />,
-    next: '8 заявок ждут решения',
+    next: '128 заявок из 250',
   },
   'Э6.2': {
     cap: 'Заявки участников',
@@ -2814,17 +2576,6 @@ export const SCREENS: ScreenMap = {
       </>
     ),
     alt: () => <Protocol6_7Phone />,
-  },
-  'Э6.8': {
-    cap: 'Отклонение заявки с причиной',
-    view: () => (
-      <>
-        <Reject6_8 />
-        <Reject6_8States />
-      </>
-    ),
-    alt: () => <Reject6_8Phone />,
-    next: 'формирование протокола',
   },
   'Э6.9': {
     cap: 'Формирование итогового протокола',

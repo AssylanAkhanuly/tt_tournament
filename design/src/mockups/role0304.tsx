@@ -12,7 +12,8 @@
 
 import { useState, type ReactNode } from 'react';
 import {
-  BarChart3, Bell, CalendarDays, ClipboardList, Download, LayoutDashboard, Printer, Users,
+  BarChart3, Bell, CalendarDays, ClipboardList, Download, FileSignature, LayoutDashboard, Printer,
+  Send, Users, Video,
 } from 'lucide-react';
 import { Button } from '@heroui/react';
 import { A, AW } from '../fedCommon';
@@ -21,6 +22,7 @@ import {
   DataTable,
   EmptyBox,
   FilterSeg,
+  KV,
   Panel,
   PhoneRoleApp,
   Pill,
@@ -60,6 +62,10 @@ const R0304: RoleUI = {
     [<Users size={16} key="r" />, 'Реестры'],
     [<BarChart3 size={16} key="t" />, 'Рейтинги'],
     [<Bell size={16} key="p" />, 'Подписки'],
+    /* Тренерский совет ведёт роль 3 — менеджер по спортивной работе
+       (решение совещания 04.11.2026). ⚠ Тот же пункт нужен в меню R0304
+       общего файла `roles.tsx`. */
+    [<FileSignature size={16} key="s" />, 'Тренерский совет'],
   ],
 };
 
@@ -228,22 +234,21 @@ const Dash3_1Phone = () => (
 
 const CATS3_2 = ['Все категории', 'Главный старт', 'Лига', 'ОРТ'];
 
-/** Что открыто роли на чтение — 11 модулей по матрице ROLES.md. Состав каждого
+/** Что открыто роли на чтение — 10 модулей по матрице ROLES.md. Состав каждого
     экрана описан у пишущей роли, здесь — только чтение; список стоит на
     экране, а не в документации: «полный доступ ко всем модулям» иначе
     оставался бы словами. */
 const MODULES3_2: { nm: string; src: string; what: string }[] = [
   { nm: 'Календарь сезона', src: 'Э1.2', what: 'все категории, все состояния' },
   { nm: 'Карточка турнира', src: 'Э1.3', what: 'регламент, заявки, сетка, расписание, наряд, протокол, журнал турнира' },
-  { nm: 'Заявки участников', src: 'Э6.2', what: 'состав заявок, решения судьи, причины отказов' },
-  { nm: 'Заявки судей', src: 'Э5.2', what: 'заявившиеся, решение председателя ГСК' },
+  { nm: 'Заявки участников', src: 'Э6.2', what: 'заявленные участники, допуск врача соревнований' },
+  { nm: 'Заявки судей', src: 'Э5.2', what: 'заявившиеся и назначенные председателем ГСК' },
   { nm: 'Ход турнира', src: 'Э6.6', what: 'столы, счёт, задержки; без кнопок вызова' },
   { nm: 'Итоговый протокол', src: 'Э6.7', what: 'результаты, места; печать' },
   { nm: 'Реестры', src: 'Э1.5', what: 'спортсмены, судьи, тренеры, организации — без ролей и без выдачи' },
   { nm: 'Рейтинг игроков и судей', src: 'Э0.4 · Э5.5', what: 'таблицы, журнал начислений судей' },
-  { nm: 'Взносы', src: 'Э2.1', what: 'состояния взносов, без отметки оплаты' },
+  { nm: 'Взносы', src: 'Э2.1', what: 'оплаченные и неоплаченные, без отметки оплаты' },
   { nm: 'Команды Лиги и таблицы', src: 'Э13.3', what: 'дивизионы, составы, таблицы туров' },
-  { nm: 'Заключения инспекции', src: 'Э10.4', what: 'готовые заключения' },
 ];
 
 /** Взносы на чтение — три строки из Э2.1. Вынесены из экрана ✳: телефонный
@@ -651,6 +656,116 @@ const Subs3_3States = () => (
   </States>
 );
 
+/* ── Э3.4 · Тренерский совет: заседания и протоколы ──────────────────
+   Роль 3. Решение совещания 04.11.2026: заседание — по внешней ссылке на Zoom,
+   протокол создаёт менеджер, подписывает как секретарь и отправляет на
+   согласование председателю тренерского совета и администратору. */
+
+type Meet = { d: string; nm: string; st: string; cls: Cls };
+
+const MEETS: Meet[] = [
+  { d: '12.11.2026 · 15:00', nm: 'Отбор в сборную на ЧА-2027', st: 'ЧЕРНОВИК', cls: 'done' },
+  { d: '28.10.2026 · 16:00', nm: 'Итоги Кубка РК, календарь УТС', st: 'НА СОГЛАСОВАНИИ', cls: 'wait' },
+  { d: '02.10.2026 · 15:00', nm: 'Индивидуальные планы подготовки', st: 'СОГЛАСОВАН', cls: 'live' },
+  { d: '11.09.2026 · 15:00', nm: 'Положение о ЧРК 2027', st: 'ВОЗВРАЩЁН', cls: 'bad' },
+];
+
+const SIGNS: { who: string; nm: string; st: string; cls: Cls }[] = [
+  { who: 'Секретарь', nm: 'Тлеуова А.', st: 'ПОДПИСАЛ · 29.10', cls: 'live' },
+  { who: 'Председатель тренерского совета', nm: 'Ахметов Б.', st: 'ЖДЁТ', cls: 'wait' },
+  { who: 'Администратор Федерации', nm: 'Садыков Е.', st: 'ЖДЁТ', cls: 'wait' },
+];
+
+const MEET_GRID = '150px 1fr 150px';
+
+const MeetTable = () => (
+  <DataTable
+    cols={['Дата', 'Повестка', 'Протокол']}
+    grid={MEET_GRID}
+    rows={MEETS.map((m, i) => ({
+      key: m.d,
+      on: i === 1,
+      cells: [
+        <span key="d" className="tabular-nums text-neutral-600">{m.d}</span>,
+        <span key="n" className="font-medium">{m.nm}</span>,
+        <Pill key="s" t={m.st} color={PC[m.cls]} />,
+      ],
+    }))}
+  />
+);
+
+const ProtocolPanel = () => (
+  <>
+    <Panel title="Заседание 28.10.2026" extra={<Pill t="НА СОГЛАСОВАНИИ" color={PC.wait} />}>
+      <KV
+        items={[
+          ['Повестка', 'Итоги Кубка РК, календарь УТС'],
+          ['Ссылка', <span key="z" className="inline-flex items-center gap-1.5"><Video size={14} /> zoom.us/j/84213…</span>],
+          ['Участники', '14 из 17 членов совета'],
+          ['Решения', '3 пункта'],
+        ]}
+      />
+    </Panel>
+    <Panel title="Подписи и согласование" flush>
+      <div className="divide-y divide-neutral-100">
+        {SIGNS.map((g) => (
+          <Row key={g.who} nm={g.who} sub={g.nm} pill={{ t: g.st, cls: g.cls }} />
+        ))}
+      </div>
+    </Panel>
+  </>
+);
+
+const NewMeet = ({ wide }: { wide?: boolean } = {}) => (
+  <Button variant="primary" className={wide ? 'w-full' : undefined}>
+    <Send size={15} /> Новое заседание
+  </Button>
+);
+
+export function Council3_4() {
+  return (
+    <WebApp role={R0304} nav="Тренерский совет" title="Тренерский совет" actions={<NewMeet />}>
+      <MeetTable />
+      <div className="mt-4">
+        <ProtocolPanel />
+      </div>
+    </WebApp>
+  );
+}
+
+const Council3_4Phone = () => (
+  <PhoneRoleApp role={R0304} nav="Тренерский совет" title="Тренерский совет">
+    <div className="mb-3">
+      <NewMeet wide />
+    </div>
+    <Rows>
+      {MEETS.map((m) => (
+        <Row key={m.d} nm={m.nm} sub={m.d} pill={{ t: m.st, cls: m.cls }} />
+      ))}
+    </Rows>
+    <div className="mt-3">
+      <ProtocolPanel />
+    </div>
+  </PhoneRoleApp>
+);
+
+const Council3_4States = () => (
+  <States>
+    <Shot tone="info" title="Заседаний нет" text="Пустой список с «Новое заседание».">
+      <Frag w={440}>
+        <EmptyBox title="Заседаний нет" text="" action={<NewMeet />} />
+      </Frag>
+    </Shot>
+    <Shot tone="danger" title="Протокол вернули" text="Комментарий возврата над текстом.">
+      <Frag w={480}>
+        <Rows>
+          <Row nm="Председатель тренерского совета" sub="Ахметов Б. · 13.09.2026 · нет решения по п. 2" pill={{ t: 'ВЕРНУЛ', cls: 'bad' }} />
+        </Rows>
+      </Frag>
+    </Shot>
+  </States>
+);
+
 /* ── Борд ролей ────────────────────────────────────────────────── */
 
 /** Экраны роли по кодам: из этой карты собираются и борд, и карта флоу.
@@ -691,6 +806,16 @@ export const SCREENS: ScreenMap = {
       </>
     ),
     alt: () => <Subs3_3Phone />,
+  },
+  'Э3.4': {
+    cap: 'Тренерский совет: заседания и протоколы',
+    view: () => (
+      <>
+        <Council3_4 />
+        <Council3_4States />
+      </>
+    ),
+    alt: () => <Council3_4Phone />,
   },
 };
 

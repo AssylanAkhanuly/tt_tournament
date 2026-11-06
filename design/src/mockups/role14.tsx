@@ -549,13 +549,18 @@ const Calendar14_2States = () => (
       </Frag>
     </Shot>
 
-    <Shot tone="warning" title="Взнос не оплачен, а турнир его требует" text="Кнопка с предупреждением — ⚠ 6.1." wide>
+    <Shot
+      tone="warning"
+      title="Взнос не оплачен"
+      text="Решение совещания 04.11.2026: «Заявиться» открывает «не оплачен регистрационный взнос» с кнопкой «Оплатить» (Э14.8)."
+      wide
+    >
       <Frag>
         <Rows>
-          <Row nm="ОРТ «Кубок Иртыша»" sub="нужен годовой взнос федерации" pill={{ t: 'ВЗНОС НЕ ОПЛАЧЕН', cls: 'wait' }} />
+          <Row nm="ОРТ «Кубок Иртыша»" sub="не оплачен регистрационный взнос" pill={{ t: 'ВЗНОС НЕ ОПЛАЧЕН', cls: 'wait' }} />
         </Rows>
         <div className="mt-3">
-          <Bar tone="warning">Заявку подать можно, но допуск может не пройти — решение федерации не получено.</Bar>
+          <PrimaryAction to="Э14.8">Оплатить</PrimaryAction>
         </div>
       </Frag>
     </Shot>
@@ -584,7 +589,9 @@ const Calendar14_2States = () => (
 const TERMS14_3 = [
   { nm: 'Годовой взнос федерации', ss: 'оплачен 14.01.2026', need: true },
   { nm: 'Удостоверение личности', ss: 'приложено при регистрации', need: true },
-  { nm: 'Медицинский допуск', ss: 'действует до 30.11.2026', need: true },
+  { nm: 'Медицинская справка', ss: 'из DamuMed · действует до 30.11.2026', need: true },
+  { nm: 'Возрастная категория', ss: 'взрослые · 2003 г.р.', need: true },
+  { nm: 'Места', ss: 'занято 96 из 128', need: true },
   { nm: 'Ценз по рейтингу', ss: 'у этого турнира не требуется', need: false },
 ];
 
@@ -659,7 +666,7 @@ export function Apply14_3() {
           <div className="mb-1.5 text-[11px] font-semibold uppercase tracking-wider text-neutral-400">
             Документы · нужна медицинская справка
           </div>
-          <FileDrop label="Медицинская справка" hint="PDF или фото · до 10 МБ" />
+          <FileDrop label="Медицинская справка" hint="форма 027/у · PDF или фото · до 10 МБ" />
         </div>
         <div className="flex items-center justify-end border-t border-neutral-100 bg-neutral-50 px-4 py-3">
           <Button variant="primary" data-to="Э14.4">
@@ -698,7 +705,7 @@ export function Apply14_3Web() {
       <Panel title="Заявка" sub="разряды и документы этого турнира">
         <FormGrid>
           {FORM14_3.map((f) => <PickField key={f.k} label={f.k} value={f.v} />)}
-          <FileDrop label="Медицинская справка" hint="PDF или фото · до 10 МБ · нужна этому турниру" />
+          <FileDrop label="Медицинская справка" hint="форма 027/у · PDF или фото · до 10 МБ" />
         </FormGrid>
       </Panel>
 
@@ -750,7 +757,7 @@ const Apply14_3States = () => (
 /* Шаги заявки. `done` — уже случилось, `now` — то, чего ждём прямо сейчас. */
 const STEPS14_4: Step[] = [
   { t: 'Заявка подана', ss: 'вами, из списка турниров', at: '02.09, 19:40', done: true },
-  { t: 'Решение главного судьи', ss: 'придёт уведомлением', at: 'ждём', now: true },
+  { t: 'Допуск врача соревнований', ss: 'за 3 дня до старта, уведомлением', at: 'ждём', now: true },
   { t: 'Жеребьёвка', ss: 'после закрытия приёма', at: '19.09' },
   { t: 'Вызов на стол', ss: 'в день игры, уведомлением', at: '26.09' },
 ];
@@ -775,14 +782,14 @@ const OTHER14_4: {
   {
     nm: 'Кубок Алматы 2026',
     sub: 'подана 20.08 · тренером Оспановым Т. · сейчас идёт',
-    pill: { t: 'ПРИНЯТА', cls: 'live' },
+    pill: { t: 'ДОПУЩЕН', cls: 'live' },
     to: 'Э14.5',
   },
   {
     nm: 'Кубок Тараза 2026',
-    sub: '«справка не того образца — нужен допуск к соревнованиям»',
-    pill: { t: 'ОТКЛОНЕНА', cls: 'bad' },
-    action: 'Исправить',
+    sub: 'врач соревнований · справка не по форме 027/у',
+    pill: { t: 'НЕ ДОПУЩЕН', cls: 'bad' },
+    action: 'Заменить справку',
     actionTo: 'Э14.3',
   },
 ];
@@ -797,7 +804,7 @@ export function MyApp14_4() {
         <div className="leading-tight">
           <div className="flex items-center gap-2 text-[19px] font-bold tracking-tight">
             <span className="h-2.5 w-2.5 rounded-full bg-amber-500" />
-            На рассмотрении
+            Ждёт допуска врача
           </div>
           <div className="mt-1 text-xs text-neutral-500">
             Чемпионат Астаны 2026 · подана 02.09.2026, 19:40
@@ -848,9 +855,9 @@ export function MyApp14_4Web() {
         <span className="flex items-center gap-2.5 leading-tight">
           <span className="h-2.5 w-2.5 rounded-full bg-amber-500" />
           <span>
-            <span className="block text-[19px] font-bold tracking-tight">На рассмотрении</span>
+            <span className="block text-[19px] font-bold tracking-tight">Ждёт допуска врача</span>
             <span className="block text-xs text-neutral-500">
-              решение принимает главный судья турнира · придёт уведомлением
+              врач соревнований · за 3 дня до старта
             </span>
           </span>
         </span>
@@ -878,21 +885,21 @@ export function MyApp14_4Web() {
 
 const MyApp14_4States = () => (
   <States>
-    <Shot tone="danger" title="Заявка отклонена" text="Причина — текст судьи, видна сразу; пока приём открыт можно исправить и подать снова." wide>
+    <Shot tone="danger" title="Не допущен" text="Добора нет; пока приём открыт, справку можно заменить." wide>
       <Frag>
         <Rows>
-          <Row nm="Кубок Тараза 2026" sub="«нет медицинского допуска»" pill={{ t: 'ОТКЛОНЕНА', cls: 'bad' }} />
+          <Row nm="Кубок Тараза 2026" sub="врач соревнований · справка не по форме 027/у" pill={{ t: 'НЕ ДОПУЩЕН', cls: 'bad' }} />
         </Rows>
         <div className="mt-3">
-          <PrimaryAction to="Э14.3">Исправить и подать снова</PrimaryAction>
+          <PrimaryAction to="Э14.3">Заменить справку</PrimaryAction>
         </div>
       </Frag>
     </Shot>
 
-    <Shot tone="success" title="Заявка принята" text="Дальше — вызов на стол уведомлением, экран матча (Э14.5)." wide>
+    <Shot tone="success" title="Допущен" text="Дальше — вызов на стол уведомлением, экран матча (Э14.5)." wide>
       <Frag>
         <Rows>
-          <Row nm="Чемпионат Астаны 2026" sub="принята 15.09 · ждите жеребьёвку" pill={{ t: 'ПРИНЯТА', cls: 'live' }} to="Э14.5" />
+          <Row nm="Чемпионат Астаны 2026" sub="допущен 23.09 · ждите жеребьёвку" pill={{ t: 'ДОПУЩЕН', cls: 'live' }} to="Э14.5" />
         </Rows>
       </Frag>
     </Shot>
@@ -2962,7 +2969,7 @@ export const SCREENS: ScreenMap = {
       </>
     ),
     alt: () => <MyApp14_4Web />,
-    next: 'заявка принята',
+    next: 'допуск врача',
   },
   'Э14.5': {
     cap: 'Мой турнир и мой матч',

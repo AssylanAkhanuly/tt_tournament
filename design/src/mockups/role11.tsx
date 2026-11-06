@@ -124,7 +124,7 @@ const TEAM: Athlete[] = [
 
 const SQUADS = ['Все составы', 'Основной', 'Расширенный'];
 const AGES = ['Все возрасты', 'Взрослые', 'До 21', 'До 19', 'До 17'];
-const COACHES = ['Все тренеры', 'Ахметов С.', 'Смагулова Д.'];
+const COACHES = ['Все личные тренеры', 'Ахметов С.', 'Смагулова Д.'];
 
 const squadFiltered = (q: string, sq: string, age: string, coach: string) =>
   TEAM.filter((a) => {
@@ -203,7 +203,7 @@ export function Squad11_1() {
         <Sheet
           flush
           grid={TEAM_GRID}
-          cols={['Спортсмен', 'Состав', 'Возраст', 'Тренер', 'Рейтинг', 'План периода', 'Медицинский допуск']}
+          cols={['Спортсмен', 'Состав', 'Возраст', 'Личный тренер', 'Рейтинг', 'План периода', 'Медицинский допуск']}
         >
           {rows.map((a) => (
             <div
@@ -578,10 +578,11 @@ const PLAN_DRAFT: PlanDraft[] = [
 ];
 
 const PLAN_EDITS = [
-  { t: 'План создан на сезон 2026', s: '9 пунктов · Ахметов С., главный тренер', at: '14.01.2026' },
+  { t: 'План создан на сезон 2026', s: '9 пунктов · Смагулова Д., личный тренер', at: '14.01.2026' },
   { t: 'Добавлен пункт «Работа над игрой слева в атаке»', s: 'после разбора чемпионата РК', at: '19.03.2026' },
   { t: 'Срок сбора в Шымкенте передвинут на 10–20.06', s: 'вслед за календарём подготовки', at: '02.06.2026' },
   { t: 'Отмечено выполнение: открытый турнир Караганды', s: 'результат подтянут из истории', at: '12.06.2026' },
+  { t: 'Отправлен на согласование', s: 'Смагулова Д. → Ахметов С., главный тренер', at: '14.06.2026' },
 ];
 
 const KIND_PILL: Record<PlanKind, 'accent' | 'success' | 'warning'> = {
@@ -622,7 +623,10 @@ export function PlanEdit11_5() {
               <FieldView label="Спортсмен" value="Ким Георгий · 2003 г.р. · основной состав" />
               <PickField label="Период" value="Сезон 2026 · январь — декабрь" />
               <TextInput label="Цель сезона" value="Медаль чемпионата РК и место в основном составе" wide />
-              <FieldView label="Кто ведёт план" value="Ахметов С. · главный тренер национальной команды" wide />
+              {/* План составляет личный тренер, согласует главный тренер —
+                  решение совещания 04.11.2026. */}
+              <FieldView label="Личный тренер" value="Смагулова Д." />
+              <FieldView label="Согласование" value="ждёт решения главного тренера" />
               <Derived k="Выполнено пунктов" v={`${done} из ${items.length}`} />
             </FormGrid>
           </Panel>
@@ -709,9 +713,9 @@ export function PlanEdit11_5() {
       </Bar>
       <ActionBar>
         <QuietAction to="Э11.2">
-          <Undo2 size={14} /> Отменить правку
+          <Undo2 size={14} /> Вернуть с комментарием
         </QuietAction>
-        <PrimaryAction to="Э11.2">Сохранить план</PrimaryAction>
+        <PrimaryAction to="Э11.2">Согласовать план</PrimaryAction>
       </ActionBar>
     </WebApp>
   );
@@ -747,7 +751,8 @@ export const PlanEdit11_5Phone = () => (
     </Panel>
 
     <ActionBar>
-      <PrimaryAction to="Э11.2">Сохранить план</PrimaryAction>
+      <QuietAction to="Э11.2">Вернуть</QuietAction>
+      <PrimaryAction to="Э11.2">Согласовать план</PrimaryAction>
     </ActionBar>
   </PhoneRoleApp>
 );

@@ -10,7 +10,7 @@
 
 import { useState, type ReactNode } from 'react';
 import {
-  Banknote, Download, FileSpreadsheet, FileWarning, RefreshCw, Undo2, Wallet,
+  Banknote, Download, FileSpreadsheet, FileText, RefreshCw, Undo2, Wallet,
 } from 'lucide-react';
 import { Avatar, Button } from '@heroui/react';
 import { A, AW } from '../fedCommon';
@@ -113,9 +113,12 @@ const Who = ({ av, nm, sub }: { av: string; nm: string; sub?: ReactNode }) => (
 /** Состояние взноса — цвета из флоу: оплачен зелёный, не оплачен серый,
     просрочен красный. Серый, а не янтарный: «не оплачен» — массовое рабочее
     состояние начала года, тревожить им нельзя; горит только просрочка. */
-type FeeSt = 'paid' | 'unpaid' | 'late';
-const FST: Record<FeeSt, { t: string; color: 'success' | 'default' | 'danger' }> = {
+type FeeSt = 'paid' | 'check' | 'unpaid' | 'late';
+const FST: Record<FeeSt, { t: string; color: 'success' | 'warning' | 'default' | 'danger' }> = {
   paid: { t: 'ОПЛАЧЕН', color: 'success' },
+  /* Квитанцию плательщик приложил сам — до проверки экономистом взнос не
+     оплачен (решение совещания 04.11.2026). */
+  check: { t: 'НА ПРОВЕРКЕ', color: 'warning' },
   unpaid: { t: 'НЕ ОПЛАЧЕН', color: 'default' },
   late: { t: 'ПРОСРОЧЕН', color: 'danger' },
 };
@@ -129,30 +132,33 @@ type Fee = {
   st: FeeSt;
   /** Дата оплаты; у просроченных — с какого числа горит. */
   when: string;
-  /** Как оплачен: картой через ePay либо отметка вручную — с автором. */
+  /** Вид платежа: годовой взнос спортсмена, взнос клуба за лигу, штраф. */
+  kind: string;
+  /** Как оплачен: по ссылке Halyk Bank, по квитанции либо отметка вручную — с автором. */
   how: string;
 };
 
 const FEES: Fee[] = [
-  { av: A(32), nm: 'Смагулов Алан', reg: 'Алматы', club: '«Алатау»', born: '2004', st: 'paid', when: '14.01', how: 'картой · Halyk ePay' },
-  { av: A(44), nm: 'Ким Георгий', reg: 'Астана', club: 'СКА', born: '2003', st: 'paid', when: '09.01', how: 'картой · Halyk ePay' },
-  { av: A(22), nm: 'Жумабеков Расул', reg: 'Караганда', club: '«Шахтёр»', born: '2007', st: 'unpaid', when: '—', how: '—' },
-  { av: AW(21), nm: 'Тлеуова Аружан', reg: 'Шымкент', club: '«Достык»', born: '2009', st: 'unpaid', when: '—', how: '—' },
-  { av: A(56), nm: 'Гладун Игорь', reg: 'Тараз', club: 'без клуба', born: '2001', st: 'late', when: 'срок вышел 31.03', how: '—' },
-  { av: A(13), nm: 'Пак Сергей', reg: 'Павлодар', club: '«Иртыш»', born: '2005', st: 'paid', when: '22.02', how: 'вручную · Сериков Н.' },
+  { av: A(32), nm: 'Смагулов Алан', reg: 'Алматы', club: '«Алатау»', born: '2004', st: 'paid', when: '14.01', kind: 'годовой взнос', how: 'ссылка Halyk Bank' },
+  { av: A(44), nm: 'Ким Георгий', reg: 'Астана', club: 'СКА', born: '2003', st: 'paid', when: '09.01', kind: 'годовой взнос', how: 'ссылка Halyk Bank' },
+  { av: A(22), nm: 'Жумабеков Расул', reg: 'Караганда', club: '«Шахтёр»', born: '2007', st: 'unpaid', when: '—', kind: 'годовой взнос', how: '—' },
+  { av: AW(21), nm: 'Тлеуова Аружан', reg: 'Шымкент', club: '«Достык»', born: '2009', st: 'check', when: '03.03', kind: 'годовой взнос', how: 'квитанция · приложила сама' },
+  { av: A(56), nm: 'Гладун Игорь', reg: 'Тараз', club: 'без клуба', born: '2001', st: 'late', when: 'срок вышел 31.03', kind: 'годовой взнос', how: '—' },
+  { av: A(13), nm: 'Пак Сергей', reg: 'Павлодар', club: '«Иртыш»', born: '2005', st: 'paid', when: '22.02', kind: 'годовой взнос', how: 'квитанция · Сериков Н.' },
 ];
 
 /* ── Э2.1 · Взносы за сезон ────────────────────────────────────── */
 
 /** Срез таблицы по состоянию взноса — фильтр из флоу. */
-const FSEG = ['Все', 'Оплачен', 'Не оплачен', 'Просрочен'];
+const FSEG = ['Все', 'Оплачен', 'На проверке', 'Не оплачен', 'Просрочен'];
 const FMAP: Record<string, FeeSt | undefined> = {
   Оплачен: 'paid',
+  'На проверке': 'check',
   'Не оплачен': 'unpaid',
   Просрочен: 'late',
 };
 
-const FEE_GRID = '2.4fr 0.85fr 0.85fr 112px 92px 0.9fr 164px';
+const FEE_GRID = '2.2fr 0.8fr 0.8fr 0.9fr 112px 92px 1fr 164px';
 
 /** Правило экрана — одно на оба формата ✳: у веб-оболочки для него есть место
     под заголовком (`hint`), у телефонной его нет — там оно стоит плашкой. */
@@ -169,6 +175,7 @@ const FEE_FACTS: { k: string; v: string; hot?: boolean }[] = [
     (PickField, без портала): живой список без данных под ним врал бы. */
 const FEE_PICKS: [string, string][] = [
   ['Год взноса', '2026'],
+  ['Вид платежа', 'Все виды'],
   ['Регион', 'Все регионы'],
   ['Клуб', 'Все клубы'],
   ['Год рождения', 'Все годы'],
@@ -213,9 +220,14 @@ export function Fees2_1(_props: { variant?: 'desktop' | 'land' } = {}) {
       hint={FEE_HINT}
       actions={
         /* Реестр оплат по текущему фильтру за период — файлом, в «Выгрузки». */
-        <Button variant="outline">
-          <Download size={15} /> Выгрузить список
-        </Button>
+        <>
+          <Button variant="outline" data-to="Э2.5">
+            <FileText size={15} /> Виды платежей
+          </Button>
+          <Button variant="outline">
+            <Download size={15} /> Выгрузить список
+          </Button>
+        </>
       }
     >
       {/* Год взноса не подписан второй раз ✳ (04.09.2026): он стоит и в шапке
@@ -227,7 +239,7 @@ export function Fees2_1(_props: { variant?: 'desktop' | 'land' } = {}) {
 
       {/* Год и срезы — статичный выбор (PickField, без портала): живой список
           без данных под ним врал бы. Год первым — ⚠ 6.2: год или сезон. */}
-      <div className="mb-3 grid grid-cols-[120px_1fr_1fr_1fr_1.4fr] items-end gap-3">
+      <div className="mb-3 grid grid-cols-[120px_1fr_1fr_1fr_1fr_1.4fr] items-end gap-3">
         {FEE_PICKS.map(([k, v]) => (
           <PickField key={k} label={k} value={v} />
         ))}
@@ -239,7 +251,7 @@ export function Fees2_1(_props: { variant?: 'desktop' | 'land' } = {}) {
 
       {rows.length ? (
         <DataTable
-          cols={['Спортсмен', 'Регион', 'Клуб', 'Состояние', 'Дата оплаты', 'Как оплачен', '']}
+          cols={['Плательщик', 'Регион', 'Клуб', 'Вид платежа', 'Состояние', 'Дата оплаты', 'Как оплачен', '']}
           grid={FEE_GRID}
           rows={rows.map((r) => ({
             key: r.nm,
@@ -248,6 +260,7 @@ export function Fees2_1(_props: { variant?: 'desktop' | 'land' } = {}) {
               <Who key="w" av={r.av} nm={r.nm} sub={`${r.born} г.р.`} />,
               <span key="r" className="text-neutral-600">{r.reg}</span>,
               <span key="c" className="text-neutral-600">{r.club}</span>,
+              <span key="k" className="text-neutral-600">{r.kind}</span>,
               <Pill key="s" t={FST[r.st].t} color={FST[r.st].color} />,
               <span
                 key="d"
@@ -260,6 +273,10 @@ export function Fees2_1(_props: { variant?: 'desktop' | 'land' } = {}) {
                  неоплаченный взнос, и диалог потребует основания. */
               r.st === 'paid' ? (
                 <span key="a" />
+              ) : r.st === 'check' ? (
+                <Button key="a" size="sm" variant="primary" data-to="Э2.3">
+                  Проверить квитанцию
+                </Button>
               ) : (
                 <Button key="a" size="sm" variant="outline" data-to="Э2.3">
                   Отметить вручную
@@ -419,37 +436,25 @@ const Fee2_2Body = ({ phone }: { phone?: boolean } = {}) => (
          «как оплачен» слева переносились. Панель сама держит отступ снизу —
          обёртка не нужна. */
       <>
-        <Panel title="Взнос за 2026 год" extra={<Pill t="ОПЛАЧЕН ВРУЧНУЮ" color="success" />}>
+        <Panel title="Взнос за 2026 год" extra={<Pill t="ОПЛАЧЕН ПО КВИТАНЦИИ" color="success" />}>
           <KV
             items={[
-              ['Год', '2026'],
+              ['Вид платежа', 'годовой взнос спортсмена'],
               ['Сумма', '₸ 10 000'],
               ['Дата оплаты', '22.02.2026'],
-              /* Как оплачен: у ручной отметки виден автор — система именная. */
-              ['Как оплачен', 'отметка вручную · Сериков Н.'],
+              /* Как оплачен: у проверенной квитанции виден автор проверки —
+                 система именная. */
+              ['Как оплачен', 'квитанция плательщика · проверил Сериков Н.'],
               ['Основание', 'квитанция № 4471 от 22.02.2026'],
             ]}
           />
 
-          {/* Зона документа — заглушка намеренно: храним ли платёжку, не
-              решено (QUESTIONS), и «Приложить документ» не проектируем. */}
-          <div
-            className={
-              'mt-4 flex gap-3 rounded-lg border border-dashed border-amber-300 bg-amber-50/60 px-4 py-3 ' +
-              (phone ? 'flex-col items-start' : 'items-center justify-between')
-            }
-          >
-            <span className="leading-tight">
-              <span className="flex items-center gap-1.5 text-sm font-medium text-amber-800">
-                <FileWarning size={15} /> Платёжка не приложена
-              </span>
-              <span className="mt-0.5 block text-xs text-amber-700">
-                ⚠ нужно ли хранить платёжку — не решено
-              </span>
-            </span>
-            <Button size="sm" variant="outline" isDisabled>
-              Приложить документ
-            </Button>
+          {/* Квитанцию приложил сам плательщик — она хранится в карточке и
+              открывается тут же (решение совещания 04.11.2026). */}
+          <div className="mt-4">
+            <Rows>
+              <Row nm="kvitanciya-4471.pdf" sub="приложил Пак Сергей · 21.02.2026" action="Открыть" />
+            </Rows>
           </div>
 
           <div className={'mt-4 flex gap-3 ' + (phone ? 'flex-col' : 'items-center justify-between')}>
@@ -561,11 +566,18 @@ const Fee2_2States = () => (
 
     <Shot
       tone="warning"
-      title="Документ не приложен"
-      text="Зона документа остаётся заглушкой, пока не решено, храним ли платёжку."
+      title="Квитанция на проверке"
+      text="Квитанция открыта, главное действие — «Проверить квитанцию»."
     >
-      <Frag w={480}>
-        <EmptyBox title="Платёжка не приложена" text="⚠ Решение о хранении документов не принято." />
+      <Frag w={520}>
+        <Rows>
+          <Row nm="kvitanciya-0303.pdf" sub="приложила Тлеуова Аружан · 03.03.2026" pill={{ t: 'НА ПРОВЕРКЕ', cls: 'wait' }} />
+        </Rows>
+        <div className="mt-3 flex justify-end">
+          <Button variant="primary" data-to="Э2.3">
+            <FileText size={15} /> Проверить квитанцию
+          </Button>
+        </div>
       </Frag>
     </Shot>
   </States>
@@ -575,23 +587,23 @@ const Fee2_2States = () => (
 
 /** Чем платёж подтверждается — выбор рабочий: от него зависит, что писать в
     основание. Значения — из флоу, слово в слово. */
-const PROOFS = ['Квитанция', 'Перевод на счёт федерации', 'Оплата на месте'];
+const PROOFS = ['Квитанция плательщика', 'Перевод на счёт федерации', 'Оплата на месте'];
 
 /** Родительский экран под диалогом — карточка неоплаченного взноса: видно,
     откуда диалог открыт и почему кнопка на нём называется так же. Одна на оба
     формата: на телефоне кнопка растягивается на ширину кадра. */
 const Mark2_3Parent = ({ phone }: { phone?: boolean } = {}) => (
-  <Panel title="Взнос за 2026 год" extra={<Pill t="НЕ ОПЛАЧЕН" />}>
+  <Panel title="Взнос за 2026 год" extra={<Pill t="НА ПРОВЕРКЕ" color="warning" />}>
     <KV
       items={[
-        ['Год', '2026'],
+        ['Вид платежа', 'годовой взнос спортсмена'],
         ['Сумма', '₸ 10 000'],
         ['Дата оплаты', '—'],
       ]}
     />
     <div className={'mt-4 flex ' + (phone ? '' : 'items-center justify-end')}>
       <Button className={phone ? 'w-full' : undefined} variant="primary">
-        <Banknote size={15} /> Отметить оплату вручную
+        <FileText size={15} /> Проверить квитанцию
       </Button>
     </div>
   </Panel>
@@ -606,7 +618,7 @@ const MarkDialog = ({ phone }: { phone?: boolean } = {}) => {
   return (
     <InlineDialog
       title="Отметить оплату вручную"
-      sub="Жумабеков Расул · взнос 2026 · ₸ 10 000"
+      sub="Тлеуова Аружан · годовой взнос 2026 · ₸ 10 000"
       to="Э2.2"
       wide
       foot={
@@ -619,6 +631,11 @@ const MarkDialog = ({ phone }: { phone?: boolean } = {}) => {
             </span>
           )}
           <QuietAction to="Э2.2">Закрыть</QuietAction>
+          {proof === PROOFS[0] && (
+            <Button variant="outline" data-to="Э2.2">
+              <Undo2 size={15} /> Вернуть квитанцию
+            </Button>
+          )}
           <Button variant="primary" data-to="Э2.2">
             <Banknote size={15} /> Отметить оплачен
           </Button>
@@ -629,19 +646,20 @@ const MarkDialog = ({ phone }: { phone?: boolean } = {}) => {
         <span className="text-xs font-medium text-neutral-500">Чем платёж подтверждается</span>
         {phone ? <Swipe>{seg}</Swipe> : <div>{seg}</div>}
       </div>
+      {proof === PROOFS[0] && (
+        <div className="mb-3">
+          <Rows>
+            <Row nm="kvitanciya-0303.pdf" sub="приложила Тлеуова Аружан · 03.03.2026" action="Открыть" />
+          </Rows>
+        </div>
+      )}
       <FormGrid>
-        <TextInput label="Основание" value="квитанция № 4471" wide={phone} />
+        <TextInput label="Основание" value="квитанция № 5120" wide={phone} />
         {/* Дата — текстом в русском формате: нативный `input type="date"`
             (DateInput кита) рисуется в локали браузера и на снимке выдавал
             американское «02/22/2026» рядом с «22.02.2026» остального экрана. */}
-        <TextInput label="Дата платежа" value="22.02.2026" wide={phone} />
+        <TextInput label="Дата платежа" value="03.03.2026" wide={phone} />
       </FormGrid>
-      <div className="mt-3">
-        <Bar>
-          Обычно спортсмен платит картой, и строка становится «оплачен» сама (TZ §9.2). Ручная
-          отметка — исключение: платёж пришёл мимо системы. Состояние увидят спортсмен и его тренер.
-        </Bar>
-      </div>
     </InlineDialog>
   );
 };
@@ -836,6 +854,68 @@ const Unmark2_4States = () => (
   </States>
 );
 
+/* ── Э2.5 · Виды платежей и основания ✳ ───────────────────────────
+   Решение совещания 04.11.2026: вид платежа — из списка, сумма взноса клуба
+   зависит от лиги, основания видны плательщику и меняются раз в год. Суммы в
+   макете условные: документов о размере взносов в репозитории нет. */
+
+type PayKind = { kind: string; sum: string; doc: string; from: string; old?: boolean };
+
+const PAY_KINDS: PayKind[] = [
+  { kind: 'Годовой взнос спортсмена', sum: '₸ 10 000', doc: 'Приказ о размере взноса № 12 · 2026', from: '01.01.2026' },
+  { kind: 'Евразийская лига · Суперлига', sum: '₸ 300 000', doc: 'Положение Евразийской лиги · 2026', from: '01.01.2026' },
+  { kind: 'Евразийская лига · 2 лига', sum: '₸ 200 000', doc: 'Положение Евразийской лиги · 2026', from: '01.01.2026' },
+  { kind: 'Евразийская лига · 3 лига', sum: '₸ 150 000', doc: 'Положение Евразийской лиги · 2025', from: '01.01.2025', old: true },
+  { kind: 'Штраф по положению клубного чемпионата', sum: 'по перечню', doc: 'Положение клубного чемпионата · 2026', from: '01.01.2026' },
+];
+
+const PAY_GRID = '2fr 120px 2fr 110px 150px';
+
+export function Kinds2_5() {
+  return (
+    <WebApp role={R02} nav="Взносы" title="Виды платежей" back={{ label: 'Взносы за сезон', to: 'Э2.1' }}>
+      <DataTable
+        cols={['Вид платежа', 'Сумма', 'Основание', 'Действует с', '']}
+        grid={PAY_GRID}
+        rows={PAY_KINDS.map((r) => ({
+          key: r.kind,
+          cells: [
+            <span key="k" className="font-medium">{r.kind}</span>,
+            <span key="s" className="tabular-nums">{r.sum}</span>,
+            <span key="d" className="flex items-center gap-2 text-neutral-600">
+              <FileText size={14} /> {r.doc}
+            </span>,
+            r.old ? (
+              <Pill key="f" t="ПРОШЛЫЙ ГОД" color="warning" />
+            ) : (
+              <span key="f" className="tabular-nums text-neutral-600">{r.from}</span>
+            ),
+            <Button key="a" size="sm" variant={r.old ? 'primary' : 'outline'}>
+              Заменить документ
+            </Button>,
+          ],
+        }))}
+      />
+    </WebApp>
+  );
+}
+
+const Kinds2_5Phone = () => (
+  <PhoneRoleApp role={R02} nav="Взносы" title="Виды платежей" back={{ label: 'Взносы за сезон', to: 'Э2.1' }}>
+    <Rows>
+      {PAY_KINDS.map((r) => (
+        <Row
+          key={r.kind}
+          nm={r.kind}
+          sub={`${r.sum} · ${r.doc}`}
+          pill={r.old ? { t: 'ПРОШЛЫЙ ГОД', cls: 'wait' } : undefined}
+          action="Заменить"
+        />
+      ))}
+    </Rows>
+  </PhoneRoleApp>
+);
+
 /* ── Сверка с банком: то же на планшете ────────────────────────── */
 
 export const Fees2_1Tablet = () => <Fees2_1 variant="land" />;
@@ -878,7 +958,7 @@ export const SCREENS: ScreenMap = {
       </>
     ),
     alt: () => <Fee2_2Phone />,
-    next: '«Отметить оплату вручную»',
+    next: '«Проверить квитанцию»',
   },
   'Э2.3': {
     cap: 'Отметка оплаты вручную',
@@ -900,6 +980,11 @@ export const SCREENS: ScreenMap = {
       </>
     ),
     alt: () => <Unmark2_4Phone />,
+  },
+  'Э2.5': {
+    cap: 'Виды платежей и основания',
+    view: () => <Kinds2_5 />,
+    alt: () => <Kinds2_5Phone />,
   },
 };
 

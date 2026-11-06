@@ -8,7 +8,8 @@ import {
   FileSpreadsheet,
   FileText, Gavel, GraduationCap, Grid3x3, History, LayoutDashboard, ListChecks, Megaphone,
   MapPin, Newspaper, Plane, Scale,
-  Scroll, Search, Shield, Table2, Timer, Trophy, User, UserCog, UserPlus, Users, Users2, Wallet,
+  Scroll, Search, Shield, Stethoscope, Table2, Timer, Trophy, User, UserCog, UserPlus, Users, Users2,
+  Wallet,
 } from 'lucide-react';
 import { A, AW, type RoleUI } from './shell';
 
@@ -77,6 +78,7 @@ export const R0304: RoleUI = {
     [<Users size={18} />, 'Реестры'],
     [<BarChart3 size={18} />, 'Рейтинги'],
     [<Bell size={18} />, 'Подписки'],
+    [<Scroll size={18} />, 'Тренерский совет'],
   ],
 };
 
@@ -137,6 +139,7 @@ export const R07: RoleUI = {
     [<LayoutDashboard size={18} />, 'Рабочий стол'],
     [<Grid3x3 size={18} />, 'Сетка'],
     [<CalendarDays size={18} />, 'Расписание'],
+    [<Timer size={18} />, 'Ход турнира'],
     [<Scroll size={18} />, 'Протоколы'],
   ],
 };
@@ -332,5 +335,20 @@ export const R17: RoleUI = {
   nav: [
     [<MapPin size={18} />, 'Статистика региона'],
     [<Users size={18} />, 'Кадры региона'],
+  ],
+};
+
+/* Роль 18 · Врач соревнований (решение совещания федерации 04.11.2026): вместо
+   заместителя главного судьи по медицинской части. Область — один турнир на
+   время его проведения, поэтому в шапке турнир, а не сезон. */
+export const R18: RoleUI = {
+  num: '18', title: 'Врач соревнований',
+  person: { nm: 'Жаксылыкова Г.', rl: 'Врач соревнований', av: AW(58) },
+  brandName: 'Чемпионат Казахстана 2026',
+  brandSub: 'Одиночный · олимпийская · г. Астана',
+  badge: 'ДОПУСК',
+  nav: [
+    [<Stethoscope size={18} />, 'Мои турниры'],
+    [<ClipboardCheck size={18} />, 'Допуск участников'],
   ],
 };

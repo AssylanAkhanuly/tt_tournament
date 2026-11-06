@@ -11,6 +11,7 @@
 import { useState, type ReactNode } from 'react';
 import {
   ArrowUpDown, CalendarDays, Grid3x3, LayoutDashboard, Printer, RefreshCw, Scroll, Send, Shuffle,
+  Timer,
 } from 'lucide-react';
 import { Avatar, Button } from '@heroui/react';
 import { A, AW } from '../fedCommon';
@@ -52,6 +53,10 @@ import { BracketFlow } from '@/widgets/bracket/BracketFlow';
 import {
   Login0_1, LoginPhone0_1, SignUpJudge0_7, SignUpJudge0_7States, SignUpJudge0_7Phone,
 } from './role00';
+/* Ход турнира по передаче полномочий главного судьи (решение совещания
+   04.11.2026) — тот же экран, что у заместителя (Э8.2): одна реализация на
+   обе роли. */
+import { DelegatedLive, DelegatedStates } from './role08';
 
 /* ── Роль: сайдбар и подпись профиля ─────────────────────────────── */
 
@@ -69,6 +74,7 @@ const R07: RoleUI = {
     [<Grid3x3 size={16} key="b" />, 'Сетка'],
     [<CalendarDays size={16} key="s" />, 'Расписание'],
     [<Scroll size={16} key="p" />, 'Протоколы'],
+    [<Timer size={16} key="l" />, 'Ход турнира'],
   ],
   /* Должность в наряде держит человек с судейской квалификацией ✳: срок
      аттестации и рейтинг у него живут в кабинете судьи, и попадать туда он
@@ -190,7 +196,7 @@ type Work = { to?: string; nm: string; sub: string; p: string; cls: Cls; act?: s
 const WORKS7_1: Work[] = [
   {
     to: 'Э7.3', nm: 'Система проведения и жеребьёвка',
-    sub: 'формат выбран · жребий проведён 14.05, 12:40 · 16 сеяных',
+    sub: 'формат выбран · жеребьёвка внесена 14.05, 12:40 · 16 сеяных',
     p: 'ГОТОВО', cls: 'live', act: 'Открыть',
   },
   {
@@ -204,6 +210,7 @@ const WORKS7_1: Work[] = [
     p: 'НЕ СОСТАВЛЕНО', cls: 'bad', act: 'Открыть',
   },
   { to: 'Э7.5', nm: 'Протокол', sub: 'откроется, когда матчи сыграны', p: 'ЖДЁТ МАТЧЕЙ', cls: 'wait' },
+  { to: 'Э7.6', nm: 'Ход турнира', sub: 'полномочия у главного судьи · Оспанов Т.', p: 'ПРОСМОТР', cls: 'done' },
 ];
 
 const Works7_1 = () => (
@@ -296,6 +303,23 @@ const Desk7_1States = () => (
         <div className="mt-3">
           <Bar>Состав ещё собирается: заявки принимает главный судья, секретарь их не видит.</Bar>
         </div>
+      </Frag>
+    </Shot>
+    <Shot
+      tone="success"
+      title="Полномочия переданы вам"
+      text="Пришло уведомление от главного судьи; строка «Ход турнира» ведёт в работу."
+      wide
+    >
+      <Frag>
+        <Rows>
+          <Row
+            to="Э7.6"
+            nm="Ход турнира"
+            sub="передал Оспанов Т., главный судья · 14:20"
+            pill={{ t: 'ВЕДЁТЕ', cls: 'live' }}
+          />
+        </Rows>
       </Frag>
     </Shot>
   </States>
@@ -1368,6 +1392,8 @@ const Protocols7_5States = () => (
 
 /* ── Борд роли: экраны маршрута подряд ──────────────────────────── */
 
+const SEC_AUTHOR = 'Ким Л., главный секретарь';
+
 /** Экраны роли по кодам: из этой карты собираются и борд, и карта флоу. */
 export const SCREENS: ScreenMap = {
   /* Борд роли начинается со входа — как у всех ролей (flows/00): маршрут не
@@ -1426,6 +1452,16 @@ export const SCREENS: ScreenMap = {
       </>
     ),
     alt: () => <Protocols7_5Phone />,
+  },
+  'Э7.6': {
+    cap: 'Ход турнира',
+    view: () => (
+      <>
+        <DelegatedLive role={at('ИДЁТ')} author={SEC_AUTHOR} who="СЕКРЕТАРЬ" />
+        <DelegatedStates other={{ gen: 'заместителя', nm: 'Сагинтаев Дархан · заместитель' }} />
+      </>
+    ),
+    alt: () => <DelegatedLive role={at('ИДЁТ')} author={SEC_AUTHOR} who="СЕКРЕТАРЬ" phone />,
   },
 };
 

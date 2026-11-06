@@ -145,6 +145,21 @@ type Cand = { av: string; nm: string; sub: string; rt: string; fee: Fee };
 
 /* Кандидаты на старт «2007 г.р. и моложе»: старше границы система не предлагает
    вовсе — поэтому Абдрахманова (2004) в списке нет. */
+/** Квота региона на старт — из положения турнира (совещание 04.11.2026,
+    пример «не больше трёх»). Число в макете условное. */
+const QUOTA = 3;
+
+/** Действие в строке кандидата: без взноса в заявку не добавить — вместо
+    кнопки «Оплатить»; квота набрана — «Добавить» у остальных нет. */
+const candAction = (a: Cand, on: boolean, full: boolean, toggle: (nm: string) => void) =>
+  a.fee === UNPAID
+    ? { action: 'Оплатить' }
+    : on
+      ? { action: 'Убрать', onAction: () => toggle(a.nm) }
+      : full
+        ? {}
+        : { action: 'Добавить', onAction: () => toggle(a.nm) };
+
 const CANDS: Cand[] = [
   { av: A(29), nm: 'Нургалиев Санжар', sub: '2009 г.р. · «Медеу» · КМС', rt: '2118', fee: PAID },
   { av: A(18), nm: 'Оралбек Диас', sub: '2009 г.р. · СДЮСШОР №3 · КМС', rt: '2042', fee: UNPAID },
@@ -280,7 +295,7 @@ type Start = {
 const STARTS: Start[] = [
   { nm: 'Чемпионат Республики Казахстан', age: 'Главный старт · без возрастной границы', m: 1, d: '18–22', city: 'г. Астана', val: 'наших 14 · лучший — 2 место', st: 'done' },
   { nm: 'Кубок Республики Казахстан', age: 'Главный старт · без возрастной границы', m: 2, d: '24–28', city: 'г. Алматы', val: 'наших 6 · идёт 1/8 финала', st: 'live' },
-  { nm: 'Молодёжный чемпионат Республики Казахстан', age: 'Главный старт · до 21 года', m: 3, d: '14–18', city: 'г. Шымкент', val: 'исправить до 31.03', st: 'no', open: true },
+  { nm: 'Молодёжный чемпионат Республики Казахстан', age: 'Главный старт · до 21 года', m: 3, d: '14–18', city: 'г. Шымкент', val: 'заявка до 31.03', st: 'claim', open: true },
   { nm: 'Чемпионат РК среди спортсменов 2007 г.р. и моложе', age: 'Главный старт · 2007 г.р. и моложе', m: 4, d: '12–16', city: 'г. Караганда', val: 'заявка до 28.04', st: 'claim', open: true },
   { nm: 'Чемпионат РК среди спортсменов 2009 г.р. и моложе', age: 'Главный старт · 2009 г.р. и моложе', m: 5, d: '09–13', city: 'г. Тараз', val: 'подана 22.05 · 6 человек', st: 'wait' },
   { nm: 'Чемпионат РК среди спортсменов 2011 г.р. и моложе', age: 'Главный старт · 2011 г.р. и моложе', m: 8, d: '08–12', city: 'г. Павлодар', val: 'заявка с 10.08', st: 'claim' },
@@ -301,8 +316,9 @@ const STARTS_W = 760;
 /** Куда ведёт строка — по состоянию заявки, а не по типу старта.
 
     В этом весь смысл объединённого раздела: список один, а дальше человек
-    попадает туда, где с этой строкой работают. Ждут заявку, отклонили или
-    решают — это сама заявка (Э12.3): там состав, причина отказа и подача.
+    попадает туда, где с этой строкой работают. Ждут заявку или ждут допуска
+    врача — это сама заявка (Э12.3): там состав, подача и допуск. Состояния
+    «отклонена» нет: заявку вручную не отклоняют (совещание 04.11.2026).
     Приняли, идёт или сыграно — это турнир со срезом «наши» (Э12.5). */
 const startTo = (st: St) => (st === 'claim' || st === 'no' || st === 'wait' ? 'Э12.3' : 'Э12.5');
 
@@ -521,8 +537,8 @@ const Starts12_2States = () => (
       <Frag w={STARTS_W}>
         <Rows>
           <Row
-            nm="ПРИЁМ ЗАЯВОК · ОТКЛОНЕНА · ЖДЁТ ДОПУСКА"
-            sub="заявку ещё ждут, вернули на исправление или решает главный судья"
+            nm="ПРИЁМ ЗАЯВОК · ЖДЁТ ДОПУСКА"
+            sub="заявку ещё ждут или допуск ставит врач соревнований"
             val="сама заявка"
             pill={{ t: 'Э12.3', cls: 'reg' }}
           />
@@ -599,13 +615,13 @@ const Starts12_2States = () => (
    не предлагает вовсе (TZ §9.2). Взнос виден у каждого: он решает, пройдёт ли
    заявка. */
 export function Squad12_3() {
-  const [picked, setPicked] = useState<string[]>(['Нургалиев Санжар', 'Оралбек Диас']);
+  const [picked, setPicked] = useState<string[]>(['Нургалиев Санжар', 'Байжанов Ерасыл']);
   const [q, setQ] = useState('');
   const toggle = (nm: string) =>
     setPicked((p) => (p.includes(nm) ? p.filter((x) => x !== nm) : [...p, nm]));
   const found = CANDS.filter((c) => c.nm.toLowerCase().includes(q.trim().toLowerCase()));
   const team = CANDS.filter((c) => picked.includes(c.nm));
-  const noFee = team.filter((c) => c.fee === UNPAID);
+  const full = team.length >= QUOTA;
 
   return (
     <WebApp
@@ -622,7 +638,7 @@ export function Squad12_3() {
           items={[
             { k: 'Приём заявок', v: 'до 28.04', hot: true },
             { k: 'Проходят по возрасту', v: `${CANDS.length}` },
-            { k: 'В заявке', v: `${team.length}` },
+            { k: 'В заявке', v: `${team.length} из ${QUOTA}` },
           ]}
         />
       </div>
@@ -647,8 +663,7 @@ export function Squad12_3() {
                   val={`рейтинг ${a.rt}`}
                   on={on}
                   pill={a.fee}
-                  action={on ? 'Убрать' : 'Добавить'}
-                  onAction={() => toggle(a.nm)}
+                  {...candAction(a, on, full, toggle)}
                 />
               );
             })}
@@ -661,18 +676,10 @@ export function Squad12_3() {
         )}
       </Panel>
 
-      {noFee.length > 0 && (
-        <Bar tone="warning">
-          {noFee.map((a) => a.nm).join(', ')} — годовой взнос за сезон не оплачен. ⚠ 6.1 —
-          блокирует ли это заявку, федерация не ответила; заявку подать можно, но допуск на месте
-          может не пройти (§9.2).
-        </Bar>
-      )}
-
       {/* Документы и подача — последним: их читают ровно перед тем, как нажать. */}
       <div className="flex items-center justify-between gap-4">
         <span className="text-[12.5px] leading-snug text-neutral-500">
-          В заявке {team.length} из {CANDS.length}
+          В заявке {team.length} из {QUOTA}
         </span>
         <span className="flex shrink-0 items-center gap-2">
           <QuietAction>
@@ -693,55 +700,37 @@ const Squad12_3States = () => (
         «отклонена» и «ждёт допуска». Отдельного списка «мои заявки» больше нет
         (18.08.2026): он был срезом сезона, а разбор одной заявки живёт здесь. */}
     <Shot
-      tone="danger"
-      title="Заявку отклонили — причина здесь же"
-      text="Со строки «ОТКЛОНЕНА» открывается этот же экран: причина сверху, состав правится, и пока приём открыт заявку подают снова."
-      wide
+      tone="warning"
+      title="Заявка подана — ждёт допуска врача"
+      text="Кнопок выбора нет: допуск по каждому ставит врач соревнований. Изменить состав и отозвать заявку можно до закрытия приёма."
     >
-      <Frag w={640}>
-        <FormGrid>
-          <FieldView label="Подана" value="24.03.2026, 12:40" />
-          <FieldView label="Решение" value="25.03.2026, 09:15" />
-          <FieldView label="Кто решил" value="Оспанов Т. · главный судья" />
-          <FieldView label="Приём открыт до" value="31.03.2026" />
-          <FieldView
-            label="Причина отказа"
-            value="У двоих в составе нет годового взноса за 2026 год; приложена не та редакция заявки региона."
-            wide
-          />
-        </FormGrid>
-        <div className="mt-3 flex items-center justify-between gap-3">
-          <span className="text-[12.5px] text-neutral-500">
-            Состав правится тут же — решение приходит по заявке целиком
-          </span>
-          <span className="flex items-center gap-2">
-            <QuietAction>Отозвать заявку</QuietAction>
-            <PrimaryAction>Подать снова</PrimaryAction>
-          </span>
+      <Frag>
+        <Rows>
+          <Row nm="Нургалиев Санжар" sub="2009 г.р. · «Медеу» · справка 027/у" pill={{ t: 'ДОПУЩЕН', cls: 'live' }} />
+          <Row nm="Байжанов Ерасыл" sub="2011 г.р. · «Алатау» · DamuMed" pill={{ t: 'ЖДЁТ ВРАЧА', cls: 'wait' }} />
+        </Rows>
+        <div className="mt-3 flex gap-2">
+          <QuietAction>Отозвать заявку</QuietAction>
+          <QuietAction>Изменить состав</QuietAction>
         </div>
       </Frag>
     </Shot>
 
     <Shot
-      tone="warning"
-      title="Заявка подана — ждёт решения"
-      text="Кнопок выбора больше нет: состав зафиксирован, пока главный судья не ответил. Отозвать можно до закрытия приёма."
+      tone="danger"
+      title="Врач не допустил спортсмена"
+      text="Строка помечена, добора нет (совещание 04.11.2026). ⚠ Успеет ли спортсмен переподать справку до закрытия приёма — открытый вопрос совещания."
     >
       <Frag>
         <Rows>
-          <Row
-            nm="Чемпионат РК · 2009 г.р. и моложе"
-            sub="подана 22.05, 11:20 · 6 спортсменов"
-            pill={{ t: 'ЖДЁТ ДОПУСКА', cls: 'wait' }}
-          />
+          <Row nm="Жақсылық Аружан" sub="2012 г.р. · «Алатау» · справка приложена вручную" pill={{ t: 'НЕ ДОПУЩЕНА', cls: 'bad' }} />
         </Rows>
-        <div className="mt-3"><QuietAction>Отозвать заявку</QuietAction></div>
       </Frag>
     </Shot>
 
     <Shot
       tone="success"
-      title="Заявка принята"
+      title="Допуск поставлен"
       text="Дальше строка сезона ведёт уже не сюда, а на турнир со срезом «наши» (Э12.5)."
     >
       <Frag>
@@ -758,13 +747,23 @@ const Squad12_3States = () => (
 
     <Shot
       tone="warning"
-      title="В заявке спортсмен с неоплаченным взносом"
-      text="⚠ 6.1 — блокирует ли это заявку, федерация не ответила; подать можно, но допуск на месте может не пройти (§9.2)."
+      title="У кандидата не оплачен взнос"
+      text="В заявку не добавить: «не оплачен регистрационный взнос» и рядом «Оплатить» (решение совещания 04.11.2026)."
     >
       <Frag>
         <Rows>
-          <Row nm="Оралбек Диас" sub="2009 г.р. · СДЮСШОР №3 · КМС" pill={UNPAID} />
+          <Row nm="Оралбек Диас" sub="не оплачен регистрационный взнос" pill={UNPAID} action="Оплатить" />
         </Rows>
+      </Frag>
+    </Shot>
+
+    <Shot
+      tone="info"
+      title="Квота региона набрана"
+      text="«Добавить» у остальных погашена: чтобы поставить другого, сначала убрать кого-то из заявки."
+    >
+      <Frag>
+        <Facts items={[{ k: 'В заявке', v: `${QUOTA} из ${QUOTA}` }]} />
       </Frag>
     </Shot>
 
@@ -1490,13 +1489,14 @@ const Starts12_2Phone = () => (
     взноса и фамилией не оставляет от фамилии ничего — а взнос убирать нельзя,
     он решает судьбу заявки (§9.2). */
 function Squad12_3Phone() {
-  const [picked, setPicked] = useState<string[]>(['Нургалиев Санжар', 'Оралбек Диас']);
+  const [picked, setPicked] = useState<string[]>(['Нургалиев Санжар', 'Байжанов Ерасыл']);
   const [q, setQ] = useState('');
   const toggle = (nm: string) =>
-    setPicked((p) => (p.includes(nm) ? p.filter((x) => x !== nm) : [...p, nm]));
+    setPicked((p) =>
+      p.includes(nm) ? p.filter((x) => x !== nm) : p.length >= QUOTA ? p : [...p, nm],
+    );
   const found = CANDS.filter((c) => c.nm.toLowerCase().includes(q.trim().toLowerCase()));
   const team = CANDS.filter((c) => picked.includes(c.nm));
-  const noFee = team.filter((c) => c.fee === UNPAID);
 
   return (
     <PhoneRoleApp
@@ -1511,7 +1511,7 @@ function Squad12_3Phone() {
           items={[
             { k: 'Приём заявок', v: 'до 28.04', hot: true },
             { k: 'Проходят по возрасту', v: `${CANDS.length}` },
-            { k: 'В заявке', v: `${team.length}` },
+            { k: 'В заявке', v: `${team.length} из ${QUOTA}` },
           ]}
         />
       </div>
@@ -1532,7 +1532,8 @@ function Squad12_3Phone() {
                     nm={a.nm}
                     sub={`${a.sub} · рейтинг ${a.rt}${on ? ' · в заявке' : ''}`}
                     on={on}
-                    onSelect={() => toggle(a.nm)}
+                    onSelect={a.fee === UNPAID ? undefined : () => toggle(a.nm)}
+                    action={a.fee === UNPAID ? 'Оплатить' : undefined}
                     pill={a.fee}
                   />
                 );
@@ -1550,17 +1551,9 @@ function Squad12_3Phone() {
         )}
       </Panel>
 
-      {noFee.length > 0 && (
-        <Bar tone="warning">
-          {noFee.map((a) => a.nm).join(', ')} — годовой взнос за сезон не оплачен. ⚠ 6.1 —
-          блокирует ли это заявку, федерация не ответила; заявку подать можно, но допуск на месте
-          может не пройти (§9.2).
-        </Bar>
-      )}
-
       <div className="flex flex-col gap-2">
         <span className="text-[12px] leading-snug text-neutral-500">
-          В заявке {team.length} из {CANDS.length}
+          В заявке {team.length} из {QUOTA}
         </span>
         <PrimaryAction>
           <ClipboardCheck size={15} /> Подать заявку
@@ -1782,7 +1775,7 @@ export function Report12_8() {
       role={R12}
       nav="Рапорты"
       title="Рапорт на командирование"
-      sub="Подаётся главному тренеру национальной команды"
+      sub="Подаётся тренеру по возрастам или главному тренеру"
     >
       <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,330px)]">
         <div>
