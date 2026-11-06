@@ -28,7 +28,6 @@ storybook`, опубликовано на https://storybook-static-nu-two.vercel
 | 7 | Главный секретарь соревнований | [07-glavnyy-sekretar.md](07-glavnyy-sekretar.md) | десктоп |
 | 8 | Заместитель главного судьи | [08-zam-glavnogo-sudi.md](08-zam-glavnogo-sudi.md) | десктоп ⚠ |
 | 9 | Судья | [09-sudya.md](09-sudya.md) | адаптивный сайт: планшет за столом, телефон |
-| 10 | Инспектор / супервайзер — **пока не делается** (совещание 04.11.2026) | [10-inspektor.md](10-inspektor.md) | десктоп |
 | 11 | Главный тренер национальной команды | [11-glavnyy-trener-sbornoy.md](11-glavnyy-trener-sbornoy.md) | десктоп ⚠ |
 | 12 | Старший тренер региона | [12-starshiy-trener-regiona.md](12-starshiy-trener-regiona.md) | десктоп |
 | 13 | Администратор клуба | [13-admin-kluba.md](13-admin-kluba.md) | десктоп |

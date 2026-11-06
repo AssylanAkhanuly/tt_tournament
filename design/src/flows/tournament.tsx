@@ -44,7 +44,6 @@ import { SCREENS as S06 } from '../mockups/role06';
 import { SCREENS as S07 } from '../mockups/role07';
 import { SCREENS as S08 } from '../mockups/role08';
 import { SCREENS as S09 } from '../mockups/role09';
-import { SCREENS as S10 } from '../mockups/role10';
 import { SCREENS as S12 } from '../mockups/role12';
 import { SCREENS as S13 } from '../mockups/role13';
 import { SCREENS as S14 } from '../mockups/role14';
@@ -55,7 +54,7 @@ import './tournament.css';
    роли, которая делает шаг. Коды сквозные (Э5.2, Э9.3), поэтому объединение
    безопасно — двух экранов с одним кодом в системе нет. */
 const ALL_SCREENS: ScreenMap = {
-  ...S00, ...S00J, ...S01, ...S02, ...S05, ...S06, ...S07, ...S08, ...S09, ...S10, ...S12, ...S13, ...S14,
+  ...S00, ...S00J, ...S01, ...S02, ...S05, ...S06, ...S07, ...S08, ...S09, ...S12, ...S13, ...S14,
 };
 
 /** Требования ко всем экранам по кодам: карта показывает справа то же, что и
