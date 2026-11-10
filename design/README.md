@@ -965,14 +965,15 @@ Vercel'ом сам — руками ничего заливать не надо.
   `design/`, ставился только он. Каждый деплой Storybook падал с
   `Can't resolve 'tailwindcss/theme.css'`; так было с 01.09 по 04.09.2026 —
   локально не воспроизводилось, потому что `front/node_modules` на машине есть.
-- «Ignored Build Step» на Vercel: `git diff --quiet HEAD^ HEAD -- . ../front/src`.
+- «Ignored Build Step» — `ignoreCommand` в `vercel.json` (с 10.11.2026; прежде стоял
+  в настройках проекта): `git diff --quiet HEAD^ HEAD -- . ../front/src
+  ../diagrams/out/flow-roles.png`.
   Сборка запускается, если коммит изменил `design/` **или** `front/src` — второе
   обязательно, потому что экран «Сетка» тянет настоящий `BracketFlow` из
   `front/` по алиасу `@`. Правки только в `TZ.md`/диаграммах деплой не гоняют
   (такой деплой Vercel показывает как `CANCELED` — это норма). Исключение —
-  `diagrams/out/flow-roles.png`: его показывает «Флоу/Обзор», и правка одной
-  этой схемы без изменения в `design/` в Storybook не попадёт. Такую правку
-  коммитим вместе с изменением в `design/` (или запускаем ручной деплой ниже).
+  `diagrams/out/flow-roles.png`: его показывает «Флоу/Обзор», поэтому он
+  тоже в списке, и правка одной этой схемы Storybook пересобирает.
 - В настройках включён доступ к файлам вне корня проекта
   (`sourceFilesOutsideRootDirectory`) — без него `../front/src` не виден сборке.
 - **Автор коммита обязан быть `assylan.akhanuly@gmail.com`.** Vercel сверяет

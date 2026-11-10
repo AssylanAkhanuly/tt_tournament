@@ -4,6 +4,7 @@
   "installCommand": "npm install && npm --prefix ../front install --no-audit --no-fund",
   "buildCommand": "npm run build",
   "outputDirectory": "storybook-static",
+  "ignoreCommand": "git diff --quiet HEAD^ HEAD -- . ../front/src ../diagrams/out/flow-roles.png",
   "cleanUrls": true,
   "github": {
     "enabled": true,
