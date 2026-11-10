@@ -23,6 +23,7 @@ import {
   EmptyBox,
   FilterSeg,
   KV,
+  PageTabs,
   Panel,
   PhoneRoleApp,
   Pill,
@@ -62,10 +63,11 @@ const R0304: RoleUI = {
     [<Users size={16} key="r" />, 'Реестры'],
     [<BarChart3 size={16} key="t" />, 'Рейтинги'],
     [<Bell size={16} key="p" />, 'Подписки'],
-    /* Тренерский совет ведёт роль 3 — менеджер по спортивной работе
-       (решение совещания 04.11.2026). ⚠ Тот же пункт нужен в меню R0304
-       общего файла `roles.tsx`. */
-    [<FileSignature size={16} key="s" />, 'Тренерский совет'],
+    /* Заседания тренерского совета (решение совещания 04.11.2026) и ГСК
+       (замечание к схеме, 10.11.2026) ведёт роль 3 — менеджер по
+       спортивной работе. ⚠ Тот же пункт нужен в меню R0304 общего файла
+       `roles.tsx`. */
+    [<FileSignature size={16} key="s" />, 'Заседания'],
   ],
 };
 
@@ -656,33 +658,58 @@ const Subs3_3States = () => (
   </States>
 );
 
-/* ── Э3.4 · Тренерский совет: заседания и протоколы ──────────────────
+/* ── Э3.4 · Заседания тренерского совета и ГСК: протоколы ───────────
    Роль 3. Решение совещания 04.11.2026: заседание — по внешней ссылке на Zoom,
    протокол создаёт менеджер, подписывает как секретарь и отправляет на
-   согласование председателю тренерского совета и администратору. */
+   согласование председателю тренерского совета и администратору. Заседания
+   ГСК тот же менеджер ведёт тем же порядком (замечание к схеме, 10.11.2026) —
+   отдельной вкладкой того же экрана; протокол ГСК согласует председатель ГСК
+   ✳ (наше допущение). */
 
 type Meet = { d: string; nm: string; st: string; cls: Cls };
+type Sign = { who: string; nm: string; st: string; cls: Cls };
+type Body = {
+  meets: Meet[];
+  open: { d: string; nm: string; link: string; who: string; res: string };
+  signs: Sign[];
+};
 
-const MEETS: Meet[] = [
-  { d: '12.11.2026 · 15:00', nm: 'Отбор в сборную на ЧА-2027', st: 'ЧЕРНОВИК', cls: 'done' },
-  { d: '28.10.2026 · 16:00', nm: 'Итоги Кубка РК, календарь УТС', st: 'НА СОГЛАСОВАНИИ', cls: 'wait' },
-  { d: '02.10.2026 · 15:00', nm: 'Индивидуальные планы подготовки', st: 'СОГЛАСОВАН', cls: 'live' },
-  { d: '11.09.2026 · 15:00', nm: 'Положение о ЧРК 2027', st: 'ВОЗВРАЩЁН', cls: 'bad' },
-];
+const COUNCIL: Body = {
+  meets: [
+    { d: '12.11.2026 · 15:00', nm: 'Отбор в сборную на ЧА-2027', st: 'ЧЕРНОВИК', cls: 'done' },
+    { d: '28.10.2026 · 16:00', nm: 'Итоги Кубка РК, календарь УТС', st: 'НА СОГЛАСОВАНИИ', cls: 'wait' },
+    { d: '02.10.2026 · 15:00', nm: 'Индивидуальные планы подготовки', st: 'СОГЛАСОВАН', cls: 'live' },
+    { d: '11.09.2026 · 15:00', nm: 'Положение о ЧРК 2027', st: 'ВОЗВРАЩЁН', cls: 'bad' },
+  ],
+  open: { d: '28.10.2026', nm: 'Итоги Кубка РК, календарь УТС', link: 'zoom.us/j/84213…', who: '14 из 17 членов совета', res: '3 пункта' },
+  signs: [
+    { who: 'Секретарь', nm: 'Тлеуова А.', st: 'ПОДПИСАЛ · 29.10', cls: 'live' },
+    { who: 'Председатель тренерского совета', nm: 'Ахметов Б.', st: 'ЖДЁТ', cls: 'wait' },
+    { who: 'Администратор Федерации', nm: 'Садыков Е.', st: 'ЖДЁТ', cls: 'wait' },
+  ],
+};
 
-const SIGNS: { who: string; nm: string; st: string; cls: Cls }[] = [
-  { who: 'Секретарь', nm: 'Тлеуова А.', st: 'ПОДПИСАЛ · 29.10', cls: 'live' },
-  { who: 'Председатель тренерского совета', nm: 'Ахметов Б.', st: 'ЖДЁТ', cls: 'wait' },
-  { who: 'Администратор Федерации', nm: 'Садыков Е.', st: 'ЖДЁТ', cls: 'wait' },
-];
+const GSK: Body = {
+  meets: [
+    { d: '19.11.2026 · 11:00', nm: 'Наряд судей на ЧРК 2027', st: 'ЧЕРНОВИК', cls: 'done' },
+    { d: '30.10.2026 · 11:00', nm: 'Итоги судейства Кубка РК', st: 'НА СОГЛАСОВАНИИ', cls: 'wait' },
+    { d: '08.10.2026 · 11:00', nm: 'Аттестация судей, II категория', st: 'СОГЛАСОВАН', cls: 'live' },
+  ],
+  open: { d: '30.10.2026', nm: 'Итоги судейства Кубка РК', link: 'zoom.us/j/90577…', who: '7 из 9 членов ГСК', res: '2 пункта' },
+  signs: [
+    { who: 'Секретарь', nm: 'Тлеуова А.', st: 'ПОДПИСАЛ · 31.10', cls: 'live' },
+    { who: 'Председатель ГСК', nm: 'Жумабаев Н.', st: 'ЖДЁТ', cls: 'wait' },
+    { who: 'Администратор Федерации', nm: 'Садыков Е.', st: 'ЖДЁТ', cls: 'wait' },
+  ],
+};
 
 const MEET_GRID = '150px 1fr 150px';
 
-const MeetTable = () => (
+const MeetTable = ({ b }: { b: Body }) => (
   <DataTable
     cols={['Дата', 'Повестка', 'Протокол']}
     grid={MEET_GRID}
-    rows={MEETS.map((m, i) => ({
+    rows={b.meets.map((m, i) => ({
       key: m.d,
       on: i === 1,
       cells: [
@@ -694,21 +721,21 @@ const MeetTable = () => (
   />
 );
 
-const ProtocolPanel = () => (
+const ProtocolPanel = ({ b }: { b: Body }) => (
   <>
-    <Panel title="Заседание 28.10.2026" extra={<Pill t="НА СОГЛАСОВАНИИ" color={PC.wait} />}>
+    <Panel title={`Заседание ${b.open.d}`} extra={<Pill t="НА СОГЛАСОВАНИИ" color={PC.wait} />}>
       <KV
         items={[
-          ['Повестка', 'Итоги Кубка РК, календарь УТС'],
-          ['Ссылка', <span key="z" className="inline-flex items-center gap-1.5"><Video size={14} /> zoom.us/j/84213…</span>],
-          ['Участники', '14 из 17 членов совета'],
-          ['Решения', '3 пункта'],
+          ['Повестка', b.open.nm],
+          ['Ссылка', <span key="z" className="inline-flex items-center gap-1.5"><Video size={14} /> {b.open.link}</span>],
+          ['Участники', b.open.who],
+          ['Решения', b.open.res],
         ]}
       />
     </Panel>
     <Panel title="Подписи и согласование" flush>
       <div className="divide-y divide-neutral-100">
-        {SIGNS.map((g) => (
+        {b.signs.map((g) => (
           <Row key={g.who} nm={g.who} sub={g.nm} pill={{ t: g.st, cls: g.cls }} />
         ))}
       </div>
@@ -722,30 +749,52 @@ const NewMeet = ({ wide }: { wide?: boolean } = {}) => (
   </Button>
 );
 
+const MeetsDesk = ({ b }: { b: Body }) => (
+  <>
+    <MeetTable b={b} />
+    <div className="mt-4">
+      <ProtocolPanel b={b} />
+    </div>
+  </>
+);
+
+const MeetsPhone = ({ b }: { b: Body }) => (
+  <>
+    <Rows>
+      {b.meets.map((m) => (
+        <Row key={m.d} nm={m.nm} sub={m.d} pill={{ t: m.st, cls: m.cls }} />
+      ))}
+    </Rows>
+    <div className="mt-3">
+      <ProtocolPanel b={b} />
+    </div>
+  </>
+);
+
 export function Council3_4() {
   return (
-    <WebApp role={R0304} nav="Тренерский совет" title="Тренерский совет" actions={<NewMeet />}>
-      <MeetTable />
-      <div className="mt-4">
-        <ProtocolPanel />
-      </div>
+    <WebApp role={R0304} nav="Заседания" title="Заседания" actions={<NewMeet />}>
+      <PageTabs
+        items={[
+          { t: 'Тренерский совет', view: <MeetsDesk b={COUNCIL} /> },
+          { t: 'ГСК', view: <MeetsDesk b={GSK} /> },
+        ]}
+      />
     </WebApp>
   );
 }
 
 const Council3_4Phone = () => (
-  <PhoneRoleApp role={R0304} nav="Тренерский совет" title="Тренерский совет">
+  <PhoneRoleApp role={R0304} nav="Заседания" title="Заседания">
     <div className="mb-3">
       <NewMeet wide />
     </div>
-    <Rows>
-      {MEETS.map((m) => (
-        <Row key={m.d} nm={m.nm} sub={m.d} pill={{ t: m.st, cls: m.cls }} />
-      ))}
-    </Rows>
-    <div className="mt-3">
-      <ProtocolPanel />
-    </div>
+    <PageTabs
+      items={[
+        { t: 'Тренерский совет', view: <MeetsPhone b={COUNCIL} /> },
+        { t: 'ГСК', view: <MeetsPhone b={GSK} /> },
+      ]}
+    />
   </PhoneRoleApp>
 );
 
@@ -808,7 +857,7 @@ export const SCREENS: ScreenMap = {
     alt: () => <Subs3_3Phone />,
   },
   'Э3.4': {
-    cap: 'Тренерский совет: заседания и протоколы',
+    cap: 'Заседания тренерского совета и ГСК',
     view: () => (
       <>
         <Council3_4 />

@@ -78,7 +78,7 @@ export const R0304: RoleUI = {
     [<Users size={18} />, 'Реестры'],
     [<BarChart3 size={18} />, 'Рейтинги'],
     [<Bell size={18} />, 'Подписки'],
-    [<Scroll size={18} />, 'Тренерский совет'],
+    [<Scroll size={18} />, 'Заседания'],
   ],
 };
 
