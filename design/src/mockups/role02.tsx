@@ -633,11 +633,11 @@ const MarkDialog = ({ phone }: { phone?: boolean } = {}) => {
           <QuietAction to="Э2.2">Закрыть</QuietAction>
           {proof === PROOFS[0] && (
             <Button variant="outline" data-to="Э2.2">
-              <Undo2 size={15} /> Вернуть квитанцию
+              <Undo2 size={15} /> Отказать с причиной
             </Button>
           )}
           <Button variant="primary" data-to="Э2.2">
-            <Banknote size={15} /> Отметить оплачен
+            <Banknote size={15} /> Подтвердить с пометкой
           </Button>
         </>
       }
@@ -659,6 +659,7 @@ const MarkDialog = ({ phone }: { phone?: boolean } = {}) => {
             (DateInput кита) рисуется в локали браузера и на снимке выдавал
             американское «02/22/2026» рядом с «22.02.2026» остального экрана. */}
         <TextInput label="Дата платежа" value="03.03.2026" wide={phone} />
+        <TextInput label="Пометка" value="сверено с выпиской" wide={phone} />
       </FormGrid>
     </InlineDialog>
   );
@@ -706,7 +707,7 @@ const Mark2_3States = () => (
           </div>
         </FormGrid>
         <div className="mt-3">
-          <DisabledAction>Отметить оплачен</DisabledAction>
+          <DisabledAction>Подтвердить с пометкой</DisabledAction>
         </div>
       </Frag>
     </Shot>

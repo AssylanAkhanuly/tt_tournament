@@ -12,6 +12,6 @@ export default {
 export const AllRoles = {
   name: 'Все роли — одна схема',
   render: () => (
-    <Scheme src={scheme} alt="Рабочий путь всех четырнадцати ролей" source="flows/README.md" />
+    <Scheme src={scheme} alt="Рабочий путь всех ролей" source="flows/README.md" />
   ),
 };

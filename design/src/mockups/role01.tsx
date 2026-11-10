@@ -1169,6 +1169,9 @@ export function Cal1_2(_props: { variant?: 'desktop' | 'land' } = {}) {
                 под которым человек ждёт свой Excel, а получает csv. */}
             <FileSpreadsheet size={14} /> Выгрузить в Excel
           </Button>
+          <Button variant="outline">
+            <Send size={14} /> Опубликовать ЕРК
+          </Button>
           <Button variant="primary">
             <Plus size={15} /> Завести соревнование
           </Button>
