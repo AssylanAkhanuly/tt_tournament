@@ -622,8 +622,10 @@ const MarkDialog = ({ phone }: { phone?: boolean } = {}) => {
       to="Э2.2"
       wide
       foot={
-        <>
-          {/* На телефоне подвал делят две кнопки, и третьей строке в нём места
+        /* Кнопок четыре, и на узком экране они переносятся строкой ниже, а не
+           вылезают за край диалога. */
+        <div className="flex w-full flex-wrap items-center justify-end gap-2">
+          {/* На телефоне подвал делят кнопки, и строке о журнале в нём места
               нет: то же правило сказано плашкой внутри диалога. */}
           {!phone && (
             <span className="mr-auto text-xs text-neutral-500">
@@ -636,10 +638,13 @@ const MarkDialog = ({ phone }: { phone?: boolean } = {}) => {
               <Undo2 size={15} /> Отказать с причиной
             </Button>
           )}
-          <Button variant="primary" data-to="Э2.2">
+          <Button variant="outline" data-to="Э2.2">
             <Banknote size={15} /> Подтвердить с пометкой
           </Button>
-        </>
+          <Button variant="primary" data-to="Э2.2">
+            <Banknote size={15} /> Подтвердить
+          </Button>
+        </div>
       }
     >
       <div className="mb-3 flex flex-col gap-1">
@@ -707,7 +712,7 @@ const Mark2_3States = () => (
           </div>
         </FormGrid>
         <div className="mt-3">
-          <DisabledAction>Подтвердить с пометкой</DisabledAction>
+          <DisabledAction>Подтвердить</DisabledAction>
         </div>
       </Frag>
     </Shot>
