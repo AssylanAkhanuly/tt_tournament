@@ -129,3 +129,78 @@ def test_незнакомый_заголовок_листа_отменяет_з�
     with pytest.raises(CommandError, match="ветераны"):
         call_command("import_rating_list", odd)
     assert RatingProfile.objects.count() == 0
+
+
+# ── Листы октября 2026 ✳ (12.11.2026): лишняя колонка «Nп», заголовок во второй
+#    колонке, зарубежные города, тот же человек казахскими буквами ──
+
+
+def лист_октября(path, title, rows):
+    """Как у федерации 02.10.2026: «Nп · Nж · Rж · Rи · N · Ф.И.О. · Гр · Город»."""
+    wb = Workbook()
+    ws = wb.active
+    ws.append([None])
+    ws.append([None, "Квалификационные списки рейтинга спортсменов по настольному теннису"])
+    ws.append([None, "РЕСПУБЛИКА  КАЗАХСТАН"])
+    ws.append([None, title])
+    ws.append([None, "составлено на 02.10.2026"])
+    ws.append(["Nп", "Nж", "Rж", "Rи", "N", "Ф.И.О.", "Гр", "Город"])
+    for r in rows:
+        ws.append(list(r))
+    ws.append([None])
+    ws.append([None, None, "Судья по рейтингу Республики Казахстан …", None, None, None, None, "Мирасланов М.К."])
+    wb.save(path)
+    return str(path)
+
+
+def test_лист_октября_читается_по_шапке(tmp_path):
+    f = лист_октября(tmp_path / "w.xlsx", "женщины", [
+        (1, 73, 25, 26, 18, "ЖАРМУХАМБЕТОВА Алуа  ", "26.09.2008", "Абайская обл."),
+    ])
+    call_command("import_rating_list", f)
+    p = RatingProfile.objects.select_related("user").get()
+    # «Rж» = 25: не «Nж» = 73 и не «Rи» = 26 — колонки сдвинуты на одну.
+    assert (p.user.name, p.value, p.sex) == ("Жармухамбетова Алуа", Decimal("25.00"), "f")
+    assert (p.birth_date, p.region) == (datetime.date(2008, 9, 26), "Абайская область")
+
+
+def test_зарубежный_город_без_региона_а_незнакомый_по_прежнему_отказ(tmp_path):
+    f = лист_октября(tmp_path / "m.xlsx", "мужчины", [
+        (1, 1, 30, 30, 5, "АВАЗОВ Шохжахон ", "29.08.2013", "г. Ташкент"),
+        (2, 2, 20, 20, 5, "ПОПОВ  Андрей  ", "03.05.1996", "г.Н-Новгород"),
+    ])
+    call_command("import_rating_list", f)
+    assert sorted(RatingProfile.objects.values_list("region", flat=True)) == ["", ""]
+    bad = лист_октября(tmp_path / "x.xlsx", "мужчины", [(1, 1, 30, 30, 5, "ИВАНОВ Иван", "01.01.2000", "г. Астанаа")])
+    with pytest.raises(CommandError, match="Астанаа"):
+        call_command("import_rating_list", bad)
+    assert RatingProfile.objects.count() == 2
+
+
+def test_тот_же_человек_казахскими_буквами_и_в_другом_порядке_не_задваивается(tmp_path):
+    from rating import engine, services
+
+    services.create_athlete(name="ҚАЛДЫБАЙ Нұртас", region="Мангистауская область", sex="m",
+                            birth_date=datetime.date(2011, 12, 31), origin=engine.ORIGIN_LEGACY, legacy=4)
+    services.create_athlete(name="Ёлкин Пётр", region="Астана", sex="m",
+                            birth_date=datetime.date(2000, 1, 1), origin=engine.ORIGIN_LEGACY, legacy=10)
+    f = лист_октября(tmp_path / "m.xlsx", "мужчины", [
+        (1, 1, 4, 4, 1, "КАЛДЫБАЙ Нуртас ", "31.12.2011", "Мангистау. обл."),
+        (2, 2, 10, 10, 1, "Петр ЕЛКИН", "01.01.2000", "г. Астана"),
+        # Тот же ФИО, но другая дата рождения — другой человек, заводится.
+        (3, 3, 10, 10, 1, "ЕЛКИН Петр", "02.01.2000", "г. Астана"),
+    ])
+    call_command("import_rating_list", f)
+    assert RatingProfile.objects.count() == 3
+
+
+def test_dry_run_только_отчёт(tmp_path, capsys):
+    f = лист_октября(tmp_path / "m.xlsx", "мужчины", [
+        (1, 1, 30, 30, 5, "АВАЗОВ Шохжахон ", "29.08.2013", "г. Ташкент"),
+        (2, 2, 20, 20, 5, "ИВАНОВ Иван", "01.01.2000", "г. Алматы"),
+    ])
+    call_command("import_rating_list", f, "--dry-run")
+    out = capsys.readouterr().out
+    assert RatingProfile.objects.count() == 0
+    assert "будет заведено: 2 (без региона: 1)" in out
+    assert "Авазов Шохжахон" in out
