@@ -204,3 +204,14 @@ def test_dry_run_только_отчёт(tmp_path, capsys):
     assert RatingProfile.objects.count() == 0
     assert "будет заведено: 2 (без региона: 1)" in out
     assert "Авазов Шохжахон" in out
+
+
+def test_дата_1900_это_заглушка_карточка_без_даты(tmp_path):
+    f = лист_октября(tmp_path / "m.xlsx", "мужчины", [
+        (1, 1, 42, 42, 5, "МА Чжен ", "01.01.1900", "г. Алматы"),
+    ])
+    call_command("import_rating_list", f)
+    p = RatingProfile.objects.select_related("user").get()
+    assert (p.user.name, p.birth_date, p.birth_year, p.value) == ("Ма Чжен", None, None, Decimal("42.00"))
+    call_command("import_rating_list", f)  # повтор — та же карточка, не вторая
+    assert RatingProfile.objects.count() == 1

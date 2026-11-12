@@ -28,6 +28,9 @@
   Москвы и т. п. в листе федерации есть. Город, которого нет ни там, ни там, —
   по-прежнему отказ: опечатка в казахстанском городе не должна молча стать
   «не указан».
+- Дата рождения раньше 1920 года — заглушка «неизвестно» (в листах октября
+  у 18 человек, чаще всего 01.01.1900) ✳ (12.11.2026): карточка заводится без даты, а не с
+  1900 годом, который карточка и не примет (граница 1920 — наша).
 - `--dry-run` — только отчёт: сколько строк, сколько уже есть, кто будет
   заведён; ничего не записывается.
 - Колонка «N» не читается: что она значит, в файле не сказано.
@@ -109,13 +112,20 @@ def same_person_key(name: str, birth) -> tuple:
     return (" ".join(sorted(words)), birth)
 
 
-def _birth(raw) -> datetime.date:
+#: Раньше этого года дата в листе — заглушка «неизвестно» (01.01.1900).
+UNKNOWN_BEFORE = 1920
+
+
+def _birth(raw):
+    """Дата рождения из листа; None — заглушка вместо неизвестной даты."""
     if isinstance(raw, datetime.datetime):
-        return raw.date()
-    m = re.fullmatch(r"(\d\d)\.(\d\d)\.(\d{4})", _space(raw))
-    if not m:
-        raise ValueError(raw)
-    return datetime.date(int(m.group(3)), int(m.group(2)), int(m.group(1)))
+        d = raw.date()
+    else:
+        m = re.fullmatch(r"(\d\d)\.(\d\d)\.(\d{4})", _space(raw))
+        if not m:
+            raise ValueError(raw)
+        d = datetime.date(int(m.group(3)), int(m.group(2)), int(m.group(1)))
+    return None if d.year < UNKNOWN_BEFORE else d
 
 
 #: Заголовок листа → пол (первое слово, как в листах федерации).
@@ -226,7 +236,7 @@ class Command(BaseCommand):
                     fresh.append(r)
             for r in fresh:
                 self.stdout.write("  + %s, %s, %s, %s" % (
-                    r["name"], r["birth"].strftime("%d.%m.%Y"),
+                    r["name"], r["birth"].strftime("%d.%m.%Y") if r["birth"] else "дата не указана",
                     region_of(r["city"]) or "регион не указан (%s)" % r["city"], r["value"]))
             self.stdout.write(
                 "Строк в листах: %d, уже есть: %d, будет заведено: %d (без региона: %d). Ничего не записано." % (
