@@ -10,6 +10,7 @@ from django.contrib.auth import get_user_model
 from django.db.models import Count, Max, Q
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
+from django.utils import timezone
 from rest_framework import generics, status
 from rest_framework.permissions import AllowAny, IsAuthenticated, IsAuthenticatedOrReadOnly
 from rest_framework.response import Response
@@ -766,7 +767,8 @@ class ManualResultsView(APIView):
     `POST schedule/manual/` `{on}` — выбрать «вручную» или вернуться к выбору;
     `POST schedule/manual/matches/` `{a, b, score_a, score_b}` — внести матч;
     `DELETE schedule/manual/matches/<id>/` — убрать; `POST schedule/manual/finish/`
-    — завершить турнир и пересчитать рейтинг. Главный судья турнира,
+    — завершить турнир и пересчитать рейтинг; `POST schedule/manual/unfinish/` ✳
+    (12.11.2026) — вернуть последний завершённый турнир, откатив рейтинг. Главный судья турнира,
     председатель ГСК, администратор федерации. Ответ — расписание целиком."""
 
     permission_classes = [IsAuthenticated]
@@ -786,6 +788,8 @@ class ManualResultsView(APIView):
 
     def post(self, request, pk, match_id=None):
         d = request.data
+        if request.path.rstrip("/").endswith("/unfinish"):
+            return self._run(request, pk, lambda m, t: m.unfinish(t, actor=request.user))
         if request.path.rstrip("/").endswith("/finish"):
             return self._run(request, pk, lambda m, t: m.finish(t, actor=request.user))
         if request.path.rstrip("/").endswith("/matches"):
@@ -1442,6 +1446,7 @@ def _record_bracket_result(match, tournament, request, score1, score2, winner, w
     finished_matches = tournament.matches.filter(status=Match.FINISHED).count()
     if total_matches > 0 and total_matches == finished_matches:
         tournament.status = Tournament.STATUS_FINISHED
+        tournament.finished_at = timezone.now()
         tournament.save()
         # Национальный рейтинг ФНТ РК считается по итоговому протоколу (п. 8.1
         # Положения). Прежняя методика RTTF из прототипа SpinCoach заменена —
@@ -1610,6 +1615,7 @@ class MatchResetView(APIView):
             from rating.services import revert_tournament
             revert_tournament(tournament, actor=request.user)
             tournament.status = Tournament.STATUS_IN_PROGRESS
+            tournament.finished_at = None
             tournament.save()
 
         return Response(MatchSerializer(match).data)

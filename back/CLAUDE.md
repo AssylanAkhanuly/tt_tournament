@@ -196,6 +196,10 @@
   круга 1, сыгранный. В снимке расписания — `mode`, `can_manual`, `can_build`, `manual_matches`, `players`, `games_to_win`.
   `POST …/schedule/manual/finish/` — завершить турнир и пересчитать рейтинг (`apply_tournament`); дальше матчи не меняются;
   в снимке — `can_finish`, `tournament_status`, `rating_changes`.
+  `POST …/schedule/manual/unfinish/` ✳ (12.11.2026) — вернуть из завершённых **только последний завершённый турнир**
+  (`Tournament.finished_at`, миграция `0027`; ставят все три пути завершения): рейтинг откатывается
+  (`revert_tournament`), турнир снова `in_progress`; отказ — если после него у участников были другие строки рейтинга
+  (`protocol_block_reason`). В снимке — `can_unfinish`.
   Тесты — `tournaments/tests/test_manual_results.py`.
 
 ## Permissions

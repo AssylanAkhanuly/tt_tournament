@@ -12,10 +12,16 @@
    «Завершить турнир» ✳ (03.11.2026, решение владельца продукта) — с
    подтверждением: турнир завершается, рейтинг участников пересчитывает
    сервер. После этого матчи не меняются, а у таблицы два вида — «Рейтинг»
-   (было, изменение, стало — по каждому сыгравшему) и «Матчи». HeroUI + Tailwind. */
+   (было, изменение, стало — по каждому сыгравшему) и «Матчи».
+
+   «Вернуть турнир» ✳ (12.11.2026, решение владельца продукта) — только у
+   последнего завершённого турнира, с подтверждением: рейтинг турнира
+   откатывается, матчи снова правятся. Кнопку показывает `canUnfinish` —
+   правило «последний» и отказы считает сервер (`manual_results.unfinish`).
+   HeroUI + Tailwind. */
 
 import { AlertDialog, Button, Chip, I18nProvider, Modal, NumberField, useOverlayState } from '@heroui/react';
-import { Flag, Plus, Trash2, Undo2 } from 'lucide-react';
+import { Flag, Plus, RotateCcw, Trash2, Undo2 } from 'lucide-react';
 import { useState } from 'react';
 
 import {
@@ -23,6 +29,7 @@ import {
   finishManualResults,
   removeManualMatch,
   setManualResults,
+  unfinishManualResults,
   type ManualMatch,
   type RatingChange,
   type Schedule,
@@ -245,6 +252,39 @@ function Finish({ s, onFinish }: { s: Schedule; onFinish: () => void }) {
   );
 }
 
+function Unfinish({ s, onUnfinish }: { s: Schedule; onUnfinish: () => void }) {
+  return (
+    <AlertDialog>
+      <Button variant="tertiary" size="sm" className="rounded-xl" data-testid="manual-unfinish">
+        <RotateCcw size={15} /> Вернуть турнир
+      </Button>
+      <AlertSheet className="rounded-xl" testId="manual-unfinish-confirm">
+        <AlertDialog.Header>
+          <AlertDialog.Icon status="warning" />
+          <AlertDialog.Heading>Вернуть турнир из завершённых?</AlertDialog.Heading>
+        </AlertDialog.Header>
+        <AlertDialog.Body>
+          <p className="text-[14px]">Изменений рейтинга к отмене: {s.ratingChanges.length}</p>
+        </AlertDialog.Body>
+        <AlertDialog.Footer>
+          <Button slot="close" variant="tertiary" className="rounded-xl">
+            Отмена
+          </Button>
+          <Button
+            slot="close"
+            variant="danger"
+            className="rounded-xl"
+            onPress={onUnfinish}
+            data-testid="manual-unfinish-ok"
+          >
+            Вернуть
+          </Button>
+        </AlertDialog.Footer>
+      </AlertSheet>
+    </AlertDialog>
+  );
+}
+
 export function ManualResults({
   s,
   tournamentId,
@@ -338,6 +378,7 @@ export function ManualResults({
           <Chip size="sm" variant="soft" color="success" data-testid="manual-finished">
             Завершён
           </Chip>
+          {s.canUnfinish && <Unfinish s={s} onUnfinish={() => void run(() => unfinishManualResults(tournamentId))} />}
           <div className="ml-auto">
             <Segmented
               items={['Рейтинг', 'Матчи']}

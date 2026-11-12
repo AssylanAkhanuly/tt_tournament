@@ -235,3 +235,87 @@ def test_завершить_может_только_тот_кто_вносит(�
     матч(клиент(мир["главный"]), t, a, b, 3, 0)
     assert завершить(клиент(мир["судья"]), t).status_code == 403
     assert завершить(клиент(a), t).status_code == 403
+
+
+# ── Вернуть из завершённых — только последний ✳ (12.11.2026) ─────────
+
+
+def вернуть(api, t):
+    return api.post(url(t, "manual/unfinish/"), format="json")
+
+
+def сыграть_и_завершить(api, t, a, b):
+    вручную(api, t)
+    матч(api, t, a, b, 3, 1)
+    return завершить(api, t)
+
+
+def test_последний_завершённый_возвращается_и_рейтинг_откатывается(мир):
+    from rating.models import RatingEntry, RatingProfile
+
+    t, a, b = мир["t"], *мир["игроки"][:2]
+    api = клиент(мир["председатель"])
+    сыграть_и_завершить(api, t, a, b)
+    before_a = RatingProfile.objects.get(user=a).value
+    assert api.get(url(t)).data["can_unfinish"] is True
+
+    r = вернуть(api, t)
+    assert r.status_code == 200, r.data
+    t.refresh_from_db()
+    assert t.status == Tournament.STATUS_IN_PROGRESS
+    assert t.finished_at is None
+    # Строки журнала остались, но отменены; карточка — без начислений турнира.
+    assert RatingEntry.objects.filter(tournament=t, is_reverted=False).count() == 0
+    assert RatingEntry.objects.filter(tournament=t, is_reverted=True).count() == 2
+    assert RatingProfile.objects.get(user=a).value < before_a
+    assert (r.data["tournament_status"], r.data["can_unfinish"], r.data["can_manual"]) == (
+        Tournament.STATUS_IN_PROGRESS, False, True,
+    )
+    # Матчи снова правятся, и турнир завершается заново с тем же итогом.
+    assert матч(api, t, a, b, 3, 0).status_code == 200
+    assert завершить(api, t).status_code == 200
+    assert RatingEntry.objects.filter(tournament=t, is_reverted=False).count() == 4
+
+
+def test_вернуть_можно_только_последний_завершённый(мир):
+    t, a, b, c, d = мир["t"], *мир["игроки"]
+    api = клиент(мир["председатель"])
+    сыграть_и_завершить(api, t, a, b)
+    второй = Tournament.objects.create(name="Второй", created_by=мир["админ"], games_to_win=3)
+    for p in (c, d):
+        TournamentParticipant.objects.create(tournament=второй, user=p)
+    сыграть_и_завершить(api, второй, c, d)
+
+    assert api.get(url(t)).data["can_unfinish"] is False
+    r = вернуть(api, t)
+    assert r.status_code == 400
+    assert "последний" in r.data["detail"]
+    t.refresh_from_db()
+    assert t.status == Tournament.STATUS_FINISHED
+    # Последний — возвращается, и тогда последним становится первый.
+    assert вернуть(api, второй).status_code == 200
+    assert вернуть(api, t).status_code == 200
+
+
+def test_не_вернуть_если_после_турнира_рейтинг_правили(мир):
+    from rating import services
+
+    t, a, b = мир["t"], *мир["игроки"][:2]
+    api = клиент(мир["председатель"])
+    сыграть_и_завершить(api, t, a, b)
+    services.register_correction(a, "1.50", "ошибка в листе", actor=мир["председатель"])
+    assert вернуть(api, t).status_code == 400
+    t.refresh_from_db()
+    assert t.status == Tournament.STATUS_FINISHED
+
+
+def test_незавершённый_не_возвращается_и_чужим_нельзя(мир):
+    t, a, b = мир["t"], *мир["игроки"][:2]
+    api = клиент(мир["главный"])
+    вручную(api, t)
+    матч(api, t, a, b, 3, 1)
+    assert вернуть(api, t).status_code == 400
+    завершить(api, t)
+    assert вернуть(клиент(мир["судья"]), t).status_code == 403
+    assert вернуть(клиент(a), t).status_code == 403
+    assert вернуть(api, t).status_code == 200

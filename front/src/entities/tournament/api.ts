@@ -612,6 +612,8 @@ export type Schedule = {
   gamesToWin: number;
   /** Можно ли завершить турнир (вручную, есть матчи, ещё не завершён) ✳ 03.11.2026. */
   canFinish: boolean;
+  /** Можно ли вернуть турнир из завершённых — только последний завершённый ✳ 12.11.2026. */
+  canUnfinish: boolean;
   tournamentStatus: TournamentStatus;
   /** После завершения — изменение рейтинга участников по турниру. */
   ratingChanges: RatingChange[];
@@ -633,10 +635,11 @@ export type ManualMatch = {
 
 type RawSchedule = Omit<
   Schedule,
-  'canEdit' | 'settings' | 'matches' | 'canManual' | 'canBuild' | 'manualMatches' | 'gamesToWin' | 'canFinish' | 'tournamentStatus' | 'ratingChanges'
+  'canEdit' | 'settings' | 'matches' | 'canManual' | 'canBuild' | 'manualMatches' | 'gamesToWin' | 'canFinish' | 'canUnfinish' | 'tournamentStatus' | 'ratingChanges'
 > & {
   games_to_win: number;
   can_finish: boolean;
+  can_unfinish?: boolean;
   tournament_status: TournamentStatus;
   rating_changes: { player: SchedulePerson; before: string; delta: string; after: string }[];
   can_edit: boolean;
@@ -686,6 +689,7 @@ const toSchedule = (r: RawSchedule): Schedule => ({
   players: r.players ?? [],
   gamesToWin: r.games_to_win ?? 3,
   canFinish: r.can_finish ?? false,
+  canUnfinish: r.can_unfinish ?? false,
   tournamentStatus: r.tournament_status,
   ratingChanges: (r.rating_changes ?? []).map((c) => ({
     player: c.player,
@@ -760,6 +764,11 @@ export async function removeManualMatch(id: string, matchId: number): Promise<Sc
 /** Завершить турнир, внесённый вручную, — и пересчитать рейтинг участников. */
 export async function finishManualResults(id: string): Promise<Schedule> {
   return toSchedule(await send<RawSchedule>(scheduleUrl(id, 'manual/finish/'), 'POST'));
+}
+
+/** Вернуть последний завершённый турнир: рейтинг откатывается, матчи снова правятся. */
+export async function unfinishManualResults(id: string): Promise<Schedule> {
+  return toSchedule(await send<RawSchedule>(scheduleUrl(id, 'manual/unfinish/'), 'POST'));
 }
 
 /** Отправить: расписание и состав запираются, турнир начинается. */

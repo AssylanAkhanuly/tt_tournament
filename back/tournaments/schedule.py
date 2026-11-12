@@ -427,6 +427,8 @@ def snapshot(t: Tournament, user) -> dict:
         "can_build": t.schedule_status == "none" and t.results_mode != "manual" and is_chief(t, user),
         "manual_matches": manual_results.manual_snapshot(t),
         "can_finish": manual_results.can_finish(t, user),
+        # Вернуть из завершённых ✳ (12.11.2026) — только последний завершённый турнир.
+        "can_unfinish": manual_results.can_unfinish(t, user),
         "tournament_status": t.status,
         "rating_changes": manual_results.rating_changes(t) if t.results_mode == "manual" else [],
         "games_to_win": t.games_to_win,

@@ -24,9 +24,21 @@
 участников пересчитывается тем же `rating.services.apply_tournament`, что и
 при закрытии последнего матча сетки; у нерейтингового (`is_rating = False`)
 пересчёта нет. После завершения матчи не меняются. ⚠ Мест и неявок здесь
-нет — коэффициент места P у всех 1,00 (ENGINE.md). """
+нет — коэффициент места P у всех 1,00 (ENGINE.md).
+
+**Вернуть из завершённых** ✳ (12.11.2026, решение владельца продукта): только
+**последний завершённый турнир** (по `finished_at`, среди всех турниров).
+Рейтинг турнира откатывается (`rating.services.revert_tournament`: строки
+журнала помечаются отменёнными, карточки пересобираются), турнир снова идёт, и
+матчи опять можно править, а потом завершить заново. Почему только последний:
+рейтинг считается от значений участников на момент турнира, и откат более
+раннего оставил бы следующие турниры посчитанными от старых чисел — каскадного
+пересчёта нет (п. 21.6). По той же причине отказ, если после турнира у его
+участников были другие строки рейтинга (исправление, неявка) —
+`protocol_block_reason`. Возвращают те же, кто вносит. """
 from django.db import transaction
-from django.db.models import Max
+from django.db.models import F, Max
+from django.utils import timezone
 
 from .models import Match, Tournament
 
@@ -131,8 +143,53 @@ def finish(t: Tournament, actor=None) -> int:
     from rating.services import apply_tournament
 
     t.status = Tournament.STATUS_FINISHED
-    t.save(update_fields=["status"])
+    t.finished_at = timezone.now()
+    t.save(update_fields=["status", "finished_at"])
     return apply_tournament(t, actor=actor)
+
+
+def last_finished():
+    """Последний завершённый турнир — единственный, кого можно вернуть."""
+    return (
+        Tournament.objects.filter(status=Tournament.STATUS_FINISHED)
+        .order_by(F("finished_at").desc(nulls_last=True), "-created_at")
+        .first()
+    )
+
+
+def unfinish_block_reason(t: Tournament):
+    """Почему турнир нельзя вернуть из завершённых — или None."""
+    if t.results_mode != MANUAL:
+        return "Вернуть можно только турнир с результатами, внесёнными вручную."
+    if t.status != Tournament.STATUS_FINISHED:
+        return "Турнир не завершён."
+    last = last_finished()
+    if last is None or last.pk != t.pk:
+        return "Вернуть можно только последний завершённый турнир."
+    from rating.services import protocol_block_reason
+
+    return protocol_block_reason(t)
+
+
+def can_unfinish(t: Tournament, user) -> bool:
+    return t.status == Tournament.STATUS_FINISHED and can_enter(t, user) and unfinish_block_reason(t) is None
+
+
+@transaction.atomic
+def unfinish(t: Tournament, actor=None) -> int:
+    """Вернуть последний завершённый турнир: откатить рейтинг, турнир снова идёт.
+    Возвращает число отменённых строк рейтинга."""
+    t = Tournament.objects.select_for_update().get(pk=t.pk)
+    blocked = unfinish_block_reason(t)
+    if blocked:
+        raise ResultsError(blocked)
+    from rating.services import revert_tournament
+
+    reverted = revert_tournament(t, actor=actor)
+    t.status = Tournament.STATUS_IN_PROGRESS
+    t.finished_at = None
+    t.save(update_fields=["status", "finished_at"])
+    return reverted
 
 
 def rating_changes(t: Tournament) -> list:

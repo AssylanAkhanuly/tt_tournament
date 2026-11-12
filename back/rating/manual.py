@@ -236,7 +236,8 @@ def approve(tournament, *, level: str, places: Dict[str, int], no_third_place_ma
             raise ManualError(late)
         if tournament.status != Tournament.STATUS_FINISHED:
             tournament.status = Tournament.STATUS_FINISHED
-            tournament.save(update_fields=["status"])
+            tournament.finished_at = timezone.now()
+            tournament.save(update_fields=["status", "finished_at"])
     services.set_protocol(
         tournament, level=level, places=places, no_third_place_match=no_third_place_match, actor=actor
     )
@@ -283,5 +284,6 @@ def return_for_rework(tournament, actor=None):
     services.revert_tournament(tournament, actor=actor)
     if tournament.format == Tournament.FORMAT_MANUAL:
         tournament.status = Tournament.STATUS_OPEN
-        tournament.save(update_fields=["status"])
+        tournament.finished_at = None
+        tournament.save(update_fields=["status", "finished_at"])
     return tournament

@@ -7,9 +7,14 @@ import { E2E_ADMIN } from './global-setup';
    «Вручную». Вручную — пустая таблица матчей и «Добавить матч»: пара и счёт в
    партиях. После первого матча расписание у турнира не собрать — сервер
    отказывает, кнопок выбора больше нет. «Завершить турнир» пересчитывает
-   рейтинг участников. Турнир заводится здесь и удаляется в конце. */
+   рейтинг участников. «Вернуть турнир» ✳ (12.11.2026) — только у последнего
+   завершённого: рейтинг откатывается, матчи снова правятся. Турнир заводится
+   здесь и удаляется в конце. */
 
 test.use({ actionTimeout: 15_000 });
+// Варианты идут по очереди: «последний завершённый» один на всю базу, и два
+// турнира, завершённые параллельно, отбирали бы это место друг у друга.
+test.describe.configure({ mode: 'serial' });
 
 async function войти(page: import('@playwright/test').Page) {
   await page.goto('/login?next=/dashboard');
@@ -117,6 +122,20 @@ for (const phone of [false, true]) {
       await expect(page.getByTestId('manual-row')).toHaveCount(1);
       await expect(page.getByTestId('manual-add')).toHaveCount(0);
       await expect(page.getByRole('button', { name: 'Убрать матч' })).toHaveCount(0);
+
+      // «Вернуть турнир» — он последний завершённый: рейтинг откатывается к
+      // прежнему, турнир снова идёт, матчи правятся, и его можно завершить заново.
+      await page.getByTestId('manual-unfinish').click();
+      await expect(page.getByTestId('manual-unfinish-confirm')).toBeVisible();
+      await page.screenshot({ path: `test-results/manual/${phone ? 'phone-' : ''}unfinish.png` });
+      await page.getByTestId('manual-unfinish-ok').click();
+      await expect(page.getByTestId('manual-finished')).toHaveCount(0);
+      await expect(page.getByTestId('manual-add')).toBeVisible();
+      await expect(page.getByRole('button', { name: 'Убрать матч' })).toHaveCount(1);
+      await expect(page.getByTestId('manual-finish')).toBeVisible();
+      expect(await рейтинг(игроки[0].id)).toBe(былоA);
+      expect(await рейтинг(игроки[1].id)).toBe(былоB);
+      await page.screenshot({ path: `test-results/manual/${phone ? 'phone-' : ''}unfinished.png` });
     } finally {
       await page.request.delete(`/api/tournaments/${id}/`);
     }

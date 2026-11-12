@@ -121,6 +121,10 @@ class Tournament(models.Model):
     results_mode = models.CharField(
         max_length=8, choices=RESULTS_CHOICES, default="", blank=True, verbose_name="Результаты вносятся"
     )
+    # Когда турнир завершён ✳ (12.11.2026): по нему ищется последний завершённый —
+    # только его можно вернуть из завершённых (`manual_results.unfinish`). Пусто —
+    # не завершён или завершён до появления поля и без строк рейтинга.
+    finished_at = models.DateTimeField(null=True, blank=True, verbose_name="Завершён")
 
     class Meta:
         verbose_name = "Турнир"

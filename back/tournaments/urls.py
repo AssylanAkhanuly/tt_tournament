@@ -66,6 +66,7 @@ urlpatterns = [
     path("<uuid:pk>/schedule/manual/", ManualResultsView.as_view(), name="tournament-results-manual"),
     path("<uuid:pk>/schedule/manual/matches/", ManualResultsView.as_view(), name="tournament-results-manual-matches"),
     path("<uuid:pk>/schedule/manual/finish/", ManualResultsView.as_view(), name="tournament-results-manual-finish"),
+    path("<uuid:pk>/schedule/manual/unfinish/", ManualResultsView.as_view(), name="tournament-results-manual-unfinish"),
     path("<uuid:pk>/schedule/manual/matches/<int:match_id>/", ManualResultsView.as_view(), name="tournament-results-manual-match"),
     path("<uuid:pk>/player-recruitment/", RecruitmentView.as_view(), {"who": "player"}, name="tournament-player-recruitment"),
     path("<uuid:pk>/referee-applications/", RefereeApplicationsView.as_view(), name="tournament-referee-applications"),
