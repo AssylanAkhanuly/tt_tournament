@@ -1,6 +1,6 @@
 """Загрузить рейтинг-лист федерации из Excel ✳ (03.11.2026).
 
-    python manage.py import_rating_list men.xlsx u17.xlsx [--column rj|ri] [--wipe] [--dry-run]
+    python manage.py import_rating_list men.xlsx u17.xlsx [--column rj|ri] [--wipe] [--dry-run] [--update-regions]
 
 Файл — «Квалификационные списки рейтинга спортсменов по настольному теннису»
 (оригиналы — docs/refs/reyting-list-*.xlsx). Колонки ищутся **по шапке**
@@ -22,12 +22,14 @@
   «мальчики» — «m»; «женщины», «девушки», «девочки» — «f». Незнакомый
   заголовок — отказ всей загрузки: угадывать пол по имени нельзя.
 - Город → регион закреплённого списка (`regions.py`), сокращения — `REGION`
-  ниже; незнакомый — отказ всей загрузки, ничего не записано. Зарубежные
-  города листа (`FOREIGN`) ✳ (12.11.2026) заводятся без региона («не указан»):
-  в закреплённом списке только регионы Казахстана, а спортсмены из Ташкента,
-  Москвы и т. п. в листе федерации есть. Город, которого нет ни там, ни там, —
-  по-прежнему отказ: опечатка в казахстанском городе не должна молча стать
-  «не указан».
+  ниже; незнакомый — отказ всей загрузки, ничего не записано. Зарубежный
+  город листа (`FOREIGN`) ✳ (12.11.2026) становится регионом спортсмена —
+  город без «г.», опечатки листа исправлены («Нижный-Новгород», «Н-Новгород» →
+  «Нижний Новгород») ✳ (14.11.2026; до этого такие заводились без региона).
+  Город, которого нет ни там, ни там, — по-прежнему отказ: опечатка в
+  казахстанском городе не должна молча стать чужим регионом.
+- `--update-regions` ✳ (14.11.2026) — уже заведённым, у кого регион пуст,
+  проставить регион из листа. Другие поля и непустой регион не трогаются.
 - Дата рождения раньше 1920 года — заглушка «неизвестно» (в листах октября
   у 18 человек, чаще всего 01.01.1900) ✳ (12.11.2026): карточка заводится без даты, а не с
   1900 годом, который карточка и не примет (граница 1920 — наша).
@@ -73,23 +75,34 @@ REGION = {
     "Улытау. обл.": "Улытауская область",
 }
 
-#: Зарубежные города в листах федерации — регион «не указан» (пустая строка).
+#: Зарубежные города в листах федерации → регион спортсмена (`regions.FOREIGN`).
 FOREIGN = {
-    "г. Ташкент", "г. Андижан", "г. Самарканд", "г. Фергана",
-    "г. Бишкек", "г. Баку", "г. Пекин",
-    "г. Москва", "г. Санкт- Петербург", "г. Санкт-Петербург", "г. Екатеринбург", "г. Краснодар",
-    "г. Казань", "г. Оренбург", "г. Архангельск", "г. Нижный-Новгород", "г. Нижний Новгород",
-    "г.Н-Новгород",
+    "г. Ташкент": "Ташкент",
+    "г. Андижан": "Андижан",
+    "г. Самарканд": "Самарканд",
+    "г. Фергана": "Фергана",
+    "г. Бишкек": "Бишкек",
+    "г. Баку": "Баку",
+    "г. Пекин": "Пекин",
+    "г. Москва": "Москва",
+    "г. Санкт- Петербург": "Санкт-Петербург",
+    "г. Санкт-Петербург": "Санкт-Петербург",
+    "г. Екатеринбург": "Екатеринбург",
+    "г. Краснодар": "Краснодар",
+    "г. Казань": "Казань",
+    "г. Оренбург": "Оренбург",
+    "г. Архангельск": "Архангельск",
+    "г. Нижный-Новгород": "Нижний Новгород",
+    "г. Нижний Новгород": "Нижний Новгород",
+    "г.Н-Новгород": "Нижний Новгород",
 }
 
 
 def region_of(city: str):
-    """Регион закреплённого списка, «» для зарубежного города, None — незнакомый."""
+    """Регион закреплённого списка или зарубежный город; None — незнакомый."""
     if city in REGION:
         return REGION[city]
-    if city in FOREIGN:
-        return ""
-    return None
+    return FOREIGN.get(city)
 
 
 def _space(s) -> str:
@@ -202,9 +215,11 @@ class Command(BaseCommand):
         parser.add_argument("--column", choices=["rj", "ri"], default="rj")
         parser.add_argument("--wipe", action="store_true", help="Сначала снести турниры, карточки и учётки без ролей")
         parser.add_argument("--dry-run", action="store_true", help="Только отчёт, ничего не записывать")
+        parser.add_argument("--update-regions", action="store_true",
+                            help="Уже заведённым с пустым регионом проставить регион из листа")
 
     @transaction.atomic
-    def handle(self, *args, files, column, wipe, dry_run=False, **_):
+    def handle(self, *args, files, column, wipe, dry_run=False, update_regions=False, **_):
         rows = []
         for f in files:
             try:
@@ -226,7 +241,21 @@ class Command(BaseCommand):
 
         from rating.models import RatingProfile
 
-        have = {same_person_key(p.user.name, p.birth_date) for p in RatingProfile.objects.select_related("user")}
+        profiles = {same_person_key(p.user.name, p.birth_date): p for p in RatingProfile.objects.select_related("user")}
+        have = set(profiles)
+        if update_regions:
+            fixed = 0
+            for r in rows:
+                p = profiles.get(same_person_key(r["name"], r["birth"]))
+                region = region_of(r["city"])
+                if p is None or p.region or not region:
+                    continue
+                if not dry_run:
+                    RatingProfile.objects.filter(pk=p.pk).update(region=region)
+                p.region = region
+                fixed += 1
+                self.stdout.write("  ~ %s: %s" % (p.user.name, region))
+            self.stdout.write("Регион проставлен: %d%s" % (fixed, " (ничего не записано)" if dry_run else ""))
         if dry_run:
             fresh, keys = [], set(have)
             for r in rows:
@@ -237,10 +266,10 @@ class Command(BaseCommand):
             for r in fresh:
                 self.stdout.write("  + %s, %s, %s, %s" % (
                     r["name"], r["birth"].strftime("%d.%m.%Y") if r["birth"] else "дата не указана",
-                    region_of(r["city"]) or "регион не указан (%s)" % r["city"], r["value"]))
+                    region_of(r["city"]), r["value"]))
             self.stdout.write(
-                "Строк в листах: %d, уже есть: %d, будет заведено: %d (без региона: %d). Ничего не записано." % (
-                    len(rows), len(rows) - len(fresh), len(fresh), sum(1 for r in fresh if not region_of(r["city"]))))
+                "Строк в листах: %d, уже есть: %d, будет заведено: %d. Ничего не записано." % (
+                    len(rows), len(rows) - len(fresh), len(fresh)))
             return
         made = 0
         for r in rows:

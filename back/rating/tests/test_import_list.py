@@ -164,13 +164,14 @@ def test_лист_октября_читается_по_шапке(tmp_path):
     assert (p.birth_date, p.region) == (datetime.date(2008, 9, 26), "Абайская область")
 
 
-def test_зарубежный_город_без_региона_а_незнакомый_по_прежнему_отказ(tmp_path):
+def test_зарубежный_город_становится_регионом_а_незнакомый_по_прежнему_отказ(tmp_path):
     f = лист_октября(tmp_path / "m.xlsx", "мужчины", [
         (1, 1, 30, 30, 5, "АВАЗОВ Шохжахон ", "29.08.2013", "г. Ташкент"),
         (2, 2, 20, 20, 5, "ПОПОВ  Андрей  ", "03.05.1996", "г.Н-Новгород"),
     ])
     call_command("import_rating_list", f)
-    assert sorted(RatingProfile.objects.values_list("region", flat=True)) == ["", ""]
+    assert RatingProfile.objects.get(user__name="Авазов Шохжахон").region == "Ташкент"
+    assert RatingProfile.objects.get(user__name="Попов Андрей").region == "Нижний Новгород"
     bad = лист_октября(tmp_path / "x.xlsx", "мужчины", [(1, 1, 30, 30, 5, "ИВАНОВ Иван", "01.01.2000", "г. Астанаа")])
     with pytest.raises(CommandError, match="Астанаа"):
         call_command("import_rating_list", bad)
@@ -202,7 +203,7 @@ def test_dry_run_только_отчёт(tmp_path, capsys):
     call_command("import_rating_list", f, "--dry-run")
     out = capsys.readouterr().out
     assert RatingProfile.objects.count() == 0
-    assert "будет заведено: 2 (без региона: 1)" in out
+    assert "будет заведено: 2." in out
     assert "Авазов Шохжахон" in out
 
 
@@ -215,3 +216,31 @@ def test_дата_1900_это_заглушка_карточка_без_даты(
     assert (p.user.name, p.birth_date, p.birth_year, p.value) == ("Ма Чжен", None, None, Decimal("42.00"))
     call_command("import_rating_list", f)  # повтор — та же карточка, не вторая
     assert RatingProfile.objects.count() == 1
+
+
+def test_update_regions_проставляет_пустой_регион_и_не_трогает_заполненный(tmp_path):
+    from rating import engine, services
+
+    services.create_athlete(name="Авазов Шохжахон", region="", sex="m", birth_date=datetime.date(2013, 8, 29),
+                            origin=engine.ORIGIN_LEGACY, legacy=30)
+    services.create_athlete(name="Иванов Иван", region="Алматы", sex="m", birth_date=datetime.date(2000, 1, 1),
+                            origin=engine.ORIGIN_LEGACY, legacy=20)
+    f = лист_октября(tmp_path / "m.xlsx", "мужчины", [
+        (1, 1, 31, 31, 5, "АВАЗОВ Шохжахон ", "29.08.2013", "г. Ташкент"),
+        (2, 2, 25, 25, 5, "ИВАНОВ Иван", "01.01.2000", "г. Москва"),
+    ])
+    call_command("import_rating_list", f, "--update-regions", "--dry-run")
+    assert RatingProfile.objects.get(user__name="Авазов Шохжахон").region == ""  # отчёт без записи
+    call_command("import_rating_list", f, "--update-regions")
+    a = RatingProfile.objects.get(user__name="Авазов Шохжахон")
+    assert (a.region, a.value) == ("Ташкент", Decimal("30.00"))  # значение не тронуто
+    assert RatingProfile.objects.get(user__name="Иванов Иван").region == "Алматы"
+    assert RatingProfile.objects.count() == 2
+
+
+def test_зарубежный_город_проходит_проверку_карточки_но_не_в_списке_выбора():
+    from rating import regions
+
+    assert regions.clean("Ташкент") == "Ташкент"
+    assert regions.clean("Луна") is None
+    assert "Ташкент" not in regions.REGIONS
