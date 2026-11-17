@@ -230,7 +230,7 @@ const Steps = ({ items }: { items: Step[] }) => (
           className={
             'relative mt-1 h-2.5 w-2.5 shrink-0 rounded-full ' +
             (s.now
-              ? 'bg-blue-600 ring-4 ring-blue-100'
+              ? 'bg-brand-600 ring-4 ring-brand-100'
               : s.done
                 ? 'bg-green-600'
                 : 'border border-neutral-300 bg-white')
@@ -240,7 +240,7 @@ const Steps = ({ items }: { items: Step[] }) => (
           <span className={'block text-[13px] ' + (s.now ? 'font-semibold' : 'font-medium')}>{s.t}</span>
           <span className="block text-xs text-neutral-500">{s.ss}</span>
         </span>
-        <span className={'shrink-0 text-xs tabular-nums ' + (s.now ? 'font-semibold text-blue-700' : 'text-neutral-500')}>
+        <span className={'shrink-0 text-xs tabular-nums ' + (s.now ? 'font-semibold text-brand-700' : 'text-neutral-500')}>
           {s.at}
         </span>
       </div>
@@ -1625,15 +1625,15 @@ const Foes14_6 = () => (
     меня сейчас». Блок один на оба формата — двух разных «моих рейтингов» на
     одном экране быть не должно. */
 const RatingHero14_6 = () => (
-  <div className="rounded-xl bg-blue-950 px-4 py-3.5 text-white">
-    <div className="text-[11px] font-semibold uppercase tracking-wider text-blue-300">
+  <div className="rounded-xl bg-brand-950 px-4 py-3.5 text-white">
+    <div className="text-[11px] font-semibold uppercase tracking-wider text-brand-300">
       Мой рейтинг · сезон 2026
     </div>
     <div className="mt-1 flex items-baseline gap-2.5">
       <span className="text-4xl font-bold tabular-nums tracking-tight">2456</span>
       <span className="text-sm font-semibold text-green-400">+68 за сезон</span>
     </div>
-    <div className="mt-0.5 text-xs text-blue-200">7-е место в РК · 70% побед · 7 турниров · 27 матчей</div>
+    <div className="mt-0.5 text-xs text-brand-200">7-е место в РК · 70% побед · 7 турниров · 27 матчей</div>
   </div>
 );
 
@@ -1784,7 +1784,7 @@ const Stats14_6States = () => (
     просто шире, а обложка выше: это одна и та же визитка. */
 const Vcard14_7 = ({ cover = 64 }: { cover?: number }) => (
   <div className="overflow-hidden rounded-xl border border-neutral-200 bg-white shadow-sm">
-    <div className="bg-linear-to-r from-blue-950 via-blue-900 to-blue-700" style={{ height: cover }} />
+    <div className="bg-linear-to-r from-brand-950 via-brand-900 to-brand-700" style={{ height: cover }} />
     <div className="-mt-7 px-4 pb-3.5">
       <Avatar size="lg" className="ring-4 ring-white">
         <Avatar.Image alt="Ким Георгий" src={ME} />
@@ -1806,16 +1806,16 @@ const Vcard14_7 = ({ cover = 64 }: { cover?: number }) => (
     одном экране читается как два разных показателя. Блок один на оба формата:
     строка-вход несёт `data-to="Э14.6"`, и переход обязан быть в обоих. */
 const Rating14_7 = () => (
-  <div className="overflow-hidden rounded-xl bg-blue-950 text-white">
+  <div className="overflow-hidden rounded-xl bg-brand-950 text-white">
     <div className="px-4 py-3.5">
-      <div className="text-[11px] font-semibold uppercase tracking-wider text-blue-300">
+      <div className="text-[11px] font-semibold uppercase tracking-wider text-brand-300">
         Мой рейтинг · сезон 2026
       </div>
       <div className="mt-1 flex items-baseline gap-2.5">
         <span className="text-4xl font-bold tabular-nums tracking-tight">2456</span>
         <span className="text-sm font-semibold text-green-400">+68 за сезон</span>
       </div>
-      <div className="mt-0.5 text-xs text-blue-200">7-е место в РК · 7 турниров · 27 матчей</div>
+      <div className="mt-0.5 text-xs text-brand-200">7-е место в РК · 7 турниров · 27 матчей</div>
     </div>
     {/* Строка-вход вместо кнопки: она во всю ширину блока и читается как его
         продолжение — «вот число, а вот из чего оно». */}
@@ -1824,11 +1824,11 @@ const Rating14_7 = () => (
       data-to="Э14.6"
       className="flex w-full items-center gap-2.5 border-t border-white/15 bg-white/5 px-4 py-2.5 text-left"
     >
-      <BarChart3 size={16} className="shrink-0 text-blue-300" />
+      <BarChart3 size={16} className="shrink-0 text-brand-300" />
       <span className="min-w-0 flex-1 leading-tight">
         <span className="block text-[13.5px] font-semibold">Аналитика сезона</span>
       </span>
-      <ChevronRight size={16} className="shrink-0 text-blue-300" />
+      <ChevronRight size={16} className="shrink-0 text-brand-300" />
     </button>
   </div>
 );
@@ -2049,7 +2049,7 @@ const PayForm14_8 = () => (
       </Button>
     </div>
     <div className="mt-2.5 flex items-start justify-end gap-3">
-      <button type="button" data-to="Э14.11" className="shrink-0 text-[12.5px] font-semibold text-blue-600">
+      <button type="button" data-to="Э14.11" className="shrink-0 text-[12.5px] font-semibold text-brand-600">
         Отмена
       </button>
     </div>
@@ -2300,9 +2300,9 @@ const NewsCard = ({ n }: { n: (typeof NEWS)[number] }) => (
     data-to="Э14.14"
     className="flex w-full items-start gap-3 overflow-hidden rounded-xl border border-neutral-200 bg-white p-2.5 text-left shadow-sm"
   >
-    <span className="h-20 w-20 shrink-0 rounded-lg bg-linear-to-tr from-blue-950 via-blue-900 to-blue-700" />
+    <span className="h-20 w-20 shrink-0 rounded-lg bg-linear-to-tr from-brand-950 via-brand-900 to-brand-700" />
     <span className="min-w-0 flex-1 leading-tight">
-      <span className="block text-[10px] font-semibold tracking-wider text-blue-700">{n.tag}</span>
+      <span className="block text-[10px] font-semibold tracking-wider text-brand-700">{n.tag}</span>
       <span className="mt-0.5 block text-[14px] font-semibold leading-snug">{n.nm}</span>
       {/* Лид обрезается целыми строками, а не кромкой карточки: обрыв по высоте
           резал буквы пополам и уносил с собой дату, которая по требованию есть
@@ -2330,7 +2330,7 @@ const NewsHero14_13 = ({ h = 160 }: { h?: number }) => (
     data-to="Э14.14"
     className="relative w-full overflow-hidden rounded-xl text-left shadow-sm"
   >
-    <div className="bg-linear-to-tr from-blue-950 via-blue-900 to-blue-600" style={{ height: h }} />
+    <div className="bg-linear-to-tr from-brand-950 via-brand-900 to-brand-600" style={{ height: h }} />
     <div className="absolute inset-0 flex flex-col justify-end bg-linear-to-t from-neutral-950/80 via-neutral-950/30 to-transparent p-4">
       <span className="mb-1.5 w-fit rounded bg-white/15 px-1.5 py-0.5 text-[10px] font-semibold tracking-wider text-white">
         {NEWS[0].tag}
@@ -2417,7 +2417,7 @@ const TAGS14_14 = ['календарь 2026', 'ОРТ', 'Евразийская 
     Один на оба формата, меняется высота обложки. */
 const ArticleHero14_14 = ({ h = 160 }: { h?: number }) => (
   <div className="relative overflow-hidden rounded-xl shadow-sm">
-    <div className="bg-linear-to-tr from-blue-950 via-blue-900 to-blue-600" style={{ height: h }} />
+    <div className="bg-linear-to-tr from-brand-950 via-brand-900 to-brand-600" style={{ height: h }} />
     <div className="absolute inset-0 flex flex-col justify-end bg-linear-to-t from-neutral-950/80 via-neutral-950/30 to-transparent p-4">
       <span className="mb-1.5 w-fit rounded bg-white/15 px-1.5 py-0.5 text-[10px] font-semibold tracking-wider text-white">
         КАЛЕНДАРЬ

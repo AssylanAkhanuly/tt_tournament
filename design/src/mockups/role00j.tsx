@@ -1340,9 +1340,9 @@ function AttNav({
             className={
               'h-7 w-7 rounded-lg border text-[12px] font-semibold tabular-nums ' +
               (on
-                ? 'border-blue-600 bg-blue-600 text-white'
+                ? 'border-brand-600 bg-brand-600 text-white'
                 : answered.has(i)
-                  ? 'border-blue-200 bg-blue-50 text-blue-700'
+                  ? 'border-brand-200 bg-brand-50 text-brand-700'
                   : real
                     ? 'border-neutral-200 bg-white text-neutral-600 hover:border-neutral-300'
                     : 'border-dashed border-neutral-200 bg-neutral-50 text-neutral-300')
@@ -1560,10 +1560,10 @@ function Attest0_14Body({ phone, start = 'before' }: { phone?: boolean; start?: 
                 не говорят, что значат, а от этого зависит, куда прыгать. */}
             <div className="mt-3 flex flex-col gap-1.5 text-[11.5px] text-neutral-500">
               <span className="flex items-center gap-2">
-                <span className="h-3 w-3 rounded bg-blue-600" /> текущий
+                <span className="h-3 w-3 rounded bg-brand-600" /> текущий
               </span>
               <span className="flex items-center gap-2">
-                <span className="h-3 w-3 rounded bg-blue-50 ring-1 ring-blue-200" /> отвечен
+                <span className="h-3 w-3 rounded bg-brand-50 ring-1 ring-brand-200" /> отвечен
               </span>
               <span className="flex items-center gap-2">
                 <span className="h-3 w-3 rounded bg-neutral-100 ring-1 ring-neutral-200" /> без ответа
@@ -1995,7 +1995,7 @@ function AttnPhone({ items }: { items: AttnItem[] }) {
             className={
               'flex items-center gap-2 rounded-lg border px-3 py-2 text-left text-[13px] font-medium ' +
               (a.t === open
-                ? 'border-blue-200 bg-blue-50 text-blue-800'
+                ? 'border-brand-200 bg-brand-50 text-brand-800'
                 : 'border-neutral-200 bg-white text-neutral-700')
             }
           >
@@ -2024,7 +2024,7 @@ function AttnPhone({ items }: { items: AttnItem[] }) {
               >
                 {r.why}
               </span>
-              <span className="block text-xs font-medium text-blue-600">{r.who}</span>
+              <span className="block text-xs font-medium text-brand-600">{r.who}</span>
             </button>
           ))}
         </div>

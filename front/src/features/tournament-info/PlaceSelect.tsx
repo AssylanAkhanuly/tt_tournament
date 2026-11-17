@@ -167,7 +167,7 @@ function PlaceSheet({
                   <span className="block text-[12.5px] text-neutral-500">{o.region}</span>
                 )}
               </span>
-              {o.id === selected && <Check size={18} className="shrink-0 text-blue-600" />}
+              {o.id === selected && <Check size={18} className="shrink-0 text-brand-600" />}
             </button>
           ))}
         </div>

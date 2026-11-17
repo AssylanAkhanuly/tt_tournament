@@ -30,13 +30,13 @@ import { dayKey, monthGrid } from './grid';
 
 const WEEKDAYS = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
 const STATUS_TONE: Record<TournamentStatus, string> = {
-  open: 'bg-blue-50 text-blue-700 hover:bg-blue-100',
+  open: 'bg-brand-50 text-brand-700 hover:bg-brand-100',
   in_progress: 'bg-green-50 text-green-700 hover:bg-green-100',
   finished: 'bg-neutral-100 text-neutral-600 hover:bg-neutral-200',
 };
 
 const STATUS_DOT: Record<TournamentStatus, string> = {
-  open: 'bg-blue-600',
+  open: 'bg-brand-600',
   in_progress: 'bg-green-600',
   finished: 'bg-neutral-400',
 };
@@ -327,7 +327,7 @@ export function TournamentCalendar({
               aria-current={isToday ? 'date' : undefined}
               className={
                 'relative flex min-h-0 min-w-0 flex-col gap-1 overflow-hidden border-b border-r border-neutral-100 p-1.5 [&:nth-child(7n)]:border-r-0 ' +
-                (isToday ? 'bg-blue-50/40 ring-2 ring-inset ring-blue-500' : inMonth ? 'bg-white' : 'bg-neutral-50')
+                (isToday ? 'bg-brand-50/40 ring-2 ring-inset ring-brand-500' : inMonth ? 'bg-white' : 'bg-neutral-50')
               }
             >
               {isToday && <NowLine />}
@@ -336,7 +336,7 @@ export function TournamentCalendar({
                 className={
                   'flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[12px] tabular-nums ' +
                   (isToday
-                    ? 'bg-blue-600 font-semibold text-white'
+                    ? 'bg-brand-600 font-semibold text-white'
                     : inMonth
                       ? 'text-neutral-700'
                       : 'text-neutral-400')

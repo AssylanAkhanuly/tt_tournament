@@ -124,7 +124,7 @@ const ALink = ({ to, muted, children }: { to?: string; muted?: boolean; children
     type="button"
     data-to={to}
     className={
-      'text-[12.5px] font-semibold hover:underline ' + (muted ? 'text-neutral-500' : 'text-blue-600')
+      'text-[12.5px] font-semibold hover:underline ' + (muted ? 'text-neutral-500' : 'text-brand-600')
     }
   >
     {children}
@@ -200,7 +200,7 @@ function IinField({
         maxLength={12}
         placeholder="000000000000"
         className={
-          'w-full rounded-lg border bg-white px-3 py-2.5 text-center font-mono text-lg tracking-[0.28em] outline-none placeholder:text-neutral-300 focus:border-blue-500 ' +
+          'w-full rounded-lg border bg-white px-3 py-2.5 text-center font-mono text-lg tracking-[0.28em] outline-none placeholder:text-neutral-300 focus:border-brand-500 ' +
           (bad ? 'border-red-400' : 'border-neutral-300')
         }
         value={v}
@@ -265,7 +265,7 @@ function CodeStep({
       </InputOTP>
       {err && <div className="text-center text-xs leading-snug text-red-600">{err}</div>}
       {resend ? (
-        <button type="button" className="text-[12.5px] font-semibold text-blue-600 hover:underline">
+        <button type="button" className="text-[12.5px] font-semibold text-brand-600 hover:underline">
           <RefreshCw size={13} className="mr-1 inline" /> Отправить код снова
         </button>
       ) : (
@@ -326,7 +326,7 @@ const FromState = ({
     Checkbox из @heroui/react в макетах не разрешён — нативная отметка. */
 const Consent = ({ t, off, sub }: { t?: string; off?: boolean; sub?: string }) => (
   <label className="col-span-2 mt-1 flex items-start gap-2.5">
-    <input type="checkbox" defaultChecked={!off} className="mt-0.5 size-4 shrink-0 accent-blue-600" />
+    <input type="checkbox" defaultChecked={!off} className="mt-0.5 size-4 shrink-0 accent-brand-600" />
     <span className="text-[12.5px] leading-snug text-neutral-700">
       {t ?? 'Согласие на обработку персональных данных'}
       {sub && <span className="block text-xs text-neutral-500">{sub}</span>}
@@ -462,7 +462,7 @@ const ProfileMenu0_1 = () => (
       {/* Боковое меню целиком: карточка роли сверху, разделы, человек снизу. */}
       <div className="flex w-[240px] shrink-0 flex-col rounded-xl border border-neutral-200 bg-white px-3 py-3">
         <div className="flex items-center gap-2.5 rounded-xl border border-neutral-200 bg-white px-2.5 py-2">
-          <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-blue-600 text-[12px] font-bold text-white">
+          <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-brand-600 text-[12px] font-bold text-white">
             1
           </span>
           <span className="min-w-0 flex-1 leading-tight">
@@ -487,7 +487,7 @@ const ProfileMenu0_1 = () => (
                   (i === 0 ? 'font-medium text-neutral-900' : 'text-neutral-700')
                 }
               >
-                <span className="w-4">{i === 0 && <Check size={14} className="text-blue-600" />}</span>
+                <span className="w-4">{i === 0 && <Check size={14} className="text-brand-600" />}</span>
                 <span className="min-w-0 flex-1 truncate">{t}</span>
                 {i !== 0 && <span className="text-[11px] text-neutral-400">перейти</span>}
               </div>
@@ -994,7 +994,7 @@ const NRow = ({
     <span
       className={
         'grid size-9 shrink-0 place-items-center rounded-lg ' +
-        (unread ? 'bg-blue-50 text-blue-600' : 'bg-neutral-100 text-neutral-400')
+        (unread ? 'bg-brand-50 text-brand-600' : 'bg-neutral-100 text-neutral-400')
       }
     >
       {ic}
@@ -1124,7 +1124,7 @@ const BellFeed0_3 = () => (
             key={n.t}
             className="flex w-full items-start gap-2.5 rounded-lg px-2.5 py-2 hover:bg-neutral-50"
           >
-            <span className="mt-1.5 size-1.5 shrink-0 rounded-full bg-blue-600" />
+            <span className="mt-1.5 size-1.5 shrink-0 rounded-full bg-brand-600" />
             <span className="min-w-0 flex-1 leading-tight">
               <span className="block text-sm font-medium">{n.t}</span>
               <span className="block text-xs text-neutral-500">{n.s}</span>
@@ -1136,7 +1136,7 @@ const BellFeed0_3 = () => (
         <button
           type="button"
           data-to="Э0.3"
-          className="w-full rounded-lg px-2.5 py-2 text-left text-sm font-medium text-blue-600 hover:bg-neutral-50"
+          className="w-full rounded-lg px-2.5 py-2 text-left text-sm font-medium text-brand-600 hover:bg-neutral-50"
         >
           Все уведомления
         </button>

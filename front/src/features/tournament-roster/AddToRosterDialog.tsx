@@ -60,14 +60,14 @@ function Steps({ steps, current }: { steps: string[]; current: number }) {
     <ol className="m-0 flex list-none items-center gap-2 p-0" data-testid="roster-steps">
       {steps.map((s, i) => (
         <li key={s} className="flex items-center gap-2" aria-current={i === current ? 'step' : undefined}>
-          {i > 0 && <span className={'h-px w-8 ' + (i <= current ? 'bg-blue-600' : 'bg-neutral-200')} />}
+          {i > 0 && <span className={'h-px w-8 ' + (i <= current ? 'bg-brand-600' : 'bg-neutral-200')} />}
           <span
             className={
               'flex h-6 w-6 items-center justify-center rounded-full text-[12px] font-semibold ' +
               (i < current
-                ? 'bg-blue-600 text-white'
+                ? 'bg-brand-600 text-white'
                 : i === current
-                  ? 'bg-blue-600 text-white'
+                  ? 'bg-brand-600 text-white'
                   : 'bg-neutral-100 text-neutral-500')
             }
           >
@@ -195,7 +195,7 @@ export function AddToRosterDialog({
                             id={c.id}
                             textValue={c.name}
                             // Отмеченная строка подсвечена, а не только с галочкой справа.
-                            className="rounded-xl data-[selected=true]:bg-blue-50 data-[selected=true]:text-blue-900"
+                            className="rounded-xl data-[selected=true]:bg-brand-50 data-[selected=true]:text-brand-900"
                             data-testid="roster-candidate"
                             data-name={c.name}
                           >

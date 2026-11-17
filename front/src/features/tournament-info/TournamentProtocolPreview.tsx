@@ -55,7 +55,7 @@ function Field({
       data-active={selected || undefined}
       className={
         'border-l-2 px-2.5 py-1.5 transition-colors motion-reduce:transition-none ' +
-        (selected ? 'border-blue-500 bg-blue-50 text-blue-950 ring-1 ring-inset ring-blue-200' : 'border-transparent') +
+        (selected ? 'border-brand-500 bg-brand-50 text-brand-950 ring-1 ring-inset ring-brand-200' : 'border-transparent') +
         ' ' +
         className
       }

@@ -186,7 +186,7 @@ export function Attention({
             className={
               'flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-[13px] font-medium ' +
               (a.t === open
-                ? 'border-blue-200 bg-blue-50 text-blue-800'
+                ? 'border-brand-200 bg-brand-50 text-brand-800'
                 : 'border-neutral-200 bg-white text-neutral-700 hover:border-neutral-300')
             }
           >
@@ -341,7 +341,7 @@ export function Row({
       }
       className={
         'flex w-full items-center gap-3 px-4 py-2.5 text-left ' +
-        (on ? 'bg-blue-50/60' : 'hover:bg-neutral-50') +
+        (on ? 'bg-brand-50/60' : 'hover:bg-neutral-50') +
         (onSelect || to || action ? ' cursor-pointer' : '')
       }
     >
@@ -563,13 +563,13 @@ export function FilterSeg({
         className={
           'inline-flex h-9 items-center gap-1.5 rounded-lg border px-3 text-[13px] font-medium ' +
           (on
-            ? 'border-blue-200 bg-blue-50 text-blue-700'
+            ? 'border-brand-200 bg-brand-50 text-brand-700'
             : 'border-neutral-200 bg-white text-neutral-700 hover:bg-neutral-50')
         }
       >
-        {label && <span className={on ? 'text-blue-500' : 'text-neutral-400'}>{label}</span>}
+        {label && <span className={on ? 'text-brand-500' : 'text-neutral-400'}>{label}</span>}
         <span className="max-w-[164px] truncate">{active}</span>
-        <ChevronDown size={14} className={on ? 'text-blue-500' : 'text-neutral-400'} />
+        <ChevronDown size={14} className={on ? 'text-brand-500' : 'text-neutral-400'} />
       </button>
       {open && (
         <div className="absolute left-0 top-[38px] z-20 min-w-[188px] rounded-lg border border-neutral-200 bg-white p-1 shadow-lg">
@@ -583,7 +583,7 @@ export function FilterSeg({
               }}
               className={
                 'flex w-full items-center justify-between gap-3 rounded-md px-2.5 py-1.5 text-left text-[13px] ' +
-                (t === active ? 'bg-blue-50 font-medium text-blue-700' : 'text-neutral-700 hover:bg-neutral-50')
+                (t === active ? 'bg-brand-50 font-medium text-brand-700' : 'text-neutral-700 hover:bg-neutral-50')
               }
             >
               <span className="truncate">{t}</span>
@@ -622,21 +622,21 @@ const MENU_LIST = 'min-w-[228px] gap-0 p-1';
 const MENU_ITEM =
   'min-h-0 gap-2 rounded-md px-2.5 py-1.5 text-[13px] text-neutral-700 ' +
   'data-[hovered]:bg-neutral-50 data-[focused]:bg-neutral-50 ' +
-  'data-[selected]:bg-blue-50 data-[selected]:font-medium data-[selected]:text-blue-700';
+  'data-[selected]:bg-brand-50 data-[selected]:font-medium data-[selected]:text-brand-700';
 
 export type FilterGroup = { label: string; items: string[]; active: string; onPick: (v: string) => void };
 
 const triggerClass = (on: number) =>
   'inline-flex h-9 items-center gap-1.5 rounded-lg border px-3 text-[13px] font-medium ' +
-  (on ? 'border-blue-200 bg-blue-50 text-blue-700' : 'border-neutral-200 bg-white text-neutral-700 hover:bg-neutral-50');
+  (on ? 'border-brand-200 bg-brand-50 text-brand-700' : 'border-neutral-200 bg-white text-neutral-700 hover:bg-neutral-50');
 
 /** Подпись кнопки «Фильтры»: значок, текст, сколько включено. */
 const TriggerFace = ({ label, on, chevron }: { label: string; on: number; chevron: boolean }) => (
   <>
-    <SlidersHorizontal size={14} className={on ? 'text-blue-500' : 'text-neutral-400'} />
+    <SlidersHorizontal size={14} className={on ? 'text-brand-500' : 'text-neutral-400'} />
     {label}
-    {on > 0 && <span className="rounded-full bg-blue-100 px-1.5 text-[11px] font-semibold text-blue-700">{on}</span>}
-    {chevron && <ChevronDown size={14} className={on ? 'text-blue-500' : 'text-neutral-400'} />}
+    {on > 0 && <span className="rounded-full bg-brand-100 px-1.5 text-[11px] font-semibold text-brand-700">{on}</span>}
+    {chevron && <ChevronDown size={14} className={on ? 'text-brand-500' : 'text-neutral-400'} />}
   </>
 );
 
@@ -662,7 +662,7 @@ export function FilterGroups({ groups }: { groups: FilterGroup[] }) {
                 'h-10 rounded-lg border px-2 text-[14px] ' +
                 (t.length > 8 ? 'col-span-2 ' : '') +
                 (t === g.active
-                  ? 'border-blue-300 bg-blue-50 font-medium text-blue-700'
+                  ? 'border-brand-300 bg-brand-50 font-medium text-brand-700'
                   : 'border-neutral-200 bg-white text-neutral-700')
               }
             >
@@ -699,7 +699,7 @@ function FilterDrawer({ groups, label }: { groups: FilterGroup[]; label: string 
           <Settings2 size={18} />
         </button>
         {on.length > 0 && (
-          <span className="pointer-events-none absolute -right-1 -top-1 rounded-full bg-blue-600 px-1.5 text-[11px] font-semibold text-white">
+          <span className="pointer-events-none absolute -right-1 -top-1 rounded-full bg-brand-600 px-1.5 text-[11px] font-semibold text-white">
             {on.length}
           </span>
         )}
@@ -771,7 +771,7 @@ export function FilterMenu({ groups, label = 'Фильтры' }: { groups: Filte
                         <span className="flex-1 truncate">{t}</span>
                         {/* Галочка своя и справа — как в остальных списках отбора;
                             у `ItemIndicator` из HeroUI место слева и свой отступ. */}
-                        {t === g.active && <Check size={14} className="shrink-0 text-blue-600" />}
+                        {t === g.active && <Check size={14} className="shrink-0 text-brand-600" />}
                       </Dropdown.Item>
                     ))}
                   </Dropdown.Menu>
@@ -972,7 +972,7 @@ export function AreaInput({
       <textarea
         aria-label={ariaLabel ?? label}
         placeholder={placeholder}
-        className="w-full rounded-lg border border-neutral-300 bg-white px-3 py-2 text-sm outline-none placeholder:text-neutral-400 focus:border-blue-500"
+        className="w-full rounded-lg border border-neutral-300 bg-white px-3 py-2 text-sm outline-none placeholder:text-neutral-400 focus:border-brand-500"
         rows={rows}
         value={managed ? value : v}
         onChange={(e) => (managed ? onChange(e.target.value) : setV(e.target.value))}
@@ -1002,7 +1002,7 @@ export function DateInput({
       <input
         type="date"
         aria-label={label}
-        className="w-full rounded-lg border border-neutral-300 bg-white px-3 py-1.5 text-sm outline-none focus:border-blue-500"
+        className="w-full rounded-lg border border-neutral-300 bg-white px-3 py-1.5 text-sm outline-none focus:border-brand-500"
         value={managed ? value : v}
         onChange={(e) => (managed ? onChange(e.target.value) : setV(e.target.value))}
       />
@@ -1087,7 +1087,7 @@ export const DisabledAction = ({ children }: { children: ReactNode }) => (
 /* ── Плашки и пустые состояния ──────────────────────────────────── */
 
 const BAR_TONE = {
-  info: 'border-blue-100 bg-blue-50 text-blue-900',
+  info: 'border-brand-100 bg-brand-50 text-brand-900',
   success: 'border-green-100 bg-green-50 text-green-900',
   warning: 'border-amber-200 bg-amber-50 text-amber-900',
   danger: 'border-red-100 bg-red-50 text-red-900',
@@ -1322,7 +1322,7 @@ export function MatchCard({
 export const ROWS =
   '[&>*:nth-child(even)]:bg-neutral-50/70 ' +
   '[&>*:hover:hover]:bg-neutral-100/70 ' +
-  '[&>*[data-on][data-on]]:bg-blue-50';
+  '[&>*[data-on][data-on]]:bg-brand-50';
 
 /** Шапка и тело реестра: строки рисует вызывающий — колонки у каждого реестра
     свои. Раньше эта же разметка лежала копией в девяти файлах ролей и уже

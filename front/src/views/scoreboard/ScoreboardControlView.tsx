@@ -86,7 +86,7 @@ function Toggle({
     : card === 'yellow'
     ? 'border-amber-400 bg-amber-400 text-neutral-900'
     : on
-    ? 'border-blue-600 bg-blue-600 text-white'
+    ? 'border-brand-600 bg-brand-600 text-white'
     : 'border-neutral-200 bg-white text-neutral-700 hover:bg-neutral-50';
   return (
     <button
@@ -153,7 +153,7 @@ function Counter({
           aria-label={plusLabel}
           onClick={onPlus}
           className={
-            step + ' border-blue-600 bg-blue-600 text-white hover:bg-blue-700'
+            step + ' border-brand-600 bg-brand-600 text-white hover:bg-brand-700'
           }
         >
           +

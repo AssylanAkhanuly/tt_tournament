@@ -60,12 +60,12 @@ export function MenuSheet({
               }}
               className={
                 'flex w-full items-center gap-3 border-b border-neutral-100 px-6 py-3.5 text-left text-[15px] last:border-b-0 ' +
-                (it.danger ? 'text-red-600' : it.selected ? 'font-medium text-blue-700' : 'text-neutral-800')
+                (it.danger ? 'text-red-600' : it.selected ? 'font-medium text-brand-700' : 'text-neutral-800')
               }
             >
               {it.icon}
               <span className="min-w-0 flex-1">{it.label}</span>
-              {it.selected && <Check size={18} className="shrink-0 text-blue-600" />}
+              {it.selected && <Check size={18} className="shrink-0 text-brand-600" />}
             </button>
           ))}
         </section>

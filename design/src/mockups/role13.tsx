@@ -2770,7 +2770,7 @@ export function Fees13_10({ done }: { done?: boolean }) {
                   className={
                     'grid size-[18px] place-items-center border text-[11px] font-bold ' +
                     (on
-                      ? 'border-blue-600 bg-blue-600 text-white'
+                      ? 'border-brand-600 bg-brand-600 text-white'
                       : p.paid
                       ? 'border-neutral-200 bg-neutral-100 text-neutral-400'
                       : 'border-neutral-300 bg-white text-transparent')

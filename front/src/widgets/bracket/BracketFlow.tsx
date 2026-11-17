@@ -62,7 +62,7 @@ function Row({
         : 'text-[color:var(--c-muted,#a6b0c6)]';
   const scoreColor = win
     ? light
-      ? 'text-[color:var(--primary,#2563eb)]'
+      ? 'text-[color:var(--primary,#18244d)]'
       : 'text-[color:var(--c-accent,#6f9bff)]'
     : light
       ? 'text-[color:var(--muted,#737373)]'
@@ -126,9 +126,9 @@ function MatchNode({ data }: NodeProps) {
   const surface = light
     ? 'bg-[color:var(--c-panel,#fff)] border-[color:var(--c-glass-line,rgba(15,23,42,0.12))]'
     : d.mine
-      ? 'bg-[color-mix(in_srgb,var(--c-accent,#0a86cd)_22%,var(--c-screen-1,#0b1120))] border-[color:var(--c-accent,#0a86cd)]'
+      ? 'bg-[color-mix(in_srgb,var(--c-accent,#0ab3d7)_22%,var(--c-screen-1,#0c1439))] border-[color:var(--c-accent,#0ab3d7)]'
       : cx(
-          'bg-[color-mix(in_srgb,var(--c-screen-1,#0b1120)_95.5%,var(--c-ink,#eef2fb))]',
+          'bg-[color-mix(in_srgb,var(--c-screen-1,#0c1439)_95.5%,var(--c-ink,#eef2fb))]',
           live
             ? 'border-[color:var(--c-accent-line-3,rgba(111,155,255,0.5))]'
             : 'border-[color:var(--c-glass-line,rgba(255,255,255,0.11))]',
@@ -137,7 +137,7 @@ function MatchNode({ data }: NodeProps) {
     'relative box-border flex h-full w-full flex-col justify-center rounded-[14px] border-solid px-3 [font-family:var(--font)]',
     surface,
     d.mine
-      ? 'border-2 [box-shadow:0_0_0_4px_color-mix(in_srgb,var(--c-accent,#0a86cd)_45%,transparent)]'
+      ? 'border-2 [box-shadow:0_0_0_4px_color-mix(in_srgb,var(--c-accent,#0ab3d7)_45%,transparent)]'
       : 'border',
     d.dim && (light ? 'opacity-50' : 'opacity-[0.42]'),
   );
@@ -184,7 +184,7 @@ const CANVAS = cx(
 );
 const CANVAS_TONE: Record<Tone, string> = {
   dark: cx(
-    '[&_.react-flow]:bg-[color:var(--c-screen-1,#0b1120)]',
+    '[&_.react-flow]:bg-[color:var(--c-screen-1,#0c1439)]',
     String.raw`[&_.react-flow\_\_background]:text-[color:var(--c-glass-line-soft,rgba(255,255,255,0.06))]`,
   ),
   light: cx(
@@ -321,7 +321,7 @@ export function BracketFlow({
   }, [bracket, minePlayerId, tone]);
 
   return (
-    <div className="flex h-screen flex-col bg-[color:var(--c-screen-1,#0b1120)] text-[color:var(--text)]">
+    <div className="flex h-screen flex-col bg-[color:var(--c-screen-1,#0c1439)] text-[color:var(--text)]">
       <div className={cx(CANVAS, CANVAS_TONE[tone])}>
         <ReactFlow
           nodes={nodes}
@@ -354,7 +354,7 @@ export function BracketFlow({
               {mineConnectorD && (
                 <path
                   d={mineConnectorD}
-                  className="[stroke:var(--c-accent,#0a86cd)]"
+                  className="[stroke:var(--c-accent,#0ab3d7)]"
                   fill="none"
                   strokeWidth={4}
                 />

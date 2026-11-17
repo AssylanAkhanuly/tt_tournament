@@ -10,7 +10,7 @@ import type { ReactNode } from 'react';
 
 /** Выделенное обозначение — то, что правит строка. */
 const H = ({ children }: { children: ReactNode }) => (
-  <b className="rounded-sm bg-blue-100 px-1 font-semibold text-blue-700" data-testid="formula-mark">
+  <b className="rounded-sm bg-brand-100 px-1 font-semibold text-brand-700" data-testid="formula-mark">
     {children}
   </b>
 );

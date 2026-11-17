@@ -363,9 +363,9 @@ export function ScheduleSection({
               disabled={!allowed || busy}
               onClick={() => (id === 'auto' ? setWay('auto') : void run(() => setManualResults(tournamentId, true)))}
               data-testid={'results-way-' + id}
-              className="flex min-h-40 flex-col items-center justify-center gap-3 rounded-xl border border-neutral-200 bg-white px-6 py-8 text-[17px] font-semibold text-neutral-800 hover:border-blue-300 hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:border-neutral-200 disabled:hover:bg-white"
+              className="flex min-h-40 flex-col items-center justify-center gap-3 rounded-xl border border-neutral-200 bg-white px-6 py-8 text-[17px] font-semibold text-neutral-800 hover:border-brand-300 hover:bg-brand-50 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:border-neutral-200 disabled:hover:bg-white"
             >
-              <span className="flex size-14 items-center justify-center rounded-full bg-blue-50 text-blue-600">{icon}</span>
+              <span className="flex size-14 items-center justify-center rounded-full bg-brand-50 text-brand-600">{icon}</span>
               {label}
             </button>
           ))}

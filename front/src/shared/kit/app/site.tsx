@@ -29,9 +29,9 @@ export function AuthScreen({
   children: ReactNode;
 }) {
   return (
-    <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden bg-linear-to-br from-blue-800 via-blue-900 to-blue-950">
-      <div className="pointer-events-none absolute -left-28 -top-28 h-96 w-96 rounded-full border-[30px] border-blue-700/40" />
-      <div className="pointer-events-none absolute -bottom-36 -right-20 h-[440px] w-[440px] rounded-full border-[38px] border-blue-700/30" />
+    <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden bg-linear-to-br from-brand-800 via-brand-900 to-brand-950">
+      <div className="pointer-events-none absolute -left-28 -top-28 h-96 w-96 rounded-full border-[30px] border-brand-700/40" />
+      <div className="pointer-events-none absolute -bottom-36 -right-20 h-[440px] w-[440px] rounded-full border-[38px] border-brand-700/30" />
       <div className="relative flex min-h-0 flex-1 items-center justify-center overflow-auto p-8">
         <div
           className={
@@ -43,7 +43,7 @@ export function AuthScreen({
           {children}
         </div>
       </div>
-      <div className="relative shrink-0 pb-5 text-center text-xs text-blue-200/80">{AUTH_FOOT}</div>
+      <div className="relative shrink-0 pb-5 text-center text-xs text-brand-200/80">{AUTH_FOOT}</div>
     </div>
   );
 }
@@ -59,7 +59,7 @@ const SiteLink = ({ item, on }: { item: SiteItem; on: boolean }) => (
     onClick={item.onPick}
     className={
       'shrink-0 rounded-lg px-2.5 py-1.5 ' +
-      (on ? 'bg-blue-50 text-blue-700' : 'text-neutral-600 hover:bg-neutral-50')
+      (on ? 'bg-brand-50 text-brand-700' : 'text-neutral-600 hover:bg-neutral-50')
     }
   >
     {item.t}

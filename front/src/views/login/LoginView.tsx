@@ -38,7 +38,7 @@ function AccountCard({ account, onPress }: { account: KnownAccount; onPress: () 
       data-testid="account-card"
       data-account={account.email}
       onClick={onPress}
-      className="flex w-full items-center gap-3 rounded-xl border border-neutral-200 bg-white px-3 py-2.5 text-left hover:border-blue-300 hover:bg-blue-50/40"
+      className="flex w-full items-center gap-3 rounded-xl border border-neutral-200 bg-white px-3 py-2.5 text-left hover:border-brand-300 hover:bg-brand-50/40"
     >
       <Avatar size="md">
         <Avatar.Fallback>{initials(account.name)}</Avatar.Fallback>

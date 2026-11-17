@@ -5,7 +5,7 @@
    склейкой: Tailwind находит только написанные полностью. */
 
 const TONES = [
-  { block: 'border-blue-300 bg-blue-50 text-blue-900', chip: 'bg-blue-100 text-blue-800', bar: 'bg-blue-500', head: 'bg-blue-50' },
+  { block: 'border-brand-300 bg-brand-50 text-brand-900', chip: 'bg-brand-100 text-brand-800', bar: 'bg-brand-500', head: 'bg-brand-50' },
   { block: 'border-green-300 bg-green-50 text-green-900', chip: 'bg-green-100 text-green-800', bar: 'bg-green-500', head: 'bg-green-50' },
   { block: 'border-amber-300 bg-amber-50 text-amber-900', chip: 'bg-amber-100 text-amber-800', bar: 'bg-amber-500', head: 'bg-amber-50' },
   { block: 'border-violet-300 bg-violet-50 text-violet-900', chip: 'bg-violet-100 text-violet-800', bar: 'bg-violet-500', head: 'bg-violet-50' },

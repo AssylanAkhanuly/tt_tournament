@@ -85,14 +85,14 @@ export type CalEvent = {
 /* Тона событий. Полоса — заливка светлая, текст тёмный: полос на месяце
    бывает по три в день, и сплошная заливка превращает месяц в лоскут. */
 const BAR: Record<CalTone, string> = {
-  accent: 'bg-blue-100 text-blue-900 hover:bg-blue-200',
+  accent: 'bg-brand-100 text-brand-900 hover:bg-brand-200',
   success: 'bg-green-100 text-green-900 hover:bg-green-200',
   warning: 'bg-amber-100 text-amber-900 hover:bg-amber-200',
   danger: 'bg-red-100 text-red-900 hover:bg-red-200',
   neutral: 'bg-neutral-100 text-neutral-700 hover:bg-neutral-200',
 };
 const DOT: Record<CalTone, string> = {
-  accent: 'bg-blue-500',
+  accent: 'bg-brand-500',
   success: 'bg-green-500',
   warning: 'bg-amber-500',
   danger: 'bg-red-500',
@@ -197,14 +197,14 @@ export function MonthGrid({
                        клетку помещаются. */
                     'flex min-h-[92px] flex-col items-start border-l border-neutral-100 px-1.5 pt-1.5 text-left first:border-l-0 ' +
                     (out ? 'bg-neutral-50/60 ' : '') +
-                    (sameDay(key, selected) ? 'bg-blue-50/70 ' : 'hover:bg-neutral-50 ')
+                    (sameDay(key, selected) ? 'bg-brand-50/70 ' : 'hover:bg-neutral-50 ')
                   }
                 >
                   <span
                     className={
                       'flex h-6 min-w-6 items-center justify-center rounded-full px-1 text-[12.5px] tabular-nums ' +
                       (isToday
-                        ? 'bg-blue-600 font-semibold text-white'
+                        ? 'bg-brand-600 font-semibold text-white'
                         : out
                         ? 'text-neutral-300'
                         : 'font-medium text-neutral-700')
@@ -319,9 +319,9 @@ export function MiniMonth({
               className={
                 'relative flex h-7 w-7 items-center justify-center rounded-full text-[12px] tabular-nums ' +
                 (sameDay(key, today)
-                  ? 'bg-blue-600 font-semibold text-white'
+                  ? 'bg-brand-600 font-semibold text-white'
                   : sameDay(key, selected)
-                  ? 'bg-blue-50 font-semibold text-blue-700'
+                  ? 'bg-brand-50 font-semibold text-brand-700'
                   : out
                   ? 'text-neutral-300'
                   : 'text-neutral-700 hover:bg-neutral-100')
@@ -329,7 +329,7 @@ export function MiniMonth({
             >
               {d.getUTCDate()}
               {busy.has(key) && !sameDay(key, today) && (
-                <span className="absolute bottom-0.5 h-1 w-1 rounded-full bg-blue-500" />
+                <span className="absolute bottom-0.5 h-1 w-1 rounded-full bg-brand-500" />
               )}
             </button>
           );
@@ -363,7 +363,7 @@ const mins = (t: string) => {
 /* Блок на шкале — заливка плотнее, чем у полосы месяца: на светлой сетке
    часов бледная заливка не читается как объект. */
 const SLOT: Record<CalTone, string> = {
-  accent: 'border-blue-300 bg-blue-50 text-blue-900',
+  accent: 'border-brand-300 bg-brand-50 text-brand-900',
   success: 'border-green-300 bg-green-50 text-green-900',
   warning: 'border-amber-300 bg-amber-50 text-amber-900',
   danger: 'border-red-300 bg-red-50 text-red-900',
@@ -637,7 +637,7 @@ export type TimelineItem = {
 };
 
 const RAIL: Record<CalTone, string> = {
-  accent: 'bg-blue-500',
+  accent: 'bg-brand-500',
   success: 'bg-green-500',
   warning: 'bg-amber-500',
   danger: 'bg-red-500',
@@ -689,7 +689,7 @@ export function EventTimeline({
             {/* Дата: число крупно, под ним месяц и день недели — по числу глаз
                 и ведёт счёт, остальное подпись. */}
             <div className="pt-2.5 text-right leading-tight">
-              <div className={'text-[17px] font-semibold tabular-nums ' + (isToday ? 'text-blue-600' : '')}>
+              <div className={'text-[17px] font-semibold tabular-nums ' + (isToday ? 'text-brand-600' : '')}>
                 {d.getUTCDate()}
                 {it.till && it.till !== it.from && (
                   <span className="text-neutral-400">–{parse(it.till).getUTCDate()}</span>
@@ -706,7 +706,7 @@ export function EventTimeline({
                 className={
                   'absolute left-1/2 top-3.5 h-2.5 w-2.5 -translate-x-1/2 rounded-full ' +
                   RAIL[tone] +
-                  (isToday ? ' ring-4 ring-blue-100' : '')
+                  (isToday ? ' ring-4 ring-brand-100' : '')
                 }
               />
               <span
@@ -724,7 +724,7 @@ export function EventTimeline({
                 data-row
                 className={
                   'rounded-xl border bg-white p-3 shadow-sm ' +
-                  (isToday ? 'border-blue-200' : 'border-neutral-200') +
+                  (isToday ? 'border-brand-200' : 'border-neutral-200') +
                   (it.to ? ' cursor-pointer hover:border-neutral-300' : '')
                 }
               >

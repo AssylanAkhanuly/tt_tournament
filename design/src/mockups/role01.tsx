@@ -212,7 +212,7 @@ const Who = ({ av, nm, sub }: { av?: string; nm: string; sub?: ReactNode }) => (
 );
 
 /** Малые плитки-показатели внутри панели или диалога. */
-const CELL_TONE = { g: 'text-green-700', a: 'text-amber-600', r: 'text-red-600', b: 'text-blue-700' } as const;
+const CELL_TONE = { g: 'text-green-700', a: 'text-amber-600', r: 'text-red-600', b: 'text-brand-700' } as const;
 const Cells = ({ items, cols = 3 }: { items: { v: string; k: string; tone?: keyof typeof CELL_TONE }[]; cols?: number }) => (
   <div className="grid gap-2" style={{ gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))` }}>
     {items.map((c) => (
@@ -240,7 +240,7 @@ const Flag = ({ label, on: initial = true }: { label: string; on?: boolean }) =>
       className="flex w-full items-center justify-between gap-3 rounded-lg bg-neutral-50 px-3 py-2 text-left text-sm"
     >
       {label}
-      <span className={'relative h-5 w-9 shrink-0 rounded-full ' + (on ? 'bg-blue-600' : 'bg-neutral-300')}>
+      <span className={'relative h-5 w-9 shrink-0 rounded-full ' + (on ? 'bg-brand-600' : 'bg-neutral-300')}>
         <span className={'absolute top-0.5 h-4 w-4 rounded-full bg-white shadow ' + (on ? 'right-0.5' : 'left-0.5')} />
       </span>
     </button>
@@ -865,7 +865,7 @@ const AttnPhone = () => {
               className={
                 'flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1.5 text-[12.5px] font-medium ' +
                 (a.t === open
-                  ? 'border-blue-200 bg-blue-50 text-blue-800'
+                  ? 'border-brand-200 bg-brand-50 text-brand-800'
                   : 'border-neutral-200 bg-white text-neutral-700')
               }
             >
@@ -1014,11 +1014,11 @@ const MonthStrip = ({ counts, m, onPick }: { counts: number[]; m: number; onPick
         className={
           'flex items-baseline justify-center gap-1 rounded-lg border px-1 py-1 text-[11.5px] leading-none ' +
           (i === m
-            ? 'border-blue-300 bg-blue-50 font-semibold text-blue-800'
+            ? 'border-brand-300 bg-brand-50 font-semibold text-brand-800'
             : 'border-neutral-200 bg-white text-neutral-600 hover:border-neutral-300') +
           /* Текущий месяц отмечен даже когда смотрят другой: «где мы сейчас» —
              это не то же самое, что «на что смотрим». */
-          (i === NOW_M && i !== m ? ' ring-1 ring-blue-200' : '')
+          (i === NOW_M && i !== m ? ' ring-1 ring-brand-200' : '')
         }
       >
         {nm.slice(0, 3)}
@@ -1041,7 +1041,7 @@ const CalLegend = () => (
     {[
       ['bg-green-500', 'идёт или принимает заявки'],
       ['bg-amber-500', 'ждёт судью'],
-      ['bg-blue-500', 'судья назначен'],
+      ['bg-brand-500', 'судья назначен'],
       ['bg-neutral-400', 'черновик или завершён'],
     ].map(([dot, txt]) => (
       <div key={txt} className="flex items-center gap-2 leading-relaxed">
@@ -1400,14 +1400,14 @@ const CatPick = ({ one }: { one?: boolean } = {}) => {
           onClick={() => setCat(c.k)}
           className={
             'rounded-xl border bg-white p-4 text-left shadow-sm ' +
-            (c.k === cat ? 'border-blue-400 ring-1 ring-blue-200' : 'border-neutral-200 hover:border-neutral-300')
+            (c.k === cat ? 'border-brand-400 ring-1 ring-brand-200' : 'border-neutral-200 hover:border-neutral-300')
           }
         >
           {/* Выбор отмечен галочкой, не словом ✳ (04.09.2026): рамка карточки
               уже синяя, и метка «ВЫБРАНО» рядом с ней — второй раз о том же. */}
           <span className="flex items-center justify-between gap-2 text-[13.5px] font-semibold">
             {c.k === 'Лига' ? 'Евразийская лига' : c.k}
-            {c.k === cat && <Check size={16} className="shrink-0 text-blue-600" />}
+            {c.k === cat && <Check size={16} className="shrink-0 text-brand-600" />}
           </span>
           <span className="mt-1 block text-xs text-neutral-500">{c.sub}</span>
         </button>
@@ -1569,7 +1569,7 @@ const SectionRow = ({
             className={
               'shrink-0 rounded-lg border px-2.5 py-1.5 text-[12.5px] font-medium ' +
               (s === on
-                ? 'border-blue-200 bg-blue-50 text-blue-800'
+                ? 'border-brand-200 bg-brand-50 text-brand-800'
                 : i < at
                   ? 'border-transparent text-neutral-400 hover:bg-neutral-100'
                   : 'border-neutral-200 bg-white text-neutral-600 hover:border-neutral-300')
@@ -1728,7 +1728,7 @@ const JudgeApps = ({ phone }: { phone?: boolean } = {}) => {
                   className={
                     'px-2.5 py-1 text-[11.5px] font-medium ' +
                     (phone ? 'flex-1 py-1.5 ' : '') +
-                    (s.on(j.nm) ? 'bg-blue-600 text-white' : 'text-neutral-500 hover:bg-neutral-100') +
+                    (s.on(j.nm) ? 'bg-brand-600 text-white' : 'text-neutral-500 hover:bg-neutral-100') +
                     (i > 0 ? ' border-l border-neutral-200' : '')
                   }
                 >
@@ -2098,7 +2098,7 @@ const Groups1_3 = ({ phone }: { phone?: boolean } = {}) => {
                     className={
                       'flex items-center gap-1.5 px-2.5 py-1 text-[11px] ' +
                       (r.out ? 'bg-green-50/70 ' : '') +
-                      (hit(r.p.nm) ? 'ring-1 ring-inset ring-blue-300' : '')
+                      (hit(r.p.nm) ? 'ring-1 ring-inset ring-brand-300' : '')
                     }
                   >
                     <span className="w-3 shrink-0 tabular-nums text-neutral-400">{r.place}</span>
@@ -3909,10 +3909,10 @@ const RolePick = ({ value, onPick }: { value: string; onPick: (g: Grant) => void
               onClick={() => { onPick(g); setOpen(false); }}
               className={
                 'flex w-full items-center gap-2 px-3 py-1.5 text-left text-sm hover:bg-neutral-50 ' +
-                (g.nm === value ? 'bg-blue-50/60 font-medium' : '')
+                (g.nm === value ? 'bg-brand-50/60 font-medium' : '')
               }
             >
-              <span className="w-4">{g.nm === value && <Check size={13} className="text-blue-600" />}</span>
+              <span className="w-4">{g.nm === value && <Check size={13} className="text-brand-600" />}</span>
               {g.nm}
             </button>
           ))}

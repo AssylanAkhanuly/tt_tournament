@@ -121,7 +121,7 @@ function Squad24_2Body() {
                 checked={on.includes(p.nm)}
                 onChange={() => flip(p.nm)}
                 aria-label={p.nm}
-                className="size-4 accent-blue-600"
+                className="size-4 accent-brand-600"
               />,
               <span key="n" data-to="Э24.3">{`${p.nm} · ${p.y}`}</span>,
               p.r,

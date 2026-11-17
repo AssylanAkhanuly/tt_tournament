@@ -80,7 +80,7 @@ const BellMenu = () => {
               data-to="Э0.3"
               className="flex w-full items-start gap-2.5 rounded-lg px-2.5 py-2 text-left hover:bg-neutral-50"
             >
-              <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-blue-600" />
+              <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-brand-600" />
               <span className="min-w-0 flex-1">
                 <span className="block text-sm font-medium">{n.t}</span>
                 <span className="block truncate text-xs text-neutral-500">{n.s}</span>
@@ -92,7 +92,7 @@ const BellMenu = () => {
           <button
             type="button"
             data-to="Э0.3"
-            className="w-full rounded-lg px-2.5 py-2 text-left text-sm text-blue-600 hover:bg-neutral-50"
+            className="w-full rounded-lg px-2.5 py-2 text-left text-sm text-brand-600 hover:bg-neutral-50"
           >
             Все уведомления
           </button>
@@ -137,7 +137,7 @@ const SideRole = ({ role }: { role: RoleUI }) => {
             говорит ничего, номер роли живёт в наших документах, а не у него в
             голове. Берём иконку первого раздела роли: она уже подобрана под то,
             чем эта роль занимается, и второй раз выбирать её не нужно. */}
-        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-blue-600 text-white [&_svg]:h-4 [&_svg]:w-4">
+        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-brand-600 text-white [&_svg]:h-4 [&_svg]:w-4">
           {role.nav?.[0]?.[0] ?? <span className="text-[12px] font-bold">{role.num}</span>}
         </span>
         {/* У одной роли второй строки нет ✳ (04.09.2026): «единственная роль»
@@ -179,7 +179,7 @@ const SideRole = ({ role }: { role: RoleUI }) => {
                 setOpen(false);
               }}
             >
-              <span className="w-4">{r.t === cur && <Check size={14} className="text-blue-600" />}</span>
+              <span className="w-4">{r.t === cur && <Check size={14} className="text-brand-600" />}</span>
               <span className="min-w-0 flex-1 truncate">{r.t}</span>
               {r.t !== cur && <span className="text-[11px] text-neutral-400">перейти</span>}
             </button>
@@ -260,7 +260,7 @@ export const BackLink = ({
     type="button"
     data-to={to}
     onClick={onPress}
-    className="mb-1 flex items-center gap-1 text-xs font-medium text-blue-600 hover:underline"
+    className="mb-1 flex items-center gap-1 text-xs font-medium text-brand-600 hover:underline"
   >
     <ArrowLeft size={13} /> {label}
   </button>
@@ -359,11 +359,11 @@ export function AppChrome({
               className={
                 'flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-[13px] font-medium ' +
                 (label === nav
-                  ? 'bg-blue-50 text-blue-700'
+                  ? 'bg-brand-50 text-brand-700'
                   : 'text-neutral-600 hover:bg-neutral-50 hover:text-neutral-900')
               }
             >
-              <span className={label === nav ? 'text-blue-600' : 'text-neutral-400'}>{icon}</span>
+              <span className={label === nav ? 'text-brand-600' : 'text-neutral-400'}>{icon}</span>
               {label}
             </button>
           ))}
@@ -625,7 +625,7 @@ export function PhoneChrome({
             onClick={label === 'Ещё' && person ? () => setMore(true) : onNavigate ? () => onNavigate(label) : undefined}
             className={
               'flex flex-1 flex-col items-center gap-0.5 rounded-lg py-1.5 text-[10px] font-medium ' +
-              (label === nav ? 'text-blue-600' : 'text-neutral-400')
+              (label === nav ? 'text-brand-600' : 'text-neutral-400')
             }
           >
             {icon}
@@ -742,7 +742,7 @@ export function PhoneApp({
             aria-current={label === active || undefined}
             className={
               'flex flex-1 flex-col items-center gap-0.5 rounded-lg py-1.5 text-[10px] font-medium ' +
-              (label === active ? 'text-blue-600' : 'text-neutral-400')
+              (label === active ? 'text-brand-600' : 'text-neutral-400')
             }
           >
             {icon}

@@ -27,12 +27,12 @@ import { DataTable, type DataColumn } from '@/shared/ui/DataTable';
 /** Вид записи задаёт, как её читать: матч, штраф или служебная строка. */
 const KIND_TONE: Record<RatingEntry['kind'], string> = {
   match: 'text-neutral-500',
-  start: 'text-blue-700',
-  prize: 'text-blue-700',
+  start: 'text-brand-700',
+  prize: 'text-brand-700',
   no_show: 'text-red-600',
   correction: 'text-amber-700',
   void: 'text-red-600',
-  merge: 'text-blue-700',
+  merge: 'text-brand-700',
 };
 
 const right = (text: string) => <span className="block text-right">{text}</span>;

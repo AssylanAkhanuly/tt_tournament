@@ -621,7 +621,7 @@ const Systems7_3 = () => (
     {SYSTEMS.map((s) => (
       <div
         key={s.nm}
-        className={'flex items-start justify-between gap-3 px-4 py-2.5 ' + (s.on ? 'bg-blue-50/60' : '')}
+        className={'flex items-start justify-between gap-3 px-4 py-2.5 ' + (s.on ? 'bg-brand-50/60' : '')}
       >
         <span className="min-w-0 leading-tight">
           <span className="flex flex-wrap items-center gap-2 text-[13.5px] font-medium">

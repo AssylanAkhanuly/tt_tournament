@@ -10,9 +10,9 @@ import { ArrowDown, ArrowUp, ChevronsUpDown } from 'lucide-react';
 /** Направление сортировки колонки: нет, по возрастанию, по убыванию. */
 export function SortIcon({ dir }: { dir: false | 'asc' | 'desc' }) {
   return dir === 'asc' ? (
-    <ArrowUp size={12} className="shrink-0 text-blue-600" />
+    <ArrowUp size={12} className="shrink-0 text-brand-600" />
   ) : dir === 'desc' ? (
-    <ArrowDown size={12} className="shrink-0 text-blue-600" />
+    <ArrowDown size={12} className="shrink-0 text-brand-600" />
   ) : (
     <ChevronsUpDown size={12} className="shrink-0 text-neutral-300" />
   );

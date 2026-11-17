@@ -567,7 +567,7 @@ function Marks({ m, live, off, onTo, onCard, onUndo }: {
     <div className="flex flex-wrap justify-center gap-1.5">
       {pill(
         live
-          ? 'border-blue-300 bg-blue-50 text-blue-700'
+          ? 'border-brand-300 bg-brand-50 text-brand-700'
           : m.to
             ? 'border-neutral-200 bg-neutral-100 text-neutral-400'
             : 'border-neutral-200 bg-white text-neutral-500',
@@ -638,7 +638,7 @@ function Half({ av, nm, city, pts, onPoint, off, marks, serve, phone }: {
       <div
         className={
           'flex flex-col gap-2.5 rounded-xl bg-white p-3 shadow-sm ' +
-          (serve ? 'border-2 border-blue-500' : 'border border-neutral-200')
+          (serve ? 'border-2 border-brand-500' : 'border border-neutral-200')
         }
       >
         <div className="flex items-center gap-3">
@@ -649,7 +649,7 @@ function Half({ av, nm, city, pts, onPoint, off, marks, serve, phone }: {
           <span className="min-w-0 flex-1 leading-tight">
             <span className="block truncate text-[15px] font-bold tracking-tight">{nm}</span>
             <span className="block truncate text-[11px] text-neutral-500">
-              {serve ? <b className="text-blue-600">подача</b> : city}
+              {serve ? <b className="text-brand-600">подача</b> : city}
             </span>
           </span>
           {/* Счёт всё равно крупный: с полуметра от стола его читают цифрой, а
@@ -668,7 +668,7 @@ function Half({ av, nm, city, pts, onPoint, off, marks, serve, phone }: {
     <div
       className={
         'flex flex-col items-center gap-2 rounded-xl bg-white p-4 shadow-sm ' +
-        (serve ? 'border-2 border-blue-500' : 'border border-neutral-200')
+        (serve ? 'border-2 border-brand-500' : 'border border-neutral-200')
       }
     >
       {/* Фамилия рядом с фотографией, а не столбиком под ней ✳ (31.08.2026):
@@ -689,8 +689,8 @@ function Half({ av, nm, city, pts, onPoint, off, marks, serve, phone }: {
       {/* Место под отметку занято всегда: без него половины разной высоты, и
           кнопки очка перестают стоять в одну линию — а по ним бьют не глядя. */}
       {serve ? (
-        <span className="flex items-center gap-1.5 rounded-full bg-blue-50 px-2.5 py-1 text-[11px] font-bold uppercase tracking-wider text-blue-700">
-          <span className="h-2 w-2 rounded-full bg-blue-600" /> подача
+        <span className="flex items-center gap-1.5 rounded-full bg-brand-50 px-2.5 py-1 text-[11px] font-bold uppercase tracking-wider text-brand-700">
+          <span className="h-2 w-2 rounded-full bg-brand-600" /> подача
         </span>
       ) : (
         <span className="h-[26px]" />
@@ -723,7 +723,7 @@ function ScoreInput({ v, big, onSet }: {
   return (
     <input
       className={
-        'rounded-lg border border-transparent bg-transparent text-center font-bold tabular-nums tracking-tight outline-none hover:border-neutral-300 focus:border-blue-500 ' +
+        'rounded-lg border border-transparent bg-transparent text-center font-bold tabular-nums tracking-tight outline-none hover:border-neutral-300 focus:border-brand-500 ' +
         (big ? 'w-24 text-5xl' : 'w-20 text-4xl')
       }
       value={v}
@@ -829,7 +829,7 @@ function ByPoints9_3({ pts, sets, swap, paused, off, done, ready, over, marks, h
       </span>
       <button
         type="button"
-        className="rounded-md px-2.5 py-1.5 font-medium text-blue-600 hover:bg-blue-50"
+        className="rounded-md px-2.5 py-1.5 font-medium text-brand-600 hover:bg-brand-50"
         onClick={onDropHand}
       >
         считать по партиям
@@ -1248,7 +1248,7 @@ function ScoreBody({ tab, phone }: { tab?: string; phone?: boolean }) {
           работа без сети (TZ §6) показана отдельным кадром в состояниях. */}
       <div className="flex items-center justify-between gap-3">
         {to !== null ? (
-          <span className="flex items-center gap-1.5 text-[13px] font-medium text-blue-700">
+          <span className="flex items-center gap-1.5 text-[13px] font-medium text-brand-700">
             <Timer size={15} /> Тайм-аут · {PL[to].nm}
           </span>
         ) : (
@@ -1480,7 +1480,7 @@ const Score9_3States = () => (
           <span className="rounded-md bg-neutral-100 px-2.5 py-1.5 text-neutral-500">
             партии не заполнялись — записан итог матча
           </span>
-          <span className="rounded-md px-2.5 py-1.5 font-medium text-blue-600">считать по партиям</span>
+          <span className="rounded-md px-2.5 py-1.5 font-medium text-brand-600">считать по партиям</span>
         </div>
       </Frag>
     </Shot>
@@ -1528,7 +1528,7 @@ const EvBadge = ({ tone }: { tone: Ev['tone'] }) => {
   }
   if (tone === 'to') {
     return (
-      <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-blue-100 text-blue-700">
+      <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-brand-100 text-brand-700">
         <Timer size={14} />
       </span>
     );
@@ -1949,7 +1949,7 @@ export function SignUpJudgePhone0_7() {
                 inputMode="numeric"
                 maxLength={12}
                 placeholder="000000000000"
-                className="w-full rounded-lg border border-neutral-300 bg-white px-3 py-3 text-center font-mono text-lg tracking-[0.18em] outline-none placeholder:text-neutral-300 focus:border-blue-500"
+                className="w-full rounded-lg border border-neutral-300 bg-white px-3 py-3 text-center font-mono text-lg tracking-[0.18em] outline-none placeholder:text-neutral-300 focus:border-brand-500"
                 value={iin}
                 onChange={(e) => setIin(e.target.value.replace(/\D/g, '').slice(0, 12))}
               />
@@ -2028,7 +2028,7 @@ export function SignUpJudgePhone0_7() {
         )}
 
         <div className="flex justify-center">
-          <button type="button" data-to="Э0.1" className="text-[12.5px] font-semibold text-blue-600">
+          <button type="button" data-to="Э0.1" className="text-[12.5px] font-semibold text-brand-600">
             Уже есть аккаунт — войти
           </button>
         </div>

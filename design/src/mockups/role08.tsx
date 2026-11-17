@@ -114,7 +114,7 @@ const TILES8_1: { v: string; k: string; tone?: 'g' | 'a' | 'b' }[] = [
 const NeedRowPhone = ({ n }: { n: Need }) => (
   <div className="flex flex-col gap-1.5 px-4 py-3">
     <div className="flex items-start gap-3">
-      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-blue-50 text-blue-600">
+      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-brand-50 text-brand-600">
         {n.ic}
       </span>
       <span className="min-w-0 flex-1 leading-tight">

@@ -95,7 +95,7 @@ function PlayerRow({
               {...attributes}
               {...listeners}
               aria-label={player.name + ' — перетащить в другую группу'}
-              className="-ml-1 inline-flex shrink-0 cursor-grab touch-none rounded p-0.5 text-neutral-400 outline-none hover:bg-neutral-100 hover:text-neutral-700 focus-visible:ring-2 focus-visible:ring-blue-400"
+              className="-ml-1 inline-flex shrink-0 cursor-grab touch-none rounded p-0.5 text-neutral-400 outline-none hover:bg-neutral-100 hover:text-neutral-700 focus-visible:ring-2 focus-visible:ring-brand-400"
               data-testid="schedule-drag"
             >
               <GripVertical size={14} aria-hidden />
@@ -150,7 +150,7 @@ function GroupTable({
   return (
     <section
       ref={setNodeRef}
-      className={'border-b border-neutral-200 ' + (target ? 'bg-blue-50 ring-2 ring-inset ring-blue-400' : '')}
+      className={'border-b border-neutral-200 ' + (target ? 'bg-brand-50 ring-2 ring-inset ring-brand-400' : '')}
       data-testid="schedule-group"
       data-group={group.name}
       data-over={target || undefined}
@@ -253,7 +253,7 @@ export function ScheduleGroups({
           {/* Обёртка оверлея — размером с переносимое имя; копия заполняет её целиком. */}
           {dragging && (
             <div
-              className="flex h-full w-full cursor-grabbing items-center gap-1.5 rounded-md bg-white text-[14px] shadow-lg ring-1 ring-blue-300"
+              className="flex h-full w-full cursor-grabbing items-center gap-1.5 rounded-md bg-white text-[14px] shadow-lg ring-1 ring-brand-300"
               data-testid="schedule-drag-overlay"
             >
               <GripVertical size={14} className="shrink-0 text-neutral-400" aria-hidden />

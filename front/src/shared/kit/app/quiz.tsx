@@ -58,7 +58,7 @@ function Option({
     : wrongPick
     ? 'border-red-300 bg-red-50'
     : picked
-    ? 'border-blue-400 bg-blue-50'
+    ? 'border-brand-400 bg-brand-50'
     : 'border-neutral-200 bg-white hover:border-neutral-300';
   return (
     <button
@@ -75,7 +75,7 @@ function Option({
             : wrongPick
             ? 'bg-red-600 text-white'
             : picked
-            ? 'bg-blue-600 text-white'
+            ? 'bg-brand-600 text-white'
             : 'bg-neutral-100 text-neutral-500')
         }
       >
@@ -175,7 +175,7 @@ export function QuizProgress({
         {left && <span className="text-[12.5px] tabular-nums text-neutral-500">осталось {left}</span>}
       </div>
       <div className="h-1.5 w-full overflow-hidden rounded-full bg-neutral-100">
-        <div className="h-full rounded-full bg-blue-600" style={{ width: pct + '%' }} />
+        <div className="h-full rounded-full bg-brand-600" style={{ width: pct + '%' }} />
       </div>
     </div>
   );

@@ -27,9 +27,9 @@ export type ExamMark = { n: number; answered?: boolean; current?: boolean };
 const cell = (m: ExamMark) =>
   'flex h-8 w-8 items-center justify-center rounded-lg text-[12.5px] font-semibold tabular-nums ' +
   (m.current
-    ? 'bg-blue-600 text-white'
+    ? 'bg-brand-600 text-white'
     : m.answered
-    ? 'bg-blue-50 text-blue-700 ring-1 ring-blue-200'
+    ? 'bg-brand-50 text-brand-700 ring-1 ring-brand-200'
     : 'bg-neutral-100 text-neutral-400 ring-1 ring-neutral-200');
 
 /** Сетка номеров вопросов. Один компонент на оба формата: на телефоне она

@@ -19,13 +19,12 @@ import { useState, type ReactNode } from 'react';
 
 import { useNarrow } from '@/shared/kit/app';
 import { assetUrl } from '@/shared/kit/asset';
-import markUrl from '@/shared/kit/brand/fnt-mark.svg';
+import logoUrl from '@/shared/kit/brand/qtt-logo.svg';
 import { MenuSheet } from '@/shared/ui/MenuSheet';
 import { ModalSheet } from '@/shared/ui/ModalSheet';
 
-/** Знак ФНТ РК — тот же файл, что у `Brand` в ките (`public/logo.png` — знак
- *  прототипа SpinCoach). */
-const MARK = assetUrl(markUrl);
+/** Знак QTT — тот же файл, что у `Brand` в ките (ребрендинг 17.11.2026). */
+const LOGO = assetUrl(logoUrl);
 
 /** Один радиус у карточки человека, меню и строк меню. */
 const RADIUS = 'rounded-xl';
@@ -99,13 +98,12 @@ export function AppShell({
     // `hero-scope` — локальный сброс вместо preflight; `relative` — диалоги
     // рабочей области рисуются абсолютным слоем внутри.
     <div
-      className="hero-scope relative flex h-screen w-full flex-col overflow-hidden bg-white font-[Inter,-apple-system,'Segoe_UI',system-ui,sans-serif] text-neutral-900"
+      className="hero-scope relative flex h-screen w-full flex-col overflow-hidden bg-white font-[family-name:var(--font)] text-neutral-900"
       data-theme="light"
     >
       <header className="flex h-14 shrink-0 items-center gap-2.5 border-b border-neutral-200 px-5">
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={MARK} alt="" className="h-7 w-7" />
-        <span className="text-[15px] font-extrabold tracking-tight">ФНТ РК</span>
+        <img src={LOGO} alt="QAZ TABLE TENNIS" className="h-8 w-auto" />
       </header>
 
       <div className="flex min-h-0 flex-1 flex-col md:flex-row">
@@ -135,7 +133,7 @@ export function AppShell({
                         className={
                           'h-9 w-full justify-start gap-2.5 px-2.5 text-[13px] font-medium max-md:w-auto max-md:flex-1 max-md:justify-center ' +
                           (nested ? 'md:pr-9 ' : '') +
-                          (lit ? 'bg-blue-50 text-blue-700' : on ? 'text-neutral-900' : 'text-neutral-600')
+                          (lit ? 'bg-brand-50 text-brand-700' : on ? 'text-neutral-900' : 'text-neutral-600')
                         }
                       >
                         {item.icon}
@@ -166,14 +164,14 @@ export function AppShell({
                           className={
                             // На телефоне сайдбар — полоса: подпункты встают в неё следом.
                             'h-8 w-full justify-start gap-2 pl-9 pr-2.5 text-[13px] font-medium max-md:w-auto max-md:flex-1 max-md:justify-center max-md:pl-2.5 ' +
-                            (sub.active ? 'bg-blue-50 text-blue-700' : 'text-neutral-600')
+                            (sub.active ? 'bg-brand-50 text-brand-700' : 'text-neutral-600')
                           }
                           data-testid="nav-sub"
                         >
                           <span className="min-w-0 flex-1 truncate text-left">{sub.label}</span>
                           {!!sub.badge && (
                             <span
-                              className="inline-flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-blue-600 px-1 text-[10px] font-semibold tabular-nums text-white"
+                              className="inline-flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-brand-600 px-1 text-[10px] font-semibold tabular-nums text-white"
                               aria-label={'ждут решения: ' + sub.badge}
                               data-testid="nav-sub-badge"
                             >

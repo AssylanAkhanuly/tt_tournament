@@ -74,6 +74,82 @@
 /* HeroUI переключает тёмную тему классом на обёртке. */
 @custom-variant dark (&:is(.dark *));
 
+/* ФИРМЕННЫЙ СТИЛЬ QTT ✳ (17.11.2026, решение владельца продукта: «цвета —
+   из брендбука QAZ TABLE TENNIS для всего интерфейса»). Значения сняты с
+   векторов брендбука (оригинал — docs/refs/private/qaz-table-tennis-
+   brendbuk-2026-11-05.pdf, разбор — docs/refs/qaz-table-tennis-brendbuk-
+   2026-11-05.md): корпоративные — тёмно-синий #18244D, голубой #0AB3D7,
+   серый #58667B; глубокий синий #0C1439 — из дополнительных.
+
+   ОДНО МЕСТО НА ВЕСЬ ИНТЕРФЕЙС. Цвет в разметке кита и приложения — утилиты
+   Tailwind (`neutral-*` почти везде, акцент — `brand-*`), поэтому бренд
+   задаётся шкалами здесь, а не правкой двухсот файлов.
+
+   `brand` — акцент. Светлая половина (50–500) — голубой бренда и его
+   подложки: выделение, фокус, точки, полосы, светлый текст на тёмном.
+   Тёмная половина (600–950) — тёмно-синий: заливка главных кнопок и
+   акцентный текст. Голубой на белом даёт 2,5 : 1 — подписью и заливкой под
+   белый текст он не годится, поэтому «рабочий» акцент тёмно-синий, как и в
+   брендбуке, где главный цвет — синий, а голубой — мяч и росчерк знака. Шкала
+   заменила `blue-*` один к одному по ступеням (17.11.2026).
+
+   `neutral` — серая шкала Tailwind, перекрашенная в холодный серый бренда:
+   600 — серый брендбука, 900 — тёмно-синий (основной текст), 950 — глубокий
+   синий. Контраст подписей сохранён: 500 на белом — 4,7 : 1 (было 4,74), 400 —
+   2,5 : 1, как было. */
+@theme {
+  --color-brand-50: #ebf8fc;
+  --color-brand-100: #d2f1f8;
+  --color-brand-200: #a7e3f1;
+  --color-brand-300: #6fd1e8;
+  --color-brand-400: #3cc2df;
+  --color-brand-500: #0ab3d7;
+  --color-brand-600: #18244d;
+  --color-brand-700: #141f45;
+  --color-brand-800: #111a3f;
+  --color-brand-900: #0e173b;
+  --color-brand-950: #0c1439;
+
+  --color-neutral-50: #f6f7f9;
+  --color-neutral-100: #eef0f4;
+  --color-neutral-200: #e1e5eb;
+  --color-neutral-300: #c9cfd8;
+  --color-neutral-400: #9ba4b2;
+  --color-neutral-500: #68758a;
+  --color-neutral-600: #58667b;
+  --color-neutral-700: #3f4b60;
+  --color-neutral-800: #2a3550;
+  --color-neutral-900: #18244d;
+  --color-neutral-950: #0c1439;
+}
+
+/* Тема HeroUI — в цвета бренда. Переменные HeroUI объявлены в
+   `layer(theme)` на `:root` и на `[data-theme="light"]` (обёртка
+   `.hero-scope`), и перебить их может только правило вне слоёв на тех же
+   элементах. Производные (`--accent-hover`, `--accent-soft`, рамка поля в
+   фокусе) HeroUI считает от этих же переменных — они перекрашиваются сами. */
+:root,
+.light,
+.default,
+[data-theme="light"],
+[data-theme="default"] {
+  --accent: var(--color-brand-600);
+  --accent-foreground: #ffffff;
+  --foreground: var(--color-neutral-900);
+  --field-foreground: var(--color-neutral-900);
+  --default-foreground: var(--color-neutral-900);
+  --segment-foreground: var(--color-neutral-900);
+  --muted: var(--color-neutral-500);
+  --focus: var(--color-brand-500);
+  --border: var(--color-neutral-200);
+  --separator: var(--color-neutral-200);
+  --background: var(--color-neutral-50);
+  --default: var(--color-neutral-100);
+  --surface-secondary: var(--color-neutral-100);
+  --surface-tertiary: var(--color-neutral-200);
+  --backdrop: color-mix(in srgb, var(--color-brand-950) 55%, transparent);
+}
+
 /* ОБЩЕЕ ДЛЯ ПРИЛОЖЕНИЯ ✳ (28.10.2026, решение владельца продукта: только
    Tailwind, своих CSS-файлов нет). Здесь то, что раньше лежало в
    `app/globals.css`: базовый сброс, переменные палитры и оформление `body`.
@@ -110,14 +186,15 @@
      согласованы с китом (`src/shared/kit/theme/tokens.css`): у приложения и у
      макетов должен быть один фон и один акцент, иначе экран, перенесённый из
      Storybook, выглядит чужим. */
-  --bg: #f7f8fa;        /* фон страницы */
-  --surface: #f2f3f6;   /* подложка под карточками */
+  --bg: #f6f7f9;        /* фон страницы — neutral-50 бренда */
+  --surface: #eef0f4;   /* подложка под карточками — neutral-100 */
   --card: #ffffff;      /* карточка, панель, поле */
-  --elevated: #eceef1;  /* приподнятое: шахматка предпросмотра, полосы строк */
-  --text: #171717;
-  --muted: #737373;
-  --line: #e5e5e5;
-  --primary: #2563eb;
+  --elevated: #e8ebf0;  /* приподнятое: шахматка предпросмотра, полосы строк */
+  /* Текст, подписи, линии и акцент — из шкал бренда выше (17.11.2026). */
+  --text: var(--color-neutral-900);
+  --muted: var(--color-neutral-500);
+  --line: var(--color-neutral-200);
+  --primary: var(--color-brand-600);
   /* Рост и падение ✳ (16.09.2026): точки кривой рейтинга и прочее «в плюс —
      в минус». Те же зелёный и красный, что у изменений в таблицах кита. */
   --success: #15803d;
@@ -126,22 +203,33 @@
   /* ── табло трансляции (оверлей OBS, /scoreboard) ──
      Отдельная вещательная палитра: плашку смотрят в эфире поверх видео,
      она не обязана совпадать с палитрой интерфейса. */
-  --sb-azure: #1f9ad6;       /* полосы «MT | R 16» и командный счёт */
-  --sb-azure-deep: #1583b8;  /* плитка логотипа слева */
-  --sb-navy: #16225f;        /* блок с фамилиями */
+  /* Цвета бренда QTT ✳ (17.11.2026): голубой — #1193B6 и #187496 из
+     градиента брендбука, а не чистый #0AB3D7: белая подпись на нём даёт 2,5 : 1,
+     в эфире поверх видео это нечитаемо; #1193B6 даёт 3,6 : 1 — норма для
+     крупного полужирного. Синий — тёмно-синий бренда. */
+  --sb-azure: #1193b6;       /* полосы «MT | R 16» и командный счёт */
+  --sb-azure-deep: #187496;  /* плитка логотипа слева */
+  --sb-navy: #18244d;        /* блок с фамилиями */
   /* Партии приглушены, очки громче: два соседних синих (#1e2f80 и #2740a2)
      на экране читались одним цветом, и зритель не понимал, где что. Очко
      меняется каждый розыгрыш — за ним и следят. */
-  --sb-games: #17235e;       /* колонка партий — тише фамилий */
-  --sb-points: #2f6bff;      /* колонка очков — самая громкая на плашке */
+  --sb-games: #0c1439;       /* колонка партий — тише фамилий (глубокий синий бренда) */
+  --sb-points: #3a6eb6;      /* колонка очков — самая громкая (синий из доп. цветов бренда) */
   --sb-yellow: #f2c200;      /* жёлтая карточка */
   --sb-red: #e02424;         /* красная карточка */
   --sb-ink: #ffffff;
-  --sb-ink-dim: #cfe6f5;
+  --sb-ink-dim: #c9eef7;
 
   --r-sm: 10px; --r-md: 16px; --r-lg: 24px;
-  --font: -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+  /* Inter — гарнитура брендбука QTT (17.11.2026). Файл подключает
+     `app/layout.tsx` через next/font и кладёт в `--font-inter`. */
+  --font: var(--font-inter), Inter, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
 }
+
+/* Запасное значение `--font-inter`: в приложении его ставит next/font классом
+   на `<html>` (имя с хэшем), `:where()` — нулевая специфичность, поэтому класс
+   next/font всегда сильнее. В Storybook класса нет — остаётся просто Inter. */
+:where(:root) { --font-inter: Inter; }
 
 @layer base {
   :where([data-app]) body {
@@ -222,12 +310,12 @@
      перебить их может только правило вне слоёв.
 
    Цвета — через `--theme()`: это та же палитра Tailwind, что у классов
-   `border-neutral-300` и `focus:border-blue-500` соседних полей. */
+   `border-neutral-300` и `focus:border-brand-500` соседних полей. */
 .hero-scope {
   --field-border-width: 1px;
   --border-width-field: 1px;
   --field-border: --theme(--color-neutral-300);
-  --field-border-focus: --theme(--color-blue-500);
+  --field-border-focus: --theme(--color-brand-500);
   --field-shadow: 0 0 0 0 transparent;
   --shadow-field: 0 0 0 0 transparent;
 }

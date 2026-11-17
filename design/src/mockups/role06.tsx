@@ -204,7 +204,7 @@ export type Need = { ic: ReactNode; t: string; s: string; p: string; cls: 'live'
 export function NeedRow({ n, read }: { n: Need; read?: boolean }) {
   return (
     <div className="flex w-full items-center gap-3 px-4 py-2.5">
-      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-blue-50 text-blue-600">
+      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-brand-50 text-brand-600">
         {n.ic}
       </span>
       <span className="min-w-0 flex-1 leading-tight">

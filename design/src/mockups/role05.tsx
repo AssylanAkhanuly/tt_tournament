@@ -161,7 +161,7 @@ const Who = ({ av, nm, sub, to }: { av: string; nm: string; sub?: ReactNode; to?
 
 /** Малые плитки-показатели внутри панели (зона сверки, слагаемые рейтинга).
     Тон `b` — акцент, как в старом слое; `r` — тревога. */
-const CELL_TONE = { g: 'text-green-700', a: 'text-amber-600', r: 'text-red-600', b: 'text-blue-700' } as const;
+const CELL_TONE = { g: 'text-green-700', a: 'text-amber-600', r: 'text-red-600', b: 'text-brand-700' } as const;
 const Cells = ({ items, cols = 2 }: { items: { v: string; k: string; tone?: keyof typeof CELL_TONE }[]; cols?: number }) => (
   <div className="grid gap-2" style={{ gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))` }}>
     {items.map((c) => (
@@ -1825,7 +1825,7 @@ export function JudgeCrew({ cur, phone }: { cur: (typeof OPEN_TOURS)[number]; ph
                 onClick={() => pick(c.nm, p.k)}
                 className={
                   'px-2 py-1 text-[11px] font-medium ' +
-                  (post === p.k ? 'bg-blue-600 text-white' : 'text-neutral-500 hover:bg-neutral-100') +
+                  (post === p.k ? 'bg-brand-600 text-white' : 'text-neutral-500 hover:bg-neutral-100') +
                   (i > 0 ? ' border-l border-neutral-200' : '')
                 }
               >
@@ -2742,7 +2742,7 @@ const Rating5_5Body = ({ phone }: { phone?: boolean }) => {
         data-row
         data-to={to}
         onClick={openJournal}
-        className={'cursor-pointer px-4 py-2.5 ' + (open === j.nm ? 'bg-blue-50/60' : 'hover:bg-neutral-50')}
+        className={'cursor-pointer px-4 py-2.5 ' + (open === j.nm ? 'bg-brand-50/60' : 'hover:bg-neutral-50')}
       >
         {who}
         <div className="mt-1.5 flex items-center justify-between gap-2">
@@ -3822,7 +3822,7 @@ const OptRow = ({
       onChange={(e) => onText(e.target.value)}
       placeholder={`Вариант ${ABC[i]}`}
       aria-label={`Вариант ${ABC[i]}`}
-      className="w-full rounded-lg border border-neutral-300 bg-white px-3 py-1.5 text-sm outline-none placeholder:text-neutral-400 focus:border-blue-500"
+      className="w-full rounded-lg border border-neutral-300 bg-white px-3 py-1.5 text-sm outline-none placeholder:text-neutral-400 focus:border-brand-500"
     />
     <button
       type="button"
@@ -4529,7 +4529,7 @@ const Publish5_7Body = ({ phone }: { phone?: boolean }) => {
         tabIndex={0}
         data-row
         onClick={() => setOpen(a.nm)}
-        className={'cursor-pointer px-4 py-2.5 ' + (open === a.nm ? 'bg-blue-50/60' : 'hover:bg-neutral-50')}
+        className={'cursor-pointer px-4 py-2.5 ' + (open === a.nm ? 'bg-brand-50/60' : 'hover:bg-neutral-50')}
       >
         <Who av={a.av} nm={a.nm} sub={a.what} />
         <div className="mt-1.5 flex items-center justify-between gap-2">

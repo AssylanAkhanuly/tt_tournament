@@ -101,7 +101,7 @@ export function TableTools({
           <Settings2 size={18} />
         </Button>
         {on.length > 0 && (
-          <span className="pointer-events-none absolute -right-1 -top-1 rounded-full bg-blue-600 px-1.5 text-[11px] font-semibold text-white">
+          <span className="pointer-events-none absolute -right-1 -top-1 rounded-full bg-brand-600 px-1.5 text-[11px] font-semibold text-white">
             {on.length}
           </span>
         )}
