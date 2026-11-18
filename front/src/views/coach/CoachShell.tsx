@@ -1,0 +1,50 @@
+'use client';
+
+/* Оболочка кабинета старшего тренера региона ✳ (19.11.2026, роль 12):
+   `RoleShell` с его ролью и разделами. Новая страница кабинета оборачивается
+   сюда. */
+
+import { CalendarDays } from 'lucide-react';
+import type { ReactNode } from 'react';
+
+import { ROLE_REGIONAL_HEAD_COACH } from '@/entities/session';
+import { RoleShell, type RoleNavItem } from '@/views/workspace';
+import type { ShellSubItem } from '@/widgets/app-shell';
+
+/** Разделы кабинета. Новый раздел — строка здесь. */
+const NAV: RoleNavItem[] = [{ label: 'Соревнования', href: '/coach', icon: <CalendarDays size={16} /> }];
+
+export function CoachShell({
+  active,
+  bleed,
+  nav = NAV,
+  context,
+  sub,
+  actions,
+  children,
+}: {
+  active: string;
+  bleed?: boolean;
+  /** Свои разделы вместо разделов кабинета — внутри турнира. */
+  nav?: RoleNavItem[];
+  context?: ReactNode;
+  sub?: ShellSubItem[];
+  /** Полоса внизу рабочей области. */
+  actions?: ReactNode;
+  children: ReactNode;
+}) {
+  return (
+    <RoleShell
+      kind={ROLE_REGIONAL_HEAD_COACH}
+      title="Старший тренер региона"
+      nav={nav}
+      context={context}
+      active={active}
+      bleed={bleed}
+      sub={sub}
+      actions={actions}
+    >
+      {children}
+    </RoleShell>
+  );
+}

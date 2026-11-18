@@ -11,7 +11,7 @@
 
 /** Кабинет, в котором открыта страница турнира. `chief` — главный судья этого
  *  турнира ✳ (30.10.2026). */
-export type TournamentCabinet = 'dashboard' | 'gsk' | 'chief' | 'referee';
+export type TournamentCabinet = 'dashboard' | 'gsk' | 'chief' | 'referee' | 'coach';
 export type TournamentSectionSlug = 'info' | 'players' | 'referees' | 'schedule';
 
 export const tournamentHref = (cabinet: TournamentCabinet, id: string, section?: TournamentSectionSlug) =>
@@ -28,5 +28,7 @@ export function cabinetFor(
   if (has('gsk_chairman')) return 'gsk';
   if (roles.some((r) => r.kind === 'chief_referee' && r.scope_id === tournamentId)) return 'chief';
   if (has('referee')) return 'referee';
+  // Старший тренер региона ✳ (19.11.2026): сведения и заявка своего региона.
+  if (has('regional_head_coach')) return 'coach';
   return null;
 }

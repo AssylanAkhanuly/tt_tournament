@@ -11,7 +11,10 @@
 
    Правки — черновик: на сервер уходят разом по «Сохранить» в подвале,
    «Отменить» возвращает сохранённое; обе кнопки неактивны, пока ничего не
-   изменено. Панель открывается всегда с сохранённым. HeroUI + Tailwind. */
+   изменено. Панель открывается всегда с сохранённым. HeroUI + Tailwind.
+
+   У игроков ниже — условия допуска ✳ (19.11.2026, `AdmissionFields`): тот же
+   черновик и та же «Сохранить»; на сервер уходит только изменённое. */
 
 import {
   Button,
@@ -28,7 +31,16 @@ import { parseDate, type CalendarDate } from '@internationalized/date';
 import { Settings } from 'lucide-react';
 import { useState } from 'react';
 
-import { setRecruitment, type Recruitment, type RecruitmentOf, type TournamentSummary } from '@/entities/tournament';
+import {
+  setRecruitment,
+  updateAdmission,
+  type Admission,
+  type Recruitment,
+  type RecruitmentOf,
+  type TournamentSummary,
+} from '@/entities/tournament';
+
+import { AdmissionFields } from './AdmissionFields';
 
 /** Кнопка «Настройки». Отдельно — чтобы экран показал её сразу, неактивной,
  *  пока турнир грузится, и полоса над таблицей не прыгала. */
@@ -40,23 +52,34 @@ export function SettingsButton({ isDisabled }: { isDisabled?: boolean }) {
   );
 }
 
-type Draft = { open: boolean; until: CalendarDate | null };
+type Draft = { open: boolean; until: CalendarDate | null; admission: Admission | null };
 
-const draftOf = (r: Recruitment): Draft => ({ open: r.open, until: r.until ? parseDate(r.until) : null });
+const draftOf = (r: Recruitment, a: Admission | null): Draft => ({
+  open: r.open,
+  until: r.until ? parseDate(r.until) : null,
+  admission: a,
+});
+
+const sameAdmission = (a: Admission | null, b: Admission | null) => JSON.stringify(a) === JSON.stringify(b);
 
 export function RecruitmentSettings({
   tournamentId,
   of,
   recruitment,
+  admission = null,
+  admissionLocked = false,
   onChanged,
 }: {
   tournamentId: string;
   /** Чей приём заявок правится. */
   of: RecruitmentOf;
   recruitment: Recruitment;
+  /** Условия допуска турнира — только у игроков; нет — раздела нет. */
+  admission?: Admission | null;
+  admissionLocked?: boolean;
   onChanged: (t: TournamentSummary) => void;
 }) {
-  const saved = draftOf(recruitment);
+  const saved = draftOf(recruitment, admission);
   const [draft, setDraft] = useState<Draft>(saved);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -64,21 +87,25 @@ export function RecruitmentSettings({
   const state = useOverlayState({
     onOpenChange: (isOpen) => {
       if (isOpen) {
-        setDraft(draftOf(recruitment));
+        setDraft(draftOf(recruitment, admission));
         setError(null);
       }
     },
   });
 
-  const changed = draft.open !== saved.open || String(draft.until) !== String(saved.until);
+  const recruitmentChanged = draft.open !== saved.open || String(draft.until) !== String(saved.until);
+  const admissionChanged = !sameAdmission(draft.admission, saved.admission);
+  const changed = recruitmentChanged || admissionChanged;
 
   async function save() {
     setBusy(true);
     setError(null);
     try {
-      onChanged(
-        await setRecruitment(tournamentId, of, { open: draft.open, until: draft.until?.toString() ?? null }),
-      );
+      let latest: TournamentSummary | null = null;
+      if (recruitmentChanged)
+        latest = await setRecruitment(tournamentId, of, { open: draft.open, until: draft.until?.toString() ?? null });
+      if (admissionChanged && draft.admission) latest = await updateAdmission(tournamentId, draft.admission);
+      if (latest) onChanged(latest);
       state.close();
     } catch (e) {
       setError((e as Error).message);
@@ -158,6 +185,13 @@ export function RecruitmentSettings({
                   >
                     Без срока
                   </Button>
+                )}
+                {draft.admission && (
+                  <AdmissionFields
+                    value={draft.admission}
+                    locked={admissionLocked}
+                    onChange={(a) => setDraft((d) => ({ ...d, admission: a }))}
+                  />
                 )}
                 {error && (
                   <p className="text-[13px] text-red-600" data-testid="recruitment-error">

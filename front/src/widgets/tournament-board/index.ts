@@ -7,4 +7,5 @@ export {
   type SectionView,
   type TournamentSectionId,
 } from './TournamentPage';
+export { TournamentOverview } from './TournamentOverview';
 export { useTournamentPage } from './useTournamentPage';

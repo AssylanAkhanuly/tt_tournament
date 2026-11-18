@@ -279,8 +279,19 @@ test('вид «Таблица»: поиск сужает, строка откр�
   await page.getByTestId('nav-sub').filter({ hasText: 'Таблица' }).click();
   await page.waitForURL((url) => url.search === '?view=table');
   const rows = page.getByTestId('tournament-table-row');
-  const всего = (await (await page.request.get('/api/tournaments/')).json()).length;
-  await expect(rows).toHaveCount(всего);
+  // Число строк сверяется с тем же ответом, который нарисовала страница: отдельный
+  // запрос позже ловил турниры, заведённые соседними проверками в это время.
+  let served = -1;
+  await page.route('**/api/tournaments/', async (route) => {
+    const response = await route.fetch();
+    const json = (await response.json()) as unknown[];
+    served = json.length;
+    await route.fulfill({ response, json });
+  });
+  await page.reload();
+  await expect.poll(() => served).toBeGreaterThanOrEqual(0);
+  await expect(rows).toHaveCount(served);
+  await page.unroute('**/api/tournaments/');
   await page.screenshot({ path: 'test-results/dashboard/table.png' });
 
   // Сортировка заголовком: «Турнир» — по алфавиту, второй щелчок — обратно.

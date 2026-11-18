@@ -16,6 +16,9 @@ export const ROLE_REFEREE = 'referee';
 /** Главный судья турнира ✳ (30.10.2026) — роль с областью «турнир»: свой
  *  кабинет `/chief` с турнирами, где он главный (`chiefTournamentIds`). */
 export const ROLE_CHIEF_REFEREE = 'chief_referee';
+/** Старший тренер региона ✳ (19.11.2026, роль 12) — роль с областью «регион»:
+ *  кабинет `/coach`, заявка на главные старты за спортсменов своего региона. */
+export const ROLE_REGIONAL_HEAD_COACH = 'regional_head_coach';
 
 /** Рабочие места ролей, у которых в приложении есть кабинет: короткое
  *  название (полное с сервера длинное для меню) и адрес. Порядок — старшинство:
@@ -28,6 +31,7 @@ const WORKSPACES: { kind: string; title: string; to: string }[] = [
   // После судьи: главный судья — роль одного турнира, а судья входит в свой
   // кабинет; в кабинет главного судьи — из меню «Работать как».
   { kind: ROLE_CHIEF_REFEREE, title: 'Главный судья', to: '/chief' },
+  { kind: ROLE_REGIONAL_HEAD_COACH, title: 'Старший тренер региона', to: '/coach' },
   { kind: ROLE_PLAYER, title: 'Спортсмен', to: '/player' },
 ];
 

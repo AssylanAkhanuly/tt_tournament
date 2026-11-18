@@ -47,6 +47,8 @@ export type TournamentSummary = {
   regionQuota: number | null;
   /** В каком качестве текущий пользователь может подать заявку — решает сервер. */
   canApplyAs: string[];
+  /** Условия допуска заморожены первой заявкой (или турнир начат) — правка закрыта. */
+  admissionLocked: boolean;
 };
 
 /** Категория календаря ФНТ РК (ТЗ §4.1) — значок вида соревнования. */
@@ -154,6 +156,7 @@ type Raw = {
   participant_limit: number | null;
   region_quota: number | null;
   can_apply_as: string[];
+  admission_locked: boolean;
 };
 
 type RawParticipant = {
@@ -199,6 +202,7 @@ const toSummary = (t: Raw): TournamentSummary => ({
   participantLimit: t.participant_limit ?? null,
   regionQuota: t.region_quota ?? null,
   canApplyAs: t.can_apply_as ?? [],
+  admissionLocked: t.admission_locked ?? false,
 });
 
 /** Правка сведений турнира (`PATCH /api/tournaments/<id>/update/`). Дата начала —
@@ -396,6 +400,9 @@ function useAsync<T>(run: () => Promise<T>, key: string, cache?: Map<string, T>)
 }
 
 export const useTournaments = () => useAsync(fetchTournaments, 'all');
+export const useApplicantKinds = () =>
+  useAsync(() => getJson<ApplicantKind[]>('/api/tournaments/applicants/', 'Заявители'), 'all');
+export const useMyApplications = (id: string) => useAsync(() => fetchMyApplications(id), id);
 export const useTemplates = () =>
   useAsync(() => getJson<TournamentTemplate[]>('/api/tournaments/templates/', 'Виды соревнований'), 'all');
 export const usePlaces = () => useAsync(() => getJson<Place[]>('/api/tournaments/places/', 'Места'), 'all');
@@ -817,3 +824,93 @@ export async function finalizeSchedule(id: string): Promise<Schedule> {
 }
 
 export const useSchedule = (id: string) => useAsync(() => fetchSchedule(id), id);
+
+// ─── Допуск заявки ✳ (19.11.2026, ADMISSION.md) ─────────────────────────────
+
+/** Вид заявителя из реестра сервера: «Спортсмен сам», «Старший тренер региона». */
+export type ApplicantKind = { key: string; label: string };
+
+/** Условия допуска турнира — правятся, пока нет заявок. */
+export type Admission = { applicantKinds: string[]; participantLimit: number | null; regionQuota: number | null };
+
+export async function updateAdmission(id: string, a: Admission): Promise<TournamentSummary> {
+  const res = await fetch(`/api/tournaments/${id}/update/`, {
+    method: 'PATCH',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      applicant_kinds: a.applicantKinds,
+      participant_limit: a.participantLimit,
+      region_quota: a.regionQuota,
+    }),
+  });
+  const body = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    const first = Object.values(body as Record<string, unknown>).flat()[0];
+    throw new Error(typeof first === 'string' ? first : 'Не сохранено (' + res.status + ')');
+  }
+  return toSummary(body as Raw);
+}
+
+/** Спортсмен на экране заявки: кандидат или уже заявленный. */
+export type ApplicationAthlete = {
+  id: string;
+  name: string;
+  region: string;
+  birthYear: number | null;
+  rating: number | null;
+};
+
+type RawAthlete = { id: string; name: string; region: string; birth_year: number | null; rating: string | null };
+
+const toAthlete = (a: RawAthlete): ApplicationAthlete => ({
+  id: a.id,
+  name: a.name,
+  region: a.region,
+  birthYear: a.birth_year,
+  rating: num(a.rating),
+});
+
+/** Кого заявитель `as` может заявить и кто ещё не в турнире; поиск по имени. */
+export async function fetchApplicationCandidates(id: string, as: string, q: string): Promise<ApplicationAthlete[]> {
+  const params = new URLSearchParams({ as, q });
+  return (await getJson<RawAthlete[]>(`/api/tournaments/${id}/applications/candidates/?${params}`, 'Кандидаты')).map(
+    toAthlete,
+  );
+}
+
+/** Кого я заявил на этот турнир. */
+export async function fetchMyApplications(id: string): Promise<ApplicationAthlete[]> {
+  return (await getJson<RawAthlete[]>(`/api/tournaments/${id}/applications/mine/`, 'Заявленные')).map(toAthlete);
+}
+
+/** Отказ в допуске: общий текст и причины по спортсменам (`athleteId` пусто —
+ *  про заявку целиком, например предел участников). */
+export class ApplicationRefused extends Error {
+  constructor(
+    message: string,
+    readonly errors: { athleteId: string | null; name: string | null; detail: string }[],
+  ) {
+    super(message);
+    this.name = 'ApplicationRefused';
+  }
+}
+
+/** Подать заявку списком: все встают в состав или никто. */
+export async function submitApplication(id: string, as: string, athleteIds: string[]): Promise<void> {
+  const res = await fetch(`/api/tournaments/${id}/applications/`, {
+    method: 'POST',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ as, athlete_ids: athleteIds }),
+  });
+  if (res.ok) return;
+  const body = (await res.json().catch(() => ({}))) as {
+    detail?: string;
+    errors?: { athlete_id: string | null; name: string | null; detail: string }[];
+  };
+  throw new ApplicationRefused(
+    body.detail || 'Заявка не подана (' + res.status + ')',
+    (body.errors ?? []).map((e) => ({ athleteId: e.athlete_id, name: e.name, detail: e.detail })),
+  );
+}

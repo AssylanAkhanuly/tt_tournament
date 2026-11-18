@@ -221,6 +221,12 @@ function Players({ id, recruitment }: { id: string; recruitment: boolean }) {
                 tournamentId={id}
                 of="players"
                 recruitment={tournament.data.playerRecruitment}
+                admission={{
+                  applicantKinds: tournament.data.applicantKinds,
+                  participantLimit: tournament.data.participantLimit,
+                  regionQuota: tournament.data.regionQuota,
+                }}
+                admissionLocked={tournament.data.admissionLocked}
                 onChanged={tournament.reload}
               />
             ) : (

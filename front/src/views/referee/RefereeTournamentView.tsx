@@ -11,10 +11,9 @@ import { useRouter } from 'next/navigation';
 
 import { useTournament } from '@/entities/tournament';
 import { ApplicationPanel } from '@/features/referee-application';
-import { TournamentContext } from '@/widgets/tournament-board';
+import { TournamentContext, TournamentOverview } from '@/widgets/tournament-board';
 
 import { RefereeShell } from './RefereeShell';
-import { TournamentOverview } from './TournamentOverview';
 
 export function RefereeTournamentView({ id }: { id: string }) {
   const router = useRouter();
