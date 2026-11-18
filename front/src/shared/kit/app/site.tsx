@@ -62,8 +62,8 @@ export const AUTH_FOOT = 'Федерация настольного теннис
     надвое ✳ (19.11.2026, решение владельца продукта): слева — фирменный синий
     со знаком QTT и подписью федерации под ним, лента орнамента слева и
     круговой узор в углу (`AuthBackdrop`); справа — белая половина с формой, без карточки вокруг. На
-    телефоне половины встают друг под другом, синяя — низкой полосой: знак
-    поменьше и подпись мелко ✳ (19.11.2026).
+    телефоне половины встают друг под другом, синяя — низкой полосой только со
+    знаком, подпись федерации — мелко в самом низу экрана ✳ (19.11.2026).
     `judge` — своя окраска формы судьи: формы похожи как две капли, и
     заголовок читают уже после того, как начали заполнять; сам вход не
     окрашивается — он один на всех. */
@@ -85,13 +85,14 @@ export function AuthScreen({
         <AuthBackdrop />
         <div className="relative flex flex-1 flex-col items-center justify-center gap-6 px-[calc(3.6vw+clamp(44px,4.8vw,92px))] py-10 max-md:gap-1.5 max-md:py-4">
           <Brand size="xl" inverse />
-          {/* Подпись федерации — под знаком, крупно ✳ (19.11.2026, решение владельца продукта). */}
-          <p className="m-0 max-w-[30rem] text-center text-lg leading-snug text-brand-100 max-md:text-[11px]" data-testid="auth-caption">
+          {/* Подпись федерации — под знаком, крупно ✳ (19.11.2026, решение владельца
+              продукта); на телефоне — внизу экрана, под формой. */}
+          <p className="m-0 max-w-[30rem] text-center text-lg leading-snug text-brand-100 max-md:hidden" data-testid="auth-caption">
             {AUTH_FOOT}
           </p>
         </div>
       </div>
-      <div className="relative flex min-h-0 flex-1 items-center justify-center overflow-auto p-8" data-testid="auth-form">
+      <div className="relative flex min-h-0 flex-1 flex-col items-center overflow-auto p-8 max-md:pb-4" data-testid="auth-form">
         <div
           className={
             'my-auto w-full ' +
@@ -101,6 +102,9 @@ export function AuthScreen({
         >
           {children}
         </div>
+        <p className="m-0 mt-6 shrink-0 text-center text-[11px] leading-snug text-neutral-500 md:hidden" data-testid="auth-caption-bottom">
+          {AUTH_FOOT}
+        </p>
       </div>
     </div>
   );
