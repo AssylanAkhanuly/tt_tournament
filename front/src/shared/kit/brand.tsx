@@ -35,7 +35,7 @@ const SIZE: Record<BrandSize, { root: string; logo: string; sub: string }> = {
   md: { root: 'gap-[12px]', logo: 'h-[36px]', sub: 'text-[10px] tracking-[1.1px]' },
   lg: { root: 'gap-[16px]', logo: 'h-[56px]', sub: 'text-[11px] tracking-[1.1px]' },
   // Половина титульного экрана со знаком ✳ (19.11.2026): знак — главное на ней.
-  xl: { root: 'gap-[20px]', logo: 'h-[104px] max-md:h-[64px]', sub: 'text-[12px] tracking-[1.4px]' },
+  xl: { root: 'gap-[20px]', logo: 'h-[104px] max-md:h-[44px]', sub: 'text-[12px] tracking-[1.4px]' },
 };
 
 export function Brand({
