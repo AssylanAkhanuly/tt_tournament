@@ -21,7 +21,6 @@ import { useState, type FormEvent } from 'react';
 
 import { homeFor, useKnownAccounts, useSession, type KnownAccount } from '@/entities/session';
 import { AuthScreen, FullScreen, TextInput } from '@/shared/kit/app';
-import { Brand } from '@/shared/kit/brand';
 
 const initials = (name: string) =>
   name
@@ -98,9 +97,9 @@ export function LoginView() {
   return (
     <FullScreen>
       <AuthScreen>
-        <div className="mb-5 flex flex-col items-center gap-4 text-center">
-          <Brand size="lg" />
-          <div className="text-xl font-semibold tracking-tight">Вход в систему</div>
+        {/* Знак — на синей половине экрана ✳ (19.11.2026), у формы — только заголовок. */}
+        <div className="mb-6">
+          <div className="text-2xl font-semibold tracking-tight">Вход в систему</div>
         </div>
 
         {!loading && current ? (

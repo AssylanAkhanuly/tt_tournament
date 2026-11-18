@@ -24,7 +24,7 @@ const cx = (...p: (string | false | undefined)[]) => p.filter(Boolean).join(' ')
 const LOGO = assetUrl(logoUrl);
 const LOGO_INVERSE = assetUrl(logoInverseUrl);
 
-export type BrandSize = 'sm' | 'md' | 'lg';
+export type BrandSize = 'sm' | 'md' | 'lg' | 'xl';
 
 /* Высота знака по подаче: `sm` — телефон и узкие шапки, `md` — десктоп, `lg` —
    титульные экраны. Знак вытянут (≈ 2,7 : 1) и несёт три строки словесной
@@ -34,6 +34,8 @@ const SIZE: Record<BrandSize, { root: string; logo: string; sub: string }> = {
   sm: { root: 'gap-[10px]', logo: 'h-[30px]', sub: 'text-[9px] tracking-[1px]' },
   md: { root: 'gap-[12px]', logo: 'h-[36px]', sub: 'text-[10px] tracking-[1.1px]' },
   lg: { root: 'gap-[16px]', logo: 'h-[56px]', sub: 'text-[11px] tracking-[1.1px]' },
+  // Половина титульного экрана со знаком ✳ (19.11.2026): знак — главное на ней.
+  xl: { root: 'gap-[20px]', logo: 'h-[104px] max-md:h-[64px]', sub: 'text-[12px] tracking-[1.4px]' },
 };
 
 export function Brand({
