@@ -26,255 +26,256 @@ from users.models import Role, User
 
 pytestmark = pytest.mark.django_db
 
+COACH = Role.KIND_REGIONAL_HEAD_COACH
 
-def человек(n, name, region="", born=None):
-    u = User.objects.create_user(phone="+7700999" + str(n).zfill(4), name=name, password="x")
+
+def make_person(n, name, region="", born=None):
+    user = User.objects.create_user(phone="+7700999" + str(n).zfill(4), name=name, password="x")
     if region or born:
         RatingProfile.objects.create(
-            user=u, region=region, birth_date=born, birth_year=born.year if born else None,
+            user=user, region=region, birth_date=born, birth_year=born.year if born else None,
         )
-    return u
+    return user
 
 
-def клиент(user):
+def client_for(user):
     api = APIClient()
     api.force_authenticate(user)
     return api
 
 
 @pytest.fixture
-def мир():
-    председатель = человек(1, "Председатель")
-    Role.objects.create(user=председатель, kind=Role.KIND_GSK_CHAIRMAN)
-    тренер = человек(2, "Тренеров Тимур")
-    Role.objects.create(user=тренер, kind=Role.KIND_REGIONAL_HEAD_COACH, scope=Role.SCOPE_REGION, region="Алматы")
-    алматы = [человек(10 + i, "Алматинец %d" % i, "Алматы", datetime.date(2010, 1, 1 + i)) for i in range(4)]
-    астанец = человек(20, "Астанин Арман", "Астана", datetime.date(2010, 5, 5))
-    r = клиент(председатель).post(
+def world():
+    chairman = make_person(1, "Председатель")
+    Role.objects.create(user=chairman, kind=Role.KIND_GSK_CHAIRMAN)
+    coach = make_person(2, "Тренеров Тимур")
+    Role.objects.create(user=coach, kind=COACH, scope=Role.SCOPE_REGION, region="Алматы")
+    almaty = [make_person(10 + i, "Алматинец %d" % i, "Алматы", datetime.date(2010, 1, 1 + i)) for i in range(4)]
+    astana = make_person(20, "Астанин Арман", "Астана", datetime.date(2010, 5, 5))
+    response = client_for(chairman).post(
         "/api/tournaments/", {"name": "Чемпионат РК", "template": "main_start"}, format="json"
     )
-    assert r.status_code == 201, r.data
-    t = Tournament.objects.get(pk=r.data["id"])
-    return {"t": t, "председатель": председатель, "тренер": тренер, "алматы": алматы, "астанец": астанец}
+    assert response.status_code == 201, response.data
+    tournament = Tournament.objects.get(pk=response.data["id"])
+    return {"t": tournament, "chairman": chairman, "coach": coach, "almaty": almaty, "astana": astana}
 
 
-def заявить(user, t, athletes, applicant=Role.KIND_REGIONAL_HEAD_COACH):
-    return клиент(user).post(
-        f"/api/tournaments/{t.id}/applications/",
+def submit(user, tournament, athletes, applicant=COACH):
+    return client_for(user).post(
+        f"/api/tournaments/{tournament.id}/applications/",
         {"as": applicant, "athlete_ids": [str(a.id) for a in athletes]},
         format="json",
     )
 
 
-def в_турнире(t):
-    return set(TournamentParticipant.objects.filter(tournament=t).values_list("user__name", flat=True))
+def entered_names(tournament):
+    return set(TournamentParticipant.objects.filter(tournament=tournament).values_list("user__name", flat=True))
+
+
+def update(world, payload):
+    return client_for(world["chairman"]).patch(f"/api/tournaments/{world['t'].id}/update/", payload, format="json")
 
 
 # ── Шаблон: засевает настройки, но не держит их ─────────────────────────────
 
 
-def test_главный_старт_засевает_заявителя_квоту_и_значок(мир):
-    t = мир["t"]
+def test_main_start_seeds_applicant_quota_and_badge(world):
+    t = world["t"]
     assert t.template.code == "main_start"
     assert t.category == "main"
-    assert t.applicant_kinds == [Role.KIND_REGIONAL_HEAD_COACH]
+    assert t.applicant_kinds == [COACH]
     assert t.region_quota == 3
 
 
-def test_правка_шаблона_не_меняет_заведённый_турнир(мир):
+def test_editing_template_does_not_change_existing_tournament(world):
     TournamentTemplate.objects.filter(code="main_start").update(region_quota=5, applicant_kinds=["self"])
-    мир["t"].refresh_from_db()
-    assert мир["t"].region_quota == 3
-    assert мир["t"].applicant_kinds == [Role.KIND_REGIONAL_HEAD_COACH]
+    world["t"].refresh_from_db()
+    assert world["t"].region_quota == 3
+    assert world["t"].applicant_kinds == [COACH]
 
 
-def test_без_шаблона_спортсмен_записывается_сам(мир):
-    r = клиент(мир["председатель"]).post("/api/tournaments/", {"name": "Турнир"}, format="json")
-    t = Tournament.objects.get(pk=r.data["id"])
+def test_without_template_athlete_applies_alone(world):
+    response = client_for(world["chairman"]).post("/api/tournaments/", {"name": "Турнир"}, format="json")
+    t = Tournament.objects.get(pk=response.data["id"])
     assert t.applicant_kinds == ["self"]
     assert t.template is None and t.category == ""
 
 
-def test_командный_вид_пока_не_заводится(мир):
-    r = клиент(мир["председатель"]).post(
+def test_team_template_is_not_created_yet(world):
+    response = client_for(world["chairman"]).post(
         "/api/tournaments/", {"name": "ЕЛНТ, 1 тур", "template": "eurasian_league"}, format="json"
     )
-    assert r.status_code == 400
-    assert "Командн" in str(r.data)
+    assert response.status_code == 400
+    assert "Командн" in str(response.data)
 
 
-def test_неизвестный_шаблон_400(мир):
-    r = клиент(мир["председатель"]).post("/api/tournaments/", {"name": "X", "template": "nope"}, format="json")
-    assert r.status_code == 400
+def test_unknown_template_400(world):
+    response = client_for(world["chairman"]).post("/api/tournaments/", {"name": "X", "template": "nope"}, format="json")
+    assert response.status_code == 400
+
+
+def test_template_list_for_new_tournament_excludes_team():
+    response = APIClient().get("/api/tournaments/templates/")
+    assert response.status_code == 200
+    assert [t["code"] for t in response.data] == ["main_start", "open"]
+    assert response.data[0] == {"code": "main_start", "name": "Главный республиканский старт", "category": "main"}
 
 
 # ── Кто подаёт ──────────────────────────────────────────────────────────────
 
 
-def test_тренер_заявляет_свой_регион_списком(мир):
-    t, тренер = мир["t"], мир["тренер"]
-    r = заявить(тренер, t, мир["алматы"][:2])
-    assert r.status_code == 201, r.data
-    assert в_турнире(t) == {"Алматинец 0", "Алматинец 1"}
-    p = TournamentParticipant.objects.get(tournament=t, user=мир["алматы"][0])
-    assert p.entered_by == тренер
-    assert p.entered_as == Role.KIND_REGIONAL_HEAD_COACH
+def test_coach_enters_own_region_as_list(world):
+    t, coach = world["t"], world["coach"]
+    response = submit(coach, t, world["almaty"][:2])
+    assert response.status_code == 201, response.data
+    assert entered_names(t) == {"Алматинец 0", "Алматинец 1"}
+    participant = TournamentParticipant.objects.get(tournament=t, user=world["almaty"][0])
+    assert participant.entered_by == coach
+    assert participant.entered_as == COACH
 
 
-def test_самозапись_на_главный_старт_отбивается(мир):
-    t, игрок = мир["t"], мир["алматы"][0]
-    r = клиент(игрок).post(f"/api/tournaments/{t.id}/participants/join/")
-    assert r.status_code == 400
-    assert "старший тренер региона" in r.data["detail"].lower()
-    assert в_турнире(t) == set()
+def test_self_join_on_main_start_is_refused(world):
+    t, player = world["t"], world["almaty"][0]
+    response = client_for(player).post(f"/api/tournaments/{t.id}/participants/join/")
+    assert response.status_code == 400
+    assert "старший тренер региона" in response.data["detail"].lower()
+    assert entered_names(t) == set()
 
 
-def test_без_роли_тренера_как_тренер_не_подать(мир):
-    r = заявить(мир["алматы"][0], мир["t"], мир["алматы"][:1])
-    assert r.status_code == 403
-    assert в_турнире(мир["t"]) == set()
+def test_without_coach_role_cannot_apply_as_coach(world):
+    response = submit(world["almaty"][0], world["t"], world["almaty"][:1])
+    assert response.status_code == 403
+    assert entered_names(world["t"]) == set()
 
 
-def test_чужой_регион_валит_всю_заявку(мир):
-    t = мир["t"]
-    r = заявить(мир["тренер"], t, [мир["алматы"][0], мир["астанец"]])
-    assert r.status_code == 400
-    assert [e["athlete_id"] for e in r.data["errors"]] == [str(мир["астанец"].id)]
-    assert в_турнире(t) == set()
+def test_foreign_region_rejects_whole_application(world):
+    t = world["t"]
+    response = submit(world["coach"], t, [world["almaty"][0], world["astana"]])
+    assert response.status_code == 400
+    assert [e["athlete_id"] for e in response.data["errors"]] == [str(world["astana"].id)]
+    assert entered_names(t) == set()
 
 
-def test_турнир_может_разрешить_и_самозапись(мир):
-    t = мир["t"]
-    r = клиент(мир["председатель"]).patch(
-        f"/api/tournaments/{t.id}/update/",
-        {"applicant_kinds": ["self", Role.KIND_REGIONAL_HEAD_COACH]},
-        format="json",
-    )
-    assert r.status_code == 200, r.data
-    r = клиент(мир["астанец"]).post(f"/api/tournaments/{t.id}/participants/join/")
-    assert r.status_code == 201, r.data
-    assert в_турнире(t) == {"Астанин Арман"}
+def test_tournament_can_also_allow_self_join(world):
+    t = world["t"]
+    response = update(world, {"applicant_kinds": ["self", COACH]})
+    assert response.status_code == 200, response.data
+    response = client_for(world["astana"]).post(f"/api/tournaments/{t.id}/participants/join/")
+    assert response.status_code == 201, response.data
+    assert entered_names(t) == {"Астанин Арман"}
 
 
-def test_самозапись_только_за_себя(мир):
-    t = мир["t"]
+def test_self_applicant_enters_only_themselves(world):
+    t = world["t"]
     t.applicant_kinds = ["self"]
     t.save()
-    r = заявить(мир["астанец"], t, [мир["алматы"][0]], applicant="self")
-    assert r.status_code == 400
-    assert в_турнире(t) == set()
+    response = submit(world["astana"], t, [world["almaty"][0]], applicant="self")
+    assert response.status_code == 400
+    assert entered_names(t) == set()
 
 
 # ── Квота, предел, возраст ──────────────────────────────────────────────────
 
 
-def test_квота_региона_валит_лишнего(мир):
-    t = мир["t"]
-    r = заявить(мир["тренер"], t, мир["алматы"])  # 4 при квоте 3
-    assert r.status_code == 400
-    assert "Квота" in str(r.data["errors"])
-    assert в_турнире(t) == set()
+def test_region_quota_rejects_extra_athlete(world):
+    t = world["t"]
+    response = submit(world["coach"], t, world["almaty"])  # 4 при квоте 3
+    assert response.status_code == 400
+    assert "Квота" in str(response.data["errors"])
+    assert entered_names(t) == set()
 
 
-def test_квота_считает_уже_заявленных(мир):
-    t, тренер, алматы = мир["t"], мир["тренер"], мир["алматы"]
-    assert заявить(тренер, t, алматы[:2]).status_code == 201
-    r = заявить(тренер, t, алматы[2:])
-    assert r.status_code == 400
-    assert len(в_турнире(t)) == 2
+def test_region_quota_counts_already_entered(world):
+    t, coach, almaty = world["t"], world["coach"], world["almaty"]
+    assert submit(coach, t, almaty[:2]).status_code == 201
+    response = submit(coach, t, almaty[2:])
+    assert response.status_code == 400
+    assert len(entered_names(t)) == 2
 
 
-def test_предел_участников(мир):
-    t = мир["t"]
+def test_participant_limit(world):
+    t = world["t"]
     t.region_quota = None
     t.participant_limit = 2
     t.save()
-    r = заявить(мир["тренер"], t, мир["алматы"][:3])
-    assert r.status_code == 400
-    assert "Предел" in str(r.data["errors"])
-    assert заявить(мир["тренер"], t, мир["алматы"][:2]).status_code == 201
+    response = submit(world["coach"], t, world["almaty"][:3])
+    assert response.status_code == 400
+    assert "Предел" in str(response.data["errors"])
+    assert submit(world["coach"], t, world["almaty"][:2]).status_code == 201
 
 
-def test_возраст_вне_категорий_называет_спортсмена(мир):
-    t, алматы = мир["t"], мир["алматы"]
+def test_age_outside_categories_names_the_athlete(world):
+    t, almaty = world["t"], world["almaty"]
     TournamentAgeCategory.objects.create(
         tournament=t, name="2010 г.р. и моложе",
         born_from=datetime.date(2010, 1, 2), born_to=datetime.date(2026, 12, 31),
     )
-    r = заявить(мир["тренер"], t, алматы[:2])  # Алматинец 0 — 01.01.2010, на день старше
-    assert r.status_code == 400
-    assert [e["athlete_id"] for e in r.data["errors"]] == [str(алматы[0].id)]
-    assert в_турнире(t) == set()
+    response = submit(world["coach"], t, almaty[:2])  # Алматинец 0 — 01.01.2010, на день старше
+    assert response.status_code == 400
+    assert [e["athlete_id"] for e in response.data["errors"]] == [str(almaty[0].id)]
+    assert entered_names(t) == set()
 
 
-def test_уже_заявленный_второй_раз_не_идёт(мир):
-    t, тренер, алматы = мир["t"], мир["тренер"], мир["алматы"]
-    assert заявить(тренер, t, алматы[:1]).status_code == 201
-    r = заявить(тренер, t, алматы[:1])
-    assert r.status_code == 400
-    assert len(в_турнире(t)) == 1
+def test_already_entered_athlete_is_not_entered_twice(world):
+    t, coach, almaty = world["t"], world["coach"], world["almaty"]
+    assert submit(coach, t, almaty[:1]).status_code == 201
+    response = submit(coach, t, almaty[:1])
+    assert response.status_code == 400
+    assert len(entered_names(t)) == 1
 
 
-def test_закрытый_приём_не_пускает(мир):
-    t = мир["t"]
+def test_closed_recruitment_refuses(world):
+    t = world["t"]
     t.player_recruitment_open = False
     t.save()
-    r = заявить(мир["тренер"], t, мир["алматы"][:1])
-    assert r.status_code == 400
-    assert в_турнире(t) == set()
+    response = submit(world["coach"], t, world["almaty"][:1])
+    assert response.status_code == 400
+    assert entered_names(t) == set()
 
 
 # ── Условия допуска замораживаются первой заявкой ───────────────────────────
 
 
-def test_неизвестный_заявитель_в_настройках_400(мир):
-    r = клиент(мир["председатель"]).patch(
-        f"/api/tournaments/{мир['t'].id}/update/", {"applicant_kinds": ["director"]}, format="json"
-    )
-    assert r.status_code == 400
+def test_unknown_applicant_in_settings_400(world):
+    assert update(world, {"applicant_kinds": ["director"]}).status_code == 400
 
 
-def test_после_первой_заявки_условия_не_меняются(мир):
-    t = мир["t"]
-    assert заявить(мир["тренер"], t, мир["алматы"][:1]).status_code == 201
-    r = клиент(мир["председатель"]).patch(f"/api/tournaments/{t.id}/update/", {"region_quota": 5}, format="json")
-    assert r.status_code == 400
+def test_settings_locked_after_first_application(world):
+    t = world["t"]
+    assert submit(world["coach"], t, world["almaty"][:1]).status_code == 201
+    assert update(world, {"region_quota": 5}).status_code == 400
     t.refresh_from_db()
     assert t.region_quota == 3
     # Остальные сведения править можно.
-    r = клиент(мир["председатель"]).patch(f"/api/tournaments/{t.id}/update/", {"venue": "Дворец спорта"}, format="json")
-    assert r.status_code == 200, r.data
+    response = update(world, {"venue": "Дворец спорта"})
+    assert response.status_code == 200, response.data
 
 
 # ── Что видит заявитель ─────────────────────────────────────────────────────
 
 
-def test_турнир_говорит_тренеру_как_он_может_подать(мир):
-    r = клиент(мир["тренер"]).get(f"/api/tournaments/{мир['t'].id}/")
-    assert r.data["can_apply_as"] == [Role.KIND_REGIONAL_HEAD_COACH]
-    assert r.data["category"] == "main"
-    r = клиент(мир["астанец"]).get(f"/api/tournaments/{мир['t'].id}/")
-    assert r.data["can_apply_as"] == []
+def test_tournament_tells_coach_how_they_can_apply(world):
+    response = client_for(world["coach"]).get(f"/api/tournaments/{world['t'].id}/")
+    assert response.data["can_apply_as"] == [COACH]
+    assert response.data["category"] == "main"
+    response = client_for(world["astana"]).get(f"/api/tournaments/{world['t'].id}/")
+    assert response.data["can_apply_as"] == []
 
 
-def test_кандидаты_тренера_только_свой_регион_и_ещё_не_заявленные(мир):
-    t, тренер, алматы = мир["t"], мир["тренер"], мир["алматы"]
-    заявить(тренер, t, алматы[:1])
-    r = клиент(тренер).get(f"/api/tournaments/{t.id}/applications/candidates/?as=regional_head_coach")
-    assert r.status_code == 200
-    assert sorted(a["name"] for a in r.data) == ["Алматинец 1", "Алматинец 2", "Алматинец 3"]
+def test_coach_candidates_only_own_region_not_yet_entered(world):
+    t, coach, almaty = world["t"], world["coach"], world["almaty"]
+    submit(coach, t, almaty[:1])
+    response = client_for(coach).get(f"/api/tournaments/{t.id}/applications/candidates/?as={COACH}")
+    assert response.status_code == 200
+    assert sorted(a["name"] for a in response.data) == ["Алматинец 1", "Алматинец 2", "Алматинец 3"]
 
 
-def test_команда_заводит_тренера_с_регионом_и_отбивает_чужой():
+def test_command_creates_coach_with_region_and_rejects_unknown():
     from django.core.management import call_command
     from django.core.management.base import CommandError
 
-    call_command(
-        "create_regional_head_coach", email="coach@fnt.kz", name="Тренер", password="x", region="Алматы",
-    )
+    call_command("create_regional_head_coach", email="coach@fnt.kz", name="Тренер", password="x", region="Алматы")
     role = Role.objects.get(user__email="coach@fnt.kz")
-    assert (role.kind, role.scope, role.region) == (Role.KIND_REGIONAL_HEAD_COACH, Role.SCOPE_REGION, "Алматы")
+    assert (role.kind, role.scope, role.region) == (COACH, Role.SCOPE_REGION, "Алматы")
     with pytest.raises(CommandError):
-        call_command(
-            "create_regional_head_coach", email="c2@fnt.kz", name="Тренер 2", password="x", region="Марс",
-        )
+        call_command("create_regional_head_coach", email="c2@fnt.kz", name="Тренер 2", password="x", region="Марс")

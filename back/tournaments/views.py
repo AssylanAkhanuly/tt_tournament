@@ -1019,6 +1019,19 @@ class ParticipantAbsentView(APIView):
         return Response(ParticipantSerializer(participant).data)
 
 
+class TournamentTemplatesView(APIView):
+    """GET — виды соревнований для «Нового турнира» ✳ (19.11.2026). Командных
+    нет: такой турнир пока не заводится (`admission/templates.py`)."""
+
+    permission_classes = [AllowAny]
+
+    def get(self, request):
+        from .models import TournamentTemplate
+
+        rows = TournamentTemplate.objects.filter(is_team=False).order_by("order", "id")
+        return Response([{"code": t.code, "name": t.name, "category": t.category} for t in rows])
+
+
 class ApplicationsView(APIView):
     """Заявка на турнир ✳ (19.11.2026, `admission`, ADMISSION.md).
 
