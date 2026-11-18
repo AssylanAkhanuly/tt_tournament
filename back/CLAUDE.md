@@ -179,7 +179,8 @@
   `create_regional_head_coach --region`. У участника — `entered_by`, `entered_as`.
 - Ручки: `GET /api/tournaments/templates/` (виды для «Нового турнира», без командных), `GET /api/tournaments/applicants/`
   (реестр заявителей), `POST …/applications/` `{as, athlete_ids}` (порядок списка сохраняется — сверх квоты отказывают
-  последним), `GET …/applications/candidates/?as=&q=`, `GET …/applications/mine/` (кого заявил я); у турнира в ответе —
+  последним), `GET …/applications/candidates/?as=&q=`, `GET …/applications/mine/` (кого заявил я), `DELETE …/applications/<athlete_id>/`
+  (отзыв своего, пока приём открыт — `admission.withdraw`); у турнира в ответе —
   `admission_locked`; три пути самозаписи
   идут через тот же `apply` (заявитель `self`).
 - Тесты — `tournaments/tests/test_admission.py`.
