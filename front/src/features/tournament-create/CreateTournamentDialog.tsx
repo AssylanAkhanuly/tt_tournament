@@ -7,7 +7,12 @@
    начало и окончание сразу; однодневный — оба конца в один день), формат и
    размер группы (только для «Группы и плей-офф»). Описания здесь нет
    ✳ (03.11.2026) — оно правится в «Сведениях». Турнир протоколом вручную здесь
-   не заводится — у него свой путь через рейтинг. */
+   не заводится — у него свой путь через рейтинг.
+
+   Вид соревнования ✳ (19.11.2026, ADMISSION.md) — первым полем: он засевает
+   условия допуска (кто подаёт заявку, квота региона) и значок турнира.
+   Список видов — с сервера (`useTemplates`); «Без вида» — спортсмен
+   записывается сам, как раньше. */
 
 import {
   Button,
@@ -30,6 +35,7 @@ import {
   FORMAT_LABEL,
   type NewTournament,
   type TournamentSummary,
+  useTemplates,
 } from '@/entities/tournament';
 import { useNarrow } from '@/shared/kit/app';
 import { Picker } from '@/shared/ui/Picker';
@@ -54,7 +60,11 @@ const EMPTY = (): NewTournament => ({
   endsAt: today(),
   format: 'single_elimination',
   groupSize: 4,
+  template: '',
 });
+
+// Ключ пункта «Без вида»: у `Select` HeroUI пустой ключ не выбирается.
+const NO_KIND = 'none';
 
 export function CreateTournamentDialog({ onCreated }: { onCreated: (t: TournamentSummary) => void }) {
   const state = useOverlayState();
@@ -62,6 +72,7 @@ export function CreateTournamentDialog({ onCreated }: { onCreated: (t: Tournamen
   const [form, setForm] = useState<NewTournament>(EMPTY);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const templates = useTemplates();
   const set = <K extends keyof NewTournament>(k: K, v: NewTournament[K]) =>
     setForm((f) => ({ ...f, [k]: v }));
 
@@ -118,6 +129,18 @@ export function CreateTournamentDialog({ onCreated }: { onCreated: (t: Tournamen
                   <Label>Название</Label>
                   <Input className="rounded-xl" />
                 </TextField>
+
+                <Picker
+                  label="Вид соревнования"
+                  showLabel
+                  testId="tournament-kind-picker"
+                  value={form.template || NO_KIND}
+                  options={[
+                    { id: NO_KIND, label: 'Без вида' },
+                    ...(templates.data ?? []).map((t) => ({ id: t.code, label: t.name })),
+                  ]}
+                  onChange={(k) => set('template', k === NO_KIND ? '' : k)}
+                />
 
                 {/* Диапазон HeroUI, как в «Сведениях», а не `<input type="date">`:
                     родное поле пишет дату по языку браузера (10/20/2026). */}

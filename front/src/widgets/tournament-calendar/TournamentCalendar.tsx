@@ -17,6 +17,7 @@ import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode, type RefObject } from 'react';
 
 import {
+  KindBadge,
   TournamentFacts,
   tournamentDate,
   type TournamentStatus,
@@ -227,6 +228,11 @@ function TournamentEvent({ t, onOpen }: { t: TournamentSummary; onOpen: (id: str
               <Drawer.Heading className="text-xl font-semibold leading-snug">{t.name}</Drawer.Heading>
             )}
             <p className="mt-0.5 text-[14px] text-neutral-600">{t.startsAt ? tournamentDate(t.startsAt) : 'Без даты'}</p>
+            {t.category && (
+              <div className="mt-2">
+                <KindBadge category={t.category} />
+              </div>
+            )}
           </div>
         </div>
       )}

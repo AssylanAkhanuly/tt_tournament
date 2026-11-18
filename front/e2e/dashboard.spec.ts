@@ -210,6 +210,68 @@ test('«Новый турнир» заводит турнир, и он вста�
   expect(заведён.ends_at).toBe(`${день.getFullYear()}-${мм}-22`);
 });
 
+test('вид соревнования: «Главный старт» засевает допуск и ставит значок в карточке, таблице и сайдбаре', async ({ page }) => {
+  await войти(page, E2E_ADMIN);
+  await page.waitForURL((url) => url.pathname === '/dashboard');
+
+  const stamp = Date.now();
+  const mainName = `[e2e] ЧРК ${stamp}`;
+  const plainName = `[e2e] Без вида ${stamp}`;
+  await завести(page, plainName, new Date());
+
+  await page.getByRole('button', { name: 'Новый турнир' }).click();
+  const form = page.getByTestId('tournament-create');
+  await form.getByLabel('Название').fill(mainName);
+  await expect(form.getByTestId('tournament-kind-picker')).toHaveText(/Без вида/);
+  await form.getByTestId('tournament-kind-picker').click();
+  // Командного вида в списке нет — такой турнир пока не заводится.
+  await expect(page.getByRole('option', { name: 'Евразийская лига' })).toHaveCount(0);
+  await page.getByRole('option', { name: 'Главный республиканский старт' }).click();
+  await expect(form.getByTestId('tournament-kind-picker')).toHaveText(/Главный республиканский старт/);
+  await page.screenshot({ path: 'test-results/dashboard/create-kind.png' });
+  await form.getByRole('button', { name: 'Завести' }).click();
+  await expect(form).toHaveCount(0);
+
+  // Сервер засеял условия допуска из вида.
+  const all = (await (await page.request.get('/api/tournaments/')).json()) as {
+    id: string; name: string; category: string; applicant_kinds: string[]; region_quota: number | null;
+  }[];
+  const created = all.find((t) => t.name === mainName)!;
+  expect([created.category, created.applicant_kinds, created.region_quota]).toEqual(['main', ['regional_head_coach'], 3]);
+
+  // Карточка в календаре — значок. В сегодняшней клетке турниры соседних
+  // проверок: свой может уйти в «Ещё N», тогда он — в карточке дня.
+  const cell = page.locator(`[data-day="${ключ(new Date())}"]`);
+  const more = cell.getByTestId('calendar-more');
+  if (await cell.getByText(mainName).isVisible()) await cell.getByText(mainName).click();
+  else {
+    await more.click();
+    await page.getByTestId('calendar-day').getByText(mainName, { exact: true }).click();
+  }
+  const card = page.getByTestId('tournament-details');
+  await expect(card.getByTestId('tournament-kind')).toHaveText('Главный старт');
+  await page.screenshot({ path: 'test-results/dashboard/kind-card.png' });
+  await page.keyboard.press('Escape');
+
+  // Таблица — колонка «Вид» (у турнира без вида значка нет), поиск находит по значку.
+  await page.goto('/dashboard?view=table');
+  await page.getByTestId('tournament-search').fill(String(stamp));
+  const rows = page.getByTestId('tournament-table-row');
+  await expect(rows).toHaveCount(2);
+  await expect(rows.filter({ hasText: mainName }).getByTestId('tournament-kind')).toHaveText('Главный старт');
+  await expect(rows.filter({ hasText: plainName }).getByTestId('tournament-kind')).toHaveCount(0);
+  await page.screenshot({ path: 'test-results/dashboard/kind-table.png' });
+  await page.getByTestId('tournament-search').fill('Главный старт');
+  await expect(rows.filter({ hasText: mainName })).toHaveCount(1);
+  await expect(rows.filter({ hasText: plainName })).toHaveCount(0);
+
+  // Сайдбар турнира — тот же значок под датой.
+  await rows.filter({ hasText: mainName }).click();
+  await page.waitForURL(/\/dashboard\/tournaments\/[0-9a-f-]{36}\/info$/);
+  await expect(page.getByTestId('tournament-context').getByTestId('tournament-kind')).toHaveText('Главный старт');
+  await page.screenshot({ path: 'test-results/dashboard/kind-sidebar.png' });
+});
+
 test('вид «Таблица»: поиск сужает, строка открывает турнир, вид переживает перезагрузку', async ({ page }) => {
   await войти(page, E2E_ADMIN);
   await page.waitForURL((url) => url.pathname === '/dashboard');

@@ -9,7 +9,9 @@ import { Chip } from '@heroui/react';
 import type { ReactNode } from 'react';
 
 import {
+  CATEGORY_LABEL,
   FORMAT_LABEL,
+  KindBadge,
   STATUS_LABEL,
   type TournamentStatus,
   type TournamentSummary,
@@ -26,6 +28,12 @@ const shortDate = (d: Date) => d.toLocaleDateString('ru-RU', { day: '2-digit', m
 
 const COLUMNS: DataColumn<TournamentSummary>[] = [
   { id: 'name', label: 'Турнир', rowHeader: true, sortValue: (t) => t.name, render: (t) => <span className="font-medium">{t.name}</span> },
+  {
+    id: 'kind',
+    label: 'Вид',
+    sortValue: (t) => (t.category ? CATEGORY_LABEL[t.category] : null),
+    render: (t) => (t.category ? <KindBadge category={t.category} /> : '—'),
+  },
   {
     id: 'date',
     label: 'Дата',
@@ -75,7 +83,8 @@ export function TournamentTable({
       search={{
         placeholder: 'Название, клуб, статус',
         testId: 'tournament-search',
-        text: (t) => [t.name, t.clubName ?? '', STATUS_LABEL[t.status], FORMAT_LABEL[t.format] ?? ''].join(' '),
+        text: (t) =>
+          [t.name, t.clubName ?? '', STATUS_LABEL[t.status], FORMAT_LABEL[t.format] ?? '', t.category ? CATEGORY_LABEL[t.category] : ''].join(' '),
       }}
       count={(n) => 'Турниров: ' + n}
       actions={toolbar}

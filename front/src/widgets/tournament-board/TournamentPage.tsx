@@ -19,6 +19,7 @@ import { useSearchParams } from 'next/navigation';
 import { useState, type ReactNode } from 'react';
 
 import {
+  KindBadge,
   REFEREE_POSITIONS,
   tournamentDate,
   useParticipants,
@@ -112,6 +113,11 @@ export function TournamentContext({ t, onBack }: { t: TournamentSummary | null; 
         <div className="px-2" data-testid="tournament-context">
           <p className="line-clamp-3 text-[14px] font-semibold leading-snug">{t.name}</p>
           <p className="mt-0.5 text-[12px] text-neutral-500">{t.startsAt ? tournamentDate(t.startsAt) : 'Без даты'}</p>
+          {t.category && (
+            <div className="mt-1.5">
+              <KindBadge category={t.category} />
+            </div>
+          )}
         </div>
       )}
     </div>

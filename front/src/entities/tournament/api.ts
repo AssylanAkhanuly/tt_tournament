@@ -36,7 +36,30 @@ export type TournamentSummary = {
   gamesToWin: number;
   isRating: boolean;
   groupSize: number;
+  /** Вид соревнования ✳ (19.11.2026, ADMISSION.md): из какого шаблона заведён
+   *  и его категория календаря — значок на карточке; без вида — null. */
+  kind: { code: string; name: string } | null;
+  category: TournamentCategory | null;
+  /** Условия допуска — копия вида, дальше свои: кто подаёт заявку (ключи
+   *  заявителей сервера), предел участников и квота региона (null — без них). */
+  applicantKinds: string[];
+  participantLimit: number | null;
+  regionQuota: number | null;
+  /** В каком качестве текущий пользователь может подать заявку — решает сервер. */
+  canApplyAs: string[];
 };
+
+/** Категория календаря ФНТ РК (ТЗ §4.1) — значок вида соревнования. */
+export type TournamentCategory = 'main' | 'league' | 'open';
+export const CATEGORY_LABEL: Record<TournamentCategory, string> = {
+  main: 'Главный старт',
+  league: 'Евразийская лига',
+  open: 'Открытый',
+};
+
+/** Вид соревнования для «Нового турнира» (`GET /api/tournaments/templates/`);
+ *  командных сервер не отдаёт — такой турнир пока не заводится. */
+export type TournamentTemplate = { code: string; name: string; category: TournamentCategory };
 
 /** Регион справочника и его города; у города республиканского значения своих нет. */
 export type Place = { region: string; cities: string[] };
@@ -125,6 +148,12 @@ type Raw = {
   games_to_win: number;
   is_rating: boolean;
   group_size: number;
+  template: { code: string; name: string } | null;
+  category: TournamentCategory | '';
+  applicant_kinds: string[];
+  participant_limit: number | null;
+  region_quota: number | null;
+  can_apply_as: string[];
 };
 
 type RawParticipant = {
@@ -164,6 +193,12 @@ const toSummary = (t: Raw): TournamentSummary => ({
   gamesToWin: t.games_to_win,
   isRating: t.is_rating,
   groupSize: t.group_size,
+  kind: t.template ?? null,
+  category: t.category || null,
+  applicantKinds: t.applicant_kinds ?? [],
+  participantLimit: t.participant_limit ?? null,
+  regionQuota: t.region_quota ?? null,
+  canApplyAs: t.can_apply_as ?? [],
 });
 
 /** Правка сведений турнира (`PATCH /api/tournaments/<id>/update/`). Дата начала —
@@ -259,6 +294,8 @@ export type NewTournament = {
   endsAt: string;
   format: Exclude<TournamentFormat, 'manual'>;
   groupSize: number;
+  /** Код вида соревнования ✳ (19.11.2026); пусто — без вида. */
+  template: string;
 };
 
 /** Завести турнир (`POST /api/tournaments/`, право — `is_staff` или админ клуба).
@@ -277,6 +314,7 @@ export async function createTournament(input: NewTournament): Promise<Tournament
       format: input.format,
       group_size: input.groupSize,
       ends_at: input.endsAt || null,
+      template: input.template || undefined,
     }),
   });
   const body = await res.json().catch(() => ({}));
@@ -358,6 +396,8 @@ function useAsync<T>(run: () => Promise<T>, key: string, cache?: Map<string, T>)
 }
 
 export const useTournaments = () => useAsync(fetchTournaments, 'all');
+export const useTemplates = () =>
+  useAsync(() => getJson<TournamentTemplate[]>('/api/tournaments/templates/', 'Виды соревнований'), 'all');
 export const usePlaces = () => useAsync(() => getJson<Place[]>('/api/tournaments/places/', 'Места'), 'all');
 /** Турниры по id — последний ответ: шапка сайдбара турнира не пропадает при смене раздела. */
 const tournamentCache = new Map<string, TournamentSummary>();
