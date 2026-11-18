@@ -153,4 +153,21 @@ test('старший тренер региона: заявка списком, �
   await page.getByTestId('application-search').fill(String(stamp));
   await expect(page.getByTestId('application-candidate')).toHaveCount(1);
   await expect(page.getByTestId('application-candidate')).toHaveAttribute('data-name', extra);
+  // Esc в поле поиска очищает поле, а не окно — закрываем «Отменой».
+  await page.getByTestId('application-dialog').getByRole('button', { name: 'Отмена' }).click();
+  await expect(page.getByTestId('application-dialog')).toHaveCount(0);
+
+  // «Отозвать» с подтверждением: спортсмен выходит из турнира и снова в кандидатах.
+  const first = entries.first();
+  const withdrawn = (await first.getAttribute('data-name'))!;
+  await first.getByTestId('withdraw').click();
+  await expect(page.getByTestId('withdraw-confirm')).toContainText(withdrawn);
+  await page.screenshot({ path: 'test-results/admission/coach-withdraw.png' });
+  await page.getByTestId('withdraw-confirm').getByRole('button', { name: 'Отозвать' }).click();
+  await expect(entries).toHaveCount(2);
+  await expect(page.getByTestId('coach-entries')).not.toContainText(withdrawn);
+  await page.getByTestId('application-open').click();
+  await page.getByTestId('application-search').fill(String(stamp));
+  await expect(page.getByTestId('application-candidate')).toHaveCount(2);
+  await expect(page.locator(`[data-testid="application-candidate"][data-name="${withdrawn}"]`)).toHaveCount(1);
 });

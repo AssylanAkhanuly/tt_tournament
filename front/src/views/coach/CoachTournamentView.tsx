@@ -6,7 +6,8 @@
    Заявка — полоса внизу рабочей области, как у судьи: срок приёма и
    «Подать заявку», если турнир принимает заявку от старшего тренера региона
    (`canApplyAs` решает сервер). На турнир, куда спортсмен подаёт сам, кнопки
-   нет — кто подаёт, видно в сведениях. */
+   нет — кто подаёт, видно в сведениях. В строке «Заявлены» — «Отозвать»
+   ✳ (19.11.2026), пока приём открыт. */
 
 import { Spinner } from '@heroui/react';
 import { useRouter } from 'next/navigation';
@@ -20,7 +21,7 @@ import {
   type ApplicationAthlete,
   type TournamentSummary,
 } from '@/entities/tournament';
-import { ApplicationDialog } from '@/features/tournament-application';
+import { ApplicationDialog, WithdrawButton } from '@/features/tournament-application';
 import { DataTable, type DataColumn } from '@/shared/ui/DataTable';
 import { TournamentContext, TournamentOverview } from '@/widgets/tournament-board';
 
@@ -39,6 +40,21 @@ const COLUMNS: DataColumn<ApplicationAthlete>[] = [
     render: (a) => (a.rating === null ? '—' : num2(a.rating)),
   },
 ];
+
+/** Колонки «Заявлены» с «Отозвать» в конце строки — пока приём открыт. */
+const entryColumns = (t: TournamentSummary, onWithdrawn: () => void): DataColumn<ApplicationAthlete>[] =>
+  t.playerRecruitment.active && t.status === 'open'
+    ? [
+        ...COLUMNS,
+        {
+          id: 'withdraw',
+          label: '',
+          sortable: false,
+          align: 'right',
+          render: (a) => <WithdrawButton tournamentId={t.id} athlete={a} onWithdrawn={onWithdrawn} />,
+        },
+      ]
+    : COLUMNS;
 
 function ApplicationBar({ t, onSubmitted }: { t: TournamentSummary; onSubmitted: () => void }) {
   if (!t.canApplyAs.includes(ROLE_REGIONAL_HEAD_COACH)) return null;
@@ -101,7 +117,10 @@ export function CoachTournamentView({ id }: { id: string }) {
                 ariaLabel="Заявленные спортсмены"
                 testId="coach-entries-table"
                 rows={mine.data ?? []}
-                columns={COLUMNS}
+                columns={entryColumns(t, () => {
+                  mine.reload();
+                  tournament.reload();
+                })}
                 getId={(a) => a.id}
                 loading={!mine.data && !mine.error}
                 error={mine.error}

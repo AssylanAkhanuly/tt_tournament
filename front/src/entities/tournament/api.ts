@@ -914,3 +914,14 @@ export async function submitApplication(id: string, as: string, athleteIds: stri
     (body.errors ?? []).map((e) => ({ athleteId: e.athlete_id, name: e.name, detail: e.detail })),
   );
 }
+
+/** Отозвать заявленного: только своего и пока приём открыт — решает сервер. */
+export async function withdrawApplication(id: string, athleteId: string): Promise<void> {
+  const res = await fetch(`/api/tournaments/${id}/applications/${athleteId}/`, {
+    method: 'DELETE',
+    credentials: 'include',
+  });
+  if (res.ok) return;
+  const body = (await res.json().catch(() => ({}))) as { detail?: string };
+  throw new Error(body.detail || 'Не отозван (' + res.status + ')');
+}
