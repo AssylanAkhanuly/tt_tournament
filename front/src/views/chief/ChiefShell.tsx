@@ -18,18 +18,22 @@ export function ChiefShell({
   active,
   nav = NAV,
   context,
+  home,
   sub,
   children,
 }: {
   active: string;
   nav?: RoleNavItem[];
   context?: ReactNode;
+  /** Куда ведёт знак в шапке (страница турнира — список турниров кабинета). */
+  home?: string;
   /** Подпункты активного раздела (вид экрана: «Месяц», «Таблица») ✳ 30.10.2026. */
   sub?: ShellSubItem[];
   children: ReactNode;
 }) {
   return (
-    <RoleShell sub={sub} kind={ROLE_CHIEF_REFEREE} title="Главный судья" nav={nav} context={context} active={active} bleed>
+    <RoleShell sub={sub} kind={ROLE_CHIEF_REFEREE} title="Главный судья" nav={nav} context={context}
+      home={home} active={active} bleed>
       {children}
     </RoleShell>
   );

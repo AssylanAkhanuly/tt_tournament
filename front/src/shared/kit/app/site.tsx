@@ -9,14 +9,67 @@
 
 import type { ReactNode } from 'react';
 
+import { assetUrl } from '../asset';
 import { Brand } from '../brand';
+import linesUrl from '../brand/line-pattern.svg';
+import ornamentUrl from '../brand/ornament-strip.svg';
+
+/* Фон титульных страниц ✳ (19.11.2026, решение владельца продукта: «орнамент
+   и линии, как на лендинге Astana 2027»). Две вещи с лендинга
+   (`astana-2027-landing`: `EdgeStrips` и узор линий секции сетки):
+   - полоса орнамента вдоль левого и правого края — тот же контур, что
+     `ittf-ornament-strip.svg` лендинга (`brand/ornament-strip.svg`). Он идёт
+     маской, а цвет даёт шкала `brand`: сырых цветов в ките нет;
+   - волнистые линии через весь фон — узор `bracket-curves.svg` лендинга
+     (`brand/line-pattern.svg`), тоже маской в цвете шкалы `brand`.
+   Всё за карточкой и не ловит клики. */
+const ORNAMENT = assetUrl(ornamentUrl);
+const LINES = assetUrl(linesUrl);
+
+function AuthBackdrop() {
+  const strip = {
+    maskImage: `url(${ORNAMENT})`,
+    WebkitMaskImage: `url(${ORNAMENT})`,
+    maskSize: '100% auto',
+    WebkitMaskSize: '100% auto',
+    maskRepeat: 'repeat-y',
+    WebkitMaskRepeat: 'repeat-y',
+  } as const;
+  const lines = {
+    maskImage: `url(${LINES})`,
+    WebkitMaskImage: `url(${LINES})`,
+    maskSize: 'cover',
+    WebkitMaskSize: 'cover',
+    maskPosition: 'center',
+    WebkitMaskPosition: 'center',
+    maskRepeat: 'no-repeat',
+    WebkitMaskRepeat: 'no-repeat',
+  } as const;
+  return (
+    <div aria-hidden className="pointer-events-none absolute inset-0" data-testid="auth-backdrop">
+      {/* Линии через весь фон — узор секции сетки лендинга (`bracket-curves.svg`),
+          маской: цвет — `bg-brand-400`, как и у орнамента. */}
+      <div className="absolute inset-0 bg-brand-400 opacity-25" style={lines} />
+      {(['left', 'right'] as const).map((side) => (
+        <div
+          key={side}
+          className={
+            'absolute inset-y-0 w-[clamp(40px,4.4vw,84px)] bg-brand-400 opacity-35 ' +
+            (side === 'left' ? 'left-[1.4vw]' : 'right-[1.4vw] -scale-x-100')
+          }
+          style={strip}
+        />
+      ))}
+    </div>
+  );
+}
 
 /** Подпись в подвале титульных страниц — одна на оба формата. */
 export const AUTH_FOOT = 'Федерация настольного тенниса Республики Казахстан · цифровая платформа турниров';
 
 /** Титульная страница: до входа ни сайдбара, ни профиля — карточка по центру
-    на фирменном синем. Синий — цвет знака ФНТ; кольца на фоне — намёк на мяч,
-    нарисованы рамками, без картинок. `judge` — своя окраска формы судьи:
+    на фирменном синем. На фоне — орнамент по краям и веер дуг (`AuthBackdrop`,
+    ✳ 19.11.2026; до того — два кольца-намёка на мяч). `judge` — своя окраска формы судьи:
     формы похожи как две капли, и заголовок читают уже после того, как начали
     заполнять; сам вход не окрашивается — он один на всех. */
 export function AuthScreen({
@@ -30,8 +83,7 @@ export function AuthScreen({
 }) {
   return (
     <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden bg-linear-to-br from-brand-800 via-brand-900 to-brand-950">
-      <div className="pointer-events-none absolute -left-28 -top-28 h-96 w-96 rounded-full border-[30px] border-brand-700/40" />
-      <div className="pointer-events-none absolute -bottom-36 -right-20 h-[440px] w-[440px] rounded-full border-[38px] border-brand-700/30" />
+      <AuthBackdrop />
       <div className="relative flex min-h-0 flex-1 items-center justify-center overflow-auto p-8">
         <div
           className={

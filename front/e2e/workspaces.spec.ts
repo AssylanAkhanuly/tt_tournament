@@ -69,7 +69,7 @@ test('судья: «Календарь» без «Нового турнира»,
   await событие.click();
   await page.getByTestId('tournament-details').getByRole('button', { name: 'Подробнее' }).click();
   await page.waitForURL((url) => url.pathname === `/referee/tournaments/${id}`);
-  await expect(page.getByTestId('tournament-context')).toContainText(имя);
+  await expect(page.getByTestId('tournament-about')).toContainText(имя);
   await expect(page.getByTestId('tournament-about')).toContainText('Олимпийская система');
   await expect(page.getByRole('navigation', { name: 'Разделы' })).toHaveCount(0);
   await expect(page.getByTestId('participants')).toHaveCount(0);

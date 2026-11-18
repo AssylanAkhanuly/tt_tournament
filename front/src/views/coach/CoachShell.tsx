@@ -19,6 +19,7 @@ export function CoachShell({
   bleed,
   nav = NAV,
   context,
+  home,
   sub,
   actions,
   children,
@@ -28,6 +29,8 @@ export function CoachShell({
   /** Свои разделы вместо разделов кабинета — внутри турнира. */
   nav?: RoleNavItem[];
   context?: ReactNode;
+  /** Куда ведёт знак в шапке (страница турнира — список турниров кабинета). */
+  home?: string;
   sub?: ShellSubItem[];
   /** Полоса внизу рабочей области. */
   actions?: ReactNode;
@@ -39,6 +42,7 @@ export function CoachShell({
       title="Старший тренер региона"
       nav={nav}
       context={context}
+      home={home}
       active={active}
       bleed={bleed}
       sub={sub}

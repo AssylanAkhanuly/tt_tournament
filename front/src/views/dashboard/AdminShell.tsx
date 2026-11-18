@@ -20,6 +20,7 @@ export function AdminShell({
   bleed,
   nav = NAV,
   context,
+  home,
   sub,
   children,
 }: {
@@ -29,6 +30,8 @@ export function AdminShell({
   /** Свои разделы вместо разделов кабинета — внутри турнира. */
   nav?: RoleNavItem[];
   context?: ReactNode;
+  /** Куда ведёт знак в шапке (страница турнира — список турниров кабинета). */
+  home?: string;
   /** Подпункты активного раздела (вид экрана: «Месяц», «Таблица») ✳ 30.10.2026. */
   sub?: ShellSubItem[];
   children: ReactNode;
@@ -40,6 +43,7 @@ export function AdminShell({
       title="Администратор федерации"
       nav={nav}
       context={context}
+      home={home}
       active={active}
       pageTitle={title}
       bleed={bleed}

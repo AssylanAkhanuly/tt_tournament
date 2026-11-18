@@ -1,12 +1,8 @@
-/* Турнир в кабинете старшего тренера региона: сведения и заявка своего
-   региона. Маршрут тонкий: композиция во `views`. */
+/* Турнир без раздела — открываем первый раздел, «Сведения». */
 
-import type { Metadata } from 'next';
-import { CoachTournamentView } from '@/views/coach';
+import { redirect } from 'next/navigation';
 
-export const metadata: Metadata = { title: 'Турнир — ФНТ РК' };
-
-export default async function Page({ params }: { params: Promise<{ id: string }> }) {
+export default async function TournamentPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  return <CoachTournamentView id={id} />;
+  redirect('/coach/tournaments/' + id + '/info');
 }

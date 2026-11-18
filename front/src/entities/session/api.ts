@@ -36,8 +36,9 @@ const WORKSPACES: { kind: string; title: string; to: string }[] = [
 ];
 
 /** Роли человека, между которыми можно переключаться в меню профиля. */
-export function workspacesOf(user: SessionUser | null): { title: string; to: string }[] {
-  return WORKSPACES.filter((w) => user?.roles.some((r) => r.kind === w.kind)).map(({ title, to }) => ({
+export function workspacesOf(user: SessionUser | null): { kind: string; title: string; to: string }[] {
+  return WORKSPACES.filter((w) => user?.roles.some((r) => r.kind === w.kind)).map(({ kind, title, to }) => ({
+    kind,
     title,
     to,
   }));

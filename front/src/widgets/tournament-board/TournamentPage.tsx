@@ -13,15 +13,13 @@
    (`features/referee-recruitment`); вкладка — в адресе (`?tab=applications`).
    HeroUI + Tailwind. */
 
-import { Button, Chip } from '@heroui/react';
-import { ArrowLeft, CalendarClock, Gavel, Info, Users } from 'lucide-react';
+import { Chip } from '@heroui/react';
+import { CalendarClock, Gavel, Info, Users } from 'lucide-react';
 import { useSearchParams } from 'next/navigation';
 import { useState, type ReactNode } from 'react';
 
 import {
-  KindBadge,
   REFEREE_POSITIONS,
-  tournamentDate,
   useParticipants,
   useReferees,
   useRefereeApplications,
@@ -31,7 +29,6 @@ import {
   type RefereePosition,
   type TournamentParticipant,
   type TournamentReferee,
-  type TournamentSummary,
 } from '@/entities/tournament';
 import { ApplicationDrawer } from '@/features/referee-recruitment';
 import { TournamentInfoForm } from '@/features/tournament-info';
@@ -95,34 +92,6 @@ export function tournamentNav(pageHref: string, only?: TournamentSectionId[], at
 }
 
 export const sectionLabel = (id: TournamentSectionId) => SECTIONS.find((s) => s.id === id)!.label;
-
-/** Шапка сайдбара внутри турнира: назад к списку, название и дата. */
-export function TournamentContext({ t, onBack }: { t: TournamentSummary | null; onBack: () => void }) {
-  return (
-    <div className="flex flex-col gap-2">
-      <Button
-        variant="ghost"
-        size="sm"
-        className="h-8 w-fit gap-1.5 rounded-xl px-2 text-[13px] text-neutral-600"
-        onPress={onBack}
-        data-testid="tournament-back"
-      >
-        <ArrowLeft size={15} /> Все турниры
-      </Button>
-      {t && (
-        <div className="px-2" data-testid="tournament-context">
-          <p className="line-clamp-3 text-[14px] font-semibold leading-snug">{t.name}</p>
-          <p className="mt-0.5 text-[12px] text-neutral-500">{t.startsAt ? tournamentDate(t.startsAt) : 'Без даты'}</p>
-          {t.category && (
-            <div className="mt-1.5">
-              <KindBadge category={t.category} />
-            </div>
-          )}
-        </div>
-      )}
-    </div>
-  );
-}
 
 const signed = (v: number) => (v > 0 ? '+' : v < 0 ? '−' : '') + Math.abs(v).toFixed(2).replace('.', ',');
 const plain = (v: number) => v.toFixed(2).replace('.', ',');
@@ -225,6 +194,9 @@ function Players({ id, recruitment }: { id: string; recruitment: boolean }) {
                   applicantKinds: tournament.data.applicantKinds,
                   participantLimit: tournament.data.participantLimit,
                   regionQuota: tournament.data.regionQuota,
+                  sex: tournament.data.sex,
+                  ratingMin: tournament.data.ratingMin,
+                  ratingMax: tournament.data.ratingMax,
                 }}
                 admissionLocked={tournament.data.admissionLocked}
                 onChanged={tournament.reload}

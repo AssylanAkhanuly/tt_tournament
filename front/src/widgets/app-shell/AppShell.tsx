@@ -46,6 +46,7 @@ export function AppShell({
   actions,
   bleed = false,
   context,
+  home,
   onNavigate,
   onOpen,
   onSwitchRole,
@@ -66,6 +67,10 @@ export function AppShell({
   /** Шапка сайдбара над разделами: где человек сейчас (страница турнира —
    *  «← Все турниры», название и дата). Нет — разделы сразу. */
   context?: ReactNode;
+  /** Куда ведёт знак QTT в шапке ✳ (19.11.2026, решение владельца продукта):
+   *  с ним из турнира возвращаются к списку турниров кабинета — «← Все
+   *  турниры» в сайдбаре больше нет. Пусто — знак не ссылка. */
+  home?: string;
   /** Содержимое на всю рабочую область — без полей и общей прокрутки:
    *  экран сам раскладывается по высоте (календарь). */
   bleed?: boolean;
@@ -102,8 +107,26 @@ export function AppShell({
       data-theme="light"
     >
       <header className="flex h-14 shrink-0 items-center gap-2.5 border-b border-neutral-200 px-5">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={LOGO} alt="QAZ TABLE TENNIS" className="h-8 w-auto" />
+        {home ? (
+          <a
+            href={home}
+            onClick={(e) => {
+              // Переход без перезагрузки, если экран дал навигацию; иначе — обычная ссылка.
+              if (!onOpen) return;
+              e.preventDefault();
+              onOpen(home);
+            }}
+            aria-label="Турниры"
+            className="flex items-center"
+            data-testid="home-link"
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={LOGO} alt="QAZ TABLE TENNIS" className="h-8 w-auto" />
+          </a>
+        ) : (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={LOGO} alt="QAZ TABLE TENNIS" className="h-8 w-auto" />
+        )}
       </header>
 
       <div className="flex min-h-0 flex-1 flex-col md:flex-row">

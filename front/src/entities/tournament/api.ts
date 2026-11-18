@@ -49,7 +49,15 @@ export type TournamentSummary = {
   canApplyAs: string[];
   /** Условия допуска заморожены первой заявкой (или турнир начат) — правка закрыта. */
   admissionLocked: boolean;
+  /** Пол участников ✳ (19.11.2026): пусто — все. */
+  sex: TournamentSex;
+  /** Ценз по рейтингу, границы включительно; null — без границы. */
+  ratingMin: number | null;
+  ratingMax: number | null;
 };
+
+export type TournamentSex = '' | 'm' | 'f';
+export const SEX_LABEL: Record<TournamentSex, string> = { '': 'Все', m: 'Мужчины', f: 'Женщины' };
 
 /** Категория календаря ФНТ РК (ТЗ §4.1) — значок вида соревнования. */
 export type TournamentCategory = 'main' | 'league' | 'open';
@@ -157,6 +165,9 @@ type Raw = {
   region_quota: number | null;
   can_apply_as: string[];
   admission_locked: boolean;
+  sex: TournamentSex;
+  rating_min: string | null;
+  rating_max: string | null;
 };
 
 type RawParticipant = {
@@ -203,6 +214,9 @@ const toSummary = (t: Raw): TournamentSummary => ({
   regionQuota: t.region_quota ?? null,
   canApplyAs: t.can_apply_as ?? [],
   admissionLocked: t.admission_locked ?? false,
+  sex: t.sex ?? '',
+  ratingMin: t.rating_min == null ? null : Number(t.rating_min),
+  ratingMax: t.rating_max == null ? null : Number(t.rating_max),
 });
 
 /** Правка сведений турнира (`PATCH /api/tournaments/<id>/update/`). Дата начала —
@@ -222,6 +236,9 @@ export type TournamentInfo = {
   gamesToWin: number;
   level: TournamentLevel;
   isRating: boolean;
+  /** Код вида соревнования ✳ (19.11.2026); пусто — без вида. Смена вида засевает
+   *  условия допуска заново — пока нет заявок, решает сервер. */
+  template: string;
 };
 
 const noon = (day: string) => {
@@ -249,6 +266,7 @@ export async function updateTournament(id: string, info: TournamentInfo): Promis
       games_to_win: info.gamesToWin,
       level: info.level,
       is_rating: info.isRating,
+      template: info.template,
     }),
   });
   const body = await res.json().catch(() => ({}));
@@ -831,7 +849,14 @@ export const useSchedule = (id: string) => useAsync(() => fetchSchedule(id), id)
 export type ApplicantKind = { key: string; label: string };
 
 /** Условия допуска турнира — правятся, пока нет заявок. */
-export type Admission = { applicantKinds: string[]; participantLimit: number | null; regionQuota: number | null };
+export type Admission = {
+  applicantKinds: string[];
+  participantLimit: number | null;
+  regionQuota: number | null;
+  sex: TournamentSex;
+  ratingMin: number | null;
+  ratingMax: number | null;
+};
 
 export async function updateAdmission(id: string, a: Admission): Promise<TournamentSummary> {
   const res = await fetch(`/api/tournaments/${id}/update/`, {
@@ -842,6 +867,9 @@ export async function updateAdmission(id: string, a: Admission): Promise<Tournam
       applicant_kinds: a.applicantKinds,
       participant_limit: a.participantLimit,
       region_quota: a.regionQuota,
+      sex: a.sex,
+      rating_min: a.ratingMin,
+      rating_max: a.ratingMax,
     }),
   });
   const body = await res.json().catch(() => ({}));

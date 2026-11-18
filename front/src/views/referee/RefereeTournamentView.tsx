@@ -7,34 +7,35 @@
    меню — «← Все турниры», название и дата. */
 
 import { Spinner } from '@heroui/react';
-import { useRouter } from 'next/navigation';
 
 import { useTournament } from '@/entities/tournament';
 import { ApplicationPanel } from '@/features/referee-application';
-import { TournamentContext, TournamentOverview } from '@/widgets/tournament-board';
+import { TournamentOverview } from '@/widgets/tournament-board';
 
 import { RefereeShell } from './RefereeShell';
 
 export function RefereeTournamentView({ id }: { id: string }) {
-  const router = useRouter();
   const tournament = useTournament(id);
   const t = tournament.data;
 
   return (
     <RefereeShell
       active=""
+      bleed
       nav={[]}
-      context={<TournamentContext t={t} onBack={() => router.push('/referee')} />}
       actions={t && <ApplicationPanel tournament={t} />}
     >
       {tournament.error ? (
-        <p className="text-[13px] text-red-600" data-testid="tournament-error">
+        <p className="p-6 text-[13px] text-red-600" data-testid="tournament-error">
           {tournament.error}
         </p>
       ) : !t ? (
         <Spinner className="m-auto" />
       ) : (
-        <TournamentOverview t={t} />
+        // С `bleed` рабочая область не прокручивается сама — прокрутка здесь.
+        <div className="h-full overflow-y-auto">
+          <TournamentOverview t={t} />
+        </div>
       )}
     </RefereeShell>
   );

@@ -1,7 +1,8 @@
 'use client';
 
 /* Условия допуска в «Настройках» раздела «Спортсмены» ✳ (19.11.2026,
-   ADMISSION.md): кто подаёт заявку, квота региона, предел участников. Их
+   ADMISSION.md): кто подаёт заявку, квота региона, предел участников, пол и
+   ценз по рейтингу («от» / «до», включительно; запятая или точка). Их
    засевает вид соревнования, дальше они свои у турнира. Первая заявка их
    замораживает — поля неактивны, причина в подсказке у замка (пояснительного
    текста на экране нет — правило «Текст в интерфейсе»).
@@ -11,8 +12,10 @@
 
 import { Button, Checkbox, CheckboxGroup, Input, Label, TextField, Tooltip } from '@heroui/react';
 import { Lock } from 'lucide-react';
+import { useState } from 'react';
 
-import { useApplicantKinds, type Admission } from '@/entities/tournament';
+import { SEX_LABEL, useApplicantKinds, type Admission, type TournamentSex } from '@/entities/tournament';
+import { Picker } from '@/shared/ui/Picker';
 
 /** «12» → 12, пусто → null (без ограничения), не число — как было. */
 const toLimit = (raw: string, prev: number | null): number | null => {
@@ -50,6 +53,45 @@ function LimitField({
   );
 }
 
+/** «12,5» / «12.5» → 12.5, пусто → null; два знака, как в рейтинге (п. 6.4). */
+const toRating = (raw: string): number | null => {
+  const s = raw.replace(',', '.').replace(/[^\d.]/g, '');
+  if (s === '' || s === '.') return null;
+  const n = Number(s);
+  return Number.isFinite(n) ? Math.round(n * 100) / 100 : null;
+};
+
+function RatingField({
+  label,
+  value,
+  isDisabled,
+  testId,
+  onChange,
+}: {
+  label: string;
+  value: number | null;
+  isDisabled: boolean;
+  testId: string;
+  onChange: (v: number | null) => void;
+}) {
+  // Набор держим строкой: «12,» на полпути — не число, но и не ошибка.
+  const [text, setText] = useState(value === null ? '' : String(value).replace('.', ','));
+  return (
+    <TextField
+      value={text}
+      onChange={(raw) => {
+        setText(raw);
+        onChange(toRating(raw));
+      }}
+      isDisabled={isDisabled}
+      className="flex flex-row items-center justify-between gap-3"
+    >
+      <Label className="text-[14px] font-medium">{label}</Label>
+      <Input inputMode="decimal" placeholder="Без ценза" className="w-36 rounded-xl" data-testid={testId} />
+    </TextField>
+  );
+}
+
 export function AdmissionFields({
   value,
   locked,
@@ -77,7 +119,8 @@ export function AdmissionFields({
             >
               <Lock size={14} />
             </Button>
-            <Tooltip.Content>Заявки уже поданы — условия допуска не меняются</Tooltip.Content>
+            {/* Ширина по тексту, иначе подсказка у края панели ломала слово пополам. */}
+            <Tooltip.Content className="w-max max-w-72">Заявки уже поданы — условия допуска не меняются</Tooltip.Content>
           </Tooltip>
         )}
       </div>
@@ -116,6 +159,32 @@ export function AdmissionFields({
         isDisabled={locked}
         testId="admission-limit"
         onChange={(participantLimit) => onChange({ ...value, participantLimit })}
+      />
+      <div className="flex flex-row items-center justify-between gap-3">
+        <Label className="text-[14px] font-medium">Пол</Label>
+        <Picker
+          label="Пол"
+          className="w-36 min-w-0"
+          value={value.sex || 'all'}
+          options={(Object.keys(SEX_LABEL) as TournamentSex[]).map((s) => ({ id: s || 'all', label: SEX_LABEL[s] }))}
+          onChange={(k) => onChange({ ...value, sex: (k === 'all' ? '' : k) as TournamentSex })}
+          isDisabled={locked}
+          testId="admission-sex"
+        />
+      </div>
+      <RatingField
+        label="Рейтинг от"
+        value={value.ratingMin}
+        isDisabled={locked}
+        testId="admission-rating-min"
+        onChange={(ratingMin) => onChange({ ...value, ratingMin })}
+      />
+      <RatingField
+        label="Рейтинг до"
+        value={value.ratingMax}
+        isDisabled={locked}
+        testId="admission-rating-max"
+        onChange={(ratingMax) => onChange({ ...value, ratingMax })}
       />
     </section>
   );

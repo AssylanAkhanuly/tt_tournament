@@ -1,2 +1,2 @@
-export { CoachTournamentView } from './CoachTournamentView';
+export { CoachTournamentView, type CoachSection } from './CoachTournamentView';
 export { CoachView } from './CoachView';

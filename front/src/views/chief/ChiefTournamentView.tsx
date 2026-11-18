@@ -14,7 +14,7 @@ const SECTIONS: TournamentSectionId[] = ['info', 'players', 'schedule'];
 export function ChiefTournamentView({ id, section }: { id: string; section: TournamentSectionId }) {
   const page = useTournamentPage({ id, section, cabinet: 'chief', back: '/chief', sections: SECTIONS, recruitment: false });
   return (
-    <ChiefShell active={page.active} nav={page.nav} context={page.context}>
+    <ChiefShell active={page.active} nav={page.nav} home={page.home}>
       {page.body}
     </ChiefShell>
   );

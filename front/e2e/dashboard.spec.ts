@@ -75,11 +75,13 @@ test('главная администратора — календарь: тур
   await событие.click();
   await окно.getByRole('button', { name: 'Подробнее' }).click();
   await page.waitForURL(/\/dashboard\/tournaments\/[0-9a-f-]{36}\/info$/);
-  await expect(page.getByTestId('tournament-context')).toContainText(`[e2e] Кубок ${stamp}`);
+  // Шапки турнира в сайдбаре нет ✳ (19.11.2026) — название в «Сведениях».
+  await expect(page.getByTestId('tournament-context')).toHaveCount(0);
   await expect(page.getByTestId('info-name')).toHaveValue(`[e2e] Кубок ${stamp}`);
   await page.getByRole('button', { name: 'Спортсмены', exact: true }).click();
   await expect(page.getByTestId('table-empty')).toHaveText('Участников нет'); // заведён без участников
-  await page.getByTestId('tournament-back').click();
+  // Назад к списку — знак в шапке.
+  await page.getByTestId('home-link').click();
   await page.waitForURL((url) => url.pathname === '/dashboard');
 
   // …и появляется на своём дне после листания.
@@ -265,11 +267,22 @@ test('вид соревнования: «Главный старт» засев�
   await expect(rows.filter({ hasText: mainName })).toHaveCount(1);
   await expect(rows.filter({ hasText: plainName })).toHaveCount(0);
 
-  // Сайдбар турнира — тот же значок под датой.
+  // «Сведения» — вид соревнования можно сменить, пока нет заявок: смена засевает допуск заново.
   await rows.filter({ hasText: mainName }).click();
   await page.waitForURL(/\/dashboard\/tournaments\/[0-9a-f-]{36}\/info$/);
-  await expect(page.getByTestId('tournament-context').getByTestId('tournament-kind')).toHaveText('Главный старт');
-  await page.screenshot({ path: 'test-results/dashboard/kind-sidebar.png' });
+  const kindPicker = page.getByTestId('info-template');
+  await expect(kindPicker).toHaveText(/Главный республиканский старт/);
+  await kindPicker.click();
+  await page.getByRole('option', { name: 'Открытый республиканский' }).click();
+  await page.getByRole('button', { name: 'Сохранить' }).click();
+  await expect(kindPicker).toHaveText(/Открытый республиканский/);
+  const changed = (await (await page.request.get(`/api/tournaments/${created.id}/`)).json()) as {
+    category: string;
+    applicant_kinds: string[];
+    region_quota: number | null;
+  };
+  expect([changed.category, changed.applicant_kinds, changed.region_quota]).toEqual(['open', ['self'], null]);
+  await page.screenshot({ path: 'test-results/dashboard/kind-change.png' });
 });
 
 test('вид «Таблица»: поиск сужает, строка открывает турнир, вид переживает перезагрузку', async ({ page }) => {
@@ -314,7 +327,7 @@ test('вид «Таблица»: поиск сужает, строка откр�
   await page.getByTestId('tournament-search').fill('Чемпионат Республики');
   await rows.first().click();
   await page.waitForURL(/\/dashboard\/tournaments\/[0-9a-f-]{36}\/info$/);
-  await expect(page.getByTestId('tournament-context')).toContainText('[demo] Чемпионат Республики Казахстан');
+  await expect(page.getByTestId('info-name')).toHaveValue('[demo] Чемпионат Республики Казахстан');
 
   await page.goto('/dashboard?view=table');
   await page.getByTestId('nav-sub').filter({ hasText: 'Месяц' }).click();
@@ -459,8 +472,9 @@ test('внутри турнира сайдбар — разделы турнир
   // Без раздела — первый, «Сведения».
   await page.waitForURL((url) => url.pathname === '/dashboard/tournaments/' + demo.id + '/info');
 
-  // Сайдбар: «Все турниры», название турнира, разделы турнира вместо разделов кабинета.
-  await expect(page.getByTestId('tournament-context')).toContainText(demo.name);
+  // Сайдбар: разделы турнира вместо разделов кабинета, шапки турнира нет ✳ (19.11.2026).
+  await expect(page.getByTestId('tournament-context')).toHaveCount(0);
+  await expect(page.getByTestId('info-name')).toHaveValue(demo.name);
   // Разделы — кнопки без стрелки раскрытия и подпунктов.
   const разделы = page
     .getByRole('navigation', { name: 'Разделы' })
@@ -500,7 +514,7 @@ test('внутри турнира сайдбар — разделы турнир
   await expect(page.getByTestId('referee-row')).toHaveText([/Судья \(проверки\)/]);
   await page.screenshot({ path: 'test-results/dashboard/referees.png' });
 
-  await page.getByTestId('tournament-back').click();
+  await page.getByTestId('home-link').click();
   await page.waitForURL((url) => url.pathname === '/dashboard');
   // Раздел раскрыт — текущий его подпункт, вид «Месяц».
   await expect(page.getByTestId('nav-sub').filter({ hasText: 'Месяц' })).toHaveAttribute('aria-current', 'true');
@@ -594,11 +608,11 @@ test('у председателя ГСК тот же «Календарь»: с�
   await page.getByTestId('tournament-search').fill('Чемпионат Республики');
   await page.getByTestId('tournament-table-row').first().click();
   await page.waitForURL(/\/gsk\/tournaments\/[0-9a-f-]{36}\/info$/);
-  await expect(page.getByTestId('tournament-context')).toContainText('[demo] Чемпионат Республики Казахстан');
+  await expect(page.getByTestId('info-name')).toHaveValue('[demo] Чемпионат Республики Казахстан');
   await page.getByRole('button', { name: 'Спортсмены', exact: true }).click();
   await expect(page.getByTestId('participant-row')).toHaveCount(8);
   await expect(page.getByRole('button', { name: 'Спортсмены', exact: true })).toHaveAttribute('aria-current', 'true');
-  await page.getByTestId('tournament-back').click();
+  await page.getByTestId('home-link').click();
   await page.waitForURL((url) => url.pathname === '/calendar');
 });
 

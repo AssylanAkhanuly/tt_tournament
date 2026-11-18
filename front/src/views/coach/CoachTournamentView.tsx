@@ -1,21 +1,25 @@
 'use client';
 
 /* Турнир в кабинете старшего тренера региона ✳ (19.11.2026, роль 12 —
-   «Заявка на старт»): сведения турнира и спортсмены, которых заявил он сам
-   («Заявлены»); всего состава тренер не видит — сервер его ему и не отдаёт.
-   Заявка — полоса внизу рабочей области, как у судьи: срок приёма и
-   «Подать заявку», если турнир принимает заявку от старшего тренера региона
-   (`canApplyAs` решает сервер). На турнир, куда спортсмен подаёт сам, кнопки
-   нет — кто подаёт, видно в сведениях. В строке «Заявлены» — «Отозвать»
-   ✳ (19.11.2026), пока приём открыт. */
+   «Заявка на старт»). Разделы турнира в сайдбаре, каждый своей страницей
+   (решение владельца продукта: заявленные — отдельным разделом):
+   - «Сведения» (`/coach/tournaments/<id>/info`) — сведения турнира с условиями
+     допуска;
+   - «Заявлены» (`…/entries`) — спортсмены, которых заявил он сам (всего
+     состава тренер не видит — сервер его ему и не отдаёт), в строке —
+     «Отозвать», пока приём открыт; «Подать заявку» — в полосе над таблицей,
+     как «Добавить» в разделах турнира у администратора.
+   Раздела «Заявлены» нет, если турнир не принимает заявку от старшего тренера
+   региона (`canApplyAs` решает сервер): кто подаёт, видно в сведениях.
+   Без обёрток и полей — от края до края (`bleed`). */
 
 import { Spinner } from '@heroui/react';
-import { useRouter } from 'next/navigation';
+import { FileText, Info } from 'lucide-react';
 
 import { num2 } from '@/entities/rating/lib/format';
 import { ROLE_REGIONAL_HEAD_COACH } from '@/entities/session';
 import {
-  recruitmentLabel,
+  tournamentHref,
   useMyApplications,
   useTournament,
   type ApplicationAthlete,
@@ -23,9 +27,14 @@ import {
 } from '@/entities/tournament';
 import { ApplicationDialog, WithdrawButton } from '@/features/tournament-application';
 import { DataTable, type DataColumn } from '@/shared/ui/DataTable';
-import { TournamentContext, TournamentOverview } from '@/widgets/tournament-board';
+import type { RoleNavItem } from '@/views/workspace';
+import { TournamentOverview } from '@/widgets/tournament-board';
 
 import { CoachShell } from './CoachShell';
+
+export type CoachSection = 'info' | 'entries';
+
+const SECTION_LABEL: Record<CoachSection, string> = { info: 'Сведения', entries: 'Заявлены' };
 
 const COLUMNS: DataColumn<ApplicationAthlete>[] = [
   { id: 'name', label: 'Спортсмен', rowHeader: true, sortValue: (a) => a.name, render: (a) => a.name },
@@ -56,79 +65,71 @@ const entryColumns = (t: TournamentSummary, onWithdrawn: () => void): DataColumn
       ]
     : COLUMNS;
 
-function ApplicationBar({ t, onSubmitted }: { t: TournamentSummary; onSubmitted: () => void }) {
-  if (!t.canApplyAs.includes(ROLE_REGIONAL_HEAD_COACH)) return null;
-  const r = t.playerRecruitment;
-  // Срок или «закрыт»; приём без срока виден по самой кнопке.
-  const term = r.active && !r.until ? null : recruitmentLabel(r);
+const applies = (t: TournamentSummary | null) => !!t?.canApplyAs.includes(ROLE_REGIONAL_HEAD_COACH);
+
+/** Разделы турнира в сайдбаре: «Заявлены» — только где тренер подаёт заявку. */
+function sections(id: string, t: TournamentSummary | null): RoleNavItem[] {
+  const nav: RoleNavItem[] = [
+    { label: SECTION_LABEL.info, href: tournamentHref('coach', id, 'info'), icon: <Info size={16} /> },
+  ];
+  if (applies(t))
+    nav.push({ label: SECTION_LABEL.entries, href: tournamentHref('coach', id, 'entries'), icon: <FileText size={16} /> });
+  return nav;
+}
+
+function Entries({ t, onChanged }: { t: TournamentSummary; onChanged: () => void }) {
+  const mine = useMyApplications(t.id);
+  const reload = () => {
+    mine.reload();
+    onChanged();
+  };
   return (
-    <div className="flex w-full flex-wrap items-center justify-end gap-3" data-testid="coach-application-bar">
-      {term && (
-        <span className="mr-auto text-[14px] text-neutral-600" data-testid="recruitment-state">
-          {term}
-        </span>
-      )}
-      <ApplicationDialog
-        tournamentId={t.id}
-        as={ROLE_REGIONAL_HEAD_COACH}
-        isDisabled={!r.active}
-        onSubmitted={onSubmitted}
+    <section className="h-full" data-testid="coach-entries">
+      <DataTable
+        ariaLabel="Заявленные спортсмены"
+        testId="coach-entries-table"
+        rows={mine.data ?? []}
+        columns={entryColumns(t, reload)}
+        getId={(a) => a.id}
+        loading={!mine.data && !mine.error}
+        error={mine.error}
+        empty="Пока никого"
+        rowProps={(a) => ({ 'data-testid': 'coach-entry', 'data-name': a.name })}
+        actions={
+          <ApplicationDialog
+            tournamentId={t.id}
+            as={ROLE_REGIONAL_HEAD_COACH}
+            isDisabled={!t.playerRecruitment.active}
+            onSubmitted={reload}
+          />
+        }
       />
-    </div>
+    </section>
   );
 }
 
-export function CoachTournamentView({ id }: { id: string }) {
-  const router = useRouter();
+export function CoachTournamentView({ id, section }: { id: string; section: CoachSection }) {
   const tournament = useTournament(id);
-  const mine = useMyApplications(id);
   const t = tournament.data;
 
   return (
     <CoachShell
-      active=""
-      nav={[]}
-      context={<TournamentContext t={t} onBack={() => router.push('/coach')} />}
-      actions={
-        t && (
-          <ApplicationBar
-            t={t}
-            onSubmitted={() => {
-              mine.reload();
-              tournament.reload();
-            }}
-          />
-        )
-      }
+      active={SECTION_LABEL[section]}
+      bleed
+      nav={sections(id, t)}
     >
       {tournament.error ? (
-        <p className="text-[13px] text-red-600" data-testid="tournament-error">
+        <p className="p-6 text-[13px] text-red-600" data-testid="tournament-error">
           {tournament.error}
         </p>
       ) : !t ? (
         <Spinner className="m-auto" />
+      ) : section === 'entries' && applies(t) ? (
+        <Entries t={t} onChanged={tournament.reload} />
       ) : (
-        <div className="flex w-full max-w-4xl flex-col gap-6">
+        // С `bleed` рабочая область не прокручивается сама — прокрутка здесь.
+        <div className="h-full overflow-y-auto">
           <TournamentOverview t={t} />
-          {t.canApplyAs.includes(ROLE_REGIONAL_HEAD_COACH) && (
-            <section className="flex flex-col gap-2" data-testid="coach-entries">
-              <h2 className="m-0 text-[15px] font-semibold">Заявлены</h2>
-              <DataTable
-                ariaLabel="Заявленные спортсмены"
-                testId="coach-entries-table"
-                rows={mine.data ?? []}
-                columns={entryColumns(t, () => {
-                  mine.reload();
-                  tournament.reload();
-                })}
-                getId={(a) => a.id}
-                loading={!mine.data && !mine.error}
-                error={mine.error}
-                empty="Пока никого"
-                rowProps={(a) => ({ 'data-testid': 'coach-entry', 'data-name': a.name })}
-              />
-            </section>
-          )}
         </div>
       )}
     </CoachShell>

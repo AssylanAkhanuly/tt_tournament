@@ -26,7 +26,7 @@ export function GskTournamentView({ id, section }: { id: string; section: Tourna
     <RatingShell
       active={page.active}
       nav={page.nav.map(({ label, href, icon, children }) => [label, href, icon, children])}
-      context={page.context}
+      home={page.home}
       bleed
     >
       {isGskChairman && page.body}

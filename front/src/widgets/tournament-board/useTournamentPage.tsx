@@ -1,12 +1,14 @@
 'use client';
 
 /* Общее у страниц турнира администратора и председателя ГСК ✳ (30.10.2026):
-   разделы в сайдбаре, его шапка («← Все турниры», название, дата) и
-   содержимое раздела — и у главного судьи турнира (свой набор разделов). Оболочку
+   разделы в сайдбаре и содержимое раздела — и у главного судьи турнира (свой
+   набор разделов). Шапки турнира в сайдбаре («← Все турниры», название, дата,
+   значок) нет ✳ (19.11.2026, решение владельца продукта): к списку турниров
+   ведёт знак в шапке (`home`). Оболочку
    кабинета (`AdminShell`, `RatingShell`, `ChiefShell`) даёт страница кабинета —
    сюда она не попадает, и ветвлений по ролям здесь нет. */
 
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 
 import {
   tournamentHref,
@@ -17,7 +19,6 @@ import {
 
 import {
   sectionLabel,
-  TournamentContext,
   tournamentNav,
   TournamentSection,
   type SectionView,
@@ -36,13 +37,12 @@ export function useTournamentPage({
   section: TournamentSectionId;
   /** Кабинет — его адреса у разделов. */
   cabinet: TournamentCabinet;
-  /** «← Все турниры» — календарь кабинета. */
+  /** Список турниров кабинета — туда ведёт знак в шапке. */
   back: string;
   /** Разделы кабинета; нет — все. */
   sections?: TournamentSectionId[];
   recruitment?: boolean;
 }) {
-  const router = useRouter();
   const tournament = useTournament(id);
   // Подпункты разделов — из адреса; число ждущих заявок — значок у «Заявок»
   // (только где «Судьи» есть: главному судье сервер заявки не отдаёт).
@@ -57,7 +57,7 @@ export function useTournamentPage({
   return {
     active: sectionLabel(section),
     nav: tournamentNav(tournamentHref(cabinet, id), sections, at),
-    context: <TournamentContext t={tournament.data} onBack={() => router.push(back)} />,
+    home: back,
     body: tournament.error ? (
       <p className="p-6 text-[13px] text-red-600" data-testid="tournament-error">
         {tournament.error}

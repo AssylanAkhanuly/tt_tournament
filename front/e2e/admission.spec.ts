@@ -69,6 +69,10 @@ test('настройки допуска: засев вида, правка и с
   await expect(self).toHaveAttribute('data-selected', 'true');
   await admission.getByTestId('admission-quota').fill('2');
   await admission.getByTestId('admission-limit').fill('40');
+  await admission.getByTestId('admission-sex').click();
+  await page.getByRole('option', { name: 'Женщины' }).click();
+  await admission.getByTestId('admission-rating-min').fill('5,5');
+  await admission.getByTestId('admission-rating-max').fill('30');
   await page.screenshot({ path: 'test-results/admission/settings.png' });
   await expect(save).toBeEnabled();
   await save.click();
@@ -78,15 +82,27 @@ test('настройки допуска: засев вида, правка и с
     applicant_kinds: string[];
     region_quota: number | null;
     participant_limit: number | null;
+    sex: string;
+    rating_min: string | null;
+    rating_max: string | null;
   };
   expect([saved.applicant_kinds, saved.region_quota, saved.participant_limit]).toEqual([
     ['self', 'regional_head_coach'],
     2,
     40,
   ]);
+  expect([saved.sex, saved.rating_min, saved.rating_max]).toEqual(['f', '5.50', '30.00']);
 
   // Первая заявка (администратор записался сам — теперь самозапись разрешена)
   // замораживает условия: поля неактивны, у заголовка замок.
+  // Пол и ценз действуют: администратор без рейтинговой карточки не проходит.
+  const refused = await request.post(`/api/tournaments/${id}/participants/join/`);
+  expect(refused.status()).toBe(400);
+  expect(await refused.text()).toContain('Ценз по рейтингу');
+  const relaxed = await request.patch(`/api/tournaments/${id}/update/`, {
+    data: { sex: '', rating_min: null, rating_max: null },
+  });
+  expect(relaxed.status(), await relaxed.text()).toBe(200);
   const join = await request.post(`/api/tournaments/${id}/participants/join/`);
   expect(join.status(), await join.text()).toBe(201);
   await page.reload();
@@ -115,6 +131,13 @@ test('старший тренер региона: заявка списком, �
   const facts = page.getByTestId('tournament-fact');
   await expect(facts.filter({ hasText: 'Заявку подаёт' })).toContainText('Старший тренер региона');
   await expect(facts.filter({ hasText: 'Квота региона' })).toContainText('3');
+  // Сведения — без обёрток и полей: секция от края до края рабочей области.
+  await expect(page.getByTestId('tournament-about')).not.toHaveClass(/rounded/);
+  await page.screenshot({ path: 'test-results/admission/coach-info.png' });
+
+  // «Заявлены» — отдельный раздел в сайдбаре, «Подать заявку» — над таблицей.
+  await page.getByRole('button', { name: 'Заявлены', exact: true }).click();
+  await page.waitForURL((url) => url.pathname === `/coach/tournaments/${id}/entries`);
   await expect(page.getByTestId('coach-entries')).toContainText('Пока никого');
 
   await page.getByTestId('application-open').click();

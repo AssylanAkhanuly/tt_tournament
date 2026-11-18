@@ -1,7 +1,6 @@
 export { boardViews, TournamentBoard, useBoardView } from './TournamentBoard';
 export {
   sectionLabel,
-  TournamentContext,
   tournamentNav,
   TournamentSection,
   type SectionView,

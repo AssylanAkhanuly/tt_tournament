@@ -10,6 +10,7 @@ import { downloadProtocolPdf, protocolFileName } from './protocolPdf';
 
 export type ProtocolField =
   | 'name'
+  | 'template'
   | 'description'
   | 'dates'
   | 'city'
@@ -23,6 +24,7 @@ export type ProtocolField =
 
 export const PROTOCOL_FIELD_LABEL: Record<ProtocolField, string> = {
   name: 'Название',
+  template: 'Вид соревнования',
   description: 'Описание',
   dates: 'Даты проведения',
   city: 'Город, область',

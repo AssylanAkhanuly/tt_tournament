@@ -58,6 +58,7 @@ export function RatingShell({
   nav = NAV,
   sub,
   context,
+  home = '/calendar',
   children,
 }: {
   /** Заголовок — только когда он и есть содержание (имя спортсмена). */
@@ -72,8 +73,10 @@ export function RatingShell({
   nav?: RatingNavItem[];
   /** Подпункты активного раздела (вид экрана: «Месяц», «Таблица») ✳ 30.10.2026. */
   sub?: ShellSubItem[];
-  /** Шапка сайдбара над разделами (страница турнира). */
+  /** Шапка сайдбара над разделами. */
   context?: ReactNode;
+  /** Куда ведёт знак в шапке — календарь турниров председателя. */
+  home?: string;
   children: ReactNode;
 }) {
   const router = useRouter();
@@ -111,6 +114,7 @@ export function RatingShell({
           actions={actions}
           bleed={bleed}
           context={context}
+          home={home}
           onNavigate={onNavigate}
           onOpen={(href) => router.push(href)}
           onSwitchRole={(to) => router.push(to)}

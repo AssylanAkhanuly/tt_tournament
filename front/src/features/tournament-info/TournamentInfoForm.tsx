@@ -29,6 +29,7 @@ import {
   type TournamentInfo,
   type TournamentLevel,
   type TournamentSummary,
+  useTemplates,
 } from '@/entities/tournament';
 import { Picker } from '@/shared/ui/Picker';
 import { PlaceSelect } from './PlaceSelect';
@@ -58,7 +59,11 @@ const infoOf = (t: TournamentSummary): TournamentInfo => ({
   gamesToWin: t.gamesToWin,
   level: t.level,
   isRating: t.isRating,
+  template: t.kind?.code ?? '',
 });
+
+// Ключ пункта «Без вида»: у `Select` HeroUI пустой ключ не выбирается.
+const NO_KIND = 'none';
 
 function Row({
   label,
@@ -110,6 +115,7 @@ export function TournamentInfoForm({
   const [activeField, setActiveField] = useState<ProtocolField | null>(null);
   const [mobilePanel, setMobilePanel] = useState('form');
   const [busy, setBusy] = useState(false);
+  const templates = useTemplates();
   const [error, setError] = useState<string | null>(null);
   const set = <K extends keyof TournamentInfo>(k: K, v: TournamentInfo[K]) => setDraft((d) => ({ ...d, [k]: v }));
   const changed =
@@ -196,6 +202,21 @@ export function TournamentInfoForm({
                   >
                     <Input className="rounded-xl" data-testid="info-name" />
                   </TextField>
+                </Row>
+                {/* Вид соревнования ✳ (19.11.2026): смена засевает условия допуска
+                    заново; после первой заявки — неактивно (условия заморожены). */}
+                <Row label="Вид соревнования" field="template" onFocus={setActiveField}>
+                  <Picker
+                    label="Вид соревнования"
+                    value={draft.template || NO_KIND}
+                    options={[
+                      { id: NO_KIND, label: 'Без вида' },
+                      ...(templates.data ?? []).map((k) => ({ id: k.code, label: k.name })),
+                    ]}
+                    onChange={(k) => set('template', k === NO_KIND ? '' : k)}
+                    isDisabled={tournament.admissionLocked || busy}
+                    testId="info-template"
+                  />
                 </Row>
                 <Row label="Описание" field="description" onFocus={setActiveField} top>
                   <TextField

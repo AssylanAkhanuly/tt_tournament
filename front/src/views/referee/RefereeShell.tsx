@@ -18,6 +18,7 @@ export function RefereeShell({
   bleed,
   nav = NAV,
   context,
+  home,
   sub,
   actions,
   children,
@@ -27,6 +28,8 @@ export function RefereeShell({
   /** Свои разделы вместо разделов кабинета — внутри турнира. */
   nav?: RoleNavItem[];
   context?: ReactNode;
+  /** Куда ведёт знак в шапке (страница турнира — список турниров кабинета). */
+  home?: string;
   /** Подпункты активного раздела (вид экрана: «Месяц», «Таблица») ✳ 30.10.2026. */
   sub?: ShellSubItem[];
   /** Полоса внизу рабочей области. */
@@ -34,7 +37,8 @@ export function RefereeShell({
   children: ReactNode;
 }) {
   return (
-    <RoleShell sub={sub} kind={ROLE_REFEREE} title="Судья" nav={nav} context={context} active={active} bleed={bleed} actions={actions}>
+    <RoleShell sub={sub} kind={ROLE_REFEREE} title="Судья" nav={nav} context={context}
+      home={home} active={active} bleed={bleed} actions={actions}>
       {children}
     </RoleShell>
   );

@@ -24,6 +24,7 @@ export function RoleShell({
   pageTitle,
   bleed,
   context,
+  home,
   sub,
   actions,
   children,
@@ -37,8 +38,10 @@ export function RoleShell({
   active?: string;
   pageTitle?: string;
   bleed?: boolean;
-  /** Шапка сайдбара над разделами (страница турнира). */
+  /** Шапка сайдбара над разделами. */
   context?: ReactNode;
+  /** Куда ведёт знак в шапке; нет — кабинет этой роли. */
+  home?: string;
   /** Подпункты активного раздела (вид экрана: «Месяц», «Таблица») ✳ 30.10.2026. */
   sub?: ShellSubItem[];
   /** Полоса внизу рабочей области. */
@@ -67,6 +70,7 @@ export function RoleShell({
       bleed={bleed}
       actions={actions}
       context={context}
+      home={home ?? workspacesOf(user).find((w) => w.kind === kind)?.to}
       onNavigate={(label) => {
         const href = nav.find((n) => n.label === label)?.href;
         if (href) router.push(href);
