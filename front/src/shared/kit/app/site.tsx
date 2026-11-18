@@ -52,8 +52,8 @@ function SeamOrnament() {
       className="pointer-events-none absolute inset-y-0 left-1/2 z-10 w-[clamp(44px,4.8vw,92px)] -translate-x-1/2 max-md:hidden"
       data-testid="auth-ornament"
     >
-      <div className={half + ' bg-white opacity-45 [clip-path:inset(0_50%_0_0)]'} style={STRIP} />
-      <div className={half + ' bg-brand-800 opacity-45 [clip-path:inset(0_0_0_50%)]'} style={STRIP} />
+      <div className={half + ' bg-white opacity-90 [clip-path:inset(0_50%_0_0)]'} style={STRIP} />
+      <div className={half + ' bg-brand-800 opacity-90 [clip-path:inset(0_0_0_50%)]'} style={STRIP} />
     </div>
   );
 }
@@ -117,11 +117,11 @@ export function AuthScreen({
           </p>
         </div>
       </div>
-      {/* Форма — колонкой от верхней трети, а не по центру ✳ (19.11.2026): на
-          широком экране она не плавает в белом, на телефоне начинается сразу под
-          полосой и не прыгает, когда выезжает клавиатура. */}
+      {/* Форма на десктопе — по центру половины ✳ (19.11.2026, решение владельца
+          продукта); на телефоне — сразу под полосой: так она не прыгает, когда
+          выезжает клавиатура. */}
       <div
-        className="relative flex min-h-0 flex-1 flex-col items-center overflow-auto px-8 pb-8 pt-[18vh] max-md:px-6 max-md:pb-[max(16px,env(safe-area-inset-bottom))] max-md:pt-8"
+        className="relative flex min-h-0 flex-1 flex-col items-center overflow-auto justify-center px-8 py-8 max-md:justify-start max-md:px-6 max-md:pb-[max(16px,env(safe-area-inset-bottom))] max-md:pt-8"
         data-testid="auth-form"
       >
         <div
@@ -134,7 +134,7 @@ export function AuthScreen({
           {children}
         </div>
         {/* Отступ снизу — с запасом на полоску «домой» у iPhone (safe-area). */}
-        <p className="m-0 mt-auto shrink-0 pt-6 text-center text-[11px] leading-snug text-neutral-500 md:hidden" data-testid="auth-caption-bottom">
+        <p className="m-0 mt-6 shrink-0 text-center text-[11px] max-md:mt-auto max-md:pt-6 leading-snug text-neutral-500 md:hidden" data-testid="auth-caption-bottom">
           {AUTH_FOOT}
         </p>
       </div>
