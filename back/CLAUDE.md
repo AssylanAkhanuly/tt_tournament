@@ -162,8 +162,24 @@
 - `DELETE …/participants/<id>/remove/` — ещё и председатель ГСК / администратор федерации ✳ (29.10.2026, карточка
   спортсмена); из начатого турнира по-прежнему 400.
 - **Чего ещё нет:** резерва с очередью и авто-отказа по закрытию приёма (ТЗ §4.4, QUESTIONS 3.3), причины отказа,
-  уведомлений о решении, допуска к подаче по категории (QUESTIONS 3).
+  уведомлений о решении. Допуск к подаче по категории — раздел «Допуск заявки» ниже.
 - Тесты — `tournaments/tests/test_recruitment.py`.
+
+## Допуск заявки ✳ (19.11.2026)
+- Пакет `tournaments/admission/` — устройство целиком в [ADMISSION.md](../ADMISSION.md). `apply()` — единственный
+  путь заявки: заявитель разрешён турниром (`Tournament.applicant_kinds`) и у подающего его роль → `gate` (приём,
+  статус, расписание) → спортсмен «его» и не в турнире → `checks.CHECKS` (возраст по категориям, `participant_limit`,
+  `region_quota`). Всё или ничего, ошибки — списком по спортсменам.
+- Заявители — реестр `admission/applicants.py` (`self`, `regional_head_coach`); новый — класс + строка в `REGISTRY`.
+- Вид соревнования — `TournamentTemplate` (миграции `0028`, `0029` с засевом `main_start`, `eurasian_league`,
+  `open`), правится в админке; `admission/templates.py::seed` копирует его значения в турнир при `POST /api/tournaments/`
+  `{template}`. Командный вид — 400.
+- Условия допуска замораживает первая заявка (`admission.locked`) — `TournamentUpdateSerializer._admission`.
+- Роль `regional_head_coach` с областью `region` и полем `Role.region` (миграция `users/0009`), команда
+  `create_regional_head_coach --region`. У участника — `entered_by`, `entered_as`.
+- Ручки: `POST …/applications/` `{as, athlete_ids}`, `GET …/applications/candidates/?as=&q=`; три пути самозаписи
+  идут через тот же `apply` (заявитель `self`).
+- Тесты — `tournaments/tests/test_admission.py`.
 
 ## Расписание «группы + плей-офф» ✳ (30.10.2026)
 - Правила — `tournaments/schedule.py`: чистая часть (`snake_split`, `round_robin_rounds`, `assign_slots`, `slot_time`) и

@@ -45,8 +45,11 @@ role: ROLE {
   id: uuid {constraint: primary_key}
   user_id: uuid {constraint: foreign_key}
   kind: "четырнадцать ролей, см. ТЗ §2; первой заведена «председатель ГСК» (10.09.2026)"
-  scope: "система | турнир | клуб | стол"
+  scope: "система | регион | турнир | клуб | стол"
   scope_id: uuid
+  # Область «регион» ✳ 19.11.2026 (старший тренер региона): регион — строка из
+  # закреплённого списка, а не строка таблицы, в scope_id не ложится.
+  region: "string — регион роли с областью «регион»"
 }
 
 club: CLUB {
@@ -81,6 +84,16 @@ tournament_template: TOURNAMENT_TEMPLATE {
   needs_table_referees: bool
   needs_documents: bool
   rating_limit: string
+
+  # Вид соревнования ✳ 19.11.2026 (ADMISSION.md): первыми заведены условия
+  # допуска — «Главный старт», «Евразийская лига», «Открытый». Политики выше
+  # (approval_by, rating_pool…) в коде ещё не заведены.
+  code: "string — ключ вида: main_start | eurasian_league | open"
+  category: "главный | лига | открытый — значок на карточке турнира"
+  is_team: "bool — командный вид; командной ветки ещё нет, не заводится"
+  applicant_kinds: "список — кто подаёт заявку; засевается в турнир"
+  participant_limit: "int — предел участников; пусто — без предела"
+  region_quota: "int — квота региона; пусто — без квоты"
 }
 
 tournament: TOURNAMENT {
@@ -154,6 +167,11 @@ tournament: TOURNAMENT {
   # записывается сам; открыт по умолчанию.
   player_recruitment_open: "bool — приём заявок игроков открыт"
   player_recruitment_until: "date — срок приёма игроков, включительно"
+  # Условия допуска ✳ 19.11.2026 (ADMISSION.md): засевает шаблон, дальше свои;
+  # первая заявка их замораживает. Код спрашивает их, а не category.
+  applicant_kinds: "список — кто подаёт: спортсмен сам | старший тренер региона"
+  participant_limit: "int — предел участников; пусто — без предела"
+  region_quota: "int — квота региона; пусто — без квоты"
 }
 
 # Возрастная категория соревнования ✳ 15.09.2026 (замечания федерации, ТЗ §4.1):
@@ -247,7 +265,10 @@ application: APPLICATION {
   tournament_id: uuid {constraint: foreign_key}
   club_id: "uuid — пусто, если игрок сам" {constraint: foreign_key}
   submitted_by: uuid {constraint: foreign_key}
-  source: "клуб | игрок сам"
+  # ✳ 19.11.2026: отдельной записи заявки в коде ещё нет — прошедший допуск
+  # сразу встаёт в состав, а кто и как заявил, хранит участник (entered_by,
+  # entered_as). source — ключ заявителя из applicant_kinds турнира.
+  source: "игрок сам | старший тренер региона | клуб"
   status: "подана | принята | отклонена"
   reject_reason: string
 }

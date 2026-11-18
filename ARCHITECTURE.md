@@ -1155,8 +1155,9 @@ erDiagram
         uuid id PK
         uuid userId FK
         string kind "четырнадцать ролей, см. ТЗ §2 (перечень федерации)"
-        string scope "система | турнир | клуб | стол"
+        string scope "система | регион | турнир | клуб | стол"
         uuid scopeId "id области"
+        string region "у роли с областью «регион»"
     }
     CLUB {
         uuid id PK
@@ -1200,6 +1201,9 @@ erDiagram
         date refereeRecruitmentUntil "срок приёма, включительно; пусто — без срока"
         boolean playerRecruitmentOpen "приём заявок игроков открыт"
         date playerRecruitmentUntil "срок приёма игроков, включительно"
+        string applicantKinds "кто подаёт: спортсмен сам | старший тренер региона"
+        int participantLimit "предел участников; пусто — без предела"
+        int regionQuota "квота региона; пусто — без квоты"
     }
     TOURNAMENT_AGE_CATEGORY {
         uuid id PK
@@ -1240,7 +1244,7 @@ erDiagram
         uuid tournamentId FK
         uuid clubId FK "пусто, если игрок заявился сам"
         uuid submittedBy FK "тренер или сам игрок"
-        string source "клуб | игрок сам"
+        string source "игрок сам | старший тренер региона | клуб"
         string status "подана | принята | отклонена | отозвана"
         string rejectReason
     }
@@ -1418,6 +1422,12 @@ erDiagram
         boolean needsTableReferees
         boolean needsDocuments
         string ratingLimit
+        string code "main_start | eurasian_league | open"
+        string category "главный | лига | открытый — значок"
+        boolean isTeam "командный вид, не заводится"
+        string applicantKinds "кто подаёт заявку — засевается в турнир"
+        int participantLimit "пусто — без предела"
+        int regionQuota "пусто — без квоты"
     }
     MEMBERSHIP_FEE {
         uuid id PK
@@ -1570,6 +1580,16 @@ erDiagram
   турниры с разным набором значений, а не отдельные значения enum. Если зашить
   поведение в ярлык, любое исключение («лига с судьями») потребует новой
   категории.
+- **Кто подаёт заявку — тоже поле, а не категория** ✳ (19.11.2026,
+  [ADMISSION.md](ADMISSION.md)). `TOURNAMENT.applicant_kinds` — список ключей
+  заявителей (спортсмен сам, старший тренер региона), его засевает вид
+  соревнования (`TOURNAMENT_TEMPLATE`: «Главный старт», «Евразийская лига»,
+  «Открытый»), и турнир может его поменять, пока заявок нет. Заявитель — класс
+  с общим контрактом в реестре, проверки допуска (возраст, предел, квота
+  региона) — независимые функции, каждая читает своё поле. Код нигде не
+  спрашивает «главный ли это старт», поэтому новый способ подать заявку — это
+  класс в реестре, а не правка проверок. Правило-движок с условиями в базе
+  отвергнут: проверок пять-шесть, федерация меняет числа, а не логику.
 - **Два разных платежа — две сущности.** `MEMBERSHIP_FEE` — годовой членский
   взнос федерации (свой год, дата, три состояния: оплачен, не оплачен,
   просрочен). `TOURNAMENT_PAYMENT` — плата за участие в конкретном турнире, её
