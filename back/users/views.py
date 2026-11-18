@@ -7,6 +7,7 @@ from rest_framework.parsers import FormParser, MultiPartParser
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from rest_framework_simplejwt.exceptions import TokenError
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from .serializers import RegisterSerializer, UserSerializer
@@ -14,10 +15,33 @@ from .serializers import RegisterSerializer, UserSerializer
 User = get_user_model()
 
 
+DEVICE_COOKIE = "acct_%s"
+
+
+def _device_cookie(user_id) -> str:
+    """Кука аккаунта устройства ✳ (19.11.2026): refresh-токен этого аккаунта,
+    по нему `SwitchAccountView` возвращает в аккаунт без пароля."""
+    return DEVICE_COOKIE % user_id
+
+
 def _set_auth_cookies(response, refresh_token: RefreshToken):
-    """Attach access + refresh JWT cookies to a response."""
+    """Attach access + refresh JWT cookies to a response.
+
+    Плюс кука аккаунта устройства ✳ (19.11.2026, решение владельца продукта:
+    сессия на 30 дней и переход между сохранёнными аккаунтами без пароля):
+    тот же refresh-токен под именем `acct_<id>`, httpOnly — скрипты страницы
+    его не читают, а в `localStorage` токенов по-прежнему нет."""
     jwt = settings.SIMPLE_JWT
     access_token = refresh_token.access_token
+    response.set_cookie(
+        key=_device_cookie(refresh_token["user_id"]),
+        value=str(refresh_token),
+        max_age=int(jwt["REFRESH_TOKEN_LIFETIME"].total_seconds()),
+        httponly=True,
+        samesite=jwt["AUTH_COOKIE_SAMESITE"],
+        secure=jwt["AUTH_COOKIE_SECURE"],
+        path="/",
+    )
 
     response.set_cookie(
         key=jwt["AUTH_COOKIE"],
@@ -114,6 +138,9 @@ class LoginEmailView(APIView):
 
 
 class LogoutView(APIView):
+    """«Выйти» — из текущего аккаунта, и на этом устройстве он забывается
+    (кука `acct_<id>` снимается). Другие аккаунты устройства остаются."""
+
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
@@ -121,7 +148,37 @@ class LogoutView(APIView):
         response = Response({"detail": "Выход выполнен."})
         response.delete_cookie(jwt["AUTH_COOKIE"])
         response.delete_cookie(jwt["AUTH_COOKIE_REFRESH"])
+        response.delete_cookie(_device_cookie(request.user.id), samesite=jwt["AUTH_COOKIE_SAMESITE"])
         return response
+
+
+class SwitchAccountView(APIView):
+    """Перейти в другой аккаунт этого устройства без пароля ✳ (19.11.2026).
+
+    `{user_id}` → если у устройства есть живая кука `acct_<user_id>` и токен в
+    ней выдан именно этому аккаунту, он становится текущим (новые куки на 30
+    дней). Иначе 401 — экран просит пароль. Права не расширяются: в аккаунт
+    попадает только тот, кто в него уже входил на этом устройстве."""
+
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        user_id = str(request.data.get("user_id") or "")
+        raw = request.COOKIES.get(_device_cookie(user_id)) if user_id else None
+        refused = Response({"detail": "Войдите заново."}, status=status.HTTP_401_UNAUTHORIZED)
+        if not raw:
+            return refused
+        try:
+            token = RefreshToken(raw)
+        except TokenError:
+            return refused
+        if str(token.get("user_id")) != user_id:
+            return refused
+        user = User.objects.filter(pk=user_id, is_active=True).first()
+        if user is None:
+            return refused
+        response = Response(UserSerializer(user, context={"request": request}).data)
+        return _set_auth_cookies(response, RefreshToken.for_user(user))
 
 
 class MeView(APIView):
