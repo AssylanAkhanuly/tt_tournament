@@ -88,7 +88,10 @@ def test_logout_forgets_only_current_account(two):
     login(client, other, 2)
     response = client.post("/api/auth/logout/")
     assert response.status_code == 200
-    assert response.cookies["acct_%s" % other.id].value == ""
+    gone = response.cookies["acct_%s" % other.id]
+    assert gone.value == ""
+    # Снимается с теми же атрибутами: без Secure браузер отверг бы SameSite=None.
+    assert gone["secure"] is True and gone["samesite"] == "None" and int(gone["max-age"]) == 0
     assert me(client) is None
     assert client.post("/api/auth/switch/", {"user_id": str(other.id)}, format="json").status_code == 401
     assert client.post("/api/auth/switch/", {"user_id": str(one.id)}, format="json").status_code == 200

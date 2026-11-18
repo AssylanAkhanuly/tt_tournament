@@ -148,7 +148,19 @@ class LogoutView(APIView):
         response = Response({"detail": "Выход выполнен."})
         response.delete_cookie(jwt["AUTH_COOKIE"])
         response.delete_cookie(jwt["AUTH_COOKIE_REFRESH"])
-        response.delete_cookie(_device_cookie(request.user.id), samesite=jwt["AUTH_COOKIE_SAMESITE"])
+        # Снимаем той же кукой, что ставили (Secure + SameSite): браузер не
+        # примет `SameSite=None` без `Secure`, и кука осталась бы жить — так и
+        # было, поймала сквозная проверка (тестовый клиент Django этого не видит).
+        response.set_cookie(
+            key=_device_cookie(request.user.id),
+            value="",
+            max_age=0,
+            expires="Thu, 01 Jan 1970 00:00:00 GMT",
+            httponly=True,
+            samesite=jwt["AUTH_COOKIE_SAMESITE"],
+            secure=jwt["AUTH_COOKIE_SECURE"],
+            path="/",
+        )
         return response
 
 
