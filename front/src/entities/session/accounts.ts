@@ -1,9 +1,12 @@
 /* Аккаунты, с которых входили на этом устройстве ✳ (11.09.2026) — карточки
    выбора на странице входа.
 
-   Хранятся только имя и почта: ни токенов, ни паролей. Войти в другой аккаунт
-   по карточке нельзя — она подставляет почту, пароль вводится как обычно.
-   Войти одним кликом можно только в тот, где сессия уже открыта.
+   Хранятся только имя, почта и id учётки: ни токенов, ни паролей. Переход по
+   карточке в другой аккаунт — без пароля ✳ (19.11.2026, решение владельца
+   продукта), пока у устройства жива его сессия (30 дней): токен лежит в
+   httpOnly-куке `acct_<id>`, которую ставит сервер и не видят скрипты страницы
+   (`switchAccount`). Нет такой сессии — карточка подставляет почту, пароль
+   вводится как обычно.
 
    Список читается через `useSyncExternalStore`: на сервере он пуст, в браузере
    берётся из localStorage — разметка до гидратации совпадает, и эффект с
@@ -13,7 +16,7 @@ import { useSyncExternalStore } from 'react';
 
 import type { SessionUser } from './api';
 
-export type KnownAccount = { email: string; name: string };
+export type KnownAccount = { email: string; name: string; id?: string };
 
 const KEY = 'fnt.accounts';
 const LIMIT = 5;
@@ -43,7 +46,7 @@ export function rememberAccount(user: SessionUser): void {
   if (!user.email) return;
   try {
     const rest = knownAccounts().filter((a) => a.email !== user.email);
-    const next = [{ email: user.email, name: user.name }, ...rest].slice(0, LIMIT);
+    const next = [{ email: user.email, name: user.name, id: user.id }, ...rest].slice(0, LIMIT);
     if (JSON.stringify(next) === JSON.stringify(knownAccounts())) return;
     localStorage.setItem(KEY, JSON.stringify(next));
     cache = next;

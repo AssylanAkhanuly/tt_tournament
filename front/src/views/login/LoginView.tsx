@@ -61,7 +61,10 @@ export function LoginView() {
   const raw = params.get('next');
   const asked = raw && raw.startsWith('/') && !raw.startsWith('//') ? raw : null;
 
-  const { user, loading, signIn, signOut } = useSession();
+  const { user, loading, signIn, signOut, switchTo: switchSession } = useSession();
+  // Форма поверх открытой сессии: «Другой аккаунт» или карточка без живой
+  // сессии. Текущую сессию это не закрывает — её аккаунт остаётся на устройстве.
+  const [adding, setAdding] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -83,12 +86,22 @@ export function LoginView() {
     }
   }
 
-  /** Другой аккаунт: сессия закрывается, почта подставляется в форму. */
+  /** Другой аккаунт устройства ✳ (19.11.2026): без пароля, пока жива его
+   *  сессия (30 дней); иначе — форма с подставленной почтой. */
   async function switchTo(account: KnownAccount) {
-    if (user) await signOut();
+    setError(null);
+    if (account.id) {
+      setBusy(true);
+      const switched = await switchSession(account.id);
+      setBusy(false);
+      if (switched) {
+        router.push(asked ?? homeFor(switched));
+        return;
+      }
+    }
+    setAdding(true);
     setEmail(account.email);
     setPassword('');
-    setError(null);
   }
 
   const current: KnownAccount | null = user ? { email: user.email ?? '', name: user.name } : null;
@@ -102,19 +115,33 @@ export function LoginView() {
           <div className="text-2xl font-semibold tracking-tight">Вход в систему</div>
         </div>
 
-        {!loading && current ? (
+        {!loading && current && !adding ? (
           <div className="flex flex-col gap-2" data-testid="already-in">
             <AccountCard account={current} onPress={() => router.push(asked ?? homeFor(user))} />
             {others.map((a) => (
               <AccountCard key={a.email} account={a} onPress={() => void switchTo(a)} />
             ))}
-            <button
-              type="button"
-              onClick={() => void signOut()}
-              className="mt-1 text-[12.5px] font-semibold text-neutral-500 hover:underline"
-            >
-              Выйти
-            </button>
+            <div className="mt-1 flex justify-center gap-6">
+              <button
+                type="button"
+                onClick={() => {
+                  setAdding(true);
+                  setEmail('');
+                  setPassword('');
+                }}
+                className="text-[12.5px] font-semibold text-brand-700 hover:underline"
+                data-testid="login-add-account"
+              >
+                Другой аккаунт
+              </button>
+              <button
+                type="button"
+                onClick={() => void signOut()}
+                className="text-[12.5px] font-semibold text-neutral-500 hover:underline"
+              >
+                Выйти
+              </button>
+            </div>
           </div>
         ) : (
           <div className="flex flex-col gap-3">

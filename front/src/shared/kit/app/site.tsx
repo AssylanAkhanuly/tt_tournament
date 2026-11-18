@@ -11,27 +11,22 @@ import type { ReactNode } from 'react';
 
 import { assetUrl } from '../asset';
 import { Brand } from '../brand';
-import linesUrl from '../brand/line-pattern.svg';
 import ornamentUrl from '../brand/ornament-strip.svg';
 
-/* Фон титульных страниц ✳ (19.11.2026, решение владельца продукта: «орнамент
-   и линии, как на лендинге Astana 2027»). Две вещи с лендинга
-   (`astana-2027-landing`: `EdgeStrips` и узор линий секции сетки):
-   - полоса орнамента вдоль левого и правого края — тот же контур, что
-     `ittf-ornament-strip.svg` лендинга (`brand/ornament-strip.svg`). Он идёт
-     маской, а цвет даёт шкала `brand`: сырых цветов в ките нет;
-   - волнистые линии через весь фон — узор `bracket-curves.svg` лендинга
-     (`brand/line-pattern.svg`), тоже маской в цвете шкалы `brand`.
+/* Фон титульных страниц ✳ (19.11.2026, решение владельца продукта): только
+   фирменный синий, лента орнамента у левого края и один круговой узор в углу.
+   - Орнамент — контур `ittf-ornament-strip.svg` лендинга Astana 2027
+     (`brand/ornament-strip.svg`), маской: цвет даёт шкала `brand`, сырых
+     цветов в ките нет. Шаг повтора короче родного (×1,36 ширины вместо
+     ×1,59) — завитки сходятся в одну ленту.
+   - Круговой узор — концентрические окружности из правого нижнего угла,
+     `stroke="currentColor"` в цвете той же шкалы; угол срезает их на четверть.
    Всё на синей половине, за знаком, и не ловит клики. */
 const ORNAMENT = assetUrl(ornamentUrl);
-const LINES = assetUrl(linesUrl);
-/** Ширина полосы орнамента — одна на маску, полосу и отступ линий. */
-const STRIP_W = 'clamp(40px,4.4vw,84px)';
+const STRIP_W = 'clamp(44px,4.8vw,92px)';
+const RINGS = Array.from({ length: 14 }, (_, i) => 60 + i * 38);
 
 function AuthBackdrop() {
-  // Орнамент — одной лентой, а не отдельными завитками ✳ (19.11.2026, решение
-  // владельца продукта): шаг повтора чуть короче родного (×1,36 ширины вместо
-  // ×1,59), и хвост каждого завитка доходит до следующего.
   const strip = {
     maskImage: `url(${ORNAMENT})`,
     WebkitMaskImage: `url(${ORNAMENT})`,
@@ -40,41 +35,22 @@ function AuthBackdrop() {
     maskRepeat: 'repeat-y',
     WebkitMaskRepeat: 'repeat-y',
   } as const;
-  const lines = {
-    maskImage: `url(${LINES})`,
-    WebkitMaskImage: `url(${LINES})`,
-    maskSize: 'cover',
-    WebkitMaskSize: 'cover',
-    maskPosition: 'center',
-    WebkitMaskPosition: 'center',
-    maskRepeat: 'no-repeat',
-    WebkitMaskRepeat: 'no-repeat',
-  } as const;
   return (
     <div aria-hidden className="pointer-events-none absolute inset-0" data-testid="auth-backdrop">
-      {/* Линии через весь фон — узор секции сетки лендинга (`bracket-curves.svg`),
-          маской: цвет — `bg-brand-400`, как и у орнамента. */}
-      {/* Линии продолжают орнамент ✳ (19.11.2026, решение владельца продукта):
-          слой начинается там, где кончается нарисованный завиток: у плитки
-          орнамента пустое поле ≈ 9 % ширины с внутренней стороны, поэтому
-          отступ — 1,4vw + 0,91 ширины ленты. Яркость у линий и орнамента одна. */}
       <div
-        className="absolute inset-y-0 left-[calc(1.4vw+clamp(40px,4.4vw,84px)*0.91)] right-[calc(1.4vw+clamp(40px,4.4vw,84px)*0.91)] bg-brand-400 opacity-30"
-        style={lines}
-        data-testid="auth-lines"
+        className="absolute inset-y-0 left-[1.6vw] w-[clamp(44px,4.8vw,92px)] bg-brand-400 opacity-35"
+        style={strip}
+        data-testid="auth-ornament"
       />
-      {(['left', 'right'] as const).map((side) => (
-        <div
-          key={side}
-          className={
-            'absolute inset-y-0 w-[clamp(40px,4.4vw,84px)] ' +
-            (side === 'left' ? 'left-[1.4vw]' : 'right-[1.4vw] -scale-x-100')
-          }
-          data-testid="auth-ornament"
-        >
-          <div className="absolute inset-0 bg-brand-400 opacity-30" style={strip} />
-        </div>
-      ))}
+      <svg
+        viewBox="0 0 600 600"
+        className="absolute -bottom-px -right-px h-[min(62vh,44vw)] w-[min(62vh,44vw)] text-brand-400 opacity-30 max-md:hidden"
+        data-testid="auth-rings"
+      >
+        {RINGS.map((r) => (
+          <circle key={r} cx={600} cy={600} r={r} fill="none" stroke="currentColor" strokeWidth={1.2} vectorEffect="non-scaling-stroke" />
+        ))}
+      </svg>
     </div>
   );
 }
@@ -84,8 +60,8 @@ export const AUTH_FOOT = 'Федерация настольного теннис
 
 /** Титульная страница: до входа ни сайдбара, ни профиля. Экран поделён
     надвое ✳ (19.11.2026, решение владельца продукта): слева — фирменный синий
-    со знаком QTT, орнаментом по краям и линиями (`AuthBackdrop`), подпись
-    федерации внизу; справа — белая половина с формой, без карточки вокруг. На
+    со знаком QTT и подписью федерации под ним, лента орнамента слева и
+    круговой узор в углу (`AuthBackdrop`); справа — белая половина с формой, без карточки вокруг. На
     телефоне половины встают друг под другом, синяя — узкой полосой со знаком.
     `judge` — своя окраска формы судьи: формы похожи как две капли, и
     заголовок читают уже после того, как начали заполнять; сам вход не
@@ -106,7 +82,7 @@ export function AuthScreen({
         data-testid="auth-brand"
       >
         <AuthBackdrop />
-        <div className="relative flex flex-1 flex-col items-center justify-center gap-6 px-[calc(3.4vw+clamp(40px,4.4vw,84px))] py-10">
+        <div className="relative flex flex-1 flex-col items-center justify-center gap-6 px-[calc(3.6vw+clamp(44px,4.8vw,92px))] py-10">
           <Brand size="xl" inverse />
           {/* Подпись федерации — под знаком, крупно ✳ (19.11.2026, решение владельца продукта). */}
           <p className="m-0 max-w-[30rem] text-center text-lg leading-snug text-brand-100 max-md:text-[13px]" data-testid="auth-caption">

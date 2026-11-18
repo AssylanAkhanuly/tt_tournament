@@ -15,6 +15,7 @@ import {
   fetchMe,
   loginByEmail,
   logout,
+  switchAccount,
   ROLE_FEDERATION_ADMIN,
   ROLE_GSK_CHAIRMAN,
   type SessionUser,
@@ -72,6 +73,16 @@ export function useSession() {
     return user;
   }, []);
 
+  /** Перейти в сохранённый аккаунт устройства без пароля; нет его сессии — `null`. */
+  const switchTo = useCallback(async (userId: string) => {
+    const user = await switchAccount(userId).catch(() => null);
+    if (user) {
+      rememberAccount(user);
+      set({ user, loaded: true });
+    }
+    return user;
+  }, []);
+
   const signOut = useCallback(async () => {
     await logout().catch(() => undefined);
     set({ user: null, loaded: true });
@@ -87,6 +98,7 @@ export function useSession() {
     hasRole: (kind: string) => !!s.user?.roles.some((r) => r.kind === kind),
     signIn,
     signOut,
+    switchTo,
     reload: load,
   };
 }

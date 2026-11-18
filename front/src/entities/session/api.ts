@@ -123,3 +123,16 @@ export async function loginByEmail(email: string, password: string): Promise<Ses
 export async function logout(): Promise<void> {
   await fetch('/api/auth/logout/', { method: 'POST', credentials: 'same-origin' });
 }
+
+/** Перейти в другой аккаунт этого устройства без пароля ✳ (19.11.2026): сервер
+ *  берёт его сессию из httpOnly-куки. Нет живой сессии — `null`, нужен пароль. */
+export async function switchAccount(userId: string): Promise<SessionUser | null> {
+  const res = await fetch('/api/auth/switch/', {
+    method: 'POST',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ user_id: userId }),
+  });
+  if (!res.ok) return null;
+  return toUser((await res.json()) as Record<string, unknown>);
+}

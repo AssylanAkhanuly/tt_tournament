@@ -70,6 +70,10 @@
   сведения о турнире и подаёт заявки на судейство (✳ 29.10.2026, `IsReferee`, раздел «Приём заявок
   судей» ниже); составы турниров ему не отдаются. Заводят `manage.py create_player` /
   `create_referee` (`--email --name --password`).
+- **Аккаунты устройства** ✳ (19.11.2026): каждый вход (`_set_auth_cookies`) кладёт refresh-токен ещё и в httpOnly-куку
+  `acct_<id>` на 30 дней; `POST /api/auth/switch/ {user_id}` (`SwitchAccountView`) делает аккаунт текущим без пароля,
+  если кука жива и токен выдан именно ему, иначе 401; `logout/` снимает куку текущего аккаунта. Тесты —
+  `users/tests/test_switch.py`.
 - **Вход по почте и паролю — временный** (ТЗ §2): `POST /api/auth/login/email/`, только для
   пользователей с ролью. Председателя заводит `manage.py create_gsk_chairman --email --name
   --password`.
