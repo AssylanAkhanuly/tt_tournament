@@ -177,7 +177,8 @@
 - Условия допуска замораживает первая заявка (`admission.locked`) — `TournamentUpdateSerializer._admission`.
 - Роль `regional_head_coach` с областью `region` и полем `Role.region` (миграция `users/0009`), команда
   `create_regional_head_coach --region`. У участника — `entered_by`, `entered_as`.
-- Ручки: `POST …/applications/` `{as, athlete_ids}`, `GET …/applications/candidates/?as=&q=`; три пути самозаписи
+- Ручки: `GET /api/tournaments/templates/` (виды для «Нового турнира», без командных), `POST …/applications/`
+  `{as, athlete_ids}`, `GET …/applications/candidates/?as=&q=`; три пути самозаписи
   идут через тот же `apply` (заявитель `self`).
 - Тесты — `tournaments/tests/test_admission.py`.
 
