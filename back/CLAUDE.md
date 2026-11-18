@@ -175,6 +175,10 @@
   `open`), правится в админке; `admission/templates.py::seed` копирует его значения в турнир при `POST /api/tournaments/`
   `{template}`. Командный вид — 400.
 - Условия допуска замораживает первая заявка (`admission.locked`) — `TournamentUpdateSerializer._admission`.
+- Пол и ценз ✳ (19.11.2026, миграция `0030`): `Tournament.sex` (`m`/`f`/пусто), `rating_min`/`rating_max` (включительно);
+  проверки `checks.sex`, `checks.rating_cutoff`; кандидаты сужает `checks.eligible_profiles` (пол, ценз, возраст).
+- Вид меняется в «Сведениях»: `PATCH …/update/ {template}` — новый засевает допуск заново, пустой снимает вид, тот же
+  самый ничего не засевает; после первой заявки — 400.
 - Роль `regional_head_coach` с областью `region` и полем `Role.region` (миграция `users/0009`), команда
   `create_regional_head_coach --region`. У участника — `entered_by`, `entered_as`.
 - Ручки: `GET /api/tournaments/templates/` (виды для «Нового турнира», без командных), `GET /api/tournaments/applicants/`

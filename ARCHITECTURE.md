@@ -1194,7 +1194,7 @@ erDiagram
         int entryFee "сумма, если feeModel = entry_fee"
         boolean needsTableReferees "судьи на столах"
         boolean needsDocuments "документы к заявке"
-        string ratingLimit "ценз по рейтингу, если задан"
+        string ratingLimit "ценз: rating_min / rating_max, включительно"
         string level "чемпионат РК | республиканские | областные | любительские"
         boolean noThirdPlaceMatch "матча за 3-е место не было, бронзовых двое (п. 10.4)"
         boolean refereeRecruitmentOpen "приём заявок судей открыт"
