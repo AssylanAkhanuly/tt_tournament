@@ -912,12 +912,16 @@ export function TextInput({
   onChange,
   ariaLabel,
   type,
+  autoComplete,
 }: {
   label: string;
   value?: string;
   placeholder?: string;
   /** Тип поля ✳ (10.09.2026): почта и пароль — вход председателя ГСК. */
   type?: 'text' | 'email' | 'password';
+  /** Подсказка браузеру и менеджеру паролей ✳ (19.11.2026): `email`,
+      `current-password` на входе — сохранённый пароль подставляется сам. */
+  autoComplete?: string;
   wide?: boolean;
   /** Поле не проходит проверку. */
   bad?: boolean;
@@ -936,7 +940,10 @@ export function TextInput({
       <Input
         aria-label={ariaLabel ?? label}
         type={type}
-        className={'w-full' + (bad ? ' border-red-400' : '')}
+        autoComplete={autoComplete}
+        // 16 px на телефоне ✳ (19.11.2026): мельче — iPhone приближает
+        // страницу при касании поля.
+        className={'w-full max-md:text-[16px]' + (bad ? ' border-red-400' : '')}
         placeholder={placeholder}
         value={managed ? value : own}
         onChange={(e) => (managed ? onChange(e.target.value) : setOwn(e.target.value))}

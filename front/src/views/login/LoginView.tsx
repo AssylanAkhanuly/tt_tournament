@@ -17,7 +17,7 @@
 import { Avatar, Button } from '@heroui/react';
 import { ChevronRight, LogIn } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useState, type FormEvent } from 'react';
+import { type ReactNode, useState, type FormEvent } from 'react';
 
 import { homeFor, useKnownAccounts, useSession, type KnownAccount } from '@/entities/session';
 import { AuthScreen, FullScreen, TextInput } from '@/shared/kit/app';
@@ -30,24 +30,34 @@ const initials = (name: string) =>
     .map((w) => w[0].toUpperCase())
     .join('');
 
-function AccountCard({ account, onPress }: { account: KnownAccount; onPress: () => void }) {
+/** Сохранённый аккаунт строкой ✳ (19.11.2026): компактно — инициалы, имя,
+ *  почта мелко; список из нескольких не отодвигает форму вниз. */
+function AccountRow({ account, onPress }: { account: KnownAccount; onPress: () => void }) {
   return (
     <button
       type="button"
       data-testid="account-card"
       data-account={account.email}
       onClick={onPress}
-      className="flex w-full items-center gap-3 rounded-xl border border-neutral-200 bg-white px-3 py-2.5 text-left hover:border-brand-300 hover:bg-brand-50/40"
+      className="flex w-full items-center gap-3 px-3 py-2 text-left hover:bg-brand-50/50"
     >
-      <Avatar size="md">
-        <Avatar.Fallback>{initials(account.name)}</Avatar.Fallback>
+      <Avatar size="sm">
+        <Avatar.Fallback className="text-[11px]">{initials(account.name)}</Avatar.Fallback>
       </Avatar>
       <span className="min-w-0 flex-1 leading-tight">
-        <span className="block truncate text-[14px] font-semibold">{account.name}</span>
-        <span className="block truncate text-[12px] text-neutral-500">{account.email}</span>
+        <span className="block truncate text-[13.5px] font-semibold">{account.name}</span>
+        <span className="block truncate text-[11.5px] text-neutral-500">{account.email}</span>
       </span>
-      <ChevronRight size={16} className="shrink-0 text-neutral-400" />
+      <ChevronRight size={15} className="shrink-0 text-neutral-400" />
     </button>
+  );
+}
+
+function AccountList({ children }: { children: ReactNode }) {
+  return (
+    <div className="flex flex-col divide-y divide-neutral-100 overflow-hidden rounded-xl border border-neutral-200 bg-white">
+      {children}
+    </div>
   );
 }
 
@@ -117,10 +127,12 @@ export function LoginView() {
 
         {!loading && current && !adding ? (
           <div className="flex flex-col gap-2" data-testid="already-in">
-            <AccountCard account={current} onPress={() => router.push(asked ?? homeFor(user))} />
-            {others.map((a) => (
-              <AccountCard key={a.email} account={a} onPress={() => void switchTo(a)} />
-            ))}
+            <AccountList>
+              <AccountRow account={current} onPress={() => router.push(asked ?? homeFor(user))} />
+              {others.map((a) => (
+                <AccountRow key={a.email} account={a} onPress={() => void switchTo(a)} />
+              ))}
+            </AccountList>
             <div className="mt-1 flex justify-center gap-6">
               <button
                 type="button"
@@ -146,21 +158,28 @@ export function LoginView() {
         ) : (
           <div className="flex flex-col gap-3">
             {!loading && others.length > 0 && (
-              <div className="flex flex-col gap-2">
+              <AccountList>
                 {others.map((a) => (
-                  <AccountCard key={a.email} account={a} onPress={() => void switchTo(a)} />
+                  <AccountRow key={a.email} account={a} onPress={() => void switchTo(a)} />
                 ))}
-              </div>
+              </AccountList>
             )}
             <form onSubmit={onSubmit} className="flex flex-col gap-3">
-              <TextInput label="Эл. почта" type="email" value={email} onChange={setEmail} />
-              <TextInput label="Пароль" type="password" value={password} onChange={setPassword} />
+              <TextInput label="Эл. почта" type="email" autoComplete="email" value={email} onChange={setEmail} />
+              <TextInput
+                label="Пароль"
+                type="password"
+                autoComplete="current-password"
+                value={password}
+                onChange={setPassword}
+              />
               {error && (
                 <div role="alert" data-testid="login-error" className="text-center text-xs leading-snug text-red-600">
                   {error}
                 </div>
               )}
-              <Button type="submit" className="mt-1 w-full" variant="primary" isDisabled={busy}>
+              {/* Углы как у кнопок приложения (`rounded-xl`), а не «таблетка». */}
+              <Button type="submit" className="mt-1 w-full rounded-xl" variant="primary" isDisabled={busy}>
                 <LogIn size={15} /> {busy ? 'Входим…' : 'Войти'}
               </Button>
             </form>
