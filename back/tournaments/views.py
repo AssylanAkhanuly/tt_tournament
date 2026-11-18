@@ -1032,6 +1032,45 @@ class TournamentTemplatesView(APIView):
         return Response([{"code": t.code, "name": t.name, "category": t.category} for t in rows])
 
 
+class ApplicantKindsView(APIView):
+    """GET — виды заявителей из реестра `admission/applicants.py` ✳ (19.11.2026):
+    варианты «Кто подаёт заявку» в настройках турнира."""
+
+    permission_classes = [AllowAny]
+
+    def get(self, request):
+        return Response([{"key": a.key, "label": a.label} for a in admission_applicants.REGISTRY.values()])
+
+
+class MyApplicationsView(APIView):
+    """GET — спортсмены, которых этот человек заявил на турнир ✳ (19.11.2026):
+    «Наши» на странице заявки тренера. Чужих заявленных он не видит."""
+
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, pk):
+        tournament = get_object_or_404(Tournament, pk=pk)
+        entries = (
+            TournamentParticipant.objects.filter(tournament=tournament, entered_by=request.user)
+            .select_related("user__rating_profile")
+            .order_by("user__name")
+        )
+        return Response([_athlete_row(p.user, entered_as=p.entered_as) for p in entries])
+
+
+def _athlete_row(user, **extra) -> dict:
+    """Спортсмен строкой для экранов заявки: имя и данные рейтинговой карточки."""
+    card = getattr(user, "rating_profile", None)
+    return {
+        "id": str(user.pk),
+        "name": user.name,
+        "region": card.region if card else "",
+        "birth_year": card.birth_year if card else None,
+        "rating": str(card.value) if card else None,
+        **extra,
+    }
+
+
 class ApplicationsView(APIView):
     """Заявка на турнир ✳ (19.11.2026, `admission`, ADMISSION.md).
 
@@ -1049,8 +1088,10 @@ class ApplicationsView(APIView):
         users = {str(u.pk): u for u in User.objects.filter(pk__in=[i for i in ids if _is_uuid(i)])}
         if len(users) != len(set(map(str, ids))):
             return Response({"detail": "Спортсмен не найден."}, status=status.HTTP_400_BAD_REQUEST)
+        # В порядке заявки: сверх квоты отказывают последним в списке, а не случайным.
+        athletes = [users[str(i)] for i in dict.fromkeys(map(str, ids))]
         try:
-            created = admission.apply(tournament, request.user, request.data.get("as", ""), list(users.values()))
+            created = admission.apply(tournament, request.user, request.data.get("as", ""), athletes)
         except admission.AdmissionError as e:
             return _refused(e)
         return Response(ParticipantSerializer(created, many=True).data, status=status.HTTP_201_CREATED)
@@ -1076,16 +1117,7 @@ class ApplicationCandidatesView(APIView):
         q = (request.query_params.get("q") or "").strip()
         if q:
             qs = qs.filter(name__icontains=q)
-        rows = []
-        for u in qs.order_by("name")[: self.LIMIT]:
-            card = getattr(u, "rating_profile", None)
-            rows.append({
-                "id": str(u.pk), "name": u.name,
-                "region": card.region if card else "",
-                "birth_year": card.birth_year if card else None,
-                "rating": str(card.value) if card else None,
-            })
-        return Response(rows)
+        return Response([_athlete_row(u) for u in qs.order_by("name")[: self.LIMIT]])
 
 
 def _is_uuid(value) -> bool:

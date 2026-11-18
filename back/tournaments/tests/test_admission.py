@@ -181,7 +181,9 @@ def test_region_quota_rejects_extra_athlete(world):
     t = world["t"]
     response = submit(world["coach"], t, world["almaty"])  # 4 при квоте 3
     assert response.status_code == 400
-    assert "Квота" in str(response.data["errors"])
+    # Отказ — последнему в заявке, не случайному.
+    assert [e["athlete_id"] for e in response.data["errors"]] == [str(world["almaty"][3].id)]
+    assert "квоты" in response.data["errors"][0]["detail"]
     assert entered_names(t) == set()
 
 
@@ -279,3 +281,36 @@ def test_command_creates_coach_with_region_and_rejects_unknown():
     assert (role.kind, role.scope, role.region) == (COACH, Role.SCOPE_REGION, "Алматы")
     with pytest.raises(CommandError):
         call_command("create_regional_head_coach", email="c2@fnt.kz", name="Тренер 2", password="x", region="Марс")
+
+
+# ── Экраны: настройки допуска и заявка тренера ──────────────────────────────
+
+
+def test_tournament_reports_admission_lock(world):
+    url = f"/api/tournaments/{world['t'].id}/"
+    assert client_for(world["chairman"]).get(url).data["admission_locked"] is False
+    submit(world["coach"], world["t"], world["almaty"][:1])
+    assert client_for(world["chairman"]).get(url).data["admission_locked"] is True
+
+
+def test_applicant_kinds_list_for_settings():
+    response = APIClient().get("/api/tournaments/applicants/")
+    assert response.status_code == 200
+    assert response.data == [
+        {"key": "self", "label": "Спортсмен сам"},
+        {"key": COACH, "label": "Старший тренер региона"},
+    ]
+
+
+def test_my_entries_lists_only_athletes_i_entered(world):
+    t = world["t"]
+    t.applicant_kinds = ["self", COACH]
+    t.save()
+    submit(world["coach"], t, world["almaty"][:2])
+    client_for(world["astana"]).post(f"/api/tournaments/{t.id}/participants/join/")
+    response = client_for(world["coach"]).get(f"/api/tournaments/{t.id}/applications/mine/")
+    assert response.status_code == 200
+    assert [(row["name"], row["region"], row["entered_as"]) for row in response.data] == [
+        ("Алматинец 0", "Алматы", COACH),
+        ("Алматинец 1", "Алматы", COACH),
+    ]

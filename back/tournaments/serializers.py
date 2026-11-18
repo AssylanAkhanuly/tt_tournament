@@ -15,6 +15,7 @@ class TournamentSerializer(serializers.ModelSerializer):
     player_recruitment_active = serializers.SerializerMethodField()
     template          = serializers.SerializerMethodField()
     can_apply_as      = serializers.SerializerMethodField()
+    admission_locked  = serializers.SerializerMethodField()
 
     class Meta:
         model  = Tournament
@@ -30,6 +31,7 @@ class TournamentSerializer(serializers.ModelSerializer):
             "ends_at", "region", "city", "venue", "age_min", "age_max",
             "level", "games_to_win", "is_rating",
             "template", "category", "applicant_kinds", "participant_limit", "region_quota", "can_apply_as",
+            "admission_locked",
         ]
         read_only_fields = [
             "id", "join_token", "created_by", "created_at", "participant_count", "status", "is_registered",
@@ -43,9 +45,22 @@ class TournamentSerializer(serializers.ModelSerializer):
         return {"code": t.code, "name": t.name} if t else None
 
     def get_can_apply_as(self, obj):
-        """В каком качестве текущий пользователь может подать заявку (`admission`)."""
+        """В каком качестве текущий пользователь может подать заявку (`admission`).
+        Роли человека проверяются один раз на запрос, а не на каждый турнир списка."""
         request = self.context.get("request")
-        return admission.can_apply_as(request.user if request else None, obj)
+        user = request.user if request else None
+        acting = self.context.setdefault("_acting_applicants", {})
+        if "kinds" not in acting:
+            acting["kinds"] = set(admission.acting_kinds(user))
+        return [k for k in obj.applicant_kinds if k in acting["kinds"]]
+
+    def get_admission_locked(self, obj):
+        """Условия допуска заморожены первой заявкой — экран настроек их не даёт править."""
+        # В списке число участников уже посчитано аннотацией — без запроса на турнир.
+        anno = getattr(obj, "participant_count_anno", None)
+        if anno is not None:
+            return obj.status != Tournament.STATUS_OPEN or anno > 0
+        return admission.locked(obj)
 
     def get_referee_recruitment_active(self, obj):
         """Приём заявок судей идёт сегодня: переключатель и срок (`recruitment.py`)."""

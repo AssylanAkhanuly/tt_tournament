@@ -24,7 +24,7 @@ from ..models import Tournament, TournamentGroup, TournamentParticipant
 from . import applicants, checks
 from .errors import AdmissionError, athlete_error
 
-__all__ = ["AdmissionError", "apply", "gate", "locked", "can_apply_as", "PLAYERS_CLOSED", "LOCKED"]
+__all__ = ["AdmissionError", "apply", "gate", "locked", "acting_kinds", "can_apply_as", "PLAYERS_CLOSED", "LOCKED"]
 
 PLAYERS_CLOSED = "Приём заявок игроков закрыт."
 LOCKED = "Заявки уже поданы — условия допуска не меняются."
@@ -92,11 +92,14 @@ def locked(tournament: Tournament) -> bool:
     return tournament.status != Tournament.STATUS_OPEN or tournament.participants.exists()
 
 
-def can_apply_as(user, tournament: Tournament) -> List[str]:
-    """В каком качестве этот человек может подать заявку на турнир — для экрана."""
+def acting_kinds(user) -> List[str]:
+    """Заявители из реестра, чьи роли есть у человека, — независимо от турнира."""
     if not user or not user.is_authenticated:
         return []
-    return [
-        k for k in tournament.applicant_kinds
-        if k in applicants.REGISTRY and applicants.REGISTRY[k].acts(user)
-    ]
+    return [k for k, a in applicants.REGISTRY.items() if a.acts(user)]
+
+
+def can_apply_as(user, tournament: Tournament) -> List[str]:
+    """В каком качестве этот человек может подать заявку на турнир — для экрана."""
+    acting = set(acting_kinds(user))
+    return [k for k in tournament.applicant_kinds if k in acting]

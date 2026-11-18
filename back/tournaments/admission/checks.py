@@ -57,7 +57,8 @@ def participant_limit(tournament, athletes) -> List[dict]:
 
 def region_quota(tournament, athletes) -> List[dict]:
     """Не больше N спортсменов от региона — с учётом уже заявленных. Спортсмен
-    без региона в квоту не считается: квоты «ничьих» положение не знает."""
+    без региона в квоту не считается: квоты «ничьих» положение не знает.
+    Отказ получают последние по порядку заявки — те, кто в квоту не влез."""
     quota = tournament.region_quota
     if quota is None:
         return []
@@ -70,10 +71,8 @@ def region_quota(tournament, athletes) -> List[dict]:
         ).count()
         if already + n > quota:
             over = [a for a in athletes if regions.get(a.pk) == region][max(quota - already, 0):]
-            errors += [
-                athlete_error(a, "Квота региона «%s» — %d, уже заявлено: %d." % (region, quota, already))
-                for a in over
-            ]
+            text = "Сверх квоты региона «%s»: квота %d, уже заявлено %d, в заявке %d." % (region, quota, already, n)
+            errors += [athlete_error(a, text) for a in over]
     return errors
 
 
