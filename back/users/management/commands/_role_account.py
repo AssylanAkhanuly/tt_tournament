@@ -32,6 +32,10 @@ class RoleAccountCommand(BaseCommand):
     def extra(self, user: User) -> None:
         """Донастроить пользователя сверх роли. По умолчанию — ничего."""
 
+    def scope(self, options) -> dict:
+        """Область роли. По умолчанию — вся система."""
+        return {"scope": Role.SCOPE_SYSTEM, "scope_id": None}
+
     @transaction.atomic
     def handle(self, *args, **options):
         email = options["email"].strip().lower()
@@ -53,9 +57,7 @@ class RoleAccountCommand(BaseCommand):
             user.save(update_fields=["password"])
             self.stdout.write("Пароль обновлён: %s <%s>" % (user.name, email))
 
-        role, created = Role.objects.get_or_create(
-            user=user, kind=self.kind, scope=Role.SCOPE_SYSTEM, scope_id=None
-        )
+        role, created = Role.objects.get_or_create(user=user, kind=self.kind, **self.scope(options))
         self.extra(user)
         self.stdout.write(self.style.SUCCESS(
             ("Роль выдана" if created else "Роль уже была") + ": " + role.get_kind_display()

@@ -80,6 +80,11 @@ class Role(models.Model):
     KIND_CHIEF_REFEREE = "chief_referee"
     KIND_DEPUTY_CHIEF_REFEREE = "deputy_chief_referee"
     KIND_CHIEF_SECRETARY = "chief_secretary"
+    # Старший тренер региона ✳ (19.11.2026, ТЗ §8.2, роль 12): подаёт заявку на
+    # главные старты списком за спортсменов своего региона. Область — регион
+    # (`scope = region`, сам регион — в `region`). Правила заявки —
+    # `tournaments/admission/`.
+    KIND_REGIONAL_HEAD_COACH = "regional_head_coach"
     KIND_CHOICES = [
         (KIND_GSK_CHAIRMAN, "Председатель Главной судейской коллегии"),
         (KIND_FEDERATION_ADMIN, "Администратор федерации"),
@@ -88,11 +93,14 @@ class Role(models.Model):
         (KIND_CHIEF_REFEREE, "Главный судья соревнований"),
         (KIND_DEPUTY_CHIEF_REFEREE, "Заместитель главного судьи"),
         (KIND_CHIEF_SECRETARY, "Главный секретарь соревнований"),
+        (KIND_REGIONAL_HEAD_COACH, "Старший тренер региона"),
     ]
 
     SCOPE_SYSTEM = "system"
+    SCOPE_REGION = "region"
     SCOPE_CHOICES = [
         (SCOPE_SYSTEM, "Система"),
+        (SCOPE_REGION, "Регион"),
         ("tournament", "Турнир"),
         ("club", "Клуб"),
         ("table", "Стол"),
@@ -105,6 +113,10 @@ class Role(models.Model):
         max_length=16, choices=SCOPE_CHOICES, default=SCOPE_SYSTEM, verbose_name="Область"
     )
     scope_id = models.UUIDField(null=True, blank=True, verbose_name="Объект области")
+    # Регион роли с областью «регион» ✳ (19.11.2026). Регион — строка из
+    # закреплённого списка (`rating/regions.py`), а не строка таблицы, поэтому в
+    # `scope_id` (uuid) он не ложится.
+    region = models.CharField(max_length=120, blank=True, verbose_name="Регион")
     granted_by = models.ForeignKey(
         User, null=True, blank=True, on_delete=models.SET_NULL, related_name="roles_granted",
         verbose_name="Кем выдана",

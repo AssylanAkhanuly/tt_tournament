@@ -7,6 +7,7 @@ from pathlib import Path
 
 from django.conf import settings
 from django.contrib.auth import get_user_model
+from django.db import transaction
 from django.db.models import Count, Max, Q
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
@@ -20,7 +21,8 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from users.serializers import RegisterSerializer, UserSerializer
 from users.views import _set_auth_cookies
 
-from . import places
+from . import admission, places
+from .admission import applicants as admission_applicants
 from .bracket import advance_winner, advance_winner_and_loser, generate_bracket, generate_group_bracket, generate_playoff_from_groups, reset_match
 from .models import Match, Tournament, TournamentParticipant, TournamentTable, TournamentGroup, GroupMatch, ScoreLog
 from .serializers import (
@@ -73,7 +75,22 @@ def _can_create_tournament(user, club=None):
 
 
 # Приём заявок игроков закрыт ✳ (29.10.2026): переключатель выключен или срок прошёл.
-PLAYERS_CLOSED = "Приём заявок игроков закрыт."
+PLAYERS_CLOSED = admission.PLAYERS_CLOSED
+
+
+def _refused(e: "admission.AdmissionError") -> Response:
+    """Отказ в допуске → HTTP: общий текст и строки по спортсменам."""
+    return Response({"detail": e.detail, "errors": e.errors}, status=e.status)
+
+
+def _join_self(tournament, user):
+    """Самозапись — тот же допуск, что у любой заявки (`admission`), заявитель
+    «сам». Уже в турнире — не ошибка: повторное нажатие отдаёт ту же запись."""
+    participant = TournamentParticipant.objects.filter(tournament=tournament, user=user).first()
+    if participant:
+        return participant, False
+    (participant,) = admission.apply(tournament, user, admission_applicants.Self.key, [user])
+    return participant, True
 
 
 def _clean_tts_name(value):
@@ -382,11 +399,10 @@ class TournamentJoinView(APIView):
                 {"detail": "Регистрация закрыта — турнир уже начался."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
-        if not tournament.player_recruitment_active():
-            return Response({"detail": PLAYERS_CLOSED}, status=status.HTTP_400_BAD_REQUEST)
-        participant, created = TournamentParticipant.objects.get_or_create(
-            tournament=tournament, user=request.user,
-        )
+        try:
+            participant, created = _join_self(tournament, request.user)
+        except admission.AdmissionError as e:
+            return _refused(e)
         return Response(
             ParticipantSerializer(participant).data,
             status=status.HTTP_201_CREATED if created else status.HTTP_200_OK,
@@ -403,8 +419,15 @@ class RegisterAndJoinView(APIView):
                 {"detail": "Регистрация закрыта — турнир уже начался."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
-        if not tournament.player_recruitment_active():
-            return Response({"detail": PLAYERS_CLOSED}, status=status.HTTP_400_BAD_REQUEST)
+        # Турнир не примет заявку сам за себя — учётку не заводим зря.
+        # Роль «сам» есть у любого, поэтому `permit` здесь проверяет только,
+        # разрешает ли турнир самозапись.
+        try:
+            admission.gate(tournament)
+            if admission_applicants.Self.key not in tournament.applicant_kinds:
+                admission.permit(tournament, None, admission_applicants.Self.key)
+        except admission.AdmissionError as e:
+            return _refused(e)
 
         # An existing phone can't register again — tell the frontend to switch
         # to the login-and-join flow instead of failing on the unique constraint.
@@ -417,10 +440,13 @@ class RegisterAndJoinView(APIView):
 
         serializer = RegisterSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        user = serializer.save()
-        participant, _ = TournamentParticipant.objects.get_or_create(
-            tournament=tournament, user=user
-        )
+        try:
+            # Не прошёл допуск (возраст, предел) — учётка откатывается вместе с заявкой.
+            with transaction.atomic():
+                user = serializer.save()
+                (participant,) = admission.apply(tournament, user, admission_applicants.Self.key, [user])
+        except admission.AdmissionError as e:
+            return _refused(e)
         refresh = RefreshToken.for_user(user)
         data = {
             "user": UserSerializer(user).data,
@@ -993,6 +1019,72 @@ class ParticipantAbsentView(APIView):
         return Response(ParticipantSerializer(participant).data)
 
 
+class ApplicationsView(APIView):
+    """Заявка на турнир ✳ (19.11.2026, `admission`, ADMISSION.md).
+
+    POST `{as, athlete_ids}` — подать от имени заявителя `as` (ключ из
+    `admission/applicants.py`) за этих спортсменов. Все встают в состав или
+    никто: 400 с `errors` по спортсменам, 403 — нет роли заявителя."""
+
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, pk):
+        tournament = get_object_or_404(Tournament, pk=pk)
+        ids = request.data.get("athlete_ids")
+        if not isinstance(ids, list):
+            return Response({"detail": "Спортсмены — списком."}, status=status.HTTP_400_BAD_REQUEST)
+        users = {str(u.pk): u for u in User.objects.filter(pk__in=[i for i in ids if _is_uuid(i)])}
+        if len(users) != len(set(map(str, ids))):
+            return Response({"detail": "Спортсмен не найден."}, status=status.HTTP_400_BAD_REQUEST)
+        try:
+            created = admission.apply(tournament, request.user, request.data.get("as", ""), list(users.values()))
+        except admission.AdmissionError as e:
+            return _refused(e)
+        return Response(ParticipantSerializer(created, many=True).data, status=status.HTTP_201_CREATED)
+
+
+class ApplicationCandidatesView(APIView):
+    """GET `?as=&q=` — кого этот заявитель может заявить и кто ещё не в
+    турнире ✳ (19.11.2026). Проверки допуска здесь не применяются: их итог
+    показывает сама заявка."""
+
+    permission_classes = [IsAuthenticated]
+    LIMIT = 50  # наше значение
+
+    def get(self, request, pk):
+        tournament = get_object_or_404(Tournament, pk=pk)
+        try:
+            applicant = admission.permit(tournament, request.user, request.query_params.get("as", ""))
+        except admission.AdmissionError as e:
+            return _refused(e)
+        qs = applicant.candidates(request.user).exclude(
+            id__in=tournament.participants.values_list("user_id", flat=True)
+        ).select_related("rating_profile")
+        q = (request.query_params.get("q") or "").strip()
+        if q:
+            qs = qs.filter(name__icontains=q)
+        rows = []
+        for u in qs.order_by("name")[: self.LIMIT]:
+            card = getattr(u, "rating_profile", None)
+            rows.append({
+                "id": str(u.pk), "name": u.name,
+                "region": card.region if card else "",
+                "birth_year": card.birth_year if card else None,
+                "rating": str(card.value) if card else None,
+            })
+        return Response(rows)
+
+
+def _is_uuid(value) -> bool:
+    import uuid
+
+    try:
+        uuid.UUID(str(value))
+        return True
+    except ValueError:
+        return False
+
+
 class JoinTournamentSelfView(APIView):
     """POST /api/tournaments/<pk>/join-self/ - User self-registers for an open tournament"""
     permission_classes = [IsAuthenticated]
@@ -1000,23 +1092,11 @@ class JoinTournamentSelfView(APIView):
     def post(self, request, pk):
         tournament = get_object_or_404(Tournament.objects.select_related('club'), pk=pk)
 
-        if tournament.status == Tournament.STATUS_FINISHED:
-            return Response({"detail": "Турнир завершён — нельзя зарегистрироваться."}, status=status.HTTP_400_BAD_REQUEST)
-        if not tournament.player_recruitment_active():
-            return Response({"detail": PLAYERS_CLOSED}, status=status.HTTP_400_BAD_REQUEST)
-        if tournament.schedule_status == "final":
-            return Response({"detail": "Расписание отправлено — состав не меняется."}, status=status.HTTP_400_BAD_REQUEST)
-        if tournament.status == Tournament.STATUS_IN_PROGRESS:
-            group_stage = TournamentGroup.objects.filter(tournament=tournament).exists()
-            if not group_stage:
-                return Response(
-                    {"detail": "Плей-офф уже идёт — присоединиться нельзя."},
-                    status=status.HTTP_400_BAD_REQUEST,
-                )
-
-        participant, joined = TournamentParticipant.objects.get_or_create(
-            tournament=tournament, user=request.user
-        )
+        try:
+            admission.gate(tournament)
+            participant, joined = _join_self(tournament, request.user)
+        except admission.AdmissionError as e:
+            return _refused(e)
 
         # If joining during group stage, add to a group
         if joined and TournamentGroup.objects.filter(tournament=tournament).exists():

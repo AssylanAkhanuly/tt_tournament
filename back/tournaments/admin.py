@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Tournament, TournamentParticipant
+from .models import Tournament, TournamentParticipant, TournamentTemplate
 
 
 class ParticipantInline(admin.TabularInline):
@@ -26,3 +26,13 @@ class TournamentParticipantAdmin(admin.ModelAdmin):
     list_display = ["user", "tournament", "joined_at"]
     list_filter = ["tournament"]
     search_fields = ["user__name", "user__phone", "tournament__name"]
+
+
+@admin.register(TournamentTemplate)
+class TournamentTemplateAdmin(admin.ModelAdmin):
+    """Виды соревнований ✳ (19.11.2026): правит администратор федерации. Правка
+    вида меняет только турниры, заведённые после неё (ADMISSION.md). Ключи
+    заявителей проверяет `TournamentTemplate.clean`."""
+
+    list_display = ["name", "code", "category", "is_team", "applicant_kinds", "region_quota", "participant_limit"]
+    ordering = ["order"]

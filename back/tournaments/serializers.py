@@ -1,5 +1,6 @@
 from rest_framework import serializers
-from . import places
+from . import admission, places
+from .admission import applicants as admission_applicants, templates as admission_templates
 from .models import Match, Tournament, TournamentParticipant, TournamentTable, TournamentGroup, GroupParticipant, GroupMatch, ScoreLog
 from users.serializers import UserSerializer
 
@@ -12,6 +13,8 @@ class TournamentSerializer(serializers.ModelSerializer):
     is_registered     = serializers.SerializerMethodField()
     referee_recruitment_active = serializers.SerializerMethodField()
     player_recruitment_active = serializers.SerializerMethodField()
+    template          = serializers.SerializerMethodField()
+    can_apply_as      = serializers.SerializerMethodField()
 
     class Meta:
         model  = Tournament
@@ -26,12 +29,23 @@ class TournamentSerializer(serializers.ModelSerializer):
             "player_recruitment_open", "player_recruitment_until", "player_recruitment_active",
             "ends_at", "region", "city", "venue", "age_min", "age_max",
             "level", "games_to_win", "is_rating",
+            "template", "category", "applicant_kinds", "participant_limit", "region_quota", "can_apply_as",
         ]
         read_only_fields = [
             "id", "join_token", "created_by", "created_at", "participant_count", "status", "is_registered",
             "referee_recruitment_open", "referee_recruitment_until",
             "player_recruitment_open", "player_recruitment_until",
         ]
+
+    def get_template(self, obj):
+        """Вид соревнования — значок на карточке ✳ (19.11.2026)."""
+        t = obj.template
+        return {"code": t.code, "name": t.name} if t else None
+
+    def get_can_apply_as(self, obj):
+        """В каком качестве текущий пользователь может подать заявку (`admission`)."""
+        request = self.context.get("request")
+        return admission.can_apply_as(request.user if request else None, obj)
 
     def get_referee_recruitment_active(self, obj):
         """Приём заявок судей идёт сегодня: переключатель и срок (`recruitment.py`)."""
@@ -69,11 +83,21 @@ class TournamentSerializer(serializers.ModelSerializer):
 
 class TournamentCreateSerializer(serializers.ModelSerializer):
     club_id = serializers.UUIDField(write_only=True, required=False, allow_null=True)
+    # Вид соревнования ✳ (19.11.2026): код шаблона; засевает условия допуска.
+    template = serializers.CharField(write_only=True, required=False, allow_blank=True)
 
     class Meta:
         model  = Tournament
         # Окончание ✳ (03.11.2026): «Новый турнир» спрашивает даты диапазоном.
-        fields = ["name", "description", "starts_at", "ends_at", "club_id", "format", "group_size"]
+        fields = ["name", "description", "starts_at", "ends_at", "club_id", "format", "group_size", "template"]
+
+    def validate_template(self, code):
+        if not code:
+            return None
+        try:
+            return admission_templates.find(code)
+        except admission.AdmissionError as e:
+            raise serializers.ValidationError(e.detail)
 
     def validate(self, attrs):
         from django.utils import timezone
@@ -85,11 +109,16 @@ class TournamentCreateSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         club_id = validated_data.pop('club_id', None)
+        template = validated_data.pop("template", None)
         validated_data["created_by"] = self.context["request"].user
         if club_id:
             from clubs.models import Club
             validated_data["club"] = Club.objects.get(pk=club_id)
-        return super().create(validated_data)
+        tournament = Tournament(**validated_data)
+        if template:
+            admission_templates.seed(tournament, template)
+        tournament.save()
+        return tournament
 
 
 class TournamentUpdateSerializer(serializers.ModelSerializer):
@@ -104,7 +133,35 @@ class TournamentUpdateSerializer(serializers.ModelSerializer):
         fields = [
             "name", "description", "starts_at", "ends_at", "region", "city", "venue", "age_min", "age_max",
             "format", "group_size", "games_to_win", "level", "is_rating",
+            "applicant_kinds", "participant_limit", "region_quota",
         ]
+
+    # Условия допуска ✳ (19.11.2026): первая заявка их замораживает.
+    ADMISSION_FIELDS = ("applicant_kinds", "participant_limit", "region_quota")
+
+    def validate_applicant_kinds(self, v):
+        try:
+            return admission_applicants.clean_kinds(v)
+        except admission.AdmissionError as e:
+            raise serializers.ValidationError(e.detail)
+
+    def validate_participant_limit(self, v):
+        if v is not None and v < 1:
+            raise serializers.ValidationError("Предел — хотя бы один участник.")
+        return v
+
+    def validate_region_quota(self, v):
+        if v is not None and v < 1:
+            raise serializers.ValidationError("Квота — хотя бы один спортсмен.")
+        return v
+
+    def _admission(self, attrs):
+        t = self.instance
+        if t is None:
+            return
+        changed = [f for f in self.ADMISSION_FIELDS if f in attrs and attrs[f] != getattr(t, f)]
+        if changed and admission.locked(t):
+            raise serializers.ValidationError({changed[0]: admission.LOCKED})
 
     def _value(self, attrs, name):
         return attrs[name] if name in attrs else getattr(self.instance, name, None)
@@ -150,6 +207,7 @@ class TournamentUpdateSerializer(serializers.ModelSerializer):
         if lo is not None and hi is not None and lo > hi:
             raise serializers.ValidationError({"age_max": "Возраст «до» — не меньше «от»."})
         self._place(attrs)
+        self._admission(attrs)
         return attrs
 
     def _place(self, attrs):
@@ -172,7 +230,7 @@ class ParticipantSerializer(serializers.ModelSerializer):
 
     class Meta:
         model  = TournamentParticipant
-        fields = ["id", "user", "joined_at", "is_absent", "rating_before", "rating_change"]
+        fields = ["id", "user", "joined_at", "is_absent", "rating_before", "rating_change", "entered_as"]
 
 
 class TournamentTableSerializer(serializers.ModelSerializer):

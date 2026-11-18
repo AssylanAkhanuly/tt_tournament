@@ -3,6 +3,61 @@ from django.conf import settings
 from django.db import models
 
 
+def _self_only():
+    return ["self"]
+
+
+class TournamentTemplate(models.Model):
+    """Вид соревнования ✳ (19.11.2026, ТЗ §4.1; `TOURNAMENT_TEMPLATE` в
+    `diagrams/domain.d2`): «Главный республиканский старт», «Евразийская лига»,
+    «Открытый республиканский». Строка таблицы, а не код: виды и их значения
+    правит администратор федерации в админке.
+
+    При заведении турнира шаблон **копирует** свои значения в турнир
+    (`admission.templates.seed`), дальше это собственные поля турнира. Правка
+    шаблона заведённые турниры не меняет — иначе у тренера посреди приёма
+    заявок пропадало бы право подать. Код никогда не спрашивает «это главный
+    старт?», он спрашивает настройку турнира. Устройство — ADMISSION.md.
+    """
+
+    CATEGORY_CHOICES = [
+        ("main", "Главный республиканский старт"),
+        ("league", "Евразийская лига"),
+        ("open", "Открытый республиканский"),
+    ]
+
+    code = models.SlugField(max_length=40, unique=True, verbose_name="Код")
+    name = models.CharField(max_length=120, verbose_name="Название")
+    # Значок на карточке турнира — категория календаря ФНТ РК (ТЗ §4.1).
+    category = models.CharField(max_length=16, choices=CATEGORY_CHOICES, verbose_name="Категория календаря")
+    # Командный вид (Евразийская лига) — другая ветка модели: команды, составы,
+    # туры. Её ещё нет (QUESTIONS 11.x), такой турнир не заводится.
+    is_team = models.BooleanField(default=False, verbose_name="Командное соревнование")
+    # Значения, которые шаблон засевает в турнир, — те же поля, что у турнира.
+    applicant_kinds = models.JSONField(default=list, blank=True, verbose_name="Кто подаёт заявку")
+    participant_limit = models.PositiveIntegerField(null=True, blank=True, verbose_name="Предел участников")
+    region_quota = models.PositiveSmallIntegerField(null=True, blank=True, verbose_name="Квота региона")
+    order = models.PositiveSmallIntegerField(default=0, verbose_name="Порядок")
+
+    class Meta:
+        verbose_name = "Вид соревнования"
+        verbose_name_plural = "Виды соревнований"
+        ordering = ["order", "id"]
+
+    def __str__(self):
+        return self.name
+
+    def clean(self):
+        from django.core.exceptions import ValidationError
+
+        from .admission import applicants
+
+        try:
+            self.applicant_kinds = applicants.clean_kinds(self.applicant_kinds, allow_empty=True)
+        except applicants.AdmissionError as e:
+            raise ValidationError({"applicant_kinds": e.detail})
+
+
 class Tournament(models.Model):
     STATUS_OPEN = "open"
     STATUS_IN_PROGRESS = "in_progress"
@@ -126,6 +181,22 @@ class Tournament(models.Model):
     # не завершён или завершён до появления поля и без строк рейтинга.
     finished_at = models.DateTimeField(null=True, blank=True, verbose_name="Завершён")
 
+    # Условия допуска ✳ (19.11.2026, ТЗ §4.1, §8.2; ADMISSION.md). Засевает их
+    # вид соревнования (`template`), дальше они собственные; первая заявка их
+    # замораживает. Пусто у предела и квоты — без ограничения.
+    template = models.ForeignKey(
+        TournamentTemplate, null=True, blank=True, on_delete=models.SET_NULL, related_name="tournaments",
+        verbose_name="Вид соревнования",
+    )
+    category = models.CharField(
+        max_length=16, blank=True, choices=TournamentTemplate.CATEGORY_CHOICES, verbose_name="Категория календаря",
+    )
+    # Ключи заявителей из реестра `admission/applicants.py`. «self» по умолчанию —
+    # так записывались и до настройки, розданные ссылки не сломались.
+    applicant_kinds = models.JSONField(default=_self_only, blank=True, verbose_name="Кто подаёт заявку")
+    participant_limit = models.PositiveIntegerField(null=True, blank=True, verbose_name="Предел участников")
+    region_quota = models.PositiveSmallIntegerField(null=True, blank=True, verbose_name="Квота региона")
+
     class Meta:
         verbose_name = "Турнир"
         verbose_name_plural = "Турниры"
@@ -243,6 +314,14 @@ class TournamentParticipant(models.Model):
         verbose_name="Участник",
     )
     joined_at = models.DateTimeField(auto_now_add=True)
+    # Кто заявил и в каком качестве ✳ (19.11.2026, `admission/`): спортсмен сам
+    # («self») или, например, старший тренер региона за него. Пусто — добавлен
+    # составом вручную или до появления допуска.
+    entered_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name="+",
+        verbose_name="Кто заявил",
+    )
+    entered_as = models.CharField(max_length=32, blank=True, verbose_name="Заявлен как")
     # Absent / no-show: their matches are excluded from RTTF rating and score 0
     # group points; their unplayed group matches are auto-forfeited.
     is_absent = models.BooleanField(default=False, verbose_name="Отсутствует")
