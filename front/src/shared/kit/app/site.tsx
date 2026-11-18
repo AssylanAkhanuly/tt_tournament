@@ -54,10 +54,12 @@ function AuthBackdrop() {
     <div aria-hidden className="pointer-events-none absolute inset-0" data-testid="auth-backdrop">
       {/* Линии через весь фон — узор секции сетки лендинга (`bracket-curves.svg`),
           маской: цвет — `bg-brand-400`, как и у орнамента. */}
-      {/* Линии не заходят под орнамент: слой отступает от краёв на полосу
-          орнамента (её отступ 1,4vw + ширина) и ещё на зазор. */}
+      {/* Линии продолжают орнамент ✳ (19.11.2026, решение владельца продукта):
+          слой начинается там, где кончается нарисованный завиток: у плитки
+          орнамента пустое поле ≈ 9 % ширины с внутренней стороны, поэтому
+          отступ — 1,4vw + 0,91 ширины ленты. Яркость у линий и орнамента одна. */}
       <div
-        className="absolute inset-y-0 left-[calc(2.4vw+clamp(40px,4.4vw,84px))] right-[calc(2.4vw+clamp(40px,4.4vw,84px))] bg-brand-400 opacity-25"
+        className="absolute inset-y-0 left-[calc(1.4vw+clamp(40px,4.4vw,84px)*0.91)] right-[calc(1.4vw+clamp(40px,4.4vw,84px)*0.91)] bg-brand-400 opacity-30"
         style={lines}
         data-testid="auth-lines"
       />
@@ -70,11 +72,7 @@ function AuthBackdrop() {
           }
           data-testid="auth-ornament"
         >
-          <div className="absolute inset-0 bg-brand-400 opacity-35" style={strip} />
-          {/* Тонкие линейки по обе стороны ленты — орнамент читается целой
-              полосой, как лента между линейками на лендинге. */}
-          <div className="absolute inset-y-0 -left-[6px] w-px bg-brand-400 opacity-30" />
-          <div className="absolute inset-y-0 -right-[6px] w-px bg-brand-400 opacity-30" />
+          <div className="absolute inset-0 bg-brand-400 opacity-30" style={strip} />
         </div>
       ))}
     </div>
