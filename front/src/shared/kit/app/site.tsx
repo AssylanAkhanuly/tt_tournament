@@ -49,7 +49,13 @@ function AuthBackdrop() {
     <div aria-hidden className="pointer-events-none absolute inset-0" data-testid="auth-backdrop">
       {/* Линии через весь фон — узор секции сетки лендинга (`bracket-curves.svg`),
           маской: цвет — `bg-brand-400`, как и у орнамента. */}
-      <div className="absolute inset-0 bg-brand-400 opacity-25" style={lines} />
+      {/* Линии не заходят под орнамент: слой отступает от краёв на полосу
+          орнамента (её отступ 1,4vw + ширина) и ещё на зазор. */}
+      <div
+        className="absolute inset-y-0 left-[calc(2.4vw+clamp(40px,4.4vw,84px))] right-[calc(2.4vw+clamp(40px,4.4vw,84px))] bg-brand-400 opacity-25"
+        style={lines}
+        data-testid="auth-lines"
+      />
       {(['left', 'right'] as const).map((side) => (
         <div
           key={side}
