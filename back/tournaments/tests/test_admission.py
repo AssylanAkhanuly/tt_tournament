@@ -314,3 +314,50 @@ def test_my_entries_lists_only_athletes_i_entered(world):
         ("Алматинец 0", "Алматы", COACH),
         ("Алматинец 1", "Алматы", COACH),
     ]
+
+
+# ── Отзыв: заявитель выводит заявленного им, пока приём открыт ──────────────
+
+
+def withdraw(user, tournament, athlete):
+    return client_for(user).delete(f"/api/tournaments/{tournament.id}/applications/{athlete.id}/")
+
+
+def test_coach_withdraws_athlete_he_entered(world):
+    t, coach, almaty = world["t"], world["coach"], world["almaty"]
+    submit(coach, t, almaty[:2])
+    response = withdraw(coach, t, almaty[0])
+    assert response.status_code == 204, getattr(response, "data", None)
+    assert entered_names(t) == {"Алматинец 1"}
+    # Место в квоте освободилось.
+    assert submit(coach, t, almaty[2:4]).status_code == 201
+
+
+def test_cannot_withdraw_athlete_entered_by_someone_else(world):
+    t, coach, almaty = world["t"], world["coach"], world["almaty"]
+    submit(coach, t, almaty[:1])
+    other = make_person(3, "Другой тренер")
+    Role.objects.create(user=other, kind=COACH, scope=Role.SCOPE_REGION, region="Алматы")
+    assert withdraw(other, t, almaty[0]).status_code == 400
+    assert withdraw(almaty[0], t, almaty[0]).status_code == 400
+    assert entered_names(t) == {"Алматинец 0"}
+
+
+def test_withdraw_closed_after_recruitment_closes(world):
+    t, coach, almaty = world["t"], world["coach"], world["almaty"]
+    submit(coach, t, almaty[:1])
+    t.player_recruitment_open = False
+    t.save()
+    response = withdraw(coach, t, almaty[0])
+    assert response.status_code == 400
+    assert "закрыт" in response.data["detail"]
+    assert entered_names(t) == {"Алматинец 0"}
+
+
+def test_self_applicant_withdraws_own_entry(world):
+    t = world["t"]
+    t.applicant_kinds = ["self"]
+    t.save()
+    client_for(world["astana"]).post(f"/api/tournaments/{t.id}/participants/join/")
+    assert withdraw(world["astana"], t, world["astana"]).status_code == 204
+    assert entered_names(t) == set()

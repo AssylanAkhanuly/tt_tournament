@@ -1097,6 +1097,22 @@ class ApplicationsView(APIView):
         return Response(ParticipantSerializer(created, many=True).data, status=status.HTTP_201_CREATED)
 
 
+class ApplicationEntryView(APIView):
+    """DELETE — отозвать заявленного ✳ (19.11.2026, `admission.withdraw`):
+    только тот, кто его заявил, пока приём открыт."""
+
+    permission_classes = [IsAuthenticated]
+
+    def delete(self, request, pk, athlete_id):
+        tournament = get_object_or_404(Tournament, pk=pk)
+        athlete = get_object_or_404(User, pk=athlete_id)
+        try:
+            admission.withdraw(tournament, request.user, athlete)
+        except admission.AdmissionError as e:
+            return _refused(e)
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
 class ApplicationCandidatesView(APIView):
     """GET `?as=&q=` — кого этот заявитель может заявить и кто ещё не в
     турнире ✳ (19.11.2026). Проверки допуска здесь не применяются: их итог

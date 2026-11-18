@@ -24,7 +24,9 @@ from ..models import Tournament, TournamentGroup, TournamentParticipant
 from . import applicants, checks
 from .errors import AdmissionError, athlete_error
 
-__all__ = ["AdmissionError", "apply", "gate", "locked", "acting_kinds", "can_apply_as", "PLAYERS_CLOSED", "LOCKED"]
+__all__ = [
+    "AdmissionError", "apply", "withdraw", "gate", "locked", "acting_kinds", "can_apply_as", "PLAYERS_CLOSED", "LOCKED",
+]
 
 PLAYERS_CLOSED = "Приём заявок игроков закрыт."
 LOCKED = "Заявки уже поданы — условия допуска не меняются."
@@ -84,6 +86,23 @@ def apply(tournament: Tournament, by, applicant_key: str, athletes: Sequence) ->
             )
             for a in athletes
         ]
+
+
+def withdraw(tournament: Tournament, by, athlete) -> None:
+    """Отозвать заявленного ✳ (19.11.2026, ROLES.md роль 12 — «Отозвать заявку:
+    до закрытия приёма, состав выходит из турнира»). Отзывает только тот, кто
+    заявил: тренер — своих, спортсмен — себя. Пока приём открыт и турнир не
+    начат; место в квоте и пределе освобождается."""
+    with transaction.atomic():
+        tournament = Tournament.objects.select_for_update().get(pk=tournament.pk)
+        entry = TournamentParticipant.objects.filter(tournament=tournament, user=athlete, entered_by=by).first()
+        if entry is None:
+            raise AdmissionError("Отозвать можно только заявленного вами.")
+        if tournament.status != Tournament.STATUS_OPEN or tournament.schedule_status == "final":
+            raise AdmissionError("Турнир уже начат — состав не меняется.")
+        if not tournament.player_recruitment_active():
+            raise AdmissionError(PLAYERS_CLOSED)
+        entry.delete()
 
 
 def locked(tournament: Tournament) -> bool:

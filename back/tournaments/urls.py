@@ -20,6 +20,7 @@ from .views import (
     ApplicationsView,
     ApplicantKindsView,
     MyApplicationsView,
+    ApplicationEntryView,
     TournamentTemplatesView,
     ApplicationCandidatesView,
     MatchListView,
@@ -91,6 +92,11 @@ urlpatterns = [
     path("<uuid:pk>/participants/join/", JoinTournamentSelfView.as_view(), name="tournament-join-self"),
     path("<uuid:pk>/applications/", ApplicationsView.as_view(), name="tournament-applications"),
     path("<uuid:pk>/applications/mine/", MyApplicationsView.as_view(), name="tournament-applications-mine"),
+    path(
+        "<uuid:pk>/applications/<uuid:athlete_id>/",
+        ApplicationEntryView.as_view(),
+        name="tournament-application-entry",
+    ),
     path(
         "<uuid:pk>/applications/candidates/",
         ApplicationCandidatesView.as_view(),
