@@ -1115,8 +1115,8 @@ class ApplicationEntryView(APIView):
 
 class ApplicationCandidatesView(APIView):
     """GET `?as=&q=` — кого этот заявитель может заявить и кто ещё не в
-    турнире ✳ (19.11.2026). Проверки допуска здесь не применяются: их итог
-    показывает сама заявка."""
+    турнире ✳ (19.11.2026), из них — проходящие пол, ценз и возраст. Квоту и
+    предел (они зависят от состава) показывает сама заявка."""
 
     permission_classes = [IsAuthenticated]
     LIMIT = 50  # наше значение
@@ -1130,6 +1130,11 @@ class ApplicationCandidatesView(APIView):
         qs = applicant.candidates(request.user).exclude(
             id__in=tournament.participants.values_list("user_id", flat=True)
         ).select_related("rating_profile")
+        # Только проходящие условия турнира (пол, ценз, возраст) — ROLES.md, роль 12.
+        from .admission import checks as admission_checks
+
+        if admission_checks.has_conditions(tournament):
+            qs = qs.filter(id__in=admission_checks.eligible_profiles(tournament).values("user_id"))
         q = (request.query_params.get("q") or "").strip()
         if q:
             qs = qs.filter(name__icontains=q)

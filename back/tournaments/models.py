@@ -196,6 +196,17 @@ class Tournament(models.Model):
     applicant_kinds = models.JSONField(default=_self_only, blank=True, verbose_name="Кто подаёт заявку")
     participant_limit = models.PositiveIntegerField(null=True, blank=True, verbose_name="Предел участников")
     region_quota = models.PositiveSmallIntegerField(null=True, blank=True, verbose_name="Квота региона")
+    # Пол и ценз по рейтингу ✳ (19.11.2026, ТЗ §4: «не подходит категория
+    # (девочки, мальчики…)», §4.1: «ценз по рейтингу — не выше или не ниже
+    # порога»). Пусто — без условия; границы ценза включительно.
+    SEX_CHOICES = [("", "Все"), ("m", "Мужчины"), ("f", "Женщины")]
+    sex = models.CharField(max_length=1, blank=True, choices=SEX_CHOICES, verbose_name="Пол участников")
+    rating_min = models.DecimalField(
+        max_digits=6, decimal_places=2, null=True, blank=True, verbose_name="Ценз: рейтинг не ниже",
+    )
+    rating_max = models.DecimalField(
+        max_digits=6, decimal_places=2, null=True, blank=True, verbose_name="Ценз: рейтинг не выше",
+    )
 
     class Meta:
         verbose_name = "Турнир"

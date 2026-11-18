@@ -31,7 +31,7 @@ class TournamentSerializer(serializers.ModelSerializer):
             "ends_at", "region", "city", "venue", "age_min", "age_max",
             "level", "games_to_win", "is_rating",
             "template", "category", "applicant_kinds", "participant_limit", "region_quota", "can_apply_as",
-            "admission_locked",
+            "admission_locked", "sex", "rating_min", "rating_max",
         ]
         read_only_fields = [
             "id", "join_token", "created_by", "created_at", "participant_count", "status", "is_registered",
@@ -139,6 +139,11 @@ class TournamentCreateSerializer(serializers.ModelSerializer):
 class TournamentUpdateSerializer(serializers.ModelSerializer):
     """Сведения о турнире ✳ (29.10.2026): раздел «Сведения» на странице турнира."""
 
+    # Вид соревнования ✳ (19.11.2026, решение владельца продукта): меняется в
+    # «Сведениях». Новый вид засевает условия допуска заново (как при заведении),
+    # пустой — снимает вид и значок, условия остаются как были. Пока нет заявок.
+    template = serializers.CharField(write_only=True, required=False, allow_blank=True)
+
     # Границы возраста — разумные, а не из документа федерации (наше значение).
     AGE_LIMITS = (1, 99)
     GAMES_TO_WIN = (2, 3, 4, 5)
@@ -148,11 +153,34 @@ class TournamentUpdateSerializer(serializers.ModelSerializer):
         fields = [
             "name", "description", "starts_at", "ends_at", "region", "city", "venue", "age_min", "age_max",
             "format", "group_size", "games_to_win", "level", "is_rating",
-            "applicant_kinds", "participant_limit", "region_quota",
+            "applicant_kinds", "participant_limit", "region_quota", "sex", "rating_min", "rating_max",
+            "template",
         ]
 
     # Условия допуска ✳ (19.11.2026): первая заявка их замораживает.
-    ADMISSION_FIELDS = ("applicant_kinds", "participant_limit", "region_quota")
+    ADMISSION_FIELDS = ("applicant_kinds", "participant_limit", "region_quota", "sex", "rating_min", "rating_max")
+
+    def validate_template(self, code):
+        if not code:
+            return None
+        try:
+            return admission_templates.find(code)
+        except admission.AdmissionError as e:
+            raise serializers.ValidationError(e.detail)
+
+    def update(self, instance, validated_data):
+        if "template" in validated_data:
+            template = validated_data.pop("template")
+            # «Сведения» шлют вид и без правки — засев только при смене, иначе
+            # он стёр бы условия, донастроенные в «Настройках».
+            if template == instance.template:
+                pass
+            elif template is None:
+                instance.template, instance.category = None, ""
+            else:
+                admission_templates.seed(instance, template)
+        # Поля из того же запроса — поверх засева вида.
+        return super().update(instance, validated_data)
 
     def validate_applicant_kinds(self, v):
         try:
@@ -175,6 +203,8 @@ class TournamentUpdateSerializer(serializers.ModelSerializer):
         if t is None:
             return
         changed = [f for f in self.ADMISSION_FIELDS if f in attrs and attrs[f] != getattr(t, f)]
+        if "template" in attrs and attrs["template"] != t.template:
+            changed.append("template")
         if changed and admission.locked(t):
             raise serializers.ValidationError({changed[0]: admission.LOCKED})
 
@@ -221,6 +251,9 @@ class TournamentUpdateSerializer(serializers.ModelSerializer):
         lo, hi = self._value(attrs, "age_min"), self._value(attrs, "age_max")
         if lo is not None and hi is not None and lo > hi:
             raise serializers.ValidationError({"age_max": "Возраст «до» — не меньше «от»."})
+        lo, hi = self._value(attrs, "rating_min"), self._value(attrs, "rating_max")
+        if lo is not None and hi is not None and lo > hi:
+            raise serializers.ValidationError({"rating_max": "Ценз «до» — не меньше «от»."})
         self._place(attrs)
         self._admission(attrs)
         return attrs

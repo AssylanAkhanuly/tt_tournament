@@ -361,3 +361,98 @@ def test_self_applicant_withdraws_own_entry(world):
     client_for(world["astana"]).post(f"/api/tournaments/{t.id}/participants/join/")
     assert withdraw(world["astana"], t, world["astana"]).status_code == 204
     assert entered_names(t) == set()
+
+
+# ── Пол и ценз по рейтингу ──────────────────────────────────────────────────
+
+
+def set_profile(user, **fields):
+    RatingProfile.objects.filter(user=user).update(**fields)
+
+
+def test_sex_condition_rejects_other_sex(world):
+    t, almaty = world["t"], world["almaty"]
+    set_profile(almaty[0], sex="m")
+    set_profile(almaty[1], sex="f")
+    assert update(world, {"sex": "f"}).status_code == 200
+    response = submit(world["coach"], t, almaty[:2])
+    assert response.status_code == 400
+    assert [e["athlete_id"] for e in response.data["errors"]] == [str(almaty[0].id)]
+    assert submit(world["coach"], t, almaty[1:2]).status_code == 201
+
+
+def test_rating_cutoff_inclusive_bounds(world):
+    t, almaty = world["t"], world["almaty"]
+    for athlete, value in zip(almaty, ["9.99", "10.00", "20.00", "20.01"]):
+        set_profile(athlete, value=value)
+    t.region_quota = None
+    t.save()
+    assert update(world, {"rating_min": "10.00", "rating_max": "20.00"}).status_code == 200
+    response = submit(world["coach"], t, almaty)
+    assert response.status_code == 400
+    assert {e["athlete_id"] for e in response.data["errors"]} == {str(almaty[0].id), str(almaty[3].id)}
+    assert submit(world["coach"], t, almaty[1:3]).status_code == 201
+
+
+def test_rating_cutoff_min_above_max_400(world):
+    assert update(world, {"rating_min": "30", "rating_max": "20"}).status_code == 400
+
+
+def test_new_conditions_lock_after_first_application(world):
+    submit(world["coach"], world["t"], world["almaty"][:1])
+    assert update(world, {"sex": "m"}).status_code == 400
+    assert update(world, {"rating_min": "5"}).status_code == 400
+
+
+def test_candidates_only_those_passing_conditions(world):
+    t, almaty = world["t"], world["almaty"]
+    set_profile(almaty[0], sex="m", value="5")
+    set_profile(almaty[1], sex="f", value="5")
+    set_profile(almaty[2], sex="m", value="50")
+    set_profile(almaty[3], sex="m", value="5")
+    TournamentAgeCategory.objects.create(
+        tournament=t, born_from=datetime.date(2010, 1, 1), born_to=datetime.date(2010, 1, 3),
+    )
+    update(world, {"sex": "m", "rating_max": "10"})
+    response = client_for(world["coach"]).get(f"/api/tournaments/{t.id}/applications/candidates/?as={COACH}")
+    # №1 — женщина, №2 — рейтинг выше ценза, №3 — родился 04.01.2010, вне категории.
+    assert [a["name"] for a in response.data] == ["Алматинец 0"]
+
+
+# ── Смена вида соревнования в «Сведениях» ───────────────────────────────────
+
+
+def test_changing_template_reseeds_admission(world):
+    response = update(world, {"template": "open"})
+    assert response.status_code == 200, response.data
+    t = world["t"]
+    t.refresh_from_db()
+    assert (t.template.code, t.category, t.applicant_kinds, t.region_quota) == ("open", "open", ["self"], None)
+    assert response.data["template"] == {"code": "open", "name": "Открытый республиканский"}
+
+
+def test_clearing_template_keeps_conditions(world):
+    response = update(world, {"template": ""})
+    assert response.status_code == 200, response.data
+    t = world["t"]
+    t.refresh_from_db()
+    assert t.template is None and t.category == ""
+    assert t.applicant_kinds == [COACH] and t.region_quota == 3
+
+
+def test_template_change_locked_after_first_application(world):
+    submit(world["coach"], world["t"], world["almaty"][:1])
+    assert update(world, {"template": "open"}).status_code == 400
+    world["t"].refresh_from_db()
+    assert world["t"].template.code == "main_start"
+
+
+def test_team_template_cannot_be_set(world):
+    assert update(world, {"template": "eurasian_league"}).status_code == 400
+
+
+def test_resending_same_template_keeps_tuned_conditions(world):
+    assert update(world, {"region_quota": 5}).status_code == 200
+    assert update(world, {"template": "main_start", "venue": "Зал"}).status_code == 200
+    world["t"].refresh_from_db()
+    assert world["t"].region_quota == 5

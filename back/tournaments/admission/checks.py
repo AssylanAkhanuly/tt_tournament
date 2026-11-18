@@ -6,8 +6,7 @@
 Новая проверка — функция здесь и строка в `CHECKS`. Проверки считают и тех,
 кто уже в турнире: квота и предел — на всех заявленных, а не на одну заявку.
 
-Чего ещё нет: взноса (нет данных об оплате — роли бухгалтера нет) и ценза по
-рейтингу (у турнира нет поля со значением ценза; ТЗ §4.1, gaps Э1.3).
+Чего ещё нет: взноса (нет данных об оплате — роли бухгалтера нет).
 """
 from collections import Counter
 from typing import List
@@ -44,6 +43,67 @@ def age(tournament, athletes) -> List[dict]:
     ]
 
 
+def sex(tournament, athletes) -> List[dict]:
+    """Пол участников ✳ (19.11.2026, ТЗ §4: «не подходит категория — девочки,
+    мальчики…»): у турнира «Мужчины» или «Женщины» — спортсмен того же пола по
+    рейтинговой карточке. Пол не указан — не проходит: проверить нечем."""
+    if not tournament.sex:
+        return []
+    fits = set(
+        RatingProfile.objects.filter(user__in=athletes, sex=tournament.sex).values_list("user_id", flat=True)
+    )
+    label = dict(tournament.SEX_CHOICES)[tournament.sex].lower()
+    return [athlete_error(a, "Турнир для: %s." % label) for a in athletes if a.pk not in fits]
+
+
+def _num(value) -> str:
+    return ("%.2f" % value).replace(".", ",")
+
+
+def rating_cutoff(tournament, athletes) -> List[dict]:
+    """Ценз по рейтингу ✳ (19.11.2026, ТЗ §4.1): рейтинг карточки не ниже
+    `rating_min` и не выше `rating_max`, границы включительно. Без карточки
+    рейтинга нет — при цензе не проходит."""
+    lo, hi = tournament.rating_min, tournament.rating_max
+    if lo is None and hi is None:
+        return []
+    values = dict(RatingProfile.objects.filter(user__in=athletes).values_list("user_id", "value"))
+    bounds = " — ".join(x for x in [("от " + _num(lo)) if lo is not None else "", ("до " + _num(hi)) if hi is not None else ""] if x)
+    errors = []
+    for a in athletes:
+        v = values.get(a.pk)
+        if v is None or (lo is not None and v < lo) or (hi is not None and v > hi):
+            shown = "нет" if v is None else _num(v)
+            errors.append(athlete_error(a, "Ценз по рейтингу %s, у спортсмена %s." % (bounds, shown)))
+    return errors
+
+
+def eligible_profiles(tournament):
+    """Рейтинговые карточки, проходящие условия турнира, которые от состава не
+    зависят: пол, ценз, возраст. По ним сужаются кандидаты на экране заявки —
+    тренер видит только проходящих (ROLES.md, роль 12); квоту и предел
+    считает сама заявка."""
+    qs = RatingProfile.objects.all()
+    if tournament.sex:
+        qs = qs.filter(sex=tournament.sex)
+    if tournament.rating_min is not None:
+        qs = qs.filter(value__gte=tournament.rating_min)
+    if tournament.rating_max is not None:
+        qs = qs.filter(value__lte=tournament.rating_max)
+    categories = list(tournament.age_categories.all())
+    if categories:
+        qs = qs.filter(any_category_q(categories))
+    return qs
+
+
+def has_conditions(tournament) -> bool:
+    """Задано ли хоть одно условие, сужающее кандидатов."""
+    return bool(
+        tournament.sex or tournament.rating_min is not None or tournament.rating_max is not None
+        or tournament.age_categories.exists()
+    )
+
+
 def participant_limit(tournament, athletes) -> List[dict]:
     """Предел участников по положению: 251-й при пределе 250 не подаст (ТЗ §4)."""
     limit = tournament.participant_limit
@@ -77,4 +137,4 @@ def region_quota(tournament, athletes) -> List[dict]:
 
 
 # Порядок — порядок сообщений на экране.
-CHECKS = [age, participant_limit, region_quota]
+CHECKS = [age, sex, rating_cutoff, participant_limit, region_quota]
