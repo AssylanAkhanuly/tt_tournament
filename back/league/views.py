@@ -1,0 +1,244 @@
+"""Ручки Евразийской лиги ✳ (19.11.2026, LEAGUE.md) — только переводят
+`services.py` в HTTP."""
+from django.shortcuts import get_object_or_404
+from rest_framework import status
+from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework.response import Response
+from rest_framework.views import APIView
+
+from clubs.models import Club
+from users.models import User
+from users.permissions import IsGskChairman
+
+from . import services
+from .models import LeagueDivision, LeagueRules, LeagueTour, Team, TeamMatch
+
+RULE_FIELDS = (
+    "order", "players", "wins_needed", "games_to_win", "points_win", "points_loss", "points_no_show",
+    "promote", "relegate", "squad_max",
+)
+
+
+def _refused(e: services.LeagueError) -> Response:
+    return Response({"detail": e.detail}, status=e.status)
+
+
+def _rules_data(r: LeagueRules) -> dict:
+    return {f: getattr(r, f) for f in RULE_FIELDS}
+
+
+def _division_data(d: LeagueDivision) -> dict:
+    return {"id": str(d.id), "season": d.season, "gender": d.gender, "name": d.name, "level": d.level}
+
+
+def _team_data(t: Team) -> dict:
+    return {
+        "id": str(t.id), "name": t.name, "club_id": str(t.club_id), "club_name": t.club.name,
+        "members_count": t.members.count(),
+    }
+
+
+def _person(u: User) -> dict:
+    card = getattr(u, "rating_profile", None)
+    return {"id": str(u.id), "name": u.name, "region": card.region if card else "", "rating": str(card.value) if card else None}
+
+
+def _match_data(m: TeamMatch) -> dict:
+    return {
+        "id": m.id, "tour_id": str(m.tour_id), "status": m.status,
+        "team_a": {"id": str(m.team_a_id), "name": m.team_a.name},
+        "team_b": {"id": str(m.team_b_id), "name": m.team_b.name},
+        "rubbers_a": m.rubbers_a, "rubbers_b": m.rubbers_b, "winner": m.winner, "no_show": m.no_show,
+        "rubbers": m.rubbers, "lineup_a": m.lineup_a, "lineup_b": m.lineup_b,
+    }
+
+
+class RulesView(APIView):
+    def get_permissions(self):
+        return [AllowAny()] if self.request.method == "GET" else [IsGskChairman()]
+
+    def get(self, request):
+        return Response(_rules_data(LeagueRules.active()))
+
+    def patch(self, request):
+        rules = LeagueRules.active()
+        for f in RULE_FIELDS:
+            if f in request.data:
+                setattr(rules, f, request.data[f])
+        try:
+            services.engine.rubber_order(rules.to_rules())
+            rules.full_clean()
+        except Exception:
+            return Response({"detail": "Правила не сходятся: проверьте порядок встреч и числа."}, status=400)
+        rules.save()
+        return Response(_rules_data(rules))
+
+
+class DivisionsView(APIView):
+    def get_permissions(self):
+        return [AllowAny()] if self.request.method == "GET" else [IsGskChairman()]
+
+    def get(self, request):
+        qs = LeagueDivision.objects.all()
+        season = request.query_params.get("season")
+        if season:
+            qs = qs.filter(season=season)
+        return Response([{**_division_data(d), "teams": d.teams.count()} for d in qs])
+
+    def post(self, request):
+        data = request.data
+        try:
+            d = LeagueDivision.objects.create(
+                season=int(data.get("season")), gender=data.get("gender"), name=(data.get("name") or "").strip(),
+                level=int(data.get("level")),
+            )
+        except Exception:
+            return Response({"detail": "Дивизион: сезон, розыгрыш, название и уровень; такой уже может быть."}, status=400)
+        return Response(_division_data(d), status=status.HTTP_201_CREATED)
+
+
+class DivisionView(APIView):
+    permission_classes = [AllowAny]
+
+    def get(self, request, pk):
+        d = get_object_or_404(LeagueDivision, pk=pk)
+        teams = {t.id: t for t in d.teams.select_related("club")}
+        rows = services.table(d)
+        return Response({
+            **_division_data(d),
+            "teams": [_team_data(t) for t in teams.values()],
+            "tours": [
+                {"id": str(t.id), "number": t.number, "city": t.city, "starts_on": t.starts_on,
+                 "matches": t.matches.count(), "finished": t.matches.filter(status="finished").count()}
+                for t in d.tours.all()
+            ],
+            "table": [
+                {"place": r.place, "team_id": str(r.team), "team": teams[r.team].name, "played": r.played,
+                 "won": r.won, "lost": r.lost, "no_shows": r.no_shows, "points": r.points,
+                 "rubbers_for": r.rubbers_for, "rubbers_against": r.rubbers_against,
+                 "games_for": r.games_for, "games_against": r.games_against}
+                for r in rows
+            ],
+        })
+
+
+class DivisionTeamsView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, pk):
+        d = get_object_or_404(LeagueDivision, pk=pk)
+        club = get_object_or_404(Club, pk=request.data.get("club_id"))
+        try:
+            team = services.register_team(d, club, request.data.get("name", ""), request.user)
+        except services.LeagueError as e:
+            return _refused(e)
+        return Response(_team_data(team), status=status.HTTP_201_CREATED)
+
+
+class DivisionToursView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, pk):
+        d = get_object_or_404(LeagueDivision, pk=pk)
+        try:
+            number = int(request.data.get("number"))
+        except (TypeError, ValueError):
+            return Response({"detail": "Номер тура — числом."}, status=400)
+        try:
+            tour = services.create_tour(d, number, request.data.get("city", ""), request.data.get("starts_on") or None, request.user)
+        except services.LeagueError as e:
+            return _refused(e)
+        return Response({"id": str(tour.id), "number": tour.number, "matches": tour.matches.count()}, status=201)
+
+
+class TeamView(APIView):
+    permission_classes = [AllowAny]
+
+    def get(self, request, pk):
+        team = get_object_or_404(Team.objects.select_related("club", "division"), pk=pk)
+        members = [m.user for m in team.members.select_related("user__rating_profile")]
+        return Response({**_team_data(team), "division": _division_data(team.division), "members": [_person(u) for u in members]})
+
+
+class TeamMembersView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, pk):
+        team = get_object_or_404(Team.objects.select_related("club", "division"), pk=pk)
+        user = get_object_or_404(User, pk=request.data.get("user_id"))
+        try:
+            services.add_member(team, user, request.user)
+        except services.LeagueError as e:
+            return _refused(e)
+        return Response(_person(user), status=status.HTTP_201_CREATED)
+
+
+class TeamMemberView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def delete(self, request, pk, user_id):
+        team = get_object_or_404(Team.objects.select_related("club"), pk=pk)
+        try:
+            services.remove_member(team, user_id, request.user)
+        except services.LeagueError as e:
+            return _refused(e)
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class TeamCandidatesView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, pk):
+        team = get_object_or_404(Team.objects.select_related("division"), pk=pk)
+        return Response([_person(u) for u in services.member_candidates(team, request.query_params.get("q", ""))])
+
+
+class TourView(APIView):
+    permission_classes = [AllowAny]
+
+    def get(self, request, pk):
+        tour = get_object_or_404(LeagueTour.objects.select_related("division"), pk=pk)
+        matches = tour.matches.select_related("team_a", "team_b")
+        return Response({
+            "id": str(tour.id), "number": tour.number, "city": tour.city, "starts_on": tour.starts_on,
+            "division": _division_data(tour.division), "matches": [_match_data(m) for m in matches],
+        })
+
+
+class TeamMatchView(APIView):
+    permission_classes = [AllowAny]
+
+    def get(self, request, pk):
+        m = get_object_or_404(TeamMatch.objects.select_related("team_a", "team_b", "tour"), pk=pk)
+        squad = lambda team: [_person(tm.user) for tm in team.members.select_related("user__rating_profile")]  # noqa: E731
+        rules = LeagueRules.active()
+        return Response({
+            **_match_data(m), "squad_a": squad(m.team_a), "squad_b": squad(m.team_b),
+            "order": services.engine.rubber_order(rules.to_rules()), "rules": _rules_data(rules),
+        })
+
+
+class TeamMatchResultView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, pk):
+        m = get_object_or_404(TeamMatch.objects.select_related("team_a", "team_b"), pk=pk)
+        try:
+            services.record_result(
+                m, request.data.get("lineup_a"), request.data.get("lineup_b"), request.data.get("rubbers"), request.user
+            )
+        except services.LeagueError as e:
+            return _refused(e)
+        return Response(_match_data(m))
+
+
+class TeamMatchNoShowView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, pk):
+        m = get_object_or_404(TeamMatch.objects.select_related("team_a", "team_b"), pk=pk)
+        try:
+            services.record_no_show(m, request.data.get("absent", ""), request.user)
+        except services.LeagueError as e:
+            return _refused(e)
+        return Response(_match_data(m))

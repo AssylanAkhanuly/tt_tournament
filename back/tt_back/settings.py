@@ -30,6 +30,7 @@ INSTALLED_APPS = [
     "notifications",
     "scoreboard",
     "rating",
+    "league",
 ]
 
 MIDDLEWARE = [
