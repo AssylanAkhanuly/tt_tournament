@@ -87,6 +87,12 @@ class Command(BaseCommand):
             LeagueDivision.objects.filter(name__startswith="[e2e] ").delete()
             Team.objects.filter(club__name__startswith="[e2e] ").delete()
             Club.objects.filter(name__startswith="[e2e] ").delete()
+            # Сборная ✳ (19.11.2026): мероприятия календаря подготовки проверок и
+            # рапорты по ним (рапорт держит мероприятие — сначала рапорты).
+            from national.models import TrainingEvent, TravelReport
+
+            TravelReport.objects.filter(event__title__startswith="[e2e] ").delete()
+            TrainingEvent.objects.filter(title__startswith="[e2e] ").delete()
             User.objects.filter(name__startswith="[e2e] ").delete()
             # Коэффициенты тоже возвращаются к значениям по умолчанию: иначе
             # показательные числа зависели бы от того, что кто-то накрутил в

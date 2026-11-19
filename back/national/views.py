@@ -49,6 +49,8 @@ def _access(m: NationalTeamMember, viewer) -> dict:
     return {
         "roster": s.is_head_staff(viewer),
         "plans": s.can_see_plans(m, viewer),
+        # Может завести план: штаб или личный тренер этого спортсмена.
+        "plan_author": s.is_head_staff(viewer) or bool(m.personal_coach_id and m.personal_coach_id == viewer.id),
         "medical": "full" if s.is_doctor(viewer) else ("summary" if s.can_read_medical_summary(m, viewer) else None),
         "sport": s.is_psychologist(viewer),
     }
