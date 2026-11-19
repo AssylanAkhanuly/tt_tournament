@@ -4,7 +4,7 @@
 import { AlignLeft, Building2, CalendarDays, Cake, Flag, MapPin, Network, Trophy, Users } from 'lucide-react';
 import type { ReactNode } from 'react';
 
-import { FORMAT_LABEL, LEVEL_LABEL, placeLabel, STATUS_LABEL, type TournamentSummary } from './api';
+import { FORMAT_LABEL, LEVEL_LABEL, placeLabel, STATUS_LABEL, type LeagueFacts, type TournamentSummary } from './api';
 
 const capital = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
@@ -32,6 +32,24 @@ export function TournamentFacts({ t, withDate = false }: { t: TournamentSummary;
   // Окончание — если турнир не однодневный.
   if (t.endsAt && (!t.startsAt || t.endsAt !== t.startsAt.toLocaleDateString('sv-SE')))
     rows.push([<CalendarDays key="e" size={18} />, 'До ' + day(t.endsAt)]);
+  if (t.league) leagueRows(rows, t.league, t.status);
+  else tournamentRows(rows, t);
+  return <FactList rows={rows} />;
+}
+
+/** Дивизион Лиги: где туры, ход сезона, команды — формата, уровня и возраста
+ *  у него нет. */
+function leagueRows(rows: [ReactNode, string][], l: LeagueFacts, status: TournamentSummary['status']) {
+  if (l.cities.length) rows.push([<MapPin key="w" size={18} />, l.cities.join(', ')]);
+  rows.push(
+    [<Flag key="s" size={18} />, STATUS_LABEL[status] + (l.matches ? ', встреч сыграно ' + l.finished + ' из ' + l.matches : '')],
+    [<Network key="f" size={18} />, 'Командные встречи, туров: ' + l.tours],
+    [<Users key="p" size={18} />, 'Команд: ' + l.teams],
+    [<Trophy key="l" size={18} />, l.gender + ', сезон ' + l.season],
+  );
+}
+
+function tournamentRows(rows: [ReactNode, string][], t: TournamentSummary) {
   const where = [placeLabel(t), t.venue].filter(Boolean).join(', ');
   if (where) rows.push([<MapPin key="w" size={18} />, where]);
   const ages = ageRange(t.ageMin, t.ageMax);
@@ -44,7 +62,9 @@ export function TournamentFacts({ t, withDate = false }: { t: TournamentSummary;
   );
   if (t.clubName) rows.push([<Building2 key="c" size={18} />, t.clubName]);
   if (t.description) rows.push([<AlignLeft key="a" size={18} />, t.description]);
+}
 
+function FactList({ rows }: { rows: [ReactNode, string][] }) {
   return (
     // `m-0 list-none p-0` — глобального сброса нет, у списка браузерный отступ.
     <ul className="m-0 flex list-none flex-col gap-3 p-0 text-[14px]" data-testid="tournament-facts">

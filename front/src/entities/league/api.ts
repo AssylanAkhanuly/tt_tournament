@@ -17,7 +17,21 @@ export type LeagueRules = {
   squadMax: number;
 };
 
-export type Division = { id: string; season: number; gender: LeagueGender; name: string; level: number; teamsCount?: number };
+export type Division = { id: string; season: number; gender: LeagueGender; name: string; level: number };
+
+/** Строка списка дивизионов — то, что нужно календарю соревнований ✳
+ *  (19.11.2026: Лига стоит в «Месяце» и «Таблице» рядом с турнирами). Дата —
+ *  первый тур, окончание — последний (без туров — null), города — по порядку
+ *  туров, ход — сыграно встреч из всех. Считает сервер. */
+export type DivisionListItem = Division & {
+  teamsCount: number;
+  toursCount: number;
+  startsOn: string | null;
+  endsOn: string | null;
+  cities: string[];
+  matches: number;
+  finished: number;
+};
 
 export type LeagueTeam = { id: string; name: string; clubId: string; clubName: string; membersCount: number };
 
@@ -79,7 +93,17 @@ const division = (d: Raw): Division => ({
   gender: d.gender as LeagueGender,
   name: String(d.name),
   level: Number(d.level),
-  teamsCount: typeof d.teams === 'number' ? (d.teams as number) : undefined,
+});
+
+const divisionItem = (d: Raw): DivisionListItem => ({
+  ...division(d),
+  teamsCount: Number(d.teams),
+  toursCount: Number(d.tours),
+  startsOn: (d.starts_on as string | null) ?? null,
+  endsOn: (d.ends_on as string | null) ?? null,
+  cities: ((d.cities as string[]) ?? []).map(String),
+  matches: Number(d.matches),
+  finished: Number(d.finished),
 });
 
 const team = (t: Raw): LeagueTeam => ({
@@ -145,8 +169,9 @@ export const fetchRules = async () => rules(await request<Raw>('/api/league/rule
 export const updateRules = async (patch: Partial<Record<string, number | string>>) =>
   rules(await request<Raw>('/api/league/rules/', { method: 'PATCH', body: JSON.stringify(patch) }));
 
-export const fetchDivisions = async (season: number) =>
-  (await request<Raw[]>(`/api/league/divisions/?season=${season}`)).map(division);
+/** Дивизионы — все сезоны (календарь) или один. */
+export const fetchDivisions = async (season?: number) =>
+  (await request<Raw[]>('/api/league/divisions/' + (season ? `?season=${season}` : ''))).map(divisionItem);
 
 export const createDivision = async (d: { season: number; gender: LeagueGender; name: string; level: number }) =>
   division(await post<Raw>('/api/league/divisions/', d));

@@ -2,10 +2,10 @@
 
 /* Страницы Лиги в кабинете администратора федерации ✳ (19.11.2026, LEAGUE.md):
    дивизион (разделы «Таблица · Команды · Туры» в сайдбаре) → тур (встречи и
-   окно счёта). Список дивизионов — вид «Лига» календаря (`DashboardView`),
-   своего раздела в меню у Лиги нет. Содержимое — общие виджеты
-   `widgets/league`; здесь только оболочка и адреса. Знак в шапке ведёт к
-   дивизионам. */
+   окно счёта). Дивизионы стоят в календаре рядом с турнирами
+   (`DashboardView`), своего раздела в меню у Лиги нет; знак в шапке
+   дивизиона ведёт в календарь, тура — к турам дивизиона. Содержимое — общие виджеты
+   `widgets/league`; здесь только оболочка и адреса. */
 
 import { Spinner } from '@heroui/react';
 import { useRouter } from 'next/navigation';
@@ -14,7 +14,7 @@ import { fetchDivision, fetchRules, fetchTour, useLoad } from '@/entities/league
 import { DIVISION_SECTIONS, DivisionPage, TourPage, type DivisionSection } from '@/widgets/league';
 
 import { AdminShell } from './AdminShell';
-import { LEAGUE_BASE as BASE, LEAGUE_HOME } from './leagueHref';
+import { divisionHref, LEAGUE_BASE as BASE } from './leagueHref';
 
 function Failed({ error }: { error: string }) {
   return (
@@ -28,10 +28,10 @@ export function AdminDivisionView({ id, section }: { id: string; section: Divisi
   const router = useRouter();
   const division = useLoad(() => fetchDivision(id), id);
   const rules = useLoad(fetchRules, 'rules');
-  const nav = DIVISION_SECTIONS.map((s) => ({ label: s.label, href: `${BASE}/${id}/${s.id}` }));
+  const nav = DIVISION_SECTIONS.map((s) => ({ label: s.label, href: divisionHref(id, s.id) }));
   const active = DIVISION_SECTIONS.find((s) => s.id === section)!.label;
   return (
-    <AdminShell active={active} nav={nav} home={LEAGUE_HOME} bleed>
+    <AdminShell active={active} nav={nav} bleed>
       {division.error ? (
         <Failed error={division.error} />
       ) : !division.data ? (
@@ -55,7 +55,7 @@ export function AdminTourView({ id }: { id: string }) {
   const t = tour.data;
   const nav = t ? [{ label: 'Тур ' + t.number, href: `${BASE}/tours/${id}` }] : [];
   return (
-    <AdminShell active={t ? 'Тур ' + t.number : ''} nav={nav} home={t ? `${BASE}/${t.division.id}/tours` : LEAGUE_HOME} bleed>
+    <AdminShell active={t ? 'Тур ' + t.number : ''} nav={nav} home={t ? divisionHref(t.division.id, 'tours') : undefined} bleed>
       {tour.error ? <Failed error={tour.error} /> : !t ? <Spinner className="m-auto" /> : <TourPage tour={t} canEdit onChanged={tour.reload} />}
     </AdminShell>
   );

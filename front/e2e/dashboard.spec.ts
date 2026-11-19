@@ -226,8 +226,9 @@ test('вид соревнования: «Главный старт» засев�
   await form.getByLabel('Название').fill(mainName);
   await expect(form.getByTestId('tournament-kind-picker')).toHaveText(/Без вида/);
   await form.getByTestId('tournament-kind-picker').click();
-  // Командного вида в списке нет — такой турнир пока не заводится.
-  await expect(page.getByRole('option', { name: 'Евразийская лига' })).toHaveCount(0);
+  // Командный вид у администратора есть, но заводит дивизион Лиги, а не турнир
+  // (e2e/league.spec.ts).
+  await expect(page.getByRole('option', { name: 'Евразийская лига' })).toHaveCount(1);
   await page.getByRole('option', { name: 'Главный республиканский старт' }).click();
   await expect(form.getByTestId('tournament-kind-picker')).toHaveText(/Главный республиканский старт/);
   await page.screenshot({ path: 'test-results/dashboard/create-kind.png' });

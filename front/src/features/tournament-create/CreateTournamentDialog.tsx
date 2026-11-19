@@ -12,7 +12,14 @@
    Вид соревнования ✳ (19.11.2026, ADMISSION.md) — первым полем: он засевает
    условия допуска (кто подаёт заявку, квота региона) и значок турнира.
    Список видов — с сервера (`useTemplates`); «Без вида» — спортсмен
-   записывается сам, как раньше. */
+   записывается сам, как раньше.
+
+   «Евразийская лига» ✳ (19.11.2026, решение владельца продукта: Лига — в
+   календаре, как турниры, а не отдельным разделом) — тоже вид, но заводит не
+   турнир, а дивизион сезона: название, розыгрыш, уровень, сезон. Дат нет — их
+   дают туры дивизиона. Сервер командный вид в список не отдаёт (турнира такого
+   вида не бывает), пункт добавляет диалог, когда открывший просит
+   (`withLeague`). */
 
 import {
   Button,
@@ -30,11 +37,12 @@ import { parseDate } from '@internationalized/date';
 import { Plus } from 'lucide-react';
 import { useState, type FormEvent } from 'react';
 
+import { createDivision, GENDER_LABEL, type LeagueGender } from '@/entities/league';
 import {
+  CATEGORY_LABEL,
   createTournament,
   FORMAT_LABEL,
   type NewTournament,
-  type TournamentSummary,
   useTemplates,
 } from '@/entities/tournament';
 import { useNarrow } from '@/shared/kit/app';
@@ -65,18 +73,32 @@ const EMPTY = (): NewTournament => ({
 
 // Ключ пункта «Без вида»: у `Select` HeroUI пустой ключ не выбирается.
 const NO_KIND = 'none';
+// Вид «Евразийская лига» — код шаблона сервера.
+const LEAGUE = 'eurasian_league';
 
-export function CreateTournamentDialog({ onCreated }: { onCreated: (t: TournamentSummary) => void }) {
+type LeagueForm = { gender: LeagueGender; level: string; season: string };
+const LEAGUE_EMPTY = (): LeagueForm => ({ gender: 'm', level: '1', season: String(new Date().getFullYear()) });
+
+export function CreateTournamentDialog({
+  onCreated,
+  withLeague = false,
+}: {
+  onCreated: () => void;
+  /** Предлагать «Евразийскую лигу» — заводит дивизион сезона. */
+  withLeague?: boolean;
+}) {
   const state = useOverlayState();
   const narrow = useNarrow();
   const [form, setForm] = useState<NewTournament>(EMPTY);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [league, setLeague] = useState<LeagueForm>(LEAGUE_EMPTY);
   const templates = useTemplates();
   const set = <K extends keyof NewTournament>(k: K, v: NewTournament[K]) =>
     setForm((f) => ({ ...f, [k]: v }));
+  const isLeague = form.template === LEAGUE;
 
-  const ready = form.name.trim() !== '' && form.date !== '';
+  const ready = form.name.trim() !== '' && (isLeague ? league.season.length === 4 : form.date !== '');
 
   async function submit(e: FormEvent) {
     e.preventDefault();
@@ -84,10 +106,20 @@ export function CreateTournamentDialog({ onCreated }: { onCreated: (t: Tournamen
     setBusy(true);
     setError(null);
     try {
-      const created = await createTournament(form);
+      if (isLeague) {
+        await createDivision({
+          season: Number(league.season),
+          gender: league.gender,
+          name: form.name.trim(),
+          level: Number(league.level) || 1,
+        });
+      } else {
+        await createTournament(form);
+      }
       state.close();
       setForm(EMPTY());
-      onCreated(created);
+      setLeague(LEAGUE_EMPTY());
+      onCreated();
     } catch (err) {
       setError((err as Error).message);
     } finally {
@@ -138,10 +170,37 @@ export function CreateTournamentDialog({ onCreated }: { onCreated: (t: Tournamen
                   options={[
                     { id: NO_KIND, label: 'Без вида' },
                     ...(templates.data ?? []).map((t) => ({ id: t.code, label: t.name })),
+                    ...(withLeague ? [{ id: LEAGUE, label: CATEGORY_LABEL.league }] : []),
                   ]}
                   onChange={(k) => set('template', k === NO_KIND ? '' : k)}
                 />
 
+                {isLeague && (
+                  <>
+                    <Picker
+                      label="Розыгрыш"
+                      showLabel
+                      testId="league-gender"
+                      value={league.gender}
+                      options={(['m', 'f'] as LeagueGender[]).map((g) => ({ id: g, label: GENDER_LABEL[g] }))}
+                      onChange={(k) => setLeague((l) => ({ ...l, gender: k as LeagueGender }))}
+                    />
+                    <TextField value={league.level} onChange={(v) => setLeague((l) => ({ ...l, level: v.replace(/\D/g, '') }))}>
+                      <Label>Уровень (1 — Суперлига)</Label>
+                      <Input inputMode="numeric" className="rounded-xl" data-testid="league-level" />
+                    </TextField>
+                    <TextField
+                      value={league.season}
+                      onChange={(v) => setLeague((l) => ({ ...l, season: v.replace(/\D/g, '').slice(0, 4) }))}
+                    >
+                      <Label>Сезон</Label>
+                      <Input inputMode="numeric" className="rounded-xl" data-testid="league-season" />
+                    </TextField>
+                  </>
+                )}
+
+                {!isLeague && (
+                  <>
                 {/* Диапазон HeroUI, как в «Сведениях», а не `<input type="date">`:
                     родное поле пишет дату по языку браузера (10/20/2026). */}
                 <I18nProvider locale="ru-RU">
@@ -197,6 +256,8 @@ export function CreateTournamentDialog({ onCreated }: { onCreated: (t: Tournamen
                     <Label>Игроков в группе</Label>
                     <Input inputMode="numeric" className="rounded-xl" />
                   </TextField>
+                )}
+                  </>
                 )}
 
                 {error && (

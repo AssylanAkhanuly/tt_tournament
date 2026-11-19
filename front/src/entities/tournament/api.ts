@@ -54,6 +54,22 @@ export type TournamentSummary = {
   /** Ценз по рейтингу, границы включительно; null — без границы. */
   ratingMin: number | null;
   ratingMax: number | null;
+  /** Дивизион Евразийской лиги в календаре ✳ (19.11.2026, решение владельца
+   *  продукта: Лига — не отдельный раздел, а строка рядом с турнирами). Есть —
+   *  это не турнир: у него команды, туры и встречи, а формат, уровень и приём
+   *  заявок не значат ничего. Строку собирает раздел турниров из ответа Лиги. */
+  league?: LeagueFacts;
+};
+
+export type LeagueFacts = {
+  /** «Мужчины» / «Женщины». */
+  gender: string;
+  season: number;
+  teams: number;
+  tours: number;
+  cities: string[];
+  matches: number;
+  finished: number;
 };
 
 export type TournamentSex = '' | 'm' | 'f';
@@ -126,6 +142,10 @@ export const FORMAT_LABEL: Record<TournamentFormat, string> = {
   group_playoff: 'Группы и плей-офф',
   manual: 'Протокол вручную',
 };
+
+/** Подпись формата строки календаря: у дивизиона Лиги — командные встречи. */
+export const formatLabel = (t: Pick<TournamentSummary, 'format' | 'league'>) =>
+  t.league ? 'Командные встречи' : (FORMAT_LABEL[t.format] ?? t.format);
 
 export const STATUS_LABEL: Record<TournamentStatus, string> = {
   open: 'Открыт',

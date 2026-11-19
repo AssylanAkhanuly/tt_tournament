@@ -10,7 +10,7 @@ import type { ReactNode } from 'react';
 
 import {
   CATEGORY_LABEL,
-  FORMAT_LABEL,
+  formatLabel,
   KindBadge,
   STATUS_LABEL,
   type TournamentStatus,
@@ -51,10 +51,11 @@ const COLUMNS: DataColumn<TournamentSummary>[] = [
       </Chip>
     ),
   },
-  { id: 'format', label: 'Формат', sortValue: (t) => FORMAT_LABEL[t.format] ?? t.format, render: (t) => FORMAT_LABEL[t.format] ?? t.format },
+  { id: 'format', label: 'Формат', sortValue: formatLabel, render: formatLabel },
   { id: 'club', label: 'Клуб', sortValue: (t) => t.clubName, render: (t) => t.clubName ?? '—' },
   {
     id: 'participants',
+    // У дивизиона Лиги участники — команды.
     label: 'Участников',
     align: 'right',
     descFirst: true,
@@ -84,7 +85,7 @@ export function TournamentTable({
         placeholder: 'Название, клуб, статус',
         testId: 'tournament-search',
         text: (t) =>
-          [t.name, t.clubName ?? '', STATUS_LABEL[t.status], FORMAT_LABEL[t.format] ?? '', t.category ? CATEGORY_LABEL[t.category] : ''].join(' '),
+          [t.name, t.clubName ?? '', STATUS_LABEL[t.status], formatLabel(t), t.category ? CATEGORY_LABEL[t.category] : ''].join(' '),
       }}
       count={(n) => 'Турниров: ' + n}
       actions={toolbar}

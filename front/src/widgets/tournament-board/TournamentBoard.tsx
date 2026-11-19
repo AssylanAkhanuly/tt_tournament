@@ -10,11 +10,16 @@
 
 import { Spinner } from '@heroui/react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { useMemo } from 'react';
 
+import { fetchDivisions } from '@/entities/league';
 import { useTournaments } from '@/entities/tournament';
+import { useLoad } from '@/shared/lib/useLoad';
 import { CreateTournamentDialog } from '@/features/tournament-create';
 import { TournamentCalendar } from '@/widgets/tournament-calendar';
 import { TournamentTable } from '@/widgets/tournament-table';
+
+import { divisionRow } from './leagueRows';
 
 type View = 'calendar' | 'table';
 
@@ -39,6 +44,7 @@ export function TournamentBoard({
   detailsPath,
   canCreate,
   only,
+  leaguePath,
 }: {
   /** Страница турнира для «Подробнее» и строки таблицы. */
   detailsPath: (id: string) => string;
@@ -46,15 +52,29 @@ export function TournamentBoard({
   canCreate: boolean;
   /** Только эти турниры (кабинет главного судьи — его турниры); нет — все. */
   only?: string[];
+  /** Страница дивизиона Евразийской лиги. Есть — дивизионы стоят в календаре и
+   *  таблице рядом с турнирами ✳ (19.11.2026); нет — только турниры. */
+  leaguePath?: (divisionId: string) => string;
 }) {
   const router = useRouter();
   const view = useBoardView();
   const tournaments = useTournaments();
-  const open = (id: string) => router.push(detailsPath(id));
+  const divisions = useLoad(() => (leaguePath ? fetchDivisions() : Promise.resolve([])), leaguePath ? 'league' : 'none');
+  const leagueRows = useMemo(() => (divisions.data ?? []).map(divisionRow), [divisions.data]);
+  const leagueIds = useMemo(() => new Set(leagueRows.map((r) => r.id)), [leagueRows]);
+  const open = (id: string) => router.push(leaguePath && leagueIds.has(id) ? leaguePath(id) : detailsPath(id));
 
   const toolbar = (
     <>
-      {canCreate && <CreateTournamentDialog onCreated={tournaments.reload} />}
+      {canCreate && (
+        <CreateTournamentDialog
+          withLeague={!!leaguePath}
+          onCreated={() => {
+            tournaments.reload();
+            divisions.reload();
+          }}
+        />
+      )}
     </>
   );
 
@@ -66,7 +86,7 @@ export function TournamentBoard({
     );
   }
   if (!tournaments.data) return <Spinner className="m-auto" />;
-  const rows = only ? tournaments.data.filter((t) => only.includes(t.id)) : tournaments.data;
+  const rows = [...(only ? tournaments.data.filter((t) => only.includes(t.id)) : tournaments.data), ...leagueRows];
   return view === 'table' ? (
     <TournamentTable tournaments={rows} onOpen={open} toolbar={toolbar} />
   ) : (
