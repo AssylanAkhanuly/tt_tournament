@@ -12,4 +12,5 @@ urlpatterns = [
     path("api/scoreboard/", include("scoreboard.urls")),
     path("api/rating/", include("rating.urls")),
     path("api/league/", include("league.urls")),
+    path("api/national/", include("national.urls")),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

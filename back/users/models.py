@@ -85,6 +85,12 @@ class Role(models.Model):
     # (`scope = region`, сам регион — в `region`). Правила заявки —
     # `tournaments/admission/`.
     KIND_REGIONAL_HEAD_COACH = "regional_head_coach"
+    # Национальная команда ✳ (19.11.2026, ROLES.md роли 11 и 21; NATIONAL.md):
+    # главный тренер — состав сборной и согласование планов подготовки; врач
+    # сборной — медицинская карта члена сборной (УМО, болезни, травмы,
+    # ограничения нагрузки). Не путать с врачом соревнований (роль 18).
+    KIND_NATIONAL_HEAD_COACH = "national_head_coach"
+    KIND_NATIONAL_DOCTOR = "national_doctor"
     KIND_CHOICES = [
         (KIND_GSK_CHAIRMAN, "Председатель Главной судейской коллегии"),
         (KIND_FEDERATION_ADMIN, "Администратор федерации"),
@@ -94,6 +100,8 @@ class Role(models.Model):
         (KIND_DEPUTY_CHIEF_REFEREE, "Заместитель главного судьи"),
         (KIND_CHIEF_SECRETARY, "Главный секретарь соревнований"),
         (KIND_REGIONAL_HEAD_COACH, "Старший тренер региона"),
+        (KIND_NATIONAL_HEAD_COACH, "Главный тренер национальной команды"),
+        (KIND_NATIONAL_DOCTOR, "Врач сборной"),
     ]
 
     SCOPE_SYSTEM = "system"
