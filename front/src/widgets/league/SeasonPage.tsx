@@ -2,8 +2,8 @@
 
 /* Сезон Евразийской лиги ✳ (19.11.2026, LEAGUE.md «Сезон») — разделы:
    «Лиги» (лиги сезона таблицей, «Новая лига»; строка ведёт в лигу) и
-   «Команды» (все команды сезона с клубом, лигой и составом; строка ведёт в
-   команды её лиги; «Настройки» — регистрация команд и «Сезон завершён», как
+   «Команды» (все команды сезона с клубом, лигой, составом и состоянием
+   заявки; строка открывает решение по заявке клуба — `TeamDecision`; «Настройки» — регистрация команд и «Сезон завершён», как
    приём заявок у спортсменов турнира, решение владельца продукта). Без обёрток
    и полей: таблицы от края до края. Что можно — решает сервер (завершённый сезон отбивает
    правку); экран прячет «Новую лигу» у завершённого, чтобы не звать на отказ.
@@ -21,10 +21,12 @@ import {
   type SeasonDetail,
   type SeasonTeam,
 } from '@/entities/league';
-import { SeasonSettings } from '@/features/league-season';
+import { SeasonSettings, TeamDecision } from '@/features/league-season';
 import { DataTable, type DataColumn } from '@/shared/ui/DataTable';
 import { ModalSheet } from '@/shared/ui/ModalSheet';
 import { Picker } from '@/shared/ui/Picker';
+
+import { TeamStatusChip } from './SquadDialog';
 
 export type SeasonSection = 'leagues' | 'teams';
 export const SEASON_SECTIONS: { id: SeasonSection; label: string }[] = [
@@ -113,7 +115,49 @@ const TEAM_COLUMNS: DataColumn<SeasonTeam>[] = [
   { id: 'league', label: 'Лига', sortValue: (t) => t.divisionName, render: (t) => t.divisionName },
   { id: 'gender', label: 'Розыгрыш', sortValue: (t) => t.gender, render: (t) => GENDER_LABEL[t.gender] },
   { id: 'members', label: 'Игроков', align: 'right', descFirst: true, sortValue: (t) => t.members, render: (t) => t.members },
+  { id: 'status', label: 'Заявка', sortValue: (t) => t.status, render: (t) => <TeamStatusChip status={t.status} /> },
 ];
+
+/** «Команды» сезона: строка открывает решение по заявке клуба. */
+function SeasonTeams({
+  season,
+  onOpenDivision,
+  onChanged,
+}: {
+  season: SeasonDetail;
+  onOpenDivision: (divisionId: string, divisionSection?: 'teams') => void;
+  onChanged: () => void;
+}) {
+  const [openId, setOpenId] = useState<string | null>(null);
+  const open = season.teams.find((t) => t.id === openId) ?? null;
+  return (
+    <>
+      <DataTable
+        ariaLabel="Команды сезона"
+        testId="season-teams"
+        rows={season.teams}
+        columns={TEAM_COLUMNS}
+        getId={(t) => t.id}
+        empty="Команд нет"
+        search={{
+          placeholder: 'Команда, клуб, лига',
+          testId: 'season-team-search',
+          text: (t) => [t.name, t.clubName, t.divisionName].join(' '),
+        }}
+        defaultSort={{ column: 'league', direction: 'ascending' }}
+        actions={<SeasonSettings season={season} onChanged={onChanged} />}
+        onRowAction={(t) => setOpenId(t.id)}
+        rowProps={(t) => ({ 'data-testid': 'season-team-row', 'data-name': t.name, 'data-status': t.status })}
+      />
+      <TeamDecision
+        team={open}
+        onClose={() => setOpenId(null)}
+        onDecided={onChanged}
+        onOpenLeague={(divisionId) => onOpenDivision(divisionId, 'teams')}
+      />
+    </>
+  );
+}
 
 export function SeasonPage({
   season,
@@ -129,26 +173,8 @@ export function SeasonPage({
 }) {
   if (section === 'teams') {
     // Все команды сезона; «Настройки» — регистрация и завершение сезона, как
-    // приём заявок у спортсменов турнира.
-    return (
-      <DataTable
-        ariaLabel="Команды сезона"
-        testId="season-teams"
-        rows={season.teams}
-        columns={TEAM_COLUMNS}
-        getId={(t) => t.id}
-        empty="Команд нет"
-        search={{
-          placeholder: 'Команда, клуб, лига',
-          testId: 'season-team-search',
-          text: (t) => [t.name, t.clubName, t.divisionName].join(' '),
-        }}
-        defaultSort={{ column: 'league', direction: 'ascending' }}
-        actions={<SeasonSettings season={season} onChanged={onChanged} />}
-        onRowAction={(t) => onOpenDivision(t.divisionId, 'teams')}
-        rowProps={(t) => ({ 'data-testid': 'season-team-row', 'data-name': t.name })}
-      />
-    );
+    // приём заявок у спортсменов турнира; строка — решение по заявке клуба.
+    return <SeasonTeams season={season} onOpenDivision={onOpenDivision} onChanged={onChanged} />;
   }
   return (
     <DataTable

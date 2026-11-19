@@ -57,7 +57,10 @@ export type Season = CalendarSummary & {
   closed: boolean;
   registration: SeasonRegistration;
   leagues: number;
+  /** Принятых команд. */
   teamsCount: number;
+  /** Заявок клубов ждёт решения. */
+  pending: number;
 };
 
 /** Команда сезона — строка раздела «Команды» страницы сезона. */
@@ -69,6 +72,10 @@ export type SeasonTeam = {
   divisionName: string;
   gender: LeagueGender;
   members: number;
+  status: TeamStatus;
+  decisionComment: string;
+  /** Кто подал заявку. */
+  submittedBy: string;
 };
 
 export type SeasonDetail = Season & { divisions: DivisionListItem[]; teams: SeasonTeam[] };
@@ -84,7 +91,25 @@ export const registrationLabel = (s: Pick<Season, 'closed' | 'registration'>) =>
         : 'Регистрация идёт'
       : 'Регистрация закрыта';
 
-export type LeagueTeam = { id: string; name: string; clubId: string; clubName: string; membersCount: number };
+/** Заявка команды ✳ (19.11.2026, LEAGUE.md «Заявка клуба»): клуб подал — ждёт
+ *  решения федерации; в туры и таблицу идут только принятые. */
+export type TeamStatus = 'submitted' | 'accepted' | 'rejected';
+export const TEAM_STATUS_LABEL: Record<TeamStatus, string> = {
+  submitted: 'Ждёт решения',
+  accepted: 'Принята',
+  rejected: 'Отклонена',
+};
+
+export type LeagueTeam = {
+  id: string;
+  name: string;
+  clubId: string;
+  clubName: string;
+  membersCount: number;
+  status: TeamStatus;
+  /** Комментарий решения федерации; у отклонённой — причина. */
+  decisionComment: string;
+};
 
 export type StandingRow = {
   place: number;
@@ -107,7 +132,8 @@ export type DivisionDetail = Division & { teams: LeagueTeam[]; tours: TourSummar
 
 export type LeaguePerson = { id: string; name: string; region: string; rating: string | null };
 
-export type TeamDetail = LeagueTeam & { division: Division; members: LeaguePerson[] };
+/** `canEdit` — может ли смотрящий менять состав; решает сервер. */
+export type TeamDetail = LeagueTeam & { division: Division; members: LeaguePerson[]; canEdit: boolean };
 
 export type TeamMatch = {
   id: number;
@@ -171,6 +197,7 @@ const season = (s: Raw): Season => {
     registration: { open: Boolean(r.open), until: (r.until as string | null) ?? null, active: Boolean(r.active) },
     leagues: Number(s.leagues),
     teamsCount: Number(s.teams),
+    pending: Number(s.pending ?? 0),
   };
 };
 
@@ -180,6 +207,8 @@ const team = (t: Raw): LeagueTeam => ({
   clubId: String(t.club_id),
   clubName: String(t.club_name),
   membersCount: Number(t.members_count ?? 0),
+  status: ((t.status as TeamStatus) ?? 'accepted'),
+  decisionComment: String(t.decision_comment ?? ''),
 });
 
 const person = (p: Raw): LeaguePerson => ({
@@ -261,6 +290,9 @@ export async function fetchSeason(id: string): Promise<SeasonDetail> {
       divisionName: String(t.division_name),
       gender: t.gender as LeagueGender,
       members: Number(t.members),
+      status: t.status as TeamStatus,
+      decisionComment: String(t.decision_comment ?? ''),
+      submittedBy: String(t.submitted_by ?? ''),
     })),
   };
 }
@@ -313,12 +345,76 @@ export async function fetchDivision(id: string): Promise<DivisionDetail> {
 export const registerTeam = async (divisionId: string, clubId: string, name: string) =>
   team(await post<Raw>(`/api/league/divisions/${divisionId}/teams/`, { club_id: clubId, name }));
 
+// ── Заявка клуба ✳ (19.11.2026) ──
+
+export const decideTeam = async (teamId: string, decision: 'accept' | 'reject', comment = '') =>
+  team(await post<Raw>(`/api/league/teams/${teamId}/decide/`, { decision, comment }));
+
+export const resubmitTeam = async (teamId: string) => team(await post<Raw>(`/api/league/teams/${teamId}/resubmit/`, {}));
+
+/** Команда клуба в кабинете администратора клуба: сезон, лига и что можно. */
+export type ClubTeam = LeagueTeam & {
+  seasonId: string;
+  seasonName: string;
+  divisionId: string;
+  divisionName: string;
+  gender: LeagueGender;
+  registrationActive: boolean;
+  canEdit: boolean;
+  canResubmit: boolean;
+};
+
+/** Сезон, в который сейчас открыта регистрация, и его лиги. */
+export type OpenSeason = {
+  id: string;
+  name: string;
+  registrationUntil: string | null;
+  divisions: { id: string; name: string; gender: LeagueGender; level: number }[];
+};
+
+export type MyLeague = { clubs: { id: string; name: string }[]; teams: ClubTeam[]; seasons: OpenSeason[] };
+
+export async function fetchMyLeague(): Promise<MyLeague> {
+  const d = await request<Raw>('/api/league/my/');
+  return {
+    clubs: (d.clubs as Raw[]).map((c) => ({ id: String(c.id), name: String(c.name) })),
+    teams: (d.teams as Raw[]).map((t) => ({
+      ...team(t),
+      membersCount: Number(t.members),
+      seasonId: String(t.season_id),
+      seasonName: String(t.season_name),
+      divisionId: String(t.division_id),
+      divisionName: String(t.division_name),
+      gender: t.gender as LeagueGender,
+      registrationActive: Boolean(t.registration_active),
+      canEdit: Boolean(t.can_edit),
+      canResubmit: Boolean(t.can_resubmit),
+    })),
+    seasons: (d.seasons as Raw[]).map((s) => ({
+      id: String(s.id),
+      name: String(s.name),
+      registrationUntil: (s.registration_until as string | null) ?? null,
+      divisions: (s.divisions as Raw[]).map((v) => ({
+        id: String(v.id),
+        name: String(v.name),
+        gender: v.gender as LeagueGender,
+        level: Number(v.level),
+      })),
+    })),
+  };
+}
+
 export const createTour = (divisionId: string, t: { number: number; city: string; startsOn: string | null }) =>
   post<Raw>(`/api/league/divisions/${divisionId}/tours/`, { number: t.number, city: t.city, starts_on: t.startsOn });
 
 export async function fetchTeam(id: string): Promise<TeamDetail> {
   const t = await request<Raw>(`/api/league/teams/${id}/`);
-  return { ...team(t), division: division(t.division as Raw), members: (t.members as Raw[]).map(person) };
+  return {
+    ...team(t),
+    division: division(t.division as Raw),
+    members: (t.members as Raw[]).map(person),
+    canEdit: Boolean(t.can_edit),
+  };
 }
 
 export const addMember = (teamId: string, userId: string) => post(`/api/league/teams/${teamId}/members/`, { user_id: userId });

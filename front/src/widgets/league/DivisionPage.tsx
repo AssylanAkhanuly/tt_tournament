@@ -2,27 +2,23 @@
 
 /* Дивизион Евразийской лиги ✳ (19.11.2026, LEAGUE.md) — разделы:
    «Таблица» (места, очки, встречи и партии — считает сервер движком),
-   «Команды» (заявка команды клуба, состав на сезон в окне команды),
+   «Команды» (заявка команды клуба, состав на сезон в окне команды —
+   `SquadDialog`, общий с кабинетом клуба; колонка «Заявка» — решение федерации),
    «Туры» (новый тур — сервер сразу составляет встречи по круговой; строка
    ведёт на тур). Без обёрток и полей: таблицы от края до края.
    HeroUI + Tailwind. */
 
-import { Avatar, Button, Input, Label, ListBox, Modal, SearchField, Spinner, TextField, useOverlayState } from '@heroui/react';
-import { Plus, UserMinus, UserPlus } from 'lucide-react';
-import { useEffect, useState, type FormEvent } from 'react';
+import { Button, Input, Label, Modal, TextField, useOverlayState } from '@heroui/react';
+import { Plus } from 'lucide-react';
+import { useState, type FormEvent } from 'react';
 
 import {
-  addMember,
   createClub,
   createTour,
-  fetchCandidates,
   fetchClubs,
-  fetchTeam,
   registerTeam,
-  removeMember,
   useLoad,
   type DivisionDetail,
-  type LeaguePerson,
   type LeagueTeam,
   type StandingRow,
   type TourSummary,
@@ -30,6 +26,8 @@ import {
 import { DataTable, type DataColumn } from '@/shared/ui/DataTable';
 import { ModalSheet } from '@/shared/ui/ModalSheet';
 import { Picker } from '@/shared/ui/Picker';
+
+import { SquadDialog, TeamStatusChip } from './SquadDialog';
 
 export type DivisionSection = 'table' | 'teams' | 'tours';
 export const DIVISION_SECTIONS: { id: DivisionSection; label: string }[] = [
@@ -122,109 +120,6 @@ function TeamDialog({ divisionId, onCreated }: { divisionId: string; onCreated: 
   );
 }
 
-/** Состав команды на сезон: список с «Убрать» и поиск спортсменов для «Добавить». */
-function SquadDialog({ team, squadMax, onClose, onChanged }: { team: LeagueTeam | null; squadMax: number; onClose: () => void; onChanged: () => void }) {
-  const detail = useLoad(() => (team ? fetchTeam(team.id) : Promise.resolve(null)), team?.id ?? 'none');
-  const [q, setQ] = useState('');
-  const [found, setFound] = useState<LeaguePerson[] | null>(null);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (!team) return;
-    let live = true;
-    const t = setTimeout(() => {
-      fetchCandidates(team.id, q)
-        .then((list) => live && setFound(list))
-        .catch(() => live && setFound([]));
-    }, 250);
-    return () => {
-      live = false;
-      clearTimeout(t);
-    };
-  }, [team, q, detail.data]);
-
-  async function run(action: () => Promise<unknown>) {
-    setError(null);
-    try {
-      await action();
-      detail.reload();
-      onChanged();
-    } catch (e) {
-      setError((e as Error).message);
-    }
-  }
-
-  const members = detail.data?.members ?? [];
-  return (
-    <Modal.Backdrop isOpen={!!team} onOpenChange={(open) => !open && onClose()}>
-      <Modal.Container size="md">
-        <Modal.Dialog className="rounded-xl" data-testid="squad-dialog">
-          <Modal.CloseTrigger />
-          <Modal.Header>
-            <Modal.Heading className="text-lg font-semibold">
-              {team?.name} · состав {members.length}/{squadMax}
-            </Modal.Heading>
-          </Modal.Header>
-          <Modal.Body className="flex flex-col gap-4">
-            <ul className="m-0 flex list-none flex-col divide-y divide-neutral-100 rounded-xl border border-neutral-200 p-0">
-              {members.length === 0 && <li className="px-3 py-3 text-[13px] text-neutral-500">Состав пуст</li>}
-              {members.map((m) => (
-                <li key={m.id} className="flex items-center gap-3 px-3 py-2" data-testid="squad-member" data-name={m.name}>
-                  <Avatar size="sm">
-                    <Avatar.Fallback className="text-[11px]">{m.name.slice(0, 2)}</Avatar.Fallback>
-                  </Avatar>
-                  <span className="min-w-0 flex-1 truncate text-[14px]">{m.name}</span>
-                  <span className="text-[12px] text-neutral-500">{m.region}</span>
-                  <Button
-                    isIconOnly
-                    variant="ghost"
-                    size="sm"
-                    aria-label="Убрать из состава"
-                    className="rounded-xl text-red-600"
-                    onPress={() => void run(() => removeMember(team!.id, m.id))}
-                    data-testid="squad-remove"
-                  >
-                    <UserMinus size={16} />
-                  </Button>
-                </li>
-              ))}
-            </ul>
-            <SearchField aria-label="Поиск спортсменов" value={q} onChange={setQ}>
-              <SearchField.Group className="rounded-xl">
-                <SearchField.SearchIcon />
-                <SearchField.Input placeholder="Добавить: фамилия или имя" data-testid="squad-search" />
-                <SearchField.ClearButton />
-              </SearchField.Group>
-            </SearchField>
-            <div className="max-h-56 overflow-y-auto">
-              {!found ? (
-                <Spinner className="mx-auto my-4 block" />
-              ) : (
-                <ListBox
-                  aria-label="Кандидаты"
-                  renderEmptyState={() => <p className="py-4 text-center text-[13px] text-neutral-500">Никого не найдено</p>}
-                  onAction={(id) => void run(() => addMember(team!.id, String(id)))}
-                >
-                  {found.map((p) => (
-                    <ListBox.Item key={p.id} id={p.id} textValue={p.name} className="rounded-xl" data-testid="squad-candidate" data-name={p.name}>
-                      <span className="flex w-full items-center gap-2">
-                        <UserPlus size={15} className="text-brand-600" />
-                        <span className="min-w-0 flex-1 truncate">{p.name}</span>
-                        <span className="text-[12px] text-neutral-500">{p.region}</span>
-                      </span>
-                    </ListBox.Item>
-                  ))}
-                </ListBox>
-              )}
-            </div>
-            {error && <p className="text-[13px] text-red-600" data-testid="squad-error">{error}</p>}
-          </Modal.Body>
-        </Modal.Dialog>
-      </Modal.Container>
-    </Modal.Backdrop>
-  );
-}
-
 function TourDialog({ divisionId, next, onCreated }: { divisionId: string; next: number; onCreated: () => void }) {
   const state = useOverlayState();
   const [number, setNumber] = useState(String(next));
@@ -292,6 +187,8 @@ const TEAMS: DataColumn<LeagueTeam>[] = [
   { id: 'name', label: 'Команда', rowHeader: true, sortValue: (t) => t.name, render: (t) => <span className="font-medium">{t.name}</span> },
   { id: 'club', label: 'Клуб', sortValue: (t) => t.clubName, render: (t) => t.clubName },
   { id: 'members', label: 'Состав', align: 'right', sortValue: (t) => t.membersCount, render: (t) => t.membersCount },
+  // Заявка клуба ✳ (19.11.2026): в туры и таблицу идут только принятые.
+  { id: 'status', label: 'Заявка', sortValue: (t) => t.status, render: (t) => <TeamStatusChip status={t.status} /> },
 ];
 
 const TOURS: DataColumn<TourSummary>[] = [

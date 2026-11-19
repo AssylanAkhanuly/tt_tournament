@@ -173,15 +173,19 @@ test('лига: сезон, лига, команды с составом, тур
   await page.getByTestId('home-link').click();
   await page.waitForURL(seasonUrl);
   await expect(page.locator(`[data-testid="league-row"][data-name="${division}"]`)).toContainText('2');
-  // «Команды» сезона — обе команды с лигой и составом; строка ведёт в команды лиги.
+  // «Команды» сезона — обе команды с лигой и составом, внесены федерацией —
+  // «Принята»; строка открывает карточку заявки, из неё — в команды лиги.
   await page.getByRole('button', { name: 'Команды', exact: true }).click();
   await page.waitForURL(/\/teams$/);
   const teamA = page.locator(`[data-testid="season-team-row"][data-name="${clubA}"]`);
   await expect(page.getByTestId('season-team-row')).toHaveCount(2);
   await expect(teamA).toContainText(division);
   await expect(teamA).toContainText('3');
+  await expect(teamA.getByTestId('team-status')).toHaveText('Принята');
   await page.screenshot({ path: 'test-results/league/season-teams.png' });
   await teamA.click();
+  await expect(page.getByTestId('team-decision-squad').locator('li')).toHaveCount(3);
+  await page.getByTestId('team-decision').getByRole('button', { name: 'Открыть лигу' }).click();
   await page.waitForURL(/\/dashboard\/league\/[0-9a-f-]{36}\/teams$/);
   // Знак ведёт в сезон, когда лига загрузилась (до того — в календарь).
   await expect(page.locator(`[data-testid="team-row"][data-name="${clubA}"]`)).toBeVisible();

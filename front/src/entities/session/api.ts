@@ -31,6 +31,8 @@ export const ROLE_NATIONAL_CONSULTANT = 'national_consultant';
 export const ROLE_NATIONAL_TEAM_COACH = 'national_team_coach';
 export const ROLE_NATIONAL_PSYCHOLOGIST = 'national_psychologist';
 export const ROLE_PERSONAL_COACH = 'personal_coach';
+// Администратор клуба ✳ (19.11.2026, роль 13): заявка команды клуба в Евразийскую лигу.
+export const ROLE_CLUB_ADMIN = 'club_admin';
 
 /** Рабочие места ролей, у которых в приложении есть кабинет: короткое
  *  название (полное с сервера длинное для меню) и адрес. Порядок — старшинство:
@@ -44,6 +46,7 @@ const WORKSPACES: { kind: string; title: string; to: string }[] = [
   // кабинет; в кабинет главного судьи — из меню «Работать как».
   { kind: ROLE_CHIEF_REFEREE, title: 'Главный судья', to: '/chief' },
   { kind: ROLE_REGIONAL_HEAD_COACH, title: 'Старший тренер региона', to: '/coach' },
+  { kind: ROLE_CLUB_ADMIN, title: 'Администратор клуба', to: '/club' },
   { kind: ROLE_NATIONAL_HEAD_COACH, title: 'Главный тренер сборной', to: '/national' },
   { kind: ROLE_NATIONAL_CONSULTANT, title: 'Тренер-консультант', to: '/national' },
   { kind: ROLE_NATIONAL_TEAM_COACH, title: 'Тренер сборной', to: '/national' },
