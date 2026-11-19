@@ -91,16 +91,20 @@ test('лига: сезон, лига, команды с составом, тур
   await page.waitForURL(/\/dashboard\/league\/seasons\/[0-9a-f-]{36}\/leagues$/);
   const seasonUrl = page.url();
 
-  // Регистрация нового сезона закрыта, пока её не открыли; открыть — «Сохранить».
-  await page.getByRole('button', { name: 'Регистрация', exact: true }).click();
-  await page.waitForURL(/\/registration$/);
-  const save = page.getByTestId('season-save');
+  // «Команды» сезона: пока пусто; регистрация нового сезона закрыта, пока её не
+  // открыли, — в «Настройках», как приём заявок у спортсменов турнира.
+  await page.getByRole('button', { name: 'Команды', exact: true }).click();
+  await page.waitForURL(/\/seasons\/[0-9a-f-]{36}\/teams$/);
+  await expect(page.getByTestId('table-empty')).toBeVisible();
+  await page.getByTestId('season-settings').click();
+  const drawer = page.getByTestId('season-settings-drawer');
+  const save = drawer.getByTestId('season-save');
   await expect(save).toBeDisabled();
-  await page.getByTestId('season-registration-switch').click();
-  await expect(page.getByTestId('season-registration-until')).toBeVisible();
+  await drawer.getByTestId('season-registration-switch').click();
+  await expect(drawer.getByTestId('season-registration-until')).toBeVisible();
+  await page.screenshot({ path: 'test-results/league/season-settings.png' });
   await save.click();
-  await expect(save).toBeDisabled();
-  await page.screenshot({ path: 'test-results/league/registration.png' });
+  await expect(drawer).toHaveCount(0);
 
   // Лига сезона.
   await page.getByRole('button', { name: 'Лиги', exact: true }).click();
@@ -169,6 +173,20 @@ test('лига: сезон, лига, команды с составом, тур
   await page.getByTestId('home-link').click();
   await page.waitForURL(seasonUrl);
   await expect(page.locator(`[data-testid="league-row"][data-name="${division}"]`)).toContainText('2');
+  // «Команды» сезона — обе команды с лигой и составом; строка ведёт в команды лиги.
+  await page.getByRole('button', { name: 'Команды', exact: true }).click();
+  await page.waitForURL(/\/teams$/);
+  const teamA = page.locator(`[data-testid="season-team-row"][data-name="${clubA}"]`);
+  await expect(page.getByTestId('season-team-row')).toHaveCount(2);
+  await expect(teamA).toContainText(division);
+  await expect(teamA).toContainText('3');
+  await page.screenshot({ path: 'test-results/league/season-teams.png' });
+  await teamA.click();
+  await page.waitForURL(/\/dashboard\/league\/[0-9a-f-]{36}\/teams$/);
+  // Знак ведёт в сезон, когда лига загрузилась (до того — в календарь).
+  await expect(page.locator(`[data-testid="team-row"][data-name="${clubA}"]`)).toBeVisible();
+  await page.getByTestId('home-link').click();
+  await page.waitForURL(seasonUrl);
   await page.getByTestId('home-link').click();
   await page.waitForURL((url) => url.pathname === '/dashboard' && !url.searchParams.get('view'));
   const title = `Евразийская лига · ${seasonName}`;

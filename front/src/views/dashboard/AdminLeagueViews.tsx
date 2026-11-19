@@ -1,7 +1,7 @@
 'use client';
 
 /* Страницы Лиги в кабинете администратора федерации ✳ (19.11.2026, LEAGUE.md):
-   сезон (разделы «Лиги · Регистрация») → лига-дивизион («Таблица · Команды ·
+   сезон (разделы «Лиги · Команды») → лига-дивизион («Таблица · Команды ·
    Туры») → тур (встречи и окно счёта). Сезоны стоят в календаре рядом с
    турнирами (`DashboardView`), своего раздела в меню у Лиги нет; знак в шапке
    ведёт на уровень выше: тур → туры лиги → сезон → календарь. Содержимое — общие виджеты
@@ -47,7 +47,7 @@ export function AdminSeasonView({ id, section }: { id: string; section: SeasonSe
         <SeasonPage
           season={season.data}
           section={section}
-          onOpenDivision={(divisionId) => router.push(divisionHref(divisionId))}
+          onOpenDivision={(divisionId, divisionSection) => router.push(divisionHref(divisionId, divisionSection))}
           onChanged={season.reload}
         />
       )}

@@ -60,7 +60,18 @@ export type Season = CalendarSummary & {
   teamsCount: number;
 };
 
-export type SeasonDetail = Season & { divisions: DivisionListItem[] };
+/** Команда сезона — строка раздела «Команды» страницы сезона. */
+export type SeasonTeam = {
+  id: string;
+  name: string;
+  clubName: string;
+  divisionId: string;
+  divisionName: string;
+  gender: LeagueGender;
+  members: number;
+};
+
+export type SeasonDetail = Season & { divisions: DivisionListItem[]; teams: SeasonTeam[] };
 
 /** «Регистрация до 01.12.2026», «Регистрация идёт», «Регистрация закрыта»,
  *  «Сезон завершён». */
@@ -239,7 +250,19 @@ export const fetchSeasons = async () => (await request<Raw[]>('/api/league/seaso
 
 export async function fetchSeason(id: string): Promise<SeasonDetail> {
   const s = await request<Raw>(`/api/league/seasons/${id}/`);
-  return { ...season(s), divisions: (s.divisions as Raw[]).map(divisionItem) };
+  return {
+    ...season(s),
+    divisions: (s.divisions as Raw[]).map(divisionItem),
+    teams: ((s.team_list as Raw[]) ?? []).map((t) => ({
+      id: String(t.id),
+      name: String(t.name),
+      clubName: String(t.club_name),
+      divisionId: String(t.division_id),
+      divisionName: String(t.division_name),
+      gender: t.gender as LeagueGender,
+      members: Number(t.members),
+    })),
+  };
 }
 
 export const createSeason = async (s: { year: number; name: string; registrationUntil: string | null }) =>

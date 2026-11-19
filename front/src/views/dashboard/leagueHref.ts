@@ -1,6 +1,6 @@
 /* Адреса Лиги в кабинете администратора. Сезон стоит в календаре рядом с
    турнирами и открывается своей страницей `/dashboard/league/seasons/<id>/<раздел>`
-   («Лиги · Регистрация»), как турнир — `/dashboard/tournaments/<id>/…`; лига
+   («Лиги · Команды»), как турнир — `/dashboard/tournaments/<id>/…`; лига
    сезона — `/dashboard/league/<id>/<раздел>`, тур — `/dashboard/league/tours/<id>`. */
 
 export const LEAGUE_BASE = '/dashboard/league';
