@@ -55,6 +55,8 @@ export function useTournamentPage({
     pending,
   };
   return {
+    /** Название турнира — для хлебных крошек кабинета; до ответа — пусто. */
+    name: tournament.data?.name ?? '',
     active: sectionLabel(section),
     nav: tournamentNav(tournamentHref(cabinet, id), sections, at),
     home: back,

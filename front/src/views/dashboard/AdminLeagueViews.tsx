@@ -17,6 +17,7 @@ import {
   SEASON_SECTIONS,
   SeasonPage,
   TourPage,
+  TourReferees,
   TourSchedule,
   type DivisionSection,
   type SeasonSection,
@@ -34,13 +35,22 @@ function Failed({ error }: { error: string }) {
   );
 }
 
+/** Хлебные крошки Лиги ✳ (19.11.2026): «Календарь / Евразийская лига · сезон /
+ *  лига / тур»; последнее звено — без адреса. */
+const CALENDAR = { label: 'Календарь', href: '/dashboard' };
+const seasonCrumb = (id: string, name: string, link: boolean) => ({
+  label: 'Евразийская лига · ' + name,
+  href: link ? seasonHref(id) : undefined,
+});
+
 export function AdminSeasonView({ id, section }: { id: string; section: SeasonSection }) {
   const router = useRouter();
   const season = useLoad(() => fetchSeason(id), id);
   const nav = SEASON_SECTIONS.map((s) => ({ label: s.label, href: seasonHref(id, s.id) }));
   const active = SEASON_SECTIONS.find((s) => s.id === section)!.label;
+  const crumbs = season.data ? [CALENDAR, seasonCrumb(id, season.data.name, false)] : [CALENDAR];
   return (
-    <AdminShell active={active} nav={nav} bleed>
+    <AdminShell active={active} nav={nav} crumbs={crumbs} bleed>
       {season.error ? (
         <Failed error={season.error} />
       ) : !season.data ? (
@@ -63,8 +73,10 @@ export function AdminDivisionView({ id, section }: { id: string; section: Divisi
   const rules = useLoad(fetchRules, 'rules');
   const nav = DIVISION_SECTIONS.map((s) => ({ label: s.label, href: divisionHref(id, s.id) }));
   const active = DIVISION_SECTIONS.find((s) => s.id === section)!.label;
+  const d = division.data;
+  const crumbs = d ? [CALENDAR, seasonCrumb(d.seasonId, d.seasonName, true), { label: d.name }] : [CALENDAR];
   return (
-    <AdminShell active={active} nav={nav} home={division.data ? seasonHref(division.data.seasonId) : undefined} bleed>
+    <AdminShell active={active} nav={nav} crumbs={crumbs} home={d ? seasonHref(d.seasonId) : undefined} bleed>
       {division.error ? (
         <Failed error={division.error} />
       ) : !division.data ? (
@@ -83,10 +95,11 @@ export function AdminDivisionView({ id, section }: { id: string; section: Divisi
   );
 }
 
-export type TourSection = 'matches' | 'schedule';
+export type TourSection = 'matches' | 'referees' | 'schedule';
 
-/** Тур: разделы «Встречи» (счёт) и «Расписание» ✳ (19.11.2026, как у турнира) —
- *  у расписания подпункты «Список · День» (`?view=day`). */
+/** Тур: разделы «Встречи» (счёт), «Судьи» (судьи стола) и «Расписание» ✳
+ *  (19.11.2026, как у турнира) — у расписания подпункты «Список · День»
+ *  (`?view=day`). */
 export function AdminTourView({ id, section }: { id: string; section: TourSection }) {
   const tour = useLoad(() => fetchTour(id), id);
   const view: TourScheduleView = useSearchParams().get('view') === 'day' ? 'day' : 'list';
@@ -94,8 +107,17 @@ export function AdminTourView({ id, section }: { id: string; section: TourSectio
   const href = (s: TourSection) => `${BASE}/tours/${id}/${s}`;
   const nav = [
     { label: 'Встречи', href: href('matches') },
+    { label: 'Судьи', href: href('referees') },
     { label: 'Расписание', href: href('schedule') },
   ];
+  const crumbs = t
+    ? [
+        CALENDAR,
+        seasonCrumb(t.division.seasonId, t.division.seasonName, true),
+        { label: t.division.name, href: divisionHref(t.division.id, 'tours') },
+        { label: 'Тур ' + t.number + (t.city ? ' · ' + t.city : '') },
+      ]
+    : [CALENDAR];
   const sub =
     section === 'schedule' && t && t.schedule.status !== 'none'
       ? [
@@ -105,9 +127,10 @@ export function AdminTourView({ id, section }: { id: string; section: TourSectio
       : undefined;
   return (
     <AdminShell
-      active={section === 'schedule' ? 'Расписание' : 'Встречи'}
+      active={section === 'schedule' ? 'Расписание' : section === 'referees' ? 'Судьи' : 'Встречи'}
       nav={nav}
       sub={sub}
+      crumbs={crumbs}
       home={t ? divisionHref(t.division.id, 'tours') : undefined}
       bleed
     >
@@ -117,6 +140,8 @@ export function AdminTourView({ id, section }: { id: string; section: TourSectio
         <Spinner className="m-auto" />
       ) : section === 'schedule' ? (
         <TourSchedule tour={t} view={view} onChanged={tour.reload} />
+      ) : section === 'referees' ? (
+        <TourReferees tour={t} onChanged={tour.reload} />
       ) : (
         <TourPage tour={t} canEdit onChanged={tour.reload} />
       )}

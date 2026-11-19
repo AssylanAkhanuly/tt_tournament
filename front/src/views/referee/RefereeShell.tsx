@@ -3,7 +3,7 @@
 /* Оболочка страниц кабинета судьи: `RoleShell` с ролью судьи и разделами
    кабинета. Новая страница кабинета оборачивается сюда. */
 
-import { CalendarDays } from 'lucide-react';
+import { CalendarDays, Trophy } from 'lucide-react';
 import type { ReactNode } from 'react';
 
 import { ROLE_REFEREE } from '@/entities/session';
@@ -11,7 +11,11 @@ import { RoleShell, type RoleNavItem } from '@/views/workspace';
 import type { ShellSubItem } from '@/widgets/app-shell';
 
 /** Разделы кабинета. Новый раздел — строка здесь. */
-const NAV: RoleNavItem[] = [{ label: 'Календарь', href: '/referee', icon: <CalendarDays size={16} /> }];
+const NAV: RoleNavItem[] = [
+  { label: 'Календарь', href: '/referee', icon: <CalendarDays size={16} /> },
+  // Встречи Евразийской лиги, которые он судит ✳ (19.11.2026) — из отправленных расписаний.
+  { label: 'Лига', href: '/referee/league', icon: <Trophy size={16} /> },
+];
 
 export function RefereeShell({
   active,

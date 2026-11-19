@@ -1,4 +1,4 @@
-/* Тур лиги, раздел «Встречи · Расписание». Маршрут тонкий: композиция во `views`.
+/* Тур лиги, раздел «Встречи · Судьи · Расписание». Маршрут тонкий: композиция во `views`.
    Suspense — экран читает вид расписания из адреса (`?view=day`). */
 
 import type { Metadata } from 'next';
@@ -8,7 +8,7 @@ import { AdminTourView } from '@/views/dashboard';
 
 export const metadata: Metadata = { title: 'Тур — Лига — ФНТ РК' };
 
-const SECTIONS = ['matches', 'schedule'] as const;
+const SECTIONS = ['matches', 'referees', 'schedule'] as const;
 
 export default async function Page({ params }: { params: Promise<{ id: string; section: string }> }) {
   const { id, section } = await params;

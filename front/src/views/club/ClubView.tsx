@@ -8,18 +8,14 @@
    причина и «Подать снова». Оболочка — `RoleShell` с ролью клуба. */
 
 import { Button, Spinner } from '@heroui/react';
-import { Users } from 'lucide-react';
 import { useState } from 'react';
 
 import { fetchMyLeague, GENDER_LABEL, resubmitTeam, useLoad, type ClubTeam } from '@/entities/league';
-import { ROLE_CLUB_ADMIN } from '@/entities/session';
 import { ApplyTeamDialog } from '@/features/league-application';
 import { DataTable, type DataColumn } from '@/shared/ui/DataTable';
-import { RoleShell, type RoleNavItem } from '@/views/workspace';
 import { SquadDialog, TeamStatusChip } from '@/widgets/league';
 
-/** Разделы кабинета. Новый раздел — строка здесь. */
-const NAV: RoleNavItem[] = [{ label: 'Команды', href: '/club', icon: <Users size={16} /> }];
+import { ClubShell } from './ClubShell';
 
 const COLUMNS: DataColumn<ClubTeam>[] = [
   { id: 'name', label: 'Команда', rowHeader: true, sortValue: (t) => t.name, render: (t) => <span className="font-medium">{t.name}</span> },
@@ -54,7 +50,7 @@ export function ClubView() {
   }
 
   return (
-    <RoleShell kind={ROLE_CLUB_ADMIN} title="Администратор клуба" nav={NAV} active="Команды" bleed>
+    <ClubShell active="Команды">
       {my.error ? (
         <p className="p-6 text-[13px] text-red-600">{my.error}</p>
       ) : !my.data ? (
@@ -109,6 +105,6 @@ export function ClubView() {
           </SquadDialog>
         </>
       )}
-    </RoleShell>
+    </ClubShell>
   );
 }

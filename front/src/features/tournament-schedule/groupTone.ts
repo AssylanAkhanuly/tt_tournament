@@ -21,3 +21,9 @@ export type GroupTone = (typeof TONES)[number];
 export function groupTone(groups: { id: number }[], groupId: number): GroupTone {
   return TONES[Math.max(0, groups.findIndex((g) => g.id === groupId)) % TONES.length];
 }
+
+/** Цвет по порядковому номеру (с нуля) — круг тура Лиги ✳ (19.11.2026): та же
+ *  палитра, чтобы расписания турнира и Лиги читались одинаково. */
+export function toneAt(index: number): GroupTone {
+  return TONES[((index % TONES.length) + TONES.length) % TONES.length];
+}

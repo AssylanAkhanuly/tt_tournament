@@ -152,6 +152,8 @@ export type TeamMatch = {
   roundNumber: number | null;
   table: number | null;
   scheduledAt: Date | null;
+  /** Судья стола встречи ✳ (19.11.2026). */
+  referee: { id: string; name: string } | null;
 };
 
 export type TeamMatchDetail = TeamMatch & {
@@ -173,6 +175,8 @@ export type TourSchedule = {
   tables: number;
   matchMinutes: number;
   days: TourPlayDay[];
+  /** Судьи стола тура — из них раскладка сажает судью на встречу. */
+  referees: { id: string; name: string }[];
   canEdit: boolean;
 };
 
@@ -273,6 +277,7 @@ const match = (m: Raw): TeamMatch => ({
   roundNumber: (m.round_number as number | null) ?? null,
   table: (m.table as number | null) ?? null,
   scheduledAt: m.scheduled_at ? new Date(String(m.scheduled_at)) : null,
+  referee: (m.referee as { id: string; name: string } | null) ?? null,
 });
 
 // ── Запросы ─────────────────────────────────────────────────────────────────
@@ -401,7 +406,15 @@ export type OpenSeason = {
   divisions: { id: string; name: string; gender: LeagueGender; level: number }[];
 };
 
-export type MyLeague = { clubs: { id: string; name: string }[]; teams: ClubTeam[]; seasons: OpenSeason[] };
+/** `matches` — встречи команд клуба, `judging` — встречи, которые человек
+ *  судит; только из отправленных расписаний. */
+export type MyLeague = {
+  clubs: { id: string; name: string }[];
+  teams: ClubTeam[];
+  seasons: OpenSeason[];
+  matches: ParticipantMatch[];
+  judging: ParticipantMatch[];
+};
 
 export async function fetchMyLeague(): Promise<MyLeague> {
   const d = await request<Raw>('/api/league/my/');
@@ -419,6 +432,8 @@ export async function fetchMyLeague(): Promise<MyLeague> {
       canEdit: Boolean(t.can_edit),
       canResubmit: Boolean(t.can_resubmit),
     })),
+    matches: ((d.matches as Raw[]) ?? []).map(participantMatch),
+    judging: ((d.judging as Raw[]) ?? []).map(participantMatch),
     seasons: (d.seasons as Raw[]).map((s) => ({
       id: String(s.id),
       name: String(s.name),
@@ -470,7 +485,30 @@ const schedule = (s: Raw): TourSchedule => ({
   tables: Number(s.tables),
   matchMinutes: Number(s.match_minutes),
   days: (s.days as TourPlayDay[]) ?? [],
+  referees: (s.referees as { id: string; name: string }[]) ?? [],
   canEdit: Boolean(s.can_edit),
+});
+
+// ── Судьи стола тура ✳ (19.11.2026) ──
+
+export const fetchTourRefereeCandidates = async (tourId: string, q: string) =>
+  request<{ id: string; name: string }[]>(`/api/league/tours/${tourId}/referees/candidates/?q=${encodeURIComponent(q)}`);
+export const addTourReferee = (tourId: string, userId: string) => post(`/api/league/tours/${tourId}/referees/`, { user_id: userId });
+export const removeTourReferee = (tourId: string, userId: string) =>
+  request(`/api/league/tours/${tourId}/referees/${userId}/`, { method: 'DELETE' });
+
+/** Встреча в расписании участника (клуба или судьи): тур, лига, сезон рядом. */
+export type ParticipantMatch = TeamMatch & {
+  tour: { id: string; number: number; city: string };
+  divisionName: string;
+  seasonName: string;
+};
+
+const participantMatch = (m: Raw): ParticipantMatch => ({
+  ...match(m),
+  tour: m.tour as ParticipantMatch['tour'],
+  divisionName: String((m.division as Raw)?.name ?? ''),
+  seasonName: String(m.season_name ?? ''),
 });
 
 export const buildTourSchedule = async (tourId: string, p: { tables: number; matchMinutes: number; days: TourPlayDay[] }) =>
@@ -479,12 +517,12 @@ export const buildTourSchedule = async (tourId: string, p: { tables: number; mat
 export const finalizeTourSchedule = async (tourId: string) =>
   schedule(await post<Raw>(`/api/league/tours/${tourId}/schedule/finalize/`, {}));
 
-/** Стол и время встречи; время — местное `ГГГГ-ММ-ДДTЧЧ:ММ` (сервер привяжет к своему поясу). */
-export const editMatchSchedule = async (matchId: number, p: { table: number; scheduledAt: string }) =>
+/** Стол, время и судья встречи; время — местное `ГГГГ-ММ-ДДTЧЧ:ММ` (сервер привяжет к своему поясу). */
+export const editMatchSchedule = async (matchId: number, p: { table: number; scheduledAt: string; refereeId: string | null }) =>
   match(
     await request<Raw>(`/api/league/team-matches/${matchId}/schedule/`, {
       method: 'PATCH',
-      body: JSON.stringify({ table: p.table, scheduled_at: p.scheduledAt }),
+      body: JSON.stringify({ table: p.table, scheduled_at: p.scheduledAt, referee_id: p.refereeId ?? undefined }),
     }),
   );
 

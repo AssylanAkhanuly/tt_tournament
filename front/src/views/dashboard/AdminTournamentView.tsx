@@ -12,7 +12,13 @@ import { AdminShell } from './AdminShell';
 export function AdminTournamentView({ id, section }: { id: string; section: TournamentSectionId }) {
   const page = useTournamentPage({ id, section, cabinet: 'dashboard', back: '/dashboard' });
   return (
-    <AdminShell active={page.active} nav={page.nav} home={page.home} bleed>
+    <AdminShell
+      active={page.active}
+      nav={page.nav}
+      home={page.home}
+      crumbs={[{ label: 'Календарь', href: '/dashboard' }, ...(page.name ? [{ label: page.name }] : [])]}
+      bleed
+    >
       {page.body}
     </AdminShell>
   );
