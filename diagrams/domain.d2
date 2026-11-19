@@ -343,6 +343,9 @@ team: TEAM {
   division_id: "uuid — в какой лиге играет в этом сезоне" {constraint: foreign_key}
   name: string
   submitted_by: "uuid — администратор клуба (ТЗ §2)" {constraint: foreign_key}
+  status: "ждёт решения | принята | отклонена — заявка клуба"
+  decision_comment: "string — причина отказа"
+  decided_by: "uuid — кто решил" {constraint: foreign_key}
 }
 
 # Состав. tour_id пустой = заявлен на весь сезон; иначе состав на конкретный тур

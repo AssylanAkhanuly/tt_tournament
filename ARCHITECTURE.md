@@ -1302,6 +1302,9 @@ erDiagram
         uuid divisionId FK "в какой лиге играет в этом сезоне"
         string name
         uuid submittedBy FK "администратор клуба (ТЗ §2)"
+        string status "ждёт решения | принята | отклонена — заявка клуба"
+        string decisionComment "причина отказа"
+        uuid decidedBy FK "кто решил"
     }
     TEAM_MEMBER {
         uuid id PK
