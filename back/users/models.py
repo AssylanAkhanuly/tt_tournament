@@ -91,6 +91,15 @@ class Role(models.Model):
     # ограничения нагрузки). Не путать с врачом соревнований (роль 18).
     KIND_NATIONAL_HEAD_COACH = "national_head_coach"
     KIND_NATIONAL_DOCTOR = "national_doctor"
+    # Остальной штаб сборной ✳ (19.11.2026, ROLES.md роли 19, 20, 22; NATIONAL.md):
+    # тренер-консультант — полная копия главного тренера; тренер сборной ведёт
+    # свою возрастную группу (`age_group`); психолог — спортивная карточка.
+    # Личный тренер — тот, к кому федерация прикрепляет члена сборной: план
+    # подготовки составляет он, согласует главный (совещание 04.11.2026).
+    KIND_NATIONAL_CONSULTANT = "national_consultant"
+    KIND_NATIONAL_TEAM_COACH = "national_team_coach"
+    KIND_NATIONAL_PSYCHOLOGIST = "national_psychologist"
+    KIND_PERSONAL_COACH = "personal_coach"
     KIND_CHOICES = [
         (KIND_GSK_CHAIRMAN, "Председатель Главной судейской коллегии"),
         (KIND_FEDERATION_ADMIN, "Администратор федерации"),
@@ -102,7 +111,14 @@ class Role(models.Model):
         (KIND_REGIONAL_HEAD_COACH, "Старший тренер региона"),
         (KIND_NATIONAL_HEAD_COACH, "Главный тренер национальной команды"),
         (KIND_NATIONAL_DOCTOR, "Врач сборной"),
+        (KIND_NATIONAL_CONSULTANT, "Тренер-консультант"),
+        (KIND_NATIONAL_TEAM_COACH, "Тренер сборной"),
+        (KIND_NATIONAL_PSYCHOLOGIST, "Психолог сборной"),
+        (KIND_PERSONAL_COACH, "Личный тренер"),
     ]
+
+    # Возрастная группа тренера сборной (роль 20): кадеты, юноши, взрослые.
+    AGE_GROUP_CHOICES = [("cadet", "Кадеты"), ("junior", "Юноши"), ("adult", "Взрослые")]
 
     SCOPE_SYSTEM = "system"
     SCOPE_REGION = "region"
@@ -125,6 +141,8 @@ class Role(models.Model):
     # закреплённого списка (`rating/regions.py`), а не строка таблицы, поэтому в
     # `scope_id` (uuid) он не ложится.
     region = models.CharField(max_length=120, blank=True, verbose_name="Регион")
+    # Возрастная группа роли «тренер сборной» ✳ (19.11.2026); у остальных пусто.
+    age_group = models.CharField(max_length=16, blank=True, choices=AGE_GROUP_CHOICES, verbose_name="Возрастная группа")
     granted_by = models.ForeignKey(
         User, null=True, blank=True, on_delete=models.SET_NULL, related_name="roles_granted",
         verbose_name="Кем выдана",

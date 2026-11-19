@@ -1,8 +1,8 @@
 from django.contrib import admin
 
-from .models import MedicalRecord, NationalTeamMember, PlanItem, TrainingPlan
+from .models import (
+    MedicalRecord, NationalTeamMember, PlanItem, ReportAction, SportRecord, TrainingEvent, TrainingPlan, TravelReport,
+)
 
-admin.site.register(NationalTeamMember)
-admin.site.register(MedicalRecord)
-admin.site.register(TrainingPlan)
-admin.site.register(PlanItem)
+for model in (NationalTeamMember, MedicalRecord, SportRecord, TrainingEvent, TrainingPlan, PlanItem, TravelReport, ReportAction):
+    admin.site.register(model)

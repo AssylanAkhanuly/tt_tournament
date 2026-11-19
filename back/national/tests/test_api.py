@@ -141,15 +141,25 @@ def test_training_plan_by_coach_with_progress(world):
     plan = world["coach"].post(url, period, format="json").data
 
     items_url = "/api/national/plans/%s/items/" % plan["id"]
-    ids = [world["coach"].post(items_url, {"kind": k, "title": t}, format="json").data["id"]
-           for k, t in (("work", "Подача: короткая под правую"), ("camp", "УТС, Алматы"), ("start", "Кубок РК"))]
+    camp = world["coach"].post("/api/national/events/", {"kind": "camp", "title": "УТС, Алматы", "city": "Алматы",
+                               "starts_on": str(TODAY), "ends_on": str(TODAY + datetime.timedelta(days=10))}, format="json")
+    assert camp.status_code == 201, camp.data
+    # Сбор руками, без мероприятия календаря, — отказ (Э11.5).
+    assert world["coach"].post(items_url, {"kind": "camp", "title": "УТС"}, format="json").status_code == 400
+    ids = [world["coach"].post(items_url, d, format="json").data["id"] for d in (
+        {"kind": "work", "title": "Подача: короткая под правую"},
+        {"kind": "camp", "event_id": camp.data["id"]},
+        {"kind": "work", "title": "Кубок РК"},
+    )]
     assert world["coach"].post(items_url, {"title": "  "}, format="json").status_code == 400
     assert world["coach"].patch("/api/national/plan-items/%s/" % ids[0], {"done": True}, format="json").data["done"] is True
 
     plans = world["coach"].get(url).data
     assert plans[0]["done"] == 1 and plans[0]["total"] == 3
     row = world["coach"].get("/api/national/members/").data[0]
-    assert row["plan"] == {"plan_id": plan["id"], "done": 1, "total": 3}
+    assert row["plan"] == {"plan_id": plan["id"], "done": 1, "total": 3, "status": "draft"}
+    camp_item = [i for i in plans[0]["items"] if i["kind"] == "camp"][0]
+    assert camp_item["title"] == "УТС, Алматы" and camp_item["due"] == str(TODAY)
     assert "plan" not in world["doctor"].get("/api/national/members/").data[0]
 
     assert world["coach"].delete("/api/national/plan-items/%s/" % ids[2]).status_code == 204
