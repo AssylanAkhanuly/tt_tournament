@@ -434,6 +434,56 @@ score_log: SCORE_LOG {
   reason: "правка судьи | переопределение"
 }
 
+# ——— Национальная команда (ROLES.md роли 11 и 21; NATIONAL.md) ———
+# ✳ 19.11.2026 (решение владельца продукта): состав сборной ведёт главный
+# тренер, медицинскую карту — врач сборной, план подготовки — главный тренер.
+# Член сборной — спортсмен с рейтинговой карточкой; имя, регион и рейтинг —
+# оттуда. Согласования планов (составляет личный тренер, согласует главный —
+# совещание 04.11.2026) и календаря подготовки (Э11.3) пока нет.
+national_member: NATIONAL_TEAM_MEMBER {
+  shape: sql_table
+  class: new
+  id: uuid {constraint: primary_key}
+  user_id: "uuid — спортсмен, один раз" {constraint: [foreign_key; unique]}
+  squad: "основной | расширенный"
+  age_group: "кадеты | юноши | взрослые"
+  added_by: uuid {constraint: foreign_key}
+}
+
+medical_record: MEDICAL_RECORD {
+  shape: sql_table
+  class: new
+  id: uuid {constraint: primary_key}
+  member_id: uuid {constraint: foreign_key}
+  kind: "допуск | УМО | болезнь | травма | постоянное ограничение"
+  date: date
+  title: "заключение / диагноз — тренеру не отдаётся"
+  load_limit: "ограничение нагрузки — тренер видит"
+  until: "date — срок допуска / снятие ограничения"
+  created_by: "uuid — врач сборной" {constraint: foreign_key}
+}
+
+training_plan: TRAINING_PLAN {
+  shape: sql_table
+  class: new
+  id: uuid {constraint: primary_key}
+  member_id: uuid {constraint: foreign_key}
+  starts_on: date
+  ends_on: date
+  goal: "цель периода"
+}
+
+plan_item: PLAN_ITEM {
+  shape: sql_table
+  class: new
+  id: uuid {constraint: primary_key}
+  plan_id: uuid {constraint: foreign_key}
+  kind: "работа | сбор | старт"
+  title: string
+  due: date
+  done: "bool — отметка тренера"
+}
+
 # ——— Национальный рейтинг спортсменов ———
 # Методика определена проектом Положения (получен 06.09.2026): модифицированное
 # Эло по каждому матчу, Rнов = Rстар + P x K x C x (S - E). Подробности —
@@ -733,6 +783,11 @@ scoreboard: SCOREBOARD {
   visible: bool
   updated_at: datetime
 }
+
+user.id -> national_member.user_id: член сборной
+national_member.id -> medical_record.member_id: медицинская карта
+national_member.id -> training_plan.member_id: планы подготовки
+training_plan.id -> plan_item.plan_id: пункты плана
 
 user.id -> notification.user_id: лента событий
 user.id -> push_token.user_id: устройства

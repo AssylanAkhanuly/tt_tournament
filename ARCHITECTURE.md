@@ -1106,6 +1106,11 @@ erDiagram
     TEAM ||--o{ TEAM_MATCH : "сторона встречи"
     TEAM_MATCH ||--|{ MATCH : "личные встречи внутри командной"
 
+    USER ||--o| NATIONAL_TEAM_MEMBER : "член сборной"
+    NATIONAL_TEAM_MEMBER ||--o{ MEDICAL_RECORD : "медицинская карта"
+    NATIONAL_TEAM_MEMBER ||--o{ TRAINING_PLAN : "планы подготовки"
+    TRAINING_PLAN ||--o{ PLAN_ITEM : "пункты плана"
+
     MATCH ||--|{ GAME : "состоит из партий"
     GAME ||--o{ RALLY : "розыгрыши"
     MATCH ||--o{ MATCH_EVENT : "смена сторон и подачи"
@@ -1288,6 +1293,36 @@ erDiagram
         uuid teamId FK
         uuid userId FK
         uuid tourId FK "пусто = заявлен на весь сезон; иначе состав на конкретный тур"
+    }
+    NATIONAL_TEAM_MEMBER {
+        uuid id PK
+        uuid userId FK "спортсмен с рейтинговой карточкой, один раз"
+        string squad "основной | расширенный"
+        string ageGroup "кадеты | юноши | взрослые"
+    }
+    MEDICAL_RECORD {
+        uuid id PK
+        uuid memberId FK
+        string kind "допуск | УМО | болезнь | травма | постоянное ограничение"
+        date date
+        string title "заключение / диагноз — только врачу"
+        string loadLimit "ограничение нагрузки — видит главный тренер"
+        date until "срок допуска / снятие ограничения"
+    }
+    TRAINING_PLAN {
+        uuid id PK
+        uuid memberId FK
+        date startsOn
+        date endsOn
+        string goal
+    }
+    PLAN_ITEM {
+        uuid id PK
+        uuid planId FK
+        string kind "работа | сбор | старт"
+        string title
+        date due
+        bool done
     }
     TEAM_MATCH {
         uuid id PK
