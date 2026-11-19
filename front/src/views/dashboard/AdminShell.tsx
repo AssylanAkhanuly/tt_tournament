@@ -4,7 +4,7 @@
    администратора и разделами кабинета. Новая страница кабинета оборачивается
    сюда. */
 
-import { CalendarDays } from 'lucide-react';
+import { CalendarDays, Trophy } from 'lucide-react';
 import type { ReactNode } from 'react';
 
 import { ROLE_FEDERATION_ADMIN } from '@/entities/session';
@@ -12,7 +12,11 @@ import { RoleShell, type RoleNavItem } from '@/views/workspace';
 import type { ShellSubItem } from '@/widgets/app-shell';
 
 /** Разделы кабинета. Новый раздел — строка здесь. */
-const NAV: RoleNavItem[] = [{ label: 'Календарь', href: '/dashboard', icon: <CalendarDays size={16} /> }];
+const NAV: RoleNavItem[] = [
+  { label: 'Календарь', href: '/dashboard', icon: <CalendarDays size={16} /> },
+  // Евразийская лига ✳ (19.11.2026, LEAGUE.md).
+  { label: 'Лига', href: '/dashboard/league', icon: <Trophy size={16} /> },
+];
 
 export function AdminShell({
   active,
