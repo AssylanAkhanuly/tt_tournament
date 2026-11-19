@@ -1097,6 +1097,7 @@ erDiagram
 
     CLUB ||--o{ TEAM : "заявляет команду в Евразийскую лигу"
     USER ||--o{ TEAM : "администратор клуба подаёт"
+    LEAGUE_SEASON ||--o{ LEAGUE_DIVISION : "лиги сезона"
     LEAGUE_DIVISION ||--o{ TEAM : "команды дивизиона"
     LEAGUE_DIVISION ||--|{ LEAGUE_TOUR : "четыре тура за сезон"
     TEAM ||--|{ TEAM_MEMBER : "состав"
@@ -1273,9 +1274,17 @@ erDiagram
         int place
         boolean attended "вышел на игру; неявка по регламенту (сверка явки → рейтинг)"
     }
+    LEAGUE_SEASON {
+        uuid id PK
+        int year
+        string name "«Сезон 2026»"
+        boolean registrationOpen "окно регистрации команд"
+        date registrationUntil "срок включительно; пусто — без срока"
+        boolean closed "завершён: изменений нет"
+    }
     LEAGUE_DIVISION {
         uuid id PK
-        int season
+        uuid seasonId FK
         string gender "мужской | женский — розыгрыши раздельные"
         string name "Суперлига | 2 лига … 6 лига"
         int level "1 = Суперлига; мужских 6, женских 2"

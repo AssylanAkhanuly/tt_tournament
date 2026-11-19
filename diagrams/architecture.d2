@@ -667,11 +667,22 @@ storage: "7 · ДАННЫЕ · два разных хранилища" {
     # числа правил — одна строка LEAGUE_RULES; личные встречи внутри командной пока
     # хранятся списком счетов в TEAM_MATCH (rubbers, расстановки lineup_a/b), а не
     # строками MATCH — до подключения к личному рейтингу.
+    season: LEAGUE_SEASON {
+      shape: sql_table
+      class: new
+      id: uuid {constraint: primary_key}
+      year: int
+      name: "string — «Сезон 2026»"
+      registration_open: "bool — окно регистрации команд"
+      registration_until: "date — срок, включительно; пусто — без срока"
+      closed: "bool — завершён: изменений нет"
+    }
+
     division: LEAGUE_DIVISION {
       shape: sql_table
       class: new
       id: uuid {constraint: primary_key}
-      season: "int — сезон"
+      season_id: "uuid — лига сезона" {constraint: foreign_key}
       gender: "мужской | женский — розыгрыши раздельные"
       name: "Суперлига | 2 лига … 6 лига"
       level: "int — 1 = Суперлига; мужских 6, женских 2"
