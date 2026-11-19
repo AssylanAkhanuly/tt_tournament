@@ -1,5 +1,7 @@
 """Ручки Евразийской лиги ✳ (19.11.2026, LEAGUE.md) — только переводят
 `services.py` в HTTP."""
+import datetime
+
 from django.shortcuts import get_object_or_404
 from rest_framework import status
 from rest_framework.permissions import AllowAny, IsAuthenticated
@@ -11,7 +13,7 @@ from users.models import User
 from users.permissions import IsGskChairman
 
 from . import services
-from .models import LeagueDivision, LeagueRules, LeagueTour, Team, TeamMatch
+from .models import LeagueDivision, LeagueRules, LeagueSeason, LeagueTour, Team, TeamMatch
 
 RULE_FIELDS = (
     "order", "players", "wins_needed", "games_to_win", "points_win", "points_loss", "points_no_show",
@@ -28,30 +30,53 @@ def _rules_data(r: LeagueRules) -> dict:
 
 
 def _division_data(d: LeagueDivision) -> dict:
-    return {"id": str(d.id), "season": d.season, "gender": d.gender, "name": d.name, "level": d.level}
+    return {
+        "id": str(d.id), "season": d.season.year, "season_id": str(d.season_id), "season_name": d.season.name,
+        "season_closed": d.season.closed, "gender": d.gender, "name": d.name, "level": d.level,
+    }
 
 
-def _division_row(d: LeagueDivision) -> dict:
-    """Строка списка дивизионов. Дивизион стоит в календаре соревнований рядом с
-    турнирами ✳ (19.11.2026, решение владельца продукта: Лига — не отдельный
-    раздел): дата — первый тур с датой, окончание — последний, города — по
+def _calendar(tours, matches) -> dict:
+    """Что нужно календарю соревнований ✳ (19.11.2026: Лига — строка рядом с
+    турнирами): дата — первый тур с датой, окончание — последний, города — по
     порядку туров без повторов, ход — сыграно встреч из всех."""
-    tours = list(d.tours.all())
+    tours = list(tours)
     dates = sorted(t.starts_on for t in tours if t.starts_on)
     cities = []
-    for t in tours:
+    for t in sorted(tours, key=lambda t: (t.starts_on or datetime.date.max, t.number)):
         if t.city and t.city not in cities:
             cities.append(t.city)
-    matches = TeamMatch.objects.filter(tour__division=d)
     return {
-        **_division_data(d),
-        "teams": d.teams.count(),
         "tours": len(tours),
         "starts_on": dates[0] if dates else None,
         "ends_on": dates[-1] if dates else None,
         "cities": cities,
         "matches": matches.count(),
         "finished": matches.filter(status="finished").count(),
+    }
+
+
+def _division_row(d: LeagueDivision) -> dict:
+    return {
+        **_division_data(d),
+        "teams": d.teams.count(),
+        **_calendar(d.tours.all(), TeamMatch.objects.filter(tour__division=d)),
+    }
+
+
+def _season_row(s: LeagueSeason) -> dict:
+    """Строка сезона: окно регистрации (идёт ли — считает сервер) и сводка для
+    календаря по всем лигам сезона."""
+    return {
+        "id": str(s.id), "year": s.year, "name": s.name, "closed": s.closed,
+        "registration": {
+            "open": s.registration_open,
+            "until": s.registration_until.isoformat() if s.registration_until else None,
+            "active": s.registration_active(),
+        },
+        "leagues": s.divisions.count(),
+        "teams": Team.objects.filter(division__season=s).count(),
+        **_calendar(LeagueTour.objects.filter(division__season=s), TeamMatch.objects.filter(tour__division__season=s)),
     }
 
 
@@ -98,26 +123,58 @@ class RulesView(APIView):
         return Response(_rules_data(rules))
 
 
-class DivisionsView(APIView):
+class SeasonsView(APIView):
     def get_permissions(self):
-        return [AllowAny()] if self.request.method == "GET" else [IsGskChairman()]
+        return [AllowAny()] if self.request.method == "GET" else [IsAuthenticated()]
 
     def get(self, request):
-        qs = LeagueDivision.objects.all()
+        return Response([_season_row(s) for s in LeagueSeason.objects.all()])
+
+    def post(self, request):
+        d = request.data
+        try:
+            season = services.create_season(d.get("year"), d.get("name", ""), d.get("registration_until") or None, request.user)
+        except services.LeagueError as e:
+            return _refused(e)
+        return Response(_season_row(season), status=status.HTTP_201_CREATED)
+
+
+class SeasonView(APIView):
+    def get_permissions(self):
+        return [AllowAny()] if self.request.method == "GET" else [IsAuthenticated()]
+
+    def get(self, request, pk):
+        s = get_object_or_404(LeagueSeason, pk=pk)
+        divisions = s.divisions.select_related("season").prefetch_related("tours")
+        return Response({**_season_row(s), "divisions": [_division_row(d) for d in divisions]})
+
+    def patch(self, request, pk):
+        s = get_object_or_404(LeagueSeason, pk=pk)
+        try:
+            s = services.update_season(s, request.data, request.user)
+        except services.LeagueError as e:
+            return _refused(e)
+        return Response(_season_row(s))
+
+
+class DivisionsView(APIView):
+    def get_permissions(self):
+        return [AllowAny()] if self.request.method == "GET" else [IsAuthenticated()]
+
+    def get(self, request):
+        qs = LeagueDivision.objects.select_related("season")
         season = request.query_params.get("season")
         if season:
-            qs = qs.filter(season=season)
+            qs = qs.filter(season__year=season)
         return Response([_division_row(d) for d in qs.prefetch_related("tours")])
 
     def post(self, request):
         data = request.data
+        season = get_object_or_404(LeagueSeason, pk=data.get("season_id"))
         try:
-            d = LeagueDivision.objects.create(
-                season=int(data.get("season")), gender=data.get("gender"), name=(data.get("name") or "").strip(),
-                level=int(data.get("level")),
-            )
-        except Exception:
-            return Response({"detail": "Дивизион: сезон, розыгрыш, название и уровень; такой уже может быть."}, status=400)
+            d = services.create_division(season, data.get("gender"), data.get("name", ""), data.get("level"), request.user)
+        except services.LeagueError as e:
+            return _refused(e)
         return Response(_division_data(d), status=status.HTTP_201_CREATED)
 
 

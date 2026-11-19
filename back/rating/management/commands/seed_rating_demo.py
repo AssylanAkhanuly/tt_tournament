@@ -82,8 +82,11 @@ class Command(BaseCommand):
             # Лига ✳ (19.11.2026): дивизионы проверок (с командами, турами и
             # встречами) и их клубы — до пользователей: состав держит их ссылки.
             from clubs.models import Club
-            from league.models import LeagueDivision, Team
+            from league.models import LeagueDivision, LeagueSeason, Team
 
+            # Сезоны проверок — вместе с лигами (лига держит сезон, PROTECT).
+            LeagueDivision.objects.filter(season__name__startswith="[e2e] ").delete()
+            LeagueSeason.objects.filter(name__startswith="[e2e] ").delete()
             LeagueDivision.objects.filter(name__startswith="[e2e] ").delete()
             Team.objects.filter(club__name__startswith="[e2e] ").delete()
             Club.objects.filter(name__startswith="[e2e] ").delete()

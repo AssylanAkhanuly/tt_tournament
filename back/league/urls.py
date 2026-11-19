@@ -4,6 +4,8 @@ from . import views
 
 urlpatterns = [
     path("rules/", views.RulesView.as_view(), name="league-rules"),
+    path("seasons/", views.SeasonsView.as_view(), name="league-seasons"),
+    path("seasons/<uuid:pk>/", views.SeasonView.as_view(), name="league-season"),
     path("divisions/", views.DivisionsView.as_view(), name="league-divisions"),
     path("divisions/<uuid:pk>/", views.DivisionView.as_view(), name="league-division"),
     path("divisions/<uuid:pk>/teams/", views.DivisionTeamsView.as_view(), name="league-division-teams"),

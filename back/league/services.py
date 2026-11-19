@@ -1,17 +1,19 @@
 """Правила Евразийской лиги над базой ✳ (19.11.2026, LEAGUE.md). Ручки
 (`views.py`) только переводят их в HTTP; арифметика — `engine.py`."""
+import datetime
 from itertools import combinations
 from typing import List, Sequence
 
 from django.db import transaction
 from django.utils import timezone
+from django.utils.dateparse import parse_date
 
 from rating.models import RatingProfile
 from users.models import Role, User
 from users.permissions import has_role
 
 from . import engine
-from .models import LeagueDivision, LeagueRules, LeagueTour, Team, TeamMatch, TeamMember
+from .models import LeagueDivision, LeagueRules, LeagueSeason, LeagueTour, Team, TeamMatch, TeamMember
 
 
 class LeagueError(Exception):
@@ -34,9 +36,100 @@ def can_manage_club(user, club) -> bool:
     return is_league_staff(user) or club.is_admin(user)
 
 
+# ── Сезон ✳ (19.11.2026, LEAGUE.md «Сезон») ─────────────────────────────────
+
+YEARS = (2020, 2100)  # границы года сезона — наши, от опечатки
+
+
+def _open(season: LeagueSeason) -> None:
+    """Завершённый сезон закрыт для любых изменений."""
+    if season.closed:
+        raise LeagueError("Сезон завершён — изменения закрыты.")
+
+
+def _year(value) -> int:
+    try:
+        year = int(value)
+    except (TypeError, ValueError):
+        raise LeagueError("Год сезона — числом.")
+    if not YEARS[0] <= year <= YEARS[1]:
+        raise LeagueError("Год сезона — от %d до %d." % YEARS)
+    return year
+
+
+def _date(value):
+    """День ГГГГ-ММ-ДД или пусто."""
+    if value in (None, ""):
+        return None
+    if isinstance(value, datetime.date):
+        return value
+    parsed = parse_date(str(value))
+    if parsed is None:
+        raise LeagueError("Срок регистрации — дата ГГГГ-ММ-ДД.")
+    return parsed
+
+
+def create_season(year, name: str, registration_until, by) -> LeagueSeason:
+    """Сезон заводится с закрытой регистрацией, пока не указан срок: открыть её
+    — решение, а не умолчание. Указан срок — окно открыто до него."""
+    if not is_league_staff(by):
+        raise LeagueError("Сезон заводит администратор федерации или председатель ГСК.", 403)
+    year = _year(year)
+    registration_until = _date(registration_until)
+    name = (name or "").strip() or "Сезон %d" % year
+    return LeagueSeason.objects.create(
+        year=year, name=name[:80], registration_open=bool(registration_until), registration_until=registration_until or None,
+    )
+
+
+def update_season(season: LeagueSeason, data: dict, by) -> LeagueSeason:
+    """Название, окно регистрации, «завершён». Завершение снимается тем же
+    переключателем; у завершённого сезона регистрация не идёт, что бы ни
+    стояло в окне."""
+    if not is_league_staff(by):
+        raise LeagueError("Сезон ведёт администратор федерации или председатель ГСК.", 403)
+    if "name" in data:
+        name = (data.get("name") or "").strip()
+        if not name:
+            raise LeagueError("У сезона должно быть название.")
+        season.name = name[:80]
+    if "registration_open" in data:
+        season.registration_open = bool(data["registration_open"])
+    if "registration_until" in data:
+        season.registration_until = _date(data["registration_until"])
+    if "closed" in data:
+        season.closed = bool(data["closed"])
+    season.save()
+    season.refresh_from_db()
+    return season
+
+
+def create_division(season: LeagueSeason, gender: str, name: str, level, by) -> LeagueDivision:
+    if not is_league_staff(by):
+        raise LeagueError("Лигу сезона заводит администратор федерации или председатель ГСК.", 403)
+    _open(season)
+    if gender not in ("m", "f"):
+        raise LeagueError("Розыгрыш — мужчины или женщины.")
+    try:
+        level = int(level)
+    except (TypeError, ValueError):
+        raise LeagueError("Уровень лиги — числом (1 — Суперлига).")
+    name = (name or "").strip()
+    if not name or level < 1:
+        raise LeagueError("У лиги должны быть название и уровень от 1.")
+    if LeagueDivision.objects.filter(season=season, gender=gender, level=level).exists():
+        raise LeagueError("Лига этого розыгрыша и уровня в сезоне уже есть.")
+    return LeagueDivision.objects.create(season=season, gender=gender, name=name, level=level)
+
+
 def register_team(division: LeagueDivision, club, name: str, by) -> Team:
     if not can_manage_club(by, club):
         raise LeagueError("Заявить команду может администратор этого клуба.", 403)
+    _open(division.season)
+    # Клуб заявляется сам только в окно регистрации; ведущие лигу вносят за
+    # клуб в любой момент незавершённого сезона ✳.
+    if not is_league_staff(by) and not division.season.registration_active():
+        raise LeagueError("Регистрация команд сезона закрыта.")
     name = (name or "").strip() or club.name
     if Team.objects.filter(division=division, name=name).exists():
         raise LeagueError("Команда «%s» в этом дивизионе уже есть." % name)
@@ -46,6 +139,7 @@ def register_team(division: LeagueDivision, club, name: str, by) -> Team:
 def add_member(team: Team, user: User, by) -> TeamMember:
     if not can_manage_club(by, team.club):
         raise LeagueError("Менять состав может администратор клуба команды.", 403)
+    _open(team.division.season)
     rules = LeagueRules.active()
     with transaction.atomic():
         if team.members.count() >= rules.squad_max:
@@ -63,6 +157,7 @@ def add_member(team: Team, user: User, by) -> TeamMember:
 def remove_member(team: Team, user_id, by) -> None:
     if not can_manage_club(by, team.club):
         raise LeagueError("Менять состав может администратор клуба команды.", 403)
+    _open(team.division.season)
     deleted, _ = TeamMember.objects.filter(team=team, user_id=user_id).delete()
     if not deleted:
         raise LeagueError("Этого игрока нет в составе.")
@@ -84,6 +179,7 @@ def create_tour(division: LeagueDivision, number: int, city: str, starts_on, by)
     """Тур и его встречи: каждая команда дивизиона с каждой (круговая, ТЗ §4.10)."""
     if not is_league_staff(by):
         raise LeagueError("Туры заводит председатель ГСК.", 403)
+    _open(division.season)
     if LeagueTour.objects.filter(division=division, number=number).exists():
         raise LeagueError("Тур %d в этом дивизионе уже есть." % number)
     teams = list(division.teams.order_by("created_at"))
@@ -108,6 +204,7 @@ def _check_lineup(team: Team, lineup: Sequence, rules: engine.Rules) -> List[str
 def record_result(match: TeamMatch, lineup_a, lineup_b, rubbers, by) -> TeamMatch:
     if not is_league_staff(by):
         raise LeagueError("Счёт встречи вносит председатель ГСК.", 403)
+    _open(match.tour.division.season)
     rules = LeagueRules.active().to_rules()
     a = _check_lineup(match.team_a, lineup_a, rules)
     b = _check_lineup(match.team_b, lineup_b, rules)
@@ -126,6 +223,7 @@ def record_result(match: TeamMatch, lineup_a, lineup_b, rubbers, by) -> TeamMatc
 def record_no_show(match: TeamMatch, absent: str, by) -> TeamMatch:
     if not is_league_staff(by):
         raise LeagueError("Неявку фиксирует председатель ГСК.", 403)
+    _open(match.tour.division.season)
     if absent not in ("a", "b"):
         raise LeagueError("Не явилась команда «a» или «b».")
     result = engine.no_show_result(absent, LeagueRules.active().to_rules())

@@ -48,14 +48,47 @@ class LeagueRules(models.Model):
         )
 
 
+class LeagueSeason(models.Model):
+    """Сезон — верхний уровень Лиги ✳ (19.11.2026, LEAGUE.md «Сезон»): год,
+    название, окно регистрации команд и признак «завершён». Лиги, команды и
+    туры живут внутри сезона. Год не уникален: сезон узнаётся по id."""
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    year = models.PositiveSmallIntegerField(verbose_name="Год")
+    name = models.CharField(max_length=80, verbose_name="Название")
+    registration_open = models.BooleanField(default=False, verbose_name="Регистрация команд открыта")
+    registration_until = models.DateField(null=True, blank=True, verbose_name="Регистрация до (включительно)")
+    closed = models.BooleanField(default=False, verbose_name="Сезон завершён")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "Сезон"
+        verbose_name_plural = "Сезоны"
+        ordering = ["-year", "-created_at"]
+
+    def __str__(self):
+        return self.name
+
+    def registration_active(self, today=None) -> bool:
+        """Регистрация идёт: окно открыто, сезон не завершён, срок не прошёл —
+        то же правило, что у приёма заявок турнира (`tournaments.models._active`)."""
+        if self.closed or not self.registration_open:
+            return False
+        if self.registration_until is None:
+            return True
+        from django.utils import timezone
+
+        return (today or timezone.localdate()) <= self.registration_until
+
+
 class LeagueDivision(models.Model):
-    """Дивизион сезона: Суперлига (уровень 1), 2–6 лиги у мужчин, Суперлига и
-    2 лига у женщин (ТЗ §4.1). Розыгрыши мужчин и женщин раздельные."""
+    """Дивизион (лига) сезона: Суперлига (уровень 1), 2–6 лиги у мужчин,
+    Суперлига и 2 лига у женщин (ТЗ §4.1). Розыгрыши мужчин и женщин раздельные."""
 
     GENDER_CHOICES = [("m", "Мужчины"), ("f", "Женщины")]
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    season = models.PositiveSmallIntegerField(verbose_name="Сезон")
+    season = models.ForeignKey(LeagueSeason, on_delete=models.PROTECT, related_name="divisions", verbose_name="Сезон")
     gender = models.CharField(max_length=1, choices=GENDER_CHOICES, verbose_name="Розыгрыш")
     name = models.CharField(max_length=80, verbose_name="Название")
     level = models.PositiveSmallIntegerField(verbose_name="Уровень (1 — Суперлига)")
@@ -63,11 +96,11 @@ class LeagueDivision(models.Model):
     class Meta:
         verbose_name = "Дивизион"
         verbose_name_plural = "Дивизионы"
-        ordering = ["-season", "gender", "level"]
+        ordering = ["-season__year", "gender", "level"]
         unique_together = ("season", "gender", "level")
 
     def __str__(self):
-        return "%s %s, %s" % (self.name, self.get_gender_display().lower(), self.season)
+        return "%s %s, %s" % (self.name, self.get_gender_display().lower(), self.season.year)
 
 
 class Team(models.Model):

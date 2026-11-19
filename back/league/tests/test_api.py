@@ -43,7 +43,9 @@ def world():
     ClubAdmin.objects.create(club=clubs[0], user=club_admin)
     players = [make_user(100 + i, "Игрок %02d" % i) for i in range(20)]
     api = client_for(chairman)
-    r = api.post("/api/league/divisions/", {"season": 2026, "gender": "m", "name": "Суперлига", "level": 1}, format="json")
+    r = api.post("/api/league/seasons/", {"year": 2026, "name": "Сезон 2026", "registration_until": "2099-12-31"}, format="json")
+    assert r.status_code == 201, r.data
+    r = api.post("/api/league/divisions/", {"season_id": r.json()["id"], "gender": "m", "name": "Суперлига", "level": 1}, format="json")
     assert r.status_code == 201, r.data
     return {"chairman": chairman, "club_admin": club_admin, "clubs": clubs, "players": players,
             "api": api, "division": r.data["id"]}
