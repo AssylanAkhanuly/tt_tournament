@@ -4,7 +4,7 @@
    `RoleShell` с его ролью и разделами. Новая страница кабинета оборачивается
    сюда. */
 
-import { CalendarDays } from 'lucide-react';
+import { CalendarDays, FileSignature } from 'lucide-react';
 import type { ReactNode } from 'react';
 
 import { ROLE_REGIONAL_HEAD_COACH } from '@/entities/session';
@@ -12,7 +12,11 @@ import { RoleShell, type RoleNavItem } from '@/views/workspace';
 import type { ShellSubItem } from '@/widgets/app-shell';
 
 /** Разделы кабинета. Новый раздел — строка здесь. */
-const NAV: RoleNavItem[] = [{ label: 'Соревнования', href: '/coach', icon: <CalendarDays size={16} /> }];
+const NAV: RoleNavItem[] = [
+  { label: 'Соревнования', href: '/coach', icon: <CalendarDays size={16} /> },
+  // Рапорты на командирование главному тренеру сборной ✳ (19.11.2026, Э12.8 / Э11.4).
+  { label: 'Рапорты', href: '/coach/reports', icon: <FileSignature size={16} /> },
+];
 
 export function CoachShell({
   active,

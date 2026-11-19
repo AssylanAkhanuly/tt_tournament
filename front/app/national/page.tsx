@@ -1,10 +1,10 @@
-/* Кабинет главного тренера сборной — состав. Маршрут тонкий: композиция во `views`. */
+/* Тренерский штаб сборной — состав. Маршрут тонкий: композиция во `views`. */
 
 import type { Metadata } from 'next';
-import { NationalView } from '@/views/national';
+import { NationalRosterView } from '@/views/national';
 
-export const metadata: Metadata = { title: 'Главный тренер сборной — ФНТ РК' };
+export const metadata: Metadata = { title: 'Тренерский штаб сборной — ФНТ РК' };
 
 export default function Page() {
-  return <NationalView />;
+  return <NationalRosterView cabinet="national" />;
 }

@@ -29,8 +29,10 @@ export function RoleShell({
   actions,
   children,
 }: {
-  /** Вид роли (`Role.kind` на сервере), без которой в кабинет не пускаем. */
-  kind: string;
+  /** Вид роли (`Role.kind` на сервере), без которой в кабинет не пускаем;
+      списком — пускаем с любой из них (кабинет сборной: главный тренер,
+      консультант, тренер сборной). */
+  kind: string | string[];
   /** Название роли — первая строка меню человека. */
   title: string;
   /** Разделы кабинета; пусто — кабинет без разделов. */
@@ -51,7 +53,7 @@ export function RoleShell({
   const router = useRouter();
   const path = usePathname() || '/';
   const { user, loading, hasRole, signOut } = useSession();
-  const allowed = hasRole(kind);
+  const allowed = (Array.isArray(kind) ? kind : [kind]).some((k) => hasRole(k));
 
   useEffect(() => {
     if (!loading && !allowed) router.replace('/login?next=' + encodeURIComponent(path));

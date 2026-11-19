@@ -24,6 +24,13 @@ export const ROLE_REGIONAL_HEAD_COACH = 'regional_head_coach';
  *  кабинет `/doctor`, медицинская карта. */
 export const ROLE_NATIONAL_HEAD_COACH = 'national_head_coach';
 export const ROLE_NATIONAL_DOCTOR = 'national_doctor';
+/** Штаб сборной ✳ (19.11.2026): консультант (19) и тренер сборной (20) —
+ *  в том же кабинете `/national`; психолог (22) — `/psychologist`; личный
+ *  тренер — `/personal-coach`. */
+export const ROLE_NATIONAL_CONSULTANT = 'national_consultant';
+export const ROLE_NATIONAL_TEAM_COACH = 'national_team_coach';
+export const ROLE_NATIONAL_PSYCHOLOGIST = 'national_psychologist';
+export const ROLE_PERSONAL_COACH = 'personal_coach';
 
 /** Рабочие места ролей, у которых в приложении есть кабинет: короткое
  *  название (полное с сервера длинное для меню) и адрес. Порядок — старшинство:
@@ -38,7 +45,11 @@ const WORKSPACES: { kind: string; title: string; to: string }[] = [
   { kind: ROLE_CHIEF_REFEREE, title: 'Главный судья', to: '/chief' },
   { kind: ROLE_REGIONAL_HEAD_COACH, title: 'Старший тренер региона', to: '/coach' },
   { kind: ROLE_NATIONAL_HEAD_COACH, title: 'Главный тренер сборной', to: '/national' },
+  { kind: ROLE_NATIONAL_CONSULTANT, title: 'Тренер-консультант', to: '/national' },
+  { kind: ROLE_NATIONAL_TEAM_COACH, title: 'Тренер сборной', to: '/national' },
+  { kind: ROLE_PERSONAL_COACH, title: 'Личный тренер', to: '/personal-coach' },
   { kind: ROLE_NATIONAL_DOCTOR, title: 'Врач сборной', to: '/doctor' },
+  { kind: ROLE_NATIONAL_PSYCHOLOGIST, title: 'Психолог сборной', to: '/psychologist' },
   { kind: ROLE_PLAYER, title: 'Спортсмен', to: '/player' },
 ];
 

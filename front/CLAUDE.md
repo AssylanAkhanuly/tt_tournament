@@ -894,21 +894,24 @@ iPhone (`env(safe-area-inset-bottom)`); текст полей 16 px (`TextInput`
 (`flows/12-starshiy-trener-regiona.md`). Учётка проверок — `E2E_COACH` в
 `e2e/global-setup.ts`, проверка — `e2e/admission.spec.ts`.
 
-**Кабинеты сборной: главный тренер (`/national`) и врач (`/doctor`)** ✳
-(19.11.2026, роли 11 и 21, [NATIONAL.md](../NATIONAL.md)). Транспорт —
-`entities/national` (единственное место, где фронт ходит в `/api/national/`),
-блоки — `widgets/national`: `RosterTable` (состав; «Внести в сборную» и колонка
-плана «N из M» — только тренеру, `canEdit`), `MemberStrip` (шапка члена сборной;
-тренеру состав и группа — `Picker` прямо в ней, «Убрать из сборной» с
-подтверждением), `MedicalCardView` (что прислал сервер: врачу — все записи и
-«Добавить запись», тренеру — только действующие ограничения нагрузки),
-`PlanBoard` (период, цель, «N из M», пункты; отметка «выполнено» — кнопка-значок,
-а не `Checkbox`: флажок HeroUI внутри ячейки `Table` не срабатывает по щелчку).
-Композиция — `views/national` (`/national`, `/national/members/<id>/plan|medical`)
-и `views/national-doctor` (`/doctor`, `/doctor/members/<id>`), всё с `bleed`.
-Хук `useLoad` (запрос с перечитыванием) переехал в `shared/lib/useLoad.ts`: им
-пользуются и Лига, и сборная, а сущность сущность не импортирует. Проверка —
-`e2e/national.spec.ts`, учётки `E2E_NATIONAL_COACH`, `E2E_DOCTOR`.
+**Кабинеты сборной** ✳ (19.11.2026, роли 11, 19–22, личный тренер;
+[NATIONAL.md](../NATIONAL.md)). Один набор экранов на все роли —
+`views/national/NationalViews.tsx`, кабинет задаёт адрес, роли и меню
+(`CABINETS`): `/national` (главный тренер, консультант, тренер сборной —
+`RoleShell` с `kind` списком), `/personal-coach`, `/doctor`, `/psychologist`;
+рапорты старшего тренера региона — `/coach/reports` (`views/coach/CoachReportsView`).
+Карточка члена сборной — `<кабинет>/members/<id>/<раздел>`; разделы и кнопки —
+по тому, что прислал сервер (`member.access`, у плана `canEdit` / `canSubmit` /
+`canReview`, у рапорта `canDecide` / `canResubmit`): правил прав на экране нет.
+Транспорт — `entities/national`, блоки — `widgets/national`: `RosterTable`,
+`MemberStrip`, `PlanBoard` (согласование; сбор и старт — выбор из календаря;
+отметка «выполнено» — кнопка-значок, а не `Checkbox`: флажок HeroUI внутри ячейки
+`Table` не срабатывает по щелчку), `MedicalCardView`, `SportCard`, `HistoryTable`,
+`TrainingCalendar`, `ReportsBoard` (рапорт открывается листом в панели справа,
+история согласования под ним, файл — ссылкой на ручку с проверкой прав).
+`FormDialog` из `PlanBoard` — общее окно с формой для блоков сборной. Хук
+`useLoad` — `shared/lib/useLoad.ts` (им пользуются и Лига, и сборная). Проверка —
+`e2e/national.spec.ts` (три сценария ролей), учётки — `e2e/global-setup.ts`.
 
 **Календарь: сегодня и тесные дни** ✳ (29.10.2026, образец владельца продукта —
 Google Календарь). Сегодняшняя клетка подсвечена рамкой (`data-today`), поперёк

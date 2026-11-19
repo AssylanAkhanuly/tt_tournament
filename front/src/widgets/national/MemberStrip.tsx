@@ -11,7 +11,9 @@ import { useState } from 'react';
 
 import {
   AGE_GROUP_LABEL,
+  fetchPersonalCoaches,
   removeMember,
+  useLoad,
   SQUAD_LABEL,
   updateMember,
   type AgeGroup,
@@ -36,6 +38,8 @@ export function MemberStrip({
 }) {
   const [error, setError] = useState<string | null>(null);
   const p = member.person;
+  const coaches = useLoad(() => (canEdit ? fetchPersonalCoaches() : Promise.resolve([])), canEdit ? 'coaches' : 'none');
+  const NONE = 'none';
 
   async function run(action: () => Promise<unknown>, after: () => void) {
     setError(null);
@@ -62,6 +66,14 @@ export function MemberStrip({
       <ClearanceChip clearance={member.clearance} />
       {canEdit ? (
         <div className="flex items-center gap-2">
+          <Picker
+            label="Личный тренер"
+            className="w-48 min-w-0"
+            value={member.personalCoach?.id ?? NONE}
+            options={[{ id: NONE, label: 'Без личного тренера' }, ...(coaches.data ?? []).map((c) => ({ id: c.id, label: c.name }))]}
+            onChange={(k) => void run(() => updateMember(member.id, { personalCoachId: k === NONE ? null : k }), onChanged)}
+            testId="strip-personal-coach"
+          />
           <Picker
             label="Состав"
             className="w-40 min-w-0"
@@ -106,7 +118,7 @@ export function MemberStrip({
         </div>
       ) : (
         <span className="text-[13px] text-neutral-600">
-          {SQUAD_LABEL[member.squad]} · {AGE_GROUP_LABEL[member.ageGroup]}
+          {[SQUAD_LABEL[member.squad], AGE_GROUP_LABEL[member.ageGroup], member.personalCoach?.name].filter(Boolean).join(' · ')}
         </span>
       )}
       {error && <p className="m-0 w-full text-[13px] text-red-600">{error}</p>}

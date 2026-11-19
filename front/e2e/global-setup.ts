@@ -34,6 +34,9 @@ export const E2E_COACH = { email: 'e2e-coach@fnt.kz', password: 'E2e-Coach-2026'
 /** Главный тренер и врач сборной ✳ (19.11.2026) — `national.spec.ts`. */
 export const E2E_NATIONAL_COACH = { email: 'e2e-national-coach@fnt.kz', password: 'E2e-National-2026' };
 export const E2E_DOCTOR = { email: 'e2e-doctor@fnt.kz', password: 'E2e-Doctor-2026' };
+export const E2E_PERSONAL_COACH = { email: 'e2e-personal-coach@fnt.kz', password: 'E2e-Personal-2026' };
+export const E2E_PSYCHOLOGIST = { email: 'e2e-psychologist@fnt.kz', password: 'E2e-Psych-2026' };
+export const E2E_TEAM_COACH = { email: 'e2e-team-coach@fnt.kz', password: 'E2e-TeamCoach-2026', ageGroup: 'junior' };
 
 /** Учётка администратора федерации — для `dashboard.spec.ts`. */
 export const E2E_ADMIN = { email: 'e2e-admin@fnt.kz', password: 'E2e-Admin-2026' };
@@ -77,6 +80,9 @@ export default function globalSetup() {
   );
   manage('create_national_head_coach', '--email', E2E_NATIONAL_COACH.email, '--name', 'Главный тренер сборной (проверки)', '--password', E2E_NATIONAL_COACH.password);
   manage('create_national_doctor', '--email', E2E_DOCTOR.email, '--name', 'Врач сборной (проверки)', '--password', E2E_DOCTOR.password);
+  manage('create_personal_coach', '--email', E2E_PERSONAL_COACH.email, '--name', 'Личный тренер (проверки)', '--password', E2E_PERSONAL_COACH.password);
+  manage('create_national_psychologist', '--email', E2E_PSYCHOLOGIST.email, '--name', 'Психолог сборной (проверки)', '--password', E2E_PSYCHOLOGIST.password);
+  manage('create_national_team_coach', '--email', E2E_TEAM_COACH.email, '--name', 'Тренер юношей (проверки)', '--password', E2E_TEAM_COACH.password, '--age-group', E2E_TEAM_COACH.ageGroup);
   // Судья «проверки» назначен на демо-чемпионат — роль с областью «турнир»
   // (`dashboard.spec.ts`, раздел «Судьи»). Назначения на экране пока нет.
   manage(

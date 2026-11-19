@@ -1,11 +1,8 @@
-/* Медкарта члена сборной у врача. Маршрут тонкий: композиция во `views`. */
+/* Карточка члена сборной: без раздела — первый доступный. */
 
-import type { Metadata } from 'next';
-import { DoctorMemberView } from '@/views/national-doctor';
-
-export const metadata: Metadata = { title: 'Медкарта — ФНТ РК' };
+import { NationalMemberView } from '@/views/national';
 
 export default async function Page({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  return <DoctorMemberView id={id} />;
+  return <NationalMemberView cabinet="doctor" id={id} />;
 }

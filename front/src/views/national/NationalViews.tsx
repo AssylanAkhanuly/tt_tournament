@@ -1,67 +1,172 @@
 'use client';
 
-/* Кабинет главного тренера национальной команды (`/national`) ✳ (19.11.2026,
-   роль 11, NATIONAL.md): «Состав сборной» — таблица и «Внести в сборную»;
-   строка — карточка члена сборной `/national/members/<id>/plan|medical`:
-   шапка (состав и группа правятся там же), «План подготовки» и «Медкарта»
-   (допуск и ограничения нагрузки — диагнозы тренеру сервер не отдаёт).
-   Знак в шапке ведёт к составу. */
+/* Кабинеты национальной команды ✳ (19.11.2026, NATIONAL.md) — один набор
+   экранов на все роли сборной; кабинет задаёт адрес, роли, меню и можно ли
+   вносить в состав:
+
+   - `/national` — тренерский штаб: главный тренер (11), консультант (19 —
+     полная копия), тренер сборной (20 — видит свою возрастную группу);
+     разделы «Состав сборной», «Календарь подготовки», «Рапорты»;
+   - `/personal-coach` — личный тренер: «Мои спортсмены», календарь;
+   - `/doctor` — врач сборной (21); `/psychologist` — психолог (22).
+
+   Карточка члена сборной — `<кабинет>/members/<id>/<раздел>`: шапка и разделы,
+   которые сервер открыл этому человеку (`member.access`): «План подготовки»,
+   «Медкарта», «История», «Спортивная карточка». Без раздела — первый
+   доступный. Знак в шапке ведёт к составу кабинета. */
 
 import { Spinner } from '@heroui/react';
-import { ClipboardList, HeartPulse, Users } from 'lucide-react';
+import { Brain, CalendarRange, ClipboardList, FileSignature, HeartPulse, History, Users } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import type { ReactNode } from 'react';
+import { useEffect, type ReactNode } from 'react';
 
-import { fetchMember, useLoad } from '@/entities/national';
-import { ROLE_NATIONAL_HEAD_COACH } from '@/entities/session';
+import { fetchMember, fetchNationalMe, useLoad, type NationalMember } from '@/entities/national';
+import {
+  ROLE_NATIONAL_CONSULTANT,
+  ROLE_NATIONAL_DOCTOR,
+  ROLE_NATIONAL_HEAD_COACH,
+  ROLE_NATIONAL_PSYCHOLOGIST,
+  ROLE_NATIONAL_TEAM_COACH,
+  ROLE_PERSONAL_COACH,
+  useSession,
+  workspacesOf,
+} from '@/entities/session';
 import { RoleShell, type RoleNavItem } from '@/views/workspace';
-import { MedicalCardView, MemberStrip, PlanBoard, RosterTable } from '@/widgets/national';
+import {
+  HistoryTable,
+  MedicalCardView,
+  MemberStrip,
+  PlanBoard,
+  ReportsBoard,
+  RosterTable,
+  SportCard,
+  TrainingCalendar,
+} from '@/widgets/national';
 
-const BASE = '/national';
-const NAV: RoleNavItem[] = [{ label: 'Состав сборной', href: BASE, icon: <Users size={16} /> }];
+export type CabinetKey = 'national' | 'personal' | 'doctor' | 'psychologist';
+export type MemberSection = 'plan' | 'medical' | 'history' | 'sport';
 
-export type MemberSection = 'plan' | 'medical';
-const SECTIONS: { id: MemberSection; label: string; icon: ReactNode }[] = [
-  { id: 'plan', label: 'План подготовки', icon: <ClipboardList size={16} /> },
-  { id: 'medical', label: 'Медкарта', icon: <HeartPulse size={16} /> },
+type Cabinet = { base: string; kinds: string[]; nav: RoleNavItem[]; roster: string; canAdd: boolean };
+
+const CABINETS: Record<CabinetKey, Cabinet> = {
+  national: {
+    base: '/national',
+    kinds: [ROLE_NATIONAL_HEAD_COACH, ROLE_NATIONAL_CONSULTANT, ROLE_NATIONAL_TEAM_COACH],
+    roster: 'Состав сборной',
+    canAdd: true,
+    nav: [
+      { label: 'Состав сборной', href: '/national', icon: <Users size={16} /> },
+      { label: 'Календарь подготовки', href: '/national/calendar', icon: <CalendarRange size={16} /> },
+      { label: 'Рапорты', href: '/national/reports', icon: <FileSignature size={16} /> },
+    ],
+  },
+  personal: {
+    base: '/personal-coach',
+    kinds: [ROLE_PERSONAL_COACH],
+    roster: 'Мои спортсмены',
+    canAdd: false,
+    nav: [
+      { label: 'Мои спортсмены', href: '/personal-coach', icon: <Users size={16} /> },
+      { label: 'Календарь подготовки', href: '/personal-coach/calendar', icon: <CalendarRange size={16} /> },
+    ],
+  },
+  doctor: {
+    base: '/doctor',
+    kinds: [ROLE_NATIONAL_DOCTOR],
+    roster: 'Состав сборной',
+    canAdd: false,
+    nav: [{ label: 'Состав сборной', href: '/doctor', icon: <Users size={16} /> }],
+  },
+  psychologist: {
+    base: '/psychologist',
+    kinds: [ROLE_NATIONAL_PSYCHOLOGIST],
+    roster: 'Состав сборной',
+    canAdd: false,
+    nav: [{ label: 'Состав сборной', href: '/psychologist', icon: <Users size={16} /> }],
+  },
+};
+
+const SECTIONS: { id: MemberSection; label: string; icon: ReactNode; open: (m: NationalMember) => boolean }[] = [
+  { id: 'plan', label: 'План подготовки', icon: <ClipboardList size={16} />, open: (m) => m.access.plans },
+  { id: 'medical', label: 'Медкарта', icon: <HeartPulse size={16} />, open: (m) => m.access.medical !== null },
+  { id: 'history', label: 'История', icon: <History size={16} />, open: (m) => m.access.plans },
+  { id: 'sport', label: 'Спортивная карточка', icon: <Brain size={16} />, open: (m) => m.access.sport },
 ];
 
-function Shell({ active, nav = NAV, home, children }: { active: string; nav?: RoleNavItem[]; home?: string; children: ReactNode }) {
+function Shell({ cabinet, active, nav, home, children }: { cabinet: Cabinet; active: string; nav?: RoleNavItem[]; home?: string; children: ReactNode }) {
+  const { user } = useSession();
+  // Первая строка меню человека — его роль из тех, что пускают в кабинет.
+  const title = workspacesOf(user).find((w) => cabinet.kinds.includes(w.kind))?.title ?? '';
   return (
-    <RoleShell kind={ROLE_NATIONAL_HEAD_COACH} title="Главный тренер сборной" nav={nav} home={home} active={active} bleed>
+    <RoleShell kind={cabinet.kinds} title={title} nav={nav ?? cabinet.nav} home={home} active={active} bleed>
       {children}
     </RoleShell>
   );
 }
 
-export function NationalView() {
+export function NationalRosterView({ cabinet: key }: { cabinet: CabinetKey }) {
   const router = useRouter();
+  const cabinet = CABINETS[key];
+  // «Внести в сборную» — главному тренеру и консультанту, не тренеру сборной.
+  const me = useLoad(fetchNationalMe, 'me');
   return (
-    <Shell active="Состав сборной">
-      <RosterTable canEdit onOpen={(id) => router.push(`${BASE}/members/${id}/plan`)} />
+    <Shell cabinet={cabinet} active={cabinet.roster}>
+      <RosterTable canEdit={cabinet.canAdd && !!me.data?.headStaff} onOpen={(id) => router.push(`${cabinet.base}/members/${id}`)} />
     </Shell>
   );
 }
 
-export function NationalMemberView({ id, section }: { id: string; section: MemberSection }) {
-  const router = useRouter();
-  const member = useLoad(() => fetchMember(id), id);
-  const nav = SECTIONS.map((s) => ({ label: s.label, href: `${BASE}/members/${id}/${s.id}`, icon: s.icon }));
-  const active = SECTIONS.find((s) => s.id === section)!.label;
+export function NationalCalendarView({ cabinet: key }: { cabinet: CabinetKey }) {
+  const cabinet = CABINETS[key];
   return (
-    <Shell active={active} nav={nav} home={BASE}>
+    <Shell cabinet={cabinet} active="Календарь подготовки">
+      <TrainingCalendar />
+    </Shell>
+  );
+}
+
+export function NationalReportsView({ cabinet: key }: { cabinet: CabinetKey }) {
+  const cabinet = CABINETS[key];
+  const me = useLoad(fetchNationalMe, 'me');
+  return (
+    <Shell cabinet={cabinet} active="Рапорты">
+      {me.data ? <ReportsBoard canWrite={me.data.reports} /> : <Spinner className="m-auto" />}
+    </Shell>
+  );
+}
+
+export function NationalMemberView({ cabinet: key, id, section }: { cabinet: CabinetKey; id: string; section?: MemberSection }) {
+  const router = useRouter();
+  const cabinet = CABINETS[key];
+  const member = useLoad(() => fetchMember(id), id);
+  const m = member.data;
+  const open = m ? SECTIONS.filter((s) => s.open(m)) : [];
+  const current = open.find((s) => s.id === section);
+  const href = (s: MemberSection) => `${cabinet.base}/members/${id}/${s}`;
+
+  useEffect(() => {
+    if (m && !current && open.length) router.replace(href(open[0].id));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [m, current]);
+
+  return (
+    <Shell
+      cabinet={cabinet}
+      active={current?.label ?? ''}
+      nav={open.map((s) => ({ label: s.label, href: href(s.id), icon: s.icon }))}
+      home={cabinet.base}
+    >
       {member.error ? (
         <p className="p-6 text-[13px] text-red-600">{member.error}</p>
-      ) : !member.data ? (
+      ) : !m || !current ? (
         <Spinner className="m-auto" />
       ) : (
         <div className="flex h-full min-h-0 flex-col overflow-y-auto">
-          <MemberStrip member={member.data} canEdit onChanged={member.reload} onRemoved={() => router.push(BASE)} />
-          {section === 'plan' ? (
-            <PlanBoard memberId={id} />
-          ) : (
-            <MedicalCardView memberId={id} />
-          )}
+          <MemberStrip member={m} canEdit={m.access.roster} onChanged={member.reload} onRemoved={() => router.push(cabinet.base)} />
+          {current.id === 'plan' && <PlanBoard memberId={id} canCreate={m.access.planAuthor} onChanged={member.reload} />}
+          {current.id === 'medical' && <MedicalCardView memberId={id} onChanged={member.reload} />}
+          {current.id === 'history' && <HistoryTable memberId={id} />}
+          {current.id === 'sport' && <SportCard memberId={id} />}
         </div>
       )}
     </Shell>

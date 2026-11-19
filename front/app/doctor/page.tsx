@@ -1,10 +1,10 @@
-/* Кабинет врача сборной — состав. Маршрут тонкий: композиция во `views`. */
+/* Врач сборной — состав. Маршрут тонкий: композиция во `views`. */
 
 import type { Metadata } from 'next';
-import { DoctorView } from '@/views/national-doctor';
+import { NationalRosterView } from '@/views/national';
 
 export const metadata: Metadata = { title: 'Врач сборной — ФНТ РК' };
 
 export default function Page() {
-  return <DoctorView />;
+  return <NationalRosterView cabinet="doctor" />;
 }

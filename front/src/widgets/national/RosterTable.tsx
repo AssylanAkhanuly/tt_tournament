@@ -2,8 +2,9 @@
 
 /* Состав национальной команды ✳ (19.11.2026, NATIONAL.md; флоу Э11.1):
    таблица на всю область — спортсмен, состав, возрастная группа, регион,
-   рейтинг, медицинский допуск, ограничения нагрузки и (главному тренеру)
-   план — долей «7 из 9», а не признаком. «Внести в сборную» — только
+   личный тренер, рейтинг, медицинский допуск, ограничения нагрузки и (тем,
+   кому сервер прислал планы) план — долей «7 из 9», а не признаком; «· ждёт»
+   — план на согласовании. Строки — те, кого человеку видно (решает сервер). «Внести в сборную» — только
    главному тренеру (`canEdit`). Строка открывает карточку — адрес строит
    экран. HeroUI + Tailwind. */
 
@@ -157,13 +158,20 @@ function AddMemberDialog({ onAdded }: { onAdded: () => void }) {
 
 export function RosterTable({ canEdit, onOpen }: { canEdit: boolean; onOpen: (memberId: string) => void }) {
   const members = useLoad(fetchMembers, 'members');
-  const showPlan = canEdit;
+  // Колонку плана показывает тот, кому сервер прислал планы (`plan` в строке).
+  const showPlan = (members.data ?? []).some((m) => m.plan !== undefined);
 
   const columns: DataColumn<NationalMember>[] = [
     { id: 'name', label: 'Спортсмен', rowHeader: true, sortValue: (m) => m.person.name, render: (m) => <span className="font-medium">{m.person.name}</span> },
     { id: 'squad', label: 'Состав', sortValue: (m) => m.squad, render: (m) => SQUAD_LABEL[m.squad] },
     { id: 'age', label: 'Группа', sortValue: (m) => m.ageGroup, render: (m) => AGE_GROUP_LABEL[m.ageGroup] },
     { id: 'region', label: 'Регион', sortValue: (m) => m.person.region, render: (m) => m.person.region || '—' },
+    {
+      id: 'coach',
+      label: 'Личный тренер',
+      sortValue: (m) => m.personalCoach?.name ?? '',
+      render: (m) => m.personalCoach?.name ?? <span className="text-neutral-400">—</span>,
+    },
     {
       id: 'rating',
       label: 'Рейтинг',
@@ -181,7 +189,7 @@ export function RosterTable({ canEdit, onOpen }: { canEdit: boolean; onOpen: (me
             sortValue: (m: NationalMember) => (m.plan ? m.plan.done / Math.max(m.plan.total, 1) : -1),
             render: (m: NationalMember) => (
               <span className="tabular-nums" data-testid="member-plan">
-                {m.plan ? m.plan.done + ' из ' + m.plan.total : 'Нет'}
+                {m.plan ? m.plan.done + ' из ' + m.plan.total + (m.plan.status === 'submitted' ? ' · ждёт' : '') : 'Нет'}
               </span>
             ),
           },
