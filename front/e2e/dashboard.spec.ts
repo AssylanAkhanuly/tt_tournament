@@ -1,4 +1,4 @@
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test, type Page, type Route } from '@playwright/test';
 
 import { E2E_ADMIN, E2E_GSK, E2E_PLAYER, E2E_REFEREE } from './global-setup';
 
@@ -293,19 +293,23 @@ test('вид «Таблица»: поиск сужает, строка откр�
   await page.getByTestId('nav-sub').filter({ hasText: 'Таблица' }).click();
   await page.waitForURL((url) => url.search === '?view=table');
   const rows = page.getByTestId('tournament-table-row');
-  // Число строк сверяется с тем же ответом, который нарисовала страница: отдельный
-  // запрос позже ловил турниры, заведённые соседними проверками в это время.
-  let served = -1;
-  await page.route('**/api/tournaments/', async (route) => {
+  // Число строк сверяется с теми же ответами, которые нарисовала страница:
+  // отдельный запрос позже ловил турниры, заведённые соседними проверками в это
+  // время. У администратора в таблице ещё и сезоны Евразийской лиги ✳ (19.11.2026).
+  const served = { tournaments: -1, seasons: -1 };
+  const count = (key: keyof typeof served) => async (route: Route) => {
     const response = await route.fetch();
     const json = (await response.json()) as unknown[];
-    served = json.length;
+    served[key] = json.length;
     await route.fulfill({ response, json });
-  });
+  };
+  await page.route('**/api/tournaments/', count('tournaments'));
+  await page.route('**/api/league/seasons/', count('seasons'));
   await page.reload();
-  await expect.poll(() => served).toBeGreaterThanOrEqual(0);
-  await expect(rows).toHaveCount(served);
+  await expect.poll(() => Math.min(served.tournaments, served.seasons)).toBeGreaterThanOrEqual(0);
+  await expect(rows).toHaveCount(served.tournaments + served.seasons);
   await page.unroute('**/api/tournaments/');
+  await page.unroute('**/api/league/seasons/');
   await page.screenshot({ path: 'test-results/dashboard/table.png' });
 
   // Сортировка заголовком: «Турнир» — по алфавиту, второй щелчок — обратно.

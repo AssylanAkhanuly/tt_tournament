@@ -17,14 +17,23 @@ export type LeagueRules = {
   squadMax: number;
 };
 
-export type Division = { id: string; season: number; gender: LeagueGender; name: string; level: number };
+export type Division = {
+  id: string;
+  /** Год сезона, его id и название; завершён ли сезон — правка закрыта. */
+  season: number;
+  seasonId: string;
+  seasonName: string;
+  seasonClosed: boolean;
+  gender: LeagueGender;
+  name: string;
+  level: number;
+};
 
-/** Строка списка дивизионов — то, что нужно календарю соревнований ✳
- *  (19.11.2026: Лига стоит в «Месяце» и «Таблице» рядом с турнирами). Дата —
- *  первый тур, окончание — последний (без туров — null), города — по порядку
- *  туров, ход — сыграно встреч из всех. Считает сервер. */
-export type DivisionListItem = Division & {
-  teamsCount: number;
+/** Сводка для календаря соревнований ✳ (19.11.2026: Лига стоит в «Месяце» и
+ *  «Таблице» рядом с турнирами). Дата — первый тур, окончание — последний (без
+ *  туров — null), города — по порядку туров, ход — сыграно встреч из всех.
+ *  Считает сервер. */
+export type CalendarSummary = {
   toursCount: number;
   startsOn: string | null;
   endsOn: string | null;
@@ -32,6 +41,37 @@ export type DivisionListItem = Division & {
   matches: number;
   finished: number;
 };
+
+/** Строка списка лиг (дивизионов). */
+export type DivisionListItem = Division & CalendarSummary & { teamsCount: number };
+
+/** Окно регистрации команд: переключатель, срок «до» (`ГГГГ-ММ-ДД`, включительно)
+ *  и идёт ли она сегодня — это решает сервер. */
+export type SeasonRegistration = { open: boolean; until: string | null; active: boolean };
+
+/** Сезон ✳ (19.11.2026, LEAGUE.md «Сезон») — верхний уровень Лиги. */
+export type Season = CalendarSummary & {
+  id: string;
+  year: number;
+  name: string;
+  closed: boolean;
+  registration: SeasonRegistration;
+  leagues: number;
+  teamsCount: number;
+};
+
+export type SeasonDetail = Season & { divisions: DivisionListItem[] };
+
+/** «Регистрация до 01.12.2026», «Регистрация идёт», «Регистрация закрыта»,
+ *  «Сезон завершён». */
+export const registrationLabel = (s: Pick<Season, 'closed' | 'registration'>) =>
+  s.closed
+    ? 'Сезон завершён'
+    : s.registration.active
+      ? s.registration.until
+        ? 'Регистрация до ' + s.registration.until.split('-').reverse().join('.')
+        : 'Регистрация идёт'
+      : 'Регистрация закрыта';
 
 export type LeagueTeam = { id: string; name: string; clubId: string; clubName: string; membersCount: number };
 
@@ -90,14 +130,15 @@ type Raw = Record<string, unknown>;
 const division = (d: Raw): Division => ({
   id: String(d.id),
   season: Number(d.season),
+  seasonId: String(d.season_id),
+  seasonName: String(d.season_name ?? ''),
+  seasonClosed: Boolean(d.season_closed),
   gender: d.gender as LeagueGender,
   name: String(d.name),
   level: Number(d.level),
 });
 
-const divisionItem = (d: Raw): DivisionListItem => ({
-  ...division(d),
-  teamsCount: Number(d.teams),
+const calendar = (d: Raw): CalendarSummary => ({
   toursCount: Number(d.tours),
   startsOn: (d.starts_on as string | null) ?? null,
   endsOn: (d.ends_on as string | null) ?? null,
@@ -105,6 +146,22 @@ const divisionItem = (d: Raw): DivisionListItem => ({
   matches: Number(d.matches),
   finished: Number(d.finished),
 });
+
+const divisionItem = (d: Raw): DivisionListItem => ({ ...division(d), ...calendar(d), teamsCount: Number(d.teams) });
+
+const season = (s: Raw): Season => {
+  const r = (s.registration as Raw) ?? {};
+  return {
+    ...calendar(s),
+    id: String(s.id),
+    year: Number(s.year),
+    name: String(s.name),
+    closed: Boolean(s.closed),
+    registration: { open: Boolean(r.open), until: (r.until as string | null) ?? null, active: Boolean(r.active) },
+    leagues: Number(s.leagues),
+    teamsCount: Number(s.teams),
+  };
+};
 
 const team = (t: Raw): LeagueTeam => ({
   id: String(t.id),
@@ -173,8 +230,32 @@ export const updateRules = async (patch: Partial<Record<string, number | string>
 export const fetchDivisions = async (season?: number) =>
   (await request<Raw[]>('/api/league/divisions/' + (season ? `?season=${season}` : ''))).map(divisionItem);
 
-export const createDivision = async (d: { season: number; gender: LeagueGender; name: string; level: number }) =>
-  division(await post<Raw>('/api/league/divisions/', d));
+export const createDivision = async (d: { seasonId: string; gender: LeagueGender; name: string; level: number }) =>
+  division(await post<Raw>('/api/league/divisions/', { season_id: d.seasonId, gender: d.gender, name: d.name, level: d.level }));
+
+// ── Сезоны ✳ (19.11.2026) ──
+
+export const fetchSeasons = async () => (await request<Raw[]>('/api/league/seasons/')).map(season);
+
+export async function fetchSeason(id: string): Promise<SeasonDetail> {
+  const s = await request<Raw>(`/api/league/seasons/${id}/`);
+  return { ...season(s), divisions: (s.divisions as Raw[]).map(divisionItem) };
+}
+
+export const createSeason = async (s: { year: number; name: string; registrationUntil: string | null }) =>
+  season(await post<Raw>('/api/league/seasons/', { year: s.year, name: s.name, registration_until: s.registrationUntil }));
+
+export const updateSeason = async (
+  id: string,
+  patch: Partial<{ name: string; registrationOpen: boolean; registrationUntil: string | null; closed: boolean }>,
+) => {
+  const body: Record<string, unknown> = {};
+  if (patch.name !== undefined) body.name = patch.name;
+  if (patch.registrationOpen !== undefined) body.registration_open = patch.registrationOpen;
+  if (patch.registrationUntil !== undefined) body.registration_until = patch.registrationUntil;
+  if (patch.closed !== undefined) body.closed = patch.closed;
+  return season(await request<Raw>(`/api/league/seasons/${id}/`, { method: 'PATCH', body: JSON.stringify(body) }));
+};
 
 export async function fetchDivision(id: string): Promise<DivisionDetail> {
   const d = await request<Raw>(`/api/league/divisions/${id}/`);

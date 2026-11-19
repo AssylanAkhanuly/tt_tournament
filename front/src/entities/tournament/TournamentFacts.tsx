@@ -37,15 +37,15 @@ export function TournamentFacts({ t, withDate = false }: { t: TournamentSummary;
   return <FactList rows={rows} />;
 }
 
-/** Дивизион Лиги: где туры, ход сезона, команды — формата, уровня и возраста
- *  у него нет. */
+/** Сезон Лиги: где туры, ход сезона, лиги и команды, регистрация — формата,
+ *  уровня и возраста у него нет. */
 function leagueRows(rows: [ReactNode, string][], l: LeagueFacts, status: TournamentSummary['status']) {
   if (l.cities.length) rows.push([<MapPin key="w" size={18} />, l.cities.join(', ')]);
   rows.push(
     [<Flag key="s" size={18} />, STATUS_LABEL[status] + (l.matches ? ', встреч сыграно ' + l.finished + ' из ' + l.matches : '')],
-    [<Network key="f" size={18} />, 'Командные встречи, туров: ' + l.tours],
+    [<Network key="f" size={18} />, 'Лиг: ' + l.leagues + ', туров: ' + l.tours],
     [<Users key="p" size={18} />, 'Команд: ' + l.teams],
-    [<Trophy key="l" size={18} />, l.gender + ', сезон ' + l.season],
+    [<Trophy key="l" size={18} />, l.registration],
   );
 }
 

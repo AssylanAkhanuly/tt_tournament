@@ -16,10 +16,12 @@
 
    «Евразийская лига» ✳ (19.11.2026, решение владельца продукта: Лига — в
    календаре, как турниры, а не отдельным разделом) — тоже вид, но заводит не
-   турнир, а дивизион сезона: название, розыгрыш, уровень, сезон. Дат нет — их
-   дают туры дивизиона. Сервер командный вид в список не отдаёт (турнира такого
-   вида не бывает), пункт добавляет диалог, когда открывший просит
-   (`withLeague`). */
+   турнир, а **сезон Лиги** (LEAGUE.md «Сезон»): название, год и необязательный
+   срок регистрации команд (указан — регистрация открыта до него). Дат и формата
+   нет — даты дают туры, лиги заводятся на странице сезона, куда и ведёт
+   открывший (`onCreated({seasonId})`). Сервер командный вид в список не отдаёт
+   (турнира такого вида не бывает), пункт добавляет диалог, когда открывший
+   просит (`withLeague`). */
 
 import {
   Button,
@@ -37,7 +39,7 @@ import { parseDate } from '@internationalized/date';
 import { Plus } from 'lucide-react';
 import { useState, type FormEvent } from 'react';
 
-import { createDivision, GENDER_LABEL, type LeagueGender } from '@/entities/league';
+import { createSeason } from '@/entities/league';
 import {
   CATEGORY_LABEL,
   createTournament,
@@ -46,6 +48,7 @@ import {
   useTemplates,
 } from '@/entities/tournament';
 import { useNarrow } from '@/shared/kit/app';
+import { DateInput } from '@/shared/ui/DateInput';
 import { Picker } from '@/shared/ui/Picker';
 import { ModalSheet } from '@/shared/ui/ModalSheet';
 
@@ -76,15 +79,16 @@ const NO_KIND = 'none';
 // Вид «Евразийская лига» — код шаблона сервера.
 const LEAGUE = 'eurasian_league';
 
-type LeagueForm = { gender: LeagueGender; level: string; season: string };
-const LEAGUE_EMPTY = (): LeagueForm => ({ gender: 'm', level: '1', season: String(new Date().getFullYear()) });
+type SeasonForm = { year: string; registrationUntil: string | null };
+const SEASON_EMPTY = (): SeasonForm => ({ year: String(new Date().getFullYear()), registrationUntil: null });
 
 export function CreateTournamentDialog({
   onCreated,
   withLeague = false,
 }: {
-  onCreated: () => void;
-  /** Предлагать «Евразийскую лигу» — заводит дивизион сезона. */
+  /** Заведено; у сезона Лиги — его id (открывший ведёт на страницу сезона). */
+  onCreated: (created?: { seasonId?: string }) => void;
+  /** Предлагать «Евразийскую лигу» — заводит сезон Лиги. */
   withLeague?: boolean;
 }) {
   const state = useOverlayState();
@@ -92,13 +96,13 @@ export function CreateTournamentDialog({
   const [form, setForm] = useState<NewTournament>(EMPTY);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const [league, setLeague] = useState<LeagueForm>(LEAGUE_EMPTY);
+  const [season, setSeason] = useState<SeasonForm>(SEASON_EMPTY);
   const templates = useTemplates();
   const set = <K extends keyof NewTournament>(k: K, v: NewTournament[K]) =>
     setForm((f) => ({ ...f, [k]: v }));
   const isLeague = form.template === LEAGUE;
 
-  const ready = form.name.trim() !== '' && (isLeague ? league.season.length === 4 : form.date !== '');
+  const ready = form.name.trim() !== '' && (isLeague ? season.year.length === 4 : form.date !== '');
 
   async function submit(e: FormEvent) {
     e.preventDefault();
@@ -106,20 +110,21 @@ export function CreateTournamentDialog({
     setBusy(true);
     setError(null);
     try {
+      let created: { seasonId?: string } | undefined;
       if (isLeague) {
-        await createDivision({
-          season: Number(league.season),
-          gender: league.gender,
+        const s = await createSeason({
+          year: Number(season.year),
           name: form.name.trim(),
-          level: Number(league.level) || 1,
+          registrationUntil: season.registrationUntil,
         });
+        created = { seasonId: s.id };
       } else {
         await createTournament(form);
       }
       state.close();
       setForm(EMPTY());
-      setLeague(LEAGUE_EMPTY());
-      onCreated();
+      setSeason(SEASON_EMPTY());
+      onCreated(created);
     } catch (err) {
       setError((err as Error).message);
     } finally {
@@ -177,25 +182,19 @@ export function CreateTournamentDialog({
 
                 {isLeague && (
                   <>
-                    <Picker
-                      label="Розыгрыш"
-                      showLabel
-                      testId="league-gender"
-                      value={league.gender}
-                      options={(['m', 'f'] as LeagueGender[]).map((g) => ({ id: g, label: GENDER_LABEL[g] }))}
-                      onChange={(k) => setLeague((l) => ({ ...l, gender: k as LeagueGender }))}
-                    />
-                    <TextField value={league.level} onChange={(v) => setLeague((l) => ({ ...l, level: v.replace(/\D/g, '') }))}>
-                      <Label>Уровень (1 — Суперлига)</Label>
-                      <Input inputMode="numeric" className="rounded-xl" data-testid="league-level" />
-                    </TextField>
                     <TextField
-                      value={league.season}
-                      onChange={(v) => setLeague((l) => ({ ...l, season: v.replace(/\D/g, '').slice(0, 4) }))}
+                      value={season.year}
+                      onChange={(v) => setSeason((s) => ({ ...s, year: v.replace(/\D/g, '').slice(0, 4) }))}
                     >
-                      <Label>Сезон</Label>
-                      <Input inputMode="numeric" className="rounded-xl" data-testid="league-season" />
+                      <Label>Год</Label>
+                      <Input inputMode="numeric" className="rounded-xl" data-testid="season-year" />
                     </TextField>
+                    <DateInput
+                      label="Регистрация команд до"
+                      value={season.registrationUntil}
+                      onChange={(v) => setSeason((s) => ({ ...s, registrationUntil: v }))}
+                      testId="season-registration-until"
+                    />
                   </>
                 )}
 

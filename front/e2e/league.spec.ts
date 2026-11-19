@@ -3,10 +3,11 @@ import { expect, test, type APIRequestContext, type Page } from '@playwright/tes
 import { E2E_ADMIN } from './global-setup';
 
 /* Евразийская лига ✳ (19.11.2026, LEAGUE.md) в кабинете администратора
-   федерации: дивизион — «Новым турниром» с видом «Евразийская лига», стоит в
-   «Таблице» рядом с турнирами → две команды (новые клубы) → состав → тур
-   (встреча составляется сама) → счёт по Свейтлингу → таблица дивизиона →
-   дивизион в «Месяце» в клетке дня тура. Всё «[e2e] » —
+   федерации: сезон — «Новым турниром» с видом «Евразийская лига» → страница
+   сезона, регистрация команд открывается → лига сезона → две команды (новые
+   клубы) → состав → тур (встреча составляется сама) → счёт по Свейтлингу →
+   таблица лиги → знаком вверх: сезон, календарь — сезон в «Месяце» в клетке дня
+   тура и строкой в «Таблице». Всё «[e2e] » —
    сносит засев в global-setup (дивизионы, команды, клубы, спортсмены). */
 
 async function signIn(page: Page) {
@@ -63,7 +64,7 @@ async function pick(page: Page, testId: string, option: string) {
   await expect(page.getByRole('listbox')).toHaveCount(0);
 }
 
-test('лига: дивизион, команды с составом, тур, счёт по Свейтлингу и таблица', async ({ page, request }) => {
+test('лига: сезон, лига, команды с составом, тур, счёт по Свейтлингу и таблица', async ({ page, request }) => {
   const stamp = Date.now();
   // Тур — в текущем месяце: «Месяц» открывается на нём.
   const now = new Date();
@@ -75,29 +76,43 @@ test('лига: дивизион, команды с составом, тур, с
   await expect(page.getByRole('navigation').getByText('Лига', { exact: true })).toHaveCount(0);
   await expect(page.getByTestId('nav-sub')).toHaveText(['Месяц', 'Таблица']);
 
-  // Дивизион — «Новый турнир» с видом «Евразийская лига»: дат и формата нет.
+  // Сезон — «Новый турнир» с видом «Евразийская лига»: год, без дат и формата;
+  // после «Завести» — страница сезона.
   await page.getByTestId('tournament-create-open').click();
   const create = page.getByTestId('tournament-create');
+  const seasonName = `[e2e] Сезон ${stamp}`;
   const division = `[e2e] Лига ${stamp}`;
-  await create.getByLabel('Название').fill(division);
+  await create.getByLabel('Название').fill(seasonName);
   await pick(page, 'tournament-kind-picker', 'Евразийская лига');
   await expect(create.getByTestId('tournament-date')).toHaveCount(0);
-  await create.getByTestId('league-level').fill(String(10 + (stamp % 80)));
+  await expect(create.getByTestId('season-year')).toHaveValue(String(now.getFullYear()));
   await page.screenshot({ path: 'test-results/league/create.png' });
   await create.getByRole('button', { name: 'Завести' }).click();
-  await expect(create).toHaveCount(0);
+  await page.waitForURL(/\/dashboard\/league\/seasons\/[0-9a-f-]{36}\/leagues$/);
+  const seasonUrl = page.url();
 
-  // В «Таблице» — строкой рядом с турнирами, со значком вида и командами.
-  await page.getByTestId('nav-sub').filter({ hasText: /^Таблица$/ }).click();
-  await page.waitForURL((url) => url.searchParams.get('view') === 'table');
-  await page.getByTestId('tournament-search').fill(division);
-  const row = page.getByTestId('tournament-table-row').filter({ hasText: division });
-  await expect(row).toHaveCount(1);
-  await expect(row).toContainText(`${division} · мужчины`);
-  await expect(row.getByTestId('tournament-kind')).toHaveText('Евразийская лига');
-  await expect(row).toContainText('Командные встречи');
-  await page.screenshot({ path: 'test-results/league/table-row.png' });
-  await row.click();
+  // Регистрация нового сезона закрыта, пока её не открыли; открыть — «Сохранить».
+  await page.getByRole('button', { name: 'Регистрация', exact: true }).click();
+  await page.waitForURL(/\/registration$/);
+  const save = page.getByTestId('season-save');
+  await expect(save).toBeDisabled();
+  await page.getByTestId('season-registration-switch').click();
+  await expect(page.getByTestId('season-registration-until')).toBeVisible();
+  await save.click();
+  await expect(save).toBeDisabled();
+  await page.screenshot({ path: 'test-results/league/registration.png' });
+
+  // Лига сезона.
+  await page.getByRole('button', { name: 'Лиги', exact: true }).click();
+  await page.waitForURL(/\/leagues$/);
+  await page.getByTestId('league-create-open').click();
+  const newLeague = page.getByTestId('league-create');
+  await newLeague.getByTestId('league-name').fill(division);
+  await newLeague.getByTestId('league-level').fill(String(10 + (stamp % 80)));
+  await newLeague.getByRole('button', { name: 'Завести' }).click();
+  await expect(newLeague).toHaveCount(0);
+  await page.screenshot({ path: 'test-results/league/season.png' });
+  await page.locator(`[data-testid="league-row"][data-name="${division}"]`).click();
   await page.waitForURL(/\/dashboard\/league\/[0-9a-f-]{36}\/table$/);
 
   // Две команды из новых клубов, по три игрока в составе.
@@ -149,18 +164,33 @@ test('лига: дивизион, команды с составом, тур, с
   await expect(rows.nth(1)).toHaveAttribute('data-team', clubB);
   await page.screenshot({ path: 'test-results/league/table.png' });
 
-  // Знак со страницы дивизиона — в календарь; дивизион стоит в клетке дня тура,
-  // карточка — сведения Лиги, «Подробнее» ведёт обратно в дивизион.
+  // Знак со страницы лиги — в сезон, оттуда — в календарь. Сезон стоит в клетке
+  // дня тура; карточка — сведения сезона, «Подробнее» ведёт на страницу сезона.
+  await page.getByTestId('home-link').click();
+  await page.waitForURL(seasonUrl);
+  await expect(page.locator(`[data-testid="league-row"][data-name="${division}"]`)).toContainText('2');
   await page.getByTestId('home-link').click();
   await page.waitForURL((url) => url.pathname === '/dashboard' && !url.searchParams.get('view'));
-  const event = page.locator(`[data-day="${tourDay}"]`).getByText(`${division} · мужчины`);
+  const title = `Евразийская лига · ${seasonName}`;
+  const event = page.locator(`[data-day="${tourDay}"]`).getByText(title);
   await expect(event).toBeVisible();
   await event.click();
   const card = page.getByTestId('tournament-details');
   await expect(card).toContainText('Астана');
   await expect(card).toContainText('встреч сыграно 1 из 1');
+  await expect(card).toContainText('Лиг: 1, туров: 1');
   await expect(card).toContainText('Команд: 2');
+  await expect(card).toContainText('Регистрация идёт');
   await page.screenshot({ path: 'test-results/league/calendar.png' });
   await card.getByRole('button', { name: 'Подробнее' }).click();
-  await page.waitForURL(/\/dashboard\/league\/[0-9a-f-]{36}\/table$/);
+  await page.waitForURL(seasonUrl);
+
+  // В «Таблице» календаря — строкой рядом с турнирами, со значком вида.
+  await page.goto('/dashboard?view=table');
+  await page.getByTestId('tournament-search').fill(seasonName);
+  const row = page.getByTestId('tournament-table-row').filter({ hasText: seasonName });
+  await expect(row).toHaveCount(1);
+  await expect(row.getByTestId('tournament-kind')).toHaveText('Евразийская лига');
+  await expect(row).toContainText('Командные встречи');
+  await page.screenshot({ path: 'test-results/league/table-row.png' });
 });
