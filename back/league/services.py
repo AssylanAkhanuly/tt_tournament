@@ -126,26 +126,96 @@ def register_team(division: LeagueDivision, club, name: str, by) -> Team:
     if not can_manage_club(by, club):
         raise LeagueError("Заявить команду может администратор этого клуба.", 403)
     _open(division.season)
+    staff = is_league_staff(by)
     # Клуб заявляется сам только в окно регистрации; ведущие лигу вносят за
     # клуб в любой момент незавершённого сезона ✳.
-    if not is_league_staff(by) and not division.season.registration_active():
+    if not staff and not division.season.registration_active():
         raise LeagueError("Регистрация команд сезона закрыта.")
     name = (name or "").strip() or club.name
     if Team.objects.filter(division=division, name=name).exists():
         raise LeagueError("Команда «%s» в этом дивизионе уже есть." % name)
-    return Team.objects.create(division=division, club=club, name=name, submitted_by=by)
+    # Заявка клуба ждёт решения федерации; внесённая федерацией — принята.
+    status = Team.STATUS_ACCEPTED if staff else Team.STATUS_SUBMITTED
+    return Team.objects.create(division=division, club=club, name=name, submitted_by=by, status=status)
+
+
+def squad_refusal(team: Team, user):
+    """Почему этот человек не может менять состав команды; None — может ✳.
+    Ведущие лигу — в любой момент незавершённого сезона. Клуб — пока идёт
+    регистрация и заявка не принята: принятый состав меняет только федерация,
+    иначе решение о допуске теряет смысл."""
+    if team.division.season.closed:
+        return "Сезон завершён — изменения закрыты."
+    if is_league_staff(user):
+        return None
+    if not team.club.is_admin(user):
+        return "Менять состав может администратор клуба команды."
+    if not team.division.season.registration_active():
+        return "Регистрация команд сезона закрыта — состав меняет федерация."
+    if team.status == Team.STATUS_ACCEPTED:
+        return "Заявка принята — состав меняет федерация."
+    return None
+
+
+def _squad_check(team: Team, by) -> None:
+    reason = squad_refusal(team, by)
+    if reason:
+        raise LeagueError(reason, 403 if not (is_league_staff(by) or team.club.is_admin(by)) else 400)
+
+
+def decide_team(team: Team, decision: str, comment: str, by) -> Team:
+    """Решение федерации по заявке клуба: принять или отклонить (с
+    комментарием — клуб видит причину и подаёт снова)."""
+    if not is_league_staff(by):
+        raise LeagueError("Решение по заявке принимает администратор федерации или председатель ГСК.", 403)
+    _open(team.division.season)
+    comment = (comment or "").strip()
+    if decision == "accept":
+        team.status = Team.STATUS_ACCEPTED
+    elif decision == "reject":
+        if not comment:
+            raise LeagueError("Отклонить можно только с комментарием — клуб должен понять, что исправить.")
+        team.status = Team.STATUS_REJECTED
+    else:
+        raise LeagueError("Решение — accept или reject.")
+    team.decision_comment, team.decided_by, team.decided_at = comment, by, timezone.now()
+    team.save(update_fields=["status", "decision_comment", "decided_by", "decided_at"])
+    return team
+
+
+def resubmit_team(team: Team, by) -> Team:
+    """Клуб подаёт отклонённую заявку снова — пока идёт регистрация."""
+    if not team.club.is_admin(by):
+        raise LeagueError("Подать заявку снова может администратор клуба команды.", 403)
+    _open(team.division.season)
+    if team.status != Team.STATUS_REJECTED:
+        raise LeagueError("Подать снова можно только отклонённую заявку.")
+    if not team.division.season.registration_active():
+        raise LeagueError("Регистрация команд сезона закрыта.")
+    team.status = Team.STATUS_SUBMITTED
+    team.save(update_fields=["status"])
+    return team
+
+
+def club_teams(user):
+    """Команды клубов, которые ведёт человек, — кабинет администратора клуба."""
+    return Team.objects.filter(club__admin_memberships__user=user).select_related("club", "division__season").distinct()
+
+
+def open_seasons():
+    """Сезоны, в которые сейчас можно заявиться, и их лиги."""
+    return [s for s in LeagueSeason.objects.filter(closed=False, registration_open=True) if s.registration_active()]
 
 
 def add_member(team: Team, user: User, by) -> TeamMember:
-    if not can_manage_club(by, team.club):
-        raise LeagueError("Менять состав может администратор клуба команды.", 403)
-    _open(team.division.season)
+    _squad_check(team, by)
     rules = LeagueRules.active()
     with transaction.atomic():
         if team.members.count() >= rules.squad_max:
             raise LeagueError("В составе на сезон — не больше %d игроков." % rules.squad_max)
         other = (
             TeamMember.objects.filter(user=user, team__division__season=team.division.season)
+            .exclude(team__status=Team.STATUS_REJECTED)
             .select_related("team")
             .first()
         )
@@ -155,9 +225,7 @@ def add_member(team: Team, user: User, by) -> TeamMember:
 
 
 def remove_member(team: Team, user_id, by) -> None:
-    if not can_manage_club(by, team.club):
-        raise LeagueError("Менять состав может администратор клуба команды.", 403)
-    _open(team.division.season)
+    _squad_check(team, by)
     deleted, _ = TeamMember.objects.filter(team=team, user_id=user_id).delete()
     if not deleted:
         raise LeagueError("Этого игрока нет в составе.")
@@ -166,7 +234,11 @@ def remove_member(team: Team, user_id, by) -> None:
 def member_candidates(team: Team, q: str = "", limit: int = 30):
     """Спортсмены, которых можно добавить: с рейтинговой карточкой, ещё ни в
     одной команде сезона; пол — как у розыгрыша дивизиона, если он указан."""
-    taken = TeamMember.objects.filter(team__division__season=team.division.season).values_list("user_id", flat=True)
+    taken = (
+        TeamMember.objects.filter(team__division__season=team.division.season)
+        .exclude(team__status=Team.STATUS_REJECTED)
+        .values_list("user_id", flat=True)
+    )
     qs = RatingProfile.objects.select_related("user").exclude(user_id__in=taken)
     if team.division.gender:
         qs = qs.filter(sex=team.division.gender)
@@ -182,9 +254,10 @@ def create_tour(division: LeagueDivision, number: int, city: str, starts_on, by)
     _open(division.season)
     if LeagueTour.objects.filter(division=division, number=number).exists():
         raise LeagueError("Тур %d в этом дивизионе уже есть." % number)
-    teams = list(division.teams.order_by("created_at"))
+    # В тур идут только принятые заявки ✳.
+    teams = list(division.teams.filter(status=Team.STATUS_ACCEPTED).order_by("created_at"))
     if len(teams) < 2:
-        raise LeagueError("В дивизионе меньше двух команд — встреч не составить.")
+        raise LeagueError("В лиге меньше двух принятых команд — встреч не составить.")
     with transaction.atomic():
         tour = LeagueTour.objects.create(division=division, number=number, city=city or "", starts_on=starts_on)
         TeamMatch.objects.bulk_create(TeamMatch(tour=tour, team_a=a, team_b=b) for a, b in combinations(teams, 2))
@@ -242,7 +315,7 @@ def _apply(match: TeamMatch, result: engine.MatchResult, by) -> None:
 
 def table(division: LeagueDivision) -> List[engine.Row]:
     rules = LeagueRules.active().to_rules()
-    teams = list(division.teams.order_by("created_at"))
+    teams = list(division.teams.filter(status=Team.STATUS_ACCEPTED).order_by("created_at"))
     played = [
         engine.PlayedMatch(team_a=m.team_a_id, team_b=m.team_b_id, rubbers=[tuple(r) for r in m.rubbers], no_show=m.no_show or None)
         for m in TeamMatch.objects.filter(tour__division=division, status="finished")

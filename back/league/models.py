@@ -104,8 +104,16 @@ class LeagueDivision(models.Model):
 
 
 class Team(models.Model):
-    """Команда клуба в дивизионе сезона. Заявляет администратор клуба (ТЗ §2,
-    §8.2) или председатель ГСК."""
+    """Команда клуба в дивизионе сезона — она же заявка клуба ✳ (19.11.2026,
+    LEAGUE.md «Заявка клуба»). Заявляет администратор клуба (ТЗ §2, §8.2) — тогда
+    «ждёт решения», пока федерация не примет или не отклонит (отказ — с
+    комментарием); внесённая администратором федерации или председателем ГСК —
+    сразу «принята». В туры и таблицу идут только принятые."""
+
+    STATUS_SUBMITTED = "submitted"
+    STATUS_ACCEPTED = "accepted"
+    STATUS_REJECTED = "rejected"
+    STATUS_CHOICES = [(STATUS_SUBMITTED, "Ждёт решения"), (STATUS_ACCEPTED, "Принята"), (STATUS_REJECTED, "Отклонена")]
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     division = models.ForeignKey(LeagueDivision, on_delete=models.CASCADE, related_name="teams", verbose_name="Дивизион")
@@ -114,6 +122,12 @@ class Team(models.Model):
     submitted_by = models.ForeignKey(
         settings.AUTH_USER_MODEL, null=True, on_delete=models.SET_NULL, related_name="+", verbose_name="Кто заявил"
     )
+    status = models.CharField(max_length=12, choices=STATUS_CHOICES, default=STATUS_ACCEPTED, verbose_name="Заявка")
+    decision_comment = models.TextField(blank=True, verbose_name="Комментарий решения")
+    decided_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name="+", verbose_name="Кто решил"
+    )
+    decided_at = models.DateTimeField(null=True, blank=True, verbose_name="Когда решено")
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:

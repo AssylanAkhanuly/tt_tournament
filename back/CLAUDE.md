@@ -77,6 +77,10 @@
   `manage.py create_national_head_coach` / `create_national_consultant` / `create_national_team_coach --age-group` /
   `create_national_doctor` / `create_national_psychologist` / `create_personal_coach` (`--email --name --password`).
   Права — `national/services.py`, [NATIONAL.md](../NATIONAL.md).
+- **Администратор клуба** ✳ (19.11.2026, роль 13): `club_admin` — пропуск в кабинет `/club`; какие клубы он ведёт —
+  `clubs.ClubAdmin`. Заводит `manage.py create_club_admin --email --name --password --club "Название"` (клуба нет —
+  заведётся). Заявка команды клубом и решение федерации — `league/services.py` (`register_team`, `squad_refusal`,
+  `decide_team`, `resubmit_team`), [LEAGUE.md](../LEAGUE.md) «Заявка клуба». Тесты — `league/tests/test_club.py`.
 - **Аккаунты устройства** ✳ (19.11.2026): каждый вход (`_set_auth_cookies`) кладёт refresh-токен ещё и в httpOnly-куку
   `acct_<id>` на 30 дней; `POST /api/auth/switch/ {user_id}` (`SwitchAccountView`) делает аккаунт текущим без пароля,
   если кука жива и токен выдан именно ему, иначе 401; `logout/` снимает куку текущего аккаунта. Тесты —

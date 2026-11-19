@@ -76,13 +76,16 @@ def _season_row(s: LeagueSeason) -> dict:
             "active": s.registration_active(),
         },
         "leagues": s.divisions.count(),
-        "teams": Team.objects.filter(division__season=s).count(),
+        "teams": Team.objects.filter(division__season=s, status=Team.STATUS_ACCEPTED).count(),
+        # Заявок клубов ждёт решения — значок у «Команд» сезона.
+        "pending": Team.objects.filter(division__season=s, status=Team.STATUS_SUBMITTED).count(),
         **_calendar(LeagueTour.objects.filter(division__season=s), TeamMatch.objects.filter(tour__division__season=s)),
     }
 
 
 def _team_data(t: Team) -> dict:
     return {
+        "status": t.status, "decision_comment": t.decision_comment,
         "id": str(t.id), "name": t.name, "club_id": str(t.club_id), "club_name": t.club.name,
         "members_count": t.members.count(),
     }
@@ -147,14 +150,16 @@ class SeasonView(APIView):
     def get(self, request, pk):
         s = get_object_or_404(LeagueSeason, pk=pk)
         divisions = s.divisions.select_related("season").prefetch_related("tours")
-        teams = Team.objects.filter(division__season=s).select_related("club", "division").annotate(n=Count("members"))
+        teams = Team.objects.filter(division__season=s).select_related("club", "division", "submitted_by").annotate(n=Count("members"))
         return Response({
             **_season_row(s),
             "divisions": [_division_row(d) for d in divisions],
             # Команды всех лиг сезона — раздел «Команды» страницы сезона ✳.
             "team_list": [
                 {"id": str(t.id), "name": t.name, "club_name": t.club.name, "division_id": str(t.division_id),
-                 "division_name": t.division.name, "gender": t.division.gender, "members": t.n}
+                 "division_name": t.division.name, "gender": t.division.gender, "members": t.n,
+                 "status": t.status, "decision_comment": t.decision_comment,
+                 "submitted_by": t.submitted_by.name if t.submitted_by else ""}
                 for t in teams.order_by("division__gender", "division__level", "name")
             ],
         })
@@ -249,7 +254,73 @@ class TeamView(APIView):
     def get(self, request, pk):
         team = get_object_or_404(Team.objects.select_related("club", "division"), pk=pk)
         members = [m.user for m in team.members.select_related("user__rating_profile")]
-        return Response({**_team_data(team), "division": _division_data(team.division), "members": [_person(u) for u in members]})
+        return Response({
+            **_team_data(team), "division": _division_data(team.division), "members": [_person(u) for u in members],
+            # Может ли смотрящий менять состав — экран не повторяет правила.
+            "can_edit": request.user.is_authenticated and services.squad_refusal(team, request.user) is None,
+        })
+
+
+class TeamDecideView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, pk):
+        team = get_object_or_404(Team.objects.select_related("division__season"), pk=pk)
+        try:
+            services.decide_team(team, request.data.get("decision"), request.data.get("comment", ""), request.user)
+        except services.LeagueError as e:
+            return _refused(e)
+        return Response(_team_data(team))
+
+
+class TeamResubmitView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, pk):
+        team = get_object_or_404(Team.objects.select_related("club", "division__season"), pk=pk)
+        try:
+            services.resubmit_team(team, request.user)
+        except services.LeagueError as e:
+            return _refused(e)
+        return Response(_team_data(team))
+
+
+class MyLeagueView(APIView):
+    """Кабинет администратора клуба ✳: его клубы, их команды по сезонам (с
+    решением федерации и тем, что можно сделать) и сезоны, в которые сейчас
+    открыта регистрация, с лигами."""
+
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        user = request.user
+        clubs = Club.objects.filter(admin_memberships__user=user).distinct().order_by("name")
+        teams = services.club_teams(user).annotate(n=Count("members")).order_by("-division__season__year", "name")
+        return Response({
+            "clubs": [{"id": str(c.id), "name": c.name} for c in clubs],
+            "teams": [
+                {
+                    **_team_data(t), "members": t.n, "season_id": str(t.division.season_id),
+                    "season_name": t.division.season.name, "division_id": str(t.division_id),
+                    "division_name": t.division.name, "gender": t.division.gender,
+                    "registration_active": t.division.season.registration_active(),
+                    "can_edit": services.squad_refusal(t, user) is None,
+                    "can_resubmit": t.status == Team.STATUS_REJECTED and t.division.season.registration_active(),
+                }
+                for t in teams
+            ],
+            "seasons": [
+                {
+                    "id": str(s.id), "name": s.name,
+                    "registration_until": s.registration_until.isoformat() if s.registration_until else None,
+                    "divisions": [
+                        {"id": str(d.id), "name": d.name, "gender": d.gender, "level": d.level}
+                        for d in s.divisions.order_by("gender", "level")
+                    ],
+                }
+                for s in services.open_seasons()
+            ],
+        })
 
 
 class TeamMembersView(APIView):

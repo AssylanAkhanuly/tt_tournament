@@ -100,6 +100,10 @@ class Role(models.Model):
     KIND_NATIONAL_TEAM_COACH = "national_team_coach"
     KIND_NATIONAL_PSYCHOLOGIST = "national_psychologist"
     KIND_PERSONAL_COACH = "personal_coach"
+    # Администратор клуба ✳ (19.11.2026, ROLES.md роль 13; LEAGUE.md «Заявка
+    # клуба»): вход и кабинет `/club`. Какие клубы он ведёт — по-прежнему
+    # `clubs.ClubAdmin` (одна правда о членстве); роль — пропуск в кабинет.
+    KIND_CLUB_ADMIN = "club_admin"
     KIND_CHOICES = [
         (KIND_GSK_CHAIRMAN, "Председатель Главной судейской коллегии"),
         (KIND_FEDERATION_ADMIN, "Администратор федерации"),
@@ -115,6 +119,7 @@ class Role(models.Model):
         (KIND_NATIONAL_TEAM_COACH, "Тренер сборной"),
         (KIND_NATIONAL_PSYCHOLOGIST, "Психолог сборной"),
         (KIND_PERSONAL_COACH, "Личный тренер"),
+        (KIND_CLUB_ADMIN, "Администратор клуба"),
     ]
 
     # Возрастная группа тренера сборной (роль 20): кадеты, юноши, взрослые.
