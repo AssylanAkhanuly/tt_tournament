@@ -205,3 +205,30 @@ def test_rules_readable_by_anyone():
     r = APIClient().get("/api/league/rules/")
     assert r.status_code == 200
     assert (r.data["order"], r.data["wins_needed"], r.data["squad_max"]) == ("A-X,B-Y,C-Z,A-Y,B-X", 3, 8)
+
+
+# ── Дивизион в календаре соревнований ──────────────────────────────────────
+
+
+def test_division_list_carries_calendar_dates(four_teams):
+    """Дивизион стоит в календаре рядом с турнирами: дата — первый тур, окончание —
+    последний, города — по порядку туров, ход — сыграно встреч из всех."""
+    w = four_teams
+    r = w["api"].post(f"/api/league/divisions/{w['division']}/tours/",
+                      {"number": 2, "city": "Алматы", "starts_on": "2027-02-14"}, format="json")
+    assert r.status_code == 201, r.data
+    r = w["api"].post(f"/api/league/divisions/{w['division']}/tours/", {"number": 3, "city": "Астана"}, format="json")
+    assert r.status_code == 201, r.data
+    m = first_match(w)
+    TeamMatch.objects.filter(pk=m.pk).update(status="finished")
+
+    row = next(d for d in w["api"].get("/api/league/divisions/").json() if d["id"] == w["division"])
+    assert row["starts_on"] == "2026-12-05"
+    assert row["ends_on"] == "2027-02-14"
+    assert row["cities"] == ["Астана", "Алматы"]
+    assert (row["teams"], row["tours"], row["matches"], row["finished"]) == (4, 3, 18, 1)
+
+
+def test_division_without_tours_has_no_date(world):
+    row = world["api"].get("/api/league/divisions/").json()[0]
+    assert (row["starts_on"], row["ends_on"], row["cities"], row["tours"]) == (None, None, [], 0)

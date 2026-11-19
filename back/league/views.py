@@ -31,6 +31,30 @@ def _division_data(d: LeagueDivision) -> dict:
     return {"id": str(d.id), "season": d.season, "gender": d.gender, "name": d.name, "level": d.level}
 
 
+def _division_row(d: LeagueDivision) -> dict:
+    """Строка списка дивизионов. Дивизион стоит в календаре соревнований рядом с
+    турнирами ✳ (19.11.2026, решение владельца продукта: Лига — не отдельный
+    раздел): дата — первый тур с датой, окончание — последний, города — по
+    порядку туров без повторов, ход — сыграно встреч из всех."""
+    tours = list(d.tours.all())
+    dates = sorted(t.starts_on for t in tours if t.starts_on)
+    cities = []
+    for t in tours:
+        if t.city and t.city not in cities:
+            cities.append(t.city)
+    matches = TeamMatch.objects.filter(tour__division=d)
+    return {
+        **_division_data(d),
+        "teams": d.teams.count(),
+        "tours": len(tours),
+        "starts_on": dates[0] if dates else None,
+        "ends_on": dates[-1] if dates else None,
+        "cities": cities,
+        "matches": matches.count(),
+        "finished": matches.filter(status="finished").count(),
+    }
+
+
 def _team_data(t: Team) -> dict:
     return {
         "id": str(t.id), "name": t.name, "club_id": str(t.club_id), "club_name": t.club.name,
@@ -83,7 +107,7 @@ class DivisionsView(APIView):
         season = request.query_params.get("season")
         if season:
             qs = qs.filter(season=season)
-        return Response([{**_division_data(d), "teams": d.teams.count()} for d in qs])
+        return Response([_division_row(d) for d in qs.prefetch_related("tours")])
 
     def post(self, request):
         data = request.data
