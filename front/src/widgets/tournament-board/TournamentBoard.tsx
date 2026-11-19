@@ -20,10 +20,12 @@ type View = 'calendar' | 'table';
 
 /** Вид раздела турниров — подпункты в сайдбаре ✳ (30.10.2026, решение владельца
  *  продукта: вместо вкладок «Календарь · Таблица» на экране). «Месяц» — без
- *  параметра, «Таблица» — `?view=table`. Кабинет вешает их под свой раздел. */
-export function boardViews(basePath: string, view: View) {
+ *  параметра, «Таблица» — `?view=table`. Кабинет вешает их под свой раздел и
+ *  может добавить свои виды следом (Лига у администратора) — тогда передаёт
+ *  их имя в `view`, и «Месяц» не подсвечивается. */
+export function boardViews(basePath: string, view: string) {
   return [
-    { label: 'Месяц', href: basePath, active: view !== 'table' },
+    { label: 'Месяц', href: basePath, active: view === 'calendar' },
     { label: 'Таблица', href: basePath + '?view=table', active: view === 'table' },
   ];
 }

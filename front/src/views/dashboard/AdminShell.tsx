@@ -4,7 +4,7 @@
    администратора и разделами кабинета. Новая страница кабинета оборачивается
    сюда. */
 
-import { CalendarDays, Trophy } from 'lucide-react';
+import { CalendarDays } from 'lucide-react';
 import type { ReactNode } from 'react';
 
 import { ROLE_FEDERATION_ADMIN } from '@/entities/session';
@@ -13,9 +13,9 @@ import type { ShellSubItem } from '@/widgets/app-shell';
 
 /** Разделы кабинета. Новый раздел — строка здесь. */
 const NAV: RoleNavItem[] = [
+  // Евразийская лига — вид «Календаря», а не свой раздел ✳ (19.11.2026,
+  // решение владельца продукта): `DashboardView`, `?view=league`.
   { label: 'Календарь', href: '/dashboard', icon: <CalendarDays size={16} /> },
-  // Евразийская лига ✳ (19.11.2026, LEAGUE.md).
-  { label: 'Лига', href: '/dashboard/league', icon: <Trophy size={16} /> },
 ];
 
 export function AdminShell({

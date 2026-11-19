@@ -1,10 +1,7 @@
-/* «Лига» администратора федерации — дивизионы сезона. Маршрут тонкий: композиция во `views`. */
+/* Прежний адрес раздела «Лига»: Лига теперь вид календаря администратора. */
 
-import type { Metadata } from 'next';
-import { AdminLeagueView } from '@/views/dashboard';
-
-export const metadata: Metadata = { title: 'Лига — ФНТ РК' };
+import { redirect } from 'next/navigation';
 
 export default function Page() {
-  return <AdminLeagueView />;
+  redirect('/dashboard?view=league');
 }

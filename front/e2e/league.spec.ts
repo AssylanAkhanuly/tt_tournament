@@ -57,6 +57,8 @@ async function fillSquad(page: Page, team: string, athletes: string[], stamp: nu
 async function pick(page: Page, testId: string, option: string) {
   await page.getByTestId(testId).click();
   await page.getByRole('option', { name: option, exact: true }).click();
+  // Список закрывается с анимацией: следующий выбор не должен видеть его пункты.
+  await expect(page.getByRole('listbox')).toHaveCount(0);
 }
 
 test('лига: дивизион, команды с составом, тур, счёт по Свейтлингу и таблица', async ({ page, request }) => {
@@ -64,9 +66,13 @@ test('лига: дивизион, команды с составом, тур, с
   const athletes = await createAthletes(request, stamp, 6);
   await signIn(page);
 
-  // Дивизион.
-  await page.getByRole('button', { name: 'Лига', exact: true }).click();
-  await page.waitForURL((url) => url.pathname === '/dashboard/league');
+  // Дивизион. Лига — вид «Календаря» (подпункт), своего раздела в меню нет.
+  await expect(page.getByTestId('nav-sub').filter({ hasText: /^Лига$/ })).toHaveCount(1);
+  await expect(page.getByRole('navigation').getByText('Лига', { exact: true })).toHaveCount(1);
+  await page.getByTestId('nav-sub').filter({ hasText: /^Лига$/ }).click();
+  await page.waitForURL((url) => url.pathname === '/dashboard' && url.searchParams.get('view') === 'league');
+  await expect(page.getByTestId('nav-sub').filter({ hasText: /^Месяц$/ })).not.toHaveAttribute('aria-current');
+  await page.screenshot({ path: 'test-results/league/home.png' });
   await page.getByTestId('division-create-open').click();
   const create = page.getByTestId('division-create');
   const division = `[e2e] Лига ${stamp}`;
