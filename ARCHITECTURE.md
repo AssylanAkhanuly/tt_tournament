@@ -1299,6 +1299,7 @@ erDiagram
         int scheduleTables "столов"
         int scheduleMatchMinutes "минут на встречу"
         json scheduleDays "игровые дни"
+        m2m referees "судьи стола тура"
     }
     TEAM {
         uuid id PK
@@ -1392,6 +1393,7 @@ erDiagram
         int roundNumber "круг расписания тура"
         datetime scheduledAt "время по расписанию"
         int table "стол"
+        uuid refereeId FK "судья стола встречи"
     }
     MATCH {
         uuid id PK

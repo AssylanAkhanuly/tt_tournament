@@ -700,6 +700,7 @@ storage: "7 · ДАННЫЕ · два разных хранилища" {
       schedule_tables: "int — столов"
       schedule_match_minutes: "int — минут на встречу (120 ✳)"
       schedule_days: "json — [{date, start, end}]"
+      referees: "m2m user — судьи стола тура"
     }
 
     team: TEAM {
@@ -740,6 +741,7 @@ storage: "7 · ДАННЫЕ · два разных хранилища" {
       round_number: "int — круг расписания тура"
       scheduled_at: "datetime — время по расписанию"
       table: "int — стол"
+      referee_id: "uuid — судья стола встречи" {constraint: foreign_key}
     }
 
     match: MATCH {
