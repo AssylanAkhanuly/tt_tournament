@@ -19,12 +19,19 @@ import { useState, type ReactNode } from 'react';
 
 import { useNarrow } from '@/shared/kit/app';
 import { assetUrl } from '@/shared/kit/asset';
-import logoUrl from '@/shared/kit/brand/qtt-logo.svg';
+// Шапка тёмно-синяя — знак в белом (`inverse`).
+import logoUrl from '@/shared/kit/brand/qtt-logo-inverse.svg';
 import { MenuSheet } from '@/shared/ui/MenuSheet';
 import { ModalSheet } from '@/shared/ui/ModalSheet';
 
 /** Знак QTT — тот же файл, что у `Brand` в ките (ребрендинг 17.11.2026). */
 const LOGO = assetUrl(logoUrl);
+
+/* Пункт меню: выбранный — белая плашка на подложке сайдбара, остальные —
+   приглушённый текст. Цвета — токены оболочки (`--shell-*` во входе
+   Tailwind), не шкалы. */
+const ACTIVE = 'bg-shell-active text-shell-active-ink shadow-xs';
+const IDLE = 'text-shell-muted hover:bg-shell-side-hover hover:text-shell-ink';
 
 /** Один радиус у карточки человека, меню и строк меню. */
 const RADIUS = 'rounded-xl';
@@ -103,10 +110,10 @@ export function AppShell({
     // `hero-scope` — локальный сброс вместо preflight; `relative` — диалоги
     // рабочей области рисуются абсолютным слоем внутри.
     <div
-      className="hero-scope relative flex h-screen w-full flex-col overflow-hidden bg-white font-[family-name:var(--font)] text-neutral-900"
+      className="hero-scope relative flex h-screen w-full flex-col overflow-hidden bg-shell-page font-[family-name:var(--font)] text-shell-ink"
       data-theme="light"
     >
-      <header className="flex h-14 shrink-0 items-center gap-2.5 border-b border-neutral-200 px-5">
+      <header className="flex h-14 shrink-0 items-center gap-2.5 bg-shell-bar px-5 text-shell-bar-ink">
         {home ? (
           <a
             href={home}
@@ -130,9 +137,9 @@ export function AppShell({
       </header>
 
       <div className="flex min-h-0 flex-1 flex-col md:flex-row">
-        <aside className="flex w-full shrink-0 flex-col border-b border-neutral-200 px-3 py-2 md:w-60 md:border-b-0 md:border-r md:py-3">
+        <aside className="flex w-full shrink-0 flex-col border-b border-shell-line bg-shell-side px-3 py-2 md:w-60 md:border-b-0 md:border-r md:py-3">
           {context && (
-            <div className="mb-2 md:mb-3 md:border-b md:border-neutral-200 md:pb-3 max-md:[&_[data-testid=tournament-context]]:hidden">
+            <div className="mb-2 md:mb-3 md:border-b md:border-shell-line md:pb-3 max-md:[&_[data-testid=tournament-context]]:hidden">
               {context}
             </div>
           )}
@@ -156,7 +163,7 @@ export function AppShell({
                         className={
                           'h-9 w-full justify-start gap-2.5 px-2.5 text-[13px] font-medium max-md:w-auto max-md:flex-1 max-md:justify-center ' +
                           (nested ? 'md:pr-9 ' : '') +
-                          (lit ? 'bg-brand-50 text-brand-700' : on ? 'text-neutral-900' : 'text-neutral-600')
+                          (lit ? ACTIVE : on ? 'text-shell-ink hover:bg-shell-side-hover' : IDLE)
                         }
                       >
                         {item.icon}
@@ -170,7 +177,7 @@ export function AppShell({
                           aria-label={(open ? 'Свернуть: ' : 'Раскрыть: ') + item.label}
                           aria-expanded={open}
                           onPress={() => toggle(item.label)}
-                          className="absolute right-1 top-1/2 h-7 w-7 min-w-7 -translate-y-1/2 text-neutral-500 max-md:hidden"
+                          className="absolute right-1 top-1/2 h-7 w-7 min-w-7 -translate-y-1/2 text-shell-muted hover:bg-shell-side-hover max-md:hidden"
                           data-testid="nav-toggle"
                         >
                           <ChevronDown size={15} className={'transition-transform ' + (open ? 'rotate-180' : '')} />
@@ -187,14 +194,14 @@ export function AppShell({
                           className={
                             // На телефоне сайдбар — полоса: подпункты встают в неё следом.
                             'h-8 w-full justify-start gap-2 pl-9 pr-2.5 text-[13px] font-medium max-md:w-auto max-md:flex-1 max-md:justify-center max-md:pl-2.5 ' +
-                            (sub.active ? 'bg-brand-50 text-brand-700' : 'text-neutral-600')
+                            (sub.active ? ACTIVE : IDLE)
                           }
                           data-testid="nav-sub"
                         >
                           <span className="min-w-0 flex-1 truncate text-left">{sub.label}</span>
                           {!!sub.badge && (
                             <span
-                              className="inline-flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-brand-600 px-1 text-[10px] font-semibold tabular-nums text-white"
+                              className="inline-flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-shell-active-ink px-1 text-[10px] font-semibold tabular-nums text-shell-bar-ink"
                               aria-label={'ждут решения: ' + sub.badge}
                               data-testid="nav-sub-badge"
                             >
@@ -218,7 +225,7 @@ export function AppShell({
                   type="button"
                   data-testid="side-person"
                   onClick={() => setPersonSheet(true)}
-                  className="flex w-full items-center gap-2.5 rounded-xl border border-neutral-200 px-2.5 py-2 text-left hover:bg-neutral-50 max-md:size-10 max-md:justify-center max-md:p-0"
+                  className="flex w-full items-center gap-2.5 rounded-xl border border-shell-line bg-shell-active px-2.5 py-2 text-left hover:bg-shell-side-hover max-md:size-10 max-md:justify-center max-md:p-0"
                   aria-label={person.name}
                 >
                 <Avatar size="sm">
@@ -226,9 +233,9 @@ export function AppShell({
                 </Avatar>
                 <span className="min-w-0 flex-1 leading-tight max-md:hidden">
                   <span className="block truncate text-[12.5px] font-semibold">{person.name}</span>
-                  {person.email && <span className="block truncate text-[11px] text-neutral-500">{person.email}</span>}
+                  {person.email && <span className="block truncate text-[11px] text-shell-muted">{person.email}</span>}
                 </span>
-                <ChevronsUpDown size={14} className="shrink-0 text-neutral-400 max-md:hidden" />
+                <ChevronsUpDown size={14} className="shrink-0 text-shell-faint max-md:hidden" />
               </button>
                 <MenuSheet
                   isOpen={personSheet}
@@ -258,7 +265,7 @@ export function AppShell({
             <Dropdown>
               <Dropdown.Trigger
                 data-testid="side-person"
-                className="flex w-full items-center gap-2.5 rounded-xl border border-neutral-200 px-2.5 py-2 text-left hover:bg-neutral-50 max-md:size-10 max-md:justify-center max-md:p-0"
+                className="flex w-full items-center gap-2.5 rounded-xl border border-shell-line bg-shell-active px-2.5 py-2 text-left hover:bg-shell-side-hover max-md:size-10 max-md:justify-center max-md:p-0"
                 aria-label={person.name}
               >
                 <Avatar size="sm">
@@ -266,9 +273,9 @@ export function AppShell({
                 </Avatar>
                 <span className="min-w-0 flex-1 leading-tight max-md:hidden">
                   <span className="block truncate text-[12.5px] font-semibold">{person.name}</span>
-                  {person.email && <span className="block truncate text-[11px] text-neutral-500">{person.email}</span>}
+                  {person.email && <span className="block truncate text-[11px] text-shell-muted">{person.email}</span>}
                 </span>
-                <ChevronsUpDown size={14} className="shrink-0 text-neutral-400 max-md:hidden" />
+                <ChevronsUpDown size={14} className="shrink-0 text-shell-faint max-md:hidden" />
               </Dropdown.Trigger>
 
               {/* Меню — HeroUI: отступы, ширина, стрелка подменю и галочка
@@ -326,7 +333,7 @@ export function AppShell({
           </div>
         </aside>
 
-        <main className="flex min-h-0 min-w-0 flex-1 flex-col bg-neutral-50">
+        <main className="flex min-h-0 min-w-0 flex-1 flex-col bg-shell-page">
           {/* Дети не ужимаются, лишнее уходит в прокрутку области (правило 7 в
               front/CLAUDE.md). */}
           <div
@@ -339,7 +346,7 @@ export function AppShell({
             {children}
           </div>
           {actions && (
-            <div className="flex shrink-0 items-center justify-end gap-2 border-t border-neutral-200 bg-white px-6 py-3">
+            <div className="flex shrink-0 items-center justify-end gap-2 border-t border-shell-line bg-shell-page px-6 py-3">
               {actions}
             </div>
           )}
@@ -357,7 +364,7 @@ export function AppShell({
                 <Avatar.Fallback>{person.name.slice(0, 1)}</Avatar.Fallback>
               </Avatar>
               <Modal.Heading className="text-lg font-semibold">{person.name}</Modal.Heading>
-              {person.email && <p className="text-[13px] text-neutral-500">{person.email}</p>}
+              {person.email && <p className="text-[13px] text-shell-muted">{person.email}</p>}
             </Modal.Header>
             <Modal.Body className="flex flex-wrap justify-center gap-2 pb-2">
               {roles.map((r) => (

@@ -200,6 +200,25 @@
   --success: #15803d;
   --danger: #dc2626;
 
+  /* ── оболочка кабинетов (AppShell) ✳ (19.11.2026, решение владельца
+     продукта: «всё белое — разведите цветом»; выбран вариант «тёмно-синяя
+     шапка»). Три слоя вместо одного белого: шапка — тёмно-синий бренда со
+     знаком QTT в белом, сайдбар — светлая подложка, рабочая область — белая.
+     Выбранный пункт меню — белая плашка на подложке, тёмно-синий текст. Экран берёт только эти имена
+     (`bg-shell-bar`, `text-shell-ink`…), а не шкалы: сменить вид оболочки —
+     поправить значения здесь. */
+  --shell-bar: var(--color-brand-600);
+  --shell-bar-ink: #ffffff;
+  --shell-side: var(--surface);
+  --shell-side-hover: var(--elevated);
+  --shell-active: var(--card);
+  --shell-active-ink: var(--color-brand-600);
+  --shell-page: var(--card);
+  --shell-line: var(--line);
+  --shell-ink: var(--text);
+  --shell-muted: var(--color-neutral-600);
+  --shell-faint: var(--color-neutral-400);
+
   /* ── табло трансляции (оверлей OBS, /scoreboard) ──
      Отдельная вещательная палитра: плашку смотрят в эфире поверх видео,
      она не обязана совпадать с палитрой интерфейса. */
@@ -246,6 +265,17 @@
    одного правила. Поэтому значения живут в переменных выше, а тема только
    даёт им имена классов. */
 @theme inline {
+  --color-shell-bar: var(--shell-bar);
+  --color-shell-bar-ink: var(--shell-bar-ink);
+  --color-shell-side: var(--shell-side);
+  --color-shell-side-hover: var(--shell-side-hover);
+  --color-shell-active: var(--shell-active);
+  --color-shell-active-ink: var(--shell-active-ink);
+  --color-shell-page: var(--shell-page);
+  --color-shell-line: var(--shell-line);
+  --color-shell-ink: var(--shell-ink);
+  --color-shell-muted: var(--shell-muted);
+  --color-shell-faint: var(--shell-faint);
   --color-sb-azure: var(--sb-azure);
   --color-sb-azure-deep: var(--sb-azure-deep);
   --color-sb-navy: var(--sb-navy);
