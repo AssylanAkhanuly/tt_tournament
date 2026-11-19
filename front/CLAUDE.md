@@ -894,6 +894,22 @@ iPhone (`env(safe-area-inset-bottom)`); текст полей 16 px (`TextInput`
 (`flows/12-starshiy-trener-regiona.md`). Учётка проверок — `E2E_COACH` в
 `e2e/global-setup.ts`, проверка — `e2e/admission.spec.ts`.
 
+**Кабинеты сборной: главный тренер (`/national`) и врач (`/doctor`)** ✳
+(19.11.2026, роли 11 и 21, [NATIONAL.md](../NATIONAL.md)). Транспорт —
+`entities/national` (единственное место, где фронт ходит в `/api/national/`),
+блоки — `widgets/national`: `RosterTable` (состав; «Внести в сборную» и колонка
+плана «N из M» — только тренеру, `canEdit`), `MemberStrip` (шапка члена сборной;
+тренеру состав и группа — `Picker` прямо в ней, «Убрать из сборной» с
+подтверждением), `MedicalCardView` (что прислал сервер: врачу — все записи и
+«Добавить запись», тренеру — только действующие ограничения нагрузки),
+`PlanBoard` (период, цель, «N из M», пункты; отметка «выполнено» — кнопка-значок,
+а не `Checkbox`: флажок HeroUI внутри ячейки `Table` не срабатывает по щелчку).
+Композиция — `views/national` (`/national`, `/national/members/<id>/plan|medical`)
+и `views/national-doctor` (`/doctor`, `/doctor/members/<id>`), всё с `bleed`.
+Хук `useLoad` (запрос с перечитыванием) переехал в `shared/lib/useLoad.ts`: им
+пользуются и Лига, и сборная, а сущность сущность не импортирует. Проверка —
+`e2e/national.spec.ts`, учётки `E2E_NATIONAL_COACH`, `E2E_DOCTOR`.
+
 **Календарь: сегодня и тесные дни** ✳ (29.10.2026, образец владельца продукта —
 Google Календарь). Сегодняшняя клетка подсвечена рамкой (`data-today`), поперёк
 неё — красная линия «сейчас» на доле прошедших суток со значком времени слева

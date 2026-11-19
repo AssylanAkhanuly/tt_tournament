@@ -1,8 +1,6 @@
 /* Евразийская лига — транспорт и модель ✳ (19.11.2026, LEAGUE.md).
    Единственное место, где фронт ходит в `/api/league/`. */
 
-import { useCallback, useEffect, useState } from 'react';
-
 export type LeagueGender = 'm' | 'f';
 export const GENDER_LABEL: Record<LeagueGender, string> = { m: 'Мужчины', f: 'Женщины' };
 
@@ -232,24 +230,7 @@ export const saveNoShow = async (id: number, absent: 'a' | 'b') =>
 export type Club = { id: string; name: string };
 export const fetchClubs = async () => (await request<Raw[]>('/api/clubs/')).map((c) => ({ id: String(c.id), name: String(c.name) }));
 
-// ── Хук запроса ─────────────────────────────────────────────────────────────
-
-/** Запрос с состоянием «грузится / данные / ошибка» и перечитыванием. */
-export function useLoad<T>(run: () => Promise<T>, key: string) {
-  const [tick, setTick] = useState(0);
-  const [state, setState] = useState<{ data: T | null; error: string | null }>({ data: null, error: null });
-  useEffect(() => {
-    let live = true;
-    run()
-      .then((data) => live && setState({ data, error: null }))
-      .catch((e: Error) => live && setState({ data: null, error: e.message }));
-    return () => {
-      live = false;
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [key, tick]);
-  return { ...state, reload: useCallback(() => setTick((t) => t + 1), []) };
-}
+export { useLoad } from '@/shared/lib/useLoad';
 
 /** Новый клуб (`POST /api/clubs/`, только `is_staff` — администратор федерации). */
 export const createClub = async (name: string) => {

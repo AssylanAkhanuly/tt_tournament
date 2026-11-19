@@ -19,6 +19,11 @@ export const ROLE_CHIEF_REFEREE = 'chief_referee';
 /** Старший тренер региона ✳ (19.11.2026, роль 12) — роль с областью «регион»:
  *  кабинет `/coach`, заявка на главные старты за спортсменов своего региона. */
 export const ROLE_REGIONAL_HEAD_COACH = 'regional_head_coach';
+/** Национальная команда ✳ (19.11.2026, NATIONAL.md): главный тренер (роль 11) —
+ *  кабинет `/national`, состав и планы подготовки; врач сборной (роль 21) —
+ *  кабинет `/doctor`, медицинская карта. */
+export const ROLE_NATIONAL_HEAD_COACH = 'national_head_coach';
+export const ROLE_NATIONAL_DOCTOR = 'national_doctor';
 
 /** Рабочие места ролей, у которых в приложении есть кабинет: короткое
  *  название (полное с сервера длинное для меню) и адрес. Порядок — старшинство:
@@ -32,6 +37,8 @@ const WORKSPACES: { kind: string; title: string; to: string }[] = [
   // кабинет; в кабинет главного судьи — из меню «Работать как».
   { kind: ROLE_CHIEF_REFEREE, title: 'Главный судья', to: '/chief' },
   { kind: ROLE_REGIONAL_HEAD_COACH, title: 'Старший тренер региона', to: '/coach' },
+  { kind: ROLE_NATIONAL_HEAD_COACH, title: 'Главный тренер сборной', to: '/national' },
+  { kind: ROLE_NATIONAL_DOCTOR, title: 'Врач сборной', to: '/doctor' },
   { kind: ROLE_PLAYER, title: 'Спортсмен', to: '/player' },
 ];
 

@@ -31,6 +31,10 @@ export const E2E_REFEREE = { email: 'e2e-referee@fnt.kz', password: 'E2e-Referee
  *  заводит своих «[e2e] » и не зависит от загруженного листа. */
 export const E2E_COACH = { email: 'e2e-coach@fnt.kz', password: 'E2e-Coach-2026', region: 'Улытауская область' };
 
+/** Главный тренер и врач сборной ✳ (19.11.2026) — `national.spec.ts`. */
+export const E2E_NATIONAL_COACH = { email: 'e2e-national-coach@fnt.kz', password: 'E2e-National-2026' };
+export const E2E_DOCTOR = { email: 'e2e-doctor@fnt.kz', password: 'E2e-Doctor-2026' };
+
 /** Учётка администратора федерации — для `dashboard.spec.ts`. */
 export const E2E_ADMIN = { email: 'e2e-admin@fnt.kz', password: 'E2e-Admin-2026' };
 
@@ -71,6 +75,8 @@ export default function globalSetup() {
     '--password', E2E_COACH.password,
     '--region', E2E_COACH.region,
   );
+  manage('create_national_head_coach', '--email', E2E_NATIONAL_COACH.email, '--name', 'Главный тренер сборной (проверки)', '--password', E2E_NATIONAL_COACH.password);
+  manage('create_national_doctor', '--email', E2E_DOCTOR.email, '--name', 'Врач сборной (проверки)', '--password', E2E_DOCTOR.password);
   // Судья «проверки» назначен на демо-чемпионат — роль с областью «турнир»
   // (`dashboard.spec.ts`, раздел «Судьи»). Назначения на экране пока нет.
   manage(
