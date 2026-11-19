@@ -1110,6 +1110,12 @@ erDiagram
     NATIONAL_TEAM_MEMBER ||--o{ MEDICAL_RECORD : "медицинская карта"
     NATIONAL_TEAM_MEMBER ||--o{ TRAINING_PLAN : "планы подготовки"
     TRAINING_PLAN ||--o{ PLAN_ITEM : "пункты плана"
+    USER |o--o{ NATIONAL_TEAM_MEMBER : "личный тренер"
+    NATIONAL_TEAM_MEMBER ||--o{ SPORT_RECORD : "спортивная карточка"
+    TRAINING_EVENT |o--o{ PLAN_ITEM : "сбор или старт плана"
+    TRAINING_EVENT ||--o{ TRAVEL_REPORT : "рапорты по мероприятию"
+    USER ||--o{ TRAVEL_REPORT : "автор рапорта"
+    TRAVEL_REPORT ||--|{ REPORT_ACTION : "история согласования"
 
     MATCH ||--|{ GAME : "состоит из партий"
     GAME ||--o{ RALLY : "розыгрыши"
@@ -1299,6 +1305,39 @@ erDiagram
         uuid userId FK "спортсмен с рейтинговой карточкой, один раз"
         string squad "основной | расширенный"
         string ageGroup "кадеты | юноши | взрослые"
+        uuid personalCoachId FK "личный тренер"
+    }
+    SPORT_RECORD {
+        uuid id PK
+        uuid memberId FK
+        date date
+        string text "запись психолога — читают только психологи"
+    }
+    TRAINING_EVENT {
+        uuid id PK
+        string kind "сбор | старт"
+        string title
+        string city
+        date startsOn
+        date endsOn
+        string ageGroup "группа или пусто — вся сборная"
+        uuid tournamentId FK "старт из общего календаря"
+    }
+    TRAVEL_REPORT {
+        uuid id PK
+        uuid eventId FK
+        string ageGroup
+        uuid authorId FK "ст. тренер региона или штаб"
+        string text
+        string file
+        string status "ждёт решения | на доработке | отклонён | ушёл в федерацию"
+    }
+    REPORT_ACTION {
+        uuid id PK
+        uuid reportId FK
+        string action "подан | подан повторно | возвращён | отклонён | согласован"
+        uuid by FK
+        string comment "обязателен при возврате и отказе"
     }
     MEDICAL_RECORD {
         uuid id PK
@@ -1315,6 +1354,8 @@ erDiagram
         date startsOn
         date endsOn
         string goal
+        string status "черновик | на согласовании | согласован | возвращён"
+        string reviewComment
     }
     PLAN_ITEM {
         uuid id PK
@@ -1322,6 +1363,7 @@ erDiagram
         string kind "работа | сбор | старт"
         string title
         date due
+        uuid eventId FK "сбор и старт — только из календаря подготовки"
         bool done
     }
     TEAM_MATCH {

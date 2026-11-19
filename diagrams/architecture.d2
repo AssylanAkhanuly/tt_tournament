@@ -798,11 +798,11 @@ storage: "7 · ДАННЫЕ · два разных хранилища" {
     }
 
     # ——— Национальная команда (ROLES.md роли 11 и 21; NATIONAL.md) ———
-    # ✳ 19.11.2026 (решение владельца продукта): состав сборной ведёт главный
-    # тренер, медицинскую карту — врач сборной, план подготовки — главный тренер.
-    # Член сборной — спортсмен с рейтинговой карточкой; имя, регион и рейтинг —
-    # оттуда. Согласования планов (составляет личный тренер, согласует главный —
-    # совещание 04.11.2026) и календаря подготовки (Э11.3) пока нет.
+    # ✳ 19.11.2026 (решения владельца продукта): состав и календарь подготовки
+    # ведёт штаб (главный тренер и консультант), медкарту — врач сборной,
+    # спортивную карточку — психолог; план составляет личный тренер, согласует
+    # главный (совещание 04.11.2026); рапорты на командирование пишут старшие
+    # тренеры регионов и штаб. Член сборной — спортсмен с рейтинговой карточкой.
     national_member: NATIONAL_TEAM_MEMBER {
       shape: sql_table
       class: new
@@ -810,7 +810,55 @@ storage: "7 · ДАННЫЕ · два разных хранилища" {
       user_id: "uuid — спортсмен, один раз" {constraint: [foreign_key; unique]}
       squad: "основной | расширенный"
       age_group: "кадеты | юноши | взрослые"
+      personal_coach_id: "uuid — личный тренер (роль personal_coach)" {constraint: foreign_key}
       added_by: uuid {constraint: foreign_key}
+    }
+
+    sport_record: SPORT_RECORD {
+      shape: sql_table
+      class: new
+      id: uuid {constraint: primary_key}
+      member_id: uuid {constraint: foreign_key}
+      date: date
+      text: "запись психолога — читают только психологи"
+      created_by: uuid {constraint: foreign_key}
+    }
+
+    training_event: TRAINING_EVENT {
+      shape: sql_table
+      class: new
+      id: uuid {constraint: primary_key}
+      kind: "сбор | старт"
+      title: string
+      city: string
+      starts_on: date
+      ends_on: date
+      age_group: "группа или пусто — вся сборная"
+      tournament_id: "uuid — старт из общего календаря" {constraint: foreign_key}
+    }
+
+    travel_report: TRAVEL_REPORT {
+      shape: sql_table
+      class: new
+      id: uuid {constraint: primary_key}
+      event_id: uuid {constraint: foreign_key}
+      age_group: "кадеты | юноши | взрослые"
+      author_id: "uuid — ст. тренер региона или штаб" {constraint: foreign_key}
+      athletes: "поимённый состав (M2M к USER)"
+      text: string
+      file: "файл рапорта"
+      status: "ждёт решения | на доработке | отклонён | ушёл в федерацию"
+    }
+
+    report_action: REPORT_ACTION {
+      shape: sql_table
+      class: new
+      id: uuid {constraint: primary_key}
+      report_id: uuid {constraint: foreign_key}
+      action: "подан | подан повторно | возвращён | отклонён | согласован"
+      by: uuid {constraint: foreign_key}
+      comment: "обязателен при возврате и отказе"
+      at: datetime
     }
 
     medical_record: MEDICAL_RECORD {
@@ -834,6 +882,8 @@ storage: "7 · ДАННЫЕ · два разных хранилища" {
       starts_on: date
       ends_on: date
       goal: "цель периода"
+      status: "черновик | на согласовании | согласован | возвращён"
+      review_comment: "почему вернули"
     }
 
     plan_item: PLAN_ITEM {
@@ -844,6 +894,7 @@ storage: "7 · ДАННЫЕ · два разных хранилища" {
       kind: "работа | сбор | старт"
       title: string
       due: date
+      event_id: "uuid — сбор и старт только из календаря" {constraint: foreign_key}
       done: "bool — отметка тренера"
     }
 
