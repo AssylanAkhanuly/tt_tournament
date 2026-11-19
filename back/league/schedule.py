@@ -9,11 +9,16 @@
 это время другая встреча) → **«Отправить»**: расписание запирается. Счёт
 встречи вносится и до, и после отправки — расписание его не ограничивает.
 
+Судьи стола ✳ — как коллегия турнира: ведущий лигу назначает судей тура
+(учётки с ролью «судья»; игрок состава команды этого сезона судьёй тура быть
+не может — судил бы свою лигу), раскладка сажает на встречу наименее
+загруженного свободного судью, без судей расписания нет, правка проверяет и
+судью, «Отправить» — только когда у всех встреч есть судья.
+
 Отличия от турнира — наши, подлежат утверждению: встреча занимает **один стол**
-(в настоящей лиге личные встречи иногда разводят на два — QUESTIONS 11.1);
-судей стола у тура пока нет (судейский контур Лиги — LEAGUE.md «Чего ещё нет»),
-поэтому раскладка ограничена только столами; длительность встречи по умолчанию
-— 120 минут (до пяти личных встреч до трёх побед). Чистая часть — общая с
+(в настоящей лиге личные встречи иногда разводят на два — QUESTIONS 11.1), на
+встречу — **один судья**; длительность встречи по умолчанию — 120 минут (до
+пяти личных встреч до трёх побед). Чистая часть — общая с
 турниром: `round_robin_rounds`, `assign_slots`, `play_slots`.
 """
 import datetime
@@ -21,9 +26,11 @@ import datetime
 from django.db import transaction
 from django.utils import timezone
 
+from users.models import Role, User
+
 from tournaments import schedule as tschedule
 
-from .models import LeagueTour, TeamMatch
+from .models import LeagueTour, Team, TeamMatch, TeamMember
 from .services import LeagueError, _open, is_league_staff
 
 NONE, DRAFT, FINAL = "none", "draft", "final"
@@ -55,6 +62,49 @@ def _clean_days(days) -> list:
         return tschedule._clean_days(days)
     except tschedule.ScheduleError as e:
         raise LeagueError(str(e))
+
+
+def _season_players(tour: LeagueTour):
+    """Игроки составов команд сезона (кроме отклонённых заявок)."""
+    return TeamMember.objects.filter(team__division__season=tour.division.season).exclude(
+        team__status=Team.STATUS_REJECTED
+    ).values_list("user_id", flat=True)
+
+
+def referee_candidates(tour: LeagueTour, q: str = "", limit: int = 30):
+    """Кого можно назначить судьёй тура: роль «судья», ещё не в туре, не игрок сезона."""
+    qs = (
+        User.objects.filter(roles__kind=Role.KIND_REFEREE)
+        .exclude(id__in=tour.referees.values_list("id", flat=True))
+        .exclude(id__in=_season_players(tour))
+        .distinct()
+    )
+    if q.strip():
+        qs = qs.filter(name__icontains=q.strip())
+    return list(qs.order_by("name")[:limit])
+
+
+def add_referee(tour: LeagueTour, user: User, by) -> None:
+    _staff(by)
+    _open(tour.division.season)
+    if tour.schedule_status == FINAL:
+        raise LeagueError("Расписание отправлено — судей не меняют.")
+    if not user.roles.filter(kind=Role.KIND_REFEREE).exists():
+        raise LeagueError("Судьёй тура может быть только человек с ролью «судья».")
+    if user.id in set(_season_players(tour)):
+        raise LeagueError("%s в составе команды этого сезона — судить тур не может." % user.name)
+    tour.referees.add(user)
+
+
+def remove_referee(tour: LeagueTour, user_id, by) -> None:
+    """Убрать судью; его встречи в черновике остаются без судьи — до правки
+    или нового «Сформировать»."""
+    _staff(by)
+    _open(tour.division.season)
+    if tour.schedule_status == FINAL:
+        raise LeagueError("Расписание отправлено — судей не меняют.")
+    tour.referees.remove(user_id)
+    tour.matches.filter(referee_id=user_id).update(referee=None)
 
 
 def _ordered(tour: LeagueTour) -> list:
@@ -98,17 +148,20 @@ def build(tour: LeagueTour, *, tables, match_minutes, days, by) -> LeagueTour:
     matches = _ordered(tour)
     if not matches:
         raise LeagueError("У тура нет встреч — расписывать нечего.")
-    # Судей у тура нет: «судьи» раскладки — столы, ограничивают только они.
+    refs = list(tour.referees.order_by("name").values_list("id", flat=True))
+    if not refs:
+        raise LeagueError("Назначьте судей стола тура — встречи некому судить.")
+    # В слоте встреч не больше, чем столов и судей; судья — наименее загруженный.
     try:
-        placed = tschedule.assign_slots([(m.id, m.team_a_id, m.team_b_id) for m in matches], tables, list(range(tables)))
+        placed = tschedule.assign_slots([(m.id, m.team_a_id, m.team_b_id) for m in matches], tables, refs)
         starts = tschedule.play_slots(tschedule._days(days), match_minutes, max(slot for _, slot, _, _ in placed) + 1)
     except ValueError as e:
         raise LeagueError(str(e))
     by_id = {m.id: m for m in matches}
-    for key, slot, table, _ in placed:
+    for key, slot, table, ref in placed:
         m = by_id[key]
-        m.table, m.scheduled_at = table, timezone.make_aware(starts[slot])
-    TeamMatch.objects.bulk_update(matches, ["round_number", "table", "scheduled_at"])
+        m.table, m.scheduled_at, m.referee_id = table, timezone.make_aware(starts[slot]), ref
+    TeamMatch.objects.bulk_update(matches, ["round_number", "table", "scheduled_at", "referee"])
     tour.schedule_tables, tour.schedule_match_minutes, tour.schedule_days = tables, match_minutes, days
     tour.schedule_status = DRAFT
     tour.save(update_fields=["schedule_tables", "schedule_match_minutes", "schedule_days", "schedule_status"])
@@ -116,9 +169,10 @@ def build(tour: LeagueTour, *, tables, match_minutes, days, by) -> LeagueTour:
 
 
 @transaction.atomic
-def edit_match(match: TeamMatch, *, table=None, scheduled_at=None, by) -> TeamMatch:
-    """Стол и время встречи вручную. На отрезке встречи (начало + длительность)
-    — ни занятого стола, ни команды, у которой другая встреча."""
+def edit_match(match: TeamMatch, *, table=None, scheduled_at=None, referee_id=None, by) -> TeamMatch:
+    """Стол, время и судья встречи вручную. На отрезке встречи (начало +
+    длительность) — ни занятого стола, ни команды с другой встречей, ни судьи,
+    который в это время судит другую."""
     tour = match.tour
     _staff(by)
     _open(tour.division.season)
@@ -131,6 +185,11 @@ def edit_match(match: TeamMatch, *, table=None, scheduled_at=None, by) -> TeamMa
         if not 1 <= table <= tour.schedule_tables:
             raise LeagueError(f"Стол — от 1 до {tour.schedule_tables}.")
         match.table = table
+    if referee_id is not None:
+        ref = tour.referees.filter(id=referee_id).first()
+        if ref is None:
+            raise LeagueError("Встречу судит только судья стола этого тура.")
+        match.referee_id = ref.id  # id из базы, а не строка запроса: ниже он сравнивается
     if scheduled_at is not None:
         try:
             when = datetime.datetime.fromisoformat(str(scheduled_at).replace("Z", "+00:00"))
@@ -148,7 +207,9 @@ def edit_match(match: TeamMatch, *, table=None, scheduled_at=None, by) -> TeamMa
     teams = {match.team_a_id, match.team_b_id}
     if any({o.team_a_id, o.team_b_id} & teams for o in overlapping):
         raise LeagueError("У команды в это время другая встреча.")
-    match.save(update_fields=["table", "scheduled_at"])
+    if match.referee_id and any(o.referee_id == match.referee_id for o in overlapping):
+        raise LeagueError("Этот судья в это время судит другую встречу.")
+    match.save(update_fields=["table", "scheduled_at", "referee"])
     return match
 
 
@@ -158,8 +219,8 @@ def finalize(tour: LeagueTour, by) -> LeagueTour:
     _staff(by)
     _open(tour.division.season)
     _draft_only(tour)
-    if tour.matches.filter(scheduled_at__isnull=True).exists():
-        raise LeagueError("Не у всех встреч есть время и стол.")
+    if tour.matches.filter(scheduled_at__isnull=True).exists() or tour.matches.filter(referee__isnull=True).exists():
+        raise LeagueError("Не у всех встреч есть время, стол и судья.")
     tour.schedule_status = FINAL
     tour.save(update_fields=["schedule_status"])
     return tour
@@ -174,7 +235,24 @@ def snapshot(tour: LeagueTour, user) -> dict:
         "tables": tour.schedule_tables,
         "match_minutes": tour.schedule_match_minutes,
         "days": days,
+        "referees": [{"id": str(u.id), "name": u.name} for u in tour.referees.order_by("name")],
         "can_edit": bool(user and user.is_authenticated and is_league_staff(user))
         and not tour.division.season.closed
         and tour.schedule_status != FINAL,
+    }
+
+
+def participant_matches(user) -> dict:
+    """Расписание участникам ✳ — только отправленное: черновик видит федерация.
+    `matches` — встречи команд клубов, которые ведёт человек; `judging` —
+    встречи, которые он судит."""
+    sent = TeamMatch.objects.filter(tour__schedule_status=FINAL).select_related(
+        "tour__division__season", "team_a", "team_b", "referee"
+    ).order_by("scheduled_at", "table")
+    clubs = list(user.club_admin_roles.values_list("club_id", flat=True))
+    from django.db.models import Q
+
+    return {
+        "matches": list(sent.filter(Q(team_a__club_id__in=clubs) | Q(team_b__club_id__in=clubs))) if clubs else [],
+        "judging": list(sent.filter(referee=user)),
     }

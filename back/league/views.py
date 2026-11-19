@@ -106,6 +106,18 @@ def _match_data(m: TeamMatch) -> dict:
         # Расписание тура ✳: круг, время, стол.
         "round_number": m.round_number, "table": m.table,
         "scheduled_at": m.scheduled_at.isoformat() if m.scheduled_at else None,
+        "referee": {"id": str(m.referee_id), "name": m.referee.name} if m.referee_id else None,
+    }
+
+
+def _participant_match(m: TeamMatch) -> dict:
+    """Встреча в расписании участника: тур, лига и сезон рядом."""
+    t = m.tour
+    return {
+        **_match_data(m),
+        "tour": {"id": str(t.id), "number": t.number, "city": t.city},
+        "division": {"id": str(t.division_id), "name": t.division.name},
+        "season_name": t.division.season.name,
     }
 
 
@@ -312,6 +324,8 @@ class MyLeagueView(APIView):
                 }
                 for t in teams
             ],
+            # Расписание участнику ✳ — только отправленное.
+            **{k: [_participant_match(m) for m in v] for k, v in schedule.participant_matches(user).items()},
             "seasons": [
                 {
                     "id": str(s.id), "name": s.name,
@@ -364,7 +378,7 @@ class TourView(APIView):
 
     def get(self, request, pk):
         tour = get_object_or_404(LeagueTour.objects.select_related("division"), pk=pk)
-        matches = tour.matches.select_related("team_a", "team_b")
+        matches = tour.matches.select_related("team_a", "team_b", "referee")
         return Response({
             "id": str(tour.id), "number": tour.number, "city": tour.city, "starts_on": tour.starts_on,
             "division": _division_data(tour.division), "matches": [_match_data(m) for m in matches],
@@ -397,13 +411,58 @@ class TourScheduleFinalizeView(APIView):
         return Response(schedule.snapshot(tour, request.user))
 
 
+class TourRefereesView(APIView):
+    """Судьи стола тура: список, назначить `{user_id}`."""
+
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, pk):
+        tour = get_object_or_404(LeagueTour, pk=pk)
+        return Response([{"id": str(u.id), "name": u.name} for u in tour.referees.order_by("name")])
+
+    def post(self, request, pk):
+        tour = get_object_or_404(LeagueTour.objects.select_related("division__season"), pk=pk)
+        user = get_object_or_404(User, pk=request.data.get("user_id"))
+        try:
+            schedule.add_referee(tour, user, request.user)
+        except services.LeagueError as e:
+            return _refused(e)
+        return Response({"id": str(user.id), "name": user.name}, status=status.HTTP_201_CREATED)
+
+
+class TourRefereeView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def delete(self, request, pk, user_id):
+        tour = get_object_or_404(LeagueTour.objects.select_related("division__season"), pk=pk)
+        try:
+            schedule.remove_referee(tour, user_id, request.user)
+        except services.LeagueError as e:
+            return _refused(e)
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class TourRefereeCandidatesView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, pk):
+        tour = get_object_or_404(LeagueTour.objects.select_related("division__season"), pk=pk)
+        if not services.is_league_staff(request.user):
+            return Response({"detail": "Судей тура назначает федерация."}, status=403)
+        found = schedule.referee_candidates(tour, request.query_params.get("q", ""))
+        return Response([{"id": str(u.id), "name": u.name} for u in found])
+
+
 class TeamMatchScheduleView(APIView):
     permission_classes = [IsAuthenticated]
 
     def patch(self, request, pk):
         match = get_object_or_404(TeamMatch.objects.select_related("tour__division__season", "team_a", "team_b"), pk=pk)
+        d = request.data
         try:
-            schedule.edit_match(match, table=request.data.get("table"), scheduled_at=request.data.get("scheduled_at"), by=request.user)
+            schedule.edit_match(
+                match, table=d.get("table"), scheduled_at=d.get("scheduled_at"), referee_id=d.get("referee_id"), by=request.user
+            )
         except services.LeagueError as e:
             return _refused(e)
         return Response(_match_data(match))

@@ -173,6 +173,11 @@ class LeagueTour(models.Model):
     schedule_tables = models.PositiveSmallIntegerField(default=2, verbose_name="Столов")
     schedule_match_minutes = models.PositiveSmallIntegerField(default=120, verbose_name="Минут на встречу")
     schedule_days = models.JSONField(default=list, blank=True, verbose_name="Игровые дни")
+    # Судьи стола тура ✳ (19.11.2026, как коллегия турнира): из них раскладка
+    # расписания сажает судью на каждую встречу.
+    referees = models.ManyToManyField(
+        settings.AUTH_USER_MODEL, blank=True, related_name="league_tours_judged", verbose_name="Судьи стола"
+    )
 
     class Meta:
         verbose_name = "Тур"
@@ -206,6 +211,10 @@ class TeamMatch(models.Model):
     round_number = models.PositiveSmallIntegerField(null=True, blank=True, verbose_name="Круг")
     scheduled_at = models.DateTimeField(null=True, blank=True, verbose_name="Время")
     table = models.PositiveSmallIntegerField(null=True, blank=True, verbose_name="Стол")
+    referee = models.ForeignKey(
+        settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name="league_matches_judged",
+        verbose_name="Судья стола",
+    )
 
     class Meta:
         verbose_name = "Командная встреча"

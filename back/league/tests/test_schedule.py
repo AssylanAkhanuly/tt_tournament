@@ -41,7 +41,13 @@ def tour():
         assert r.status_code == 201, r.data
     r = api.post(f"/api/league/divisions/{div['id']}/tours/", {"number": 1, "city": "Астана", "starts_on": "2026-12-05"}, format="json")
     assert r.status_code == 201, r.data
-    return {"api": api, "tour": r.json()["id"], "division": div["id"]}
+    tour_id = r.json()["id"]
+    # Судьи стола тура ✳ — трое, больше, чем столов: раскладку ограничивают столы.
+    refs = [make_user(50 + i, "Судья %d" % i, Role.KIND_REFEREE) for i in range(3)]
+    for ref in refs:
+        r = api.post(f"/api/league/tours/{tour_id}/referees/", {"user_id": str(ref.id)}, format="json")
+        assert r.status_code == 201, r.data
+    return {"api": api, "tour": tour_id, "division": div["id"], "refs": refs}
 
 
 def build(w, **data):
@@ -69,6 +75,8 @@ def test_four_teams_on_two_tables_take_three_slots_one_match_per_team(tour):
     for group in slots.values():
         teams = [t for m in group for t in (m["team_a"]["id"], m["team_b"]["id"])]
         assert len(teams) == len(set(teams))  # команда в слоте — одна встреча
+        refs = [m["referee"]["id"] for m in group]
+        assert len(refs) == len(set(refs))  # судья в слоте — одна встреча
     # По умолчанию — день тура с 10:00, шаг — длительность встречи.
     starts = sorted(local(k) for k in slots)
     assert [s.strftime("%Y-%m-%d %H:%M") for s in starts] == ["2026-12-05 10:00", "2026-12-05 12:00", "2026-12-05 14:00"]
@@ -124,3 +132,64 @@ def test_only_league_staff_build(tour):
     outsider.force_authenticate(make_user(9, "Посторонний"))
     r = outsider.post(f"/api/league/tours/{tour['tour']}/schedule/build/", {"tables": 2, "match_minutes": 120}, format="json")
     assert r.status_code == 403
+
+
+# ── Судьи стола тура ✳ ───────────────────────────────────────────────────
+
+
+def test_no_referees_no_schedule(tour):
+    for ref in tour["refs"]:
+        tour["api"].delete(f"/api/league/tours/{tour['tour']}/referees/{ref.id}/")
+    r = build(tour, tables=2, match_minutes=120)
+    assert r.status_code == 400 and "суд" in r.data["detail"].lower()
+
+
+def test_referee_must_have_role_and_not_play_in_season(tour):
+    w = tour
+    r = w["api"].post(f"/api/league/tours/{w['tour']}/referees/", {"user_id": str(make_user(70, "Без роли").id)}, format="json")
+    assert r.status_code == 400
+    player = make_user(71, "Игрок-судья", Role.KIND_REFEREE)
+    from league.models import Team
+
+    team = Team.objects.filter(division_id=w["division"]).first()
+    assert w["api"].post(f"/api/league/teams/{team.id}/members/", {"user_id": str(player.id)}, format="json").status_code == 201
+    r = w["api"].post(f"/api/league/tours/{w['tour']}/referees/", {"user_id": str(player.id)}, format="json")
+    assert r.status_code == 400 and "состав" in r.data["detail"]
+    cands = w["api"].get(f"/api/league/tours/{w['tour']}/referees/candidates/").json()
+    assert str(player.id) not in [c["id"] for c in cands]
+
+
+def test_edit_refuses_busy_referee(tour):
+    build(tour, tables=2, match_minutes=120)
+    ms = sorted(matches(tour), key=lambda m: (m["scheduled_at"], m["table"]))
+    a, b = ms[0], ms[1]
+    assert a["scheduled_at"] == b["scheduled_at"]
+    r = tour["api"].patch(f"/api/league/team-matches/{b['id']}/schedule/", {"referee_id": a["referee"]["id"]}, format="json")
+    assert r.status_code == 400 and "судья" in r.data["detail"].lower()
+
+
+def test_participants_see_only_sent_schedule(tour):
+    from clubs.models import ClubAdmin
+    from league.models import Team
+
+    w = tour
+    team = Team.objects.filter(division_id=w["division"]).order_by("created_at").first()
+    club_admin = make_user(80, "Админ клуба", Role.KIND_CLUB_ADMIN)
+    ClubAdmin.objects.create(club=team.club, user=club_admin)
+    club = APIClient()
+    club.force_authenticate(club_admin)
+    ref = APIClient()
+    ref.force_authenticate(w["refs"][0])
+
+    build(w, tables=2, match_minutes=120)
+    assert club.get("/api/league/my/").json()["matches"] == []
+    assert ref.get("/api/league/my/").json()["judging"] == []
+
+    w["api"].post(f"/api/league/tours/{w['tour']}/schedule/finalize/")
+    mine = club.get("/api/league/my/").json()["matches"]
+    assert len(mine) == 3  # у команды — три встречи круга из четырёх
+    assert all(team.name in (m["team_a"]["name"], m["team_b"]["name"]) for m in mine)
+    assert all(m["referee"] and m["table"] and m["scheduled_at"] for m in mine)
+    assert mine[0]["tour"]["city"] == "Астана"
+    judged = ref.get("/api/league/my/").json()["judging"]
+    assert judged and all(m["referee"]["id"] == str(w["refs"][0].id) for m in judged)
