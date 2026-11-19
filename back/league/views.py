@@ -2,6 +2,7 @@
 `services.py` в HTTP."""
 import datetime
 
+from django.db.models import Count
 from django.shortcuts import get_object_or_404
 from rest_framework import status
 from rest_framework.permissions import AllowAny, IsAuthenticated
@@ -146,7 +147,17 @@ class SeasonView(APIView):
     def get(self, request, pk):
         s = get_object_or_404(LeagueSeason, pk=pk)
         divisions = s.divisions.select_related("season").prefetch_related("tours")
-        return Response({**_season_row(s), "divisions": [_division_row(d) for d in divisions]})
+        teams = Team.objects.filter(division__season=s).select_related("club", "division").annotate(n=Count("members"))
+        return Response({
+            **_season_row(s),
+            "divisions": [_division_row(d) for d in divisions],
+            # Команды всех лиг сезона — раздел «Команды» страницы сезона ✳.
+            "team_list": [
+                {"id": str(t.id), "name": t.name, "club_name": t.club.name, "division_id": str(t.division_id),
+                 "division_name": t.division.name, "gender": t.division.gender, "members": t.n}
+                for t in teams.order_by("division__gender", "division__level", "name")
+            ],
+        })
 
     def patch(self, request, pk):
         s = get_object_or_404(LeagueSeason, pk=pk)

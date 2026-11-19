@@ -151,3 +151,18 @@ def test_season_needs_a_sane_year(world):
     assert r.status_code == 400
     r = world["api"].post("/api/league/seasons/", {"year": 1990, "name": "x"}, format="json")
     assert r.status_code == 400
+
+
+def test_season_lists_teams_of_all_its_leagues(world):
+    w = world
+    r = w["api"].post("/api/league/divisions/", {"season_id": w["season"], "gender": "f", "name": "Женская Суперлига", "level": 1}, format="json")
+    women = r.json()["id"]
+    a = register(w["api"], w, "Мужская").json()["id"]
+    w["api"].post(f"/api/league/divisions/{women}/teams/", {"club_id": str(w["club"].id), "name": "Женская"}, format="json")
+    w["api"].post(f"/api/league/teams/{a}/members/", {"user_id": str(make_user(60, "Игрок").id)}, format="json")
+
+    teams = w["api"].get(f"/api/league/seasons/{w['season']}/").json()["team_list"]
+    assert [(t["name"], t["division_name"], t["club_name"], t["members"]) for t in teams] == [
+        ("Женская", "Женская Суперлига", "Клуб Сезона", 0),
+        ("Мужская", "Суперлига", "Клуб Сезона", 1),
+    ]
