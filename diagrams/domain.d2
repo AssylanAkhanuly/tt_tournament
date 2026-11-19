@@ -333,6 +333,10 @@ tour: LEAGUE_TOUR {
   number: "int — тур 1..4 за сезон"
   city: string
   starts_at: datetime
+  schedule_status: "нет | черновик | отправлено"
+  schedule_tables: "int — столов"
+  schedule_match_minutes: "int — минут на встречу (120 ✳)"
+  schedule_days: "json — [{date, start, end}]"
 }
 
 team: TEAM {
@@ -370,6 +374,9 @@ team_match: TEAM_MATCH {
   team_b_id: uuid {constraint: foreign_key}
   status: "ожидает | идёт | завершена"
   winner_team_id: uuid {constraint: foreign_key}
+  round_number: "int — круг расписания тура"
+  scheduled_at: "datetime — время по расписанию"
+  table: "int — стол"
 }
 
 match: MATCH {

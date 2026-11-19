@@ -1295,6 +1295,10 @@ erDiagram
         int number "тур 1..4 за сезон"
         string city
         datetime startsAt
+        string scheduleStatus "нет | черновик | отправлено"
+        int scheduleTables "столов"
+        int scheduleMatchMinutes "минут на встречу"
+        json scheduleDays "игровые дни"
     }
     TEAM {
         uuid id PK
@@ -1385,6 +1389,9 @@ erDiagram
         uuid teamBId FK
         string status "ожидает | идёт | завершена"
         uuid winnerTeamId FK "счёт встречи — производная от личных матчей внутри"
+        int roundNumber "круг расписания тура"
+        datetime scheduledAt "время по расписанию"
+        int table "стол"
     }
     MATCH {
         uuid id PK
