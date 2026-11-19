@@ -163,6 +163,16 @@ class LeagueTour(models.Model):
     number = models.PositiveSmallIntegerField(verbose_name="Номер тура")
     city = models.CharField(max_length=120, blank=True, verbose_name="Город")
     starts_on = models.DateField(null=True, blank=True, verbose_name="Дата")
+    # Расписание тура ✳ (19.11.2026, LEAGUE.md «Расписание тура», `schedule.py`):
+    # нет → черновик → отправлено; столов, минут на встречу, игровые дни
+    # `[{date, start, end}]` — как у турнира.
+    schedule_status = models.CharField(
+        max_length=8, default="none", verbose_name="Расписание",
+        choices=[("none", "Нет"), ("draft", "Черновик"), ("final", "Отправлено")],
+    )
+    schedule_tables = models.PositiveSmallIntegerField(default=2, verbose_name="Столов")
+    schedule_match_minutes = models.PositiveSmallIntegerField(default=120, verbose_name="Минут на встречу")
+    schedule_days = models.JSONField(default=list, blank=True, verbose_name="Игровые дни")
 
     class Meta:
         verbose_name = "Тур"
@@ -192,6 +202,10 @@ class TeamMatch(models.Model):
     winner = models.CharField(max_length=1, choices=SIDE_CHOICES, blank=True, default="")
     entered_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name="+")
     entered_at = models.DateTimeField(null=True, blank=True)
+    # Расписание тура ✳ (19.11.2026): круг, время и стол встречи.
+    round_number = models.PositiveSmallIntegerField(null=True, blank=True, verbose_name="Круг")
+    scheduled_at = models.DateTimeField(null=True, blank=True, verbose_name="Время")
+    table = models.PositiveSmallIntegerField(null=True, blank=True, verbose_name="Стол")
 
     class Meta:
         verbose_name = "Командная встреча"

@@ -13,7 +13,7 @@ from clubs.models import Club
 from users.models import User
 from users.permissions import IsGskChairman
 
-from . import services
+from . import schedule, services
 from .models import LeagueDivision, LeagueRules, LeagueSeason, LeagueTour, Team, TeamMatch
 
 RULE_FIELDS = (
@@ -103,6 +103,9 @@ def _match_data(m: TeamMatch) -> dict:
         "team_b": {"id": str(m.team_b_id), "name": m.team_b.name},
         "rubbers_a": m.rubbers_a, "rubbers_b": m.rubbers_b, "winner": m.winner, "no_show": m.no_show,
         "rubbers": m.rubbers, "lineup_a": m.lineup_a, "lineup_b": m.lineup_b,
+        # Расписание тура ✳: круг, время, стол.
+        "round_number": m.round_number, "table": m.table,
+        "scheduled_at": m.scheduled_at.isoformat() if m.scheduled_at else None,
     }
 
 
@@ -365,7 +368,45 @@ class TourView(APIView):
         return Response({
             "id": str(tour.id), "number": tour.number, "city": tour.city, "starts_on": tour.starts_on,
             "division": _division_data(tour.division), "matches": [_match_data(m) for m in matches],
+            "schedule": schedule.snapshot(tour, request.user),
         })
+
+
+class TourScheduleBuildView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, pk):
+        tour = get_object_or_404(LeagueTour.objects.select_related("division__season"), pk=pk)
+        d = request.data
+        try:
+            schedule.build(tour, tables=d.get("tables"), match_minutes=d.get("match_minutes"), days=d.get("days"), by=request.user)
+        except services.LeagueError as e:
+            return _refused(e)
+        return Response(schedule.snapshot(tour, request.user))
+
+
+class TourScheduleFinalizeView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, pk):
+        tour = get_object_or_404(LeagueTour.objects.select_related("division__season"), pk=pk)
+        try:
+            schedule.finalize(tour, request.user)
+        except services.LeagueError as e:
+            return _refused(e)
+        return Response(schedule.snapshot(tour, request.user))
+
+
+class TeamMatchScheduleView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def patch(self, request, pk):
+        match = get_object_or_404(TeamMatch.objects.select_related("tour__division__season", "team_a", "team_b"), pk=pk)
+        try:
+            schedule.edit_match(match, table=request.data.get("table"), scheduled_at=request.data.get("scheduled_at"), by=request.user)
+        except services.LeagueError as e:
+            return _refused(e)
+        return Response(_match_data(match))
 
 
 class TeamMatchView(APIView):
