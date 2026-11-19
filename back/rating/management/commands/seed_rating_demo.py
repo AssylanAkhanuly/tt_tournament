@@ -79,6 +79,14 @@ class Command(BaseCommand):
             # председателя) — помечено «[e2e] » в названии и сносится тоже:
             # иначе каждый прогон добавлял бы строки в живой лист.
             Tournament.objects.filter(name__startswith="[e2e] ").delete()
+            # Лига ✳ (19.11.2026): дивизионы проверок (с командами, турами и
+            # встречами) и их клубы — до пользователей: состав держит их ссылки.
+            from clubs.models import Club
+            from league.models import LeagueDivision, Team
+
+            LeagueDivision.objects.filter(name__startswith="[e2e] ").delete()
+            Team.objects.filter(club__name__startswith="[e2e] ").delete()
+            Club.objects.filter(name__startswith="[e2e] ").delete()
             User.objects.filter(name__startswith="[e2e] ").delete()
             # Коэффициенты тоже возвращаются к значениям по умолчанию: иначе
             # показательные числа зависели бы от того, что кто-то накрутил в
