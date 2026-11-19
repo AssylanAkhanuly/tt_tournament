@@ -136,10 +136,12 @@ test('лига: сезон, лига, команды с составом, тур
   await page.waitForURL(/\/tours$/);
   await page.getByTestId('tour-create-open').click();
   await page.getByTestId('tour-create').getByTestId('tour-city').fill('Астана');
-  await page.getByTestId('tour-create').getByTestId('tour-date').fill(tourDay);
+  // Дата — русское поле по сегментам (день, месяц, год), а не родное браузерное.
+  await page.getByTestId('tour-create').getByRole('spinbutton', { name: /день/ }).click();
+  await page.keyboard.type(tourDay.split('-').reverse().join(''));
   await page.getByTestId('tour-create').getByRole('button', { name: 'Завести' }).click();
   await page.getByTestId('tour-row').first().click();
-  await page.waitForURL(/\/dashboard\/league\/tours\/[0-9a-f-]{36}$/);
+  await page.waitForURL(/\/dashboard\/league\/tours\/[0-9a-f-]{36}\/matches$/);
   await expect(page.getByTestId('match-row')).toHaveCount(1);
 
   // Счёт: расстановка и три победы подряд — встреча решена, четвёртая неактивна.

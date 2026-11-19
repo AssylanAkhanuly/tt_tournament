@@ -25,6 +25,7 @@ import {
 } from '@/entities/league';
 import { DataTable, type DataColumn } from '@/shared/ui/DataTable';
 import { ModalSheet } from '@/shared/ui/ModalSheet';
+import { DateInput } from '@/shared/ui/DateInput';
 import { Picker } from '@/shared/ui/Picker';
 
 import { SquadDialog, TeamStatusChip } from './SquadDialog';
@@ -121,10 +122,21 @@ function TeamDialog({ divisionId, onCreated }: { divisionId: string; onCreated: 
 }
 
 function TourDialog({ divisionId, next, onCreated }: { divisionId: string; next: number; onCreated: () => void }) {
-  const state = useOverlayState();
   const [number, setNumber] = useState(String(next));
   const [city, setCity] = useState('');
-  const [date, setDate] = useState('');
+  const [date, setDate] = useState<string | null>(null);
+  // Каждое открытие — с нуля и со следующим номером: прежде окно хранило
+  // прошлый тур, и второй заводился с номером первого.
+  const state = useOverlayState({
+    onOpenChange: (open) => {
+      if (open) {
+        setNumber(String(next));
+        setCity('');
+        setDate(null);
+        setError(null);
+      }
+    },
+  });
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -163,10 +175,8 @@ function TourDialog({ divisionId, next, onCreated }: { divisionId: string; next:
               <Label>Город</Label>
               <Input className="rounded-xl" data-testid="tour-city" />
             </TextField>
-            <TextField value={date} onChange={setDate}>
-              <Label>Дата</Label>
-              <Input type="date" className="rounded-xl" data-testid="tour-date" />
-            </TextField>
+            {/* Не родной `<input type="date">`: тот пишет дату по языку браузера. */}
+            <DateInput label="Дата" value={date} onChange={setDate} testId="tour-date" />
             {error && <p className="text-[13px] text-red-600" data-testid="tour-error">{error}</p>}
           </Modal.Body>
           <Modal.Footer>

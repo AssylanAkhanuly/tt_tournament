@@ -1,11 +1,8 @@
-/* Тур лиги: встречи и счёт. Маршрут тонкий: композиция во `views`. */
+/* Тур без раздела — на «Встречи». */
 
-import type { Metadata } from 'next';
-import { AdminTourView } from '@/views/dashboard';
-
-export const metadata: Metadata = { title: 'Тур — Лига — ФНТ РК' };
+import { redirect } from 'next/navigation';
 
 export default async function Page({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  return <AdminTourView id={id} />;
+  redirect(`/dashboard/league/tours/${id}/matches`);
 }

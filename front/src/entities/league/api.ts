@@ -148,6 +148,10 @@ export type TeamMatch = {
   rubbers: [number, number][];
   lineupA: string[];
   lineupB: string[];
+  /** Расписание тура: круг, стол и время встречи; не сформировано — null. */
+  roundNumber: number | null;
+  table: number | null;
+  scheduledAt: Date | null;
 };
 
 export type TeamMatchDetail = TeamMatch & {
@@ -158,7 +162,29 @@ export type TeamMatchDetail = TeamMatch & {
   rules: LeagueRules;
 };
 
-export type TourDetail = { id: string; number: number; city: string; startsOn: string | null; division: Division; matches: TeamMatch[] };
+/** Игровой день расписания: дата `ГГГГ-ММ-ДД`, часы `ЧЧ:ММ` — как у турнира. */
+export type TourPlayDay = { date: string; start: string; end: string };
+
+/** Расписание тура ✳ (19.11.2026, LEAGUE.md «Расписание тура»): нет →
+ *  черновик → отправлено; столов, минут на встречу, игровые дни (по умолчанию
+ *  — день тура); `canEdit` — может ли смотрящий его вести, решает сервер. */
+export type TourSchedule = {
+  status: 'none' | 'draft' | 'final';
+  tables: number;
+  matchMinutes: number;
+  days: TourPlayDay[];
+  canEdit: boolean;
+};
+
+export type TourDetail = {
+  id: string;
+  number: number;
+  city: string;
+  startsOn: string | null;
+  division: Division;
+  matches: TeamMatch[];
+  schedule: TourSchedule;
+};
 
 // ── Разбор ответа ───────────────────────────────────────────────────────────
 
@@ -244,6 +270,9 @@ const match = (m: Raw): TeamMatch => ({
   rubbers: (m.rubbers as [number, number][]) ?? [],
   lineupA: ((m.lineup_a as string[]) ?? []).map(String),
   lineupB: ((m.lineup_b as string[]) ?? []).map(String),
+  roundNumber: (m.round_number as number | null) ?? null,
+  table: (m.table as number | null) ?? null,
+  scheduledAt: m.scheduled_at ? new Date(String(m.scheduled_at)) : null,
 });
 
 // ── Запросы ─────────────────────────────────────────────────────────────────
@@ -432,8 +461,32 @@ export async function fetchTour(id: string): Promise<TourDetail> {
     startsOn: (t.starts_on as string | null) ?? null,
     division: division(t.division as Raw),
     matches: (t.matches as Raw[]).map(match),
+    schedule: schedule(t.schedule as Raw),
   };
 }
+
+const schedule = (s: Raw): TourSchedule => ({
+  status: s.status as TourSchedule['status'],
+  tables: Number(s.tables),
+  matchMinutes: Number(s.match_minutes),
+  days: (s.days as TourPlayDay[]) ?? [],
+  canEdit: Boolean(s.can_edit),
+});
+
+export const buildTourSchedule = async (tourId: string, p: { tables: number; matchMinutes: number; days: TourPlayDay[] }) =>
+  schedule(await post<Raw>(`/api/league/tours/${tourId}/schedule/build/`, { tables: p.tables, match_minutes: p.matchMinutes, days: p.days }));
+
+export const finalizeTourSchedule = async (tourId: string) =>
+  schedule(await post<Raw>(`/api/league/tours/${tourId}/schedule/finalize/`, {}));
+
+/** Стол и время встречи; время — местное `ГГГГ-ММ-ДДTЧЧ:ММ` (сервер привяжет к своему поясу). */
+export const editMatchSchedule = async (matchId: number, p: { table: number; scheduledAt: string }) =>
+  match(
+    await request<Raw>(`/api/league/team-matches/${matchId}/schedule/`, {
+      method: 'PATCH',
+      body: JSON.stringify({ table: p.table, scheduled_at: p.scheduledAt }),
+    }),
+  );
 
 export async function fetchTeamMatch(id: number): Promise<TeamMatchDetail> {
   const m = await request<Raw>(`/api/league/team-matches/${id}/`);

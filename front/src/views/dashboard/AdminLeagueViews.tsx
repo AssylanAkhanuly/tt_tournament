@@ -8,7 +8,7 @@
    `widgets/league`; здесь только оболочка и адреса. */
 
 import { Spinner } from '@heroui/react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 
 import { fetchDivision, fetchRules, fetchSeason, fetchTour, useLoad } from '@/entities/league';
 import {
@@ -17,8 +17,10 @@ import {
   SEASON_SECTIONS,
   SeasonPage,
   TourPage,
+  TourSchedule,
   type DivisionSection,
   type SeasonSection,
+  type TourScheduleView,
 } from '@/widgets/league';
 
 import { AdminShell } from './AdminShell';
@@ -73,7 +75,7 @@ export function AdminDivisionView({ id, section }: { id: string; section: Divisi
           section={section}
           canEdit
           squadMax={rules.data?.squadMax ?? 8}
-          onOpenTour={(tourId) => router.push(`${BASE}/tours/${tourId}`)}
+          onOpenTour={(tourId) => router.push(`${BASE}/tours/${tourId}/matches`)}
           onChanged={division.reload}
         />
       )}
@@ -81,13 +83,43 @@ export function AdminDivisionView({ id, section }: { id: string; section: Divisi
   );
 }
 
-export function AdminTourView({ id }: { id: string }) {
+export type TourSection = 'matches' | 'schedule';
+
+/** Тур: разделы «Встречи» (счёт) и «Расписание» ✳ (19.11.2026, как у турнира) —
+ *  у расписания подпункты «Список · День» (`?view=day`). */
+export function AdminTourView({ id, section }: { id: string; section: TourSection }) {
   const tour = useLoad(() => fetchTour(id), id);
+  const view: TourScheduleView = useSearchParams().get('view') === 'day' ? 'day' : 'list';
   const t = tour.data;
-  const nav = t ? [{ label: 'Тур ' + t.number, href: `${BASE}/tours/${id}` }] : [];
+  const href = (s: TourSection) => `${BASE}/tours/${id}/${s}`;
+  const nav = [
+    { label: 'Встречи', href: href('matches') },
+    { label: 'Расписание', href: href('schedule') },
+  ];
+  const sub =
+    section === 'schedule' && t && t.schedule.status !== 'none'
+      ? [
+          { label: 'Список', href: href('schedule'), active: view === 'list' },
+          { label: 'День', href: href('schedule') + '?view=day', active: view === 'day' },
+        ]
+      : undefined;
   return (
-    <AdminShell active={t ? 'Тур ' + t.number : ''} nav={nav} home={t ? divisionHref(t.division.id, 'tours') : undefined} bleed>
-      {tour.error ? <Failed error={tour.error} /> : !t ? <Spinner className="m-auto" /> : <TourPage tour={t} canEdit onChanged={tour.reload} />}
+    <AdminShell
+      active={section === 'schedule' ? 'Расписание' : 'Встречи'}
+      nav={nav}
+      sub={sub}
+      home={t ? divisionHref(t.division.id, 'tours') : undefined}
+      bleed
+    >
+      {tour.error ? (
+        <Failed error={tour.error} />
+      ) : !t ? (
+        <Spinner className="m-auto" />
+      ) : section === 'schedule' ? (
+        <TourSchedule tour={t} view={view} onChanged={tour.reload} />
+      ) : (
+        <TourPage tour={t} canEdit onChanged={tour.reload} />
+      )}
     </AdminShell>
   );
 }
