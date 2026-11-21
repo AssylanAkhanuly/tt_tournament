@@ -103,6 +103,8 @@ export type PlanItem = {
   /** Где пункт во времени и его состояние — считает сервер, как у доски. */
   period: { from: string; to: string } | null;
   state: BoardItemState;
+  /** Город мероприятия (сбор, старт); у работы — пусто. */
+  city: string;
 };
 export type TrainingPlan = {
   id: string;
@@ -253,6 +255,7 @@ const plan = (p: Raw): TrainingPlan => ({
     eventId: (i.event_id as string | null) ?? null,
     period: (i.period as { from: string; to: string } | null) ?? null,
     state: (i.state as BoardItemState) ?? 'planned',
+    city: String(i.city ?? ''),
   })),
   done: Number(p.done),
   total: Number(p.total),

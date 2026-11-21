@@ -87,14 +87,19 @@ test('сборная: тренер — состав и план, врач — м
   await row.click();
   await coach.waitForURL(/\/national\/members\/[0-9a-f-]{36}$/);
   const memberUrl = coach.url();
-  await expect(coach.getByTestId('page-title')).toHaveText(athlete);
+  await expect(coach.getByTestId('member-name')).toHaveText(athlete);
   await expect(coach.getByRole('navigation', { name: 'Разделы' }).getByRole('button', { name: 'Состав сборной' })).toHaveAttribute('aria-current', 'true');
   await expect(coach.getByRole('navigation', { name: 'Вкладки страницы' })).toHaveCount(0);
   await expect(coach.getByTestId('member-crown')).toBeVisible();
   await expect(coach.getByTestId('profile-points')).toContainText('Плана нет');
-  await expect(coach.getByTestId('member-strip').getByTestId('clearance')).toHaveAttribute('data-status', 'none');
+  await expect(coach.getByTestId('member-photo-ring')).toHaveAttribute('data-status', 'none');
+  await expect(coach.getByTestId('profile-medical').getByTestId('clearance')).toContainText('Допуск не внесён');
+  await expect(coach.getByTestId('kpi-plan')).toContainText('Нет');
+  await expect(coach.getByTestId('profile-next')).toContainText('Стартов в плане нет');
   await expect(coach.getByTestId('strip-age-group')).toHaveText('Юноши');
   await expect(coach.getByTestId('profile-rating-chart').locator('canvas')).toBeVisible();
+  await coach.getByTestId('rating-period-3m').click();
+  await expect(coach.getByTestId('profile-rating-chart')).toHaveAttribute('data-points', '1');
   await coach.getByTestId('profile-plan-open').click();
   await coach.waitForURL(/\/plan$/);
   await coach.getByTestId('plan-create-open').click();
@@ -117,7 +122,8 @@ test('сборная: тренер — состав и план, врач — м
   await expect(points.first()).toHaveAttribute('data-step', 'done');
   await expect(points.last()).toHaveAttribute('data-title', 'Приём длинной подачи');
   await expect(points.last()).toHaveAttribute('data-step', 'current');
-  await expect(coach.getByTestId('profile-points')).toContainText('1 из 2');
+  await expect(coach.getByTestId('profile-points').getByTestId('progress-ring')).toHaveAttribute('data-done', '1');
+  await expect(coach.getByTestId('kpi-plan')).toContainText('1 из 2');
   await coach.screenshot({ path: 'test-results/national/profile.png', fullPage: true });
   await coach.getByTestId('profile-medical-open').click();
   await coach.waitForURL((url) => url.pathname.endsWith('/medical'));
@@ -151,7 +157,9 @@ test('сборная: тренер — состав и план, врач — м
   await expect(doctor.locator('[data-testid="medical-row"][data-kind="injury"]')).toContainText('Растяжение связок голеностопа');
   await doctor.getByTestId('member-back').click();
   await expect(doctor.getByTestId('profile-medical').getByTestId('clearance')).toHaveAttribute('data-status', 'ok');
-  await expect(doctor.getByTestId('profile-medical')).toContainText('Ограничения нагрузки1');
+  await expect(doctor.getByTestId('profile-medical').getByTestId('clearance')).toContainText('Допущен');
+  await expect(doctor.getByTestId('profile-limits')).toHaveText('1');
+  await expect(doctor.getByTestId('member-photo-ring')).toHaveAttribute('data-status', 'ok');
 
   await coach.goto(memberUrl + '/medical');
   await expect(coach.getByTestId('limit-row')).toHaveCount(1);

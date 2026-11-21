@@ -164,8 +164,9 @@ export function NationalMemberView({ cabinet: key, id, section = 'profile' }: { 
       cabinet={cabinet}
       active={cabinet.roster}
       home={cabinet.base}
-      sections={[]}
-      pageTitle={m ? m.person.name + (current && current.id !== 'profile' ? ' · ' + current.label : '') : undefined}
+      // Профиль — имя в своей шапке; в разделе — заголовок «имя · раздел» без вкладок.
+      sections={current && current.id !== 'profile' ? [] : undefined}
+      pageTitle={m && current && current.id !== 'profile' ? m.person.name + ' · ' + current.label : undefined}
     >
       {member.error ? (
         <p className="p-6 text-[13px] text-red-600">{member.error}</p>
