@@ -74,7 +74,7 @@ export function RatingBlock({ userId, card }: { userId: string; card: ReturnType
   const change = shown.length ? shown[shown.length - 1].after - base : 0;
 
   return (
-    <section className="px-6 py-6" data-testid="profile-rating">
+    <section className="bg-[color-mix(in_srgb,var(--color-qtt-sand)_30%,white)] px-6 py-6" data-testid="profile-rating">
       <SectionHead
         title="Рейтинг"
         action={

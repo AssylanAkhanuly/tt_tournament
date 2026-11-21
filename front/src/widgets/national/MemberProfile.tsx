@@ -13,7 +13,10 @@
      группа, личный тренер (штабу — с меню выбора, `ValueSelect`), в сборной
      с, дата рождения, почта, телефон.
    - **Полоса показателей** — рейтинг, место в листе, матчей, победы и
-     поражения, доля побед (клетки «План» нет — кольцо доли у пунктов
+     поражения, доля побед; рейтинг — тёмно-синей клеткой, остальные —
+     голубой подложкой. Цвет блоков ✳ (22.11.2026, решение владельца продукта:
+     «не всё белое»): правая колонка — серая подложка с белыми карточками,
+     рейтинг — песочная (доп. цвет брендбука `qtt-sand`), степпер — белый (клетки «План» нет — кольцо доли у пунктов
      подготовки).
    - **Пункты подготовки** (`profile/PlanSteps`) и правая колонка
      (`profile/SideBlocks`): личные встречи, медкарта полосой цвета допуска,
@@ -220,9 +223,17 @@ function Kpis({ member, card }: { member: NationalMember; card: ReturnType<typeo
   return (
     <div className="grid grid-cols-2 gap-px border-b border-neutral-200 bg-neutral-200 sm:grid-cols-3 xl:grid-cols-5" data-testid="profile-kpis">
       {cells.map(([label, value, id]) => (
-        <div key={id} className="flex flex-col justify-center gap-1 bg-white px-6 py-4" data-testid={'kpi-' + id}>
-          <span className="text-[12px] text-neutral-500">{label}</span>
-          <span className={'leading-none font-semibold tabular-nums ' + (id === 'rating' ? 'text-[28px] text-brand-600' : 'text-[22px]')}>{value}</span>
+        // Рейтинг — тёмно-синей клеткой бренда, остальные — голубой подложкой ✳ (22.11.2026).
+        <div
+          key={id}
+          className={
+            'flex flex-col justify-center gap-1 px-6 py-4 ' +
+            (id === 'rating' ? 'bg-brand-600 text-white' : 'bg-[color-mix(in_srgb,var(--color-qtt-sky)_14%,white)]')
+          }
+          data-testid={'kpi-' + id}
+        >
+          <span className={'text-[12px] ' + (id === 'rating' ? 'text-white/70' : 'text-neutral-500')}>{label}</span>
+          <span className={'leading-none font-semibold tabular-nums ' + (id === 'rating' ? 'text-[28px]' : 'text-[22px]')}>{value}</span>
         </div>
       ))}
     </div>
@@ -258,7 +269,7 @@ export function MemberProfile({
       <Kpis member={member} card={card} />
       <div className={'grid border-b border-neutral-200 ' + (showPlans ? 'lg:grid-cols-[minmax(0,1fr)_24rem]' : '')}>
           {showPlans && <PlanSteps plans={plans.data} error={plans.error} plan={plan} onOpenPlan={onOpenPlan} onOpenHistory={onOpenHistory} />}
-          <div className="flex flex-col">
+          <div className="flex flex-col bg-neutral-50">
             <HeadToHead
               me={{ name: member.person.name, avatar: member.profile?.avatar ?? null }}
               history={card.data ? card.data.history.filter((h) => !h.isReverted).slice().reverse() : card.error ? [] : null} />

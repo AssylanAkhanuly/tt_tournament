@@ -89,7 +89,7 @@ export function HeadToHead({ me, history }: { me: { name: string; avatar: string
             return (
               // Карточка встречи: «имя · аватар · счёт · аватар · имя», под счётом —
               // три последних матча ✳ (22.11.2026, образец владельца продукта).
-              <li key={r.key} className="flex flex-col gap-2 rounded-xl border border-neutral-200 px-3 py-2.5" data-testid="h2h-row" data-name={r.name}>
+              <li key={r.key} className="flex flex-col gap-2 rounded-xl border border-neutral-200 bg-white px-3 py-2.5" data-testid="h2h-row" data-name={r.name}>
                 <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2">
                   <span className="flex min-w-0 items-center justify-end gap-2">
                     <span className="truncate text-right text-[13px] font-medium" title={me.name}>
@@ -139,7 +139,7 @@ export function MedStatus({ member, onOpenMedical }: { member: NationalMember; o
     status === 'expired'
       ? { band: 'bg-[color-mix(in_srgb,var(--color-qtt-coral)_12%,white)] text-[color-mix(in_srgb,var(--color-qtt-coral)_70%,black)]', title: 'Допуск истёк', sub: dmy(until) }
       : status === 'none'
-        ? { band: 'bg-neutral-100 text-neutral-600', title: 'Допуск не внесён', sub: '' }
+        ? { band: 'border border-neutral-200 bg-white text-neutral-600', title: 'Допуск не внесён', sub: '' }
         : left !== null && left <= EXPIRING_DAYS
           ? { band: 'bg-[color-mix(in_srgb,var(--color-qtt-peach)_20%,white)] text-[color-mix(in_srgb,var(--color-qtt-peach)_60%,black)]', title: 'Допуск истекает', sub: 'до ' + dmy(until) + ' · через ' + daysWord(left) }
           : { band: 'bg-green-50 text-green-800', title: 'Допущен', sub: 'до ' + dmy(until) + (left !== null ? ' · ещё ' + daysWord(left) : '') };
