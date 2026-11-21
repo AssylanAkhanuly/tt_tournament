@@ -13,7 +13,8 @@
      группа, личный тренер (штабу — с меню выбора, `ValueSelect`), в сборной
      с, дата рождения, почта, телефон.
    - **Полоса показателей** — рейтинг, место в листе, матчей, победы и
-     поражения, доля побед, выполнение плана кольцом.
+     поражения, доля побед (клетки «План» нет — кольцо доли у пунктов
+     подготовки).
    - **Пункты подготовки** (`profile/PlanSteps`) и правая колонка
      (`profile/SideBlocks`): личные встречи, медкарта полосой цвета допуска,
      спортивная карточка.
@@ -44,7 +45,6 @@ import { NO_COACH, RemoveMemberButton, useMemberEdit, ValueSelect } from './Memb
 import { PlanSteps } from './profile/PlanSteps';
 import { RatingBlock } from './profile/RatingBlock';
 import { HeadToHead, MedStatus, SportLink } from './profile/SideBlocks';
-import { ProgressRing } from './profile/ui';
 import { AGE_GROUPS, SQUADS } from './RosterTable';
 
 const initials = (name: string) =>
@@ -218,20 +218,13 @@ function Kpis({ member, card }: { member: NationalMember; card: ReturnType<typeo
     ['Доля побед', share === null ? '—' : share + ' %', 'share'],
   ];
   return (
-    <div className="grid grid-cols-2 gap-px border-b border-neutral-200 bg-neutral-200 sm:grid-cols-3 xl:grid-cols-6" data-testid="profile-kpis">
+    <div className="grid grid-cols-2 gap-px border-b border-neutral-200 bg-neutral-200 sm:grid-cols-3 xl:grid-cols-5" data-testid="profile-kpis">
       {cells.map(([label, value, id]) => (
         <div key={id} className="flex flex-col justify-center gap-1 bg-white px-6 py-4" data-testid={'kpi-' + id}>
           <span className="text-[12px] text-neutral-500">{label}</span>
           <span className={'leading-none font-semibold tabular-nums ' + (id === 'rating' ? 'text-[28px] text-brand-600' : 'text-[22px]')}>{value}</span>
         </div>
       ))}
-      <div className="flex items-center gap-3 bg-white px-6 py-4" data-testid="kpi-plan">
-        {member.plan ? <ProgressRing done={member.plan.done} total={member.plan.total} size={48} /> : null}
-        <span className="flex flex-col gap-1">
-          <span className="text-[12px] text-neutral-500">План</span>
-          <span className="text-[15px] leading-none font-semibold">{member.plan ? `${member.plan.done} из ${member.plan.total}` : member.access.plans ? 'Нет' : '—'}</span>
-        </span>
-      </div>
     </div>
   );
 }

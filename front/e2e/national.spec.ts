@@ -94,7 +94,6 @@ test('сборная: тренер — состав и план, врач — м
   await expect(coach.getByTestId('profile-points')).toContainText('Плана нет');
   await expect(coach.getByTestId('member-photo-ring')).toHaveAttribute('data-status', 'none');
   await expect(coach.getByTestId('profile-medical').getByTestId('clearance')).toContainText('Допуск не внесён');
-  await expect(coach.getByTestId('kpi-plan')).toContainText('Нет');
   await expect(coach.getByTestId('profile-h2h')).toContainText('Встреч нет');
   await expect(coach.getByTestId('strip-age-group')).toHaveText('Юноши');
   await expect(coach.getByTestId('profile-rating-chart').locator('canvas')).toBeVisible();
@@ -123,7 +122,6 @@ test('сборная: тренер — состав и план, врач — м
   await expect(points.last()).toHaveAttribute('data-title', 'Приём длинной подачи');
   await expect(points.last()).toHaveAttribute('data-step', 'current');
   await expect(coach.getByTestId('profile-points').getByTestId('progress-ring')).toHaveAttribute('data-done', '1');
-  await expect(coach.getByTestId('kpi-plan')).toContainText('1 из 2');
   await coach.screenshot({ path: 'test-results/national/profile.png', fullPage: true });
   await coach.getByTestId('profile-medical-open').click();
   await coach.waitForURL((url) => url.pathname.endsWith('/medical'));
