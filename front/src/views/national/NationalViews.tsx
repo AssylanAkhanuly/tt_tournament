@@ -6,8 +6,9 @@
 
    - `/national` — тренерский штаб: главный тренер (11), консультант (19 —
      полная копия), тренер сборной (20 — видит свою возрастную группу);
-     разделы «Состав сборной», «Календарь подготовки», «Рапорты»;
-   - `/personal-coach` — личный тренер: «Мои спортсмены», календарь;
+     разделы «Состав сборной», «Планы подготовки» (календарь подготовки и
+     рапорты из меню убраны 22.11.2026, решение владельца продукта);
+   - `/personal-coach` — личный тренер: «Мои спортсмены», «Планы подготовки»;
    - `/doctor` — врач сборной (21); `/psychologist` — психолог (22).
 
    Карточка члена сборной — `<кабинет>/members/<id>/<раздел>`: шапка и разделы,
@@ -16,7 +17,7 @@
    доступный. Знак в шапке ведёт к составу кабинета. */
 
 import { Spinner } from '@heroui/react';
-import { Brain, CalendarRange, ClipboardList, FileSignature, GanttChart, HeartPulse, History, Users } from 'lucide-react';
+import { Brain, ClipboardList, GanttChart, HeartPulse, History, Users } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useEffect, type ReactNode } from 'react';
 
@@ -38,10 +39,8 @@ import {
   MemberStrip,
   PlanBoard,
   PlansTimeline,
-  ReportsBoard,
   RosterTable,
   SportCard,
-  TrainingCalendar,
 } from '@/widgets/national';
 
 export type CabinetKey = 'national' | 'personal' | 'doctor' | 'psychologist';
@@ -59,8 +58,6 @@ const CABINETS: Record<CabinetKey, Cabinet> = {
       { label: 'Состав сборной', href: '/national', icon: <Users size={16} />, group: 'Сборная' },
       // Доска планов всех спортсменов ✳ (21.11.2026, образец Visitly).
       { label: 'Планы подготовки', href: '/national/plans', icon: <GanttChart size={16} />, group: 'Сборная' },
-      { label: 'Календарь подготовки', href: '/national/calendar', icon: <CalendarRange size={16} />, group: 'Сборная' },
-      { label: 'Рапорты', href: '/national/reports', icon: <FileSignature size={16} />, group: 'Документы' },
     ],
   },
   personal: {
@@ -71,7 +68,6 @@ const CABINETS: Record<CabinetKey, Cabinet> = {
     nav: [
       { label: 'Мои спортсмены', href: '/personal-coach', icon: <Users size={16} /> },
       { label: 'Планы подготовки', href: '/personal-coach/plans', icon: <GanttChart size={16} /> },
-      { label: 'Календарь подготовки', href: '/personal-coach/calendar', icon: <CalendarRange size={16} /> },
     ],
   },
   doctor: {
@@ -120,15 +116,6 @@ export function NationalRosterView({ cabinet: key }: { cabinet: CabinetKey }) {
   );
 }
 
-export function NationalCalendarView({ cabinet: key }: { cabinet: CabinetKey }) {
-  const cabinet = CABINETS[key];
-  return (
-    <Shell cabinet={cabinet} active="Календарь подготовки">
-      <TrainingCalendar />
-    </Shell>
-  );
-}
-
 /** Доска планов подготовки ✳ (21.11.2026): строка на спортсмена, пункты его
  *  планов по дням; щелчок по имени или «Открыть план» — раздел плана карточки. */
 export function NationalPlansView({ cabinet: key }: { cabinet: CabinetKey }) {
@@ -137,16 +124,6 @@ export function NationalPlansView({ cabinet: key }: { cabinet: CabinetKey }) {
   return (
     <Shell cabinet={cabinet} active="Планы подготовки">
       <PlansTimeline onOpenPlan={(id) => router.push(`${cabinet.base}/members/${id}/plan`)} />
-    </Shell>
-  );
-}
-
-export function NationalReportsView({ cabinet: key }: { cabinet: CabinetKey }) {
-  const cabinet = CABINETS[key];
-  const me = useLoad(fetchNationalMe, 'me');
-  return (
-    <Shell cabinet={cabinet} active="Рапорты">
-      {me.data ? <ReportsBoard canWrite={me.data.reports} /> : <Spinner className="m-auto" />}
     </Shell>
   );
 }

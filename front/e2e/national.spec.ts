@@ -190,25 +190,17 @@ test('сборная: личный тренер составляет план, �
   await expect(psych.getByTestId('sport-row')).toContainText('Волнение в решающих партиях');
 });
 
-test('сборная: календарь подготовки и рапорт старшего тренера региона — возврат, доработка, согласование', async ({ browser, request }) => {
+test('сборная: рапорт старшего тренера региона на сбор календаря подготовки', async ({ browser, request }) => {
+  /* Календарь подготовки и рапорты из кабинетов сборной убраны ✳ (22.11.2026,
+     решение владельца продукта): сбор заводится ручкой, рапорт подаёт старший
+     тренер региона в своём кабинете. Решение по рапорту — тесты бэкенда. */
   const stamp = Date.now();
   const athlete = `[e2e] Рапорт ${stamp}`;
   await makeAthlete(request, athlete, E2E_COACH.region);
   const camp = `[e2e] УТС ${stamp}`;
+  expect((await request.post('/api/auth/login/email/', { data: { email: E2E_NATIONAL_COACH.email, password: E2E_NATIONAL_COACH.password } })).status()).toBe(200);
+  expect((await request.post('/api/national/events/', { data: { kind: 'camp', title: camp, city: 'Щучинск', starts_on: iso(20), ends_on: iso(30) } })).status()).toBe(201);
 
-  // Штаб заводит сбор.
-  const coach = await signIn(browser, E2E_NATIONAL_COACH, '/national');
-  await coach.getByRole('button', { name: 'Календарь подготовки', exact: true }).click();
-  await coach.waitForURL((url) => url.pathname === '/national/calendar');
-  await coach.getByTestId('event-create-open').click();
-  await coach.getByTestId('event-title').fill(camp);
-  await coach.getByTestId('event-city').fill('Щучинск');
-  await coach.getByTestId('event-starts').fill(iso(20));
-  await coach.getByTestId('event-ends').fill(iso(30));
-  await coach.getByTestId('event-submit').click();
-  await expect(coach.locator(`[data-testid="event-row"][data-title="${camp}"]`)).toContainText('Щучинск');
-
-  // Старший тренер региона подаёт рапорт.
   const regional = await signIn(browser, E2E_COACH, '/coach');
   await regional.getByRole('button', { name: 'Рапорты', exact: true }).click();
   await regional.waitForURL((url) => url.pathname === '/coach/reports');
@@ -221,40 +213,5 @@ test('сборная: календарь подготовки и рапорт с
   await dialog.getByTestId('report-text').fill('Прошу командировать на сбор');
   await dialog.getByTestId('report-submit').click();
   await expect(dialog).toHaveCount(0);
-  const rrow = regional.locator(`[data-testid="report-row"][data-event="${camp}"]`);
-  await expect(rrow).toHaveAttribute('data-status', 'submitted');
-
-  // Главный тренер: лист рапорта и возврат.
-  await coach.getByRole('button', { name: 'Рапорты', exact: true }).click();
-  await coach.waitForURL((url) => url.pathname === '/national/reports');
-  const crow = coach.locator(`[data-testid="report-row"][data-event="${camp}"]`);
-  await crow.click();
-  const drawer = coach.getByTestId('report-drawer');
-  await expect(drawer.getByTestId('report-athletes')).toContainText(athlete);
-  await expect(drawer.getByTestId('report-text-view')).toHaveText('Прошу командировать на сбор');
-  await coach.waitForTimeout(500); // снимок — после выезда панели
-  await coach.screenshot({ path: 'test-results/national/report-sheet.png' });
-  await drawer.getByTestId('report-return-open').click();
-  await coach.getByTestId('report-return-comment').fill('Приложите приказ региона');
-  await coach.getByTestId('report-return-submit').click();
-  await expect(drawer).toHaveCount(0);
-  await expect(crow).toHaveAttribute('data-status', 'returned');
-
-  // Автор дорабатывает.
-  await regional.reload();
-  await rrow.click();
-  await expect(regional.getByTestId('report-history')).toContainText('Приложите приказ региона');
-  await regional.getByTestId('report-resubmit-open').click();
-  await regional.getByTestId('report-resubmit-text').fill('Прошу командировать на сбор. Приказ № 12 приложен');
-  await regional.getByTestId('report-resubmit-submit').click();
-  await expect(rrow).toHaveAttribute('data-status', 'submitted');
-
-  // Главный тренер согласует — рапорт уходит в федерацию.
-  await coach.reload();
-  await crow.click();
-  await drawer.getByTestId('report-approve').click();
-  await expect(crow).toHaveAttribute('data-status', 'approved');
-  await crow.click();
-  await expect(drawer.getByTestId('report-history-row')).toHaveCount(4);
-  await expect(drawer.locator('[data-testid="report-history-row"]').last()).toHaveAttribute('data-action', 'approved');
+  await expect(regional.locator(`[data-testid="report-row"][data-event="${camp}"]`)).toHaveAttribute('data-status', 'submitted');
 });

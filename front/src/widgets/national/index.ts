@@ -5,5 +5,4 @@ export { PlanBoard } from './PlanBoard';
 export { PlansTimeline } from './PlansTimeline';
 export { SportCard } from './SportCard';
 export { HistoryTable } from './HistoryTable';
-export { TrainingCalendar } from './TrainingCalendar';
 export { ReportsBoard } from './ReportsBoard';
