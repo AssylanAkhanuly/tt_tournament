@@ -280,6 +280,39 @@ class PlansView(Base):
         return Response(_plan(s.create_plan(m, data, request.user), request.user), status=status.HTTP_201_CREATED)
 
 
+class PlanBoardView(Base):
+    """Доска планов ✳ (21.11.2026): `?from=&to=` — окно дат (без них — текущая
+    неделя), строка на спортсмена с пунктами его планов (`national/board.py`)."""
+
+    def get(self, request):
+        from datetime import date as _d
+
+        from . import board
+
+        u = request.user
+        if not (s.is_head_staff(u) or s.team_coach_groups(u) or s.is_personal_coach(u)):
+            raise s.NationalError("Планы подготовки видят тренерский штаб и личный тренер.", 403)
+        today = _d.today()
+        start, end = board.window(_date(request.query_params.get("from"), "С"), _date(request.query_params.get("to"), "По"), today)
+        rows = board.plan_board(request.user, start, end, today)
+        return Response({
+            "from": _iso(start), "to": _iso(end), "today": _iso(today),
+            "rows": [{
+                "member": {"id": str(r["member"].id), "person": _person(r["member"].user), "squad": r["member"].squad,
+                           "age_group": r["member"].age_group},
+                # Отметку «выполнено» ставит штаб или личный тренер спортсмена — как `can_mark` у плана.
+                "can_mark": s.is_head_staff(u) or r["member"].personal_coach_id == u.id,
+                "plan": {"id": str(r["plan"].id), "status": r["plan"].status, "starts_on": _iso(r["plan"].starts_on),
+                         "ends_on": _iso(r["plan"].ends_on), "goal": r["plan"].goal,
+                         "done": r["plan"].items.filter(done=True).count(), "total": r["plan"].items.count()}
+                if r["plan"] else None,
+                "items": [{"id": str(i["item"].id), "title": i["title"], "kind": i["kind"], "starts_on": _iso(i["starts_on"]),
+                           "ends_on": _iso(i["ends_on"]), "state": i["state"], "plan_status": i["plan_status"],
+                           "city": i["item"].event.city if i["item"].event_id else ""} for i in r["items"]],
+            } for r in rows],
+        })
+
+
 class PlanView(Base):
     def patch(self, request, pk):
         d = request.data

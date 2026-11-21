@@ -14,6 +14,7 @@ urlpatterns = [
     path("members/<uuid:pk>/history/", views.HistoryView.as_view()),
     path("medical/<uuid:pk>/", views.MedicalRecordView.as_view()),
     path("sport/<uuid:pk>/", views.SportRecordView.as_view()),
+    path("plans/board/", views.PlanBoardView.as_view()),
     path("plans/<uuid:pk>/", views.PlanView.as_view()),
     path("plans/<uuid:pk>/submit/", views.PlanSubmitView.as_view()),
     path("plans/<uuid:pk>/review/", views.PlanReviewView.as_view()),

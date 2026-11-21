@@ -1,0 +1,71 @@
+"""Доска планов подготовки ✳ (21.11.2026, NATIONAL.md «Доска планов»).
+
+Строка на спортсмена, на ней пункты его планов за окно дат. Проверяется то, что
+сломается при поломке: состояние пункта (выполнено / идёт / запланировано /
+просрочено) считает сервер; сбор и старт лежат на датах мероприятия, работа — на
+дне срока; пункт вне окна не приходит; без плана в окне — `plan: null`; врач
+планов не видит — 403; личный тренер видит только своих."""
+import datetime
+
+import pytest
+
+from national import board
+from national.models import NationalTeamMember, PlanItem, TrainingEvent, TrainingPlan
+from national.tests.test_api import athlete, client_for, make_user
+from users.models import Role
+
+pytestmark = pytest.mark.django_db
+TODAY = datetime.date(2026, 12, 10)
+D = datetime.timedelta
+
+
+@pytest.fixture
+def team():
+    head = make_user(1, "Главный тренер", Role.KIND_NATIONAL_HEAD_COACH)
+    personal = make_user(2, "Личный тренер", Role.KIND_PERSONAL_COACH)
+    doctor = make_user(3, "Врач", Role.KIND_NATIONAL_DOCTOR)
+    a, b = athlete(100, "Спортсмен А"), athlete(101, "Спортсмен Б")
+    ma = NationalTeamMember.objects.create(user=a, personal_coach=personal)
+    mb = NationalTeamMember.objects.create(user=b)
+    plan = TrainingPlan.objects.create(member=ma, starts_on=TODAY - D(20), ends_on=TODAY + D(40), status="approved")
+    camp = TrainingEvent.objects.create(kind="camp", title="УТС Алматы", city="Алматы",
+                                        starts_on=TODAY - D(1), ends_on=TODAY + D(3))
+    items = {
+        "done": PlanItem.objects.create(plan=plan, title="Тест ОФП", due=TODAY - D(5), done=True),
+        "overdue": PlanItem.objects.create(plan=plan, title="Видеоразбор", due=TODAY - D(2)),
+        "planned": PlanItem.objects.create(plan=plan, title="Подача", due=TODAY + D(4)),
+        "live": PlanItem.objects.create(plan=plan, kind="camp", title="Сбор", event=camp),
+        "far": PlanItem.objects.create(plan=plan, title="Вне окна", due=TODAY + D(30)),
+    }
+    return {"head": head, "personal": personal, "doctor": doctor, "ma": ma, "mb": mb, "items": items, "plan": plan}
+
+
+def test_item_state_is_decided_by_server(team):
+    rows = board.plan_board(team["head"], TODAY - D(7), TODAY + D(7), TODAY)
+    row = next(r for r in rows if r["member"].pk == team["ma"].pk)
+    got = {i["title"]: (i["state"], i["starts_on"], i["ends_on"]) for i in row["items"]}
+    assert got["Тест ОФП"] == ("done", TODAY - D(5), TODAY - D(5))
+    assert got["Видеоразбор"] == ("overdue", TODAY - D(2), TODAY - D(2))
+    assert got["Подача"] == ("planned", TODAY + D(4), TODAY + D(4))
+    assert got["Сбор"] == ("live", TODAY - D(1), TODAY + D(3))
+    assert "Вне окна" not in got
+    assert row["plan"].pk == team["plan"].pk
+
+
+def test_member_without_plan_in_window_has_none(team):
+    rows = board.plan_board(team["head"], TODAY - D(7), TODAY + D(7), TODAY)
+    row = next(r for r in rows if r["member"].pk == team["mb"].pk)
+    assert row["plan"] is None and row["items"] == []
+
+
+def test_who_sees_the_board(team):
+    assert client_for(team["doctor"]).get("/api/national/plans/board/").status_code == 403
+    r = client_for(team["personal"]).get(
+        "/api/national/plans/board/", {"from": (TODAY - D(7)).isoformat(), "to": (TODAY + D(7)).isoformat()})
+    assert r.status_code == 200
+    assert [x["member"]["person"]["name"] for x in r.json()["rows"]] == ["Спортсмен А"]
+
+
+def test_window_is_limited(team):
+    r = client_for(team["head"]).get("/api/national/plans/board/", {"from": "2026-01-01", "to": "2026-12-31"})
+    assert r.status_code == 400
