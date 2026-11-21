@@ -313,6 +313,42 @@ def _apply(match: TeamMatch, result: engine.MatchResult, by) -> None:
     match.save()
 
 
+# ── Состояние тура для обзора сезона ✳ (21.11.2026, LEAGUE.md «Обзор сезона») ──
+
+SOON_DAYS = 14  # за сколько дней до тура отсутствие расписания — проблема; число наше
+
+
+def tour_state(tour: LeagueTour, today=None):
+    """Что показать в полоске туров лиги: `(состояние, проблема)`.
+
+    `done` — все встречи сыграны; `live` — часть сыграна, день тура не прошёл;
+    `ready` — расписание отправлено, ждём тура; `draft` — черновик расписания;
+    `planned` — тур заведён, расписания нет и до него больше `SOON_DAYS` дней;
+    `issue` — нужно действие, текст во втором значении: день прошёл, а счёт
+    внесён не весь («Не внесён счёт»), в черновике встреча без судьи («Нет
+    судей стола»), до тура `SOON_DAYS` дней или меньше, а расписания нет («Нет
+    расписания»). Решает сервер — экран правил не повторяет."""
+    today = today or timezone.localdate()
+    matches = list(tour.matches.all())
+    total = len(matches)
+    finished = sum(1 for m in matches if m.status == "finished")
+    if total and finished == total:
+        return "done", ""
+    if tour.starts_on and tour.starts_on < today:
+        return "issue", "Не внесён счёт"
+    if finished:
+        return "live", ""
+    if tour.schedule_status == "final":
+        return "ready", ""
+    if tour.schedule_status == "draft":
+        if any(m.referee_id is None for m in matches):
+            return "issue", "Нет судей стола"
+        return "draft", ""
+    if tour.starts_on and (tour.starts_on - today).days <= SOON_DAYS:
+        return "issue", "Нет расписания"
+    return "planned", ""
+
+
 def table(division: LeagueDivision) -> List[engine.Row]:
     rules = LeagueRules.active().to_rules()
     teams = list(division.teams.filter(status=Team.STATUS_ACCEPTED).order_by("created_at"))

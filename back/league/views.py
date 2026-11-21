@@ -4,6 +4,7 @@ import datetime
 
 from django.db.models import Count
 from django.shortcuts import get_object_or_404
+from django.utils import timezone
 from rest_framework import status
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
@@ -63,6 +64,18 @@ def _division_row(d: LeagueDivision) -> dict:
         "teams": d.teams.count(),
         **_calendar(d.tours.all(), TeamMatch.objects.filter(tour__division=d)),
     }
+
+
+def _tour_rows(d: LeagueDivision) -> list:
+    """Туры лиги для обзора сезона: номер, город, дата и состояние — его решает
+    `services.tour_state`."""
+    today = timezone.localdate()
+    out = []
+    for t in d.tours.prefetch_related("matches").order_by("number"):
+        state, problem = services.tour_state(t, today)
+        out.append({"id": str(t.id), "number": t.number, "city": t.city, "starts_on": t.starts_on,
+                    "state": state, "problem": problem})
+    return out
 
 
 def _season_row(s: LeagueSeason) -> dict:
@@ -168,7 +181,8 @@ class SeasonView(APIView):
         teams = Team.objects.filter(division__season=s).select_related("club", "division", "submitted_by").annotate(n=Count("members"))
         return Response({
             **_season_row(s),
-            "divisions": [_division_row(d) for d in divisions],
+            # У лиги — туры с состоянием для обзора сезона ✳ (21.11.2026).
+            "divisions": [{**_division_row(d), "tour_list": _tour_rows(d)} for d in divisions],
             # Команды всех лиг сезона — раздел «Команды» страницы сезона ✳.
             "team_list": [
                 {"id": str(t.id), "name": t.name, "club_name": t.club.name, "division_id": str(t.division_id),
