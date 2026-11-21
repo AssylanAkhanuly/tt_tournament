@@ -6,7 +6,8 @@
 рисует.
 
 Где пункт лежит во времени: сбор и старт — на датах мероприятия календаря
-подготовки (`event.starts_on … ends_on`), работа — на дне срока (`due`);
+подготовки (`event.starts_on … ends_on`), работа — от начала до срока
+(`starts_on … due`, без начала — на дне срока);
 пункт без даты на доску не попадает — ему некуда встать."""
 from datetime import date, timedelta
 from typing import List, Optional
@@ -20,7 +21,7 @@ MAX_DAYS = 62  # окно не длиннее двух месяцев — наш
 def item_dates(item: PlanItem):
     if item.event_id:
         return item.event.starts_on, item.event.ends_on
-    return item.due, item.due
+    return item.starts_on or item.due, item.due
 
 
 def item_state(item: PlanItem, starts_on: date, ends_on: date, today: date) -> str:

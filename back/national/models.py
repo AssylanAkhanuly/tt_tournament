@@ -192,6 +192,9 @@ class PlanItem(models.Model):
     kind = models.CharField(max_length=8, choices=KIND_CHOICES, default=KIND_WORK, verbose_name="Тип")
     title = models.CharField(max_length=300, verbose_name="Что делаем")
     due = models.DateField(null=True, blank=True, verbose_name="Срок")
+    # Начало работы ✳ (22.11.2026, решение владельца продукта: пункт на доске
+    # растягивается по дням). Пусто — работа лежит на одном дне срока.
+    starts_on = models.DateField(null=True, blank=True, verbose_name="Начало")
     # Сбор и старт не вводятся руками — берутся из календаря подготовки (Э11.5).
     event = models.ForeignKey(TrainingEvent, null=True, blank=True, on_delete=models.SET_NULL, related_name="plan_items")
     done = models.BooleanField(default=False, verbose_name="Выполнено")

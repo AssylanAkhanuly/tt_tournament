@@ -75,3 +75,47 @@ def test_who_sees_the_board(team):
 def test_window_is_limited(team):
     r = client_for(team["head"]).get("/api/national/plans/board/", {"from": "2026-01-01", "to": "2026-12-31"})
     assert r.status_code == 400
+
+
+# ── Растягивание пункта и создание диапазоном ✳ (22.11.2026) ──────────────────
+
+def test_stretched_work_spans_its_days(team):
+    head = client_for(team["head"])
+    item = team["items"]["planned"]
+    r = head.patch(f"/api/national/plan-items/{item.pk}/", {"starts_on": (TODAY + D(2)).isoformat(), "due": (TODAY + D(5)).isoformat()}, format="json")
+    assert r.status_code == 200 and r.json()["starts_on"] == (TODAY + D(2)).isoformat()
+    rows = board.plan_board(team["head"], TODAY - D(7), TODAY + D(7), TODAY)
+    got = {i["title"]: (i["starts_on"], i["ends_on"]) for i in rows[0]["items"]}
+    assert got["Подача"] == (TODAY + D(2), TODAY + D(5))
+    # Начало, равное сроку, не хранится: пункт снова на одном дне.
+    head.patch(f"/api/national/plan-items/{item.pk}/", {"starts_on": (TODAY + D(5)).isoformat(), "due": (TODAY + D(5)).isoformat()}, format="json")
+    item.refresh_from_db()
+    assert item.starts_on is None and item.due == TODAY + D(5)
+
+
+def test_move_rules(team):
+    head = client_for(team["head"])
+    work, camp = team["items"]["planned"], team["items"]["live"]
+    bad = head.patch(f"/api/national/plan-items/{work.pk}/", {"starts_on": (TODAY + D(6)).isoformat(), "due": (TODAY + D(5)).isoformat()}, format="json")
+    assert bad.status_code == 400
+    assert head.patch(f"/api/national/plan-items/{camp.pk}/", {"due": TODAY.isoformat()}, format="json").status_code == 400
+    # План согласован — личному тренеру сроки не править.
+    personal = client_for(team["personal"])
+    assert personal.patch(f"/api/national/plan-items/{work.pk}/", {"due": TODAY.isoformat()}, format="json").status_code == 403
+    work.refresh_from_db()
+    assert work.due == TODAY + D(4)
+
+
+def test_can_move_flag(team):
+    rng = {"from": (TODAY - D(7)).isoformat(), "to": (TODAY + D(7)).isoformat()}
+    head = client_for(team["head"]).get("/api/national/plans/board/", rng).json()["rows"]
+    items = {i["title"]: i["can_move"] for i in next(x for x in head if x["member"]["person"]["name"] == "Спортсмен А")["items"]}
+    assert items["Подача"] is True and items["Сбор"] is False
+    personal = client_for(team["personal"]).get("/api/national/plans/board/", rng).json()["rows"]
+    assert not any(i["can_move"] for i in personal[0]["items"])
+
+
+def test_item_created_with_range(team):
+    r = client_for(team["head"]).post(f"/api/national/plans/{team['plan'].pk}/items/", {
+        "kind": "work", "title": "Многоволан", "starts_on": (TODAY + D(1)).isoformat(), "due": (TODAY + D(3)).isoformat()}, format="json")
+    assert r.status_code == 201 and r.json()["starts_on"] == (TODAY + D(1)).isoformat()

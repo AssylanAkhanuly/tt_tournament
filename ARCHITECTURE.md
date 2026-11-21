@@ -1379,6 +1379,7 @@ erDiagram
         uuid planId FK
         string kind "работа | сбор | старт"
         string title
+        date startsOn "начало работы, пусто — один день"
         date due
         uuid eventId FK "сбор и старт — только из календаря подготовки"
         bool done

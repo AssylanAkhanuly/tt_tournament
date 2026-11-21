@@ -916,6 +916,7 @@ storage: "7 · ДАННЫЕ · два разных хранилища" {
       plan_id: uuid {constraint: foreign_key}
       kind: "работа | сбор | старт"
       title: string
+      starts_on: "date? — начало работы (растягивание на доске)"
       due: date
       event_id: "uuid — сбор и старт только из календаря" {constraint: foreign_key}
       done: "bool — отметка тренера"

@@ -89,7 +89,8 @@ def _event(e: TrainingEvent) -> dict:
 
 def _item(i: PlanItem) -> dict:
     return {
-        "id": str(i.id), "kind": i.kind, "title": i.title, "due": _iso(i.due), "done": i.done,
+        "id": str(i.id), "kind": i.kind, "title": i.title, "starts_on": _iso(i.starts_on), "due": _iso(i.due),
+        "done": i.done,
         "event_id": str(i.event_id) if i.event_id else None,
     }
 
@@ -313,6 +314,8 @@ class PlanBoardView(Base):
                 if r["plan"] else None,
                 "items": [{"id": str(i["item"].id), "title": i["title"], "kind": i["kind"], "starts_on": _iso(i["starts_on"]),
                            "ends_on": _iso(i["ends_on"]), "state": i["state"], "plan_status": i["plan_status"],
+                           # Растянуть и сдвинуть на доске можно работу того плана, который правит этот человек.
+                           "can_move": i["kind"] == "work" and s.can_edit_plan(i["item"].plan, u),
                            "city": i["item"].event.city if i["item"].event_id else ""} for i in r["items"]],
             } for r in rows],
         })
@@ -350,13 +353,19 @@ class PlanItemsView(Base):
     def post(self, request, pk):
         plan = get_object_or_404(TrainingPlan, pk=pk)
         d = request.data
-        data = {"kind": d.get("kind"), "title": d.get("title"), "due": _date(d.get("due"), "Срок"), "event_id": d.get("event_id")}
+        data = {"kind": d.get("kind"), "title": d.get("title"), "due": _date(d.get("due"), "Срок"),
+                "starts_on": _date(d.get("starts_on"), "Начало"), "event_id": d.get("event_id")}
         return Response(_item(s.add_item(plan, data, request.user)), status=status.HTTP_201_CREATED)
 
 
 class PlanItemView(Base):
     def patch(self, request, pk):
-        item = s.set_item_done(get_object_or_404(PlanItem, pk=pk), request.data.get("done"), request.user)
+        item = get_object_or_404(PlanItem, pk=pk)
+        d = request.data
+        if "due" in d or "starts_on" in d:
+            item = s.move_item(item, _date(d.get("starts_on"), "Начало"), _date(d.get("due"), "Срок"), request.user)
+        if "done" in d:
+            item = s.set_item_done(item, d.get("done"), request.user)
         return Response(_item(item))
 
     def delete(self, request, pk):

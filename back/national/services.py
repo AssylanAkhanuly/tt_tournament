@@ -337,6 +337,14 @@ def require_plan_editor(plan: TrainingPlan, user):
     raise NationalError("План правят личный тренер спортсмена и тренерский штаб.", 403)
 
 
+def can_edit_plan(plan: TrainingPlan, user) -> bool:
+    try:
+        require_plan_editor(plan, user)
+    except NationalError:
+        return False
+    return True
+
+
 def create_plan(member: NationalTeamMember, data: dict, by) -> TrainingPlan:
     if not (is_head_staff(by) or _is_personal_coach_of(member, by)):
         raise NationalError("План составляют личный тренер спортсмена и тренерский штаб.", 403)
@@ -402,7 +410,8 @@ def add_item(plan: TrainingPlan, data: dict, by) -> PlanItem:
         title = (data.get("title") or "").strip()
         if not title:
             raise NationalError("Пункт плана без содержания.")
-        return PlanItem.objects.create(plan=plan, kind=kind, title=title, due=data.get("due") or None)
+        due, starts_on = _work_dates(data.get("starts_on"), data.get("due"))
+        return PlanItem.objects.create(plan=plan, kind=kind, title=title, due=due, starts_on=starts_on)
     # Сбор и старт — только из календаря подготовки: сроки приходят оттуда (Э11.5).
     event = TrainingEvent.objects.filter(id=data.get("event_id") or None).first()
     if event is None or event.kind != kind:
@@ -410,6 +419,30 @@ def add_item(plan: TrainingPlan, data: dict, by) -> PlanItem:
     return PlanItem.objects.create(
         plan=plan, kind=kind, event=event, title=(data.get("title") or "").strip() or event.title, due=event.starts_on,
     )
+
+
+def _work_dates(starts_on, due):
+    """Даты работы: начало не позже срока; начало без срока не бывает; начало,
+    равное сроку, не хранится — работа на одном дне."""
+    if starts_on and not due:
+        raise NationalError("У работы с началом должен быть срок.")
+    if starts_on and starts_on > due:
+        raise NationalError("Начало работы позже срока.")
+    return due or None, (starts_on if starts_on and starts_on != due else None)
+
+
+def move_item(item: PlanItem, starts_on, due, by) -> PlanItem:
+    """Новые даты пункта — растягивание и сдвиг на доске ✳ (22.11.2026). Права —
+    те же, что на правку плана. Сроки сбора и старта — даты мероприятия
+    календаря подготовки, общие для всей команды: с пункта их не поменять."""
+    require_plan_editor(item.plan, by)
+    if item.kind != PlanItem.KIND_WORK:
+        raise NationalError("Сроки сбора и старта меняются в календаре подготовки.")
+    if not due:
+        raise NationalError("Срок обязателен.")
+    item.due, item.starts_on = _work_dates(starts_on, due)
+    item.save(update_fields=["due", "starts_on"])
+    return item
 
 
 def set_item_done(item: PlanItem, done: bool, by) -> PlanItem:
