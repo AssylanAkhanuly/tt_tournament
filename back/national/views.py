@@ -97,6 +97,7 @@ def _item(i: PlanItem) -> dict:
     return {
         "period": {"from": _iso(s_), "to": _iso(e_)} if s_ else None,
         "state": board.item_state(i, s_, e_, date.today()) if s_ else ("done" if i.done else "planned"),
+        "city": i.event.city if i.event_id else "",
         "id": str(i.id), "kind": i.kind, "title": i.title, "starts_on": _iso(i.starts_on), "due": _iso(i.due),
         "done": i.done,
         "event_id": str(i.event_id) if i.event_id else None,

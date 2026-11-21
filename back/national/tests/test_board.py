@@ -132,4 +132,5 @@ def test_member_profile_and_item_state(team):
     plans = head.get(f"/api/national/members/{team['ma'].pk}/plans/").json()
     items = {i["title"]: i for i in plans[0]["items"]}
     assert items["Тест ОФП"]["state"] == "done"
+    assert items["Сбор"]["city"] == "Алматы"
     assert items["Сбор"]["period"] == {"from": (TODAY - D(1)).isoformat(), "to": (TODAY + D(3)).isoformat()}
