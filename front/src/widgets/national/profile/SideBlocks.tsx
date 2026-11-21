@@ -57,28 +57,63 @@ function rivals(history: RatingEntry[]): Rival[] {
   return [...by.values()].sort((a, b) => pos.get(b.key)! - pos.get(a.key)!).slice(0, 5);
 }
 
-export function HeadToHead({ history }: { history: RatingEntry[] | null }) {
+const initials = (name: string) =>
+  name
+    .split(/\s+/)
+    .filter((w) => /^\p{L}/u.test(w))
+    .slice(0, 2)
+    .map((w) => w.slice(0, 1))
+    .join('')
+    .toUpperCase();
+
+/** Аватар встречи: снимок, если есть, иначе инициалы на круге. */
+function Face({ name, src, tone }: { name: string; src?: string | null; tone: string }) {
+  return (
+    <span className={'grid size-8 shrink-0 place-items-center overflow-hidden rounded-full text-[11px] font-semibold ' + tone} aria-hidden>
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      {src ? <img src={src} alt="" className="size-full object-cover" /> : initials(name)}
+    </span>
+  );
+}
+
+export function HeadToHead({ me, history }: { me: { name: string; avatar: string | null }; history: RatingEntry[] | null }) {
   const list = history ? rivals(history) : [];
   return (
     <Block title="Личные встречи" testId="profile-h2h">
       {!history ? null : list.length === 0 ? (
         <p className="m-0 text-[13px] text-neutral-500">Встреч нет</p>
       ) : (
-        <ul className="m-0 flex list-none flex-col p-0">
+        <ul className="m-0 flex list-none flex-col gap-2 p-0">
           {list.map((r) => {
             const lead = r.wins > r.losses ? 'text-green-700' : r.wins < r.losses ? 'text-[color-mix(in_srgb,var(--color-qtt-coral)_75%,black)]' : 'text-neutral-700';
             return (
-              <li key={r.key} className="flex items-center gap-3 border-b border-neutral-100 py-2.5 last:border-b-0" data-testid="h2h-row" data-name={r.name}>
-                <span className="min-w-0 flex-1 truncate text-[14px] font-medium" title={r.name}>
-                  {shortName(r.name)}
-                </span>
-                <span className="flex gap-1" aria-label="Последние встречи">
+              // Карточка встречи: «имя · аватар · счёт · аватар · имя», под счётом —
+              // три последних матча ✳ (22.11.2026, образец владельца продукта).
+              <li key={r.key} className="flex flex-col gap-2 rounded-xl border border-neutral-200 px-3 py-2.5" data-testid="h2h-row" data-name={r.name}>
+                <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2">
+                  <span className="flex min-w-0 items-center justify-end gap-2">
+                    <span className="truncate text-right text-[13px] font-medium" title={me.name}>
+                      {shortName(me.name)}
+                    </span>
+                    <Face name={me.name} src={me.avatar} tone="bg-[color-mix(in_srgb,var(--color-qtt-violet)_12%,white)] text-qtt-violet" />
+                  </span>
+                  <span className={'px-1 text-[18px] font-semibold tabular-nums ' + lead} data-testid="h2h-score">
+                    {r.wins}:{r.losses}
+                  </span>
+                  <span className="flex min-w-0 items-center gap-2">
+                    <Face name={r.name} tone="bg-neutral-100 text-neutral-600" />
+                    <span className="truncate text-[13px] font-medium" title={r.name}>
+                      {shortName(r.name)}
+                    </span>
+                  </span>
+                </div>
+                <span className="flex justify-center gap-1" aria-label="Последние встречи">
                   {r.last.map((m) => (
                     <span
                       key={m.id}
                       title={dmy(m.at.slice(0, 10))}
                       className={
-                        'rounded-md px-1.5 py-0.5 text-[11.5px] font-semibold tabular-nums ' +
+                        'rounded-md px-1.5 py-0.5 text-[11px] font-semibold tabular-nums ' +
                         (m.won ? 'bg-green-50 text-green-700' : 'bg-[color-mix(in_srgb,var(--color-qtt-coral)_10%,white)] text-[color-mix(in_srgb,var(--color-qtt-coral)_75%,black)]')
                       }
                       data-testid="h2h-game"
@@ -87,9 +122,6 @@ export function HeadToHead({ history }: { history: RatingEntry[] | null }) {
                       {m.score}
                     </span>
                   ))}
-                </span>
-                <span className={'w-12 text-right text-[16px] font-semibold tabular-nums ' + lead} data-testid="h2h-score">
-                  {r.wins}:{r.losses}
                 </span>
               </li>
             );

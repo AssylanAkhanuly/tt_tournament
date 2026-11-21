@@ -266,7 +266,9 @@ export function MemberProfile({
       <div className={'grid border-b border-neutral-200 ' + (showPlans ? 'lg:grid-cols-[minmax(0,1fr)_24rem]' : '')}>
           {showPlans && <PlanSteps plans={plans.data} error={plans.error} plan={plan} onOpenPlan={onOpenPlan} onOpenHistory={onOpenHistory} />}
           <div className="flex flex-col">
-            <HeadToHead history={card.data ? card.data.history.filter((h) => !h.isReverted).slice().reverse() : card.error ? [] : null} />
+            <HeadToHead
+              me={{ name: member.person.name, avatar: member.profile?.avatar ?? null }}
+              history={card.data ? card.data.history.filter((h) => !h.isReverted).slice().reverse() : card.error ? [] : null} />
             {medical && <MedStatus member={member} onOpenMedical={onOpenMedical} />}
             {sport && <SportLink onOpen={onOpenSport} />}
           </div>

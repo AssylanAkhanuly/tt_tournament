@@ -2,9 +2,8 @@
 
 /* «Рейтинг» профиля ✳ (22.11.2026, решения владельца продукта):
 
-   - **последние пять матчей** — карточками: исход (победа — зелёным,
-     поражение — коралловым), счёт, соперник фамилией с инициалами,
-     изменение рейтинга и дата;
+   - карточек последних матчей нет ✳ (22.11.2026, решение владельца продукта):
+     встречи с соперниками — блок «Личные встречи» справа;
    - **график** Chart.js (`Line` кита, тот же, что в карточке рейтинга):
      значение после каждой записи, точка — цветом изменения, подсказка —
      турнир, соперник, счёт. Период — «3 мес · 6 мес · Год · Всё»
@@ -18,9 +17,8 @@ import { Spinner, ToggleButton, ToggleButtonGroup } from '@heroui/react';
 import { useState } from 'react';
 
 import { dmy } from '@/entities/national';
-import { num2, plainLabel, signed2, useRatingCard, type RatingEntry } from '@/entities/rating';
+import { num2, plainLabel, signed2, useRatingCard } from '@/entities/rating';
 import { Line } from '@/shared/kit/app';
-import { shortName } from '@/shared/lib/name';
 
 import { SectionHead } from './ui';
 
@@ -39,46 +37,6 @@ function since(months: number | null) {
   const d = new Date();
   d.setMonth(d.getMonth() - months);
   return d.toISOString().slice(0, 10);
-}
-
-function Matches({ history }: { history: RatingEntry[] }) {
-  // `history` — от старых к новым; последние пять матчей — с конца.
-  const last = history
-    .filter((h) => h.kind === 'match')
-    .slice(-5)
-    .reverse();
-  if (!last.length) return null;
-  return (
-    <ul className="m-0 mb-6 grid list-none grid-cols-1 gap-2 p-0 sm:grid-cols-2 xl:grid-cols-5" data-testid="profile-matches">
-      {last.map((m) => (
-        <li
-          key={m.id}
-          className={
-            'flex min-w-0 flex-col gap-1 rounded-xl border-l-[3px] px-3 py-2.5 ' +
-            (m.won
-              ? 'border-l-green-600 bg-green-50/70'
-              : 'border-l-qtt-coral bg-[color-mix(in_srgb,var(--color-qtt-coral)_7%,white)]')
-          }
-          data-testid="profile-match"
-          data-won={m.won ? 'yes' : 'no'}
-        >
-          <span className="flex items-center justify-between gap-2">
-            <span className={'text-[12px] font-semibold ' + (m.won ? 'text-green-700' : 'text-[color-mix(in_srgb,var(--color-qtt-coral)_75%,black)]')}>
-              {m.won ? 'Победа' : 'Поражение'}
-            </span>
-            <span className="text-[15px] font-semibold tabular-nums">{m.score}</span>
-          </span>
-          <span className="truncate text-[13px] font-medium" title={m.opponentName ?? ''}>
-            {m.opponentName ? shortName(m.opponentName) : '—'}
-          </span>
-          <span className="flex items-center justify-between gap-2 text-[12px] text-neutral-500">
-            <span className={'font-semibold tabular-nums ' + (m.delta > 0 ? 'text-green-700' : m.delta < 0 ? 'text-red-600' : '')}>{signed2(m.delta)}</span>
-            <span>{ruDate(m.occurredAt)}</span>
-          </span>
-        </li>
-      ))}
-    </ul>
-  );
 }
 
 function Stat({ label, value, tone }: { label: string; value: string; tone?: 'up' | 'down' }) {
@@ -133,7 +91,6 @@ export function RatingBlock({ userId, card }: { userId: string; card: ReturnType
         <p className="m-0 text-[13px] text-neutral-500">Рейтинговой карточки нет</p>
       ) : (
         <>
-          <Matches history={history} />
           <div className="mb-3 flex flex-wrap items-end justify-between gap-4">
             <div className="flex gap-8" data-testid="profile-rating-stats">
               <Stat label="Наибольший" value={values.length ? num2(Math.max(...values)) : '—'} />
