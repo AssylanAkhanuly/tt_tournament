@@ -95,7 +95,7 @@ test('сборная: тренер — состав и план, врач — м
   await expect(coach.getByTestId('member-photo-ring')).toHaveAttribute('data-status', 'none');
   await expect(coach.getByTestId('profile-medical').getByTestId('clearance')).toContainText('Допуск не внесён');
   await expect(coach.getByTestId('kpi-plan')).toContainText('Нет');
-  await expect(coach.getByTestId('profile-next')).toContainText('Стартов в плане нет');
+  await expect(coach.getByTestId('profile-h2h')).toContainText('Встреч нет');
   await expect(coach.getByTestId('strip-age-group')).toHaveText('Юноши');
   await expect(coach.getByTestId('profile-rating-chart').locator('canvas')).toBeVisible();
   await coach.getByTestId('rating-period-3m').click();

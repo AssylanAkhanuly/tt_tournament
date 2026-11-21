@@ -10,7 +10,7 @@
    В заголовке — кольцо доли выполненного. */
 
 import { Button, Spinner } from '@heroui/react';
-import { Check, CircleAlert, Dumbbell, ListChecks, Tent, Trophy } from 'lucide-react';
+import { Check, CircleAlert, Dumbbell, Tent, Trophy } from 'lucide-react';
 import type { ReactNode } from 'react';
 
 import { PLAN_ITEM_LABEL, type PlanItem, type PlanItemKind, type TrainingPlan } from '@/entities/national';
@@ -65,7 +65,7 @@ export function PlanSteps({ plans, error, plan, onOpenPlan, onOpenHistory }: {
   const list = plan ? steps(plan.items) : [];
   return (
     <section className="px-6 py-6 lg:border-r lg:border-neutral-200" data-testid="profile-points">
-      <SectionHead title="Пункты подготовки" icon={<ListChecks size={18} />} tone="blue" action={plan && <ProgressRing done={plan.done} total={plan.total} />} />
+      <SectionHead title="Пункты подготовки" action={plan && <ProgressRing done={plan.done} total={plan.total} />} />
       {!plans ? (
         error ? <p className="m-0 text-[13px] text-red-600">{error}</p> : <Spinner size="sm" />
       ) : list.length === 0 ? (

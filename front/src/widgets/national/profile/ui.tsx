@@ -1,7 +1,8 @@
 'use client';
 
-/* Общие кирпичи профиля члена сборной ✳ (22.11.2026): плитка значка цветом
-   брендбука, заголовок блока, кольцо доли. Цвета — доп. цвета брендбука
+/* Общие кирпичи профиля члена сборной ✳ (22.11.2026): заголовок блока,
+   кольцо доли. Значков без нужды нет (решение владельца продукта 22.11.2026):
+   они — у шагов степпера, круглых кнопок связи и короны. Цвета — доп. цвета брендбука
    (`qtt-*` во входе Tailwind); классы записаны целиком: Tailwind собирает
    только то, что видит в тексте. */
 
@@ -9,31 +10,10 @@ import type { ReactNode } from 'react';
 
 import { dmy } from '@/entities/national';
 
-export type Tone = 'blue' | 'teal' | 'violet' | 'coral' | 'peach' | 'lime' | 'steel';
-
-export const TILE: Record<Tone, string> = {
-  blue: 'bg-[color-mix(in_srgb,var(--color-qtt-blue)_12%,white)] text-qtt-blue',
-  teal: 'bg-[color-mix(in_srgb,var(--color-qtt-teal)_12%,white)] text-qtt-teal',
-  violet: 'bg-[color-mix(in_srgb,var(--color-qtt-violet)_12%,white)] text-qtt-violet',
-  coral: 'bg-[color-mix(in_srgb,var(--color-qtt-coral)_12%,white)] text-qtt-coral',
-  peach: 'bg-[color-mix(in_srgb,var(--color-qtt-peach)_18%,white)] text-[color-mix(in_srgb,var(--color-qtt-peach)_70%,black)]',
-  lime: 'bg-[color-mix(in_srgb,var(--color-qtt-lime)_22%,white)] text-[color-mix(in_srgb,var(--color-qtt-lime)_55%,black)]',
-  steel: 'bg-[color-mix(in_srgb,var(--color-qtt-steel)_16%,white)] text-[color-mix(in_srgb,var(--color-qtt-steel)_75%,black)]',
-};
-
-export function IconTile({ tone, children, size = 'sm' }: { tone: Tone; children: ReactNode; size?: 'sm' | 'md' }) {
-  return <span className={'grid shrink-0 place-items-center rounded-lg ' + (size === 'md' ? 'size-9' : 'size-7') + ' ' + TILE[tone]}>{children}</span>;
-}
-
-export function SectionHead({ title, icon, tone, action }: { title: string; icon: ReactNode; tone: Tone; action?: ReactNode }) {
+export function SectionHead({ title, action }: { title: string; action?: ReactNode }) {
   return (
     <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
-      <h2 className="m-0 flex items-center gap-2.5 text-[17px] font-semibold">
-        <IconTile tone={tone} size="md">
-          {icon}
-        </IconTile>
-        {title}
-      </h2>
+      <h2 className="m-0 text-[17px] font-semibold">{title}</h2>
       {action}
     </div>
   );

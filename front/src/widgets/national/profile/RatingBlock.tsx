@@ -15,7 +15,6 @@
    Отменённые записи не участвуют — значение карточки — сумма неотменённых. */
 
 import { Spinner, ToggleButton, ToggleButtonGroup } from '@heroui/react';
-import { TrendingUp } from 'lucide-react';
 import { useState } from 'react';
 
 import { dmy } from '@/entities/national';
@@ -120,8 +119,6 @@ export function RatingBlock({ userId, card }: { userId: string; card: ReturnType
     <section className="px-6 py-6" data-testid="profile-rating">
       <SectionHead
         title="Рейтинг"
-        icon={<TrendingUp size={18} />}
-        tone="teal"
         action={
           card.data && (
             <a href={`/rating/${userId}`} className="text-[13px] font-medium text-brand-600 hover:underline" data-testid="profile-rating-open">

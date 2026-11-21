@@ -6,16 +6,16 @@
    - **Шапка** — полоса мягкого градиента доп. цветов брендбука, на ней фото
      (нет снимка — инициалы) с кольцом цвета допуска (зелёное — допущен,
      коралловое — истёк, серое — не внесён) и короной члена сборной; имя
-     крупно (заголовка страницы над профилем нет — имя здесь), под ним регион,
-     группа и состав; справа круглые кнопки «написать» и «позвонить» и штабу
-     «Убрать из сборной». Ниже — сведения строками «подпись: значение» со
-     значками в плитках цвета брендбука: состав, группа, личный тренер (штабу
-     — с меню выбора, `ValueSelect`), в сборной с, дата рождения, почта,
-     телефон.
+     крупно (заголовка страницы над профилем нет — имя здесь); регион, группа
+     и состав — полями ниже, а не подписью под именем; справа круглые кнопки «написать» и «позвонить» и штабу
+     «Убрать из сборной». Ниже — сведения строками «подпись: значение» без
+     значков (значки — только где нужны: шаги, кнопки связи, корона): состав,
+     группа, личный тренер (штабу — с меню выбора, `ValueSelect`), в сборной
+     с, дата рождения, почта, телефон.
    - **Полоса показателей** — рейтинг, место в листе, матчей, победы и
      поражения, доля побед, выполнение плана кольцом.
    - **Пункты подготовки** (`profile/PlanSteps`) и правая колонка
-     (`profile/SideBlocks`): ближайший старт, медкарта полосой цвета допуска,
+     (`profile/SideBlocks`): личные встречи, медкарта полосой цвета допуска,
      спортивная карточка.
    - **Рейтинг** (`profile/RatingBlock`) — последние пять матчей и график с
      выбором периода.
@@ -25,7 +25,7 @@
    разделены чертой. */
 
 import { Tooltip } from '@heroui/react';
-import { Cake, CalendarCheck, Crown, Layers, Mail, Phone, UserRound, Users } from 'lucide-react';
+import { Crown, Mail, Phone } from 'lucide-react';
 import type { ReactNode } from 'react';
 
 import {
@@ -43,8 +43,8 @@ import { num2, useRatingCard } from '@/entities/rating';
 import { NO_COACH, RemoveMemberButton, useMemberEdit, ValueSelect } from './MemberControls';
 import { PlanSteps } from './profile/PlanSteps';
 import { RatingBlock } from './profile/RatingBlock';
-import { MedStatus, NextStart, SportLink } from './profile/SideBlocks';
-import { IconTile, ProgressRing, type Tone } from './profile/ui';
+import { HeadToHead, MedStatus, SportLink } from './profile/SideBlocks';
+import { ProgressRing } from './profile/ui';
 import { AGE_GROUPS, SQUADS } from './RosterTable';
 
 const initials = (name: string) =>
@@ -59,10 +59,9 @@ const initials = (name: string) =>
 /* Кольцо фото — цвет допуска. Классы целиком. */
 const RING = { ok: 'ring-green-500', expired: 'ring-qtt-coral', none: 'ring-neutral-200' } as const;
 
-function Fact({ icon, tone, label, children }: { icon: ReactNode; tone: Tone; label: string; children: ReactNode }) {
+function Fact({ label, children }: { label: string; children: ReactNode }) {
   return (
-    <li className="flex min-w-0 items-center gap-3 text-[14px]">
-      <IconTile tone={tone}>{icon}</IconTile>
+    <li className="flex min-w-0 items-center gap-2 text-[14px]">
       <span className="shrink-0 text-neutral-500">{label}:</span>
       <span className="flex min-w-0 items-center font-medium">{children}</span>
     </li>
@@ -128,9 +127,6 @@ function Header({ member, canEdit, onChanged, onRemoved }: { member: NationalMem
           <h1 className="m-0 truncate text-[28px] leading-tight font-semibold tracking-tight" data-testid="member-name">
             {p.name}
           </h1>
-          <p className="m-0 mt-0.5 truncate text-[13.5px] text-neutral-500">
-            {[p.region, AGE_GROUP_LABEL[member.ageGroup], SQUAD_LABEL[member.squad] + ' состав'].filter(Boolean).join(' · ')}
-          </p>
         </div>
         <div className="flex items-center gap-2 pb-2">
           {pr?.email && <Contact href={'mailto:' + pr.email} label="Написать" value={pr.email} tone="bg-qtt-blue" icon={<Mail size={17} />} testId="member-mail" />}
@@ -140,7 +136,7 @@ function Header({ member, canEdit, onChanged, onRemoved }: { member: NationalMem
       </div>
       <div className="px-6 pt-5 pb-6">
         <ul className="m-0 grid list-none grid-cols-1 gap-x-8 gap-y-3 p-0 md:grid-cols-2 xl:grid-cols-3">
-          <Fact icon={<Users size={15} />} tone="blue" label="Состав">
+          <Fact label="Состав">
             {canEdit ? (
               <ValueSelect
                 label="Состав"
@@ -154,7 +150,7 @@ function Header({ member, canEdit, onChanged, onRemoved }: { member: NationalMem
               SQUAD_LABEL[member.squad]
             )}
           </Fact>
-          <Fact icon={<Layers size={15} />} tone="teal" label="Группа">
+          <Fact label="Группа">
             {canEdit ? (
               <ValueSelect
                 label="Возрастная группа"
@@ -168,7 +164,7 @@ function Header({ member, canEdit, onChanged, onRemoved }: { member: NationalMem
               AGE_GROUP_LABEL[member.ageGroup]
             )}
           </Fact>
-          <Fact icon={<UserRound size={15} />} tone="violet" label="Личный тренер">
+          <Fact label="Личный тренер">
             {canEdit ? (
               <ValueSelect
                 label="Личный тренер"
@@ -182,23 +178,24 @@ function Header({ member, canEdit, onChanged, onRemoved }: { member: NationalMem
               coach
             )}
           </Fact>
+          {p.region && <Fact label="Регион">{p.region}</Fact>}
           {pr && (
-            <Fact icon={<CalendarCheck size={15} />} tone="steel" label="В сборной с">
+            <Fact label="В сборной с">
               {dmy(pr.joined)}
             </Fact>
           )}
           {(pr?.birthDate || p.birthYear) && (
-            <Fact icon={<Cake size={15} />} tone="peach" label="Дата рождения">
+            <Fact label="Дата рождения">
               {pr?.birthDate ? dmy(pr.birthDate) : p.birthYear}
             </Fact>
           )}
           {pr?.email && (
-            <Fact icon={<Mail size={15} />} tone="blue" label="Эл. почта">
+            <Fact label="Эл. почта">
               <span className="truncate">{pr.email}</span>
             </Fact>
           )}
           {pr?.phone && (
-            <Fact icon={<Phone size={15} />} tone="teal" label="Телефон">
+            <Fact label="Телефон">
               {pr.phone}
             </Fact>
           )}
@@ -262,21 +259,18 @@ export function MemberProfile({
   const plan = plans.data ? (plans.data.find((x) => x.id === member.plan?.planId) ?? plans.data[0] ?? null) : null;
   const medical = member.access.medical !== null;
   const sport = member.access.sport;
-  const side = showPlans || medical || sport;
   return (
     <div className="flex h-full min-h-0 flex-col overflow-y-auto [&>*]:shrink-0" data-testid="member-profile">
       <Header member={member} canEdit={member.access.roster} onChanged={onChanged} onRemoved={onRemoved} />
       <Kpis member={member} card={card} />
-      {side && (
-        <div className={'grid border-b border-neutral-200 ' + (showPlans ? 'lg:grid-cols-[minmax(0,1fr)_24rem]' : '')}>
+      <div className={'grid border-b border-neutral-200 ' + (showPlans ? 'lg:grid-cols-[minmax(0,1fr)_24rem]' : '')}>
           {showPlans && <PlanSteps plans={plans.data} error={plans.error} plan={plan} onOpenPlan={onOpenPlan} onOpenHistory={onOpenHistory} />}
           <div className="flex flex-col">
-            {showPlans && <NextStart plan={plan} />}
+            <HeadToHead history={card.data ? card.data.history.filter((h) => !h.isReverted).slice().reverse() : card.error ? [] : null} />
             {medical && <MedStatus member={member} onOpenMedical={onOpenMedical} />}
             {sport && <SportLink onOpen={onOpenSport} />}
           </div>
         </div>
-      )}
       <RatingBlock userId={member.person.id} card={card} />
     </div>
   );

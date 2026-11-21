@@ -2,75 +2,100 @@
 
 /* Правая колонка профиля ✳ (22.11.2026, решения владельца продукта):
 
-   - **Ближайший старт** — ближайший невыполненный старт текущего плана, не
-     закончившийся (нет старта — ближайший сбор): сколько дней до него
-     крупно, название, даты, город. Берётся из пунктов плана — сбор и старт в
-     план попадают только из календаря подготовки, значит даты те же.
+   - **Личные встречи** (на месте «Ближайшего старта», решение владельца
+     продукта 22.11.2026) — с кем спортсмен играл: соперник фамилией с
+     инициалами, общий счёт личных встреч (победы : поражения, ведущий —
+     зелёным, уступающий — коралловым) и три последних матча с ним — счётом
+     на плашке цвета исхода. Соперники — по последней встрече, не больше
+     пяти. Источник — рейтинговые матчи истории карточки (неотменённые);
+     других матчей система не знает.
    - **Медкарта** — допуск полосой цвета состояния: зелёная — допущен (и до
      какого числа), персиковая — истекает в ближайшие 30 дней (**порог наш**),
      коралловая — истёк, серая — не внесён; ограничения и «Открыть медкарту».
    - **Спортивная карточка** — «Открыть» (психологу). */
 
 import { Button } from '@heroui/react';
-import { Brain, CalendarClock, HeartPulse, Tent, Trophy } from 'lucide-react';
 import type { ReactNode } from 'react';
 
-import { dmy, type NationalMember, type PlanItem, type TrainingPlan } from '@/entities/national';
+import { dmy, type NationalMember } from '@/entities/national';
+import type { RatingEntry } from '@/entities/rating';
+import { shortName } from '@/shared/lib/name';
 
-import { daysUntil, daysWord, periodLabel, SectionHead, todayIso, type Tone } from './ui';
+import { daysUntil, daysWord, SectionHead } from './ui';
 
 const EXPIRING_DAYS = 30; // за сколько дней предупреждать об окончании допуска — значение наше
 
-function Block({ title, icon, tone, testId, children }: { title: string; icon: ReactNode; tone: Tone; testId: string; children: ReactNode }) {
+function Block({ title, testId, children }: { title: string; testId: string; children: ReactNode }) {
   return (
     <section className="flex flex-col border-b border-neutral-200 px-6 py-6 last:border-b-0" data-testid={testId}>
-      <SectionHead title={title} icon={icon} tone={tone} />
+      <SectionHead title={title} />
       {children}
     </section>
   );
 }
 
-function nearestEvent(plan: TrainingPlan | null): PlanItem | null {
-  if (!plan) return null;
-  const today = todayIso();
-  const open = plan.items.filter((i) => i.state !== 'done' && i.period && i.period.to >= today).sort((a, b) => a.period!.from.localeCompare(b.period!.from));
-  return open.find((i) => i.kind === 'start') ?? open.find((i) => i.kind === 'camp') ?? null;
+type Meeting = { id: number; won: boolean; score: string; at: string };
+type Rival = { key: string; name: string; wins: number; losses: number; last: Meeting[] };
+
+/** Соперники по рейтинговым матчам: `history` — от старых к новым. */
+function rivals(history: RatingEntry[]): Rival[] {
+  const by = new Map<string, Rival>();
+  for (const h of history) {
+    if (h.kind !== 'match' || !h.opponentName) continue;
+    const key = h.opponent ?? h.opponentName;
+    const r = by.get(key) ?? { key, name: h.opponentName, wins: 0, losses: 0, last: [] };
+    if (h.won) r.wins += 1;
+    else r.losses += 1;
+    r.last = [{ id: h.id, won: !!h.won, score: h.score, at: h.occurredAt }, ...r.last].slice(0, 3);
+    by.set(key, r);
+  }
+  // Порядок соперников — по последней встрече: её место в истории.
+  const pos = new Map<string, number>();
+  history.forEach((h, n) => {
+    if (h.kind === 'match' && h.opponentName) pos.set(h.opponent ?? h.opponentName, n);
+  });
+  return [...by.values()].sort((a, b) => pos.get(b.key)! - pos.get(a.key)!).slice(0, 5);
 }
 
-export function NextStart({ plan }: { plan: TrainingPlan | null }) {
-  const item = nearestEvent(plan);
-  const isStart = item?.kind !== 'camp';
-  if (!item)
-    return (
-      <Block title="Ближайший старт" icon={<Trophy size={18} />} tone="violet" testId="profile-next">
-        <p className="m-0 text-[13px] text-neutral-500">Стартов в плане нет</p>
-      </Block>
-    );
-  const days = daysUntil(item.period!.from);
-  const when = days > 0 ? 'через ' + daysWord(days) : days === 0 ? 'сегодня' : 'идёт';
+export function HeadToHead({ history }: { history: RatingEntry[] | null }) {
+  const list = history ? rivals(history) : [];
   return (
-    <Block
-      title={isStart ? 'Ближайший старт' : 'Ближайший сбор'}
-      icon={isStart ? <Trophy size={18} /> : <Tent size={18} />}
-      tone={isStart ? 'violet' : 'teal'}
-      testId="profile-next"
-    >
-      <div
-        className={
-          'flex flex-col gap-1 rounded-xl px-4 py-4 ' +
-          (isStart ? 'bg-[color-mix(in_srgb,var(--color-qtt-violet)_8%,white)]' : 'bg-[color-mix(in_srgb,var(--color-qtt-teal)_8%,white)]')
-        }
-      >
-        <span className={'text-[26px] leading-tight font-semibold ' + (isStart ? 'text-qtt-violet' : 'text-qtt-teal')} data-testid="profile-next-when">
-          {when}
-        </span>
-        <span className="text-[15px] font-semibold">{item.title}</span>
-        <span className="flex items-center gap-1.5 text-[13px] text-neutral-500">
-          <CalendarClock size={14} />
-          {periodLabel(item.period)}
-          {item.city ? ' · ' + item.city : ''}
-        </span>
-      </div>
+    <Block title="Личные встречи" testId="profile-h2h">
+      {!history ? null : list.length === 0 ? (
+        <p className="m-0 text-[13px] text-neutral-500">Встреч нет</p>
+      ) : (
+        <ul className="m-0 flex list-none flex-col p-0">
+          {list.map((r) => {
+            const lead = r.wins > r.losses ? 'text-green-700' : r.wins < r.losses ? 'text-[color-mix(in_srgb,var(--color-qtt-coral)_75%,black)]' : 'text-neutral-700';
+            return (
+              <li key={r.key} className="flex items-center gap-3 border-b border-neutral-100 py-2.5 last:border-b-0" data-testid="h2h-row" data-name={r.name}>
+                <span className="min-w-0 flex-1 truncate text-[14px] font-medium" title={r.name}>
+                  {shortName(r.name)}
+                </span>
+                <span className="flex gap-1" aria-label="Последние встречи">
+                  {r.last.map((m) => (
+                    <span
+                      key={m.id}
+                      title={dmy(m.at.slice(0, 10))}
+                      className={
+                        'rounded-md px-1.5 py-0.5 text-[11.5px] font-semibold tabular-nums ' +
+                        (m.won ? 'bg-green-50 text-green-700' : 'bg-[color-mix(in_srgb,var(--color-qtt-coral)_10%,white)] text-[color-mix(in_srgb,var(--color-qtt-coral)_75%,black)]')
+                      }
+                      data-testid="h2h-game"
+                      data-won={m.won ? 'yes' : 'no'}
+                    >
+                      {m.score}
+                    </span>
+                  ))}
+                </span>
+                <span className={'w-12 text-right text-[16px] font-semibold tabular-nums ' + lead} data-testid="h2h-score">
+                  {r.wins}:{r.losses}
+                </span>
+              </li>
+            );
+          })}
+        </ul>
+      )}
     </Block>
   );
 }
@@ -87,7 +112,7 @@ export function MedStatus({ member, onOpenMedical }: { member: NationalMember; o
           ? { band: 'bg-[color-mix(in_srgb,var(--color-qtt-peach)_20%,white)] text-[color-mix(in_srgb,var(--color-qtt-peach)_60%,black)]', title: 'Допуск истекает', sub: 'до ' + dmy(until) + ' · через ' + daysWord(left) }
           : { band: 'bg-green-50 text-green-800', title: 'Допущен', sub: 'до ' + dmy(until) + (left !== null ? ' · ещё ' + daysWord(left) : '') };
   return (
-    <Block title="Медкарта" icon={<HeartPulse size={18} />} tone="coral" testId="profile-medical">
+    <Block title="Медкарта" testId="profile-medical">
       <div className={'flex flex-col gap-0.5 rounded-xl px-4 py-3.5 ' + tone.band} data-testid="clearance" data-status={status}>
         <span className="text-[17px] font-semibold">{tone.title}</span>
         {tone.sub && <span className="text-[13px] opacity-80">{tone.sub}</span>}
@@ -99,7 +124,7 @@ export function MedStatus({ member, onOpenMedical }: { member: NationalMember; o
         </span>
       </div>
       <Button className="mt-5 w-full rounded-xl" onPress={onOpenMedical} data-testid="profile-medical-open">
-        <HeartPulse size={16} /> Открыть медкарту
+        Открыть медкарту
       </Button>
     </Block>
   );
@@ -107,9 +132,9 @@ export function MedStatus({ member, onOpenMedical }: { member: NationalMember; o
 
 export function SportLink({ onOpen }: { onOpen: () => void }) {
   return (
-    <Block title="Спортивная карточка" icon={<Brain size={18} />} tone="violet" testId="profile-sport">
+    <Block title="Спортивная карточка" testId="profile-sport">
       <Button className="w-full rounded-xl" onPress={onOpen} data-testid="profile-sport-open">
-        <Brain size={16} /> Открыть
+        Открыть
       </Button>
     </Block>
   );
