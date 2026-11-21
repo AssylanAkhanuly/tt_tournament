@@ -121,6 +121,23 @@
   --color-neutral-800: #2a3550;
   --color-neutral-900: #18244d;
   --color-neutral-950: #0c1439;
+
+  /* Дополнительные цвета брендбука QTT ✳ (21.11.2026, решение владельца
+     продукта — «использовать и акцентные цвета документа»): стр. 9 и 11
+     брендбука, разбор — docs/refs/qaz-table-tennis-brendbuk-2026-11-05.md.
+     Утилиты `bg-qtt-*`, `text-qtt-*`, `border-qtt-*`; подложки — через
+     `color-mix` от них. Первое применение — доска планов подготовки. */
+  --color-qtt-teal: #006062;
+  --color-qtt-plum: #77295b;
+  --color-qtt-violet: #503780;
+  --color-qtt-sand: #e2dcd0;
+  --color-qtt-peach: #f79a66;
+  --color-qtt-sky: #91c3de;
+  --color-qtt-blue: #3a6eb6;
+  --color-qtt-lilac: #6f4fa0;
+  --color-qtt-coral: #f26748;
+  --color-qtt-lime: #bed73f;
+  --color-qtt-steel: #769dab;
 }
 
 /* Тема HeroUI — в цвета бренда. Переменные HeroUI объявлены в

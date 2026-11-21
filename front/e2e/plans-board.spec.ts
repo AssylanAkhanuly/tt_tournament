@@ -4,8 +4,7 @@ import { E2E_ADMIN, E2E_NATIONAL_COACH } from './global-setup';
 
 /* Доска планов подготовки ✳ (21.11.2026, NATIONAL.md «Доска планов»): главный
    тренер видит строку спортсмена с пунктами плана по дням; пункт со сроком
-   сегодня — «идёт», вчерашний невыполненный — «просрочено» и попадает в
-   сводку; карточка пункта отмечает его выполненным, и доска перерисовывает его
+   сегодня — «идёт», вчерашний невыполненный — «просрочено»; карточка пункта отмечает его выполненным, и доска перерисовывает его
    серым. Спортсмен — «[e2e] », его сносит засев. */
 
 const iso = (days: number) => new Date(Date.now() + days * 86400000).toISOString().slice(0, 10);
@@ -43,7 +42,6 @@ test('доска планов: пункты по дням, просрочка в
   await expect(today).toHaveAttribute('data-state', 'live');
   if (new Date().getDate() > 1) {
     await expect(row.getByTestId('plan-board-item').filter({ hasText: 'Видеоразбор вчера' })).toHaveAttribute('data-state', 'overdue');
-    await expect(page.getByTestId('plan-board-summary')).toContainText('Просрочено');
   }
   await expect(page.getByTestId('plan-board-now')).toBeVisible();
   await page.screenshot({ path: 'test-results/plans-board/board.png' });
@@ -54,4 +52,18 @@ test('доска планов: пункты по дням, просрочка в
   await expect(card).toContainText(name);
   await card.getByTestId('plan-board-done').click();
   await expect(row.getByTestId('plan-board-item').filter({ hasText: 'Подача сегодня' })).toHaveAttribute('data-state', 'done');
+  await page.mouse.click(5, 5); // щелчок мимо закрывает карточку
+  await expect(page.getByTestId('plan-board-card')).toHaveCount(0);
+
+  // Щелчок по пустому дню — новый пункт на этот день, как в календаре.
+  const day = row.locator(`[data-testid="plan-board-cell"][data-date="${iso(0)}"]`);
+  // В клетке уже лежит пункт — щёлкаем по свободному низу клетки.
+  const box = (await day.boundingBox())!;
+  await day.click({ position: { x: 4, y: box.height - 3 } });
+  const dialog = page.getByTestId('plan-board-create');
+  await expect(dialog).toContainText('Новый пункт');
+  await dialog.getByTestId('plan-board-create-title').fill('Многоволан');
+  await dialog.getByTestId('plan-board-create-submit').click();
+  await expect(dialog).toHaveCount(0);
+  await expect(row.getByTestId('plan-board-item').filter({ hasText: 'Многоволан' })).toHaveAttribute('data-state', 'live');
 });

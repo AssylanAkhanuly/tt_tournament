@@ -380,6 +380,10 @@ export type BoardRow = {
   plan: { id: string; status: PlanStatus; startsOn: string; endsOn: string; goal: string; done: number; total: number } | null;
   items: BoardItem[];
   canMark: boolean;
+  /** Добавить пункт с доски — план правит этот человек сейчас (сервер). */
+  canAdd: boolean;
+  /** Завести план с доски — штаб и личный тренер спортсмена (сервер). */
+  canCreatePlan: boolean;
 };
 export type PlanBoardData = { from: string; to: string; today: string; rows: BoardRow[] };
 
@@ -416,6 +420,8 @@ export async function fetchPlanBoard(from: string, to: string): Promise<PlanBoar
           city: String(i.city ?? ''),
         })),
         canMark: Boolean(x.can_mark),
+        canAdd: Boolean(x.can_add),
+        canCreatePlan: Boolean(x.can_create_plan),
       };
     }),
   };

@@ -3,15 +3,22 @@
 /* Доска планов подготовки ✳ (21.11.2026, образец владельца продукта — экран
    расписания Visitly; NATIONAL.md «Доска планов»). Строка на члена сборной,
    столбцы — дни окна (неделя или месяц), на строке — пункты его планов:
-   работа на дне срока, сбор и старт — на датах мероприятия. Состояние пункта
-   (выполнено / идёт / запланировано / просрочено) считает сервер; пункт плана,
-   который ещё не согласован, обведён жёлтым. Над строками — сводка: всё ли в
-   срок. Линия «сегодня» поперёк. Щелчок по пункту — карточка: даты, вид,
-   состояние плана, «Открыть план» и отметка «выполнено» (кому можно — решает
-   сервер, `canMark`). HeroUI + Tailwind. */
+   работа на дне срока, сбор и старт — на датах мероприятия.
+
+   Сетка — как у календаря кабинета: тонкие сплошные линии, выходные чуть
+   темнее, сегодняшний день — номер в тёмном круге и подсветка столбца, линия
+   «сейчас» поперёк. Цвет пункта — его вид (дополнительные цвета брендбука:
+   работа — синий, сбор — бирюзовый, старт — фиолетовый), состояние — форма:
+   запланировано — светлая заливка с полосой слева, идёт — сплошная заливка,
+   выполнено — серое, просрочено — коралловый пунктир; пункт несогласованного
+   плана обведён персиковым. Состояние считает сервер.
+
+   Щелчок по пустому дню — создание, как в календаре (`BoardCreate`): пункт
+   плана на этот день или новый план. Щелчок по пункту — карточка: даты, вид,
+   состояние плана, «Открыть план» и отметка «выполнено». HeroUI + Tailwind. */
 
 import { Button, Popover, Spinner, ToggleButton, ToggleButtonGroup } from '@heroui/react';
-import { Check, ChevronLeft, ChevronRight, CircleAlert, ExternalLink } from 'lucide-react';
+import { Check, ChevronLeft, ChevronRight, ExternalLink } from 'lucide-react';
 import { useMemo, useState } from 'react';
 
 import {
@@ -24,11 +31,15 @@ import {
   type AgeGroup,
   type BoardItem,
   type BoardRow,
+  type PlanItemKind,
 } from '@/entities/national';
+
+import { BoardCreate, type CreateAt } from './BoardCreate';
 
 type Scale = 'week' | 'month';
 
 const DAY = 86400000;
+const LANE = 40; // высота дорожки: блок 36 px и зазор
 const iso = (d: Date) => d.toISOString().slice(0, 10);
 const parse = (s: string) => new Date(s + 'T00:00:00Z');
 const addDays = (d: Date, n: number) => new Date(d.getTime() + n * DAY);
@@ -39,6 +50,7 @@ const dayLabel = (s: string) => {
   const d = parse(s);
   return d.getUTCDate() + ' ' + MONTHS[d.getUTCMonth()];
 };
+const weekend = (d: Date) => d.getUTCDay() === 0 || d.getUTCDay() === 6;
 
 /** Окно: неделя с понедельника или календарный месяц, сдвиг `shift` шагов. */
 function windowOf(today: Date, scale: Scale, shift: number) {
@@ -62,28 +74,60 @@ function lanes(items: BoardItem[]) {
   });
 }
 
-const BLOCK: Record<BoardItem['state'], string> = {
-  done: 'border-neutral-200 bg-neutral-100 text-neutral-500',
-  live: 'border-neutral-900 bg-neutral-900 text-white',
-  planned: 'border-neutral-300 bg-white text-neutral-800',
-  overdue: 'border-dashed border-red-400 bg-red-50 text-red-700',
+/* Цвет вида — доп. цвета брендбука (`qtt-*` во входе Tailwind). Классы
+   записаны целиком: Tailwind собирает только то, что видит в тексте. */
+const PLANNED: Record<PlanItemKind, string> = {
+  work: 'border-l-qtt-blue bg-[color-mix(in_srgb,var(--color-qtt-blue)_10%,white)] text-neutral-900',
+  camp: 'border-l-qtt-teal bg-[color-mix(in_srgb,var(--color-qtt-teal)_10%,white)] text-neutral-900',
+  start: 'border-l-qtt-violet bg-[color-mix(in_srgb,var(--color-qtt-violet)_10%,white)] text-neutral-900',
 };
+const LIVE: Record<PlanItemKind, string> = {
+  work: 'border-l-qtt-blue bg-qtt-blue text-white',
+  camp: 'border-l-qtt-teal bg-qtt-teal text-white',
+  start: 'border-l-qtt-violet bg-qtt-violet text-white',
+};
+const SWATCH: Record<PlanItemKind, string> = { work: 'bg-qtt-blue', camp: 'bg-qtt-teal', start: 'bg-qtt-violet' };
+
+function blockClass(item: BoardItem) {
+  const unapproved = item.planStatus !== 'approved' && (item.state === 'planned' || item.state === 'live');
+  const base =
+    item.state === 'done'
+      ? 'border-l-neutral-300 bg-neutral-100 text-neutral-500'
+      : item.state === 'overdue'
+        ? 'border border-dashed border-qtt-coral bg-[color-mix(in_srgb,var(--color-qtt-coral)_10%,white)] text-[color-mix(in_srgb,var(--color-qtt-coral)_70%,black)]'
+        : item.state === 'live'
+          ? LIVE[item.kind]
+          : PLANNED[item.kind];
+  return base + (unapproved ? ' ring-2 ring-inset ring-qtt-peach' : '');
+}
+
 const STATE_LABEL: Record<BoardItem['state'], string> = {
   done: 'Выполнено',
   live: 'Идёт',
   planned: 'Запланировано',
   overdue: 'Просрочено',
 };
+const STATE_DOT: Record<BoardItem['state'], string> = {
+  done: 'bg-green-600',
+  live: 'bg-qtt-blue',
+  planned: 'bg-neutral-400',
+  overdue: 'bg-qtt-coral',
+};
 
 function Legend() {
-  const sw = 'inline-block size-2.5 border';
+  const sw = 'inline-block size-2.5 rounded-[3px]';
   return (
-    <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[10.5px] tracking-wide text-neutral-500 uppercase">
-      <span className="flex items-center gap-1.5"><i className={sw + ' border-neutral-300 bg-white'} />Запланировано</span>
-      <span className="flex items-center gap-1.5"><i className={sw + ' border-neutral-900 bg-neutral-900'} />Идёт</span>
-      <span className="flex items-center gap-1.5"><i className={sw + ' border-neutral-200 bg-neutral-100'} />Выполнено</span>
-      <span className="flex items-center gap-1.5"><i className={sw + ' border-dashed border-red-400 bg-red-50'} />Просрочено</span>
-      <span className="flex items-center gap-1.5"><i className={sw + ' border-amber-400 bg-white'} />План не согласован</span>
+    <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] text-neutral-500">
+      {(['work', 'camp', 'start'] as PlanItemKind[]).map((k) => (
+        <span key={k} className="flex items-center gap-1.5">
+          <i className={sw + ' ' + SWATCH[k]} />
+          {PLAN_ITEM_LABEL[k]}
+        </span>
+      ))}
+      <span className="h-3 w-px bg-neutral-200" />
+      <span className="flex items-center gap-1.5"><i className={sw + ' bg-neutral-200'} />Выполнено</span>
+      <span className="flex items-center gap-1.5"><i className={sw + ' border border-dashed border-qtt-coral'} />Просрочено</span>
+      <span className="flex items-center gap-1.5"><i className={sw + ' ring-2 ring-inset ring-qtt-peach'} />План не согласован</span>
     </div>
   );
 }
@@ -105,17 +149,13 @@ function ItemCard({ row, item, onOpenPlan, onChanged }: { row: BoardRow; item: B
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <Popover.Heading className="text-[15px] leading-snug font-semibold">{item.title}</Popover.Heading>
-          <p className="text-[12px] text-neutral-500">
+          <p className="flex items-center gap-1.5 text-[12px] text-neutral-500">
+            <i className={'inline-block size-2 rounded-[2px] ' + SWATCH[item.kind]} />
             {row.member.person.name} · {PLAN_ITEM_LABEL[item.kind]}
           </p>
         </div>
         <span className="flex shrink-0 items-center gap-1.5 rounded-full border border-neutral-200 px-2 py-0.5 text-[11.5px]">
-          <i
-            className={
-              'size-1.5 rounded-full ' +
-              (item.state === 'done' ? 'bg-green-600' : item.state === 'overdue' ? 'bg-red-600' : item.state === 'live' ? 'bg-neutral-900' : 'bg-neutral-400')
-            }
-          />
+          <i className={'size-1.5 rounded-full ' + STATE_DOT[item.state]} />
           {STATE_LABEL[item.state]}
         </span>
       </div>
@@ -127,7 +167,7 @@ function ItemCard({ row, item, onOpenPlan, onChanged }: { row: BoardRow; item: B
         ].map(([k, v], n) => (
           <div key={k} className={'flex items-center justify-between gap-3 px-3 py-2 ' + (n ? 'border-t border-neutral-200' : '')}>
             <dt className="text-neutral-500">{k}</dt>
-            <dd className={'text-right font-medium ' + (k === 'План' && item.planStatus !== 'approved' ? 'text-amber-700' : '')}>{v}</dd>
+            <dd className={'text-right font-medium ' + (k === 'План' && item.planStatus !== 'approved' ? 'text-[color-mix(in_srgb,var(--color-qtt-peach)_60%,black)]' : '')}>{v}</dd>
           </div>
         ))}
       </dl>
@@ -149,6 +189,7 @@ export function PlansTimeline({ onOpenPlan }: { onOpenPlan: (memberId: string) =
   const [scale, setScale] = useState<Scale>('week');
   const [shift, setShift] = useState(0);
   const [group, setGroup] = useState<AgeGroup | 'all'>('all');
+  const [create, setCreate] = useState<CreateAt | null>(null);
   const today = useMemo(() => parse(iso(new Date())), []);
   const { from, to } = windowOf(today, scale, shift);
   const key = iso(from) + iso(to);
@@ -156,21 +197,24 @@ export function PlansTimeline({ onOpenPlan }: { onOpenPlan: (memberId: string) =
 
   const days = Math.round((to.getTime() - from.getTime()) / DAY) + 1;
   const cols = Array.from({ length: days }, (_, i) => addDays(from, i));
+  const gridCols = { gridTemplateColumns: `repeat(${days}, minmax(0, 1fr))` };
   const pct = (s: string) => ((parse(s).getTime() - from.getTime()) / DAY / days) * 100;
-  const todayPct = today >= from && today <= to ? ((today.getTime() - from.getTime()) / DAY + 0.5) / days * 100 : null;
+  const todayIso = iso(today);
+  const nowPct = today >= from && today <= to ? (((today.getTime() - from.getTime()) / DAY + new Date().getHours() / 24) / days) * 100 : null;
 
   const all = board.data?.rows ?? [];
   const rows = group === 'all' ? all : all.filter((r) => r.member.ageGroup === group);
-  const overdue = rows.flatMap((r) => r.items.filter((i) => i.state === 'overdue').map((i) => ({ r, i })));
-  const totalItems = rows.reduce((n, r) => n + r.items.length, 0);
 
   const title = scale === 'week' ? dayLabel(iso(from)) + ' — ' + dayLabel(iso(to)) : MONTHS_NOM[from.getUTCMonth()] + ' ' + from.getUTCFullYear();
+  /** Фон дня: сегодня — голубая подложка, выходные — серая. */
+  const dayBg = (d: Date) => (iso(d) === todayIso ? 'bg-brand-50/70' : weekend(d) ? 'bg-neutral-50' : '');
 
   return (
-    <div className="flex h-full min-h-0 flex-col gap-4 overflow-y-auto px-6 py-5 max-md:px-4" data-testid="plan-board">
+    // От края до края рабочей области ✳ (21.11.2026): полей и рамки у доски нет.
+    <div className="flex h-full min-h-0 flex-col overflow-y-auto" data-testid="plan-board">
       {/* Без заголовка и подписи ✳ (21.11.2026, решение владельца продукта):
           раздел назван в меню; период — у стрелок. Переключатели — HeroUI. */}
-      <div className="flex flex-wrap items-center justify-between gap-3">
+      <div className="flex flex-wrap items-center justify-between gap-3 px-6 py-3 max-md:px-4">
         <div className="flex items-center gap-1">
           <Button isIconOnly size="sm" variant="tertiary" aria-label="Назад" onPress={() => setShift((s) => s - 1)}>
             <ChevronLeft size={16} />
@@ -223,22 +267,31 @@ export function PlansTimeline({ onOpenPlan }: { onOpenPlan: (memberId: string) =
         </div>
       </div>
 
-      <section className="flex min-w-0 flex-col border border-neutral-200 bg-neutral-50">
-        <div className="flex flex-wrap items-center justify-end gap-2 px-3 py-2">
+      <section className="flex min-w-0 flex-col border-t border-neutral-200 bg-white">
+        <div className="flex flex-wrap items-center justify-end gap-2 border-b border-neutral-200 px-4 py-2.5">
           <Legend />
         </div>
-        <div className="overflow-x-auto border-t border-neutral-200 bg-white">
+        <div className="overflow-x-auto">
           <div className={scale === 'week' ? 'min-w-[900px]' : 'min-w-[1300px]'}>
-            {/* Шапка дней */}
-            <div className="grid grid-cols-[14rem_minmax(0,1fr)] border-b border-neutral-200 text-[10.5px] tracking-wide text-neutral-500 uppercase">
-              <span className="border-r border-neutral-200 px-3 py-2">Спортсмен · план</span>
-              <div className="relative grid" style={{ gridTemplateColumns: `repeat(${days}, minmax(0, 1fr))` }}>
+            {/* Шапка дней — как у календаря: день недели, число; сегодня — в круге. */}
+            <div className="grid grid-cols-[15rem_minmax(0,1fr)] border-b border-neutral-200">
+              <span className="flex items-end border-r border-neutral-200 px-4 pb-2 text-[11px] font-medium text-neutral-500">Спортсмен</span>
+              <div className="grid" style={gridCols}>
                 {cols.map((d) => {
-                  const on = iso(d) === iso(today);
+                  const on = iso(d) === todayIso;
                   return (
-                    <span key={iso(d)} className={'border-l border-neutral-100 px-1.5 py-2 text-center ' + (on ? 'font-semibold text-neutral-900' : '')}>
-                      {scale === 'week' ? WD[d.getUTCDay()] + ' ' + d.getUTCDate() : d.getUTCDate()}
-                    </span>
+                    <div key={iso(d)} className={'flex flex-col items-center gap-0.5 border-l border-neutral-100 py-1.5 ' + dayBg(d)}>
+                      <span className={'text-[10.5px] font-medium uppercase ' + (on ? 'text-brand-600' : 'text-neutral-500')}>{WD[d.getUTCDay()]}</span>
+                      <span
+                        className={
+                          'grid size-7 place-items-center rounded-full text-[13px] tabular-nums ' +
+                          (on ? 'bg-brand-600 font-semibold text-white' : weekend(d) ? 'text-neutral-500' : 'text-neutral-800')
+                        }
+                        data-today={on || undefined}
+                      >
+                        {d.getUTCDate()}
+                      </span>
+                    </div>
                   );
                 })}
               </div>
@@ -248,37 +301,11 @@ export function PlansTimeline({ onOpenPlan }: { onOpenPlan: (memberId: string) =
               <div className="flex h-40 items-center justify-center">{board.error ? <span className="text-red-600">{board.error}</span> : <Spinner />}</div>
             ) : (
               <div className="relative">
-                {todayPct !== null && (
-                  <div className="pointer-events-none absolute inset-y-0 right-0 left-56 z-10" aria-hidden>
-                    <div className="absolute inset-y-0 w-px bg-neutral-900" style={{ left: todayPct + '%' }} data-testid="plan-board-now" />
+                {nowPct !== null && (
+                  <div className="pointer-events-none absolute inset-y-0 right-0 left-60 z-20" aria-hidden>
+                    <div className="absolute inset-y-0 w-0.5 -translate-x-1/2 bg-qtt-coral" style={{ left: nowPct + '%' }} data-testid="plan-board-now" />
                   </div>
                 )}
-                {/* Сводка: всё ли в срок */}
-                <div className="grid grid-cols-[14rem_minmax(0,1fr)] border-b border-neutral-200 bg-neutral-50/60">
-                  <div className="flex items-center gap-2.5 border-r border-neutral-200 px-3 py-3">
-                    {overdue.length ? (
-                      <CircleAlert size={18} className="text-red-600" />
-                    ) : (
-                      <span className="grid size-7 place-items-center rounded-md bg-green-50 text-green-700"><Check size={15} /></span>
-                    )}
-                    <span className="flex flex-col leading-tight">
-                      <span className={'text-[13px] font-semibold ' + (overdue.length ? 'text-red-700' : 'text-green-700')} data-testid="plan-board-summary">
-                        {overdue.length ? 'Просрочено: ' + overdue.length : 'Всё в срок'}
-                      </span>
-                      <span className="text-[11px] text-neutral-500">
-                        {totalItems - overdue.length} из {totalItems} пунктов
-                      </span>
-                    </span>
-                  </div>
-                  <div className="flex items-center px-3 py-2">
-                    <p className="w-full truncate rounded-md border border-dashed border-neutral-300 px-3 py-1.5 text-[12px] text-neutral-600">
-                      {overdue.length
-                        ? overdue.slice(0, 4).map(({ r, i }) => r.member.person.name + ' — ' + i.title).join(' · ')
-                        : 'Нет просроченных пунктов'}
-                    </p>
-                  </div>
-                </div>
-
                 {rows.length === 0 && (
                   <p className="py-8 text-center text-[13px] text-neutral-500" data-testid="table-empty">
                     Спортсменов нет
@@ -287,47 +314,53 @@ export function PlansTimeline({ onOpenPlan }: { onOpenPlan: (memberId: string) =
                 {rows.map((r) => {
                   const placed = lanes(r.items);
                   const laneCount = Math.max(1, ...placed.map((p) => p.lane + 1));
+                  const canCreate = (r.plan && r.canAdd) || (!r.plan && r.canCreatePlan);
                   return (
-                    <div key={r.member.id} className="grid grid-cols-[14rem_minmax(0,1fr)] border-b border-neutral-200" data-testid="plan-board-row" data-name={r.member.person.name}>
-                      <button type="button" onClick={() => onOpenPlan(r.member.id)} className="flex items-center gap-2.5 border-r border-neutral-200 px-3 py-2 text-left hover:bg-neutral-50">
-                        <span className="grid size-8 shrink-0 place-items-center rounded-full bg-neutral-200 text-[12px] font-semibold text-neutral-700">
+                    <div key={r.member.id} className="grid grid-cols-[15rem_minmax(0,1fr)] border-b border-neutral-200 last:border-b-0" data-testid="plan-board-row" data-name={r.member.person.name}>
+                      <button type="button" onClick={() => onOpenPlan(r.member.id)} className="flex items-center gap-2.5 border-r border-neutral-200 px-4 py-2 text-left hover:bg-neutral-50">
+                        <span className="grid size-8 shrink-0 place-items-center rounded-full bg-brand-50 text-[12px] font-semibold text-brand-600">
                           {r.member.person.name.slice(0, 1)}
                         </span>
                         <span className="flex min-w-0 flex-col leading-tight">
                           <span className="truncate text-[13px] font-medium">{r.member.person.name}</span>
-                          <span className="truncate text-[10.5px] tracking-wide text-neutral-500 uppercase">
+                          <span className="truncate text-[11px] text-neutral-500">
                             {AGE_GROUP_LABEL[r.member.ageGroup]}
-                            {r.plan ? ' · ' + r.plan.done + '/' + r.plan.total : ''}
+                            {r.plan ? ' · ' + r.plan.done + ' из ' + r.plan.total : ''}
                           </span>
                         </span>
                       </button>
-                      <div className="relative grid" style={{ gridTemplateColumns: `repeat(${days}, minmax(0, 1fr))`, minHeight: laneCount * 46 + 8 + 'px' }}>
+                      <div className="relative grid" style={{ ...gridCols, minHeight: laneCount * LANE + 8 + 'px' }}>
+                        {/* Клетки дней: щелчок — создать, как в календаре. */}
                         {cols.map((d) => (
-                          <span key={iso(d)} className="border-l border-dashed border-neutral-100" />
+                          <button
+                            key={iso(d)}
+                            type="button"
+                            disabled={!canCreate}
+                            onClick={() => setCreate({ row: r, date: iso(d) })}
+                            aria-label={'Создать: ' + r.member.person.name + ', ' + dayLabel(iso(d))}
+                            className={'border-l border-neutral-100 ' + dayBg(d) + (canCreate ? ' cursor-copy hover:bg-brand-50' : ' cursor-default')}
+                            data-testid="plan-board-cell"
+                            data-date={iso(d)}
+                          />
                         ))}
                         {!r.plan && r.items.length === 0 && (
-                          <p className="absolute inset-x-3 top-1/2 -translate-y-1/2 truncate rounded-md border border-dashed border-neutral-300 px-3 py-1.5 text-[12px] text-neutral-500" data-testid="plan-board-noplan">
+                          <p className="pointer-events-none absolute inset-x-3 top-1/2 -translate-y-1/2 truncate text-[12px] text-neutral-400" data-testid="plan-board-noplan">
                             Нет плана на этот период
                           </p>
                         )}
                         {placed.map(({ item, lane }) => {
                           const left = Math.max(0, pct(item.startsOn));
                           const right = Math.min(100, pct(iso(addDays(parse(item.endsOn), 1))));
-                          const unapproved = item.planStatus !== 'approved' && item.state !== 'done' && item.state !== 'overdue';
                           return (
                             <Popover key={item.id}>
                               <Popover.Trigger
-                                className={
-                                  'absolute flex h-10 flex-col justify-center overflow-hidden rounded-md border px-2 text-left ' +
-                                  BLOCK[item.state] +
-                                  (unapproved ? ' border-amber-400' : '')
-                                }
-                                style={{ left: `calc(${left}% + 3px)`, width: `calc(${right - left}% - 6px)`, top: 4 + lane * 46 + 'px' }}
+                                className={'absolute z-10 flex h-9 flex-col justify-center overflow-hidden rounded-md border-l-[3px] px-2 text-left shadow-xs ' + blockClass(item)}
+                                style={{ left: `calc(${left}% + 3px)`, width: `calc(${right - left}% - 6px)`, top: 4 + lane * LANE + 'px' }}
                                 data-testid="plan-board-item"
                                 data-state={item.state}
                               >
-                                <span className="truncate text-[12px] leading-tight font-medium">{item.title}</span>
-                                <span className="truncate font-mono text-[10.5px] leading-tight opacity-75">
+                                <span className={'truncate text-[12px] leading-tight font-medium ' + (item.state === 'done' ? 'line-through' : '')}>{item.title}</span>
+                                <span className="truncate text-[10.5px] leading-tight opacity-75">
                                   {PLAN_ITEM_LABEL[item.kind]}
                                   {item.city ? ' · ' + item.city : ''}
                                 </span>
@@ -349,6 +382,7 @@ export function PlansTimeline({ onOpenPlan }: { onOpenPlan: (memberId: string) =
           </div>
         </div>
       </section>
+      <BoardCreate at={create} onClose={() => setCreate(null)} onDone={board.reload} />
     </div>
   );
 }
