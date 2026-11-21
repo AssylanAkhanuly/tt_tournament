@@ -29,7 +29,7 @@ async function setup(request: APIRequestContext, stamp: number) {
   }
   const tour = await request.post(`/api/league/divisions/${div.id}/tours/`, { data: { number: 1, city: 'Астана', starts_on: '2026-12-05' } });
   expect(tour.status(), await tour.text()).toBe(201);
-  return { tourId: (await tour.json()).id as string, season: season.name as string, league: div.name as string };
+  return { tourId: (await tour.json()).id as string };
 }
 
 async function signIn(page: import('@playwright/test').Page, who: { email: string; password: string }, home: string) {
@@ -42,16 +42,13 @@ async function signIn(page: import('@playwright/test').Page, who: { email: strin
 
 test('расписание тура: судьи, сформировать, список и день, правка, отправить, видят клуб и судья', async ({ page, request, browser }) => {
   const stamp = Date.now();
-  const { tourId, season, league } = await setup(request, stamp);
+  const { tourId } = await setup(request, stamp);
   await signIn(page, E2E_ADMIN, '/dashboard');
 
   // Без судей расписания нет: «Сформировать» отказывает.
   await page.goto(`/dashboard/league/tours/${tourId}/schedule`);
   await page.getByTestId('tour-schedule-params').getByTestId('tour-schedule-build').click();
   await expect(page.getByTestId('tour-schedule-error')).toContainText('судей');
-
-  // Хлебные крошки: путь до тура, последнее звено — без ссылки.
-  await expect(page.getByTestId('crumb')).toHaveText(['Календарь', `Евразийская лига · ${season}`, league, 'Тур 1 · Астана']);
 
   // «Судьи»: двое судей стола из учёток проверок (роль «судья»).
   await page.getByRole('button', { name: 'Судьи', exact: true }).click();

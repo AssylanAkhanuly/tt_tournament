@@ -43,7 +43,11 @@ export type CalendarSummary = {
 };
 
 /** Строка списка лиг (дивизионов). */
-export type DivisionListItem = Division & CalendarSummary & { teamsCount: number };
+/** Состояние тура для обзора сезона — решает сервер (`tour_state`, LEAGUE.md «Обзор сезона»). */
+export type TourState = 'done' | 'live' | 'ready' | 'draft' | 'planned' | 'issue';
+export type SeasonTour = { id: string; number: number; city: string; startsOn: string | null; state: TourState; problem: string };
+/** `tours` — только в ответе сезона (`tour_list`). */
+export type DivisionListItem = Division & CalendarSummary & { teamsCount: number; tours?: SeasonTour[] };
 
 /** Окно регистрации команд: переключатель, срок «до» (`ГГГГ-ММ-ДД`, включительно)
  *  и идёт ли она сегодня — это решает сервер. */
@@ -214,7 +218,21 @@ const calendar = (d: Raw): CalendarSummary => ({
   finished: Number(d.finished),
 });
 
-const divisionItem = (d: Raw): DivisionListItem => ({ ...division(d), ...calendar(d), teamsCount: Number(d.teams) });
+const seasonTour = (t: Raw): SeasonTour => ({
+  id: String(t.id),
+  number: Number(t.number),
+  city: String(t.city ?? ''),
+  startsOn: (t.starts_on as string | null) ?? null,
+  state: t.state as TourState,
+  problem: String(t.problem ?? ''),
+});
+
+const divisionItem = (d: Raw): DivisionListItem => ({
+  ...division(d),
+  ...calendar(d),
+  teamsCount: Number(d.teams),
+  ...(Array.isArray(d.tour_list) ? { tours: (d.tour_list as Raw[]).map(seasonTour) } : {}),
+});
 
 const season = (s: Raw): Season => {
   const r = (s.registration as Raw) ?? {};

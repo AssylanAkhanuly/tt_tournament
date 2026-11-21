@@ -12,7 +12,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, type ReactNode } from 'react';
 
 import { useSession, workspacesOf } from '@/entities/session';
-import { AppShell, type Crumb, type ShellNavItem, type ShellSubItem } from '@/widgets/app-shell';
+import { AppShell, type ShellNavItem, type ShellSubItem } from '@/widgets/app-shell';
 
 export type RoleNavItem = ShellNavItem & { href: string };
 
@@ -27,7 +27,6 @@ export function RoleShell({
   home,
   sub,
   actions,
-  crumbs,
   children,
 }: {
   /** Вид роли (`Role.kind` на сервере), без которой в кабинет не пускаем;
@@ -49,8 +48,6 @@ export function RoleShell({
   sub?: ShellSubItem[];
   /** Полоса внизу рабочей области. */
   actions?: ReactNode;
-  /** Хлебные крошки в шапке ✳ (19.11.2026). */
-  crumbs?: Crumb[];
   children?: ReactNode;
 }) {
   const router = useRouter();
@@ -75,7 +72,6 @@ export function RoleShell({
       bleed={bleed}
       actions={actions}
       context={context}
-      crumbs={crumbs}
       home={home ?? workspacesOf(user).find((w) => w.kind === kind)?.to}
       onNavigate={(label) => {
         const href = nav.find((n) => n.label === label)?.href;

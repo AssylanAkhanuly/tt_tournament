@@ -14,7 +14,7 @@
    Подписей-заголовков в меню нет (решение владельца продукта, 28.10.2026). */
 
 import { Avatar, Button, Chip, Dropdown, Label, Modal, Separator, useOverlayState } from '@heroui/react';
-import { ChevronDown, ChevronRight, ChevronsUpDown, LogOut, User } from 'lucide-react';
+import { ChevronDown, ChevronsUpDown, LogOut, User } from 'lucide-react';
 import { useState, type ReactNode } from 'react';
 
 import { useNarrow } from '@/shared/kit/app';
@@ -43,10 +43,6 @@ export type ShellSubItem = { label: string; href: string; active?: boolean; badg
 export type ShellNavItem = { label: string; icon?: ReactNode; children?: ShellSubItem[] };
 export type ShellRole = { title: string; to: string };
 
-/** Звено хлебных крошек ✳ (19.11.2026, решение владельца продукта): путь до
- *  страницы в шапке рядом со знаком; у последнего звена адреса нет. */
-export type Crumb = { label: string; href?: string };
-
 export function AppShell({
   role,
   roles,
@@ -58,7 +54,6 @@ export function AppShell({
   bleed = false,
   context,
   home,
-  crumbs,
   onNavigate,
   onOpen,
   onSwitchRole,
@@ -83,9 +78,6 @@ export function AppShell({
    *  с ним из турнира возвращаются к списку турниров кабинета — «← Все
    *  турниры» в сайдбаре больше нет. Пусто — знак не ссылка. */
   home?: string;
-  /** Хлебные крошки — путь до страницы («Календарь / Сезон / Лига / Тур»);
-   *  нет — шапка только со знаком. */
-  crumbs?: Crumb[];
   /** Содержимое на всю рабочую область — без полей и общей прокрутки:
    *  экран сам раскладывается по высоте (календарь). */
   bleed?: boolean;
@@ -121,39 +113,9 @@ export function AppShell({
       className="hero-scope relative flex h-screen w-full flex-col overflow-hidden bg-shell-page font-[family-name:var(--font)] text-shell-ink"
       data-theme="light"
     >
-      {/* Крошки слева, знак справа ✳ (20.11.2026, решение владельца продукта);
-          длинное звено обрезается, целиком — в подсказке. */}
+      {/* Знак справа ✳ (20.11.2026); хлебных крошек нет ✳ (21.11.2026,
+          решение владельца продукта). */}
       <header className="flex h-14 shrink-0 items-center gap-4 bg-shell-bar px-5 text-shell-bar-ink">
-        {!!crumbs?.length && (
-          <nav aria-label="Путь" className="flex min-w-0 flex-1 items-center gap-1.5 text-[13px] max-md:hidden" data-testid="crumbs">
-            {crumbs.map((c, k) => (
-              <span key={k} className="flex min-w-0 items-center gap-1.5">
-                {k > 0 && (
-                  <ChevronRight size={14} className="shrink-0 text-shell-bar-ink opacity-50" aria-hidden />
-                )}
-                {c.href ? (
-                  <a
-                    href={c.href}
-                    onClick={(e) => {
-                      if (!onOpen) return;
-                      e.preventDefault();
-                      onOpen(c.href!);
-                    }}
-                    title={c.label}
-                    className="max-w-56 truncate text-shell-bar-ink opacity-70 hover:opacity-100"
-                    data-testid="crumb"
-                  >
-                    {c.label}
-                  </a>
-                ) : (
-                  <span title={c.label} className="max-w-72 truncate font-medium text-shell-bar-ink" aria-current="page" data-testid="crumb">
-                    {c.label}
-                  </span>
-                )}
-              </span>
-            ))}
-          </nav>
-        )}
         <div className="ml-auto flex shrink-0 items-center">
         {home ? (
           <a

@@ -16,7 +16,6 @@ export function AdminTournamentView({ id, section }: { id: string; section: Tour
       active={page.active}
       nav={page.nav}
       home={page.home}
-      crumbs={[{ label: 'Календарь', href: '/dashboard' }, ...(page.name ? [{ label: page.name }] : [])]}
       bleed
     >
       {page.body}

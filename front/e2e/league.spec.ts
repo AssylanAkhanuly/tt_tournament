@@ -116,7 +116,10 @@ test('лига: сезон, лига, команды с составом, тур
   await newLeague.getByRole('button', { name: 'Завести' }).click();
   await expect(newLeague).toHaveCount(0);
   await page.screenshot({ path: 'test-results/league/season.png' });
+  // Строка лиги раскрывается: туров ещё нет; «Открыть лигу» — на её страницу.
   await page.locator(`[data-testid="league-row"][data-name="${division}"]`).click();
+  await expect(page.getByTestId('league-tours')).toContainText('Туров нет');
+  await page.getByTestId('league-open').click();
   await page.waitForURL(/\/dashboard\/league\/[0-9a-f-]{36}\/table$/);
 
   // Две команды из новых клубов, по три игрока в составе.
@@ -174,7 +177,12 @@ test('лига: сезон, лига, команды с составом, тур
   // дня тура; карточка — сведения сезона, «Подробнее» ведёт на страницу сезона.
   await page.getByTestId('home-link').click();
   await page.waitForURL(seasonUrl);
-  await expect(page.locator(`[data-testid="league-row"][data-name="${division}"]`)).toContainText('2');
+  // Сводка лиги: две команды, первый сегмент — тур сыгран, в раскрытии «Сыграно».
+  const leagueRow = page.locator(`[data-testid="league-row"][data-name="${division}"]`);
+  await expect(leagueRow).toContainText('2 команды');
+  await expect(leagueRow.getByTestId('league-tour-seg').first()).toHaveAttribute('data-state', 'done');
+  await leagueRow.click();
+  await expect(page.getByTestId('league-tour-row').first()).toContainText('Сыграно');
   // «Команды» сезона — обе команды с лигой и составом, внесены федерацией —
   // «Принята»; строка открывает карточку заявки, из неё — в команды лиги.
   await page.getByRole('button', { name: 'Команды', exact: true }).click();

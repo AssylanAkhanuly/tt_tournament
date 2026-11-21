@@ -1,7 +1,7 @@
 'use client';
 
 /* Сезон Евразийской лиги ✳ (19.11.2026, LEAGUE.md «Сезон») — разделы:
-   «Лиги» (лиги сезона таблицей, «Новая лига»; строка ведёт в лигу) и
+   «Лиги» (строки-сводки `LeagueSummary`: полоска туров, ближайший тур, раскрытие туров; «Новая лига») и
    «Команды» (все команды сезона с клубом, лигой, составом и состоянием
    заявки; строка открывает решение по заявке клуба — `TeamDecision`; «Настройки» — регистрация команд и «Сезон завершён», как
    приём заявок у спортсменов турнира, решение владельца продукта). Без обёрток
@@ -16,7 +16,6 @@ import { useState, type FormEvent } from 'react';
 import {
   createDivision,
   GENDER_LABEL,
-  type DivisionListItem,
   type LeagueGender,
   type SeasonDetail,
   type SeasonTeam,
@@ -26,20 +25,13 @@ import { DataTable, type DataColumn } from '@/shared/ui/DataTable';
 import { ModalSheet } from '@/shared/ui/ModalSheet';
 import { Picker } from '@/shared/ui/Picker';
 
+import { LeagueSummary } from './LeagueSummary';
 import { TeamStatusChip } from './SquadDialog';
 
 export type SeasonSection = 'leagues' | 'teams';
 export const SEASON_SECTIONS: { id: SeasonSection; label: string }[] = [
   { id: 'leagues', label: 'Лиги' },
   { id: 'teams', label: 'Команды' },
-];
-
-const COLUMNS: DataColumn<DivisionListItem>[] = [
-  { id: 'name', label: 'Лига', rowHeader: true, sortValue: (d) => d.level, render: (d) => <span className="font-medium">{d.name}</span> },
-  { id: 'gender', label: 'Розыгрыш', sortValue: (d) => d.gender, render: (d) => GENDER_LABEL[d.gender] },
-  { id: 'level', label: 'Уровень', align: 'right', sortValue: (d) => d.level, render: (d) => d.level },
-  { id: 'teams', label: 'Команд', align: 'right', sortValue: (d) => d.teamsCount, render: (d) => d.teamsCount },
-  { id: 'tours', label: 'Туров', align: 'right', sortValue: (d) => d.toursCount, render: (d) => d.toursCount },
 ];
 
 function NewLeagueDialog({ seasonId, onCreated }: { seasonId: string; onCreated: () => void }) {
@@ -163,12 +155,14 @@ export function SeasonPage({
   season,
   section,
   onOpenDivision,
+  onOpenTour,
   onChanged,
 }: {
   season: SeasonDetail;
   section: SeasonSection;
   /** Лига сезона; у команды — сразу её раздел «Команды». */
   onOpenDivision: (divisionId: string, divisionSection?: 'teams') => void;
+  onOpenTour: (tourId: string) => void;
   onChanged: () => void;
 }) {
   if (section === 'teams') {
@@ -176,18 +170,14 @@ export function SeasonPage({
     // приём заявок у спортсменов турнира; строка — решение по заявке клуба.
     return <SeasonTeams season={season} onOpenDivision={onOpenDivision} onChanged={onChanged} />;
   }
+  // Строки-сводки ✳ (21.11.2026): лига — полоска туров и ближайший тур,
+  // щелчок раскрывает туры (LeagueSummary).
   return (
-    <DataTable
-      ariaLabel="Лиги сезона"
-      testId="season-leagues"
-      rows={season.divisions}
-      columns={COLUMNS}
-      getId={(d) => d.id}
-      empty="Лиг нет"
-      defaultSort={{ column: 'name', direction: 'ascending' }}
+    <LeagueSummary
+      leagues={season.divisions}
       actions={season.closed ? undefined : <NewLeagueDialog seasonId={season.id} onCreated={onChanged} />}
-      onRowAction={(d) => onOpenDivision(d.id)}
-      rowProps={(d) => ({ 'data-testid': 'league-row', 'data-name': d.name })}
+      onOpenLeague={(id) => onOpenDivision(id)}
+      onOpenTour={onOpenTour}
     />
   );
 }

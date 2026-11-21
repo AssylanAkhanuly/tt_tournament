@@ -9,7 +9,7 @@ import type { ReactNode } from 'react';
 
 import { ROLE_FEDERATION_ADMIN } from '@/entities/session';
 import { RoleShell, type RoleNavItem } from '@/views/workspace';
-import type { Crumb, ShellSubItem } from '@/widgets/app-shell';
+import type { ShellSubItem } from '@/widgets/app-shell';
 
 /** Разделы кабинета. Новый раздел — строка здесь. */
 const NAV: RoleNavItem[] = [
@@ -26,7 +26,6 @@ export function AdminShell({
   context,
   home,
   sub,
-  crumbs,
   children,
 }: {
   active: string;
@@ -39,8 +38,6 @@ export function AdminShell({
   home?: string;
   /** Подпункты активного раздела (вид экрана: «Месяц», «Таблица») ✳ 30.10.2026. */
   sub?: ShellSubItem[];
-  /** Хлебные крошки в шапке ✳ (19.11.2026): «Календарь / Сезон / Лига / Тур». */
-  crumbs?: Crumb[];
   children: ReactNode;
 }) {
   return (
@@ -54,7 +51,6 @@ export function AdminShell({
       active={active}
       pageTitle={title}
       bleed={bleed}
-      crumbs={crumbs}
     >
       {children}
     </RoleShell>
