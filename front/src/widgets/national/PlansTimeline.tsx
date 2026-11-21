@@ -13,9 +13,11 @@
    выполнено — серое, просрочено — коралловый пунктир; пункт несогласованного
    плана обведён персиковым. Состояние считает сервер.
 
-   Щелчок по пустому дню — создание, как в календаре (`BoardCreate`): пункт
-   плана на этот день или новый план. Щелчок по пункту — карточка: даты, вид,
-   состояние плана, «Открыть план» и отметка «выполнено». HeroUI + Tailwind. */
+   Как в календаре ✳ (22.11.2026): щелчок по пустому дню или протягивание по
+   дням строки — создание на выбранные дни (`BoardCreate`: пункт плана или
+   новый план); работу можно растянуть за край — новые даты уходят на сервер
+   (`useBoardDrag`). Щелчок по пункту — карточка: даты, вид, состояние плана,
+   «Открыть план» и отметка «выполнено». HeroUI + Tailwind. */
 
 import { Button, Popover, Spinner, ToggleButton, ToggleButtonGroup } from '@heroui/react';
 import { Check, ChevronLeft, ChevronRight, ExternalLink } from 'lucide-react';
@@ -24,6 +26,7 @@ import { useMemo, useState } from 'react';
 import {
   AGE_GROUP_LABEL,
   fetchPlanBoard,
+  movePlanItem,
   PLAN_ITEM_LABEL,
   PLAN_STATUS_LABEL,
   setPlanItemDone,
@@ -35,6 +38,7 @@ import {
 } from '@/entities/national';
 
 import { BoardCreate, type CreateAt } from './BoardCreate';
+import { useBoardDrag } from './useBoardDrag';
 
 type Scale = 'week' | 'month';
 
@@ -50,6 +54,10 @@ const dayLabel = (s: string) => {
   const d = parse(s);
   return d.getUTCDate() + ' ' + MONTHS[d.getUTCMonth()];
 };
+const rangeLabel = (a: string, b: string) => (a === b ? dayLabel(a) : dayLabel(a) + ' — ' + dayLabel(b));
+const span = (a: string, b: string) => Math.round((parse(b).getTime() - parse(a).getTime()) / DAY) + 1;
+const daysWord = (n: number) =>
+  n + ' ' + (n % 10 === 1 && n % 100 !== 11 ? 'день' : n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 10 || n % 100 >= 20) ? 'дня' : 'дней');
 const weekend = (d: Date) => d.getUTCDay() === 0 || d.getUTCDay() === 6;
 
 /** Окно: неделя с понедельника или календарный месяц, сдвиг `shift` шагов. */
@@ -132,9 +140,25 @@ function Legend() {
   );
 }
 
+/** Выделение протягиванием: пунктирная рамка на выбранных днях и их число. */
+function Selection({ a, b, pct }: { a: string; b: string; pct: (s: string) => number }) {
+  const [lo, hi] = a <= b ? [a, b] : [b, a];
+  const left = pct(lo);
+  const right = pct(iso(addDays(parse(hi), 1)));
+  return (
+    <div
+      className="pointer-events-none absolute inset-y-1 z-[5] flex items-center justify-center rounded-md border-2 border-dashed border-brand-500 bg-brand-50/80 text-[11.5px] font-medium text-brand-700"
+      style={{ left: `calc(${left}% + 3px)`, width: `calc(${right - left}% - 6px)` }}
+      data-testid="plan-board-selection"
+    >
+      {daysWord(span(lo, hi))}
+    </div>
+  );
+}
+
 function ItemCard({ row, item, onOpenPlan, onChanged }: { row: BoardRow; item: BoardItem; onOpenPlan: () => void; onChanged: () => void }) {
   const [busy, setBusy] = useState(false);
-  const dates = item.startsOn === item.endsOn ? dayLabel(item.startsOn) : dayLabel(item.startsOn) + ' — ' + dayLabel(item.endsOn);
+  const dates = rangeLabel(item.startsOn, item.endsOn);
   async function toggle() {
     setBusy(true);
     try {
@@ -190,7 +214,11 @@ export function PlansTimeline({ onOpenPlan }: { onOpenPlan: (memberId: string) =
   const [shift, setShift] = useState(0);
   const [group, setGroup] = useState<AgeGroup | 'all'>('all');
   const [create, setCreate] = useState<CreateAt | null>(null);
-  const today = useMemo(() => parse(iso(new Date())), []);
+  // Сегодня — по местному календарю: в ранние часы UTC ещё вчерашний.
+  const today = useMemo(() => {
+    const n = new Date();
+    return new Date(Date.UTC(n.getFullYear(), n.getMonth(), n.getDate()));
+  }, []);
   const { from, to } = windowOf(today, scale, shift);
   const key = iso(from) + iso(to);
   const board = useLoad(() => fetchPlanBoard(iso(from), iso(to)), key);
@@ -201,6 +229,32 @@ export function PlansTimeline({ onOpenPlan }: { onOpenPlan: (memberId: string) =
   const pct = (s: string) => ((parse(s).getTime() - from.getTime()) / DAY / days) * 100;
   const todayIso = iso(today);
   const nowPct = today >= from && today <= to ? (((today.getTime() - from.getTime()) / DAY + new Date().getHours() / 24) / days) * 100 : null;
+
+  /* Растянутый пункт стоит на новых датах, пока доска не перечитана: запись
+     привязана к ответу, на котором сделана, — новый ответ её снимает сам. */
+  const [moved, setMoved] = useState<{ data: unknown; id: string; start: string; end: string } | null>(null);
+  const [moveError, setMoveError] = useState<string | null>(null);
+  const { drag, trackProps } = useBoardDrag({
+    from,
+    days,
+    onCreate: (row, start, end) => setCreate({ row, from: start, to: end }),
+    onResize: async (item, start, end) => {
+      setMoved({ data: board.data, id: item.id, start, end });
+      setMoveError(null);
+      try {
+        await movePlanItem(item.id, start, end);
+      } catch (e) {
+        setMoveError((e as Error).message);
+      }
+      board.reload();
+    },
+  });
+  /** Даты пункта на экране: идёт растягивание — его, только что растянут — новые. */
+  const shownDates = (item: BoardItem) => {
+    if (drag?.kind === 'resize' && drag.item.id === item.id) return { start: drag.start, end: drag.end };
+    if (moved && moved.data === board.data && moved.id === item.id) return { start: moved.start, end: moved.end };
+    return { start: item.startsOn, end: item.endsOn };
+  };
 
   const all = board.data?.rows ?? [];
   const rows = group === 'all' ? all : all.filter((r) => r.member.ageGroup === group);
@@ -269,6 +323,11 @@ export function PlansTimeline({ onOpenPlan }: { onOpenPlan: (memberId: string) =
 
       <section className="flex min-w-0 flex-col border-t border-neutral-200 bg-white">
         <div className="flex flex-wrap items-center justify-end gap-2 border-b border-neutral-200 px-4 py-2.5">
+          {moveError && (
+            <span className="mr-auto text-[12px] text-red-600" data-testid="plan-board-move-error">
+              {moveError}
+            </span>
+          )}
           <Legend />
         </div>
         <div className="overflow-x-auto">
@@ -329,14 +388,19 @@ export function PlansTimeline({ onOpenPlan }: { onOpenPlan: (memberId: string) =
                           </span>
                         </span>
                       </button>
-                      <div className="relative grid" style={{ ...gridCols, minHeight: laneCount * LANE + 8 + 'px' }}>
-                        {/* Клетки дней: щелчок — создать, как в календаре. */}
+                      <div
+                        {...trackProps(r, !!canCreate)}
+                        className={'relative grid touch-none select-none ' + (drag?.rowId === r.member.id ? (drag.kind === 'resize' ? 'cursor-ew-resize' : 'cursor-copy') : '')}
+                        style={{ ...gridCols, minHeight: laneCount * LANE + 8 + 'px' }}
+                      >
+                        {/* Клетки дней: щелчок или протягивание — создать (указатель
+                            ведёт `useBoardDrag`); с клавиатуры — Enter на дне. */}
                         {cols.map((d) => (
                           <button
                             key={iso(d)}
                             type="button"
                             disabled={!canCreate}
-                            onClick={() => setCreate({ row: r, date: iso(d) })}
+                            onClick={(e) => e.detail === 0 && setCreate({ row: r, from: iso(d), to: iso(d) })}
                             aria-label={'Создать: ' + r.member.person.name + ', ' + dayLabel(iso(d))}
                             className={'border-l border-neutral-100 ' + dayBg(d) + (canCreate ? ' cursor-copy hover:bg-brand-50' : ' cursor-default')}
                             data-testid="plan-board-cell"
@@ -348,29 +412,64 @@ export function PlansTimeline({ onOpenPlan }: { onOpenPlan: (memberId: string) =
                             Нет плана на этот период
                           </p>
                         )}
+                        {/* Выделение протягиванием: дни будущего пункта. */}
+                        {drag?.kind === 'create' && drag.rowId === r.member.id && (
+                          <Selection a={drag.a} b={drag.b} pct={pct} />
+                        )}
                         {placed.map(({ item, lane }) => {
-                          const left = Math.max(0, pct(item.startsOn));
-                          const right = Math.min(100, pct(iso(addDays(parse(item.endsOn), 1))));
+                          const { start, end } = shownDates(item);
+                          const left = Math.max(0, pct(start));
+                          const right = Math.min(100, pct(iso(addDays(parse(end), 1))));
+                          const resizing = drag?.kind === 'resize' && drag.item.id === item.id;
+                          // Край за окном не тянется: его дня нет на экране.
+                          const edges = item.canMove ? (['start', 'end'] as const).filter((k) => (k === 'start' ? start >= iso(from) : end <= iso(to))) : [];
                           return (
-                            <Popover key={item.id}>
-                              <Popover.Trigger
-                                className={'absolute z-10 flex h-9 flex-col justify-center overflow-hidden rounded-md border-l-[3px] px-2 text-left shadow-xs ' + blockClass(item)}
-                                style={{ left: `calc(${left}% + 3px)`, width: `calc(${right - left}% - 6px)`, top: 4 + lane * LANE + 'px' }}
-                                data-testid="plan-board-item"
-                                data-state={item.state}
-                              >
-                                <span className={'truncate text-[12px] leading-tight font-medium ' + (item.state === 'done' ? 'line-through' : '')}>{item.title}</span>
-                                <span className="truncate text-[10.5px] leading-tight opacity-75">
-                                  {PLAN_ITEM_LABEL[item.kind]}
-                                  {item.city ? ' · ' + item.city : ''}
+                            <div
+                              key={item.id}
+                              className={'group absolute h-9 ' + (resizing ? 'z-30' : 'z-10')}
+                              style={{ left: `calc(${left}% + 3px)`, width: `calc(${right - left}% - 6px)`, top: 4 + lane * LANE + 'px' }}
+                            >
+                              <Popover>
+                                <Popover.Trigger
+                                  className={
+                                    'flex size-full flex-col justify-center overflow-hidden rounded-md border-l-[3px] px-2 text-left shadow-xs ' +
+                                    blockClass(item) +
+                                    (resizing ? ' shadow-md ring-2 ring-brand-500' : '')
+                                  }
+                                  data-testid="plan-board-item"
+                                  data-state={item.state}
+                                  data-start={start}
+                                  data-end={end}
+                                >
+                                  <span className={'truncate text-[12px] leading-tight font-medium ' + (item.state === 'done' ? 'line-through' : '')}>{item.title}</span>
+                                  <span className="truncate text-[10.5px] leading-tight opacity-75">
+                                    {resizing ? rangeLabel(start, end) : PLAN_ITEM_LABEL[item.kind] + (item.city ? ' · ' + item.city : '')}
+                                  </span>
+                                </Popover.Trigger>
+                                <Popover.Content placement="bottom" className="rounded-xl">
+                                  <Popover.Dialog className="p-4">
+                                    <ItemCard row={r} item={item} onOpenPlan={() => onOpenPlan(r.member.id)} onChanged={board.reload} />
+                                  </Popover.Dialog>
+                                </Popover.Content>
+                              </Popover>
+                              {/* Ручки краёв: видны при наведении, тянутся указателем. */}
+                              {edges.map((k) => (
+                                <span
+                                  key={k}
+                                  aria-hidden
+                                  data-edge={k}
+                                  data-item={item.id}
+                                  data-testid={'plan-board-edge-' + k}
+                                  className={
+                                    'absolute inset-y-0 flex w-2.5 cursor-ew-resize items-center justify-center ' +
+                                    (k === 'start' ? '-left-1' : '-right-1') +
+                                    (resizing ? '' : ' opacity-0 group-hover:opacity-100')
+                                  }
+                                >
+                                  <i className="h-4 w-1 rounded-full bg-white shadow-[0_0_0_1px_var(--color-neutral-400)]" />
                                 </span>
-                              </Popover.Trigger>
-                              <Popover.Content placement="bottom" className="rounded-xl">
-                                <Popover.Dialog className="p-4">
-                                  <ItemCard row={r} item={item} onOpenPlan={() => onOpenPlan(r.member.id)} onChanged={board.reload} />
-                                </Popover.Dialog>
-                              </Popover.Content>
-                            </Popover>
+                              ))}
+                            </div>
                           );
                         })}
                       </div>

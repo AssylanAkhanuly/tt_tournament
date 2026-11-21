@@ -87,7 +87,7 @@ export type MedicalCard =
 
 export type SportRecord = { id: string; date: string; text: string; createdBy: string };
 
-export type PlanItem = { id: string; kind: PlanItemKind; title: string; due: string | null; done: boolean; eventId: string | null };
+export type PlanItem = { id: string; kind: PlanItemKind; title: string; startsOn: string | null; due: string | null; done: boolean; eventId: string | null };
 export type TrainingPlan = {
   id: string;
   startsOn: string;
@@ -222,6 +222,7 @@ const plan = (p: Raw): TrainingPlan => ({
     id: String(i.id),
     kind: i.kind as PlanItemKind,
     title: String(i.title),
+    startsOn: (i.starts_on as string | null) ?? null,
     due: (i.due as string | null) ?? null,
     done: Boolean(i.done),
     eventId: (i.event_id as string | null) ?? null,
@@ -359,8 +360,14 @@ export const deletePlan = (id: string) => send('DELETE', `/api/national/plans/${
 export const submitPlan = (id: string) => send('POST', `/api/national/plans/${id}/submit/`);
 export const reviewPlan = (id: string, approve: boolean, comment = '') =>
   send('POST', `/api/national/plans/${id}/review/`, { approve, comment });
-export const addPlanItem = (planId: string, d: { kind: PlanItemKind; title: string; due: string; eventId?: string | null }) =>
-  send('POST', `/api/national/plans/${planId}/items/`, { kind: d.kind, title: d.title, due: d.due || null, event_id: d.eventId ?? null });
+export const addPlanItem = (planId: string, d: { kind: PlanItemKind; title: string; due: string; startsOn?: string | null; eventId?: string | null }) =>
+  send('POST', `/api/national/plans/${planId}/items/`, {
+    kind: d.kind,
+    title: d.title,
+    due: d.due || null,
+    starts_on: d.startsOn || null,
+    event_id: d.eventId ?? null,
+  });
 // ── Доска планов ✳ (21.11.2026, NATIONAL.md «Доска планов») ──────────────────
 
 /** Состояние пункта на доске — считает сервер (`national/board.py`). */
@@ -374,6 +381,8 @@ export type BoardItem = {
   state: BoardItemState;
   planStatus: PlanStatus;
   city: string;
+  /** Растянуть и сдвинуть на доске — работа плана, который правит этот человек (сервер). */
+  canMove: boolean;
 };
 export type BoardRow = {
   member: { id: string; person: NationalPerson; squad: Squad; ageGroup: AgeGroup };
@@ -418,6 +427,7 @@ export async function fetchPlanBoard(from: string, to: string): Promise<PlanBoar
           state: i.state as BoardItemState,
           planStatus: i.plan_status as PlanStatus,
           city: String(i.city ?? ''),
+          canMove: Boolean(i.can_move),
         })),
         canMark: Boolean(x.can_mark),
         canAdd: Boolean(x.can_add),
@@ -428,6 +438,10 @@ export async function fetchPlanBoard(from: string, to: string): Promise<PlanBoar
 }
 
 export const setPlanItemDone = (id: string, done: boolean) => send('PATCH', `/api/national/plan-items/${id}/`, { done });
+/** Новые даты работы — растягивание на доске ✳ (22.11.2026). Начало, равное
+ *  сроку, сервер не хранит. */
+export const movePlanItem = (id: string, startsOn: string, due: string) =>
+  send('PATCH', `/api/national/plan-items/${id}/`, { starts_on: startsOn, due });
 export const deletePlanItem = (id: string) => send('DELETE', `/api/national/plan-items/${id}/`);
 
 // ── Календарь подготовки ────────────────────────────────────────────────────

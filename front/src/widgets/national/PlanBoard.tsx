@@ -288,7 +288,7 @@ export function PlanBoard({ memberId, canCreate, onChanged }: { memberId: string
       sortValue: (i) => i.title,
       render: (i) => <span className={i.done ? 'text-neutral-500 line-through' : 'font-medium'}>{i.title}</span>,
     },
-    { id: 'due', label: 'Срок', sortValue: (i) => i.due, render: (i) => dmy(i.due) },
+    { id: 'due', label: 'Срок', sortValue: (i) => i.due, render: (i) => (i.startsOn ? dmy(i.startsOn) + ' — ' + dmy(i.due) : dmy(i.due)) },
     {
       id: 'actions',
       label: '',

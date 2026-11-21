@@ -7,7 +7,11 @@ import { E2E_ADMIN, E2E_NATIONAL_COACH } from './global-setup';
    сегодня — «идёт», вчерашний невыполненный — «просрочено»; карточка пункта отмечает его выполненным, и доска перерисовывает его
    серым. Спортсмен — «[e2e] », его сносит засев. */
 
-const iso = (days: number) => new Date(Date.now() + days * 86400000).toISOString().slice(0, 10);
+// Местная дата, как у сервера: `toISOString` в ранние часы дал бы вчерашнюю.
+const iso = (days: number) => {
+  const d = new Date(Date.now() + days * 86400000);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+};
 
 async function apiAs(request: APIRequestContext, account: { email: string; password: string }) {
   const r = await request.post('/api/auth/login/email/', { data: { email: account.email, password: account.password } });
@@ -66,4 +70,39 @@ test('доска планов: пункты по дням, просрочка в
   await dialog.getByTestId('plan-board-create-submit').click();
   await expect(dialog).toHaveCount(0);
   await expect(row.getByTestId('plan-board-item').filter({ hasText: 'Многоволан' })).toHaveAttribute('data-state', 'live');
+
+  // Протягивание по дням ✳ (22.11.2026): с 1-го по 3-е число месяца — пункт на три дня.
+  const month = iso(0).slice(0, 8);
+  const cellBox = async (d: string) => (await row.locator(`[data-testid="plan-board-cell"][data-date="${month}${d}"]`).boundingBox())!;
+  const a = await cellBox('01');
+  const c = await cellBox('03');
+  const y = a.y + a.height - 3;
+  await page.mouse.move(a.x + a.width / 2, y);
+  await page.mouse.down();
+  await page.mouse.move(c.x + c.width / 2, y, { steps: 6 });
+  await expect(row.getByTestId('plan-board-selection')).toHaveText('3 дня');
+  await page.mouse.up();
+  await expect(dialog).toContainText('Новый пункт');
+  await dialog.getByTestId('plan-board-create-title').fill('Сериями');
+  await dialog.getByTestId('plan-board-create-submit').click();
+  await expect(dialog).toHaveCount(0);
+  const range = row.getByTestId('plan-board-item').filter({ hasText: 'Сериями' });
+  await expect(range).toHaveAttribute('data-start', month + '01');
+  await expect(range).toHaveAttribute('data-end', month + '03');
+
+  // Растягивание за правый край до 5-го числа — сервер хранит новые даты.
+  await range.hover();
+  const edge = (await row.getByTestId('plan-board-edge-end').first().boundingBox())!;
+  const e5 = await cellBox('05');
+  await page.mouse.move(edge.x + edge.width / 2, edge.y + edge.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(e5.x + e5.width / 2, edge.y + edge.height / 2, { steps: 6 });
+  await expect(range).toContainText('— 5 ');
+  await page.screenshot({ path: 'test-results/plans-board/resize.png' });
+  await page.mouse.up();
+  await expect(page.getByTestId('plan-board-card')).toHaveCount(0); // отпускание края карточку не открывает
+  await page.reload();
+  await page.getByTestId('plan-board-month').click();
+  await expect(range).toHaveAttribute('data-end', month + '05');
+  await expect(range).toHaveAttribute('data-start', month + '01');
 });

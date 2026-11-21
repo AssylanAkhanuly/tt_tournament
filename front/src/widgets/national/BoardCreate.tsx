@@ -1,15 +1,16 @@
 'use client';
 
 /* Создание с доски планов ✳ (21.11.2026, решение владельца продукта: «как в
-   календаре — создать щелчком по клетке»). Щелчок по пустому дню в строке
-   спортсмена открывает окно:
+   календаре — создать щелчком по клетке»; с 22.11.2026 — и протягиванием по
+   дням). Выбранные дни строки спортсмена открывают окно:
 
    - у спортсмена есть план, и правит его этот человек (`canAdd`) — «Новый
-     пункт» на этот день: работа (что делаем, срок — щёлкнутый день) или сбор /
+     пункт» на эти дни: работа (что делаем, начало и срок — первый и последний
+     выбранный день) или сбор /
      старт — выбором из календаря подготовки (сроки берутся оттуда, как в
      карточке плана);
    - плана на период нет, а заводить можно (`canCreatePlan`) — «Новый план»
-     с началом в щёлкнутый день и окончанием через четыре недели (подстановка
+     на выбранные дни; выбран один день — с него на четыре недели (подстановка
      наша, правится в окне).
 
    Права проверяет сервер; окно только не предлагает недоступное. */
@@ -32,7 +33,7 @@ import { Picker } from '@/shared/ui/Picker';
 
 const plusDays = (iso: string, n: number) => new Date(Date.parse(iso + 'T00:00:00Z') + n * 86400000).toISOString().slice(0, 10);
 
-export type CreateAt = { row: BoardRow; date: string };
+export type CreateAt = { row: BoardRow; from: string; to: string };
 
 export function BoardCreate({ at, onClose, onDone }: { at: CreateAt | null; onClose: () => void; onDone: () => void }) {
   return (
@@ -98,15 +99,16 @@ function useSubmit(run: () => Promise<unknown>, onDone: () => void, onClose: () 
 function ItemForm({ at, onClose, onDone }: { at: CreateAt; onClose: () => void; onDone: () => void }) {
   const [kind, setKind] = useState<PlanItemKind>('work');
   const [title, setTitle] = useState('');
-  const [due, setDue] = useState<string | null>(at.date);
+  const [startsOn, setStartsOn] = useState<string | null>(at.from);
+  const [due, setDue] = useState<string | null>(at.to);
   const [eventId, setEventId] = useState<string | null>(null);
   const events = useLoad(fetchEvents, 'events');
   const options = (events.data?.events ?? [])
     .filter((e) => e.kind === kind)
     .map((e) => ({ id: e.id, label: e.title + (e.city ? ' · ' + e.city : '') }));
-  const ready = kind === 'work' ? !!title.trim() && !!due : !!eventId;
+  const ready = kind === 'work' ? !!title.trim() && !!due && (!startsOn || startsOn <= due) : !!eventId;
   const s = useSubmit(
-    () => addPlanItem(at.row.plan!.id, { kind, title: kind === 'work' ? title.trim() : '', due: kind === 'work' ? due ?? '' : '', eventId: kind === 'work' ? null : eventId }),
+    () => addPlanItem(at.row.plan!.id, { kind, title: kind === 'work' ? title.trim() : '', due: kind === 'work' ? due ?? '' : '', startsOn: kind === 'work' ? startsOn : null, eventId: kind === 'work' ? null : eventId }),
     onDone,
     onClose,
   );
@@ -138,6 +140,7 @@ function ItemForm({ at, onClose, onDone }: { at: CreateAt; onClose: () => void; 
             <Label>Что делаем</Label>
             <Input className="rounded-xl" data-testid="plan-board-create-title" />
           </TextField>
+          <DateInput label="Начало" value={startsOn} onChange={setStartsOn} testId="plan-board-create-start" />
           <DateInput label="Срок" value={due} onChange={setDue} testId="plan-board-create-due" />
         </>
       ) : (
@@ -156,8 +159,8 @@ function ItemForm({ at, onClose, onDone }: { at: CreateAt; onClose: () => void; 
 }
 
 function PlanForm({ at, onClose, onDone }: { at: CreateAt; onClose: () => void; onDone: () => void }) {
-  const [startsOn, setStartsOn] = useState<string | null>(at.date);
-  const [endsOn, setEndsOn] = useState<string | null>(plusDays(at.date, 27));
+  const [startsOn, setStartsOn] = useState<string | null>(at.from);
+  const [endsOn, setEndsOn] = useState<string | null>(at.to > at.from ? at.to : plusDays(at.from, 27));
   const [goal, setGoal] = useState('');
   const s = useSubmit(() => createPlan(at.row.member.id, { startsOn: startsOn!, endsOn: endsOn!, goal: goal.trim() }), onDone, onClose);
   return (
