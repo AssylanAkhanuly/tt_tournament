@@ -931,7 +931,9 @@ iPhone (`env(safe-area-inset-bottom)`); текст полей 16 px (`TextInput`
 по тому, что прислал сервер (`member.access`, у плана `canEdit` / `canSubmit` /
 `canReview`, у рапорта `canDecide` / `canResubmit`): правил прав на экране нет.
 Транспорт — `entities/national`, блоки — `widgets/national`: `RosterTable`,
-`MemberStrip`, `PlanBoard` (согласование; сбор и старт — выбор из календаря;
+`MemberProfile` (профиль ✳ 22.11.2026: сайдбар — меню кабинета, разделы
+карточки — вкладками, первая — «Профиль»; правка штаба — `MemberControls`),
+`PlanBoard` (согласование; сбор и старт — выбор из календаря;
 отметка «выполнено» — кнопка-значок, а не `Checkbox`: флажок HeroUI внутри ячейки
 `Table` не срабатывает по щелчку), `MedicalCardView`, `SportCard`, `HistoryTable`,
 `ReportsBoard` (`TrainingCalendar` удалён 22.11.2026 вместе с разделом) (рапорт открывается листом в панели справа,

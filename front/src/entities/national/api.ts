@@ -68,7 +68,12 @@ export type NationalMember = {
   access: MemberAccess;
   /** Тем, кто видит планы: «N из M» текущего плана. */
   plan?: { planId: string; done: number; total: number; status: PlanStatus } | null;
+  /** Только в ответе карточки ✳ (22.11.2026): фото, контакты, дата рождения,
+   *  с какого дня в сборной. */
+  profile?: MemberProfileData;
 };
+
+export type MemberProfileData = { avatar: string | null; email: string; phone: string; birthDate: string | null; joined: string };
 
 export type MedicalRecord = {
   id: string;
@@ -87,7 +92,18 @@ export type MedicalCard =
 
 export type SportRecord = { id: string; date: string; text: string; createdBy: string };
 
-export type PlanItem = { id: string; kind: PlanItemKind; title: string; startsOn: string | null; due: string | null; done: boolean; eventId: string | null };
+export type PlanItem = {
+  id: string;
+  kind: PlanItemKind;
+  title: string;
+  startsOn: string | null;
+  due: string | null;
+  done: boolean;
+  eventId: string | null;
+  /** Где пункт во времени и его состояние — считает сервер, как у доски. */
+  period: { from: string; to: string } | null;
+  state: BoardItemState;
+};
 export type TrainingPlan = {
   id: string;
   startsOn: string;
@@ -196,6 +212,15 @@ const member = (m: Raw): NationalMember => {
       plan === undefined
         ? undefined
         : plan && { planId: String(plan.plan_id), done: Number(plan.done), total: Number(plan.total), status: plan.status as PlanStatus },
+    profile: m.profile
+      ? (({ avatar, email, phone, birth_date, joined }: Raw) => ({
+          avatar: (avatar as string | null) ?? null,
+          email: String(email ?? ''),
+          phone: String(phone ?? ''),
+          birthDate: (birth_date as string | null) ?? null,
+          joined: String(joined),
+        }))(m.profile as Raw)
+      : undefined,
   };
 };
 
@@ -226,6 +251,8 @@ const plan = (p: Raw): TrainingPlan => ({
     due: (i.due as string | null) ?? null,
     done: Boolean(i.done),
     eventId: (i.event_id as string | null) ?? null,
+    period: (i.period as { from: string; to: string } | null) ?? null,
+    state: (i.state as BoardItemState) ?? 'planned',
   })),
   done: Number(p.done),
   total: Number(p.total),

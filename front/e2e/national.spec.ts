@@ -33,6 +33,9 @@ async function signIn(browser: Browser, account: { email: string; password: stri
   return page;
 }
 
+/** Вкладки разделов карточки под именем. */
+const tabs = (page: Page) => page.getByRole('navigation', { name: 'Вкладки страницы' }).getByRole('button');
+
 async function pick(page: Page, testId: string, option: string) {
   await page.getByTestId(testId).click();
   await page.getByRole('option', { name: option, exact: true }).click();
@@ -82,10 +85,17 @@ test('сборная: тренер — состав и план, врач — м
   await expect(row.getByTestId('member-plan')).toHaveText('Нет');
   await expect(row.getByTestId('clearance')).toHaveAttribute('data-status', 'none');
 
+  // Карточка — профиль ✳ (22.11.2026): сайдбар — меню кабинета, разделы — вкладками.
   await row.click();
-  await coach.waitForURL(/\/national\/members\/[0-9a-f-]{36}\/plan$/);
-  const memberUrl = coach.url().replace(/\/plan$/, '');
-  await expect(coach.getByTestId('member-name')).toHaveText(athlete);
+  await coach.waitForURL(/\/national\/members\/[0-9a-f-]{36}$/);
+  const memberUrl = coach.url();
+  await expect(coach.getByTestId('page-title')).toHaveText(athlete);
+  await expect(coach.getByRole('navigation', { name: 'Разделы' }).getByRole('button', { name: 'Состав сборной' })).toHaveAttribute('aria-current', 'true');
+  await expect(tabs(coach)).toHaveText(['Профиль', 'План подготовки', 'Медкарта', 'История']);
+  await expect(coach.getByTestId('profile-points')).toContainText('Плана нет');
+  await expect(coach.getByTestId('member-strip').getByTestId('clearance')).toHaveAttribute('data-status', 'none');
+  await tabs(coach).filter({ hasText: 'План подготовки' }).click();
+  await coach.waitForURL(/\/plan$/);
   await coach.getByTestId('plan-create-open').click();
   await coach.getByTestId('plan-goal').fill('Отбор на чемпионат Азии');
   await coach.getByTestId('plan-create-submit').click();
@@ -98,6 +108,17 @@ test('сборная: тренер — состав и план, врач — м
   }
   await coach.locator('[data-testid="item-row"][data-title="Подача короткая под правую"]').getByTestId('item-done').click();
   await expect(coach.getByTestId('plan-progress')).toHaveText('1 из 2');
+  // Профиль: пункты подготовки — невыполненный первым, выполненный после.
+  await tabs(coach).filter({ hasText: 'Профиль' }).click();
+  await coach.waitForURL((url) => url.href === memberUrl);
+  const points = coach.getByTestId('profile-point');
+  await expect(points).toHaveCount(2);
+  await expect(points.first()).toHaveAttribute('data-title', 'Приём длинной подачи');
+  await expect(points.last()).toHaveAttribute('data-state', 'done');
+  await expect(coach.getByTestId('profile-points')).toContainText('1 из 2');
+  await coach.screenshot({ path: 'test-results/national/profile.png', fullPage: true });
+  await coach.getByTestId('profile-medical-open').click();
+  await coach.waitForURL((url) => url.pathname.endsWith('/medical'));
   await coach.getByTestId('home-link').click();
   await coach.waitForURL((url) => url.pathname === '/national');
   await expect(row.getByTestId('member-plan')).toHaveText('1 из 2');
@@ -108,13 +129,16 @@ test('сборная: тренер — состав и план, врач — м
   await expect(drow.getByTestId('member-plan')).toHaveCount(0);
   await expect(doctor.getByTestId('member-add-open')).toHaveCount(0);
   await drow.click();
+  await doctor.waitForURL(/\/doctor\/members\/[0-9a-f-]{36}$/);
+  await expect(doctor.getByTestId('profile-points')).toHaveCount(0);
+  await doctor.getByTestId('profile-medical-open').click();
   await doctor.waitForURL(/\/doctor\/members\/[0-9a-f-]{36}\/medical$/);
 
   await doctor.getByTestId('medical-add-open').click();
   await doctor.getByTestId('medical-until').fill(iso(180));
   await doctor.getByTestId('medical-title').fill('Годен');
   await doctor.getByTestId('medical-submit').click();
-  await expect(doctor.getByTestId('member-strip').getByTestId('clearance')).toHaveAttribute('data-status', 'ok');
+  await expect(doctor.getByTestId('medical-row')).toHaveCount(1);
   await doctor.getByTestId('medical-add-open').click();
   await pick(doctor, 'medical-kind', 'Травма');
   await doctor.getByTestId('medical-until').fill(iso(14));
@@ -123,6 +147,9 @@ test('сборная: тренер — состав и план, врач — м
   await doctor.getByTestId('medical-submit').click();
   await expect(doctor.getByTestId('medical-row')).toHaveCount(2);
   await expect(doctor.locator('[data-testid="medical-row"][data-kind="injury"]')).toContainText('Растяжение связок голеностопа');
+  await tabs(doctor).filter({ hasText: 'Профиль' }).click();
+  await expect(doctor.getByTestId('profile-medical').getByTestId('clearance')).toHaveAttribute('data-status', 'ok');
+  await expect(doctor.getByTestId('profile-medical')).toContainText('Ограничения нагрузки1');
 
   await coach.goto(memberUrl + '/medical');
   await expect(coach.getByTestId('limit-row')).toHaveCount(1);
@@ -138,7 +165,9 @@ test('сборная: личный тренер составляет план, �
   // Личный тренер: план и отправка на согласование.
   const personal = await signIn(browser, E2E_PERSONAL_COACH, '/personal-coach');
   await personal.locator(`[data-testid="member-row"][data-name="${athlete}"]`).click();
-  await personal.waitForURL(/\/personal-coach\/members\/[0-9a-f-]{36}\/plan$/);
+  await personal.waitForURL(/\/personal-coach\/members\/[0-9a-f-]{36}$/);
+  await tabs(personal).filter({ hasText: 'План подготовки' }).click();
+  await personal.waitForURL(/\/plan$/);
   await personal.getByTestId('plan-create-open').click();
   await personal.getByTestId('plan-goal').fill('Первенство Азии');
   await personal.getByTestId('plan-create-submit').click();
@@ -152,9 +181,10 @@ test('сборная: личный тренер составляет план, �
 
   // Главный тренер: возврат с комментарием.
   const coach = await signIn(browser, E2E_NATIONAL_COACH, '/national');
+  await coach.goto(`/national/members/${memberId}`);
+  await expect(coach.getByTestId('strip-personal-coach')).toContainText('Личный тренер (проверки)');
   await coach.goto(`/national/members/${memberId}/plan`);
   await expect(coach.getByTestId('plan-status')).toHaveAttribute('data-status', 'submitted');
-  await expect(coach.getByTestId('strip-personal-coach')).toContainText('Личный тренер (проверки)');
   await coach.getByTestId('plan-return-open').click();
   await coach.getByTestId('plan-return-comment').fill('Добавьте сбор');
   await coach.getByTestId('plan-return-submit').click();
@@ -178,12 +208,17 @@ test('сборная: личный тренер составляет план, �
   await team.goto(`/national/members/${memberId}/plan`);
   await expect(team.getByTestId('plan-status')).toHaveAttribute('data-status', 'approved');
   await expect(team.getByTestId('item-create-open')).toHaveCount(0);
+  await team.goto(`/national/members/${memberId}`);
+  await expect(team.getByTestId('member-strip')).toContainText('Личный тренер (проверки)');
   await expect(team.getByTestId('strip-personal-coach')).toHaveCount(0);
 
   // Психолог: спортивная карточка.
   const psych = await signIn(browser, E2E_PSYCHOLOGIST, '/psychologist');
   await psych.locator(`[data-testid="member-row"][data-name="${athlete}"]`).click();
-  await psych.waitForURL(/\/psychologist\/members\/[0-9a-f-]{36}\/sport$/);
+  await psych.waitForURL(/\/psychologist\/members\/[0-9a-f-]{36}$/);
+  await expect(tabs(psych)).toHaveText(['Профиль', 'Спортивная карточка']);
+  await tabs(psych).filter({ hasText: 'Спортивная карточка' }).click();
+  await psych.waitForURL(/\/sport$/);
   await psych.getByTestId('sport-add-open').click();
   await psych.getByTestId('sport-text').fill('Волнение в решающих партиях');
   await psych.getByTestId('sport-add-submit').click();

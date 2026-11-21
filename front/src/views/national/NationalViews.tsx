@@ -11,15 +11,16 @@
    - `/personal-coach` — личный тренер: «Мои спортсмены», «Планы подготовки»;
    - `/doctor` — врач сборной (21); `/psychologist` — психолог (22).
 
-   Карточка члена сборной — `<кабинет>/members/<id>/<раздел>`: шапка и разделы,
-   которые сервер открыл этому человеку (`member.access`): «План подготовки»,
-   «Медкарта», «История», «Спортивная карточка». Без раздела — первый
-   доступный. Знак в шапке ведёт к составу кабинета. */
+   Карточка члена сборной — `<кабинет>/members/<id>[/<раздел>]` ✳ (22.11.2026,
+   решение владельца продукта): сайдбар остаётся меню кабинета, имя — заголовком,
+   разделы — вкладками под ним: «Профиль» (без раздела в адресе, `MemberProfile`)
+   и те, что сервер открыл этому человеку (`member.access`): «План подготовки»,
+   «Медкарта», «История», «Спортивная карточка». Знак в шапке ведёт к составу. */
 
 import { Spinner } from '@heroui/react';
-import { Brain, ClipboardList, GanttChart, HeartPulse, History, Users } from 'lucide-react';
+import { Brain, ClipboardList, GanttChart, HeartPulse, History, UserRound, Users } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { useEffect, type ReactNode } from 'react';
+import type { ReactNode } from 'react';
 
 import { fetchMember, fetchNationalMe, useLoad, type NationalMember } from '@/entities/national';
 import {
@@ -36,7 +37,7 @@ import { RoleShell, type RoleNavItem } from '@/views/workspace';
 import {
   HistoryTable,
   MedicalCardView,
-  MemberStrip,
+  MemberProfile,
   PlanBoard,
   PlansTimeline,
   RosterTable,
@@ -44,7 +45,7 @@ import {
 } from '@/widgets/national';
 
 export type CabinetKey = 'national' | 'personal' | 'doctor' | 'psychologist';
-export type MemberSection = 'plan' | 'medical' | 'history' | 'sport';
+export type MemberSection = 'profile' | 'plan' | 'medical' | 'history' | 'sport';
 
 type Cabinet = { base: string; kinds: string[]; nav: RoleNavItem[]; roster: string; canAdd: boolean };
 
@@ -87,18 +88,37 @@ const CABINETS: Record<CabinetKey, Cabinet> = {
 };
 
 const SECTIONS: { id: MemberSection; label: string; icon: ReactNode; open: (m: NationalMember) => boolean }[] = [
+  { id: 'profile', label: 'Профиль', icon: <UserRound size={16} />, open: () => true },
   { id: 'plan', label: 'План подготовки', icon: <ClipboardList size={16} />, open: (m) => m.access.plans },
   { id: 'medical', label: 'Медкарта', icon: <HeartPulse size={16} />, open: (m) => m.access.medical !== null },
   { id: 'history', label: 'История', icon: <History size={16} />, open: (m) => m.access.plans },
   { id: 'sport', label: 'Спортивная карточка', icon: <Brain size={16} />, open: (m) => m.access.sport },
 ];
 
-function Shell({ cabinet, active, nav, home, children }: { cabinet: Cabinet; active: string; nav?: RoleNavItem[]; home?: string; children: ReactNode }) {
+function Shell({ cabinet, active, home, sections, section, pageTitle, children }: {
+  cabinet: Cabinet;
+  active: string;
+  home?: string;
+  sections?: RoleNavItem[];
+  section?: string;
+  pageTitle?: string;
+  children: ReactNode;
+}) {
   const { user } = useSession();
   // Первая строка меню человека — его роль из тех, что пускают в кабинет.
   const title = workspacesOf(user).find((w) => cabinet.kinds.includes(w.kind))?.title ?? '';
   return (
-    <RoleShell kind={cabinet.kinds} title={title} nav={nav ?? cabinet.nav} home={home} active={active} bleed>
+    <RoleShell
+      kind={cabinet.kinds}
+      title={title}
+      nav={cabinet.nav}
+      home={home}
+      active={active}
+      sections={sections}
+      section={section}
+      pageTitle={pageTitle}
+      bleed
+    >
       {children}
     </RoleShell>
   );
@@ -128,34 +148,39 @@ export function NationalPlansView({ cabinet: key }: { cabinet: CabinetKey }) {
   );
 }
 
-export function NationalMemberView({ cabinet: key, id, section }: { cabinet: CabinetKey; id: string; section?: MemberSection }) {
+export function NationalMemberView({ cabinet: key, id, section = 'profile' }: { cabinet: CabinetKey; id: string; section?: MemberSection }) {
   const router = useRouter();
   const cabinet = CABINETS[key];
   const member = useLoad(() => fetchMember(id), id);
   const m = member.data;
   const open = m ? SECTIONS.filter((s) => s.open(m)) : [];
-  const current = open.find((s) => s.id === section);
-  const href = (s: MemberSection) => `${cabinet.base}/members/${id}/${s}`;
-
-  useEffect(() => {
-    if (m && !current && open.length) router.replace(href(open[0].id));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [m, current]);
+  // Раздел, который этому человеку не открыт, — профиль (он есть у всех).
+  const current = open.find((s) => s.id === section) ?? open[0];
+  const href = (s: MemberSection) => `${cabinet.base}/members/${id}` + (s === 'profile' ? '' : '/' + s);
 
   return (
     <Shell
       cabinet={cabinet}
-      active={current?.label ?? ''}
-      nav={open.map((s) => ({ label: s.label, href: href(s.id), icon: s.icon }))}
+      active={cabinet.roster}
       home={cabinet.base}
+      sections={open.map((s) => ({ label: s.label, href: href(s.id), icon: s.icon }))}
+      section={current?.label}
+      pageTitle={m?.person.name}
     >
       {member.error ? (
         <p className="p-6 text-[13px] text-red-600">{member.error}</p>
       ) : !m || !current ? (
         <Spinner className="m-auto" />
+      ) : current.id === 'profile' ? (
+        <MemberProfile
+          member={m}
+          onOpenPlan={() => router.push(href('plan'))}
+          onOpenMedical={() => router.push(href('medical'))}
+          onChanged={member.reload}
+          onRemoved={() => router.push(cabinet.base)}
+        />
       ) : (
         <div className="flex h-full min-h-0 flex-col overflow-y-auto">
-          <MemberStrip member={m} canEdit={m.access.roster} onChanged={member.reload} onRemoved={() => router.push(cabinet.base)} />
           {current.id === 'plan' && <PlanBoard memberId={id} canCreate={m.access.planAuthor} onChanged={member.reload} />}
           {current.id === 'medical' && <MedicalCardView memberId={id} onChanged={member.reload} />}
           {current.id === 'history' && <HistoryTable memberId={id} />}
