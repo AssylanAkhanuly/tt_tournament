@@ -267,7 +267,10 @@
   месте — шкалы `brand` (акцент, бывший `blue`) и `neutral` во входе Tailwind
   (`front/src/shared/kit/tailwind.src.css`), там же тема HeroUI; знак —
   `front/src/shared/kit/brand/qtt-logo*.svg`. Новый акцентный класс — только
-  `brand-*`, не `blue-*`. Разбор брендбука —
+  `brand-*`, не `blue-*`. Дополнительные цвета брендбука (стр. 9 и 11) — шкала
+  `qtt-*` там же (`qtt-blue`, `qtt-teal`, `qtt-violet`, `qtt-coral`,
+  `qtt-peach`…) ✳ (21.11.2026, решение владельца продукта): для различения
+  видов и состояний, первое применение — доска планов сборной. Разбор брендбука —
   `docs/refs/qaz-table-tennis-brendbuk-2026-11-05.md`.
 - **Цвет и форма — только токенами.** Единственный источник —
   `design/src/theme/tokens.css`; «сырых» `#hex`/`rgba()` и `border-radius: 12px`
