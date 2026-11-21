@@ -7,6 +7,7 @@ from datetime import date
 
 from django.http import FileResponse
 from django.shortcuts import get_object_or_404
+from django.utils import timezone
 from rest_framework import status
 from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
 from rest_framework.permissions import IsAuthenticated
@@ -88,7 +89,14 @@ def _event(e: TrainingEvent) -> dict:
 
 
 def _item(i: PlanItem) -> dict:
+    # Где пункт во времени и в каком он состоянии — те же правила, что у доски
+    # (`board.item_dates`, `board.item_state`): профиль и доска не расходятся.
+    from . import board
+
+    s_, e_ = board.item_dates(i)
     return {
+        "period": {"from": _iso(s_), "to": _iso(e_)} if s_ else None,
+        "state": board.item_state(i, s_, e_, date.today()) if s_ else ("done" if i.done else "planned"),
         "id": str(i.id), "kind": i.kind, "title": i.title, "starts_on": _iso(i.starts_on), "due": _iso(i.due),
         "done": i.done,
         "event_id": str(i.event_id) if i.event_id else None,
@@ -188,9 +196,24 @@ class PersonalCoachesView(Base):
         return Response([{"id": str(u.id), "name": u.name} for u in s.personal_coaches(request.user)])
 
 
+def _profile(m: NationalTeamMember) -> dict:
+    """Профиль спортсмена ✳ (22.11.2026, образец владельца продукта): фото,
+    контакты, дата рождения, с какого дня в сборной. Телефон у заведённых из
+    рейтинг-листа — служебный («ath-…»), такой не показываем."""
+    u = m.user
+    card = getattr(u, "rating_profile", None)
+    phone = u.phone if u.phone and not u.phone.startswith("ath-") else ""
+    return {
+        "avatar": u.avatar.url if u.avatar else None, "email": u.email or "", "phone": phone,
+        "birth_date": _iso(card.birth_date) if card and card.birth_date else None,
+        "joined": _iso(timezone.localtime(m.added_at).date()),
+    }
+
+
 class MemberView(Base):
     def get(self, request, pk):
-        return Response(_member(_visible(request, pk), request.user))
+        m = _visible(request, pk)
+        return Response({**_member(m, request.user), "profile": _profile(m)})
 
     def patch(self, request, pk):
         m = s.update_member(get_object_or_404(NationalTeamMember, pk=pk), request.data, request.user)

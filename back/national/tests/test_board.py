@@ -8,6 +8,7 @@
 import datetime
 
 import pytest
+from django.utils import timezone
 
 from national import board
 from national.models import NationalTeamMember, PlanItem, TrainingEvent, TrainingPlan
@@ -119,3 +120,16 @@ def test_item_created_with_range(team):
     r = client_for(team["head"]).post(f"/api/national/plans/{team['plan'].pk}/items/", {
         "kind": "work", "title": "Многоволан", "starts_on": (TODAY + D(1)).isoformat(), "due": (TODAY + D(3)).isoformat()}, format="json")
     assert r.status_code == 201 and r.json()["starts_on"] == (TODAY + D(1)).isoformat()
+
+
+# ── Профиль спортсмена ✳ (22.11.2026) ────────────────────────────────────────
+
+def test_member_profile_and_item_state(team):
+    head = client_for(team["head"])
+    r = head.get(f"/api/national/members/{team['ma'].pk}/").json()
+    assert r["profile"]["phone"] == "+77005550100"
+    assert r["profile"]["joined"] == timezone.localtime(team["ma"].added_at).date().isoformat()
+    plans = head.get(f"/api/national/members/{team['ma'].pk}/plans/").json()
+    items = {i["title"]: i for i in plans[0]["items"]}
+    assert items["Тест ОФП"]["state"] == "done"
+    assert items["Сбор"]["period"] == {"from": (TODAY - D(1)).isoformat(), "to": (TODAY + D(3)).isoformat()}
