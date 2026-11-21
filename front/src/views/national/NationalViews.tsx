@@ -16,7 +16,7 @@
    доступный. Знак в шапке ведёт к составу кабинета. */
 
 import { Spinner } from '@heroui/react';
-import { Brain, CalendarRange, ClipboardList, FileSignature, HeartPulse, History, Users } from 'lucide-react';
+import { Brain, CalendarRange, ClipboardList, FileSignature, GanttChart, HeartPulse, History, Users } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useEffect, type ReactNode } from 'react';
 
@@ -37,6 +37,7 @@ import {
   MedicalCardView,
   MemberStrip,
   PlanBoard,
+  PlansTimeline,
   ReportsBoard,
   RosterTable,
   SportCard,
@@ -55,9 +56,11 @@ const CABINETS: Record<CabinetKey, Cabinet> = {
     roster: 'Состав сборной',
     canAdd: true,
     nav: [
-      { label: 'Состав сборной', href: '/national', icon: <Users size={16} /> },
-      { label: 'Календарь подготовки', href: '/national/calendar', icon: <CalendarRange size={16} /> },
-      { label: 'Рапорты', href: '/national/reports', icon: <FileSignature size={16} /> },
+      { label: 'Состав сборной', href: '/national', icon: <Users size={16} />, group: 'Сборная' },
+      // Доска планов всех спортсменов ✳ (21.11.2026, образец Visitly).
+      { label: 'Планы подготовки', href: '/national/plans', icon: <GanttChart size={16} />, group: 'Сборная' },
+      { label: 'Календарь подготовки', href: '/national/calendar', icon: <CalendarRange size={16} />, group: 'Сборная' },
+      { label: 'Рапорты', href: '/national/reports', icon: <FileSignature size={16} />, group: 'Документы' },
     ],
   },
   personal: {
@@ -67,6 +70,7 @@ const CABINETS: Record<CabinetKey, Cabinet> = {
     canAdd: false,
     nav: [
       { label: 'Мои спортсмены', href: '/personal-coach', icon: <Users size={16} /> },
+      { label: 'Планы подготовки', href: '/personal-coach/plans', icon: <GanttChart size={16} /> },
       { label: 'Календарь подготовки', href: '/personal-coach/calendar', icon: <CalendarRange size={16} /> },
     ],
   },
@@ -121,6 +125,18 @@ export function NationalCalendarView({ cabinet: key }: { cabinet: CabinetKey }) 
   return (
     <Shell cabinet={cabinet} active="Календарь подготовки">
       <TrainingCalendar />
+    </Shell>
+  );
+}
+
+/** Доска планов подготовки ✳ (21.11.2026): строка на спортсмена, пункты его
+ *  планов по дням; щелчок по имени или «Открыть план» — раздел плана карточки. */
+export function NationalPlansView({ cabinet: key }: { cabinet: CabinetKey }) {
+  const router = useRouter();
+  const cabinet = CABINETS[key];
+  return (
+    <Shell cabinet={cabinet} active="Планы подготовки">
+      <PlansTimeline onOpenPlan={(id) => router.push(`${cabinet.base}/members/${id}/plan`)} />
     </Shell>
   );
 }

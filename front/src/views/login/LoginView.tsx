@@ -122,7 +122,7 @@ export function LoginView() {
       <AuthScreen>
         {/* Знак — на синей половине экрана ✳ (19.11.2026), у формы — только заголовок. */}
         <div className="mb-6">
-          <div className="text-2xl font-semibold tracking-tight">Вход в систему</div>
+          <div className="text-center text-2xl font-semibold tracking-tight">Вход в систему</div>
         </div>
 
         {!loading && current && !adding ? (

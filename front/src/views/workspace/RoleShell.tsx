@@ -27,6 +27,8 @@ export function RoleShell({
   home,
   sub,
   actions,
+  sections,
+  section,
   children,
 }: {
   /** Вид роли (`Role.kind` на сервере), без которой в кабинет не пускаем;
@@ -48,6 +50,12 @@ export function RoleShell({
   sub?: ShellSubItem[];
   /** Полоса внизу рабочей области. */
   actions?: ReactNode;
+  /** Разделы страницы (турнир, сезон, лига, тур) — вкладками под заголовком,
+   *  а сайдбар остаётся разделами кабинета ✳ (21.11.2026, образец Aligno).
+   *  `sub` тогда — виды выбранной вкладки. */
+  sections?: RoleNavItem[];
+  /** Выбранная вкладка. */
+  section?: string;
   children?: ReactNode;
 }) {
   const router = useRouter();
@@ -66,7 +74,14 @@ export function RoleShell({
       role={{ title }}
       roles={workspacesOf(user)}
       person={{ name: user.name, email: user.email }}
-      nav={sub ? nav.map((n) => (n.label === active ? { ...n, children: sub } : n)) : nav}
+      nav={sub && !sections ? nav.map((n) => (n.label === active ? { ...n, children: sub } : n)) : nav}
+      tabs={sections?.map((s) => ({
+        label: s.label,
+        href: s.href,
+        icon: s.icon,
+        active: s.label === section,
+        views: s.label === section ? (sub ?? s.children) : undefined,
+      }))}
       active={active}
       title={pageTitle}
       bleed={bleed}

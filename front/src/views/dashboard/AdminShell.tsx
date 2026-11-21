@@ -15,7 +15,7 @@ import type { ShellSubItem } from '@/widgets/app-shell';
 const NAV: RoleNavItem[] = [
   // Евразийская лига — вид «Календаря», а не свой раздел ✳ (19.11.2026,
   // решение владельца продукта): `DashboardView`, `?view=league`.
-  { label: 'Календарь', href: '/dashboard', icon: <CalendarDays size={16} /> },
+  { label: 'Календарь', href: '/dashboard', icon: <CalendarDays size={16} />, group: 'Соревнования' },
 ];
 
 export function AdminShell({
@@ -26,6 +26,8 @@ export function AdminShell({
   context,
   home,
   sub,
+  sections,
+  section,
   children,
 }: {
   active: string;
@@ -38,6 +40,10 @@ export function AdminShell({
   home?: string;
   /** Подпункты активного раздела (вид экрана: «Месяц», «Таблица») ✳ 30.10.2026. */
   sub?: ShellSubItem[];
+  /** Страница внутри кабинета ✳ (21.11.2026): разделы вкладками и
+   *  выбранный — см. `RoleShell`. Сайдбар при этом — разделы кабинета. */
+  sections?: RoleNavItem[];
+  section?: string;
   children: ReactNode;
 }) {
   return (
@@ -51,6 +57,8 @@ export function AdminShell({
       active={active}
       pageTitle={title}
       bleed={bleed}
+      sections={sections}
+      section={section}
     >
       {children}
     </RoleShell>

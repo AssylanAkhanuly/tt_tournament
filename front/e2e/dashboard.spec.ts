@@ -477,12 +477,13 @@ test('внутри турнира сайдбар — разделы турнир
   // Без раздела — первый, «Сведения».
   await page.waitForURL((url) => url.pathname === '/dashboard/tournaments/' + demo.id + '/info');
 
-  // Сайдбар: разделы турнира вместо разделов кабинета, шапки турнира нет ✳ (19.11.2026).
+  // Разделы турнира — вкладками под названием, сайдбар — «Календарь» кабинета ✳ (21.11.2026).
   await expect(page.getByTestId('tournament-context')).toHaveCount(0);
   await expect(page.getByTestId('info-name')).toHaveValue(demo.name);
-  // Разделы — кнопки без стрелки раскрытия и подпунктов.
+  await expect(page.getByTestId('page-title')).toHaveText(demo.name);
+  await expect(page.getByRole('navigation', { name: 'Разделы' }).getByRole('button', { name: 'Календарь' })).toBeVisible();
   const разделы = page
-    .getByRole('navigation', { name: 'Разделы' })
+    .getByRole('navigation', { name: 'Вкладки страницы' })
     .getByRole('button')
     .and(page.locator(':not([data-testid])'));
   await expect(разделы).toHaveText(['Сведения', 'Спортсмены', 'Судьи', 'Расписание']);
@@ -492,10 +493,10 @@ test('внутри турнира сайдбар — разделы турнир
   const сдвиги: number[] = [];
   await page.exposeFunction('__shift', (y: number) => сдвиги.push(y));
   await page.evaluate(() => {
-    const nav = document.querySelector('nav[aria-label="Разделы"]')!;
+    const nav = document.querySelector('nav[aria-label="Вкладки страницы"]')!;
     const y0 = nav.getBoundingClientRect().y;
     const watch = () => {
-      const n = document.querySelector('nav[aria-label="Разделы"]');
+      const n = document.querySelector('nav[aria-label="Вкладки страницы"]');
       if (n && Math.round(n.getBoundingClientRect().y) !== Math.round(y0))
         (window as unknown as { __shift: (y: number) => void }).__shift(n.getBoundingClientRect().y);
       requestAnimationFrame(watch);

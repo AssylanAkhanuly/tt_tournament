@@ -361,6 +361,66 @@ export const reviewPlan = (id: string, approve: boolean, comment = '') =>
   send('POST', `/api/national/plans/${id}/review/`, { approve, comment });
 export const addPlanItem = (planId: string, d: { kind: PlanItemKind; title: string; due: string; eventId?: string | null }) =>
   send('POST', `/api/national/plans/${planId}/items/`, { kind: d.kind, title: d.title, due: d.due || null, event_id: d.eventId ?? null });
+// ── Доска планов ✳ (21.11.2026, NATIONAL.md «Доска планов») ──────────────────
+
+/** Состояние пункта на доске — считает сервер (`national/board.py`). */
+export type BoardItemState = 'done' | 'live' | 'planned' | 'overdue';
+export type BoardItem = {
+  id: string;
+  title: string;
+  kind: PlanItemKind;
+  startsOn: string;
+  endsOn: string;
+  state: BoardItemState;
+  planStatus: PlanStatus;
+  city: string;
+};
+export type BoardRow = {
+  member: { id: string; person: NationalPerson; squad: Squad; ageGroup: AgeGroup };
+  plan: { id: string; status: PlanStatus; startsOn: string; endsOn: string; goal: string; done: number; total: number } | null;
+  items: BoardItem[];
+  canMark: boolean;
+};
+export type PlanBoardData = { from: string; to: string; today: string; rows: BoardRow[] };
+
+export async function fetchPlanBoard(from: string, to: string): Promise<PlanBoardData> {
+  const r = await request<Raw>(`/api/national/plans/board/?from=${from}&to=${to}`);
+  return {
+    from: String(r.from),
+    to: String(r.to),
+    today: String(r.today),
+    rows: (r.rows as Raw[]).map((x) => {
+      const m = x.member as Raw;
+      const p = x.plan as Raw | null;
+      return {
+        member: { id: String(m.id), person: person(m.person as Raw), squad: m.squad as Squad, ageGroup: m.age_group as AgeGroup },
+        plan: p
+          ? {
+              id: String(p.id),
+              status: p.status as PlanStatus,
+              startsOn: String(p.starts_on),
+              endsOn: String(p.ends_on),
+              goal: String(p.goal ?? ''),
+              done: Number(p.done),
+              total: Number(p.total),
+            }
+          : null,
+        items: (x.items as Raw[]).map((i) => ({
+          id: String(i.id),
+          title: String(i.title),
+          kind: i.kind as PlanItemKind,
+          startsOn: String(i.starts_on),
+          endsOn: String(i.ends_on),
+          state: i.state as BoardItemState,
+          planStatus: i.plan_status as PlanStatus,
+          city: String(i.city ?? ''),
+        })),
+        canMark: Boolean(x.can_mark),
+      };
+    }),
+  };
+}
+
 export const setPlanItemDone = (id: string, done: boolean) => send('PATCH', `/api/national/plan-items/${id}/`, { done });
 export const deletePlanItem = (id: string) => send('DELETE', `/api/national/plan-items/${id}/`);
 

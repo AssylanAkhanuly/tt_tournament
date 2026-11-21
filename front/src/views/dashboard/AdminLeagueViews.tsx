@@ -27,6 +27,10 @@ import {
 import { AdminShell } from './AdminShell';
 import { divisionHref, LEAGUE_BASE as BASE, seasonHref } from './leagueHref';
 
+/** Страницы Лиги ✳ (21.11.2026): заголовок и разделы вкладками в рабочей
+ *  области, сайдбар — «Календарь»; хлебных крошек нет (решение владельца продукта). */
+const seasonLabel = (name: string) => 'Евразийская лига · ' + name;
+
 function Failed({ error }: { error: string }) {
   return (
     <p className="p-6 text-[13px] text-red-600" data-testid="league-error">
@@ -41,7 +45,13 @@ export function AdminSeasonView({ id, section }: { id: string; section: SeasonSe
   const nav = SEASON_SECTIONS.map((s) => ({ label: s.label, href: seasonHref(id, s.id) }));
   const active = SEASON_SECTIONS.find((s) => s.id === section)!.label;
   return (
-    <AdminShell active={active} nav={nav} bleed>
+    <AdminShell
+      active="Календарь"
+      sections={nav}
+      section={active}
+      title={season.data ? seasonLabel(season.data.name) : ''}
+      bleed
+    >
       {season.error ? (
         <Failed error={season.error} />
       ) : !season.data ? (
@@ -67,7 +77,14 @@ export function AdminDivisionView({ id, section }: { id: string; section: Divisi
   const active = DIVISION_SECTIONS.find((s) => s.id === section)!.label;
   const d = division.data;
   return (
-    <AdminShell active={active} nav={nav} home={d ? seasonHref(d.seasonId) : undefined} bleed>
+    <AdminShell
+      active="Календарь"
+      sections={nav}
+      section={active}
+      title={d?.name ?? ''}
+      home={d ? seasonHref(d.seasonId) : undefined}
+      bleed
+    >
       {division.error ? (
         <Failed error={division.error} />
       ) : !division.data ? (
@@ -87,6 +104,8 @@ export function AdminDivisionView({ id, section }: { id: string; section: Divisi
 }
 
 export type TourSection = 'matches' | 'referees' | 'schedule';
+
+const tourTitle = (t: { number: number; city: string }) => 'Тур ' + t.number + (t.city ? ' · ' + t.city : '');
 
 /** Тур: разделы «Встречи» (счёт), «Судьи» (судьи стола) и «Расписание» ✳
  *  (19.11.2026, как у турнира) — у расписания подпункты «Список · День»
@@ -110,10 +129,11 @@ export function AdminTourView({ id, section }: { id: string; section: TourSectio
       : undefined;
   return (
     <AdminShell
-      active={section === 'schedule' ? 'Расписание' : section === 'referees' ? 'Судьи' : 'Встречи'}
-      nav={nav}
+      active="Календарь"
+      sections={nav}
+      section={section === 'schedule' ? 'Расписание' : section === 'referees' ? 'Судьи' : 'Встречи'}
       sub={sub}
-     
+      title={t ? tourTitle(t) : ''}
       home={t ? divisionHref(t.division.id, 'tours') : undefined}
       bleed
     >
