@@ -63,7 +63,13 @@ def test_who_sees_the_board(team):
     r = client_for(team["personal"]).get(
         "/api/national/plans/board/", {"from": (TODAY - D(7)).isoformat(), "to": (TODAY + D(7)).isoformat()})
     assert r.status_code == 200
-    assert [x["member"]["person"]["name"] for x in r.json()["rows"]] == ["Спортсмен А"]
+    rows = r.json()["rows"]
+    assert [x["member"]["person"]["name"] for x in rows] == ["Спортсмен А"]
+    # План согласован — личному тренеру пункт с доски не добавить, новый план — можно.
+    assert rows[0]["can_add"] is False and rows[0]["can_create_plan"] is True
+    head = client_for(team["head"]).get("/api/national/plans/board/", {"from": (TODAY - D(7)).isoformat(), "to": (TODAY + D(7)).isoformat()}).json()["rows"]
+    by = {x["member"]["person"]["name"]: x for x in head}
+    assert by["Спортсмен А"]["can_add"] is True and by["Спортсмен Б"]["can_add"] is False
 
 
 def test_window_is_limited(team):

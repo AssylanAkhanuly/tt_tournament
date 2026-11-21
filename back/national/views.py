@@ -302,6 +302,11 @@ class PlanBoardView(Base):
                            "age_group": r["member"].age_group},
                 # Отметку «выполнено» ставит штаб или личный тренер спортсмена — как `can_mark` у плана.
                 "can_mark": s.is_head_staff(u) or r["member"].personal_coach_id == u.id,
+                # Создание с доски ✳ (21.11.2026): пункт — тем, кто правит план сейчас
+                # (`require_plan_editor`), новый план — штабу и личному тренеру (`create_plan`).
+                "can_add": bool(r["plan"]) and (s.is_head_staff(u) or (
+                    r["member"].personal_coach_id == u.id and r["plan"].status in ("draft", "returned"))),
+                "can_create_plan": s.is_head_staff(u) or r["member"].personal_coach_id == u.id,
                 "plan": {"id": str(r["plan"].id), "status": r["plan"].status, "starts_on": _iso(r["plan"].starts_on),
                          "ends_on": _iso(r["plan"].ends_on), "goal": r["plan"].goal,
                          "done": r["plan"].items.filter(done=True).count(), "total": r["plan"].items.count()}
