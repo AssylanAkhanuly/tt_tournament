@@ -12,13 +12,14 @@
    - `/doctor` — врач сборной (21); `/psychologist` — психолог (22).
 
    Карточка члена сборной — `<кабинет>/members/<id>[/<раздел>]` ✳ (22.11.2026,
-   решение владельца продукта): сайдбар остаётся меню кабинета, имя — заголовком,
-   разделы — вкладками под ним: «Профиль» (без раздела в адресе, `MemberProfile`)
-   и те, что сервер открыл этому человеку (`member.access`): «План подготовки»,
-   «Медкарта», «История», «Спортивная карточка». Знак в шапке ведёт к составу. */
+   решение владельца продукта): сайдбар остаётся меню кабинета, имя — заголовком.
+   Без раздела в адресе — профиль (`MemberProfile`); разделы, что сервер открыл
+   этому человеку (`member.access`) — «План подготовки», «Медкарта», «История»,
+   «Спортивная карточка», — открываются ссылками из блоков профиля, вкладок нет;
+   в разделе — «← Профиль» (меню туда не ведёт). Знак в шапке ведёт к составу. */
 
-import { Spinner } from '@heroui/react';
-import { Brain, ClipboardList, GanttChart, HeartPulse, History, UserRound, Users } from 'lucide-react';
+import { Button, Spinner } from '@heroui/react';
+import { Brain, ChevronLeft, ClipboardList, GanttChart, HeartPulse, History, UserRound, Users } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import type { ReactNode } from 'react';
 
@@ -163,9 +164,8 @@ export function NationalMemberView({ cabinet: key, id, section = 'profile' }: { 
       cabinet={cabinet}
       active={cabinet.roster}
       home={cabinet.base}
-      sections={open.map((s) => ({ label: s.label, href: href(s.id), icon: s.icon }))}
-      section={current?.label}
-      pageTitle={m?.person.name}
+      sections={[]}
+      pageTitle={m ? m.person.name + (current && current.id !== 'profile' ? ' · ' + current.label : '') : undefined}
     >
       {member.error ? (
         <p className="p-6 text-[13px] text-red-600">{member.error}</p>
@@ -175,12 +175,19 @@ export function NationalMemberView({ cabinet: key, id, section = 'profile' }: { 
         <MemberProfile
           member={m}
           onOpenPlan={() => router.push(href('plan'))}
+          onOpenHistory={() => router.push(href('history'))}
           onOpenMedical={() => router.push(href('medical'))}
+          onOpenSport={() => router.push(href('sport'))}
           onChanged={member.reload}
           onRemoved={() => router.push(cabinet.base)}
         />
       ) : (
         <div className="flex h-full min-h-0 flex-col overflow-y-auto">
+          <div className="px-4 pt-3">
+            <Button size="sm" variant="ghost" className="rounded-xl" onPress={() => router.push(href('profile'))} data-testid="member-back">
+              <ChevronLeft size={16} /> Профиль
+            </Button>
+          </div>
           {current.id === 'plan' && <PlanBoard memberId={id} canCreate={m.access.planAuthor} onChanged={member.reload} />}
           {current.id === 'medical' && <MedicalCardView memberId={id} onChanged={member.reload} />}
           {current.id === 'history' && <HistoryTable memberId={id} />}

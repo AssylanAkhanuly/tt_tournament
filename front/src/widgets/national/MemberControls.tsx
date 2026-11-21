@@ -1,34 +1,25 @@
 'use client';
 
-/* Правка члена сборной главным тренером ✳ (19.11.2026, флоу Э11.2; с
-   22.11.2026 — в шапке профиля): личный тренер, состав и группа — выбором,
-   «Убрать из сборной» — значком с подтверждением. Показывается только тем,
-   кому сервер открыл правку состава (`access.roster`). HeroUI + Tailwind. */
+/* Правка члена сборной в шапке профиля ✳ (22.11.2026, решения владельца
+   продукта): состав, группа и личный тренер — строками сведений «Состав:
+   Основной ▾», значение — кнопка с меню выбора (`Dropdown` HeroUI); «Убрать
+   из сборной» — значком с подтверждением. Показывается тому, кому сервер
+   открыл правку состава (`access.roster`); остальным — те же строки текстом.
+   HeroUI + Tailwind. */
 
-import { AlertDialog, Button, Tooltip } from '@heroui/react';
-import { UserMinus } from 'lucide-react';
+import { AlertDialog, Button, Dropdown, Label } from '@heroui/react';
+import { ChevronDown, UserMinus } from 'lucide-react';
 import { useState } from 'react';
 
-import {
-  fetchPersonalCoaches,
-  removeMember,
-  updateMember,
-  useLoad,
-  type AgeGroup,
-  type NationalMember,
-  type Squad,
-} from '@/entities/national';
+import { fetchPersonalCoaches, removeMember, updateMember, useLoad, type NationalMember } from '@/entities/national';
 import { AlertSheet } from '@/shared/ui/ModalSheet';
-import { Picker } from '@/shared/ui/Picker';
 
-import { AGE_GROUPS, SQUADS } from './RosterTable';
+export const NO_COACH = 'none';
 
-const NONE = 'none';
-
-export function MemberControls({ member, onChanged, onRemoved }: { member: NationalMember; onChanged: () => void; onRemoved: () => void }) {
+/** Правка с ошибкой рядом: зовёт сервер, после — `after`. */
+export function useMemberEdit(canEdit: boolean) {
   const [error, setError] = useState<string | null>(null);
-  const coaches = useLoad(fetchPersonalCoaches, 'coaches');
-
+  const coaches = useLoad(() => (canEdit ? fetchPersonalCoaches() : Promise.resolve([])), canEdit ? 'coaches' : 'none');
   async function run(action: () => Promise<unknown>, after: () => void) {
     setError(null);
     try {
@@ -38,62 +29,65 @@ export function MemberControls({ member, onChanged, onRemoved }: { member: Natio
       setError((e as Error).message);
     }
   }
+  return { error, run, coaches: coaches.data ?? [], update: updateMember };
+}
 
+/** Значение строки сведений с меню выбора: текст и стрелка, по щелчку — список. */
+export function ValueSelect({ label, value, text, options, onChange, testId }: {
+  label: string;
+  value: string;
+  text: string;
+  options: { id: string; label: string }[];
+  onChange: (id: string) => void;
+  testId: string;
+}) {
   return (
-    <div className="flex flex-wrap items-end gap-2" data-testid="member-controls">
-      <Picker
-        label="Личный тренер"
-        showLabel
-        className="w-52 min-w-0"
-        value={member.personalCoach?.id ?? NONE}
-        options={[{ id: NONE, label: 'Без личного тренера' }, ...(coaches.data ?? []).map((c) => ({ id: c.id, label: c.name }))]}
-        onChange={(k) => void run(() => updateMember(member.id, { personalCoachId: k === NONE ? null : k }), onChanged)}
-        testId="strip-personal-coach"
-      />
-      <Picker
-        label="Состав"
-        showLabel
-        className="w-40 min-w-0"
-        value={member.squad}
-        options={SQUADS}
-        onChange={(k) => void run(() => updateMember(member.id, { squad: k as Squad }), onChanged)}
-        testId="strip-squad"
-      />
-      <Picker
-        label="Возрастная группа"
-        showLabel
-        className="w-40 min-w-0"
-        value={member.ageGroup}
-        options={AGE_GROUPS}
-        onChange={(k) => void run(() => updateMember(member.id, { ageGroup: k as AgeGroup }), onChanged)}
-        testId="strip-age-group"
-      />
-      <AlertDialog>
-        <Tooltip>
-          <Button isIconOnly variant="ghost" aria-label="Убрать из сборной" className="rounded-xl text-red-600" data-testid="member-remove">
-            <UserMinus size={16} />
+    <Dropdown>
+      <Dropdown.Trigger
+        aria-label={label}
+        className="-mx-1.5 inline-flex min-w-0 items-center gap-1 rounded-lg px-1.5 py-0.5 font-medium hover:bg-neutral-100"
+        data-testid={testId}
+      >
+        <span className="truncate">{text}</span>
+        <ChevronDown size={14} className="shrink-0 text-neutral-500" />
+      </Dropdown.Trigger>
+      <Dropdown.Popover placement="bottom start" className="rounded-xl">
+        <Dropdown.Menu aria-label={label} selectionMode="single" selectedKeys={[value]} onAction={(key) => key !== value && onChange(String(key))}>
+          {options.map((o) => (
+            <Dropdown.Item key={o.id} id={o.id} textValue={o.label} className="rounded-xl">
+              <Dropdown.ItemIndicator />
+              <Label>{o.label}</Label>
+            </Dropdown.Item>
+          ))}
+        </Dropdown.Menu>
+      </Dropdown.Popover>
+    </Dropdown>
+  );
+}
+
+export function RemoveMemberButton({ member, onRemove }: { member: NationalMember; onRemove: () => void }) {
+  return (
+    <AlertDialog>
+      <Button size="sm" variant="ghost" className="rounded-xl text-red-600" data-testid="member-remove">
+        <UserMinus size={15} /> Убрать из сборной
+      </Button>
+      <AlertSheet className="rounded-xl" testId="member-remove-confirm">
+        <AlertDialog.Header>
+          <AlertDialog.Icon status="danger" />
+          <AlertDialog.Heading>Убрать из сборной?</AlertDialog.Heading>
+        </AlertDialog.Header>
+        <AlertDialog.Body>
+          <p className="text-[14px]">{member.person.name}</p>
+        </AlertDialog.Body>
+        <AlertDialog.Footer>
+          <Button slot="close" variant="tertiary" className="rounded-xl">
+            Отмена
           </Button>
-          <Tooltip.Content>Убрать из сборной</Tooltip.Content>
-        </Tooltip>
-        <AlertSheet className="rounded-xl" testId="member-remove-confirm">
-          <AlertDialog.Header>
-            <AlertDialog.Icon status="danger" />
-            <AlertDialog.Heading>Убрать из сборной?</AlertDialog.Heading>
-          </AlertDialog.Header>
-          <AlertDialog.Body>
-            <p className="text-[14px]">{member.person.name}</p>
-          </AlertDialog.Body>
-          <AlertDialog.Footer>
-            <Button slot="close" variant="tertiary" className="rounded-xl">
-              Отмена
-            </Button>
-            <Button slot="close" variant="danger" className="rounded-xl" onPress={() => void run(() => removeMember(member.id), onRemoved)}>
-              Убрать
-            </Button>
-          </AlertDialog.Footer>
-        </AlertSheet>
-      </AlertDialog>
-      {error && <p className="m-0 w-full text-[13px] text-red-600">{error}</p>}
-    </div>
+          <Button slot="close" variant="danger" className="rounded-xl" onPress={() => void removeMember(member.id).then(onRemove)}>
+            Убрать
+          </Button>
+        </AlertDialog.Footer>
+      </AlertSheet>
+    </AlertDialog>
   );
 }

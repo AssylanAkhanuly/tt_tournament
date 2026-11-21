@@ -380,12 +380,18 @@ export function AppShell({
 
         <main className="flex min-h-0 min-w-0 flex-1 flex-col bg-shell-page">
           {/* Заголовок и вкладки страницы ✳ (21.11.2026). Место заголовка
-              держится и пока имя грузится — вкладки не прыгают. */}
+              держится и пока имя грузится — вкладки не прыгают. Пустой список
+              вкладок — только заголовок с чертой (карточка члена сборной ✳
+              22.11.2026: разделы открываются из профиля). */}
           {tabs && (
-            <header className="shrink-0 px-6 pt-5 max-md:px-4 max-md:pt-3" data-testid="page-header">
+            <header
+              className={'shrink-0 px-6 pt-5 max-md:px-4 max-md:pt-3 ' + (tabs.length ? '' : 'border-b border-shell-line pb-4')}
+              data-testid="page-header"
+            >
               <h1 className="min-h-9 truncate text-[26px] leading-9 font-semibold tracking-tight max-md:text-[20px]" data-testid="page-title">
                 {title}
               </h1>
+              {tabs.length > 0 && (
               <div className="mt-3 flex flex-wrap items-end justify-between gap-x-6 gap-y-2 border-b border-shell-line">
                 <nav className="-mb-px flex gap-6 overflow-x-auto" aria-label="Вкладки страницы">
                   {tabs.map((t) => (
@@ -435,6 +441,7 @@ export function AppShell({
                   </div>
                 )}
               </div>
+              )}
             </header>
           )}
           {/* Дети не ужимаются, лишнее уходит в прокрутку области (правило 7 в
