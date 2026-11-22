@@ -4,14 +4,26 @@
    продукта CoachPro «Players»; прежняя таблица снята). Серая страница: слева
    поиск, отбор плашками (состав — «Все · Основной · Расширенный», группа —
    «Кадеты · Юноши · Взрослые», повторный щелчок снимает) и «Внести в сборную»
-   (`canEdit`), под ними карточки спортсменов: фото (нет снимка — инициалы) с
-   точкой цвета допуска, фамилия крупно, имя и отчество, строка «группа ·
-   регион · план» (план — тем, кому сервер прислал планы: «7 из 9», «· ждёт» —
-   на согласовании); бледная крупная цифра — рейтинг, как номер игрока в
-   образце. Выбранная карточка залита тёмно-синим бренда.
+   (`canEdit`), под ними карточки спортсменов по 12 на страницу (страницы —
+   `TablePagination`, как у таблиц). Круглого аватара нет (решение владельца
+   продукта 22.11.2026): сверху **баннер-картинка** — одна из шести на тему
+   настольного тенниса в цветах бренда (выбор — по id, у человека она не
+   меняется), на ней фото спортсмена, а без снимка — **контур игрока**
+   (заглушка); на баннере допуск плашкой (точка: зелёная — допущен,
+   коралловая — истёк, серая — не внесён) и рейтинг. Ниже фамилия крупно, имя
+   и отчество, «группа · регион · план» (план — тем, кому сервер прислал
+   планы: «7 из 9», «· ждёт» — на согласовании). Выбранная карточка залита
+   тёмно-синим бренда.
 
-   Справа — панель выбранного (`roster-detail`): шапка с фото, составом и
-   именем на тёмно-синем, короткие сведения, ниже строки с полосами —
+   Картинки сгенерированы fal.ai (FLUX dev, 22.11.2026): баннеры — «стол,
+   сетка, мяч, ракетки, зал; тёмно-синий #18244D и голубой #0AB3D7; без текста,
+   людей и знаков», контур — «белая линия игрока с ракеткой на чёрном»,
+   переведённый в прозрачный PNG (яркость → прозрачность). Лежат в
+   `public/national/`.
+
+   Справа — панель выбранного (`roster-detail`): шапка — тот же баннер с
+   фото или контуром под тёмной шторкой, на ней состав и имя, короткие
+   сведения, ниже строки с полосами —
    рейтинг (доля от лучшего в составе), план, доля побед (рейтинговая
    карточка), матчей, допуск, ограничения нагрузки, личный тренер — и
    «Открыть профиль». Двойной щелчок по карточке открывает профиль сразу; на
@@ -25,8 +37,8 @@ import { useMemo, useState, type ReactNode } from 'react';
 import { AGE_GROUP_LABEL, fetchMembers, SQUAD_LABEL, useLoad, type AgeGroup, type NationalMember, type Squad } from '@/entities/national';
 import { num2, useRatingCard } from '@/entities/rating';
 import { useNarrow } from '@/shared/kit/app';
+import { TablePagination } from '@/shared/ui/table';
 
-import { initials } from './profile/Hero';
 import { AddMemberDialog, ClearanceChip } from './RosterParts';
 
 /* Точка допуска на фото. Классы целиком. */
@@ -40,24 +52,38 @@ const splitName = (name: string) => {
   return { surname, rest: rest.join(' ') };
 };
 
-function Photo({ m, size }: { m: NationalMember; size: string }) {
+const PAGE = 12; // карточек на страницу — значение наше
+const BANNERS = 6;
+
+/** Картинка баннера — одна и та же для человека: по id. */
+function bannerOf(m: NationalMember) {
+  let h = 0;
+  for (const ch of m.id) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
+  return `/national/banners/banner-${(h % BANNERS) + 1}.jpg`;
+}
+
+/** Баннер: картинка темы, на ней фото спортсмена или контур игрока. */
+function Banner({ m, className, figure }: { m: NationalMember; className: string; figure: string }) {
   return (
-    <span className="relative shrink-0">
-      <span className={'grid place-items-center overflow-hidden rounded-full border-2 border-white bg-[color-mix(in_srgb,var(--color-qtt-violet)_12%,white)] ' + size}>
-        {m.avatar ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={m.avatar} alt="" className="size-full object-cover" />
-        ) : (
-          <span className="font-semibold text-qtt-violet">{initials(m.person.name)}</span>
-        )}
-      </span>
-      <span
-        className={'absolute right-0 bottom-0.5 size-3.5 rounded-full border-2 border-white ' + DOT[m.clearance.status]}
-        title={DOT_TEXT[m.clearance.status]}
-        aria-label={DOT_TEXT[m.clearance.status]}
-        data-testid="clearance"
-        data-status={m.clearance.status}
-      />
+    <span className={'block overflow-hidden bg-brand-600 ' + className}>
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src={bannerOf(m)} alt="" loading="lazy" className="absolute inset-0 size-full object-cover transition-transform duration-500 group-hover:scale-105" data-testid="member-banner" />
+      {m.avatar ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={m.avatar} alt="" className="absolute inset-0 size-full object-cover" data-testid="member-photo" data-photo="yes" />
+      ) : (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src="/national/player-outline.png" alt="" aria-hidden className={'absolute bottom-0 object-contain opacity-90 ' + figure} data-testid="member-photo" data-photo="no" />
+      )}
+    </span>
+  );
+}
+
+function Clearance({ m }: { m: NationalMember }) {
+  return (
+    <span className="flex items-center gap-1.5 rounded-full bg-white/90 px-2 py-0.5 text-[11px] font-medium text-neutral-700 backdrop-blur-sm">
+      <span className={'size-2 rounded-full ' + DOT[m.clearance.status]} aria-hidden data-testid="clearance" data-status={m.clearance.status} />
+      {DOT_TEXT[m.clearance.status]}
     </span>
   );
 }
@@ -78,22 +104,29 @@ function MemberCard({ m, on, onPick, onOpen }: { m: NationalMember; on: boolean;
       onDoubleClick={onOpen}
       aria-pressed={on}
       className={
-        'group relative flex min-w-0 items-center gap-4 overflow-hidden rounded-2xl border p-4 text-left transition-[box-shadow,border-color] ' +
-        (on ? 'border-transparent text-white shadow-lg shadow-brand-700/20 ' + FILL : 'border-neutral-200/80 bg-white hover:border-brand-200 hover:shadow-sm')
+        'group flex min-w-0 flex-col overflow-hidden rounded-2xl border text-left transition-[box-shadow,border-color] ' +
+        (on ? 'border-brand-600 shadow-lg shadow-brand-700/25' : 'border-neutral-200/80 bg-white hover:border-brand-200 hover:shadow-md')
       }
       data-testid="member-row"
       data-name={m.person.name}
     >
-      {m.person.rating && (
-        <span aria-hidden className={'pointer-events-none absolute top-2 right-4 text-[34px] leading-none font-bold tabular-nums ' + (on ? 'text-white/15' : 'text-neutral-100')}>
-          {num2(Number(m.person.rating))}
+      <span className="relative block">
+        <Banner m={m} className="relative h-36" figure="left-5 h-[92%]" />
+        <span aria-hidden className="absolute inset-0 bg-[linear-gradient(to_top,color-mix(in_srgb,var(--color-brand-800)_75%,transparent),transparent_55%)]" />
+        <span className="absolute top-3 right-3">
+          <Clearance m={m} />
         </span>
-      )}
-      <Photo m={m} size="size-16 text-[18px]" />
-      <span className="relative flex min-w-0 flex-1 flex-col">
+        {m.person.rating && (
+          <span className="absolute right-4 bottom-2.5 flex flex-col items-end text-white">
+            <span className="text-[10px] font-semibold tracking-wide text-white/70 uppercase">Рейтинг</span>
+            <span className="text-[22px] leading-none font-bold tabular-nums">{num2(Number(m.person.rating))}</span>
+          </span>
+        )}
+      </span>
+      <span className={'flex min-w-0 flex-1 flex-col px-4 pt-3 pb-4 ' + (on ? 'text-white ' + FILL : '')}>
         <span className="truncate text-[16px] leading-tight font-bold">{surname}</span>
         <span className={'truncate text-[13px] ' + (on ? 'text-white/75' : 'text-neutral-500')}>{rest}</span>
-        <span className="mt-2.5 flex flex-wrap gap-x-5 gap-y-1.5">
+        <span className="mt-3 flex flex-wrap gap-x-5 gap-y-1.5">
           {facts.map(([label, value]) => (
             <span key={label} className="flex min-w-0 flex-col">
               <span className={'text-[10px] font-semibold tracking-wide uppercase ' + (on ? 'text-white/60' : 'text-neutral-400')}>{label}</span>
@@ -138,10 +171,12 @@ function Detail({ m, best, onOpen }: { m: NationalMember; best: number; onOpen: 
   const age = m.person.birthYear ? new Date().getFullYear() - m.person.birthYear : null;
   return (
     <aside className="flex min-h-0 flex-col overflow-y-auto border-l border-neutral-200 bg-white" data-testid="roster-detail" data-name={m.person.name}>
-      <div className={'relative flex items-center gap-5 overflow-hidden px-6 py-7 text-white ' + FILL}>
-        <span aria-hidden className="pointer-events-none absolute -top-10 -right-10 size-48 rounded-full bg-white/5" />
-        <span aria-hidden className="pointer-events-none absolute -bottom-16 left-16 size-40 rounded-full bg-white/5" />
-        <Photo m={m} size="size-24 text-[26px]" />
+      <div className="relative flex min-h-60 flex-col justify-end overflow-hidden px-6 pt-16 pb-6 text-white">
+        <Banner m={m} className="absolute inset-0" figure="right-4 h-[88%]" />
+        <span aria-hidden className="absolute inset-0 bg-[linear-gradient(to_top,var(--color-brand-800),color-mix(in_srgb,var(--color-brand-800)_20%,transparent)_75%)]" />
+        <span className="absolute top-4 left-6">
+          <Clearance m={m} />
+        </span>
         <div className="relative flex min-w-0 flex-col">
           <span className="text-[11px] font-semibold tracking-wide text-white/65 uppercase">{SQUAD_LABEL[m.squad]} состав</span>
           <span className="mt-0.5 truncate text-[14px] text-white/85">{rest}</span>
@@ -207,6 +242,7 @@ export function RosterBoard({ canEdit, onOpen }: { canEdit: boolean; onOpen: (me
   const [squad, setSquad] = useState<Squad | null>(null);
   const [group, setGroup] = useState<AgeGroup | null>(null);
   const [picked, setPicked] = useState<string | null>(null);
+  const [page, setPage] = useState(0);
 
   const list = useMemo(() => {
     const needle = q.trim().toLowerCase();
@@ -216,13 +252,16 @@ export function RosterBoard({ canEdit, onOpen }: { canEdit: boolean; onOpen: (me
       .sort((a, b) => a.person.name.localeCompare(b.person.name, 'ru'));
   }, [members.data, q, squad, group]);
   const best = Math.max(0, ...(members.data ?? []).map((m) => Number(m.person.rating ?? 0)));
-  const current = list.find((m) => m.id === picked) ?? list[0] ?? null;
+  const pages = Math.max(1, Math.ceil(list.length / PAGE));
+  const at = Math.min(page, pages - 1); // отбор сузил список — страница могла исчезнуть
+  const shown = list.slice(at * PAGE, at * PAGE + PAGE);
+  const current = list.find((m) => m.id === picked) ?? shown[0] ?? null;
 
   return (
     <div className="grid h-full min-h-0 bg-neutral-100 md:grid-cols-[minmax(0,1fr)_22rem] xl:grid-cols-[minmax(0,1fr)_25rem]" data-testid="national-roster">
       <div className="flex min-h-0 flex-col overflow-y-auto">
         <div className="sticky top-0 z-10 flex flex-wrap items-center gap-x-4 gap-y-3 bg-neutral-100 px-4 pt-4 pb-3">
-          <SearchField aria-label="Поиск" value={q} onChange={setQ} className="w-64 max-md:w-full">
+          <SearchField aria-label="Поиск" value={q} onChange={(v) => (setQ(v), setPage(0))} className="w-64 max-md:w-full">
             <SearchField.Group className="rounded-xl bg-white">
               <SearchField.SearchIcon />
               <SearchField.Input placeholder="Фамилия или регион" data-testid="roster-search" />
@@ -230,17 +269,17 @@ export function RosterBoard({ canEdit, onOpen }: { canEdit: boolean; onOpen: (me
             </SearchField.Group>
           </SearchField>
           <div className="flex flex-wrap items-center gap-2" role="group" aria-label="Отбор">
-            <Chip on={!squad} onPress={() => setSquad(null)} testId="roster-squad-all">
+            <Chip on={!squad} onPress={() => (setSquad(null), setPage(0))} testId="roster-squad-all">
               Все
             </Chip>
             {(Object.keys(SQUAD_LABEL) as Squad[]).map((s) => (
-              <Chip key={s} on={squad === s} onPress={() => setSquad(squad === s ? null : s)} testId={'roster-squad-' + s}>
+              <Chip key={s} on={squad === s} onPress={() => (setSquad(squad === s ? null : s), setPage(0))} testId={'roster-squad-' + s}>
                 {SQUAD_LABEL[s]}
               </Chip>
             ))}
             <span aria-hidden className="mx-1 h-5 w-px bg-neutral-300" />
             {(Object.keys(AGE_GROUP_LABEL) as AgeGroup[]).map((g) => (
-              <Chip key={g} on={group === g} onPress={() => setGroup(group === g ? null : g)} testId={'roster-group-' + g}>
+              <Chip key={g} on={group === g} onPress={() => (setGroup(group === g ? null : g), setPage(0))} testId={'roster-group-' + g}>
                 {AGE_GROUP_LABEL[g]}
               </Chip>
             ))}
@@ -262,12 +301,15 @@ export function RosterBoard({ canEdit, onOpen }: { canEdit: boolean; onOpen: (me
             {members.data.length ? 'Никого не найдено' : 'В сборной никого нет'}
           </p>
         ) : (
-          <div className="grid gap-3 px-4 pb-4 sm:grid-cols-2 2xl:grid-cols-3">
-            {list.map((m) => (
+          <div className="grid gap-4 px-4 pb-4 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
+            {shown.map((m) => (
               <MemberCard key={m.id} m={m} on={!narrow && current?.id === m.id} onPick={() => (narrow ? onOpen(m.id) : setPicked(m.id))} onOpen={() => onOpen(m.id)} />
             ))}
           </div>
         )}
+        <div className="mt-auto">
+          <TablePagination page={at} pages={pages} onPage={setPage} />
+        </div>
       </div>
       {!narrow && current && <Detail m={current} best={best} onOpen={() => onOpen(current.id)} />}
     </div>

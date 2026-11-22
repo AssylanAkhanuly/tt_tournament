@@ -5,7 +5,13 @@
 сегодняшнего дня: работа с разными сроками (выполненная, просроченная,
 будущая), сбор и старт из календаря подготовки, у двоих план не согласован, у
 одного плана нет. Повторный запуск сносит прежние показательные планы и
-мероприятия (по пометке «[показ]») и заводит заново."""
+мероприятия (по пометке «[показ]») и заводит заново.
+
+Состав побольше ✳ (22.11.2026, просьба владельца продукта — показать страницы
+карточек состава): ещё `--extra` спортсменов (по умолчанию 30) следующими по
+рейтингу вносятся в сборную без планов. Группа — по году рождения (до 15 лет —
+кадеты, до 18 — юноши, старше — взрослые; границы наши, для показа), верхняя
+половина — основной состав, остальные — расширенный. Уже внесённых не трогает."""
 import datetime
 
 from django.core.management.base import BaseCommand
@@ -22,6 +28,9 @@ WORK = ["Тест ОФП", "Видеоразбор соперников", "По�
 
 class Command(BaseCommand):
     help = "Показательные планы подготовки сборной для доски планов."
+
+    def add_arguments(self, parser):
+        parser.add_argument("--extra", type=int, default=30, help="сколько ещё спортсменов внести в состав без планов")
 
     @transaction.atomic
     def handle(self, *args, **opts):
@@ -54,4 +63,12 @@ class Command(BaseCommand):
                 PlanItem.objects.create(plan=plan, kind="start", title="Чемпионат РК", event=start)
             if member.age_group == "junior":
                 PlanItem.objects.create(plan=plan, kind="camp", title="Сбор: УТС Шымкент", event=camp2)
-        self.stdout.write("Показательные планы: %d спортсменов" % len(profiles))
+        extra = list(RatingProfile.objects.select_related("user").order_by("-value")[10:10 + opts["extra"]])
+        added = 0
+        for k, prof in enumerate(extra):
+            age = today.year - prof.birth_year if prof.birth_year else 20
+            group = "cadet" if age <= 15 else "junior" if age <= 18 else "adult"
+            squad = "main" if k < len(extra) // 2 else "extended"
+            _, made = NationalTeamMember.objects.get_or_create(user=prof.user, defaults={"age_group": group, "squad": squad})
+            added += made
+        self.stdout.write("Показательные планы: %d спортсменов; в состав внесено ещё %d" % (len(profiles), added))
