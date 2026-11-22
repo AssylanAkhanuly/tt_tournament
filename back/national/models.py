@@ -43,6 +43,11 @@ class NationalTeamMember(models.Model):
         settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name="+",
     )
     added_at = models.DateTimeField(auto_now_add=True)
+    # Изображения карточки ✳ (22.11.2026, решение владельца продукта): аватар —
+    # лицо; фигура — снимок по пояс (до бёдер) для баннера карточки и профиля.
+    # Нет снимка — экран рисует сгенерированную заглушку своего пола.
+    avatar = models.ImageField(upload_to="national/avatars/", blank=True, verbose_name="Аватар")
+    figure = models.ImageField(upload_to="national/figures/", blank=True, verbose_name="Фигура для баннера")
 
     class Meta:
         verbose_name = "Член сборной"
@@ -270,3 +275,38 @@ class ReportAction(models.Model):
 
     class Meta:
         ordering = ["at"]
+
+
+class UmoExam(models.Model):
+    """Осмотр УМО ✳ (22.11.2026, NATIONAL.md «Медкарта: УМО»): дата и условия
+    — сведения, от которых зависит сравнение заборов. Значения — `UmoValue`,
+    параметры — каталог `national/umo.py`."""
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    member = models.ForeignKey(NationalTeamMember, on_delete=models.CASCADE, related_name="umo_exams")
+    date = models.DateField(verbose_name="Дата осмотра")
+    height_cm = models.DecimalField(max_digits=5, decimal_places=1, null=True, blank=True, verbose_name="Рост, см")
+    stage = models.CharField(max_length=200, blank=True, verbose_name="Этап подготовки")
+    load_note = models.TextField(blank=True, verbose_name="Нагрузка за предшествующие 2 недели")
+    illnesses = models.TextField(blank=True, verbose_name="Болезни и травмы за период")
+    conditions = models.TextField(blank=True, verbose_name="Условия забора")
+    supplements = models.TextField(blank=True, verbose_name="Добавки и препараты")
+    note = models.TextField(blank=True, verbose_name="Врач, примечания")
+    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name="+")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["date", "created_at"]
+        verbose_name = "Осмотр УМО"
+        verbose_name_plural = "Осмотры УМО"
+
+
+class UmoValue(models.Model):
+    exam = models.ForeignKey(UmoExam, on_delete=models.CASCADE, related_name="values")
+    code = models.CharField(max_length=40, verbose_name="Параметр")
+    value = models.CharField(max_length=300, verbose_name="Значение")
+
+    class Meta:
+        constraints = [models.UniqueConstraint(fields=["exam", "code"], name="umo_value_once")]
+        verbose_name = "Значение УМО"
+        verbose_name_plural = "Значения УМО"

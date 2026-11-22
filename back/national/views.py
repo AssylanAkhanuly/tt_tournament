@@ -37,6 +37,12 @@ def _iso(d):
     return d.isoformat() if d else None
 
 
+def _avatar(m) -> "str | None":
+    if m.avatar:
+        return m.avatar.url
+    return m.user.avatar.url if m.user.avatar else None
+
+
 def _person(u: User) -> dict:
     card = getattr(u, "rating_profile", None)
     return {
@@ -65,8 +71,10 @@ def _member(m: NationalTeamMember, viewer) -> dict:
     access = _access(m, viewer)
     data = {
         "id": str(m.id), "person": _person(m.user), "squad": m.squad, "age_group": m.age_group,
-        # Фото — в строке состава ✳ (22.11.2026): карточки списка с фото.
-        "avatar": m.user.avatar.url if m.user.avatar else None,
+        # Снимки ✳ (22.11.2026): аватар — лицо (свой у члена сборной, иначе фото
+        # учётки), фигура — по пояс для баннера. Нет — заглушка на экране.
+        "avatar": _avatar(m),
+        "figure": m.figure.url if m.figure else None,
         "personal_coach": {"id": str(m.personal_coach_id), "name": m.personal_coach.name} if m.personal_coach_id else None,
         "clearance": {"status": c["status"], "until": _iso(c["until"])},
         "limits": len(s.active_limits(m)),
@@ -221,7 +229,7 @@ def _profile(m: NationalTeamMember) -> dict:
     card = getattr(u, "rating_profile", None)
     phone = u.phone if u.phone and not u.phone.startswith("ath-") else ""
     return {
-        "avatar": u.avatar.url if u.avatar else None, "email": u.email or "", "phone": phone,
+        "avatar": _avatar(m), "email": u.email or "", "phone": phone,
         "birth_date": _iso(card.birth_date) if card and card.birth_date else None,
         "joined": _iso(timezone.localtime(m.added_at).date()),
     }
@@ -340,7 +348,7 @@ class PlanBoardView(Base):
             "from": _iso(start), "to": _iso(end), "today": _iso(today),
             "rows": [{
                 "member": {"id": str(r["member"].id), "person": _person(r["member"].user), "squad": r["member"].squad,
-                           "age_group": r["member"].age_group},
+                           "age_group": r["member"].age_group, "avatar": _avatar(r["member"])},
                 # Отметку «выполнено» ставит штаб или личный тренер спортсмена — как `can_mark` у плана.
                 "can_mark": s.is_head_staff(u) or r["member"].personal_coach_id == u.id,
                 # Создание с доски ✳ (21.11.2026): пункт — тем, кто правит план сейчас
@@ -500,3 +508,93 @@ class ReportFileView(ReportView):
             raise s.NationalError("Файла у рапорта нет.", 404)
         name = report.file.name.rsplit("/", 1)[-1]
         return FileResponse(report.file.open("rb"), filename=name)
+
+
+# ── УМО ✳ (22.11.2026, NATIONAL.md «Медкарта: УМО») — только врачу ───────────
+
+def _umo(m: NationalTeamMember) -> dict:
+    from . import umo
+
+    exams = list(m.umo_exams.prefetch_related("values").select_related("created_by"))
+    card = getattr(m.user, "rating_profile", None)
+    sex = card.sex if card else ""
+    rows = [{"values": {x.code: x.value for x in e.values.all()}, "height": float(e.height_cm) if e.height_cm else None} for e in exams]
+    last = exams[-1].date if exams else None
+    nxt = None
+    if last:
+        # Следующий — через 3 месяца после последнего (шаблон: раз в 3 месяца).
+        y, mo = divmod(last.month - 1 + 3, 12)
+        import calendar
+
+        day = min(last.day, calendar.monthrange(last.year + y, mo + 1)[1])
+        nxt = date(last.year + y, mo + 1, day)
+    return {
+        "sex": sex,
+        "next_planned": _iso(nxt),
+        "exams": [
+            {
+                "id": str(e.id), "date": _iso(e.date), "height_cm": float(e.height_cm) if e.height_cm else None,
+                "stage": e.stage, "load_note": e.load_note, "illnesses": e.illnesses, "conditions": e.conditions,
+                "supplements": e.supplements, "note": e.note, "created_by": e.created_by.name if e.created_by else "",
+                "values": {x.code: x.value for x in e.values.all()},
+            }
+            for e in exams
+        ],
+        "blocks": umo.table(rows, sex),
+    }
+
+
+def _umo_data(d) -> dict:
+    out = {k: d.get(k) for k in ("stage", "load_note", "illnesses", "conditions", "supplements", "note", "height_cm") if k in d}
+    if "date" in d:
+        out["date"] = _date(d.get("date"), "Дата осмотра")
+    if "values" in d:
+        out["values"] = d.get("values") or {}
+    return out
+
+
+class UmoView(Base):
+    def get(self, request, pk):
+        s.require_doctor(request.user)
+        return Response(_umo(get_object_or_404(NationalTeamMember, pk=pk)))
+
+    def post(self, request, pk):
+        m = get_object_or_404(NationalTeamMember, pk=pk)
+        s.add_umo_exam(m, _umo_data(request.data), request.user)
+        return Response(_umo(m), status=status.HTTP_201_CREATED)
+
+
+class UmoExamView(Base):
+    def patch(self, request, pk):
+        from .models import UmoExam
+
+        exam = get_object_or_404(UmoExam, pk=pk)
+        s.update_umo_exam(exam, _umo_data(request.data), request.user)
+        return Response(_umo(exam.member))
+
+    def delete(self, request, pk):
+        from .models import UmoExam
+
+        exam = get_object_or_404(UmoExam, pk=pk)
+        member = exam.member
+        s.delete_umo_exam(exam, request.user)
+        return Response(_umo(member))
+
+
+# ── Снимки члена сборной ✳ (22.11.2026) ─────────────────────────────────────
+
+class MemberImageView(Base):
+    parser_classes = [MultiPartParser, FormParser, JSONParser]
+
+    def post(self, request, pk, kind):
+        m = get_object_or_404(NationalTeamMember, pk=pk)
+        f = request.FILES.get("file")
+        if not f:
+            raise s.NationalError("Нет файла.")
+        s.set_member_image(m, kind, f, request.user)
+        return Response(_member(m, request.user))
+
+    def delete(self, request, pk, kind):
+        m = get_object_or_404(NationalTeamMember, pk=pk)
+        s.set_member_image(m, kind, None, request.user)
+        return Response(_member(m, request.user))

@@ -614,3 +614,100 @@ def history(member: NationalTeamMember, by) -> List[dict]:
     rows.extend(by_tournament.values())
     rows.sort(key=lambda r: r["date"], reverse=True)
     return rows
+
+
+# ── УМО ✳ (22.11.2026) — ведёт врач сборной ─────────────────────────────────
+
+UMO_TEXT = ("stage", "load_note", "illnesses", "conditions", "supplements", "note")
+
+
+def _umo_context(exam, data: dict):
+    from decimal import Decimal, InvalidOperation
+
+    for f in UMO_TEXT:
+        if f in data:
+            setattr(exam, f, (data.get(f) or "").strip())
+    if "height_cm" in data:
+        raw = str(data.get("height_cm") or "").strip().replace(",", ".")
+        try:
+            h = Decimal(raw) if raw else None
+        except InvalidOperation:
+            raise NationalError("Рост — числом, в сантиметрах.")
+        if h is not None and not (Decimal(80) <= h <= Decimal(250)):  # границы наши
+            raise NationalError("Рост — от 80 до 250 см.")
+        exam.height_cm = h
+
+
+def _umo_values(exam, values):
+    from . import umo
+    from .models import UmoValue
+
+    try:
+        clean = umo.clean_values(values or {})
+    except umo.UmoError as e:
+        raise NationalError(str(e))
+    for code, text in clean.items():
+        if text:
+            UmoValue.objects.update_or_create(exam=exam, code=code, defaults={"value": text})
+        else:
+            UmoValue.objects.filter(exam=exam, code=code).delete()
+
+
+@transaction.atomic
+def add_umo_exam(member: NationalTeamMember, data: dict, by):
+    from .models import UmoExam
+
+    require_doctor(by)
+    if not data.get("date"):
+        raise NationalError("У осмотра нужна дата.")
+    exam = UmoExam(member=member, date=data["date"], created_by=by)
+    _umo_context(exam, data)
+    exam.save()
+    _umo_values(exam, data.get("values"))
+    return exam
+
+
+@transaction.atomic
+def update_umo_exam(exam, data: dict, by):
+    require_doctor(by)
+    if data.get("date"):
+        exam.date = data["date"]
+    _umo_context(exam, data)
+    exam.save()
+    _umo_values(exam, data.get("values"))
+    return exam
+
+
+def delete_umo_exam(exam, by):
+    require_doctor(by)
+    exam.delete()
+
+
+# ── Изображения карточки ✳ (22.11.2026) — аватар и фигура для баннера ───────
+
+IMAGE_KINDS = ("avatar", "figure")
+IMAGE_MAX = 8 * 1024 * 1024  # 8 МБ — предел наш
+
+
+def set_member_image(member: NationalTeamMember, kind: str, file, by):
+    """Загрузить или снять (`file=None`) снимок. Меняет тот, кто ведёт состав."""
+    if not is_head_staff(by):
+        raise NationalError("Снимки меняет штаб сборной.", 403)
+    if kind not in IMAGE_KINDS:
+        raise NationalError("Снимок — аватар или фигура.")
+    field = getattr(member, kind)
+    if file is None:
+        if field:
+            field.delete(save=False)
+        setattr(member, kind, "")
+        member.save(update_fields=[kind])
+        return member
+    if file.size > IMAGE_MAX:
+        raise NationalError("Снимок — не больше 8 МБ.")
+    if (getattr(file, "content_type", "") or "").split("/")[0] != "image":
+        raise NationalError("Нужен снимок: JPG, PNG или WebP.")
+    if field:
+        field.delete(save=False)
+    field.save(file.name, file, save=False)
+    member.save(update_fields=[kind])
+    return member
