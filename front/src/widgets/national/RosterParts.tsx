@@ -1,12 +1,9 @@
 'use client';
 
-/* Состав национальной команды ✳ (19.11.2026, NATIONAL.md; флоу Э11.1):
-   таблица на всю область — спортсмен, состав, возрастная группа, регион,
-   личный тренер, рейтинг, медицинский допуск, ограничения нагрузки и (тем,
-   кому сервер прислал планы) план — долей «7 из 9», а не признаком; «· ждёт»
-   — план на согласовании. Строки — те, кого человеку видно (решает сервер). «Внести в сборную» — только
-   главному тренеру (`canEdit`). Строка открывает карточку — адрес строит
-   экран. HeroUI + Tailwind. */
+/* Части состава национальной команды ✳ (19.11.2026, NATIONAL.md; флоу
+   Э11.1): значок допуска, списки состава и группы, окно «Внести в сборную»
+   (поиск спортсмена, состав, группа). Сам состав — карточками
+   (`RosterBoard`, 22.11.2026; прежняя таблица снята). HeroUI + Tailwind. */
 
 import { Button, Chip, ListBox, Modal, SearchField, Spinner, useOverlayState } from '@heroui/react';
 import { Plus } from 'lucide-react';
@@ -17,16 +14,12 @@ import {
   AGE_GROUP_LABEL,
   dmy,
   fetchMemberCandidates,
-  fetchMembers,
   SQUAD_LABEL,
-  useLoad,
   type AgeGroup,
   type Clearance,
-  type NationalMember,
   type NationalPerson,
   type Squad,
 } from '@/entities/national';
-import { DataTable, type DataColumn } from '@/shared/ui/DataTable';
 import { ModalSheet } from '@/shared/ui/ModalSheet';
 import { Picker } from '@/shared/ui/Picker';
 
@@ -45,7 +38,7 @@ const SQUADS = (Object.keys(SQUAD_LABEL) as Squad[]).map((s) => ({ id: s, label:
 const AGE_GROUPS = (Object.keys(AGE_GROUP_LABEL) as AgeGroup[]).map((g) => ({ id: g, label: AGE_GROUP_LABEL[g] }));
 export { AGE_GROUPS, SQUADS };
 
-function AddMemberDialog({ onAdded }: { onAdded: () => void }) {
+export function AddMemberDialog({ onAdded }: { onAdded: () => void }) {
   const state = useOverlayState();
   const [q, setQ] = useState('');
   const [found, setFound] = useState<NationalPerson[] | null>(null);
@@ -155,72 +148,3 @@ function AddMemberDialog({ onAdded }: { onAdded: () => void }) {
     </Modal>
   );
 }
-
-export function RosterTable({ canEdit, onOpen }: { canEdit: boolean; onOpen: (memberId: string) => void }) {
-  const members = useLoad(fetchMembers, 'members');
-  // Колонку плана показывает тот, кому сервер прислал планы (`plan` в строке).
-  const showPlan = (members.data ?? []).some((m) => m.plan !== undefined);
-
-  const columns: DataColumn<NationalMember>[] = [
-    { id: 'name', label: 'Спортсмен', rowHeader: true, sortValue: (m) => m.person.name, render: (m) => <span className="font-medium">{m.person.name}</span> },
-    { id: 'squad', label: 'Состав', sortValue: (m) => m.squad, render: (m) => SQUAD_LABEL[m.squad] },
-    { id: 'age', label: 'Группа', sortValue: (m) => m.ageGroup, render: (m) => AGE_GROUP_LABEL[m.ageGroup] },
-    { id: 'region', label: 'Регион', sortValue: (m) => m.person.region, render: (m) => m.person.region || '—' },
-    {
-      id: 'coach',
-      label: 'Личный тренер',
-      sortValue: (m) => m.personalCoach?.name ?? '',
-      render: (m) => m.personalCoach?.name ?? <span className="text-neutral-400">—</span>,
-    },
-    {
-      id: 'rating',
-      label: 'Рейтинг',
-      align: 'right',
-      descFirst: true,
-      sortValue: (m) => Number(m.person.rating ?? 0),
-      render: (m) => <span className="tabular-nums">{m.person.rating ?? '—'}</span>,
-    },
-    ...(showPlan
-      ? [
-          {
-            id: 'plan',
-            label: 'План',
-            align: 'right' as const,
-            sortValue: (m: NationalMember) => (m.plan ? m.plan.done / Math.max(m.plan.total, 1) : -1),
-            render: (m: NationalMember) => (
-              <span className="tabular-nums" data-testid="member-plan">
-                {m.plan ? m.plan.done + ' из ' + m.plan.total + (m.plan.status === 'submitted' ? ' · ждёт' : '') : 'Нет'}
-              </span>
-            ),
-          },
-        ]
-      : []),
-    { id: 'clearance', label: 'Допуск', sortValue: (m) => m.clearance.status, render: (m) => <ClearanceChip clearance={m.clearance} /> },
-    {
-      id: 'limits',
-      label: 'Ограничения',
-      align: 'right',
-      sortValue: (m) => m.limits,
-      render: (m) => <span className={m.limits ? 'font-semibold text-amber-700' : 'text-neutral-400'}>{m.limits || '—'}</span>,
-    },
-  ];
-
-  return (
-    <DataTable
-      ariaLabel="Состав сборной"
-      testId="national-roster"
-      rows={members.data ?? []}
-      columns={columns}
-      getId={(m) => m.id}
-      loading={!members.data && !members.error}
-      error={members.error}
-      empty="В сборной никого нет"
-      search={{ placeholder: 'Фамилия или регион', text: (m) => m.person.name + ' ' + m.person.region }}
-      defaultSort={{ column: 'name', direction: 'ascending' }}
-      actions={canEdit ? <AddMemberDialog onAdded={members.reload} /> : undefined}
-      onRowAction={(m) => onOpen(m.id)}
-      rowProps={(m) => ({ 'data-testid': 'member-row', 'data-name': m.person.name })}
-    />
-  );
-}
-

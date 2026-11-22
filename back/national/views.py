@@ -62,6 +62,8 @@ def _member(m: NationalTeamMember, viewer) -> dict:
     access = _access(m, viewer)
     data = {
         "id": str(m.id), "person": _person(m.user), "squad": m.squad, "age_group": m.age_group,
+        # Фото — в строке состава ✳ (22.11.2026): карточки списка с фото.
+        "avatar": m.user.avatar.url if m.user.avatar else None,
         "personal_coach": {"id": str(m.personal_coach_id), "name": m.personal_coach.name} if m.personal_coach_id else None,
         "clearance": {"status": c["status"], "until": _iso(c["until"])},
         "limits": len(s.active_limits(m)),

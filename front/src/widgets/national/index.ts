@@ -1,4 +1,5 @@
-export { AGE_GROUPS, ClearanceChip, RosterTable, SQUADS } from './RosterTable';
+export { RosterBoard } from './RosterBoard';
+export { AGE_GROUPS, ClearanceChip, SQUADS } from './RosterParts';
 export { MemberProfile } from './MemberProfile';
 export { MedicalCardView } from './MedicalCardView';
 export { PlanBoard } from './PlanBoard';

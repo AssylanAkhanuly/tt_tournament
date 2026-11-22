@@ -41,7 +41,7 @@ import {
   MemberProfile,
   PlanBoard,
   PlansTimeline,
-  RosterTable,
+  RosterBoard,
   SportCard,
 } from '@/widgets/national';
 
@@ -132,7 +132,7 @@ export function NationalRosterView({ cabinet: key }: { cabinet: CabinetKey }) {
   const me = useLoad(fetchNationalMe, 'me');
   return (
     <Shell cabinet={cabinet} active={cabinet.roster}>
-      <RosterTable canEdit={cabinet.canAdd && !!me.data?.headStaff} onOpen={(id) => router.push(`${cabinet.base}/members/${id}`)} />
+      <RosterBoard canEdit={cabinet.canAdd && !!me.data?.headStaff} onOpen={(id) => router.push(`${cabinet.base}/members/${id}`)} />
     </Shell>
   );
 }

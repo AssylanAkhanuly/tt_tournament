@@ -64,6 +64,14 @@ async function makeMember(request: APIRequestContext, name: string, ageGroup: st
   return id;
 }
 
+/** Состав — карточки ✳ (22.11.2026): щелчок выбирает спортсмена, панель
+ *  справа показывает его, «Открыть профиль» ведёт в профиль. */
+async function openMember(page: Page, athlete: string) {
+  await page.locator(`[data-testid="member-row"][data-name="${athlete}"]`).click();
+  await expect(page.getByTestId('roster-detail')).toHaveAttribute('data-name', athlete);
+  await page.getByTestId('member-open').click();
+}
+
 test('сборная: тренер — состав и план, врач — медкарта, тренеру — ограничение без диагноза', async ({ browser, request }) => {
   const stamp = Date.now();
   const athlete = `[e2e] Сборная ${stamp}`;
@@ -84,7 +92,7 @@ test('сборная: тренер — состав и план, врач — м
 
   // Карточка — профиль ✳ (22.11.2026): сайдбар — меню кабинета, вкладок нет —
   // разделы открываются из блоков профиля.
-  await row.click();
+  await openMember(coach, athlete);
   await coach.waitForURL(/\/national\/members\/[0-9a-f-]{36}$/);
   const memberUrl = coach.url();
   await expect(coach.getByTestId('member-name')).toHaveText(athlete);
@@ -134,7 +142,7 @@ test('сборная: тренер — состав и план, врач — м
   await expect(drow).toBeVisible();
   await expect(drow.getByTestId('member-plan')).toHaveCount(0);
   await expect(doctor.getByTestId('member-add-open')).toHaveCount(0);
-  await drow.click();
+  await openMember(doctor, athlete);
   await doctor.waitForURL(/\/doctor\/members\/[0-9a-f-]{36}$/);
   await expect(doctor.getByTestId('profile-points')).toHaveCount(0);
   await doctor.getByTestId('profile-medical-open').click();
@@ -172,7 +180,7 @@ test('сборная: личный тренер составляет план, �
 
   // Личный тренер: план и отправка на согласование.
   const personal = await signIn(browser, E2E_PERSONAL_COACH, '/personal-coach');
-  await personal.locator(`[data-testid="member-row"][data-name="${athlete}"]`).click();
+  await openMember(personal, athlete);
   await personal.waitForURL(/\/personal-coach\/members\/[0-9a-f-]{36}$/);
   await personal.getByTestId('profile-plan-open').click();
   await personal.waitForURL(/\/plan$/);
@@ -222,7 +230,7 @@ test('сборная: личный тренер составляет план, �
 
   // Психолог: спортивная карточка.
   const psych = await signIn(browser, E2E_PSYCHOLOGIST, '/psychologist');
-  await psych.locator(`[data-testid="member-row"][data-name="${athlete}"]`).click();
+  await openMember(psych, athlete);
   await psych.waitForURL(/\/psychologist\/members\/[0-9a-f-]{36}$/);
   await expect(psych.getByTestId('profile-points')).toHaveCount(0);
   await psych.getByTestId('profile-sport-open').click();

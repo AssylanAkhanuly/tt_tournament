@@ -129,6 +129,9 @@ def test_member_profile_and_item_state(team):
     r = head.get(f"/api/national/members/{team['ma'].pk}/").json()
     assert r["profile"]["phone"] == "+77005550100"
     assert r["profile"]["joined"] == timezone.localtime(team["ma"].added_at).date().isoformat()
+    # Строка состава несёт фото — карточки состава ✳ (22.11.2026); снимка нет — None.
+    row = next(x for x in head.get("/api/national/members/").json() if x["id"] == str(team["ma"].pk))
+    assert row["avatar"] is None
     plans = head.get(f"/api/national/members/{team['ma'].pk}/plans/").json()
     items = {i["title"]: i for i in plans[0]["items"]}
     assert items["Тест ОФП"]["state"] == "done"
