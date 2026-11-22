@@ -46,7 +46,7 @@ export const REPORT_ACTION_LABEL: Record<ReportActionKind, string> = {
   approved: 'Согласован, ушёл в федерацию',
 };
 
-export type NationalPerson = { id: string; name: string; region: string; birthYear: number | null; rating: string | null };
+export type NationalPerson = { id: string; name: string; region: string; birthYear: number | null; rating: string | null; sex: 'm' | 'f' | '' };
 export type Clearance = { status: ClearanceStatus; until: string | null };
 export type MemberAccess = {
   roster: boolean;
@@ -198,6 +198,7 @@ const person = (p: Raw): NationalPerson => ({
   name: String(p.name),
   region: String(p.region ?? ''),
   birthYear: (p.birth_year as number | null) ?? null,
+  sex: p.sex === 'm' || p.sex === 'f' ? p.sex : '',
   rating: (p.rating as string | null) ?? null,
 });
 

@@ -89,9 +89,9 @@ test('сборная: тренер — состав и план, врач — м
   await expect(row).toContainText('Юноши');
   await expect(row.getByTestId('member-plan')).toHaveText('Нет');
   await expect(row.getByTestId('clearance')).toHaveAttribute('data-status', 'none');
-  // Аватара нет — баннер, без снимка на нём контур игрока ✳ (22.11.2026).
+  // Без снимка — заглушка: сгенерированный игрок в стойке ✳ (22.11.2026).
   await expect(row.getByTestId('member-photo')).toHaveAttribute('data-photo', 'no');
-  await expect(row.getByTestId('member-banner')).toHaveAttribute('src', /\/national\/banners\/banner-[1-6]\.jpg$/);
+  await expect(row.getByTestId('member-photo')).toHaveAttribute('src', /\/national\/players\/[mf]-[1-3]\.webp$/);
 
   // Карточка — профиль ✳ (22.11.2026): сайдбар — меню кабинета, вкладок нет —
   // разделы открываются из блоков профиля.

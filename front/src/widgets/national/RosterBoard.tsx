@@ -5,25 +5,25 @@
    поиск, отбор плашками (состав — «Все · Основной · Расширенный», группа —
    «Кадеты · Юноши · Взрослые», повторный щелчок снимает) и «Внести в сборную»
    (`canEdit`), под ними карточки спортсменов по 12 на страницу (страницы —
-   `TablePagination`, как у таблиц). Круглого аватара нет (решение владельца
-   продукта 22.11.2026): сверху **баннер-картинка** — одна из шести на тему
-   настольного тенниса в цветах бренда (выбор — по id, у человека она не
-   меняется), на ней фото спортсмена, а без снимка — **контур игрока**
-   (заглушка); на баннере допуск плашкой (точка: зелёная — допущен,
-   коралловая — истёк, серая — не внесён) и рейтинг. Ниже фамилия крупно, имя
-   и отчество, «группа · регион · план» (план — тем, кому сервер прислал
-   планы: «7 из 9», «· ждёт» — на согласовании). Выбранная карточка залита
-   тёмно-синим бренда.
+   `TablePagination`, как у таблиц). Карточка — как в образце: слева фигура
+   спортсмена по пояс на голубой подложке (фото, если есть; нет — **заглушка:
+   сгенерированный игрок в стойке** своего пола — три мужских, три женских,
+   выбор по id, у человека не меняется; решение владельца продукта 22.11.2026),
+   в углу фигуры — точка допуска (зелёная — допущен, коралловая — истёк, серая
+   — не внесён); справа фамилия крупно, имя и отчество, регион, «группа ·
+   рейтинг · план» (план — тем, кому сервер прислал планы: «7 из 9», «· ждёт» —
+   на согласовании).
+   Выбранная карточка залита тёмно-синим бренда.
 
-   Картинки сгенерированы fal.ai (FLUX dev, 22.11.2026): баннеры — «стол,
-   сетка, мяч, ракетки, зал; тёмно-синий #18244D и голубой #0AB3D7; без текста,
-   людей и знаков», контур — «белая линия игрока с ракеткой на чёрном»,
-   переведённый в прозрачный PNG (яркость → прозрачность). Лежат в
-   `public/national/`.
+   Заглушки сгенерированы fal.ai (FLUX dev, 22.11.2026): «вымышленный
+   казахстанский спортсмен / спортсменка по пояс, в стойке с ракеткой, в
+   тёмно-синей форме с голубой отделкой без знаков и надписей», фон снят
+   (`imageutils/rembg`); вымышленные люди, не спортсмены федерации. Лежат в
+   `public/national/players/`.
 
-   Справа — панель выбранного (`roster-detail`): шапка — тот же баннер с
-   фото или контуром под тёмной шторкой, на ней состав и имя, короткие
-   сведения, ниже строки с полосами —
+   Справа — панель выбранного (`roster-detail`): шапка на тёмно-синем — та же
+   фигура крупно слева, справа состав, имя, короткие сведения; ниже строки с
+   полосами —
    рейтинг (доля от лучшего в составе), план, доля побед (рейтинговая
    карточка), матчей, допуск, ограничения нагрузки, личный тренер — и
    «Открыть профиль». Двойной щелчок по карточке открывает профиль сразу; на
@@ -53,36 +53,55 @@ const splitName = (name: string) => {
 };
 
 const PAGE = 12; // карточек на страницу — значение наше
-const BANNERS = 6;
+const PLACEHOLDERS = { m: ['m-1', 'm-2', 'm-3'], f: ['f-1', 'f-2', 'f-3'] } as const;
 
-/** Картинка баннера — одна и та же для человека: по id. */
-function bannerOf(m: NationalMember) {
+/** Заглушка фигуры — своего пола (пол неизвестен — любая), одна и та же для человека: по id. */
+function placeholderOf(m: NationalMember) {
   let h = 0;
   for (const ch of m.id) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
-  return `/national/banners/banner-${(h % BANNERS) + 1}.jpg`;
+  const list: readonly string[] = m.person.sex ? PLACEHOLDERS[m.person.sex] : [...PLACEHOLDERS.m, ...PLACEHOLDERS.f];
+  return `/national/players/${list[h % list.length]}.webp`;
 }
 
-/** Баннер: картинка темы, на ней фото спортсмена или контур игрока. */
-function Banner({ m, className, figure }: { m: NationalMember; className: string; figure: string }) {
+/** Фигура спортсмена: фото или заглушка — игрок по пояс, прижат к низу. */
+function Figure({ m, className, size }: { m: NationalMember; className: string; size: string }) {
   return (
-    <span className={'block overflow-hidden bg-brand-600 ' + className}>
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src={bannerOf(m)} alt="" loading="lazy" className="absolute inset-0 size-full object-cover transition-transform duration-500 group-hover:scale-105" data-testid="member-banner" />
+    <span className={'relative block shrink-0 overflow-hidden ' + className}>
       {m.avatar ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img src={m.avatar} alt="" className="absolute inset-0 size-full object-cover" data-testid="member-photo" data-photo="yes" />
       ) : (
         // eslint-disable-next-line @next/next/no-img-element
-        <img src="/national/player-outline.png" alt="" aria-hidden className={'absolute bottom-0 object-contain opacity-90 ' + figure} data-testid="member-photo" data-photo="no" />
+        <img
+          src={placeholderOf(m)}
+          alt=""
+          aria-hidden
+          loading="lazy"
+          className={'absolute bottom-0 left-1/2 w-auto max-w-none -translate-x-1/2 object-contain transition-transform duration-300 group-hover:scale-[1.04] origin-bottom ' + size}
+          data-testid="member-photo"
+          data-photo="no"
+        />
       )}
     </span>
   );
 }
 
+function Dot({ m, className }: { m: NationalMember; className: string }) {
+  return (
+    <span
+      className={'absolute size-3.5 rounded-full border-2 border-white ' + DOT[m.clearance.status] + ' ' + className}
+      title={DOT_TEXT[m.clearance.status]}
+      aria-label={DOT_TEXT[m.clearance.status]}
+      data-testid="clearance"
+      data-status={m.clearance.status}
+    />
+  );
+}
+
 function Clearance({ m }: { m: NationalMember }) {
   return (
-    <span className="flex items-center gap-1.5 rounded-full bg-white/90 px-2 py-0.5 text-[11px] font-medium text-neutral-700 backdrop-blur-sm">
-      <span className={'size-2 rounded-full ' + DOT[m.clearance.status]} aria-hidden data-testid="clearance" data-status={m.clearance.status} />
+    <span className="flex items-center gap-1.5 rounded-full bg-white/90 px-2 py-0.5 text-[11px] font-medium text-neutral-700">
+      <span className={'size-2 rounded-full ' + DOT[m.clearance.status]} aria-hidden />
       {DOT_TEXT[m.clearance.status]}
     </span>
   );
@@ -94,7 +113,7 @@ function MemberCard({ m, on, onPick, onOpen }: { m: NationalMember; on: boolean;
   const { surname, rest } = splitName(m.person.name);
   const facts: [string, ReactNode][] = [
     ['Группа', AGE_GROUP_LABEL[m.ageGroup]],
-    ['Регион', m.person.region || '—'],
+    ['Рейтинг', m.person.rating ? num2(Number(m.person.rating)) : '—'],
     ...(m.plan !== undefined ? [['План', <span key="p" data-testid="member-plan">{planText(m)}</span>] as [string, ReactNode]] : []),
   ];
   return (
@@ -104,33 +123,23 @@ function MemberCard({ m, on, onPick, onOpen }: { m: NationalMember; on: boolean;
       onDoubleClick={onOpen}
       aria-pressed={on}
       className={
-        'group flex min-w-0 flex-col overflow-hidden rounded-2xl border text-left transition-[box-shadow,border-color] ' +
-        (on ? 'border-brand-600 shadow-lg shadow-brand-700/25' : 'border-neutral-200/80 bg-white hover:border-brand-200 hover:shadow-md')
+        'group relative flex h-36 min-w-0 overflow-hidden rounded-2xl border text-left transition-[box-shadow,border-color] ' +
+        (on ? 'border-transparent text-white shadow-lg shadow-brand-700/25 ' + FILL : 'border-neutral-200/80 bg-white hover:border-brand-200 hover:shadow-md')
       }
       data-testid="member-row"
       data-name={m.person.name}
     >
-      <span className="relative block">
-        <Banner m={m} className="relative h-36" figure="left-5 h-[92%]" />
-        <span aria-hidden className="absolute inset-0 bg-[linear-gradient(to_top,color-mix(in_srgb,var(--color-brand-800)_75%,transparent),transparent_55%)]" />
-        <span className="absolute top-3 right-3">
-          <Clearance m={m} />
-        </span>
-        {m.person.rating && (
-          <span className="absolute right-4 bottom-2.5 flex flex-col items-end text-white">
-            <span className="text-[10px] font-semibold tracking-wide text-white/70 uppercase">Рейтинг</span>
-            <span className="text-[22px] leading-none font-bold tabular-nums">{num2(Number(m.person.rating))}</span>
-          </span>
-        )}
-      </span>
-      <span className={'flex min-w-0 flex-1 flex-col px-4 pt-3 pb-4 ' + (on ? 'text-white ' + FILL : '')}>
+      <Figure m={m} className={'w-32 ' + (on ? 'bg-white/10' : 'bg-[color-mix(in_srgb,var(--color-qtt-sky)_28%,white)]')} size="h-[94%]" />
+      <Dot m={m} className="top-2.5 left-2.5" />
+      <span className="relative flex min-w-0 flex-1 flex-col justify-center px-4 py-3">
         <span className="truncate text-[16px] leading-tight font-bold">{surname}</span>
         <span className={'truncate text-[13px] ' + (on ? 'text-white/75' : 'text-neutral-500')}>{rest}</span>
-        <span className="mt-3 flex flex-wrap gap-x-5 gap-y-1.5">
+        <span className={'truncate text-[12px] ' + (on ? 'text-white/60' : 'text-neutral-400')}>{m.person.region || 'Регион не указан'}</span>
+        <span className="mt-2.5 flex gap-x-4">
           {facts.map(([label, value]) => (
             <span key={label} className="flex min-w-0 flex-col">
               <span className={'text-[10px] font-semibold tracking-wide uppercase ' + (on ? 'text-white/60' : 'text-neutral-400')}>{label}</span>
-              <span className="text-[12.5px] font-medium whitespace-nowrap">{value}</span>
+              <span className="text-[12.5px] font-medium whitespace-nowrap tabular-nums">{value}</span>
             </span>
           ))}
         </span>
@@ -171,17 +180,17 @@ function Detail({ m, best, onOpen }: { m: NationalMember; best: number; onOpen: 
   const age = m.person.birthYear ? new Date().getFullYear() - m.person.birthYear : null;
   return (
     <aside className="flex min-h-0 flex-col overflow-y-auto border-l border-neutral-200 bg-white" data-testid="roster-detail" data-name={m.person.name}>
-      <div className="relative flex min-h-60 flex-col justify-end overflow-hidden px-6 pt-16 pb-6 text-white">
-        <Banner m={m} className="absolute inset-0" figure="right-4 h-[88%]" />
-        <span aria-hidden className="absolute inset-0 bg-[linear-gradient(to_top,var(--color-brand-800),color-mix(in_srgb,var(--color-brand-800)_20%,transparent)_75%)]" />
-        <span className="absolute top-4 left-6">
+      <div className={'relative flex items-end gap-3 overflow-hidden pt-5 pr-5 text-white ' + FILL}>
+        <span aria-hidden className="pointer-events-none absolute -top-12 -left-12 size-56 rounded-full bg-white/5" />
+        <Figure m={m} className="h-52 w-40" size="h-full" />
+        <span className="absolute top-4 right-5">
           <Clearance m={m} />
         </span>
-        <div className="relative flex min-w-0 flex-col">
+        <div className="relative flex min-w-0 flex-1 flex-col pb-5">
           <span className="text-[11px] font-semibold tracking-wide text-white/65 uppercase">{SQUAD_LABEL[m.squad]} состав</span>
           <span className="mt-0.5 truncate text-[14px] text-white/85">{rest}</span>
           <span className="truncate text-[22px] leading-tight font-bold">{surname}</span>
-          <div className="mt-3 flex gap-5 border-t border-white/15 pt-3">
+          <div className="mt-3 flex flex-wrap gap-x-4 gap-y-2 border-t border-white/15 pt-3">
             {[
               ['Возраст', age ?? '—'],
               ['Группа', AGE_GROUP_LABEL[m.ageGroup]],
@@ -301,7 +310,7 @@ export function RosterBoard({ canEdit, onOpen }: { canEdit: boolean; onOpen: (me
             {members.data.length ? 'Никого не найдено' : 'В сборной никого нет'}
           </p>
         ) : (
-          <div className="grid gap-4 px-4 pb-4 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
+          <div className="grid gap-4 px-4 pb-4 sm:grid-cols-2 2xl:grid-cols-3">
             {shown.map((m) => (
               <MemberCard key={m.id} m={m} on={!narrow && current?.id === m.id} onPick={() => (narrow ? onOpen(m.id) : setPicked(m.id))} onOpen={() => onOpen(m.id)} />
             ))}

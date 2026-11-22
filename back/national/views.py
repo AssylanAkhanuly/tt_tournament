@@ -43,6 +43,8 @@ def _person(u: User) -> dict:
         "region": card.region if card else "",
         "birth_year": card.birth_year if card else None,
         "rating": str(card.value) if card else None,
+        # Пол — для заглушки фигуры в карточке состава ✳ (22.11.2026).
+        "sex": card.sex if card else "",
     }
 
 

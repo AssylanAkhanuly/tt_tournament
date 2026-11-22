@@ -132,6 +132,9 @@ def test_member_profile_and_item_state(team):
     # Строка состава несёт фото — карточки состава ✳ (22.11.2026); снимка нет — None.
     row = next(x for x in head.get("/api/national/members/").json() if x["id"] == str(team["ma"].pk))
     assert row["avatar"] is None
+    # Пол — для заглушки фигуры своего пола ✳ (22.11.2026): из рейтинговой карточки.
+    card = getattr(team["ma"].user, "rating_profile", None)
+    assert row["person"]["sex"] == (card.sex if card else "")
     plans = head.get(f"/api/national/members/{team['ma'].pk}/plans/").json()
     items = {i["title"]: i for i in plans[0]["items"]}
     assert items["Тест ОФП"]["state"] == "done"
