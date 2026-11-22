@@ -166,6 +166,14 @@
   `medical.playing`). Ручка `GET|POST /api/tournaments/<id>/medical/`. Миграции `tournaments/0031`,
   `users/0013`. Устройство — [ADMISSION.md](../ADMISSION.md) «Допуск врача». Тесты — `test_medical.py`.
 
+## Счёт судьёй стола ✳ (22.11.2026)
+- Правила — `tournaments/scoring.py` (`my_matches`, `start`, `record_game`, `undo_game`, `submit`, `correct`,
+  `ScoringError` / `ScoringDenied`): матч группы ведёт судья, посаженный расписанием, по партиям (до 11, при 10 : 10 —
+  до разрыва в два), подтверждает решённый матч; дальше правит только главный судья. Поля `GroupMatch.games`,
+  `result_by`, `result_at` (миграция `0032`). Ручки `GET /api/tournaments/my-table/`,
+  `GET|POST /api/tournaments/<id>/group-matches/<match>/scoring/` `{action}`. Устройство — [ENGINE.md](../ENGINE.md)
+  «Сделано: счёт судьёй стола». Тесты — `test_scoring.py`.
+
 ## Приём заявок судей ✳ (29.10.2026)
 - Правила — `tournaments/recruitment.py` (`apply`, `withdraw`, `accept`, `reject`, `RecruitmentError`), модель —
   `RefereeApplication` (одна на судью и турнир: `positions` — отмеченные должности по старшинству `roster.POSITIONS`,

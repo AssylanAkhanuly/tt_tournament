@@ -402,6 +402,10 @@ match: MATCH {
   status: "ожидает | идёт | завершён"
   winner_side_id: uuid {constraint: foreign_key}
   is_walkover: bool
+  # Счёт судьёй стола ✳ 22.11.2026 (flows/09 Э9.3–Э9.5): кто и когда подтвердил
+  # результат; дальше правит только главный судья.
+  result_by: "uuid — подтвердил результат" {constraint: foreign_key}
+  result_at: "datetime — результат подтверждён"
 }
 
 game: GAME {
@@ -419,6 +423,8 @@ game: GAME {
   # ввода игроком и подтверждения соперником НЕТ (по замечанию Андрея).
   entered_by: uuid {constraint: foreign_key}
   entry_source: "судья стола | главный судья"
+  # ✳ 22.11.2026: в коде партии матча группы пока лежат списком на самом матче
+  # (`GroupMatch.games`, JSON) — отдельной таблицы нет, пока нет очков (RALLY).
 }
 
 rally: RALLY {

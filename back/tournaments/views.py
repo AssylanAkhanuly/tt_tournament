@@ -2136,3 +2136,63 @@ class MedicalAdmissionView(APIView):
             code = status.HTTP_403_FORBIDDEN if "врач соревнований" in str(e) else status.HTTP_400_BAD_REQUEST
             return Response({"detail": str(e)}, status=code)
         return Response(self._payload(t, request.user))
+
+
+class MyTableView(APIView):
+    """GET `/api/tournaments/my-table/` — «Мой стол» судьи (Э9.2): матчи групп,
+    на которые его посадили, в идущих турнирах с отправленным расписанием."""
+
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        from . import scoring
+
+        matches = list(scoring.my_matches(request.user))
+        ids = {m.player1_id for m in matches} | {m.player2_id for m in matches}
+        regions = scoring._regions(ids)
+        return Response({"matches": [scoring.serialize(m, request.user, regions) for m in matches]})
+
+
+class MatchScoringView(APIView):
+    """GET `/api/tournaments/<pk>/group-matches/<id>/scoring/` — матч со счётом
+    по партиям (результаты публичны — любому вошедшему). POST `{action, …}`:
+    `start` · `game {a, b}` · `undo` · `submit {score1?, score2?}` — судья стола
+    матча; `correct {games? | score1, score2}` — главный судья турнира."""
+
+    permission_classes = [IsAuthenticated]
+
+    def _match(self, pk, match_id):
+        return get_object_or_404(
+            GroupMatch.objects.select_related("group__tournament", "player1", "player2", "winner", "result_by"),
+            pk=match_id, group__tournament_id=pk,
+        )
+
+    def get(self, request, pk, match_id):
+        from . import scoring
+
+        return Response(scoring.serialize(self._match(pk, match_id), request.user))
+
+    def post(self, request, pk, match_id):
+        from . import scoring
+
+        m = self._match(pk, match_id)
+        d = request.data
+        action = d.get("action")
+        try:
+            if action == "start":
+                scoring.start(m, request.user)
+            elif action == "game":
+                scoring.record_game(m, request.user, d.get("a"), d.get("b"))
+            elif action == "undo":
+                scoring.undo_game(m, request.user)
+            elif action == "submit":
+                scoring.submit(m, request.user, d.get("score1"), d.get("score2"))
+            elif action == "correct":
+                scoring.correct(m, request.user, d.get("games"), d.get("score1"), d.get("score2"))
+            else:
+                return Response({"detail": "Неизвестное действие."}, status=status.HTTP_400_BAD_REQUEST)
+        except scoring.ScoringDenied as e:
+            return Response({"detail": str(e)}, status=status.HTTP_403_FORBIDDEN)
+        except scoring.ScoringError as e:
+            return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        return Response(scoring.serialize(self._match(pk, match_id), request.user))

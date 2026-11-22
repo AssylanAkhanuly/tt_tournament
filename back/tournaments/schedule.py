@@ -475,6 +475,7 @@ def snapshot(t: Tournament, user) -> dict:
                 "score2": m.score2,
                 "winner": str(m.winner_id) if m.winner_id else None,
                 "is_walkover": m.is_walkover,
+                "games": m.games or [],
             }
             for m in matches
         ],

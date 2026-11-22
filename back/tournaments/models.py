@@ -569,6 +569,14 @@ class GroupMatch(models.Model):
     proposed_by = models.ForeignKey(
         settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name='gm_proposed')
     proposed_at = models.DateTimeField(null=True, blank=True)
+    # Счёт судьёй стола ✳ (22.11.2026, `scoring.py`): партии `[[11, 9], [8, 11], …]`
+    # (пусто — записан только итог матча), кто и когда подтвердил результат.
+    games = models.JSONField(default=list, blank=True, verbose_name="Партии")
+    result_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name='gm_results',
+        verbose_name="Результат подтвердил",
+    )
+    result_at = models.DateTimeField(null=True, blank=True, verbose_name="Результат подтверждён")
 
     class Meta:
         ordering = ['match_number']

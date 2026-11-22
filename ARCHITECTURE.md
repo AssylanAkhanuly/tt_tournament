@@ -1429,6 +1429,8 @@ erDiagram
         string status "ожидает | идёт | завершён"
         uuid winnerSideId FK "ENTRY-победитель"
         boolean isWalkover "техническая победа"
+        uuid resultBy FK "подтвердил результат (судья стола или главный судья)"
+        datetime resultAt "результат подтверждён"
     }
     GAME {
         uuid id PK
