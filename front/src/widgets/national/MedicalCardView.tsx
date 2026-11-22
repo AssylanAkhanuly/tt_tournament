@@ -32,6 +32,28 @@ import { Picker } from '@/shared/ui/Picker';
 import { UmoPanel } from './MedicalUmo';
 
 const KINDS = (Object.keys(MEDICAL_KIND_LABEL) as MedicalKind[]).map((k) => ({ id: k, label: MEDICAL_KIND_LABEL[k] }));
+
+/** Фон медкарты ✳ (22.11.2026, решение владельца продукта): огромный
+ *  медицинский плюс справа сверху, бледным голубым бренда, за содержимым —
+ *  на всех вкладках. Подложка (`className`) — здесь же, под плюсом, иначе
+ *  непрозрачный фон содержимого закрыл бы его. Украшение: щелчков не ловит. */
+function Backdrop({ className = '', children }: { className?: string; children: ReactNode }) {
+  return (
+    <div className={'relative isolate flex min-h-0 flex-1 flex-col overflow-x-clip ' + className} data-testid="medical-backdrop">
+      <svg
+        aria-hidden
+        viewBox="0 0 100 100"
+        className="pointer-events-none absolute -top-10 -right-24 -z-10 size-[600px] text-brand-500 opacity-[0.13]"
+      >
+        <path
+          fill="currentColor"
+          d="M38 4h24a6 6 0 0 1 6 6v22h22a6 6 0 0 1 6 6v24a6 6 0 0 1-6 6H68v22a6 6 0 0 1-6 6H38a6 6 0 0 1-6-6V68H10a6 6 0 0 1-6-6V38a6 6 0 0 1 6-6h22V10a6 6 0 0 1 6-6z"
+        />
+      </svg>
+      {children}
+    </div>
+  );
+}
 const today = () => new Date().toISOString().slice(0, 10);
 
 function RecordDialog({ memberId, onAdded }: { memberId: string; onAdded: () => void }) {
@@ -164,10 +186,14 @@ export function MedicalCardView({ memberId, onChanged }: { memberId: string; onC
   // Вкладки — во вкладках страницы (шапка оболочки, как у остальных страниц
   // кабинета ✳ 22.11.2026); здесь только содержимое выбранной.
   const tabbed = (firstView: ReactNode) =>
-    tab === 'records' ? firstView : (
-      <div className="flex min-h-0 flex-1 flex-col bg-neutral-100" data-testid="medical-card">
-        <UmoPanel memberId={memberId} tab={tab} onTab={setTab} />
-      </div>
+    tab === 'records' ? (
+      <Backdrop>{firstView}</Backdrop>
+    ) : (
+      <Backdrop className="bg-neutral-100">
+        <div className="flex min-h-0 flex-1 flex-col" data-testid="medical-card">
+          <UmoPanel memberId={memberId} tab={tab} onTab={setTab} />
+        </div>
+      </Backdrop>
     );
 
   if (card.data && !card.data.full) {
@@ -186,7 +212,7 @@ export function MedicalCardView({ memberId, onChanged }: { memberId: string; onC
         rowProps={() => ({ 'data-testid': 'limit-row' })}
       />
     );
-    return card.data.umo ? tabbed(limitsTable) : limitsTable;
+    return card.data.umo ? tabbed(limitsTable) : <Backdrop>{limitsTable}</Backdrop>;
   }
 
   const columns: DataColumn<MedicalRecord>[] = [

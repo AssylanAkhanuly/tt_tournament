@@ -21,7 +21,8 @@
    страница, таблицы — белыми карточками; карточки блоков — подложкой группы
    (рычаги — голубой, допуск и контроль — персиковый) с огромной контурной
    цифрой блока узкой «номерной» гарнитурой, как место в листе у карточки
-   состава; над таблицей блока — полоса градиента бренда с той же цифрой. */
+   состава; над таблицей блока — полоса градиента бренда с той же цифрой.
+   Серая подложка и огромный плюс за всем — у медкарты (`Backdrop`). */
 
 import { AlertDialog, Button, Chip, Input, Label, Modal, Spinner, TextArea, TextField, Tooltip, useOverlayState } from '@heroui/react';
 import { Info, Pencil, Plus, Star } from 'lucide-react';
@@ -175,7 +176,7 @@ function Summary({ umo, memberId, onSaved, onOpen }: { umo: Umo; memberId: strin
     </Button>
   );
   return (
-    <div className="flex min-h-full flex-col gap-6 bg-neutral-100 p-5 [&>*]:shrink-0" data-testid="umo-summary">
+    <div className="flex min-h-full flex-col gap-6 p-5 [&>*]:shrink-0" data-testid="umo-summary">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h3 className="m-0 text-[15px] font-semibold">Осмотры</h3>
         {umo.canEdit && <ExamDialog memberId={memberId} onSaved={onSaved} trigger={newExam} />}
@@ -185,7 +186,7 @@ function Summary({ umo, memberId, onSaved, onOpen }: { umo: Umo; memberId: strin
           Осмотров нет
         </p>
       ) : (
-        <div className="overflow-x-auto rounded-2xl border border-neutral-200/80 bg-white">
+        <div className="overflow-x-auto rounded-2xl border border-neutral-200/80 bg-white/70 backdrop-blur-[2px]">
           <table className="w-full min-w-[720px] border-collapse">
             <thead>
               <tr>
@@ -332,7 +333,7 @@ function BlockTable({ block, umo, onSaved }: { block: UmoBlock; umo: Umo; onSave
     min === null && max === null ? '—' : min === null ? '≤ ' + fmt(max) : max === null ? '≥ ' + fmt(min) : fmt(min) + ' – ' + fmt(max);
 
   return (
-    <div className="flex min-h-full flex-col gap-3 bg-neutral-100 p-5 [&>*]:shrink-0" data-testid="umo-block" data-code={block.code}>
+    <div className="flex min-h-full flex-col gap-3 p-5 [&>*]:shrink-0" data-testid="umo-block" data-code={block.code}>
       {/* Полоса блока — фон: градиент бренда и огромная цифра блока; заголовка
           нет — он повторял бы выбранную вкладку ✳ (22.11.2026). */}
       <div
@@ -396,7 +397,7 @@ function BlockTable({ block, umo, onSaved }: { block: UmoBlock; umo: Umo; onSave
       {umo.exams.length === 0 ? (
         <p className="m-0 text-[13px] text-neutral-500">Осмотров нет</p>
       ) : (
-        <div className="overflow-x-auto rounded-2xl border border-neutral-200/80 bg-white">
+        <div className="overflow-x-auto rounded-2xl border border-neutral-200/80 bg-white/70 backdrop-blur-[2px]">
           <table className="w-full min-w-[900px] border-collapse">
             <thead>
               <tr>
