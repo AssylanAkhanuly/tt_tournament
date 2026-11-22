@@ -1,43 +1,36 @@
 'use client';
 
-/* Шапка профиля — карточка-«герой» ✳ (22.11.2026, образец владельца продукта
-   Athlitiq, совмещённый с Orbix «Player Profile»): сверху баннер-картинка
-   (одна из шести, fal.ai, по id), на неё заходит круглый аватар — фото, а без
-   снимка лицо сгенерированного игрока своего пола на персиковом, как в
-   карточке состава (решение владельца продукта 22.11.2026) с кольцом цвета допуска (зелёное —
-   допущен, коралловое — истёк, серое — не внесён) и короной члена сборной;
-   над именем — состав и группа строкой бренда, имя в две строки (фамилия,
-   затем имя и отчество); под ним — короткие сведения через черту: место в
-   рейтинг-листе (цветом бренда, как номер игрока в образце), возраст, регион,
-   «в сборной с». Справа вверху — «написать», «позвонить» и штабу «Убрать из
-   сборной». Бледная крупная цифра справа — место в листе. */
+/* Шапка профиля ✳ (22.11.2026, решения владельца продукта): у члена сборной
+   два снимка — **аватар** (лицо) и **фигура** (снимок по пояс, до бёдер).
 
-import { Tooltip } from '@heroui/react';
-import { Crown, Mail, Phone } from 'lucide-react';
-import type { ReactNode } from 'react';
+   - **Баннер — вся шапка во всю высоту**: линейный градиент бренда
+     (тёмно-синий → голубой), справа фигура во всю высоту — загруженный снимок
+     или сгенерированный игрок своего пола (заглушка, `public/national/players`),
+     позади неё огромная контурная цифра места в рейтинг-листе узкой «номерной»
+     гарнитурой (как в карточке состава).
+   - Слева на баннере белым: **аватар** — фото или лицо той же заглушки, кольцо
+     — цвет допуска (зелёное — допущен, коралловое — истёк, серое — не внесён),
+     корона — член национальной сборной; состав и группа, имя в две строки
+     (фамилия, затем имя и отчество), сведения через черту — место в листе,
+     возраст, регион, «в сборной с»; «написать», «позвонить», штабу —
+     «Убрать из сборной».
 
-import { AGE_GROUP_LABEL, dmy, SQUAD_LABEL, type NationalMember } from '@/entities/national';
+   Штаб меняет снимки прямо здесь: значок-камера у аватара и «Фигура» на
+   баннере (JPG, PNG, WebP до 8 МБ — предел наш; снять — в том же меню). */
+
+import { Dropdown, Tooltip } from '@heroui/react';
+import { Camera, Crown, Mail, Phone } from 'lucide-react';
+import { useRef, useState, type ReactNode } from 'react';
+
+import { AGE_GROUP_LABEL, dmy, setMemberImage, SQUAD_LABEL, type MemberImageKind, type NationalMember } from '@/entities/national';
 import type { useRatingCard } from '@/entities/rating';
 
 import { RemoveMemberButton } from '../MemberControls';
-import { bannerOf, placeholderOf } from '../RosterParts';
+import { placeholderOf } from '../RosterParts';
 import { CARD } from './ui';
 
-export const initials = (name: string) =>
-  name
-    .split(/\s+/)
-    .filter((w) => /^\p{L}/u.test(w))
-    .slice(0, 2)
-    .map((w) => w.slice(0, 1))
-    .join('')
-    .toUpperCase();
-
 /* Кольцо фото — цвет допуска. Классы целиком. */
-const RING = {
-  ok: 'ring-green-500',
-  expired: 'ring-qtt-coral',
-  none: 'ring-neutral-200',
-} as const;
+const RING = { ok: 'ring-green-500', expired: 'ring-qtt-coral', none: 'ring-neutral-200' } as const;
 
 const yearsWord = (n: number) => (n % 10 === 1 && n % 100 !== 11 ? 'год' : n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 10 || n % 100 >= 20) ? 'года' : 'лет');
 
@@ -55,12 +48,7 @@ function Contact({ href, label, value, tone, icon, testId }: { href: string; lab
   return (
     <Tooltip>
       <Tooltip.Trigger>
-        <a
-          href={href}
-          aria-label={label + ': ' + value}
-          className={'grid size-10 place-items-center rounded-full text-white shadow-sm hover:brightness-110 ' + tone}
-          data-testid={testId}
-        >
+        <a href={href} aria-label={label + ': ' + value} className={'grid size-10 place-items-center rounded-full text-white shadow-sm hover:brightness-110 ' + tone} data-testid={testId}>
           {icon}
         </a>
       </Tooltip.Trigger>
@@ -71,39 +59,123 @@ function Contact({ href, label, value, tone, icon, testId }: { href: string; lab
 
 function Fact({ label, value, accent }: { label: string; value: ReactNode; accent?: boolean }) {
   return (
-    <div className="flex flex-col gap-0.5 border-l border-neutral-200 px-5 first:border-l-0 first:pl-0">
-      <dd className={'m-0 text-[19px] leading-tight font-semibold tabular-nums ' + (accent ? 'text-brand-500' : '')}>{value}</dd>
-      <dt className="text-[12px] text-neutral-500">{label}</dt>
+    <div className="flex flex-col gap-0.5 border-l border-white/15 px-5 first:border-l-0 first:pl-0">
+      <dd className={'m-0 text-[19px] leading-tight font-semibold tabular-nums ' + (accent ? 'text-qtt-peach' : 'text-white')}>{value}</dd>
+      <dt className="text-[12px] text-white/60">{label}</dt>
     </div>
   );
 }
 
-export function Hero({ member, card, canEdit, onRemoved }: { member: NationalMember; card: ReturnType<typeof useRatingCard>; canEdit: boolean; onRemoved: () => void }) {
+/** Меню снимка для штаба: загрузить новый или снять загруженный. */
+function ImageMenu({ member, kind, has, onChanged, children, label }: {
+  member: NationalMember;
+  kind: MemberImageKind;
+  has: boolean;
+  onChanged: () => void;
+  children: ReactNode;
+  label: string;
+}) {
+  const input = useRef<HTMLInputElement>(null);
+  const [error, setError] = useState<string | null>(null);
+  const run = (file: File | null) =>
+    setMemberImage(member.id, kind, file).then(
+      () => {
+        setError(null);
+        onChanged();
+      },
+      (e: Error) => setError(e.message),
+    );
+  return (
+    <>
+      <input
+        ref={input}
+        type="file"
+        accept="image/jpeg,image/png,image/webp"
+        className="hidden"
+        data-testid={'image-input-' + kind}
+        onChange={(e) => {
+          const f = e.target.files?.[0];
+          e.target.value = '';
+          if (f) void run(f);
+        }}
+      />
+      <Dropdown>
+        <Dropdown.Trigger aria-label={label} data-testid={'image-open-' + kind}>
+          {children}
+        </Dropdown.Trigger>
+        <Dropdown.Popover placement="bottom end" className="rounded-xl">
+          <Dropdown.Menu
+            onAction={(key) => {
+              if (key === 'upload') input.current?.click();
+              else void run(null);
+            }}
+          >
+            <Dropdown.Item id="upload" textValue="Загрузить" className="rounded-xl">
+              Загрузить снимок
+            </Dropdown.Item>
+            {has ? (
+              <Dropdown.Item id="remove" textValue="Снять" className="rounded-xl text-red-600">
+                Снять снимок
+              </Dropdown.Item>
+            ) : null}
+          </Dropdown.Menu>
+        </Dropdown.Popover>
+      </Dropdown>
+      {error && <span className="absolute top-full right-0 mt-1 rounded-lg bg-white px-2 py-1 text-[12px] whitespace-nowrap text-red-600 shadow">{error}</span>}
+    </>
+  );
+}
+
+export function Hero({ member, card, canEdit, onChanged, onRemoved }: {
+  member: NationalMember;
+  card: ReturnType<typeof useRatingCard>;
+  canEdit: boolean;
+  onChanged: () => void;
+  onRemoved: () => void;
+}) {
   const p = member.person;
   const pr = member.profile;
   const [surname, ...rest] = p.name.split(/\s+/);
   const years = age(pr?.birthDate, p.birthYear);
   const place = card.data?.place;
+  const avatar = pr?.avatar ?? member.avatar;
   return (
-    <section className={CARD + ' relative overflow-hidden'} data-testid="member-hero">
-      {/* Баннер-картинка сверху, аватар заходит на него ✳ (22.11.2026, решение
-          владельца продукта). */}
-      <div className="relative h-40 bg-brand-600">
+    <section
+      className={
+        CARD +
+        ' relative min-h-72 overflow-hidden border-0 bg-[linear-gradient(110deg,var(--color-brand-700)_0%,var(--color-brand-600)_45%,color-mix(in_srgb,var(--color-brand-500)_70%,var(--color-brand-600))_100%)] text-white'
+      }
+      data-testid="member-hero"
+    >
+      <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden" data-testid="member-banner">
+        {place && (
+          <span
+            className="absolute top-1/2 right-44 translate-x-1/3 -translate-y-1/2 font-[family-name:var(--font-jersey)] text-[300px] leading-[0.72] text-transparent tabular-nums select-none [-webkit-text-stroke:1.5px_color-mix(in_srgb,white_28%,transparent)] max-lg:hidden"
+            data-testid="member-place"
+          >
+            {place}
+          </span>
+        )}
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={bannerOf(member)} alt="" className="absolute inset-0 size-full object-cover" data-testid="member-banner" />
-        <span aria-hidden className="absolute inset-0 bg-[linear-gradient(to_top,color-mix(in_srgb,var(--color-brand-800)_45%,transparent),transparent_60%)]" />
+        <img
+          src={member.figure ?? placeholderOf(member)}
+          alt=""
+          className="absolute right-10 bottom-0 h-[94%] w-auto max-w-none object-contain object-bottom max-md:hidden"
+          data-testid="member-figure"
+          data-photo={member.figure ? 'yes' : 'no'}
+        />
       </div>
-      {place && (
-        <span
-          aria-hidden
-          className="pointer-events-none absolute right-6 bottom-4 font-[family-name:var(--font-jersey)] text-[180px] leading-[0.72] text-transparent tabular-nums select-none [-webkit-text-stroke:1.5px_var(--color-neutral-200)]"
-        >
-          {place}
+      {canEdit && (
+        <span className="absolute top-3 right-3 z-10">
+          <ImageMenu member={member} kind="figure" has={!!member.figure} onChanged={onChanged} label="Снимок по пояс">
+            <span className="flex items-center gap-1.5 rounded-full bg-white/90 px-3 py-1.5 text-[12px] font-medium text-neutral-700 shadow-sm hover:bg-white">
+              <Camera size={14} /> Фигура
+            </span>
+          </ImageMenu>
         </span>
       )}
-      <div className="relative flex flex-wrap items-start gap-x-8 gap-y-5 px-6 pb-6">
-        {/* Корона — член национальной сборной; кольцо — допуск ✳ (22.11.2026). */}
-        <div className="relative -mt-16 shrink-0">
+      <div className="relative flex min-h-72 flex-wrap items-center gap-x-8 gap-y-5 p-6 md:pr-80">
+        <div className="relative shrink-0">
           <div
             className={'grid size-36 place-items-center overflow-hidden rounded-full border-4 border-white bg-qtt-peach ring-4 ' + RING[member.clearance.status]}
             data-testid="member-photo-ring"
@@ -111,11 +183,11 @@ export function Hero({ member, card, canEdit, onRemoved }: { member: NationalMem
           >
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
-              src={pr?.avatar ?? member.avatar ?? placeholderOf(member)}
+              src={avatar ?? placeholderOf(member)}
               alt={p.name}
-              className={'size-full object-cover ' + (pr?.avatar ?? member.avatar ? '' : 'origin-[50%_12%] scale-[2.1] object-top')}
+              className={'size-full object-cover ' + (avatar ? '' : 'origin-[50%_12%] scale-[2.1] object-top')}
               data-testid="member-photo"
-              data-photo={pr?.avatar ?? member.avatar ? 'yes' : 'no'}
+              data-photo={avatar ? 'yes' : 'no'}
             />
           </div>
           <Tooltip>
@@ -128,12 +200,21 @@ export function Hero({ member, card, canEdit, onRemoved }: { member: NationalMem
             </Tooltip.Trigger>
             <Tooltip.Content>В национальной сборной</Tooltip.Content>
           </Tooltip>
+          {canEdit && (
+            <span className="absolute right-1 bottom-1">
+              <ImageMenu member={member} kind="avatar" has={!!member.avatar} onChanged={onChanged} label="Аватар">
+                <span className="grid size-9 place-items-center rounded-full border-2 border-white bg-brand-500 text-white shadow-md hover:brightness-110">
+                  <Camera size={15} />
+                </span>
+              </ImageMenu>
+            </span>
+          )}
         </div>
-        <div className="flex min-w-0 flex-1 flex-col pt-5">
-          <span className="text-[12px] font-semibold tracking-wide text-brand-500 uppercase">
+        <div className="flex min-w-0 flex-1 flex-col">
+          <span className="text-[12px] font-semibold tracking-wide text-brand-200 uppercase">
             {SQUAD_LABEL[member.squad]} состав · {AGE_GROUP_LABEL[member.ageGroup]}
           </span>
-          <h1 className="m-0 mt-1 text-[32px] leading-[1.1] font-bold tracking-tight" data-testid="member-name">
+          <h1 className="m-0 mt-1 text-[34px] leading-[1.1] font-bold tracking-tight text-white" data-testid="member-name">
             <span className="block">{surname}</span> <span className="block">{rest.join(' ')}</span>
           </h1>
           <dl className="m-0 mt-5 flex flex-wrap gap-y-3">
@@ -142,11 +223,17 @@ export function Hero({ member, card, canEdit, onRemoved }: { member: NationalMem
             {p.region && <Fact label="Регион" value={p.region} />}
             {pr && <Fact label="В сборной с" value={dmy(pr.joined)} />}
           </dl>
-        </div>
-        <div className="flex items-center gap-2 self-start pt-5">
-          {pr?.email && <Contact href={'mailto:' + pr.email} label="Написать" value={pr.email} tone="bg-qtt-blue" icon={<Mail size={17} />} testId="member-mail" />}
-          {pr?.phone && <Contact href={'tel:' + pr.phone} label="Позвонить" value={pr.phone} tone="bg-qtt-teal" icon={<Phone size={17} />} testId="member-call" />}
-          {canEdit && <RemoveMemberButton member={member} onRemove={onRemoved} />}
+          {(pr?.email || pr?.phone || canEdit) && (
+            <div className="mt-5 flex flex-wrap items-center gap-2">
+              {pr?.email && <Contact href={'mailto:' + pr.email} label="Написать" value={pr.email} tone="bg-qtt-blue" icon={<Mail size={17} />} testId="member-mail" />}
+              {pr?.phone && <Contact href={'tel:' + pr.phone} label="Позвонить" value={pr.phone} tone="bg-qtt-teal" icon={<Phone size={17} />} testId="member-call" />}
+              {canEdit && (
+                <span className="rounded-xl bg-white/95">
+                  <RemoveMemberButton member={member} onRemove={onRemoved} />
+                </span>
+              )}
+            </div>
+          )}
         </div>
       </div>
     </section>

@@ -58,13 +58,13 @@ const splitName = (name: string) => {
 };
 
 const PAGE = 12; // карточек на страницу — значение наше
-/** Фигура спортсмена: фото или заглушка — игрок по пояс, прижат к низу. */
+/** Фигура спортсмена: загруженный снимок по пояс или заглушка, прижата к низу. */
 function Figure({ m, className, size }: { m: NationalMember; className: string; size: string }) {
   return (
     <span className={'relative block shrink-0 overflow-hidden ' + className}>
-      {m.avatar ? (
+      {m.figure ? (
         // eslint-disable-next-line @next/next/no-img-element
-        <img src={m.avatar} alt="" className="absolute inset-0 size-full object-cover" data-testid="member-photo" data-photo="yes" />
+        <img src={m.figure} alt="" className="absolute inset-0 size-full object-cover object-top" data-testid="member-photo" data-photo="yes" />
       ) : (
         // eslint-disable-next-line @next/next/no-img-element
         <img

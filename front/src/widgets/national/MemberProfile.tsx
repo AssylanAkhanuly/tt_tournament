@@ -55,7 +55,7 @@ export function MemberProfile({
     <div className="h-full min-h-0 overflow-y-auto bg-neutral-100" data-testid="member-profile">
       <div className="grid gap-4 p-4 xl:grid-cols-[minmax(0,1fr)_22rem] xl:items-start">
         <div className="flex min-w-0 flex-col gap-4">
-          <Hero member={member} card={card} canEdit={canEdit} onRemoved={onRemoved} />
+          <Hero member={member} card={card} canEdit={canEdit} onChanged={onChanged} onRemoved={onRemoved} />
           <Kpis member={member} card={card} />
           <RatingBlock userId={member.person.id} card={card} />
           <div className="grid gap-4 lg:grid-cols-2">

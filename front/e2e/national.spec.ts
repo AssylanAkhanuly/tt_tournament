@@ -277,3 +277,51 @@ test('сборная: рапорт старшего тренера регион�
   await expect(dialog).toHaveCount(0);
   await expect(regional.locator(`[data-testid="report-row"][data-event="${camp}"]`)).toHaveAttribute('data-status', 'submitted');
 });
+
+test('сборная: врач ведёт УМО по вкладкам медкарты, штаб загружает фигуру', async ({ browser, request }) => {
+  const stamp = Date.now();
+  const athlete = `[e2e] УМО ${stamp}`;
+  const memberId = await makeMember(request, athlete, 'adult');
+
+  // Врач: «Сводка УМО» → новый осмотр → блок «Питание» → значения.
+  const doctor = await signIn(browser, E2E_DOCTOR, '/doctor');
+  await doctor.goto(`/doctor/members/${memberId}/medical`);
+  await doctor.getByTestId('medical-tab-summary').click();
+  await doctor.waitForURL(/tab=summary/);
+  await expect(doctor.getByTestId('umo-empty')).toBeVisible();
+  await doctor.getByTestId('umo-new').click();
+  const dialog = doctor.getByTestId('umo-exam');
+  await dialog.getByTestId('umo-date').fill('2026-08-27');
+  await dialog.getByTestId('umo-height').fill('180');
+  await dialog.getByTestId('umo-stage').fill('УТС');
+  await dialog.getByTestId('umo-exam-save').click();
+  await expect(dialog).toHaveCount(0);
+  await expect(doctor.getByTestId('umo-exam-open')).toHaveCount(1);
+  await expect(doctor.getByTestId('umo-summary')).toContainText('УТС');
+  await doctor.locator('[data-testid="umo-block-card"][data-code="nutrition"]').click();
+  await doctor.waitForURL(/tab=nutrition/);
+  await doctor.getByTestId('umo-values-edit').click();
+  await doctor.getByTestId('umo-input-weight').fill('81');
+  await doctor.getByTestId('umo-input-ldl').fill('1,7');
+  await doctor.getByTestId('umo-values-save').click();
+  // ИМТ считает сервер: 81 / 1,8² = 25; ЛПНП ниже референса 2,6–4,1.
+  const bmi = doctor.locator('[data-testid="umo-param"][data-code="bmi"]');
+  await expect(bmi.getByTestId('umo-cell').first()).toHaveText('25');
+  const ldl = doctor.locator('[data-testid="umo-param"][data-code="ldl"]');
+  await expect(ldl.getByTestId('umo-status')).toHaveAttribute('data-status', 'low');
+  await expect(ldl.getByTestId('umo-cell').first()).toHaveAttribute('data-status', 'low');
+  await doctor.screenshot({ path: 'test-results/national/umo-block.png', fullPage: true });
+  await doctor.getByTestId('medical-tab-summary').click();
+  await expect(doctor.locator('[data-testid="umo-block-card"][data-code="nutrition"]')).toContainText('1 ниже');
+
+  // Штаб: УМО не видно; фигура для баннера загружается из профиля.
+  const coach = await signIn(browser, E2E_NATIONAL_COACH, '/national');
+  await coach.goto(`/national/members/${memberId}/medical`);
+  await expect(coach.getByTestId('medical-tab-summary')).toHaveCount(0);
+  await coach.goto(`/national/members/${memberId}`);
+  await expect(coach.getByTestId('member-figure')).toHaveAttribute('data-photo', 'no');
+  await coach.getByTestId('image-input-figure').setInputFiles('public/national/players/m-1.webp');
+  await expect(coach.getByTestId('member-figure')).toHaveAttribute('data-photo', 'yes');
+  await expect(coach.getByTestId('member-figure')).toHaveAttribute('src', /\/media\/national\/figures\//);
+  await coach.screenshot({ path: 'test-results/national/hero-figure.png' });
+});

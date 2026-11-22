@@ -65,6 +65,8 @@ export type NationalMember = {
   avatar: string | null;
   /** Место в рейтинг-листе — только в списке состава ✳ (22.11.2026). */
   place?: number | null;
+  /** Снимок по пояс для баннера карточки и профиля ✳ (22.11.2026). */
+  figure: string | null;
   personalCoach: { id: string; name: string } | null;
   clearance: Clearance;
   /** Сколько действует ограничений нагрузки. */
@@ -176,7 +178,7 @@ export type NationalMe = {
 
 type Raw = Record<string, unknown>;
 
-async function request<T>(url: string, init?: RequestInit): Promise<T> {
+export async function request<T>(url: string, init?: RequestInit): Promise<T> {
   const isForm = typeof FormData !== 'undefined' && init?.body instanceof FormData;
   const res = await fetch(url, {
     credentials: 'include',
@@ -189,7 +191,8 @@ async function request<T>(url: string, init?: RequestInit): Promise<T> {
   return body as T;
 }
 
-const send = <T>(method: string, url: string, data?: unknown) =>
+/** Запрос с телом — JSON или FormData; общий для частей транспорта сборной. */
+export const send = <T>(method: string, url: string, data?: unknown) =>
   request<T>(url, {
     method,
     body: data === undefined ? undefined : data instanceof FormData ? data : JSON.stringify(data),
@@ -213,6 +216,7 @@ const member = (m: Raw): NationalMember => {
     ageGroup: m.age_group as AgeGroup,
     avatar: (m.avatar as string | null | undefined) ?? null,
     place: (m.place as number | null | undefined) ?? undefined,
+    figure: (m.figure as string | null | undefined) ?? null,
     personalCoach: (m.personal_coach as NationalMember['personalCoach']) ?? null,
     clearance: m.clearance as Clearance,
     limits: Number(m.limits ?? 0),
@@ -422,7 +426,7 @@ export type BoardItem = {
   canMove: boolean;
 };
 export type BoardRow = {
-  member: { id: string; person: NationalPerson; squad: Squad; ageGroup: AgeGroup };
+  member: { id: string; person: NationalPerson; squad: Squad; ageGroup: AgeGroup; avatar: string | null };
   plan: { id: string; status: PlanStatus; startsOn: string; endsOn: string; goal: string; done: number; total: number } | null;
   items: BoardItem[];
   canMark: boolean;
@@ -443,7 +447,13 @@ export async function fetchPlanBoard(from: string, to: string): Promise<PlanBoar
       const m = x.member as Raw;
       const p = x.plan as Raw | null;
       return {
-        member: { id: String(m.id), person: person(m.person as Raw), squad: m.squad as Squad, ageGroup: m.age_group as AgeGroup },
+        member: {
+          id: String(m.id),
+          person: person(m.person as Raw),
+          squad: m.squad as Squad,
+          ageGroup: m.age_group as AgeGroup,
+          avatar: (m.avatar as string | null | undefined) ?? null,
+        },
         plan: p
           ? {
               id: String(p.id),
@@ -526,3 +536,14 @@ export const reportFileUrl = (id: string) => `/api/national/reports/${id}/file/`
 
 /** «2026-11-19» → «19.11.2026». */
 export const dmy = (iso: string | null) => (iso ? iso.slice(0, 10).split('-').reverse().join('.') : '—');
+
+/** Снимки члена сборной ✳ (22.11.2026): аватар (лицо) и фигура по пояс для
+ *  баннера. Меняет штаб сборной; `null` — снять. */
+export type MemberImageKind = 'avatar' | 'figure';
+export async function setMemberImage(memberId: string, kind: MemberImageKind, file: File | null) {
+  const url = `/api/national/members/${memberId}/images/${kind}/`;
+  if (!file) return member(await send<Raw>('DELETE', url));
+  const f = new FormData();
+  f.append('file', file);
+  return member(await send<Raw>('POST', url, f));
+}

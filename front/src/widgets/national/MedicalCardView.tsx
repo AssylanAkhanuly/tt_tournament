@@ -1,12 +1,15 @@
 'use client';
 
 /* Медицинская карта члена сборной ✳ (19.11.2026, NATIONAL.md; флоу Э11.2).
-   Что прислал сервер, то и рисуем: врачу (`full`) — все записи таблицей,
-   «Добавить запись» и удаление; главному тренеру — только действующие
-   ограничения нагрузки (допуск — в шапке карточки). HeroUI + Tailwind. */
+   Что прислал сервер, то и рисуем: врачу (`full`) — вкладки ✳ (22.11.2026):
+   «Записи» (все записи таблицей, «Добавить запись», удаление), «Сводка УМО»
+   и девять блоков УМО (`MedicalUmo`); вкладка — в адресе `?tab=`. Главному
+   тренеру — только действующие ограничения нагрузки (допуск — в шапке
+   карточки), УМО ему не видно. HeroUI + Tailwind. */
 
-import { AlertDialog, Button, Input, Label, Modal, TextArea, TextField, Tooltip, useOverlayState } from '@heroui/react';
+import { AlertDialog, Button, Input, Label, Modal, Tabs, TextArea, TextField, Tooltip, useOverlayState } from '@heroui/react';
 import { Plus, Trash2 } from 'lucide-react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useState, type FormEvent } from 'react';
 
 import {
@@ -23,6 +26,8 @@ import {
 import { DataTable, type DataColumn } from '@/shared/ui/DataTable';
 import { AlertSheet, ModalSheet } from '@/shared/ui/ModalSheet';
 import { Picker } from '@/shared/ui/Picker';
+
+import { UMO_TABS, UmoPanel } from './MedicalUmo';
 
 const KINDS = (Object.keys(MEDICAL_KIND_LABEL) as MedicalKind[]).map((k) => ({ id: k, label: MEDICAL_KIND_LABEL[k] }));
 const today = () => new Date().toISOString().slice(0, 10);
@@ -139,6 +144,16 @@ function DeleteRecord({ record, onDeleted }: { record: MedicalRecord; onDeleted:
 
 export function MedicalCardView({ memberId, onChanged }: { memberId: string; onChanged?: () => void }) {
   const card = useLoad(() => fetchMedical(memberId), memberId);
+  const router = useRouter();
+  const params = useSearchParams();
+  const tab = params.get('tab') ?? 'records';
+  const setTab = (t: string) => {
+    const next = new URLSearchParams(params.toString());
+    if (t === 'records') next.delete('tab');
+    else next.set('tab', t);
+    const qs = next.toString();
+    router.replace(qs ? '?' + qs : '?', { scroll: false });
+  };
   const reload = () => {
     card.reload();
     onChanged?.();
@@ -172,7 +187,7 @@ export function MedicalCardView({ memberId, onChanged }: { memberId: string; onC
     { id: 'actions', label: '', sortable: false, align: 'right', render: (r) => <DeleteRecord record={r} onDeleted={reload} /> },
   ];
 
-  return (
+  const records = (
     <DataTable
       ariaLabel="Медицинская карта"
       testId="medical-records"
@@ -186,5 +201,24 @@ export function MedicalCardView({ memberId, onChanged }: { memberId: string; onC
       actions={<RecordDialog memberId={memberId} onAdded={reload} />}
       rowProps={(r) => ({ 'data-testid': 'medical-row', 'data-kind': r.kind })}
     />
+  );
+  if (!card.data) return records;
+
+  return (
+    <div className="flex h-full min-h-0 flex-col" data-testid="medical-card">
+      <Tabs selectedKey={tab} onSelectionChange={(k) => setTab(String(k))} className="shrink-0 overflow-x-auto border-b border-neutral-200 px-4 py-2">
+        <Tabs.ListContainer className="rounded-xl">
+          <Tabs.List aria-label="Разделы медкарты">
+            {[{ id: 'records', label: 'Записи' }, ...UMO_TABS].map((t) => (
+              <Tabs.Tab key={t.id} id={t.id} className="whitespace-nowrap" data-testid={'medical-tab-' + t.id}>
+                {t.label}
+                <Tabs.Indicator />
+              </Tabs.Tab>
+            ))}
+          </Tabs.List>
+        </Tabs.ListContainer>
+      </Tabs>
+      <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">{tab === 'records' ? records : <UmoPanel memberId={memberId} tab={tab} onTab={setTab} />}</div>
+    </div>
   );
 }

@@ -38,6 +38,7 @@ import {
 } from '@/entities/national';
 
 import { BoardCreate, type CreateAt } from './BoardCreate';
+import { MemberFace } from './RosterParts';
 import { useBoardDrag } from './useBoardDrag';
 
 type Scale = 'week' | 'month';
@@ -377,9 +378,7 @@ export function PlansTimeline({ onOpenPlan }: { onOpenPlan: (memberId: string) =
                   return (
                     <div key={r.member.id} className="grid grid-cols-[15rem_minmax(0,1fr)] border-b border-neutral-200 last:border-b-0" data-testid="plan-board-row" data-name={r.member.person.name}>
                       <button type="button" onClick={() => onOpenPlan(r.member.id)} className="flex items-center gap-2.5 border-r border-neutral-200 px-4 py-2 text-left hover:bg-neutral-50">
-                        <span className="grid size-8 shrink-0 place-items-center rounded-full bg-brand-50 text-[12px] font-semibold text-brand-600">
-                          {r.member.person.name.slice(0, 1)}
-                        </span>
+                        <MemberFace m={r.member} className="size-8" />
                         <span className="flex min-w-0 flex-col leading-tight">
                           <span className="truncate text-[13px] font-medium">{r.member.person.name}</span>
                           <span className="truncate text-[11px] text-neutral-500">

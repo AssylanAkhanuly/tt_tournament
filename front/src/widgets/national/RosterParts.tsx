@@ -156,29 +156,29 @@ export function AddMemberDialog({ onAdded }: { onAdded: () => void }) {
 const PLACEHOLDERS = { m: ['m-1', 'm-2', 'm-3'], f: ['f-1', 'f-2', 'f-3'] } as const;
 
 /** Заглушка фигуры — своего пола (пол неизвестен — любая), одна и та же для человека: по id. */
-export function placeholderOf(m: NationalMember) {
+type Who = { id: string; person: { sex: NationalMember['person']['sex'] }; avatar?: string | null };
+
+export function placeholderOf(m: Who) {
   let h = 0;
   for (const ch of m.id) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
   const list: readonly string[] = m.person.sex ? PLACEHOLDERS[m.person.sex] : [...PLACEHOLDERS.m, ...PLACEHOLDERS.f];
   return `/national/players/${list[h % list.length]}.webp`;
 }
 
-const BANNERS = 6;
-
-/** Баннер профиля — картинка на тему настольного тенниса (fal.ai, 22.11.2026),
-    одна и та же для человека: по id. */
-export function bannerOf(m: NationalMember) {
-  let h = 7;
-  for (const ch of m.id) h = (h * 33 + ch.charCodeAt(0)) >>> 0;
-  return `/national/banners/banner-${(h % BANNERS) + 1}.jpg`;
-}
-
-/** Аватар строки таблицы: фото или та же заглушка, что у карточки, — по лицу. */
-function RowAvatar({ m }: { m: NationalMember }) {
+/** Круглый аватар члена сборной: фото или лицо заглушки своего пола на
+    персиковом — в таблице состава, на доске планов, в профиле. */
+export function MemberFace({ m, className = 'size-9' }: { m: Who; className?: string }) {
   return (
-    <span className="grid size-9 shrink-0 place-items-center overflow-hidden rounded-full bg-qtt-peach">
+    <span className={'grid shrink-0 place-items-center overflow-hidden rounded-full bg-qtt-peach ' + className}>
       {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src={m.avatar ?? placeholderOf(m)} alt="" loading="lazy" className={'size-full object-cover ' + (m.avatar ? '' : 'origin-[50%_12%] scale-[2.2] object-top')} data-testid="member-avatar" data-photo={m.avatar ? 'yes' : 'no'} />
+      <img
+        src={m.avatar ?? placeholderOf(m)}
+        alt=""
+        loading="lazy"
+        className={'size-full object-cover ' + (m.avatar ? '' : 'origin-[50%_12%] scale-[2.2] object-top')}
+        data-testid="member-avatar"
+        data-photo={m.avatar ? 'yes' : 'no'}
+      />
     </span>
   );
 }
@@ -197,7 +197,7 @@ export function RosterTable({ rows, onOpen }: { rows: NationalMember[]; onOpen: 
       sortValue: (m) => m.person.name,
       render: (m) => (
         <span className="flex items-center gap-3">
-          <RowAvatar m={m} />
+          <MemberFace m={m} />
           <span className="font-medium">{m.person.name}</span>
         </span>
       ),

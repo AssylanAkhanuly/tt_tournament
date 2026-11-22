@@ -22,6 +22,8 @@ const nextConfig: NextConfig = {
       // so match the slash explicitly and re-add it on the destination.
       { source: "/api/:path*/", destination: `${BACKEND}/api/:path*/` },
       { source: "/api/:path*", destination: `${BACKEND}/api/:path*` },
+      // Загруженные снимки (аватар и фигура члена сборной, 22.11.2026) лежат у Django.
+      { source: "/media/:path*", destination: `${BACKEND}/media/:path*` },
     ];
   },
   // Routes are English since 10.09.2026 (product owner's decision). The old
