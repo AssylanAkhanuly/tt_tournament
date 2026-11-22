@@ -314,10 +314,15 @@ test('сборная: врач ведёт УМО по вкладкам медк�
   await doctor.getByTestId('medical-tab-summary').click();
   await expect(doctor.locator('[data-testid="umo-block-card"][data-code="nutrition"]')).toContainText('1 ниже');
 
-  // Штаб: УМО не видно; фигура для баннера загружается из профиля.
+  // Штаб: УМО видно только для просмотра ✳ (решение владельца продукта);
+  // фигура для баннера загружается из профиля.
   const coach = await signIn(browser, E2E_NATIONAL_COACH, '/national');
-  await coach.goto(`/national/members/${memberId}/medical`);
-  await expect(coach.getByTestId('medical-tab-summary')).toHaveCount(0);
+  await coach.goto(`/national/members/${memberId}/medical?tab=nutrition`);
+  await expect(coach.locator('[data-testid="umo-param"][data-code="ldl"]').getByTestId('umo-status')).toHaveAttribute('data-status', 'low');
+  await expect(coach.getByTestId('umo-values-edit')).toHaveCount(0);
+  await coach.getByTestId('medical-tab-summary').click();
+  await expect(coach.getByTestId('umo-exam-date')).toHaveCount(1);
+  await expect(coach.getByTestId('umo-new')).toHaveCount(0);
   await coach.goto(`/national/members/${memberId}`);
   await expect(coach.getByTestId('member-figure')).toHaveAttribute('data-photo', 'no');
   await coach.getByTestId('image-input-figure').setInputFiles('public/national/players/m-1.webp');

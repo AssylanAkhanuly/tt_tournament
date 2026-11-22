@@ -54,7 +54,7 @@ export type UmoExam = {
   values: Record<string, string>;
 };
 
-export type Umo = { sex: '' | 'm' | 'f'; nextPlanned: string | null; exams: UmoExam[]; blocks: UmoBlock[] };
+export type Umo = { sex: '' | 'm' | 'f'; canEdit: boolean; nextPlanned: string | null; exams: UmoExam[]; blocks: UmoBlock[] };
 
 export type UmoContext = Pick<UmoExam, 'date' | 'stage' | 'loadNote' | 'illnesses' | 'conditions' | 'supplements' | 'note'> & { heightCm: string };
 
@@ -79,6 +79,7 @@ const param = (p: Raw): UmoParam => ({
 
 const umo = (d: Raw): Umo => ({
   sex: (d.sex as Umo['sex']) ?? '',
+  canEdit: Boolean(d.can_edit),
   nextPlanned: (d.next_planned as string | null) ?? null,
   exams: ((d.exams as Raw[]) ?? []).map((e) => ({
     id: String(e.id),

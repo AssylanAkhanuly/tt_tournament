@@ -94,7 +94,7 @@ export type MedicalRecord = {
 
 export type MedicalCard =
   | { full: true; clearance: Clearance; records: MedicalRecord[] }
-  | { full: false; clearance: Clearance; limits: { loadLimit: string; until: string | null }[] };
+  | { full: false; clearance: Clearance; limits: { loadLimit: string; until: string | null }[]; umo: boolean };
 
 export type SportRecord = { id: string; date: string; text: string; createdBy: string };
 
@@ -352,6 +352,7 @@ export async function fetchMedical(memberId: string): Promise<MedicalCard> {
     full: false,
     clearance,
     limits: (m.limits as Raw[]).map((l) => ({ loadLimit: String(l.load_limit), until: (l.until as string | null) ?? null })),
+    umo: Boolean(m.umo),
   };
 }
 

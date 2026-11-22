@@ -1,7 +1,8 @@
 'use client';
 
 /* УМО в медкарте ✳ (22.11.2026, NATIONAL.md «Медкарта: УМО»; шаблон врача
-   «Динамика спортсмена: УМО»). Только врачу. Вкладки — «Сводка» и девять
+   «Динамика спортсмена: УМО»). Ведёт врач; штаб (главный тренер,
+   консультант) только смотрит — `canEdit` с сервера, кнопок правки у него нет. Вкладки — «Сводка» и девять
    блоков; что считать, решает сервер (`national/umo.py`): расчётные
    параметры, «последнее», Δ к базе (%) и к предыдущему, статус по референсу.
 
@@ -171,7 +172,7 @@ function Summary({ umo, memberId, onSaved, onOpen }: { umo: Umo; memberId: strin
     <div className="flex flex-col gap-6 p-5" data-testid="umo-summary">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h3 className="m-0 text-[15px] font-semibold">Осмотры</h3>
-        <ExamDialog memberId={memberId} onSaved={onSaved} trigger={newExam} />
+        {umo.canEdit && <ExamDialog memberId={memberId} onSaved={onSaved} trigger={newExam} />}
       </div>
       {umo.exams.length === 0 ? (
         <p className="m-0 text-[13px] text-neutral-500" data-testid="umo-empty">
@@ -185,6 +186,12 @@ function Summary({ umo, memberId, onSaved, onOpen }: { umo: Umo; memberId: strin
                 <th className={th + ' sticky left-0 w-64 bg-white'}>Показатель</th>
                 {umo.exams.map((e, i) => (
                   <th key={e.id} className={th}>
+                    {!umo.canEdit ? (
+                      <span className="px-1.5 font-medium text-neutral-700" data-testid="umo-exam-date">
+                        {i === 0 ? 'База · ' : 'Осмотр ' + (i + 1) + ' · '}
+                        {dmy(e.date)}
+                      </span>
+                    ) : (
                     <ExamDialog
                       memberId={memberId}
                       exam={e}
@@ -196,6 +203,7 @@ function Summary({ umo, memberId, onSaved, onOpen }: { umo: Umo; memberId: strin
                         </Button>
                       }
                     />
+                    )}
                   </th>
                 ))}
                 {umo.nextPlanned && <th className={th + ' text-neutral-400'}>Следующий · {dmy(umo.nextPlanned)}</th>}
@@ -309,7 +317,8 @@ function BlockTable({ block, umo, onSaved }: { block: UmoBlock; umo: Umo; onSave
         <h3 className="m-0 text-[15px] font-semibold">
           {block.n}. {block.title}
         </h3>
-        {umo.exams.length > 0 &&
+        {umo.canEdit &&
+          umo.exams.length > 0 &&
           (editing ? (
             <div className="flex items-center gap-2">
               {error && <span className="text-[13px] text-red-600" data-testid="umo-values-error">{error}</span>}

@@ -618,6 +618,11 @@ def history(member: NationalTeamMember, by) -> List[dict]:
 
 # ── УМО ✳ (22.11.2026) — ведёт врач сборной ─────────────────────────────────
 
+def can_read_umo(user) -> bool:
+    """УМО читают врач и штаб сборной (главный тренер, консультант) — штабу
+    только смотреть ✳ (22.11.2026, решение владельца продукта)."""
+    return is_doctor(user) or is_head_staff(user)
+
 UMO_TEXT = ("stage", "load_note", "illnesses", "conditions", "supplements", "note")
 
 

@@ -264,7 +264,7 @@ class MedicalView(Base):
         if not s.can_read_medical_summary(m, request.user):
             raise s.NationalError("Медицинская карта вам не видна.", 403)
         limits = [{"load_limit": r.load_limit, "until": _iso(r.until)} for r in s.active_limits(m)]
-        return Response({**head, "full": False, "limits": limits})
+        return Response({**head, "full": False, "limits": limits, "umo": s.can_read_umo(request.user)})
 
     def post(self, request, pk):
         m = get_object_or_404(NationalTeamMember, pk=pk)
@@ -530,6 +530,7 @@ def _umo(m: NationalTeamMember) -> dict:
         nxt = date(last.year + y, mo + 1, day)
     return {
         "sex": sex,
+        "can_edit": False,  # ставит ручка — по тому, кто смотрит
         "next_planned": _iso(nxt),
         "exams": [
             {
@@ -553,15 +554,20 @@ def _umo_data(d) -> dict:
     return out
 
 
+def _umo_for(m, user) -> dict:
+    return {**_umo(m), "can_edit": s.is_doctor(user)}
+
+
 class UmoView(Base):
     def get(self, request, pk):
-        s.require_doctor(request.user)
-        return Response(_umo(get_object_or_404(NationalTeamMember, pk=pk)))
+        if not s.can_read_umo(request.user):
+            raise s.NationalError("УМО вам не видно.", 403)
+        return Response(_umo_for(get_object_or_404(NationalTeamMember, pk=pk), request.user))
 
     def post(self, request, pk):
         m = get_object_or_404(NationalTeamMember, pk=pk)
         s.add_umo_exam(m, _umo_data(request.data), request.user)
-        return Response(_umo(m), status=status.HTTP_201_CREATED)
+        return Response(_umo_for(m, request.user), status=status.HTTP_201_CREATED)
 
 
 class UmoExamView(Base):
@@ -570,7 +576,7 @@ class UmoExamView(Base):
 
         exam = get_object_or_404(UmoExam, pk=pk)
         s.update_umo_exam(exam, _umo_data(request.data), request.user)
-        return Response(_umo(exam.member))
+        return Response(_umo_for(exam.member, request.user))
 
     def delete(self, request, pk):
         from .models import UmoExam
@@ -578,7 +584,7 @@ class UmoExamView(Base):
         exam = get_object_or_404(UmoExam, pk=pk)
         member = exam.member
         s.delete_umo_exam(exam, request.user)
-        return Response(_umo(member))
+        return Response(_umo_for(member, request.user))
 
 
 # ── Снимки члена сборной ✳ (22.11.2026) ─────────────────────────────────────

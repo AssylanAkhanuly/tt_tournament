@@ -92,8 +92,16 @@ def test_doctor_records_exams_others_cannot_read(squad):
     assert _row(r.json()["blocks"], "ferritin")["values"] == [None, None]
     # число вместо текста — отказ
     assert doc.patch(f"/api/national/umo/{exam_id}/", {"values": {"weight": "x"}}, format="json").status_code == 400
-    assert client_for(squad["head"]).get(url).status_code == 403
-    assert client_for(squad["head"]).post(url, {"date": "2026-08-27"}, format="json").status_code == 403
+    # штаб читает, но не правит ✳ (решение владельца продукта); тренер группы не видит
+    head = client_for(squad["head"])
+    seen = head.get(url)
+    assert seen.status_code == 200 and seen.json()["can_edit"] is False and len(seen.json()["exams"]) == 2
+    assert head.get(f"/api/national/members/{squad['member'].pk}/medical/").json()["umo"] is True
+    assert head.post(url, {"date": "2026-08-27"}, format="json").status_code == 403
+    assert head.patch(f"/api/national/umo/{exam_id}/", {"values": {"weight": "1"}}, format="json").status_code == 403
+    assert doc.get(url).json()["can_edit"] is True
+    team = make_user(3, "Тренер юношей", Role.KIND_NATIONAL_TEAM_COACH)
+    assert client_for(team).get(url).status_code == 403
     assert doc.delete(f"/api/national/umo/{exam_id}/").status_code == 200
     assert UmoExam.objects.filter(member=squad["member"]).count() == 1
 
