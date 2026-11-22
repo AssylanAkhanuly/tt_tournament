@@ -17,12 +17,13 @@
      последнее, Δ, статус. «Внести значения» — столбец выбранного осмотра
      становится полями ввода; расчётные не вводятся.
 
-   Фон ✳ (22.11.2026, решение владельца продукта — «элементы фона»): серая
-   страница, таблицы — белыми карточками; карточки блоков — подложкой группы
-   (рычаги — голубой, допуск и контроль — персиковый) с огромной контурной
-   цифрой блока узкой «номерной» гарнитурой, как место в листе у карточки
-   состава; над таблицей блока — полоса градиента бренда с той же цифрой.
-   Серая подложка и огромный плюс за всем — у медкарты (`Backdrop`). */
+   Вид ✳ (22.11.2026, решения владельца продукта): без обёртки с полями —
+   полосы и таблицы от края до края; таблицы — как остальные таблицы
+   приложения (шапка-подложка, черта между строками, поле 24 px у краёв), но
+   полупрозрачные «жидким стеклом» — сквозь них видны серая подложка и
+   огромный значок медкарты за всем (`Backdrop` в `MedicalCardView`).
+   Карточки блоков в сводке — белые; над таблицей блока — полоса градиента
+   бренда с огромной цифрой блока. */
 
 import { AlertDialog, Button, Chip, Input, Label, Modal, Spinner, TextArea, TextField, Tooltip, useOverlayState } from '@heroui/react';
 import { Info, Pencil, Plus, Star } from 'lucide-react';
@@ -166,8 +167,14 @@ function DeleteExam({ exam, onDeleted }: { exam: UmoExam; onDeleted: (u: Umo) =>
   );
 }
 
-const th = 'border-b border-neutral-200 px-3 py-2.5 text-left text-[11.5px] font-medium whitespace-nowrap text-neutral-500';
-const td = 'border-b border-neutral-100 px-3 py-2 text-[13px] align-top';
+/* Клетки — как у таблиц приложения (HeroUI Table: шапка на подложке, мелкий
+   приглушённый текст, черта между строками, у краёв поле 24 px), но стеклом. */
+const th =
+  'border-b border-[color-mix(in_oklab,var(--separator)_50%,transparent)] bg-[color-mix(in_srgb,var(--surface-secondary)_65%,transparent)] px-4 py-2.5 text-left text-xs font-medium whitespace-nowrap text-[var(--muted)] first:pl-6 last:pr-6';
+const td = 'border-b border-[color-mix(in_oklab,var(--separator)_50%,transparent)] px-4 py-2.5 text-[13px] align-top first:pl-6 last:pr-6';
+/* Стекло: полупрозрачный белый с размытием — сквозь видно подложку и значок. */
+const GLASS = 'overflow-x-auto border-b border-white/60 bg-white/45 backdrop-blur-md';
+const STICKY = 'sticky left-0 bg-white/70 backdrop-blur-md';
 
 function Summary({ umo, memberId, onSaved, onOpen }: { umo: Umo; memberId: string; onSaved: (u: Umo) => void; onOpen: (code: string) => void }) {
   const newExam = (
@@ -176,21 +183,21 @@ function Summary({ umo, memberId, onSaved, onOpen }: { umo: Umo; memberId: strin
     </Button>
   );
   return (
-    <div className="flex min-h-full flex-col gap-6 p-5 [&>*]:shrink-0" data-testid="umo-summary">
-      <div className="flex flex-wrap items-center justify-between gap-3">
+    <div className="flex min-h-full flex-col [&>*]:shrink-0" data-testid="umo-summary">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[color-mix(in_oklab,var(--separator)_50%,transparent)] px-6 py-3">
         <h3 className="m-0 text-[15px] font-semibold">Осмотры</h3>
         {umo.canEdit && <ExamDialog memberId={memberId} onSaved={onSaved} trigger={newExam} />}
       </div>
       {umo.exams.length === 0 ? (
-        <p className="m-0 text-[13px] text-neutral-500" data-testid="umo-empty">
+        <p className="m-0 px-6 py-4 text-[13px] text-neutral-500" data-testid="umo-empty">
           Осмотров нет
         </p>
       ) : (
-        <div className="overflow-x-auto rounded-2xl border border-neutral-200/80 bg-white/70 backdrop-blur-[2px]">
+        <div className={GLASS}>
           <table className="w-full min-w-[720px] border-collapse">
             <thead>
               <tr>
-                <th className={th + ' sticky left-0 w-64 bg-white'}>Показатель</th>
+                <th className={th + ' sticky left-0 z-10 w-64'}>Показатель</th>
                 {umo.exams.map((e, i) => (
                   <th key={e.id} className={th}>
                     {!umo.canEdit ? (
@@ -218,7 +225,7 @@ function Summary({ umo, memberId, onSaved, onOpen }: { umo: Umo; memberId: strin
             </thead>
             <tbody>
               <tr>
-                <td className={td + ' sticky left-0 bg-white text-neutral-500'}>Рост, см</td>
+                <td className={td + ' ' + STICKY + ' text-neutral-500'}>Рост, см</td>
                 {umo.exams.map((e) => (
                   <td key={e.id} className={td}>
                     {e.heightCm ? fmt(e.heightCm) : '—'}
@@ -228,7 +235,7 @@ function Summary({ umo, memberId, onSaved, onOpen }: { umo: Umo; memberId: strin
               </tr>
               {CONTEXT.map((c) => (
                 <tr key={c.key}>
-                  <td className={td + ' sticky left-0 bg-white text-neutral-500'}>{c.label}</td>
+                  <td className={td + ' ' + STICKY + ' text-neutral-500'}>{c.label}</td>
                   {umo.exams.map((e) => (
                     <td key={e.id} className={td + ' max-w-72 whitespace-pre-line'}>
                       {(e[c.key as keyof UmoExam] as string) || '—'}
@@ -241,39 +248,25 @@ function Summary({ umo, memberId, onSaved, onOpen }: { umo: Umo; memberId: strin
           </table>
         </div>
       )}
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+      <div className="grid gap-3 px-6 py-5 sm:grid-cols-2 xl:grid-cols-3">
         {umo.blocks.map((b) => (
           <button
             key={b.code}
             type="button"
             onClick={() => onOpen(b.code)}
-            className={
-              'relative flex min-h-36 flex-col gap-2 overflow-hidden rounded-2xl border border-neutral-200/80 p-4 text-left transition-shadow hover:shadow-md ' +
-              (b.control ? 'bg-[color-mix(in_srgb,var(--color-qtt-peach)_16%,white)]' : 'bg-[color-mix(in_srgb,var(--color-qtt-sky)_20%,white)]')
-            }
+            className="flex flex-col gap-2 rounded-xl border border-neutral-200 bg-white p-4 text-left hover:border-brand-200 hover:shadow-sm"
             data-testid="umo-block-card"
             data-code={b.code}
           >
-            <span
-              aria-hidden
-              className={
-                'pointer-events-none absolute -right-1 -bottom-5 font-[family-name:var(--font-jersey)] text-[150px] leading-[0.72] text-transparent select-none ' +
-                (b.control
-                  ? '[-webkit-text-stroke:1.5px_color-mix(in_srgb,var(--color-qtt-peach)_55%,white)]'
-                  : '[-webkit-text-stroke:1.5px_color-mix(in_srgb,var(--color-qtt-sky)_70%,white)]')
-              }
-            >
-              {b.n}
-            </span>
-            <span className="relative flex items-center justify-between gap-2">
+            <span className="flex items-center justify-between gap-2">
               <span className="text-[14px] font-semibold">
                 {b.n}. {b.title}
               </span>
-              <span className={'rounded-full px-2 py-0.5 text-[10.5px] font-semibold ' + (b.control ? 'bg-white/80 text-[color-mix(in_srgb,var(--color-qtt-peach)_55%,black)]' : 'bg-white/80 text-brand-700')}>
+              <span className={'rounded-full px-2 py-0.5 text-[10.5px] font-semibold ' + (b.control ? 'bg-neutral-100 text-neutral-600' : 'bg-brand-50 text-brand-700')}>
                 {b.control ? 'Допуск и контроль' : 'Рычаг'}
               </span>
             </span>
-            <span className="relative flex gap-4 text-[12.5px]">
+            <span className="flex gap-4 text-[12.5px]">
               <span>
                 <b className="tabular-nums">{b.summary.numeric}</b> <span className="text-neutral-500">с данными</span>
               </span>
@@ -284,7 +277,7 @@ function Summary({ umo, memberId, onSaved, onOpen }: { umo: Umo; memberId: strin
                 <b className="tabular-nums">{b.summary.high}</b> выше
               </span>
             </span>
-            <span className="relative mt-auto max-w-[80%] text-[12px] text-neutral-600">{b.impact}</span>
+            <span className="text-[12px] text-neutral-500">{b.impact}</span>
           </button>
         ))}
       </div>
@@ -333,12 +326,12 @@ function BlockTable({ block, umo, onSaved }: { block: UmoBlock; umo: Umo; onSave
     min === null && max === null ? '—' : min === null ? '≤ ' + fmt(max) : max === null ? '≥ ' + fmt(min) : fmt(min) + ' – ' + fmt(max);
 
   return (
-    <div className="flex min-h-full flex-col gap-3 p-5 [&>*]:shrink-0" data-testid="umo-block" data-code={block.code}>
+    <div className="flex min-h-full flex-col [&>*]:shrink-0" data-testid="umo-block" data-code={block.code}>
       {/* Полоса блока — фон: градиент бренда и огромная цифра блока; заголовка
           нет — он повторял бы выбранную вкладку ✳ (22.11.2026). */}
       <div
         className={
-          'relative flex min-h-20 items-center overflow-hidden rounded-2xl px-5 py-4 ' +
+          'relative flex min-h-20 items-center overflow-hidden px-6 py-4 ' +
           (block.control
             ? 'bg-[linear-gradient(110deg,color-mix(in_srgb,var(--color-qtt-peach)_85%,var(--color-brand-600)),var(--color-qtt-peach))]'
             : 'bg-[linear-gradient(110deg,var(--color-brand-700),var(--color-brand-600)_50%,color-mix(in_srgb,var(--color-brand-500)_70%,var(--color-brand-600)))]')
@@ -366,7 +359,7 @@ function BlockTable({ block, umo, onSaved }: { block: UmoBlock; umo: Umo; onSave
           </span>
         </span>
       </div>
-      <div className="flex flex-wrap items-center justify-end gap-3 empty:hidden">
+      <div className="flex flex-wrap items-center justify-end gap-3 border-b border-[color-mix(in_oklab,var(--separator)_50%,transparent)] px-6 py-3 empty:hidden">
         {umo.canEdit &&
           umo.exams.length > 0 &&
           (editing ? (
@@ -395,13 +388,13 @@ function BlockTable({ block, umo, onSaved }: { block: UmoBlock; umo: Umo; onSave
           ))}
       </div>
       {umo.exams.length === 0 ? (
-        <p className="m-0 text-[13px] text-neutral-500">Осмотров нет</p>
+        <p className="m-0 px-6 py-4 text-[13px] text-neutral-500">Осмотров нет</p>
       ) : (
-        <div className="overflow-x-auto rounded-2xl border border-neutral-200/80 bg-white/70 backdrop-blur-[2px]">
+        <div className={GLASS}>
           <table className="w-full min-w-[900px] border-collapse">
             <thead>
               <tr>
-                <th className={th + ' sticky left-0 z-10 bg-white'}>Параметр</th>
+                <th className={th + ' sticky left-0 z-10'}>Параметр</th>
                 <th className={th}>Ед.</th>
                 <th className={th}>Референс</th>
                 {umo.exams.map((e, i) => (
@@ -419,7 +412,7 @@ function BlockTable({ block, umo, onSaved }: { block: UmoBlock; umo: Umo; onSave
             <tbody>
               {block.params.map((p) => (
                 <tr key={p.code} data-testid="umo-param" data-code={p.code}>
-                  <td className={td + ' sticky left-0 z-10 min-w-56 bg-white'}>
+                  <td className={td + ' ' + STICKY + ' z-10 min-w-56'}>
                     <span className="flex items-start gap-1.5">
                       {p.key && <Star size={12} className="mt-1 shrink-0 fill-qtt-peach text-qtt-peach" aria-label="Ключевой параметр" />}
                       <span className={p.calc ? 'text-neutral-500 italic' : 'font-medium'}>{p.name}</span>
