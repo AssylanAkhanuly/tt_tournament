@@ -1,8 +1,10 @@
 'use client';
 
 /* Шапка профиля — карточка-«герой» ✳ (22.11.2026, образец владельца продукта
-   Athlitiq, совмещённый с Orbix «Player Profile»): слева фото крупно на мягком
-   голубом пятне (нет снимка — инициалы) с кольцом цвета допуска (зелёное —
+   Athlitiq, совмещённый с Orbix «Player Profile»): сверху баннер-картинка
+   (одна из шести, fal.ai, по id), на неё заходит круглый аватар — фото, а без
+   снимка лицо сгенерированного игрока своего пола на персиковом, как в
+   карточке состава (решение владельца продукта 22.11.2026) с кольцом цвета допуска (зелёное —
    допущен, коралловое — истёк, серое — не внесён) и короной члена сборной;
    над именем — состав и группа строкой бренда, имя в две строки (фамилия,
    затем имя и отчество); под ним — короткие сведения через черту: место в
@@ -18,6 +20,7 @@ import { AGE_GROUP_LABEL, dmy, SQUAD_LABEL, type NationalMember } from '@/entiti
 import type { useRatingCard } from '@/entities/rating';
 
 import { RemoveMemberButton } from '../MemberControls';
+import { bannerOf, placeholderOf } from '../RosterParts';
 import { CARD } from './ui';
 
 export const initials = (name: string) =>
@@ -83,34 +86,37 @@ export function Hero({ member, card, canEdit, onRemoved }: { member: NationalMem
   const place = card.data?.place;
   return (
     <section className={CARD + ' relative overflow-hidden'} data-testid="member-hero">
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-y-0 left-0 w-[28rem] bg-[radial-gradient(circle_at_28%_50%,color-mix(in_srgb,var(--color-qtt-sky)_26%,white)_0%,transparent_62%)]"
-      />
+      {/* Баннер-картинка сверху, аватар заходит на него ✳ (22.11.2026, решение
+          владельца продукта). */}
+      <div className="relative h-40 bg-brand-600">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={bannerOf(member)} alt="" className="absolute inset-0 size-full object-cover" data-testid="member-banner" />
+        <span aria-hidden className="absolute inset-0 bg-[linear-gradient(to_top,color-mix(in_srgb,var(--color-brand-800)_45%,transparent),transparent_60%)]" />
+      </div>
       {place && (
-        <span aria-hidden className="pointer-events-none absolute right-6 -bottom-6 text-[150px] leading-none font-bold text-neutral-100 tabular-nums select-none">
+        <span
+          aria-hidden
+          className="pointer-events-none absolute right-6 bottom-4 font-[family-name:var(--font-jersey)] text-[180px] leading-[0.72] text-transparent tabular-nums select-none [-webkit-text-stroke:1.5px_var(--color-neutral-200)]"
+        >
           {place}
         </span>
       )}
-      <div className="relative flex flex-wrap items-center gap-x-8 gap-y-5 p-6">
+      <div className="relative flex flex-wrap items-start gap-x-8 gap-y-5 px-6 pb-6">
         {/* Корона — член национальной сборной; кольцо — допуск ✳ (22.11.2026). */}
-        <div className="relative shrink-0">
+        <div className="relative -mt-16 shrink-0">
           <div
-            className={
-              'grid size-36 place-items-center overflow-hidden rounded-full border-4 border-white bg-[color-mix(in_srgb,var(--color-qtt-violet)_10%,white)] ring-4 ' +
-              RING[member.clearance.status]
-            }
+            className={'grid size-36 place-items-center overflow-hidden rounded-full border-4 border-white bg-qtt-peach ring-4 ' + RING[member.clearance.status]}
             data-testid="member-photo-ring"
             data-status={member.clearance.status}
           >
-            {pr?.avatar ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={pr.avatar} alt={p.name} className="size-full object-cover" data-testid="member-photo" />
-            ) : (
-              <span className="text-[42px] font-semibold text-qtt-violet" data-testid="member-photo">
-                {initials(p.name)}
-              </span>
-            )}
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={pr?.avatar ?? member.avatar ?? placeholderOf(member)}
+              alt={p.name}
+              className={'size-full object-cover ' + (pr?.avatar ?? member.avatar ? '' : 'origin-[50%_12%] scale-[2.1] object-top')}
+              data-testid="member-photo"
+              data-photo={pr?.avatar ?? member.avatar ? 'yes' : 'no'}
+            />
           </div>
           <Tooltip>
             <Tooltip.Trigger
@@ -123,7 +129,7 @@ export function Hero({ member, card, canEdit, onRemoved }: { member: NationalMem
             <Tooltip.Content>В национальной сборной</Tooltip.Content>
           </Tooltip>
         </div>
-        <div className="flex min-w-0 flex-1 flex-col">
+        <div className="flex min-w-0 flex-1 flex-col pt-5">
           <span className="text-[12px] font-semibold tracking-wide text-brand-500 uppercase">
             {SQUAD_LABEL[member.squad]} состав · {AGE_GROUP_LABEL[member.ageGroup]}
           </span>
@@ -137,7 +143,7 @@ export function Hero({ member, card, canEdit, onRemoved }: { member: NationalMem
             {pr && <Fact label="В сборной с" value={dmy(pr.joined)} />}
           </dl>
         </div>
-        <div className="flex items-center gap-2 self-start">
+        <div className="flex items-center gap-2 self-start pt-5">
           {pr?.email && <Contact href={'mailto:' + pr.email} label="Написать" value={pr.email} tone="bg-qtt-blue" icon={<Mail size={17} />} testId="member-mail" />}
           {pr?.phone && <Contact href={'tel:' + pr.phone} label="Позвонить" value={pr.phone} tone="bg-qtt-teal" icon={<Phone size={17} />} testId="member-call" />}
           {canEdit && <RemoveMemberButton member={member} onRemove={onRemoved} />}

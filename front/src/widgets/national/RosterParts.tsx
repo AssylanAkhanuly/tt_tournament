@@ -163,6 +163,16 @@ export function placeholderOf(m: NationalMember) {
   return `/national/players/${list[h % list.length]}.webp`;
 }
 
+const BANNERS = 6;
+
+/** Баннер профиля — картинка на тему настольного тенниса (fal.ai, 22.11.2026),
+    одна и та же для человека: по id. */
+export function bannerOf(m: NationalMember) {
+  let h = 7;
+  for (const ch of m.id) h = (h * 33 + ch.charCodeAt(0)) >>> 0;
+  return `/national/banners/banner-${(h % BANNERS) + 1}.jpg`;
+}
+
 /** Аватар строки таблицы: фото или та же заглушка, что у карточки, — по лицу. */
 function RowAvatar({ m }: { m: NationalMember }) {
   return (
