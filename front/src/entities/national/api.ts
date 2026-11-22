@@ -176,6 +176,8 @@ export type NationalMe = {
   psychologist: boolean;
   calendar: boolean;
   reports: boolean;
+  /** Своя карточка члена сборной (кабинет спортсмена) ✳ 22.11.2026; не в сборной — `null`. */
+  member: string | null;
 };
 
 type Raw = Record<string, unknown>;
@@ -321,6 +323,7 @@ export async function fetchNationalMe(): Promise<NationalMe> {
     psychologist: Boolean(m.psychologist),
     calendar: Boolean(m.calendar),
     reports: Boolean(m.reports),
+    member: (m.member as string | null | undefined) ?? null,
   };
 }
 

@@ -23,6 +23,7 @@ export function RoleShell({
   active,
   pageTitle,
   back,
+  profileHref,
   bleed,
   context,
   home,
@@ -44,6 +45,8 @@ export function RoleShell({
   pageTitle?: string;
   /** «Назад» перед заголовком страницы. */
   back?: { label: string; onPress: () => void };
+  /** «Профиль» в меню человека — страница, а не окно. */
+  profileHref?: string;
   bleed?: boolean;
   /** Шапка сайдбара над разделами. */
   context?: ReactNode;
@@ -88,6 +91,7 @@ export function RoleShell({
       active={active}
       title={pageTitle}
       back={back}
+      profileHref={profileHref}
       bleed={bleed}
       actions={actions}
       context={context}

@@ -31,10 +31,13 @@ import {
   ROLE_NATIONAL_PSYCHOLOGIST,
   ROLE_NATIONAL_TEAM_COACH,
   ROLE_PERSONAL_COACH,
+  ROLE_PLAYER,
   useSession,
   workspacesOf,
 } from '@/entities/session';
 import { RoleShell, type RoleNavItem } from '@/views/workspace';
+
+import { PLAYER_NAV, PLAYER_PROFILE } from './playerNav';
 import {
   HistoryTable,
   MedicalCardView,
@@ -46,10 +49,10 @@ import {
   UMO_TABS,
 } from '@/widgets/national';
 
-export type CabinetKey = 'national' | 'personal' | 'doctor' | 'psychologist';
+export type CabinetKey = 'national' | 'personal' | 'doctor' | 'psychologist' | 'player';
 export type MemberSection = 'profile' | 'plan' | 'medical' | 'history' | 'sport';
 
-type Cabinet = { base: string; kinds: string[]; nav: RoleNavItem[]; roster: string; canAdd: boolean };
+type Cabinet = { base: string; kinds: string[]; nav: RoleNavItem[]; roster: string; canAdd: boolean; profileHref?: string };
 
 const CABINETS: Record<CabinetKey, Cabinet> = {
   national: {
@@ -79,6 +82,15 @@ const CABINETS: Record<CabinetKey, Cabinet> = {
     roster: 'Состав сборной',
     canAdd: false,
     nav: [{ label: 'Состав сборной', href: '/doctor', icon: <Users size={16} /> }],
+  },
+  // Кабинет спортсмена: член сборной смотрит свою карточку ✳ (22.11.2026).
+  player: {
+    base: '/player',
+    kinds: [ROLE_PLAYER],
+    roster: 'Мой профиль',
+    canAdd: false,
+    nav: PLAYER_NAV,
+    profileHref: PLAYER_PROFILE,
   },
   psychologist: {
     base: '/psychologist',
@@ -121,6 +133,7 @@ function Shell({ cabinet, active, home, sections, section, pageTitle, back, chil
       section={section}
       pageTitle={pageTitle}
       back={back}
+      profileHref={cabinet.profileHref}
       bleed
     >
       {children}

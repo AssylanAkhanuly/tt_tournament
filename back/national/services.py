@@ -120,7 +120,20 @@ def visible_members(user):
     return qs.filter(Q(age_group__in=team_coach_groups(user)) | Q(personal_coach=user))
 
 
+def is_self(member: NationalTeamMember, user) -> bool:
+    """Спортсмен смотрит свою карточку ✳ (22.11.2026, решение владельца
+    продукта): член сборной видит свой профиль, план и медкарту (без
+    диагнозов), как штаб, — только смотреть."""
+    return bool(getattr(user, "id", None)) and member.user_id == user.id
+
+
+def my_membership(user):
+    return NationalTeamMember.objects.filter(user_id=getattr(user, "id", None)).first()
+
+
 def require_member(member: NationalTeamMember, user):
+    if is_self(member, user):
+        return
     if not visible_members(user).filter(pk=member.pk).exists():
         raise NationalError("Этот спортсмен вам не виден.", 403)
 
@@ -311,7 +324,8 @@ def delete_event(event: TrainingEvent, by):
 
 def can_see_plans(member: NationalTeamMember, user) -> bool:
     return bool(
-        is_head_staff(user) or member.age_group in team_coach_groups(user)
+        is_self(member, user)
+        or is_head_staff(user) or member.age_group in team_coach_groups(user)
         or (member.personal_coach_id and member.personal_coach_id == getattr(user, "id", None))
     )
 
@@ -618,10 +632,11 @@ def history(member: NationalTeamMember, by) -> List[dict]:
 
 # ── УМО ✳ (22.11.2026) — ведёт врач сборной ─────────────────────────────────
 
-def can_read_umo(user) -> bool:
-    """УМО читают врач и штаб сборной (главный тренер, консультант) — штабу
-    только смотреть ✳ (22.11.2026, решение владельца продукта)."""
-    return is_doctor(user) or is_head_staff(user)
+def can_read_umo(user, member: "NationalTeamMember | None" = None) -> bool:
+    """УМО читают врач и штаб сборной (главный тренер, консультант), а сам
+    спортсмен — своё; кроме врача — только смотреть ✳ (22.11.2026, решения
+    владельца продукта)."""
+    return is_doctor(user) or is_head_staff(user) or (member is not None and is_self(member, user))
 
 UMO_TEXT = ("stage", "load_note", "illnesses", "conditions", "supplements", "note")
 

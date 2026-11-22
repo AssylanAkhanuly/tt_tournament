@@ -16,20 +16,32 @@ async function войти(page: Page, who: { email: string; password: string }) 
   await page.getByRole('button', { name: 'Войти' }).click();
 }
 
-for (const [who, path, title, name] of [[E2E_PLAYER, '/player', 'Спортсмен', 'Спортсмен (проверки)']] as const) {
-  test(`${title}: после входа — свой пустой кабинет`, async ({ page }) => {
-    await войти(page, who);
-    await page.waitForURL((url) => url.pathname === path);
-    await expect(page.getByTestId('workspace-blank')).toBeAttached();
-    await expect(page.getByRole('navigation', { name: 'Разделы' })).toHaveCount(0);
-    await expect(page.getByTestId('side-person')).toContainText(name);
+// Кабинет спортсмена ✳ (22.11.2026, решения владельца продукта): свой профиль
+// по адресу кабинета (член сборной — профиль сборной; не в сборной — по
+// рейтинговой карточке, без медкарты и плана; без карточки — «Рейтинговой
+// карточки нет») и «Календарь» турниров; «Профиль» в меню человека ведёт на
+// свой профиль, отдельного раздела нет. Учётку проверок показательный засев
+// сборной может внести в сборную, поэтому проверяем «свой профиль» по имени.
+test('Спортсмен: после входа — свой профиль; разделы — календарь', async ({ page }) => {
+  await войти(page, E2E_PLAYER);
+  await page.waitForURL((url) => url.pathname === '/player');
+  const own = page.getByTestId('member-name').or(page.getByTestId('player-no-card'));
+  await expect(own).toBeVisible();
+  if (await page.getByTestId('member-name').isVisible()) await expect(page.getByTestId('member-name')).toHaveText('Спортсмен (проверки)');
+  await expect(page.getByTestId('side-person')).toContainText('Спортсмен (проверки)');
+  const nav = page.getByRole('navigation', { name: 'Разделы' });
+  await expect(nav.getByRole('button', { name: 'Мой профиль' })).toHaveCount(0);
+  await nav.getByRole('button', { name: 'Календарь', exact: true }).click();
+  await page.waitForURL((url) => url.pathname === '/player/calendar');
+  await expect(page.getByRole('button', { name: 'Новый турнир' })).toHaveCount(0);
+  await page.screenshot({ path: 'test-results/workspaces/player-calendar.png' });
 
-    await page.getByTestId('side-person').click();
-    await expect(page.getByTestId('person-role')).toHaveText(title);
-    await page.keyboard.press('Escape');
-    await page.screenshot({ path: `test-results/workspaces${path}.png` });
-  });
-}
+  await page.getByTestId('side-person').click();
+  await expect(page.getByTestId('person-role')).toHaveText('Спортсмен');
+  await page.getByTestId('person-profile').click();
+  await page.waitForURL((url) => url.pathname === '/player');
+  await expect(own).toBeVisible();
+});
 
 /** Вход через API: сессия ложится в куки контекста страницы. Ответ — учётка. */
 async function сессия(page: Page, who: { email: string; password: string }) {

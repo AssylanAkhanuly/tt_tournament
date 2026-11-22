@@ -25,11 +25,28 @@ import { daysUntil, daysWord, Panel } from './ui';
 
 const EXPIRING_DAYS = 30; // за сколько дней предупреждать об окончании допуска — значение наше
 
-function Block({ title, testId, children }: { title: string; testId: string; children: ReactNode }) {
+function Block({ title, testId, decor, children }: { title: string; testId: string; decor?: ReactNode; children: ReactNode }) {
   return (
-    <Panel title={title} testId={testId}>
+    <Panel title={title} testId={testId} className={decor ? 'relative isolate overflow-hidden' : ''}>
+      {decor}
       {children}
     </Panel>
+  );
+}
+
+/** Фон карточки «Медкарта» ✳ (22.11.2026, решение владельца продукта):
+ *  крупный контурный скруглённый медицинский плюс в углу, голубой линией бренда. */
+function MedPlus() {
+  return (
+    <svg aria-hidden viewBox="0 0 100 100" className="pointer-events-none absolute -top-6 -right-6 -z-10 size-44 text-brand-500 opacity-[0.22]" data-testid="medical-plus">
+      <path
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="4"
+        strokeLinejoin="round"
+        d="M38 4h24a6 6 0 0 1 6 6v22h22a6 6 0 0 1 6 6v24a6 6 0 0 1-6 6H68v22a6 6 0 0 1-6 6H38a6 6 0 0 1-6-6V68H10a6 6 0 0 1-6-6V38a6 6 0 0 1 6-6h22V10a6 6 0 0 1 6-6z"
+      />
+    </svg>
   );
 }
 
@@ -143,7 +160,7 @@ export function MedStatus({ member, onOpenMedical }: { member: NationalMember; o
           ? { band: 'bg-[color-mix(in_srgb,var(--color-qtt-peach)_20%,white)] text-[color-mix(in_srgb,var(--color-qtt-peach)_60%,black)]', title: 'Допуск истекает', sub: 'до ' + dmy(until) + ' · через ' + daysWord(left) }
           : { band: 'bg-green-50 text-green-800', title: 'Допущен', sub: 'до ' + dmy(until) + (left !== null ? ' · ещё ' + daysWord(left) : '') };
   return (
-    <Block title="Медкарта" testId="profile-medical">
+    <Block title="Медкарта" testId="profile-medical" decor={<MedPlus />}>
       <div className={'flex flex-col gap-0.5 rounded-xl px-4 py-3.5 ' + tone.band} data-testid="clearance" data-status={status}>
         <span className="text-[17px] font-semibold">{tone.title}</span>
         {tone.sub && <span className="text-[13px] opacity-80">{tone.sub}</span>}

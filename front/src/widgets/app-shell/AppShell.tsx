@@ -54,6 +54,7 @@ export function AppShell({
   active,
   title,
   back,
+  profileHref,
   actions,
   bleed = false,
   context,
@@ -79,6 +80,9 @@ export function AppShell({
   /** «Назад» перед заголовком страницы ✳ (22.11.2026): подпись — в подсказке
    *  и `aria-label`, щелчок — куда вернуться. */
   back?: { label: string; onPress: () => void };
+  /** «Профиль» в меню человека ведёт на страницу (кабинет спортсмена — свой
+   *  профиль ✳ 22.11.2026); нет — окно с именем и ролями. */
+  profileHref?: string;
   /** Шапка сайдбара над разделами: где человек сейчас (страница турнира —
    *  «← Все турниры», название и дата). Нет — разделы сразу. */
   context?: ReactNode;
@@ -101,6 +105,7 @@ export function AppShell({
   children: ReactNode;
 }) {
   const profile = useOverlayState();
+  const openProfile = profileHref ? () => onOpen?.(profileHref) : profile.open;
   const narrow = useNarrow();
   const [personSheet, setPersonSheet] = useState(false);
   // Разделы с подпунктами складываются и раскрываются ✳ (30.10.2026, решение
@@ -303,7 +308,7 @@ export function AppShell({
                     },
                     {
                       items: [
-                        { id: 'profile', label: 'Профиль', icon: <User size={18} />, testId: 'person-profile', onAction: profile.open },
+                        { id: 'profile', label: 'Профиль', icon: <User size={18} />, testId: 'person-profile', onAction: openProfile },
                         { id: 'out', label: 'Выйти', icon: <LogOut size={18} />, danger: true, onAction: onSignOut },
                       ],
                     },
@@ -365,7 +370,7 @@ export function AppShell({
                       textValue="Профиль"
                       className={RADIUS}
                       data-testid="person-profile"
-                      onAction={profile.open}
+                      onAction={openProfile}
                     >
                       <User size={16} />
                       <Label>Профиль</Label>

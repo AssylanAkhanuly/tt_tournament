@@ -56,7 +56,7 @@ export function MemberProfile({
       <div className="grid gap-4 p-4 xl:grid-cols-[minmax(0,1fr)_22rem] xl:items-start">
         <div className="flex min-w-0 flex-col gap-4">
           <Hero member={member} card={card} canEdit={canEdit} onChanged={onChanged} onRemoved={onRemoved} />
-          <Kpis member={member} card={card} />
+          <Kpis rating={member.person.rating ? Number(member.person.rating) : null} card={card} />
           <RatingBlock userId={member.person.id} card={card} />
           <div className="grid gap-4 lg:grid-cols-2">
             {showPlans && <PlanSteps plans={plans.data} error={plans.error} plan={plan} onOpenPlan={onOpenPlan} onOpenHistory={onOpenHistory} />}

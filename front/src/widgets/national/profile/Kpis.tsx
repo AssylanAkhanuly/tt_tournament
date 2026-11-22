@@ -17,7 +17,6 @@
 
 import type { ReactNode } from 'react';
 
-import type { NationalMember } from '@/entities/national';
 import { num2, signed2, type RatingEntry, type useRatingCard } from '@/entities/rating';
 
 import { CARD, Spark } from './ui';
@@ -48,7 +47,8 @@ const Up = ({ v }: { v: number }) => (
   </span>
 );
 
-export function Kpis({ member, card }: { member: NationalMember; card: ReturnType<typeof useRatingCard> }) {
+/** `rating` — текущее значение (у члена сборной — из строки состава, у спортсмена — из карточки). */
+export function Kpis({ rating, card }: { rating: number | null; card: ReturnType<typeof useRatingCard> }) {
   // Сервер отдаёт историю новыми вперёд; здесь — от старых к новым.
   const history: RatingEntry[] = (card.data?.history ?? [])
     .filter((h) => !h.isReverted)
@@ -58,7 +58,6 @@ export function Kpis({ member, card }: { member: NationalMember; card: ReturnTyp
   const r = card.data?.profile;
   const from3 = monthsAgo(3).toISOString().slice(0, 10);
   const before3 = history.filter((h) => h.occurredAt.slice(0, 10) < from3).at(-1);
-  const rating = member.person.rating ? Number(member.person.rating) : null;
   const change3 = rating !== null && history.length ? rating - (before3 ? before3.after : history[0].kind === 'start' ? history[0].after : history[0].before) : 0;
   const months = Array.from({ length: 6 }, (_, i) => monthsAgo(5 - i));
   const perMonth = months.map((m) => matches.filter((h) => h.occurredAt.slice(0, 7) === ym(m)).length);

@@ -63,7 +63,7 @@ def _access(m: NationalTeamMember, viewer) -> dict:
         "plan_author": s.is_head_staff(viewer) or bool(m.personal_coach_id and m.personal_coach_id == viewer.id),
         "medical": "full" if s.is_doctor(viewer) else ("summary" if s.can_read_medical_summary(m, viewer) else None),
         "sport": s.is_psychologist(viewer),
-        "umo": s.can_read_umo(viewer),  # вкладки УМО в медкарте ✳ (22.11.2026)
+        "umo": s.can_read_umo(viewer, m),  # вкладки УМО в медкарте ✳ (22.11.2026)
     }
 
 
@@ -178,14 +178,18 @@ def _visible(request, pk) -> NationalTeamMember:
 # ── Состав ──────────────────────────────────────────────────────────────────
 
 class MeView(Base):
-    """Что этому человеку доступно в сборной — для меню кабинетов."""
+    """Что этому человеку доступно в сборной — для меню кабинетов. `member` —
+    id своей карточки члена сборной (кабинет спортсмена: «Мой профиль» ✳
+    22.11.2026); не в сборной — `null`."""
 
     def get(self, request):
         u = request.user
+        mine = s.my_membership(u)
         return Response({
             "head_staff": s.is_head_staff(u), "team_coach_groups": s.team_coach_groups(u),
             "personal_coach": s.is_personal_coach(u), "doctor": s.is_doctor(u), "psychologist": s.is_psychologist(u),
             "calendar": s.can_read_calendar(u), "reports": s.can_write_reports(u),
+            "member": str(mine.id) if mine else None,
         })
 
 
@@ -228,7 +232,9 @@ def _profile(m: NationalTeamMember) -> dict:
     рейтинг-листа — служебный («ath-…»), такой не показываем."""
     u = m.user
     card = getattr(u, "rating_profile", None)
-    phone = u.phone if u.phone and not u.phone.startswith("ath-") else ""
+    # Служебные метки вместо номера («ath-…», «player-…», «feder-…» у учёток
+    # без телефона) не показываем: номер начинается с «+» или цифры.
+    phone = u.phone if u.phone and (u.phone[0] == "+" or u.phone[0].isdigit()) else ""
     return {
         "avatar": _avatar(m), "email": u.email or "", "phone": phone,
         "birth_date": _iso(card.birth_date) if card and card.birth_date else None,
@@ -265,7 +271,7 @@ class MedicalView(Base):
         if not s.can_read_medical_summary(m, request.user):
             raise s.NationalError("Медицинская карта вам не видна.", 403)
         limits = [{"load_limit": r.load_limit, "until": _iso(r.until)} for r in s.active_limits(m)]
-        return Response({**head, "full": False, "limits": limits, "umo": s.can_read_umo(request.user)})
+        return Response({**head, "full": False, "limits": limits, "umo": s.can_read_umo(request.user, m)})
 
     def post(self, request, pk):
         m = get_object_or_404(NationalTeamMember, pk=pk)
@@ -561,9 +567,10 @@ def _umo_for(m, user) -> dict:
 
 class UmoView(Base):
     def get(self, request, pk):
-        if not s.can_read_umo(request.user):
+        m = get_object_or_404(NationalTeamMember, pk=pk)
+        if not s.can_read_umo(request.user, m):
             raise s.NationalError("УМО вам не видно.", 403)
-        return Response(_umo_for(get_object_or_404(NationalTeamMember, pk=pk), request.user))
+        return Response(_umo_for(m, request.user))
 
     def post(self, request, pk):
         m = get_object_or_404(NationalTeamMember, pk=pk)

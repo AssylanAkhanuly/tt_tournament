@@ -119,3 +119,31 @@ def test_head_staff_uploads_images_doctor_cannot(squad, settings, tmp_path):
     txt = SimpleUploadedFile("a.txt", b"hello", content_type="text/plain")
     assert client_for(squad["head"]).post(url, {"file": txt}, format="multipart").status_code == 400
     assert client_for(squad["head"]).delete(url).json()["figure"] is None
+
+
+def test_athlete_sees_own_card_read_only_not_others(squad):
+    """Член сборной видит свою карточку, план, медкарту без диагнозов и УМО —
+    только смотреть; чужую — нет ✳ (22.11.2026, решение владельца продукта)."""
+    me = squad["member"].user
+    other = NationalTeamMember.objects.create(user=athlete(11, "Другой спортсмен"), added_by=squad["head"])
+    api = client_for(me)
+    assert api.get("/api/national/me/").json()["member"] == str(squad["member"].pk)
+    card = api.get(f"/api/national/members/{squad['member'].pk}/")
+    assert card.status_code == 200
+    access = card.json()["access"]
+    assert access["roster"] is False and access["plans"] is True and access["medical"] == "summary" and access["umo"] is True
+    assert access["sport"] is False and access["plan_author"] is False
+    assert api.get(f"/api/national/members/{squad['member'].pk}/plans/").status_code == 200
+    medical = api.get(f"/api/national/members/{squad['member'].pk}/medical/").json()
+    assert medical["full"] is False and "records" not in medical
+    umo_r = api.get(f"/api/national/members/{squad['member'].pk}/umo/")
+    assert umo_r.status_code == 200 and umo_r.json()["can_edit"] is False
+    assert api.post(f"/api/national/members/{squad['member'].pk}/umo/", {"date": "2026-08-27"}, format="json").status_code == 403
+    assert api.patch(f"/api/national/members/{squad['member'].pk}/", {"squad": "extended"}, format="json").status_code == 403
+    assert api.get(f"/api/national/members/{squad['member'].pk}/sport/").status_code == 403
+    # чужая карточка и состав — закрыты
+    assert api.get(f"/api/national/members/{other.pk}/").status_code == 403
+    assert api.get(f"/api/national/members/{other.pk}/umo/").status_code == 403
+    assert api.get("/api/national/members/").status_code == 403
+    # не член сборной — карточки нет
+    assert client_for(make_user(12, "Просто спортсмен")).get("/api/national/me/").json()["member"] is None

@@ -18,7 +18,13 @@
 вкладкам медкарты было что показать. Настоящих результатов здесь нет и быть не
 должно — присланный шаблон с данными спортсменки в репозиторий не кладём.
 Повторный запуск пересоздаёт показательные осмотры (пометка «[показ]» в
-примечании)."""
+примечании).
+
+Кабинет спортсмена ✳ (22.11.2026): учётка проверок «Спортсмен (проверки)»
+(`e2e-player@fnt.kz`, заводит `e2e/global-setup.ts`), если она есть,
+становится членом сборной — рейтинговая карточка (старт 1,00 через
+`rating.services.get_or_create_profile`, с записью журнала), план и
+показательные осмотры, — чтобы «Мой профиль» сборной было видно вживую."""
 import datetime
 
 from django.core.management.base import BaseCommand
@@ -84,7 +90,27 @@ class Command(BaseCommand):
         UmoExam.objects.filter(note__startswith=TAG).delete()
         for prof in profiles:
             self.umo(NationalTeamMember.objects.get(user=prof.user), prof.sex or "", today)
+        self.player(today, camp)
         self.stdout.write("Показательные планы: %d спортсменов; в состав внесено ещё %d" % (len(profiles), added))
+
+    def player(self, today, camp):
+        """Учётка проверок спортсмена — член сборной для показа своего профиля."""
+        from rating.services import get_or_create_profile
+        from users.models import User
+
+        user = User.objects.filter(email="e2e-player@fnt.kz").first()
+        if user is None:
+            return
+        get_or_create_profile(user, sex="m", region="Алматы", birth_year=2004, birth_date=datetime.date(2004, 3, 14))
+        member, _ = NationalTeamMember.objects.get_or_create(user=user, defaults={"age_group": "adult"})
+        D = datetime.timedelta
+        plan = TrainingPlan.objects.create(member=member, starts_on=today - D(20), ends_on=today + D(40),
+                                           goal=TAG + "Подготовка к Чемпионату РК", status="approved")
+        for n, title in enumerate(["Тест ОФП", "Подача: короткая в середину", "Приём подачи", "Восстановление после старта"]):
+            due = today + D(n * 6 - 8)
+            PlanItem.objects.create(plan=plan, title=title, due=due, done=due < today)
+        PlanItem.objects.create(plan=plan, kind="camp", title="Сбор: УТС Алматы", event=camp)
+        self.umo(member, "m", today)
 
     TEXT = {
         "menstrual": "регулярный", "appetite": "нормальный", "ketones": "отрицательно", "rank": "МС",

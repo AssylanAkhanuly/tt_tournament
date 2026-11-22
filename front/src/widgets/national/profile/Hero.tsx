@@ -126,19 +126,38 @@ function ImageMenu({ member, kind, has, onChanged, children, label }: {
   );
 }
 
-export function Hero({ member, card, canEdit, onChanged, onRemoved }: {
-  member: NationalMember;
-  card: ReturnType<typeof useRatingCard>;
-  canEdit: boolean;
-  onChanged: () => void;
-  onRemoved: () => void;
+/** Кто в шапке: общий вид для члена сборной и для любого спортсмена ✳
+ *  (22.11.2026: свой профиль в кабинете спортсмена — по рейтинговой карточке). */
+export type HeroPerson = {
+  id: string;
+  name: string;
+  region: string;
+  birthYear: number | null;
+  birthDate: string | null;
+  sex: '' | 'm' | 'f';
+  avatar: string | null;
+  figure: string | null;
+};
+
+/** Шапка профиля без сборной: баннер-градиент с фигурой и местом в листе,
+ *  аватар, имя, сведения. Сборная добавляет своё слотами (`Hero` ниже). */
+export function ProfileHero({ who, place, tag, joined, ring, crown, contacts, avatarSlot, figureSlot }: {
+  who: HeroPerson;
+  place?: number;
+  /** Строка бренда над именем (у сборной — состав и группа). */
+  tag?: string;
+  /** «В сборной с». */
+  joined?: string | null;
+  /** Кольцо фото — цвет допуска; нет — белое. */
+  ring?: keyof typeof RING;
+  crown?: boolean;
+  contacts?: ReactNode;
+  avatarSlot?: ReactNode;
+  figureSlot?: ReactNode;
 }) {
-  const p = member.person;
-  const pr = member.profile;
-  const [surname, ...rest] = p.name.split(/\s+/);
-  const years = age(pr?.birthDate, p.birthYear);
-  const place = card.data?.place;
-  const avatar = pr?.avatar ?? member.avatar;
+  const [surname, ...rest] = who.name.split(/\s+/);
+  const years = age(who.birthDate, who.birthYear);
+  const face = { id: who.id, person: { sex: who.sex }, avatar: who.avatar };
   return (
     <section
       className={
@@ -158,84 +177,120 @@ export function Hero({ member, card, canEdit, onChanged, onRemoved }: {
         )}
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
-          src={member.figure ?? placeholderOf(member)}
+          src={who.figure ?? placeholderOf(face)}
           alt=""
           className="absolute right-10 bottom-0 h-[94%] w-auto max-w-none object-contain object-bottom max-md:hidden"
           data-testid="member-figure"
-          data-photo={member.figure ? 'yes' : 'no'}
+          data-photo={who.figure ? 'yes' : 'no'}
         />
       </div>
-      {canEdit && (
-        <span className="absolute top-3 right-3 z-10">
-          <ImageMenu member={member} kind="figure" has={!!member.figure} onChanged={onChanged} label="Снимок по пояс">
-            <span className="flex items-center gap-1.5 rounded-full bg-white/90 px-3 py-1.5 text-[12px] font-medium text-neutral-700 shadow-sm hover:bg-white">
-              <Camera size={14} /> Фигура
-            </span>
-          </ImageMenu>
-        </span>
-      )}
+      {figureSlot && <span className="absolute top-3 right-3 z-10">{figureSlot}</span>}
       <div className="relative flex min-h-72 flex-wrap items-center gap-x-8 gap-y-5 p-6 md:pr-80">
         <div className="relative shrink-0">
           <div
-            className={'grid size-36 place-items-center overflow-hidden rounded-full border-4 border-white bg-qtt-peach ring-4 ' + RING[member.clearance.status]}
+            className={'grid size-36 place-items-center overflow-hidden rounded-full border-4 border-white bg-qtt-peach ' + (ring ? 'ring-4 ' + RING[ring] : '')}
             data-testid="member-photo-ring"
-            data-status={member.clearance.status}
+            data-status={ring ?? ''}
           >
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
-              src={avatar ?? placeholderOf(member)}
-              alt={p.name}
-              className={'size-full object-cover ' + (avatar ? '' : 'origin-[50%_12%] scale-[2.1] object-top')}
+              src={who.avatar ?? placeholderOf(face)}
+              alt={who.name}
+              className={'size-full object-cover ' + (who.avatar ? '' : 'origin-[50%_12%] scale-[2.1] object-top')}
               data-testid="member-photo"
-              data-photo={avatar ? 'yes' : 'no'}
+              data-photo={who.avatar ? 'yes' : 'no'}
             />
           </div>
-          <Tooltip>
-            <Tooltip.Trigger
-              aria-label="В национальной сборной"
-              className="absolute -top-1 right-0 grid size-10 place-items-center rounded-full bg-white text-qtt-peach shadow-md"
-              data-testid="member-crown"
-            >
-              <Crown size={20} className="fill-current" />
-            </Tooltip.Trigger>
-            <Tooltip.Content>В национальной сборной</Tooltip.Content>
-          </Tooltip>
-          {canEdit && (
-            <span className="absolute right-1 bottom-1">
-              <ImageMenu member={member} kind="avatar" has={!!member.avatar} onChanged={onChanged} label="Аватар">
-                <span className="grid size-9 place-items-center rounded-full border-2 border-white bg-brand-500 text-white shadow-md hover:brightness-110">
-                  <Camera size={15} />
-                </span>
-              </ImageMenu>
-            </span>
+          {crown && (
+            <Tooltip>
+              <Tooltip.Trigger
+                aria-label="В национальной сборной"
+                className="absolute -top-1 right-0 grid size-10 place-items-center rounded-full bg-white text-qtt-peach shadow-md"
+                data-testid="member-crown"
+              >
+                <Crown size={20} className="fill-current" />
+              </Tooltip.Trigger>
+              <Tooltip.Content>В национальной сборной</Tooltip.Content>
+            </Tooltip>
           )}
+          {avatarSlot && <span className="absolute right-1 bottom-1">{avatarSlot}</span>}
         </div>
         <div className="flex min-w-0 flex-1 flex-col">
-          <span className="text-[12px] font-semibold tracking-wide text-brand-200 uppercase">
-            {SQUAD_LABEL[member.squad]} состав · {AGE_GROUP_LABEL[member.ageGroup]}
-          </span>
+          {tag && <span className="text-[12px] font-semibold tracking-wide text-brand-200 uppercase">{tag}</span>}
           <h1 className="m-0 mt-1 text-[34px] leading-[1.1] font-bold tracking-tight text-white" data-testid="member-name">
             <span className="block">{surname}</span> <span className="block">{rest.join(' ')}</span>
           </h1>
           <dl className="m-0 mt-5 flex flex-wrap gap-y-3">
             {place && <Fact label="Место в листе" value={'№ ' + place} accent />}
             {years !== null && <Fact label="Возраст" value={years + ' ' + yearsWord(years)} />}
-            {p.region && <Fact label="Регион" value={p.region} />}
-            {pr && <Fact label="В сборной с" value={dmy(pr.joined)} />}
+            {who.region && <Fact label="Регион" value={who.region} />}
+            {joined && <Fact label="В сборной с" value={dmy(joined)} />}
           </dl>
-          {(pr?.email || pr?.phone || canEdit) && (
-            <div className="mt-5 flex flex-wrap items-center gap-2">
-              {pr?.email && <Contact href={'mailto:' + pr.email} label="Написать" value={pr.email} tone="bg-qtt-blue" icon={<Mail size={17} />} testId="member-mail" />}
-              {pr?.phone && <Contact href={'tel:' + pr.phone} label="Позвонить" value={pr.phone} tone="bg-qtt-teal" icon={<Phone size={17} />} testId="member-call" />}
-              {canEdit && (
-                <span className="rounded-xl bg-white/95">
-                  <RemoveMemberButton member={member} onRemove={onRemoved} />
-                </span>
-              )}
-            </div>
-          )}
+          {contacts && <div className="mt-5 flex flex-wrap items-center gap-2">{contacts}</div>}
         </div>
       </div>
     </section>
+  );
+}
+
+export function Hero({ member, card, canEdit, onChanged, onRemoved }: {
+  member: NationalMember;
+  card: ReturnType<typeof useRatingCard>;
+  canEdit: boolean;
+  onChanged: () => void;
+  onRemoved: () => void;
+}) {
+  const p = member.person;
+  const pr = member.profile;
+  const hasContacts = !!(pr?.email || pr?.phone || canEdit);
+  return (
+    <ProfileHero
+      who={{
+        id: member.id,
+        name: p.name,
+        region: p.region,
+        birthYear: p.birthYear,
+        birthDate: pr?.birthDate ?? null,
+        sex: p.sex,
+        avatar: pr?.avatar ?? member.avatar,
+        figure: member.figure,
+      }}
+      place={card.data?.place}
+      tag={SQUAD_LABEL[member.squad] + ' состав · ' + AGE_GROUP_LABEL[member.ageGroup]}
+      joined={pr?.joined ?? null}
+      ring={member.clearance.status}
+      crown
+      contacts={
+        hasContacts && (
+          <>
+            {pr?.email && <Contact href={'mailto:' + pr.email} label="Написать" value={pr.email} tone="bg-qtt-blue" icon={<Mail size={17} />} testId="member-mail" />}
+            {pr?.phone && <Contact href={'tel:' + pr.phone} label="Позвонить" value={pr.phone} tone="bg-qtt-teal" icon={<Phone size={17} />} testId="member-call" />}
+            {canEdit && (
+              <span className="rounded-xl bg-white/95">
+                <RemoveMemberButton member={member} onRemove={onRemoved} />
+              </span>
+            )}
+          </>
+        )
+      }
+      figureSlot={
+        canEdit && (
+          <ImageMenu member={member} kind="figure" has={!!member.figure} onChanged={onChanged} label="Снимок по пояс">
+            <span className="flex items-center gap-1.5 rounded-full bg-white/90 px-3 py-1.5 text-[12px] font-medium text-neutral-700 shadow-sm hover:bg-white">
+              <Camera size={14} /> Фигура
+            </span>
+          </ImageMenu>
+        )
+      }
+      avatarSlot={
+        canEdit && (
+          <ImageMenu member={member} kind="avatar" has={!!member.avatar} onChanged={onChanged} label="Аватар">
+            <span className="grid size-9 place-items-center rounded-full border-2 border-white bg-brand-500 text-white shadow-md hover:brightness-110">
+              <Camera size={15} />
+            </span>
+          </ImageMenu>
+        )
+      }
+    />
   );
 }
