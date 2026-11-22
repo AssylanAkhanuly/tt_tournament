@@ -43,6 +43,9 @@ test('врач соревнований: допуск участников по 
   await page.getByRole('button', { name: 'Войти' }).click();
   await page.waitForURL((u) => u.pathname === '/referee');
 
+  // «Турниры» врача — только его турниры (роль с областью «турнир»).
+  await page.goto('/medic?view=table');
+  await expect(page.getByText(name, { exact: true })).toBeVisible();
   await page.goto(`/medic/tournaments/${id}`);
   await expect(page.getByTestId('page-title')).toContainText('Допуск участников');
   const rows = page.getByTestId('medical-row');

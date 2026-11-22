@@ -103,7 +103,7 @@ export class SessionError extends Error {
   }
 }
 
-type RawRole = { kind?: unknown; label?: unknown; scope?: unknown };
+type RawRole = { kind?: unknown; label?: unknown; scope?: unknown; scope_id?: unknown };
 
 const toUser = (raw: Record<string, unknown>): SessionUser => ({
   id: String(raw.id ?? ''),
@@ -113,6 +113,9 @@ const toUser = (raw: Record<string, unknown>): SessionUser => ({
     kind: String(r.kind ?? ''),
     label: String(r.label ?? ''),
     scope: String(r.scope ?? ''),
+    // Какого турнира роль ✳ (22.11.2026: раньше терялся — «мои турниры» главного
+    // судьи и врача соревнований выходили пустыми).
+    scope_id: r.scope_id ? String(r.scope_id) : null,
   })),
 });
 
