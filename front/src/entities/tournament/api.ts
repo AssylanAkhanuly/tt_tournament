@@ -1009,3 +1009,108 @@ export async function fetchMedical(tournamentId: string): Promise<MedicalAdmissi
 export async function decideMedical(tournamentId: string, userId: string, status: MedicalStatus, note = ''): Promise<MedicalAdmission> {
   return toMedical(await send<RawMedical>(`/api/tournaments/${tournamentId}/medical/`, 'POST', { user_id: userId, status, note }));
 }
+
+/* ── Счёт судьёй стола ✳ (22.11.2026, flows/09 Э9.2–Э9.5; back `tournaments/scoring.py`) ──
+   Матч группы по партиям: судья стола вносит партию за партией (сразу видно
+   всем), счёт матча — из партий; «Подтвердить результат» — когда матч решён.
+   Короткий путь — только итог матча. После подтверждения правит главный судья. */
+
+export type MatchStatus = 'pending' | 'in_progress' | 'score_proposed' | 'finished';
+
+export type ScoringPlayer = { id: string; name: string; avatar: string | null; region: string };
+
+export type ScoringMatch = {
+  id: number;
+  tournament: { id: string; name: string };
+  group: string;
+  round: number | null;
+  table: number | null;
+  scheduledAt: string | null;
+  status: MatchStatus;
+  gamesToWin: number;
+  player1: ScoringPlayer;
+  player2: ScoringPlayer;
+  /** Партии со стороны игрока 1; пусто у матча, записанного итогом. */
+  games: [number, number][];
+  score1: number | null;
+  score2: number | null;
+  winnerId: string | null;
+  isWalkover: boolean;
+  resultBy: string;
+  resultAt: string | null;
+  canScore: boolean;
+  canCorrect: boolean;
+};
+
+type RawScoring = {
+  id: number;
+  tournament: { id: string; name: string };
+  group: string;
+  round: number | null;
+  table: number | null;
+  scheduled_at: string | null;
+  status: MatchStatus;
+  games_to_win: number;
+  player1: ScoringPlayer;
+  player2: ScoringPlayer;
+  games: [number, number][];
+  score1: number | null;
+  score2: number | null;
+  winner_id: string | null;
+  is_walkover: boolean;
+  result_by: string;
+  result_at: string | null;
+  can_score: boolean;
+  can_correct: boolean;
+};
+
+const toScoring = (r: RawScoring): ScoringMatch => ({
+  id: r.id,
+  tournament: r.tournament,
+  group: r.group,
+  round: r.round,
+  table: r.table,
+  scheduledAt: r.scheduled_at,
+  status: r.status,
+  gamesToWin: r.games_to_win,
+  player1: r.player1,
+  player2: r.player2,
+  games: r.games ?? [],
+  score1: r.score1,
+  score2: r.score2,
+  winnerId: r.winner_id,
+  isWalkover: r.is_walkover,
+  resultBy: r.result_by,
+  resultAt: r.result_at,
+  canScore: r.can_score,
+  canCorrect: r.can_correct,
+});
+
+/** Партия по правилам: до 11, при 10 : 10 — до разрыва в два (то же правило, что на сервере). */
+export function validGame(a: number, b: number): boolean {
+  if (!Number.isInteger(a) || !Number.isInteger(b) || a < 0 || b < 0) return false;
+  const hi = Math.max(a, b);
+  const lo = Math.min(a, b);
+  return hi === 11 ? lo <= 9 : hi > 11 && hi - lo === 2;
+}
+
+/** «Мой стол»: матчи, на которые судья посажен, в идущих турнирах. */
+export async function fetchMyTable(): Promise<ScoringMatch[]> {
+  const r = await getJson<{ matches: RawScoring[] }>('/api/tournaments/my-table/', 'Мой стол');
+  return r.matches.map(toScoring);
+}
+
+export async function fetchScoring(tournamentId: string, matchId: string | number): Promise<ScoringMatch> {
+  return toScoring(await getJson<RawScoring>(`/api/tournaments/${tournamentId}/group-matches/${matchId}/scoring/`, 'Матч'));
+}
+
+export type ScoringAction =
+  | { action: 'start' }
+  | { action: 'game'; a: number; b: number }
+  | { action: 'undo' }
+  | { action: 'submit'; score1?: number; score2?: number }
+  | { action: 'correct'; games?: [number, number][]; score1?: number; score2?: number };
+
+export async function scoreMatch(tournamentId: string, matchId: string | number, body: ScoringAction): Promise<ScoringMatch> {
+  return toScoring(await send<RawScoring>(`/api/tournaments/${tournamentId}/group-matches/${matchId}/scoring/`, 'POST', body));
+}
