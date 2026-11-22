@@ -5,9 +5,9 @@
 
    «Мой стол» (`/referee/table`) — одна карточка текущего матча и одна кнопка
    («Старт матча» / «Продолжить счёт»); очереди стола на экране нет (Э9.2).
-   «Ввод счёта» (`/referee/table/<турнир>/<матч>`) — табло: игроки по краям,
-   счёт по партиям крупно между ними, сыгранные партии, поля партии и
-   «Записать партию». Партия — по правилам (до 11, при 10 : 10 — до разрыва в
+   «Ввод счёта» (`/referee/table/<турнир>/<матч>`) — табло-сцена (`BoardStage`:
+   фигуры игроков по краям, счёт и столбец партий между ними), под ним поля
+   партии и «Записать партию». Партия — по правилам (до 11, при 10 : 10 — до разрыва в
    два), счёт матча — из партий. «Подтвердить результат» появляется, только
    когда матч решён; до этого на его месте — регламент и текущий счёт.
    Короткий путь — «Записать только итог». После подтверждения — «Результат
@@ -31,6 +31,7 @@ import {
 import { useLoad } from '@/shared/lib/useLoad';
 import { PersonAvatar } from '@/shared/ui/PersonAvatar';
 
+import { BoardStage } from './BoardStage';
 import { RefereeShell } from './RefereeShell';
 
 const TABLE = '/referee/table';
@@ -44,6 +45,11 @@ function when(iso: string | null): string {
 
 function wins(n: number): string {
   return `до ${n} ${n === 1 ? 'победы' : 'побед'} в партиях`;
+}
+
+/** Подпись над счётом на табло: группа и круг. */
+function caption(m: ScoringMatch): string {
+  return `Группа ${m.group}${m.round ? ` · круг ${m.round}` : ''}`;
 }
 
 /** Текущий матч стола: идущий, иначе ближайший несыгранный. */
@@ -60,21 +66,6 @@ function Player({ p, align = 'left' }: { p: ScoringPlayer; align?: 'left' | 'rig
         {p.region && <div className="truncate text-[13px] text-neutral-500">{p.region}</div>}
       </div>
     </div>
-  );
-}
-
-function Games({ m }: { m: ScoringMatch }) {
-  if (!m.games.length) return null;
-  return (
-    <ol className="m-0 flex list-none flex-wrap justify-center gap-2 p-0" data-testid="score-games">
-      {m.games.map(([a, b], i) => (
-        <li key={i} className="rounded-xl border border-neutral-200 bg-white px-3 py-1.5 text-[15px] tabular-nums text-neutral-500" data-testid="score-game">
-          <span className={a > b ? 'font-semibold text-neutral-900' : ''}>{a}</span>
-          {' : '}
-          <span className={b > a ? 'font-semibold text-neutral-900' : ''}>{b}</span>
-        </li>
-      ))}
-    </ol>
   );
 }
 
@@ -167,19 +158,20 @@ function ScoreBoard({ m, act }: { m: ScoringMatch; act: (body: ScoringAction) =>
   };
 
   return (
-    <section className="flex h-full flex-col gap-8 overflow-y-auto px-4 py-8 md:px-10" data-testid="score-board">
-      <div className="grid grid-cols-[1fr_auto_1fr] items-start gap-6 max-md:grid-cols-1">
-        <Player p={m.player1} />
-        <div className="flex flex-col items-center gap-4">
-          <div className={NUM + ' text-[96px] text-neutral-900'} data-testid="score-total">
-            {s1} : {s2}
-          </div>
-          <Games m={m} />
-        </div>
-        <Player p={m.player2} align="right" />
-      </div>
+    <section className="flex h-full flex-col overflow-y-auto" data-testid="score-board">
+      <BoardStage
+        player1={m.player1}
+        player2={m.player2}
+        score1={s1}
+        score2={s2}
+        games={m.games}
+        gamesToWin={n}
+        caption={caption(m)}
+        live={!decided}
+        totalTestId="score-total"
+      />
 
-      <div className="mx-auto flex w-full max-w-md flex-col items-center gap-4">
+      <div className="mx-auto flex w-full max-w-md flex-col items-center gap-4 px-4 pt-8">
         {decided ? null : totalMode ? (
           <>
             <Pair a={a} b={b} onA={setA} onB={setB} label="Итог матча" testId="score-total-input" />
@@ -215,7 +207,7 @@ function ScoreBoard({ m, act }: { m: ScoringMatch; act: (body: ScoringAction) =>
         )}
       </div>
 
-      <div className="mt-auto flex flex-col items-center gap-2 border-t border-neutral-200 pt-6">
+      <div className="mt-auto flex flex-col items-center gap-2 border-t border-neutral-200 px-4 py-6">
         {decided ? (
           <div className="flex gap-2">
             <Button variant="tertiary" className="rounded-xl" onPress={() => void act({ action: 'undo' })} data-testid="score-undo">
@@ -239,18 +231,22 @@ function ResultSent({ m }: { m: ScoringMatch }) {
   const router = useRouter();
   const winner = m.winnerId === m.player1.id ? m.player1 : m.player2;
   return (
-    <section className="flex h-full flex-col items-center justify-center gap-6 overflow-y-auto px-4 py-10 text-center" data-testid="score-result">
-      <div className="flex items-center gap-2 text-[15px] font-semibold text-green-700">
+    <section className="flex h-full flex-col items-center gap-5 overflow-y-auto pb-10 text-center" data-testid="score-result">
+      <BoardStage
+        player1={m.player1}
+        player2={m.player2}
+        score1={m.score1 ?? 0}
+        score2={m.score2 ?? 0}
+        games={m.games}
+        gamesToWin={m.gamesToWin}
+        caption={caption(m)}
+        live={false}
+        totalTestId="result-total"
+      />
+      <div className="mt-3 flex items-center gap-2 text-[15px] font-semibold text-green-700">
         <CheckCircle2 size={20} /> Результат принят
       </div>
-      <div className="grid w-full max-w-3xl grid-cols-[1fr_auto_1fr] items-center gap-6 max-md:grid-cols-1">
-        <Player p={m.player1} />
-        <div className={NUM + ' text-[80px] text-neutral-900'} data-testid="result-total">
-          {m.score1} : {m.score2}
-        </div>
-        <Player p={m.player2} align="right" />
-      </div>
-      {m.games.length ? <Games m={m} /> : <p className="m-0 text-[13px] text-neutral-500">Партии не заполнялись — записан итог матча</p>}
+      {!m.games.length && <p className="m-0 text-[13px] text-neutral-500">Партии не заполнялись — записан итог матча</p>}
       <div className="text-[14px] text-neutral-600">
         Победитель — <span className="font-semibold text-neutral-900">{winner.name}</span>
       </div>

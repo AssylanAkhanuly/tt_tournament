@@ -1017,7 +1017,16 @@ export async function decideMedical(tournamentId: string, userId: string, status
 
 export type MatchStatus = 'pending' | 'in_progress' | 'score_proposed' | 'finished';
 
-export type ScoringPlayer = { id: string; name: string; avatar: string | null; region: string };
+export type ScoringPlayer = {
+  id: string;
+  name: string;
+  avatar: string | null;
+  region: string;
+  /** Пол — для заглушки фигуры; пусто, если не внесён. */
+  sex: '' | 'm' | 'f';
+  /** Фигура по пояс из профиля сборной; нет — заглушка своего пола. */
+  figure: string | null;
+};
 
 export type ScoringMatch = {
   id: number;

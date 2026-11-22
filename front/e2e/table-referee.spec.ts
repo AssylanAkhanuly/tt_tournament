@@ -94,7 +94,13 @@ test('судья стола: мой стол → ввод счёта по пар
     await game('13', '11');
     await page.getByTestId('score-record').click();
     await expect(page.getByTestId('score-total')).toHaveText('3 : 1');
-    await expect(page.getByTestId('score-game')).toHaveText(['11 : 7', '10 : 12', '11 : 4', '13 : 11']);
+    const played = await page.getByTestId('score-game').evaluateAll((rows) => rows.map((r) => (r as HTMLElement).dataset.score));
+    expect(played).toEqual(['11 : 7', '10 : 12', '11 : 4', '13 : 11']);
+    // табло-сцена: фигуры игроков по краям (у спортсменов засева снимков нет — заглушки), плашки с фамилиями
+    await expect(page.getByTestId('board-figure-left')).toHaveAttribute('src', /\/national\/players\/[mf]-\d\.webp$/);
+    await expect(page.getByTestId('board-figure-right')).toHaveAttribute('data-photo', 'no');
+    await expect(page.getByTestId('board-plate-left')).toContainText(match.player1.name.split(' ')[0]);
+    await expect(page.getByTestId('board-plate-right')).toContainText(match.player2.name.split(' ')[0]);
 
     // идущий матч со счётом по партиям виден с сервера ещё до подтверждения
     const live = (await (await page.request.get(`/api/tournaments/${id}/group-matches/${match.id}/scoring/`)).json()) as {
