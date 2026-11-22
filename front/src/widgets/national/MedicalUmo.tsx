@@ -22,8 +22,8 @@
    приложения (шапка-подложка, черта между строками, поле 24 px у краёв), но
    полупрозрачные «жидким стеклом» — сквозь них видны серая подложка и
    огромный значок медкарты за всем (`Backdrop` в `MedicalCardView`).
-   Карточки блоков в сводке — белые; над таблицей блока — полоса градиента
-   бренда с огромной цифрой блока. */
+   Карточки блоков в сводке — белые; полосы над таблицей блока нет
+   (решение владельца продукта 22.11.2026). */
 
 import { AlertDialog, Button, Chip, Input, Label, Modal, Spinner, TextArea, TextField, Tooltip, useOverlayState } from '@heroui/react';
 import { Info, Pencil, Plus, Star } from 'lucide-react';
@@ -327,38 +327,7 @@ function BlockTable({ block, umo, onSaved }: { block: UmoBlock; umo: Umo; onSave
 
   return (
     <div className="flex min-h-full flex-col [&>*]:shrink-0" data-testid="umo-block" data-code={block.code}>
-      {/* Полоса блока — фон: градиент бренда и огромная цифра блока; заголовка
-          нет — он повторял бы выбранную вкладку ✳ (22.11.2026). */}
-      <div
-        className={
-          'relative flex min-h-20 items-center overflow-hidden px-6 py-4 ' +
-          (block.control
-            ? 'bg-[linear-gradient(110deg,color-mix(in_srgb,var(--color-qtt-peach)_85%,var(--color-brand-600)),var(--color-qtt-peach))]'
-            : 'bg-[linear-gradient(110deg,var(--color-brand-700),var(--color-brand-600)_50%,color-mix(in_srgb,var(--color-brand-500)_70%,var(--color-brand-600)))]')
-        }
-        data-testid="umo-block-strip"
-      >
-        <span
-          aria-hidden
-          className="pointer-events-none absolute top-1/2 right-6 -translate-y-1/2 font-[family-name:var(--font-jersey)] text-[150px] leading-[0.72] text-transparent select-none [-webkit-text-stroke:1.5px_color-mix(in_srgb,white_35%,transparent)]"
-        >
-          {block.n}
-        </span>
-        <span className="relative flex flex-wrap gap-x-6 gap-y-1 text-white">
-          <span className="flex flex-col">
-            <span className="text-[22px] leading-none font-bold tabular-nums">{block.summary.numeric}</span>
-            <span className="text-[11.5px] text-white/70">с данными</span>
-          </span>
-          <span className="flex flex-col">
-            <span className="text-[22px] leading-none font-bold tabular-nums">{block.summary.low}</span>
-            <span className="text-[11.5px] text-white/70">ниже нормы</span>
-          </span>
-          <span className="flex flex-col">
-            <span className="text-[22px] leading-none font-bold tabular-nums">{block.summary.high}</span>
-            <span className="text-[11.5px] text-white/70">выше нормы</span>
-          </span>
-        </span>
-      </div>
+      {/* Заголовка блока нет — он повторял бы выбранную вкладку ✳ (22.11.2026). */}
       <div className="flex flex-wrap items-center justify-end gap-3 border-b border-[color-mix(in_oklab,var(--separator)_50%,transparent)] px-6 py-3 empty:hidden">
         {umo.canEdit &&
           umo.exams.length > 0 &&
