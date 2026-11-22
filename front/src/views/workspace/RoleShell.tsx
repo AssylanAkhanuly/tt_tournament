@@ -22,6 +22,7 @@ export function RoleShell({
   nav,
   active,
   pageTitle,
+  back,
   bleed,
   context,
   home,
@@ -41,6 +42,8 @@ export function RoleShell({
   nav: RoleNavItem[];
   active?: string;
   pageTitle?: string;
+  /** «Назад» перед заголовком страницы. */
+  back?: { label: string; onPress: () => void };
   bleed?: boolean;
   /** Шапка сайдбара над разделами. */
   context?: ReactNode;
@@ -84,6 +87,7 @@ export function RoleShell({
       }))}
       active={active}
       title={pageTitle}
+      back={back}
       bleed={bleed}
       actions={actions}
       context={context}

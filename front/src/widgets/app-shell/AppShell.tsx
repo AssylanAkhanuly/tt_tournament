@@ -14,7 +14,7 @@
    Подписей-заголовков в меню нет (решение владельца продукта, 28.10.2026). */
 
 import { Avatar, Button, Chip, Dropdown, Label, Modal, Separator, useOverlayState } from '@heroui/react';
-import { ChevronDown, ChevronsUpDown, LogOut, User } from 'lucide-react';
+import { ChevronDown, ChevronLeft, ChevronsUpDown, LogOut, User } from 'lucide-react';
 import { useState, type ReactNode } from 'react';
 
 import { useNarrow } from '@/shared/kit/app';
@@ -53,6 +53,7 @@ export function AppShell({
   nav,
   active,
   title,
+  back,
   actions,
   bleed = false,
   context,
@@ -75,6 +76,9 @@ export function AppShell({
   active?: string;
   /** Заголовок — только когда он и есть содержание (имя спортсмена). */
   title?: string;
+  /** «Назад» перед заголовком страницы ✳ (22.11.2026): подпись — в подсказке
+   *  и `aria-label`, щелчок — куда вернуться. */
+  back?: { label: string; onPress: () => void };
   /** Шапка сайдбара над разделами: где человек сейчас (страница турнира —
    *  «← Все турниры», название и дата). Нет — разделы сразу. */
   context?: ReactNode;
@@ -388,9 +392,24 @@ export function AppShell({
               className={'shrink-0 px-6 pt-5 max-md:px-4 max-md:pt-3 ' + (tabs.length ? '' : 'border-b border-shell-line pb-4')}
               data-testid="page-header"
             >
-              <h1 className="min-h-9 truncate text-[26px] leading-9 font-semibold tracking-tight max-md:text-[20px]" data-testid="page-title">
-                {title}
-              </h1>
+              <div className="flex min-w-0 items-center gap-2">
+                {back && (
+                  <Button
+                    isIconOnly
+                    size="sm"
+                    variant="ghost"
+                    aria-label={back.label}
+                    className="shrink-0 rounded-xl"
+                    onPress={back.onPress}
+                    data-testid="page-back"
+                  >
+                    <ChevronLeft size={20} />
+                  </Button>
+                )}
+                <h1 className="min-h-9 truncate text-[26px] leading-9 font-semibold tracking-tight max-md:text-[20px]" data-testid="page-title">
+                  {title}
+                </h1>
+              </div>
               {tabs.length > 0 && (
               <div className="mt-3 flex flex-wrap items-end justify-between gap-x-6 gap-y-2 border-b border-shell-line">
                 <nav className="-mb-px flex gap-6 overflow-x-auto" aria-label="Вкладки страницы">

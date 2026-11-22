@@ -18,9 +18,9 @@
    «Спортивная карточка», — открываются ссылками из блоков профиля, вкладок нет;
    в разделе — «← Профиль» (меню туда не ведёт). Знак в шапке ведёт к составу. */
 
-import { Button, Spinner } from '@heroui/react';
-import { Brain, ChevronLeft, ClipboardList, GanttChart, HeartPulse, History, UserRound, Users } from 'lucide-react';
-import { useRouter } from 'next/navigation';
+import { Spinner } from '@heroui/react';
+import { Brain, ClipboardList, GanttChart, HeartPulse, History, UserRound, Users } from 'lucide-react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import type { ReactNode } from 'react';
 
 import { fetchMember, fetchNationalMe, useLoad, type NationalMember } from '@/entities/national';
@@ -43,6 +43,7 @@ import {
   PlansTimeline,
   RosterBoard,
   SportCard,
+  UMO_TABS,
 } from '@/widgets/national';
 
 export type CabinetKey = 'national' | 'personal' | 'doctor' | 'psychologist';
@@ -96,13 +97,14 @@ const SECTIONS: { id: MemberSection; label: string; icon: ReactNode; open: (m: N
   { id: 'sport', label: 'Спортивная карточка', icon: <Brain size={16} />, open: (m) => m.access.sport },
 ];
 
-function Shell({ cabinet, active, home, sections, section, pageTitle, children }: {
+function Shell({ cabinet, active, home, sections, section, pageTitle, back, children }: {
   cabinet: Cabinet;
   active: string;
   home?: string;
   sections?: RoleNavItem[];
   section?: string;
   pageTitle?: string;
+  back?: { label: string; onPress: () => void };
   children: ReactNode;
 }) {
   const { user } = useSession();
@@ -118,6 +120,7 @@ function Shell({ cabinet, active, home, sections, section, pageTitle, children }
       sections={sections}
       section={section}
       pageTitle={pageTitle}
+      back={back}
       bleed
     >
       {children}
@@ -158,6 +161,16 @@ export function NationalMemberView({ cabinet: key, id, section = 'profile' }: { 
   // Раздел, который этому человеку не открыт, — профиль (он есть у всех).
   const current = open.find((s) => s.id === section) ?? open[0];
   const href = (s: MemberSection) => `${cabinet.base}/members/${id}` + (s === 'profile' ? '' : '/' + s);
+  // Медкарта с УМО — вкладки страницы в шапке, как у остальных страниц
+  // кабинета ✳ (22.11.2026); вкладка — в адресе `?tab=`.
+  const tab = useSearchParams().get('tab') ?? 'records';
+  const medTabs =
+    m && current?.id === 'medical' && m.access.umo
+      ? [
+          { id: 'records', label: m.access.medical === 'full' ? 'Записи' : 'Ограничения', href: href('medical') },
+          ...UMO_TABS.map((t) => ({ id: t.id, label: t.label, href: href('medical') + '?tab=' + t.id })),
+        ]
+      : null;
 
   return (
     <Shell
@@ -165,7 +178,10 @@ export function NationalMemberView({ cabinet: key, id, section = 'profile' }: { 
       active={cabinet.roster}
       home={cabinet.base}
       // Профиль — имя в своей шапке; в разделе — заголовок «имя · раздел» без вкладок.
-      sections={current && current.id !== 'profile' ? [] : undefined}
+      sections={medTabs ? medTabs.map(({ label, href: to }) => ({ label, href: to })) : current && current.id !== 'profile' ? [] : undefined}
+      section={medTabs?.find((t) => t.id === tab)?.label}
+      // «Назад» к профилю — перед именем в заголовке раздела ✳ (22.11.2026).
+      back={current && current.id !== 'profile' ? { label: 'Профиль', onPress: () => router.push(href('profile')) } : undefined}
       pageTitle={m && current && current.id !== 'profile' ? m.person.name + ' · ' + current.label : undefined}
     >
       {member.error ? (
@@ -184,11 +200,6 @@ export function NationalMemberView({ cabinet: key, id, section = 'profile' }: { 
         />
       ) : (
         <div className="flex h-full min-h-0 flex-col overflow-y-auto">
-          <div className="px-4 pt-3">
-            <Button size="sm" variant="ghost" className="rounded-xl" onPress={() => router.push(href('profile'))} data-testid="member-back">
-              <ChevronLeft size={16} /> Профиль
-            </Button>
-          </div>
           {current.id === 'plan' && <PlanBoard memberId={id} canCreate={m.access.planAuthor} onChanged={member.reload} />}
           {current.id === 'medical' && <MedicalCardView memberId={id} onChanged={member.reload} />}
           {current.id === 'history' && <HistoryTable memberId={id} />}

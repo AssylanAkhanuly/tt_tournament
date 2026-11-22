@@ -3,12 +3,13 @@
 /* Медицинская карта члена сборной ✳ (19.11.2026, NATIONAL.md; флоу Э11.2).
    Что прислал сервер, то и рисуем: врачу (`full`) — вкладки ✳ (22.11.2026):
    «Записи» (все записи таблицей, «Добавить запись», удаление), «Сводка УМО»
-   и девять блоков УМО (`MedicalUmo`); вкладка — в адресе `?tab=`. Главному
+   и девять блоков УМО (`MedicalUmo`); вкладка — в адресе `?tab=`, а сами
+   вкладки рисует шапка страницы (как вкладки других страниц кабинета). Главному
    тренеру — действующие ограничения нагрузки (допуск — в шапке карточки,
    диагнозов нет) и, если сервер открыл (`umo`), те же вкладки УМО только
    для просмотра ✳ (22.11.2026, решение владельца продукта). HeroUI + Tailwind. */
 
-import { AlertDialog, Button, Input, Label, Modal, Tabs, TextArea, TextField, Tooltip, useOverlayState } from '@heroui/react';
+import { AlertDialog, Button, Input, Label, Modal, TextArea, TextField, Tooltip, useOverlayState } from '@heroui/react';
 import { Plus, Trash2 } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useState, type FormEvent, type ReactNode } from 'react';
@@ -28,7 +29,7 @@ import { DataTable, type DataColumn } from '@/shared/ui/DataTable';
 import { AlertSheet, ModalSheet } from '@/shared/ui/ModalSheet';
 import { Picker } from '@/shared/ui/Picker';
 
-import { UMO_TABS, UmoPanel } from './MedicalUmo';
+import { UmoPanel } from './MedicalUmo';
 
 const KINDS = (Object.keys(MEDICAL_KIND_LABEL) as MedicalKind[]).map((k) => ({ id: k, label: MEDICAL_KIND_LABEL[k] }));
 const today = () => new Date().toISOString().slice(0, 10);
@@ -160,23 +161,14 @@ export function MedicalCardView({ memberId, onChanged }: { memberId: string; onC
     onChanged?.();
   };
 
-  const tabbed = (first: { id: string; label: string }, firstView: ReactNode) => (
-    <div className="flex h-full min-h-0 flex-col" data-testid="medical-card">
-      <Tabs selectedKey={tab} onSelectionChange={(k) => setTab(String(k))} className="shrink-0 overflow-x-auto border-b border-neutral-200 px-4 py-2">
-        <Tabs.ListContainer className="rounded-xl">
-          <Tabs.List aria-label="Разделы медкарты">
-            {[first, ...UMO_TABS].map((t) => (
-              <Tabs.Tab key={t.id} id={t.id} className="whitespace-nowrap" data-testid={'medical-tab-' + t.id}>
-                {t.label}
-                <Tabs.Indicator />
-              </Tabs.Tab>
-            ))}
-          </Tabs.List>
-        </Tabs.ListContainer>
-      </Tabs>
-      <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">{tab === 'records' ? firstView : <UmoPanel memberId={memberId} tab={tab} onTab={setTab} />}</div>
-    </div>
-  );
+  // Вкладки — во вкладках страницы (шапка оболочки, как у остальных страниц
+  // кабинета ✳ 22.11.2026); здесь только содержимое выбранной.
+  const tabbed = (firstView: ReactNode) =>
+    tab === 'records' ? firstView : (
+      <div className="flex min-h-0 flex-1 flex-col" data-testid="medical-card">
+        <UmoPanel memberId={memberId} tab={tab} onTab={setTab} />
+      </div>
+    );
 
   if (card.data && !card.data.full) {
     const limits = card.data.limits;
@@ -194,7 +186,7 @@ export function MedicalCardView({ memberId, onChanged }: { memberId: string; onC
         rowProps={() => ({ 'data-testid': 'limit-row' })}
       />
     );
-    return card.data.umo ? tabbed({ id: 'records', label: 'Ограничения' }, limitsTable) : limitsTable;
+    return card.data.umo ? tabbed(limitsTable) : limitsTable;
   }
 
   const columns: DataColumn<MedicalRecord>[] = [
@@ -223,5 +215,5 @@ export function MedicalCardView({ memberId, onChanged }: { memberId: string; onC
     />
   );
   if (!card.data) return records;
-  return tabbed({ id: 'records', label: 'Записи' }, records);
+  return tabbed(records);
 }

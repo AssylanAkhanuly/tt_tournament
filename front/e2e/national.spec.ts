@@ -133,7 +133,7 @@ test('сборная: тренер — состав и план, врач — м
   await coach.locator('[data-testid="item-row"][data-title="Подача короткая под правую"]').getByTestId('item-done').click();
   await expect(coach.getByTestId('plan-progress')).toHaveText('1 из 2');
   // Профиль: степпер — выполненный шаг, затем текущий.
-  await coach.getByTestId('member-back').click();
+  await coach.getByTestId('page-back').click();
   await coach.waitForURL((url) => url.href === memberUrl);
   const points = coach.getByTestId('profile-point');
   await expect(points).toHaveCount(2);
@@ -172,7 +172,7 @@ test('сборная: тренер — состав и план, врач — м
   await doctor.getByTestId('medical-submit').click();
   await expect(doctor.getByTestId('medical-row')).toHaveCount(2);
   await expect(doctor.locator('[data-testid="medical-row"][data-kind="injury"]')).toContainText('Растяжение связок голеностопа');
-  await doctor.getByTestId('member-back').click();
+  await doctor.getByTestId('page-back').click();
   await expect(doctor.getByTestId('profile-medical').getByTestId('clearance')).toHaveAttribute('data-status', 'ok');
   await expect(doctor.getByTestId('profile-medical').getByTestId('clearance')).toContainText('Допущен');
   await expect(doctor.getByTestId('profile-limits')).toHaveText('1');
@@ -286,7 +286,7 @@ test('сборная: врач ведёт УМО по вкладкам медк�
   // Врач: «Сводка УМО» → новый осмотр → блок «Питание» → значения.
   const doctor = await signIn(browser, E2E_DOCTOR, '/doctor');
   await doctor.goto(`/doctor/members/${memberId}/medical`);
-  await doctor.getByTestId('medical-tab-summary').click();
+  await doctor.getByRole('navigation', { name: 'Вкладки страницы' }).getByRole('button', { name: 'Сводка УМО' }).click();
   await doctor.waitForURL(/tab=summary/);
   await expect(doctor.getByTestId('umo-empty')).toBeVisible();
   await doctor.getByTestId('umo-new').click();
@@ -311,7 +311,7 @@ test('сборная: врач ведёт УМО по вкладкам медк�
   await expect(ldl.getByTestId('umo-status')).toHaveAttribute('data-status', 'low');
   await expect(ldl.getByTestId('umo-cell').first()).toHaveAttribute('data-status', 'low');
   await doctor.screenshot({ path: 'test-results/national/umo-block.png', fullPage: true });
-  await doctor.getByTestId('medical-tab-summary').click();
+  await doctor.getByRole('navigation', { name: 'Вкладки страницы' }).getByRole('button', { name: 'Сводка УМО' }).click();
   await expect(doctor.locator('[data-testid="umo-block-card"][data-code="nutrition"]')).toContainText('1 ниже');
 
   // Штаб: УМО видно только для просмотра ✳ (решение владельца продукта);
@@ -320,7 +320,7 @@ test('сборная: врач ведёт УМО по вкладкам медк�
   await coach.goto(`/national/members/${memberId}/medical?tab=nutrition`);
   await expect(coach.locator('[data-testid="umo-param"][data-code="ldl"]').getByTestId('umo-status')).toHaveAttribute('data-status', 'low');
   await expect(coach.getByTestId('umo-values-edit')).toHaveCount(0);
-  await coach.getByTestId('medical-tab-summary').click();
+  await coach.getByRole('navigation', { name: 'Вкладки страницы' }).getByRole('button', { name: 'Сводка УМО' }).click();
   await expect(coach.getByTestId('umo-exam-date')).toHaveCount(1);
   await expect(coach.getByTestId('umo-new')).toHaveCount(0);
   await coach.goto(`/national/members/${memberId}`);

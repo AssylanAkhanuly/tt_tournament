@@ -313,10 +313,8 @@ function BlockTable({ block, umo, onSaved }: { block: UmoBlock; umo: Umo; onSave
 
   return (
     <div className="flex flex-col gap-3 p-5" data-testid="umo-block" data-code={block.code}>
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <h3 className="m-0 text-[15px] font-semibold">
-          {block.n}. {block.title}
-        </h3>
+      {/* Заголовка блока нет — он повторял бы выбранную вкладку ✳ (22.11.2026). */}
+      <div className="flex flex-wrap items-center justify-end gap-3 empty:hidden">
         {umo.canEdit &&
           umo.exams.length > 0 &&
           (editing ? (
