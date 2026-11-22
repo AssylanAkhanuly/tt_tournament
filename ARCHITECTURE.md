@@ -1266,6 +1266,7 @@ erDiagram
         uuid id PK
         uuid applicationId FK
         uuid userId FK "заявленный игрок"
+        string medicalStatus "допуск врача соревнований: допущен | не допущен (причина)"
     }
     ENTRY {
         uuid id PK

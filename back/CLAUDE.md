@@ -159,6 +159,13 @@
   (`IsGskChairman`). В завершённый турнир и в идущий плей-офф спортсмена не добавить, дубль — 400.
   Тесты — `tournaments/tests/test_roster.py`, `test_referees.py`.
 
+## Врач соревнований ✳ (22.11.2026)
+- Роль `competition_doctor` (область «турнир», одна на турнир) — в `roster.POSITIONS`, но не в
+  `REFEREE_POSITIONS` (на неё не подают заявку). Допуск участника — `TournamentParticipant.medical_*`,
+  правила — `tournaments/medical.py` (действует, только если врач назначен; `schedule.build` берёт
+  `medical.playing`). Ручка `GET|POST /api/tournaments/<id>/medical/`. Миграции `tournaments/0031`,
+  `users/0013`. Устройство — [ADMISSION.md](../ADMISSION.md) «Допуск врача». Тесты — `test_medical.py`.
+
 ## Приём заявок судей ✳ (29.10.2026)
 - Правила — `tournaments/recruitment.py` (`apply`, `withdraw`, `accept`, `reject`, `RecruitmentError`), модель —
   `RefereeApplication` (одна на судью и турнир: `positions` — отмеченные должности по старшинству `roster.POSITIONS`,

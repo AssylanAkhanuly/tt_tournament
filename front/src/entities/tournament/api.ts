@@ -133,7 +133,12 @@ export const REFEREE_POSITIONS = [
   { id: 'deputy_chief_referee', label: 'Заместитель главного судьи', single: true },
   { id: 'chief_secretary', label: 'Главный секретарь соревнований', single: true },
   { id: 'referee', label: 'Судья стола', single: false },
+  // Врач соревнований ✳ (22.11.2026, роль 18) — назначается в турнир так же,
+  // по одному; на эту должность судьи заявкой не подаются (`apply: false`).
+  { id: 'competition_doctor', label: 'Врач соревнований', single: true, apply: false },
 ] as const;
+/** Должности, на которые судья подаёт заявку (без врача). */
+export const APPLY_POSITIONS = REFEREE_POSITIONS.filter((p) => !('apply' in p) || p.apply !== false);
 export type RefereePosition = (typeof REFEREE_POSITIONS)[number]['id'];
 
 /** Судья турнира — судейская должность в области этого турнира. */
@@ -974,4 +979,33 @@ export async function withdrawApplication(id: string, athleteId: string): Promis
   if (res.ok) return;
   const body = (await res.json().catch(() => ({}))) as { detail?: string };
   throw new Error(body.detail || 'Не отозван (' + res.status + ')');
+}
+
+/* ── Допуск врача соревнований ✳ (22.11.2026, flows/18 Э18.3) ─────────── */
+
+export type MedicalStatus = '' | 'admitted' | 'denied';
+export const MEDICAL_LABEL: Record<MedicalStatus, string> = { '': 'Не решено', admitted: 'Допущен', denied: 'Не допущен' };
+export type MedicalRow = { userId: string; name: string; region: string; birthYear: number | null; status: MedicalStatus; note: string; by: string; at: string | null };
+export type MedicalAdmission = { doctor: string | null; required: boolean; canDecide: boolean; participants: MedicalRow[] };
+
+type RawMedical = {
+  doctor: string | null;
+  required: boolean;
+  can_decide: boolean;
+  participants: { user_id: string; name: string; region: string; birth_year: number | null; status: MedicalStatus; note: string; by: string; at: string | null }[];
+};
+const toMedical = (r: RawMedical): MedicalAdmission => ({
+  doctor: r.doctor,
+  required: r.required,
+  canDecide: r.can_decide,
+  participants: r.participants.map((p) => ({ userId: p.user_id, name: p.name, region: p.region, birthYear: p.birth_year, status: p.status, note: p.note, by: p.by, at: p.at })),
+});
+
+export async function fetchMedical(tournamentId: string): Promise<MedicalAdmission> {
+  return toMedical(await getJson<RawMedical>(`/api/tournaments/${tournamentId}/medical/`, 'Допуск'));
+}
+
+/** Решение врача: допущен, не допущен (с причиной) или снять решение (`''`). */
+export async function decideMedical(tournamentId: string, userId: string, status: MedicalStatus, note = ''): Promise<MedicalAdmission> {
+  return toMedical(await send<RawMedical>(`/api/tournaments/${tournamentId}/medical/`, 'POST', { user_id: userId, status, note }));
 }

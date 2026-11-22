@@ -25,10 +25,10 @@ class RecruitmentError(Exception):
 def _clean_positions(positions) -> list:
     if not isinstance(positions, list) or not positions:
         raise RecruitmentError("Отметьте хотя бы одну должность.")
-    if any(p not in roster.POSITIONS for p in positions):
+    if any(p not in roster.REFEREE_POSITIONS for p in positions):
         raise RecruitmentError("Неизвестная судейская должность.")
     # По старшинству, без повторов — порядок отметки ничего не значит.
-    return [p for p in roster.POSITIONS if p in positions]
+    return [p for p in roster.REFEREE_POSITIONS if p in positions]
 
 
 def mine(tournament: Tournament, user: User):

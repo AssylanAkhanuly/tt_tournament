@@ -644,6 +644,8 @@ storage: "7 · ДАННЫЕ · два разных хранилища" {
       id: uuid {constraint: primary_key}
       application_id: uuid {constraint: foreign_key}
       user_id: uuid {constraint: foreign_key}
+      # ✳ 22.11.2026: допуск врача соревнований (в коде — у участника турнира)
+      medical_status: "не решено | допущен врачом | не допущен (причина)"
     }
 
     entry: ENTRY {

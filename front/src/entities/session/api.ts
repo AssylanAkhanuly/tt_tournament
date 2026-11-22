@@ -16,6 +16,9 @@ export const ROLE_REFEREE = 'referee';
 /** Главный судья турнира ✳ (30.10.2026) — роль с областью «турнир»: свой
  *  кабинет `/chief` с турнирами, где он главный (`chiefTournamentIds`). */
 export const ROLE_CHIEF_REFEREE = 'chief_referee';
+/** Врач соревнований ✳ (22.11.2026, роль 18): роль одного турнира, кабинет
+ *  `/medic` — допуск участников его турниров. */
+export const ROLE_COMPETITION_DOCTOR = 'competition_doctor';
 /** Старший тренер региона ✳ (19.11.2026, роль 12) — роль с областью «регион»:
  *  кабинет `/coach`, заявка на главные старты за спортсменов своего региона. */
 export const ROLE_REGIONAL_HEAD_COACH = 'regional_head_coach';
@@ -45,6 +48,7 @@ const WORKSPACES: { kind: string; title: string; to: string }[] = [
   // После судьи: главный судья — роль одного турнира, а судья входит в свой
   // кабинет; в кабинет главного судьи — из меню «Работать как».
   { kind: ROLE_CHIEF_REFEREE, title: 'Главный судья', to: '/chief' },
+  { kind: ROLE_COMPETITION_DOCTOR, title: 'Врач соревнований', to: '/medic' },
   { kind: ROLE_REGIONAL_HEAD_COACH, title: 'Старший тренер региона', to: '/coach' },
   { kind: ROLE_CLUB_ADMIN, title: 'Администратор клуба', to: '/club' },
   { kind: ROLE_NATIONAL_HEAD_COACH, title: 'Главный тренер сборной', to: '/national' },
@@ -73,6 +77,10 @@ export function homeFor(user: SessionUser | null): string {
 
 /** Роль человека; у ролей турнира `scope_id` — какого. */
 export type SessionRole = { kind: string; label: string; scope: string; scope_id?: string | null };
+
+/** Турниры, где у человека роль `kind` (роли с областью «турнир»). */
+export const tournamentIdsFor = (user: SessionUser | null, kind: string): string[] =>
+  (user?.roles ?? []).filter((r) => r.kind === kind && r.scope_id).map((r) => r.scope_id!);
 
 /** Турниры, где человек — главный судья. */
 export const chiefTournamentIds = (user: SessionUser | null): string[] =>

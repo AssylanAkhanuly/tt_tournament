@@ -25,9 +25,14 @@ POSITIONS = [
     Role.KIND_DEPUTY_CHIEF_REFEREE,
     Role.KIND_CHIEF_SECRETARY,
     Role.KIND_REFEREE,
+    # Врач соревнований ✳ (22.11.2026) — не судья, но назначается в турнир так
+    # же и по одному; в заявках судей его нет (`recruitment`).
+    Role.KIND_COMPETITION_DOCTOR,
 ]
+# Судейские должности — без врача: на них подают заявку судьи (`recruitment`).
+REFEREE_POSITIONS = [p for p in POSITIONS if p != Role.KIND_COMPETITION_DOCTOR]
 # Должности, которые в турнире может занимать только один человек.
-SINGLE = {Role.KIND_CHIEF_REFEREE, Role.KIND_DEPUTY_CHIEF_REFEREE, Role.KIND_CHIEF_SECRETARY}
+SINGLE = {Role.KIND_CHIEF_REFEREE, Role.KIND_DEPUTY_CHIEF_REFEREE, Role.KIND_CHIEF_SECRETARY, Role.KIND_COMPETITION_DOCTOR}
 
 
 class RosterError(Exception):

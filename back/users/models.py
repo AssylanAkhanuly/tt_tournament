@@ -80,6 +80,11 @@ class Role(models.Model):
     KIND_CHIEF_REFEREE = "chief_referee"
     KIND_DEPUTY_CHIEF_REFEREE = "deputy_chief_referee"
     KIND_CHIEF_SECRETARY = "chief_secretary"
+    # Врач соревнований ✳ (22.11.2026, ROLES.md роль 18; flows/18): допускает
+    # участников турнира по медицинской справке. Роль с областью «турнир», по
+    # одному на турнир; назначается там же, где судейская коллегия
+    # (`tournaments/roster.py`). Не путать с врачом сборной.
+    KIND_COMPETITION_DOCTOR = "competition_doctor"
     # Старший тренер региона ✳ (19.11.2026, ТЗ §8.2, роль 12): подаёт заявку на
     # главные старты списком за спортсменов своего региона. Область — регион
     # (`scope = region`, сам регион — в `region`). Правила заявки —
@@ -112,6 +117,7 @@ class Role(models.Model):
         (KIND_CHIEF_REFEREE, "Главный судья соревнований"),
         (KIND_DEPUTY_CHIEF_REFEREE, "Заместитель главного судьи"),
         (KIND_CHIEF_SECRETARY, "Главный секретарь соревнований"),
+        (KIND_COMPETITION_DOCTOR, "Врач соревнований"),
         (KIND_REGIONAL_HEAD_COACH, "Старший тренер региона"),
         (KIND_NATIONAL_HEAD_COACH, "Главный тренер национальной команды"),
         (KIND_NATIONAL_DOCTOR, "Врач сборной"),

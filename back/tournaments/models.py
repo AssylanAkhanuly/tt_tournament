@@ -336,6 +336,18 @@ class TournamentParticipant(models.Model):
     # Absent / no-show: their matches are excluded from RTTF rating and score 0
     # group points; their unplayed group matches are auto-forfeited.
     is_absent = models.BooleanField(default=False, verbose_name="Отсутствует")
+    # Допуск врача соревнований ✳ (22.11.2026, flows/18 Э18.3): по справке —
+    # «допущен» или «не допущен» с причиной; пусто — врач ещё не решал.
+    # Действует, только если врач в турнире назначен (`tournaments/medical.py`).
+    MEDICAL_ADMITTED = "admitted"
+    MEDICAL_DENIED = "denied"
+    MEDICAL_CHOICES = [("", "Не решено"), (MEDICAL_ADMITTED, "Допущен"), (MEDICAL_DENIED, "Не допущен")]
+    medical_status = models.CharField(max_length=10, choices=MEDICAL_CHOICES, blank=True, default="", verbose_name="Допуск врача")
+    medical_note = models.CharField(max_length=300, blank=True, verbose_name="Причина / справка")
+    medical_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name="+", verbose_name="Решил",
+    )
+    medical_at = models.DateTimeField(null=True, blank=True)
     # Итоговое место — от него коэффициент P (п. 10). Призовые только первые три
     # (п. 10.5), но место хранится любое: оно же идёт в протокол и в историю.
     place = models.PositiveIntegerField(null=True, blank=True, verbose_name="Итоговое место")

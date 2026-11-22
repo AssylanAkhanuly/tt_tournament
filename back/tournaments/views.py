@@ -2073,3 +2073,66 @@ class PlacesView(APIView):
 
     def get(self, request):
         return Response(places.directory())
+
+
+# ── Допуск врача соревнований ✳ (22.11.2026, flows/18) ─────────────────────
+
+class MedicalAdmissionView(APIView):
+    """GET — участники с решением врача (врачу турнира, главному судье,
+    председателю ГСК, администратору федерации); POST `{user_id, status, note}`
+    — решение (только врач турнира)."""
+
+    permission_classes = [IsAuthenticated]
+
+    def _tournament(self, request, pk):
+        from users.models import Role
+        from users.permissions import has_role
+
+        from . import medical
+
+        t = get_object_or_404(Tournament, pk=pk)
+        u = request.user
+        allowed = medical.is_doctor(t, u) or has_role(u, Role.KIND_GSK_CHAIRMAN) or has_role(u, Role.KIND_FEDERATION_ADMIN) or Role.objects.filter(
+            kind__in=[Role.KIND_CHIEF_REFEREE, Role.KIND_DEPUTY_CHIEF_REFEREE, Role.KIND_CHIEF_SECRETARY], scope="tournament", scope_id=t.id, user=u
+        ).exists()
+        if not allowed:
+            return t, Response({"detail": "Допуск участников вам не виден."}, status=status.HTTP_403_FORBIDDEN)
+        return t, None
+
+    def _payload(self, t, user):
+        from . import medical
+
+        doctor = medical.doctor_of(t)
+        rows = []
+        for p in t.participants.select_related("user", "user__rating_profile", "medical_by").order_by("user__name"):
+            card = getattr(p.user, "rating_profile", None)
+            rows.append({
+                "user_id": str(p.user_id), "name": p.user.name,
+                "region": card.region if card else "", "birth_year": card.birth_year if card else None,
+                "status": p.medical_status, "note": p.medical_note,
+                "by": p.medical_by.name if p.medical_by else "", "at": p.medical_at.isoformat() if p.medical_at else None,
+            })
+        return {
+            "doctor": doctor.name if doctor else None,
+            "required": doctor is not None,
+            "can_decide": medical.is_doctor(t, user) and t.schedule_status != "final",
+            "participants": rows,
+        }
+
+    def get(self, request, pk):
+        t, denied = self._tournament(request, pk)
+        if denied:
+            return denied
+        return Response(self._payload(t, request.user))
+
+    def post(self, request, pk):
+        from . import medical
+
+        t = get_object_or_404(Tournament, pk=pk)
+        d = request.data
+        try:
+            medical.decide(t, d.get("user_id"), d.get("status") or "", d.get("note") or "", request.user)
+        except medical.MedicalError as e:
+            code = status.HTTP_403_FORBIDDEN if "врач соревнований" in str(e) else status.HTTP_400_BAD_REQUEST
+            return Response({"detail": str(e)}, status=code)
+        return Response(self._payload(t, request.user))

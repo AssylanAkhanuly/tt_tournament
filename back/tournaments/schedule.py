@@ -288,8 +288,10 @@ def build(t: Tournament, *, tables, match_minutes, days=None) -> None:
         raise ScheduleError("В коллегии нет судей стола — матчи некому судить.")
 
     # Посев — по рейтингу, как у сеток (`bracket.generate_group_bracket`).
+    from . import medical
+
     participants = list(
-        t.participants.select_related("user").order_by(F("user__rating_profile__value").desc(nulls_last=True), "joined_at")
+        medical.playing(t).select_related("user").order_by(F("user__rating_profile__value").desc(nulls_last=True), "joined_at")
     )
     if len(participants) < 2:
         raise ScheduleError("Нужно хотя бы два участника.")

@@ -14,6 +14,7 @@ import {
   applyAsReferee,
   placeLabel,
   recruitmentLabel,
+  APPLY_POSITIONS,
   REFEREE_POSITIONS,
   tournamentDate,
   useMyRefereeApplication,
@@ -145,7 +146,7 @@ export function ApplicationPanel({ tournament }: { tournament: TournamentSummary
                 data-testid="application-pick"
               >
                 <Label>Должности</Label>
-                {REFEREE_POSITIONS.map((p) => (
+                {APPLY_POSITIONS.map((p) => (
                   <Checkbox key={p.id} value={p.id}>
                     <Checkbox.Content>
                       <Checkbox.Control>
