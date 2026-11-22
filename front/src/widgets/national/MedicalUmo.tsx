@@ -15,7 +15,13 @@
      «что отражает» и «сигнал внимания»), единицы, референс, значения по
      осмотрам (вне референса — персиковой подложкой, как в шаблоне),
      последнее, Δ, статус. «Внести значения» — столбец выбранного осмотра
-     становится полями ввода; расчётные не вводятся. */
+     становится полями ввода; расчётные не вводятся.
+
+   Фон ✳ (22.11.2026, решение владельца продукта — «элементы фона»): серая
+   страница, таблицы — белыми карточками; карточки блоков — подложкой группы
+   (рычаги — голубой, допуск и контроль — персиковый) с огромной контурной
+   цифрой блока узкой «номерной» гарнитурой, как место в листе у карточки
+   состава; над таблицей блока — полоса градиента бренда с той же цифрой. */
 
 import { AlertDialog, Button, Chip, Input, Label, Modal, Spinner, TextArea, TextField, Tooltip, useOverlayState } from '@heroui/react';
 import { Info, Pencil, Plus, Star } from 'lucide-react';
@@ -169,7 +175,7 @@ function Summary({ umo, memberId, onSaved, onOpen }: { umo: Umo; memberId: strin
     </Button>
   );
   return (
-    <div className="flex flex-col gap-6 p-5" data-testid="umo-summary">
+    <div className="flex min-h-full flex-col gap-6 bg-neutral-100 p-5 [&>*]:shrink-0" data-testid="umo-summary">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h3 className="m-0 text-[15px] font-semibold">Осмотры</h3>
         {umo.canEdit && <ExamDialog memberId={memberId} onSaved={onSaved} trigger={newExam} />}
@@ -179,7 +185,7 @@ function Summary({ umo, memberId, onSaved, onOpen }: { umo: Umo; memberId: strin
           Осмотров нет
         </p>
       ) : (
-        <div className="overflow-x-auto rounded-xl border border-neutral-200">
+        <div className="overflow-x-auto rounded-2xl border border-neutral-200/80 bg-white">
           <table className="w-full min-w-[720px] border-collapse">
             <thead>
               <tr>
@@ -240,19 +246,33 @@ function Summary({ umo, memberId, onSaved, onOpen }: { umo: Umo; memberId: strin
             key={b.code}
             type="button"
             onClick={() => onOpen(b.code)}
-            className="flex flex-col gap-2 rounded-xl border border-neutral-200 bg-white p-4 text-left hover:border-brand-200 hover:shadow-sm"
+            className={
+              'relative flex min-h-36 flex-col gap-2 overflow-hidden rounded-2xl border border-neutral-200/80 p-4 text-left transition-shadow hover:shadow-md ' +
+              (b.control ? 'bg-[color-mix(in_srgb,var(--color-qtt-peach)_16%,white)]' : 'bg-[color-mix(in_srgb,var(--color-qtt-sky)_20%,white)]')
+            }
             data-testid="umo-block-card"
             data-code={b.code}
           >
-            <span className="flex items-center justify-between gap-2">
+            <span
+              aria-hidden
+              className={
+                'pointer-events-none absolute -right-1 -bottom-5 font-[family-name:var(--font-jersey)] text-[150px] leading-[0.72] text-transparent select-none ' +
+                (b.control
+                  ? '[-webkit-text-stroke:1.5px_color-mix(in_srgb,var(--color-qtt-peach)_55%,white)]'
+                  : '[-webkit-text-stroke:1.5px_color-mix(in_srgb,var(--color-qtt-sky)_70%,white)]')
+              }
+            >
+              {b.n}
+            </span>
+            <span className="relative flex items-center justify-between gap-2">
               <span className="text-[14px] font-semibold">
                 {b.n}. {b.title}
               </span>
-              <span className={'rounded-full px-2 py-0.5 text-[10.5px] font-semibold ' + (b.control ? 'bg-neutral-100 text-neutral-600' : 'bg-brand-50 text-brand-700')}>
+              <span className={'rounded-full px-2 py-0.5 text-[10.5px] font-semibold ' + (b.control ? 'bg-white/80 text-[color-mix(in_srgb,var(--color-qtt-peach)_55%,black)]' : 'bg-white/80 text-brand-700')}>
                 {b.control ? 'Допуск и контроль' : 'Рычаг'}
               </span>
             </span>
-            <span className="flex gap-4 text-[12.5px]">
+            <span className="relative flex gap-4 text-[12.5px]">
               <span>
                 <b className="tabular-nums">{b.summary.numeric}</b> <span className="text-neutral-500">с данными</span>
               </span>
@@ -263,7 +283,7 @@ function Summary({ umo, memberId, onSaved, onOpen }: { umo: Umo; memberId: strin
                 <b className="tabular-nums">{b.summary.high}</b> выше
               </span>
             </span>
-            <span className="text-[12px] text-neutral-500">{b.impact}</span>
+            <span className="relative mt-auto max-w-[80%] text-[12px] text-neutral-600">{b.impact}</span>
           </button>
         ))}
       </div>
@@ -312,8 +332,39 @@ function BlockTable({ block, umo, onSaved }: { block: UmoBlock; umo: Umo; onSave
     min === null && max === null ? '—' : min === null ? '≤ ' + fmt(max) : max === null ? '≥ ' + fmt(min) : fmt(min) + ' – ' + fmt(max);
 
   return (
-    <div className="flex flex-col gap-3 p-5" data-testid="umo-block" data-code={block.code}>
-      {/* Заголовка блока нет — он повторял бы выбранную вкладку ✳ (22.11.2026). */}
+    <div className="flex min-h-full flex-col gap-3 bg-neutral-100 p-5 [&>*]:shrink-0" data-testid="umo-block" data-code={block.code}>
+      {/* Полоса блока — фон: градиент бренда и огромная цифра блока; заголовка
+          нет — он повторял бы выбранную вкладку ✳ (22.11.2026). */}
+      <div
+        className={
+          'relative flex min-h-20 items-center overflow-hidden rounded-2xl px-5 py-4 ' +
+          (block.control
+            ? 'bg-[linear-gradient(110deg,color-mix(in_srgb,var(--color-qtt-peach)_85%,var(--color-brand-600)),var(--color-qtt-peach))]'
+            : 'bg-[linear-gradient(110deg,var(--color-brand-700),var(--color-brand-600)_50%,color-mix(in_srgb,var(--color-brand-500)_70%,var(--color-brand-600)))]')
+        }
+        data-testid="umo-block-strip"
+      >
+        <span
+          aria-hidden
+          className="pointer-events-none absolute top-1/2 right-6 -translate-y-1/2 font-[family-name:var(--font-jersey)] text-[150px] leading-[0.72] text-transparent select-none [-webkit-text-stroke:1.5px_color-mix(in_srgb,white_35%,transparent)]"
+        >
+          {block.n}
+        </span>
+        <span className="relative flex flex-wrap gap-x-6 gap-y-1 text-white">
+          <span className="flex flex-col">
+            <span className="text-[22px] leading-none font-bold tabular-nums">{block.summary.numeric}</span>
+            <span className="text-[11.5px] text-white/70">с данными</span>
+          </span>
+          <span className="flex flex-col">
+            <span className="text-[22px] leading-none font-bold tabular-nums">{block.summary.low}</span>
+            <span className="text-[11.5px] text-white/70">ниже нормы</span>
+          </span>
+          <span className="flex flex-col">
+            <span className="text-[22px] leading-none font-bold tabular-nums">{block.summary.high}</span>
+            <span className="text-[11.5px] text-white/70">выше нормы</span>
+          </span>
+        </span>
+      </div>
       <div className="flex flex-wrap items-center justify-end gap-3 empty:hidden">
         {umo.canEdit &&
           umo.exams.length > 0 &&
@@ -345,7 +396,7 @@ function BlockTable({ block, umo, onSaved }: { block: UmoBlock; umo: Umo; onSave
       {umo.exams.length === 0 ? (
         <p className="m-0 text-[13px] text-neutral-500">Осмотров нет</p>
       ) : (
-        <div className="overflow-x-auto rounded-xl border border-neutral-200">
+        <div className="overflow-x-auto rounded-2xl border border-neutral-200/80 bg-white">
           <table className="w-full min-w-[900px] border-collapse">
             <thead>
               <tr>

@@ -165,7 +165,7 @@ export function MedicalCardView({ memberId, onChanged }: { memberId: string; onC
   // кабинета ✳ 22.11.2026); здесь только содержимое выбранной.
   const tabbed = (firstView: ReactNode) =>
     tab === 'records' ? firstView : (
-      <div className="flex min-h-0 flex-1 flex-col" data-testid="medical-card">
+      <div className="flex min-h-0 flex-1 flex-col bg-neutral-100" data-testid="medical-card">
         <UmoPanel memberId={memberId} tab={tab} onTab={setTab} />
       </div>
     );
