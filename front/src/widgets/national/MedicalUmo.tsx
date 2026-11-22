@@ -170,11 +170,12 @@ function DeleteExam({ exam, onDeleted }: { exam: UmoExam; onDeleted: (u: Umo) =>
 /* Клетки — как у таблиц приложения (HeroUI Table: шапка на подложке, мелкий
    приглушённый текст, черта между строками, у краёв поле 24 px), но стеклом. */
 const th =
-  'border-b border-[color-mix(in_oklab,var(--separator)_50%,transparent)] bg-[color-mix(in_srgb,var(--surface-secondary)_65%,transparent)] px-4 py-2.5 text-left text-xs font-medium whitespace-nowrap text-[var(--muted)] first:pl-6 last:pr-6';
+  'border-b border-[color-mix(in_oklab,var(--separator)_50%,transparent)] bg-white/35 px-4 py-2.5 text-left text-xs font-medium whitespace-nowrap text-[var(--muted)] first:pl-6 last:pr-6';
 const td = 'border-b border-[color-mix(in_oklab,var(--separator)_50%,transparent)] px-4 py-2.5 text-[13px] align-top first:pl-6 last:pr-6';
 /* Стекло: полупрозрачный белый с размытием — сквозь видно подложку и значок. */
-const GLASS = 'overflow-x-auto border-b border-white/60 bg-white/45 backdrop-blur-md';
-const STICKY = 'sticky left-0 bg-white/70 backdrop-blur-md';
+const GLASS =
+  'overflow-x-auto border-y border-white/70 bg-white/25 shadow-[inset_0_1px_0_color-mix(in_srgb,white_80%,transparent)] backdrop-blur-[3px] backdrop-saturate-150';
+const STICKY = 'sticky left-0 bg-white/35 backdrop-blur-[3px]';
 
 function Summary({ umo, memberId, onSaved, onOpen }: { umo: Umo; memberId: string; onSaved: (u: Umo) => void; onOpen: (code: string) => void }) {
   const newExam = (

@@ -10,7 +10,7 @@
    для просмотра ✳ (22.11.2026, решение владельца продукта). HeroUI + Tailwind. */
 
 import { AlertDialog, Button, Input, Label, Modal, TextArea, TextField, Tooltip, useOverlayState } from '@heroui/react';
-import { Plus, Trash2 } from 'lucide-react';
+import { HeartPulse, Plus, Trash2 } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useState, type FormEvent, type ReactNode } from 'react';
 
@@ -33,30 +33,23 @@ import { UmoPanel } from './MedicalUmo';
 
 const KINDS = (Object.keys(MEDICAL_KIND_LABEL) as MedicalKind[]).map((k) => ({ id: k, label: MEDICAL_KIND_LABEL[k] }));
 
-/** Фон медкарты ✳ (22.11.2026, решение владельца продукта): огромный
- *  контурный медицинский крест в круге справа сверху, тонкой голубой линией
- *  бренда (как контурные цифры), за содержимым —
+/** Фон медкарты ✳ (22.11.2026, решения владельца продукта): огромное
+ *  контурное сердце с пульсом жирной голубой линией бренда справа, за
+ *  содержимым —
  *  на всех вкладках. Подложка (`className`) — здесь же, под плюсом, иначе
  *  непрозрачный фон содержимого закрыл бы его. Украшение: щелчков не ловит. */
 function Backdrop({ className = '', children }: { className?: string; children: ReactNode }) {
   return (
     <div className={'relative isolate flex min-h-0 flex-1 flex-col overflow-x-clip ' + className} data-testid="medical-backdrop">
-      <svg
+      {/* Сердце с пульсом — справа, жирной контурной линией. */}
+      <HeartPulse
         aria-hidden
-        viewBox="0 0 100 100"
-        className="pointer-events-none absolute -top-12 -right-16 -z-10 size-[560px] text-brand-500 opacity-[0.22]"
+        size={540}
+        strokeWidth={9}
+        absoluteStrokeWidth
+        className="pointer-events-none absolute top-40 -right-24 -z-10 text-brand-500 opacity-[0.18]"
         data-testid="medical-mark"
-      >
-        {/* Контурный медицинский крест с кругом — тонкой линией, как контурные цифры. */}
-        <circle cx="50" cy="50" r="46" fill="none" stroke="currentColor" strokeWidth="0.6" />
-        <path
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="0.6"
-          strokeLinejoin="round"
-          d="M41 20h18a2 2 0 0 1 2 2v17h17a2 2 0 0 1 2 2v18a2 2 0 0 1-2 2H61v17a2 2 0 0 1-2 2H41a2 2 0 0 1-2-2V61H22a2 2 0 0 1-2-2V41a2 2 0 0 1 2-2h17V22a2 2 0 0 1 2-2z"
-        />
-      </svg>
+      />
       {children}
     </div>
   );
