@@ -1109,6 +1109,8 @@ erDiagram
 
     USER ||--o| NATIONAL_TEAM_MEMBER : "член сборной"
     NATIONAL_TEAM_MEMBER ||--o{ MEDICAL_RECORD : "медицинская карта"
+    NATIONAL_TEAM_MEMBER ||--o{ UMO_EXAM : "осмотры УМО"
+    UMO_EXAM ||--o{ UMO_VALUE : "значения"
     NATIONAL_TEAM_MEMBER ||--o{ TRAINING_PLAN : "планы подготовки"
     TRAINING_PLAN ||--o{ PLAN_ITEM : "пункты плана"
     USER |o--o{ NATIONAL_TEAM_MEMBER : "личный тренер"
@@ -1323,6 +1325,22 @@ erDiagram
         string squad "основной | расширенный"
         string ageGroup "кадеты | юноши | взрослые"
         uuid personalCoachId FK "личный тренер"
+        string avatar "снимок — лицо"
+        string figure "снимок по пояс для баннера"
+    }
+    UMO_EXAM {
+        uuid id PK
+        uuid memberId FK
+        date date "раз в 3 месяца"
+        decimal heightCm "для ИМТ"
+        string stage "этап подготовки"
+        string context "нагрузка, болезни, условия забора, добавки, примечания"
+    }
+    UMO_VALUE {
+        bigint id PK
+        uuid examId FK
+        string code "параметр каталога national/umo.py"
+        string value "число или текст"
     }
     SPORT_RECORD {
         uuid id PK

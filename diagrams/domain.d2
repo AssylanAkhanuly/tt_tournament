@@ -472,6 +472,8 @@ national_member: NATIONAL_TEAM_MEMBER {
   age_group: "кадеты | юноши | взрослые"
   personal_coach_id: "uuid — личный тренер (роль personal_coach)" {constraint: foreign_key}
   added_by: uuid {constraint: foreign_key}
+  avatar: "снимок — лицо (нет — заглушка своего пола)"
+  figure: "снимок по пояс для баннера карточки и профиля"
 }
 
 sport_record: SPORT_RECORD {
@@ -532,6 +534,27 @@ medical_record: MEDICAL_RECORD {
   load_limit: "ограничение нагрузки — тренер видит"
   until: "date — срок допуска / снятие ограничения"
   created_by: "uuid — врач сборной" {constraint: foreign_key}
+}
+
+umo_exam: UMO_EXAM {
+  shape: sql_table
+  class: new
+  id: uuid {constraint: primary_key}
+  member_id: uuid {constraint: foreign_key}
+  date: "дата осмотра (раз в 3 месяца)"
+  height_cm: "рост — для ИМТ"
+  stage: "этап подготовки"
+  context: "нагрузка 2 недели, болезни, условия забора, добавки, примечания"
+  created_by: "uuid — врач сборной" {constraint: foreign_key}
+}
+
+umo_value: UMO_VALUE {
+  shape: sql_table
+  class: new
+  id: bigint {constraint: primary_key}
+  exam_id: uuid {constraint: foreign_key}
+  code: "параметр из каталога national/umo.py; один раз на осмотр"
+  value: "число или текст; расчётные не хранятся"
 }
 
 training_plan: TRAINING_PLAN {
@@ -862,6 +885,8 @@ scoreboard: SCOREBOARD {
 
 user.id -> national_member.user_id: член сборной
 national_member.id -> medical_record.member_id: медицинская карта
+national_member.id -> umo_exam.member_id: осмотры УМО
+umo_exam.id -> umo_value.exam_id: значения параметров
 national_member.id -> training_plan.member_id: планы подготовки
 training_plan.id -> plan_item.plan_id: пункты плана
 user.id -> national_member.personal_coach_id: личный тренер

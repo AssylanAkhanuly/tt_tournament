@@ -835,6 +835,8 @@ storage: "7 · ДАННЫЕ · два разных хранилища" {
       age_group: "кадеты | юноши | взрослые"
       personal_coach_id: "uuid — личный тренер (роль personal_coach)" {constraint: foreign_key}
       added_by: uuid {constraint: foreign_key}
+      avatar: "снимок — лицо (нет — заглушка своего пола)"
+      figure: "снимок по пояс для баннера карточки и профиля"
     }
 
     sport_record: SPORT_RECORD {
@@ -895,6 +897,27 @@ storage: "7 · ДАННЫЕ · два разных хранилища" {
       load_limit: "ограничение нагрузки — тренер видит"
       until: "date — срок допуска / снятие ограничения"
       created_by: "uuid — врач сборной" {constraint: foreign_key}
+    }
+
+    umo_exam: UMO_EXAM {
+      shape: sql_table
+      class: new
+      id: uuid {constraint: primary_key}
+      member_id: uuid {constraint: foreign_key}
+      date: "дата осмотра (раз в 3 месяца)"
+      height_cm: "рост — для ИМТ"
+      stage: "этап подготовки"
+      context: "нагрузка 2 недели, болезни, условия забора, добавки, примечания"
+      created_by: "uuid — врач сборной" {constraint: foreign_key}
+    }
+
+    umo_value: UMO_VALUE {
+      shape: sql_table
+      class: new
+      id: bigint {constraint: primary_key}
+      exam_id: uuid {constraint: foreign_key}
+      code: "параметр из каталога national/umo.py; один раз на осмотр"
+      value: "число или текст; расчётные не хранятся"
     }
 
     training_plan: TRAINING_PLAN {
