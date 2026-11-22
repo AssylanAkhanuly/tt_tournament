@@ -15,7 +15,7 @@ import type { ReactNode } from 'react';
 
 import { PLAN_ITEM_LABEL, type PlanItem, type PlanItemKind, type TrainingPlan } from '@/entities/national';
 
-import { periodLabel, ProgressRing, SectionHead } from './ui';
+import { Panel, periodLabel, ProgressRing } from './ui';
 
 type Step = 'done' | 'current' | 'overdue' | 'todo';
 
@@ -64,8 +64,7 @@ export function PlanSteps({ plans, error, plan, onOpenPlan, onOpenHistory }: {
 }) {
   const list = plan ? steps(plan.items) : [];
   return (
-    <section className="px-6 py-6 lg:border-r lg:border-neutral-200" data-testid="profile-points">
-      <SectionHead title="Пункты подготовки" action={plan && <ProgressRing done={plan.done} total={plan.total} />} />
+    <Panel title="Пункты подготовки" action={plan && <ProgressRing done={plan.done} total={plan.total} />} testId="profile-points">
       {!plans ? (
         error ? <p className="m-0 text-[13px] text-red-600">{error}</p> : <Spinner size="sm" />
       ) : list.length === 0 ? (
@@ -97,7 +96,7 @@ export function PlanSteps({ plans, error, plan, onOpenPlan, onOpenHistory }: {
         </ol>
       )}
       {plans && (
-        <div className="mt-6 flex flex-wrap gap-2">
+        <div className="mt-auto flex flex-wrap gap-2 pt-6">
           <Button variant="tertiary" className="rounded-xl" onPress={onOpenPlan} data-testid="profile-plan-open">
             {plan ? 'Весь план' : 'План подготовки'}
           </Button>
@@ -106,6 +105,6 @@ export function PlanSteps({ plans, error, plan, onOpenPlan, onOpenHistory }: {
           </Button>
         </div>
       )}
-    </section>
+    </Panel>
   );
 }

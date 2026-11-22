@@ -1,6 +1,6 @@
 'use client';
 
-/* Правая колонка профиля ✳ (22.11.2026, решения владельца продукта):
+/* Блоки профиля на карточках ✳ (22.11.2026, решения владельца продукта):
 
    - **Личные встречи** (на месте «Ближайшего старта», решение владельца
      продукта 22.11.2026) — с кем спортсмен играл: соперник фамилией с
@@ -21,16 +21,15 @@ import { dmy, type NationalMember } from '@/entities/national';
 import type { RatingEntry } from '@/entities/rating';
 import { shortName } from '@/shared/lib/name';
 
-import { daysUntil, daysWord, SectionHead } from './ui';
+import { daysUntil, daysWord, Panel } from './ui';
 
 const EXPIRING_DAYS = 30; // за сколько дней предупреждать об окончании допуска — значение наше
 
 function Block({ title, testId, children }: { title: string; testId: string; children: ReactNode }) {
   return (
-    <section className="flex flex-col border-b border-neutral-200 px-6 py-6 last:border-b-0" data-testid={testId}>
-      <SectionHead title={title} />
+    <Panel title={title} testId={testId}>
       {children}
-    </section>
+    </Panel>
   );
 }
 
@@ -83,13 +82,13 @@ export function HeadToHead({ me, history }: { me: { name: string; avatar: string
       {!history ? null : list.length === 0 ? (
         <p className="m-0 text-[13px] text-neutral-500">Встреч нет</p>
       ) : (
-        <ul className="m-0 flex list-none flex-col gap-2 p-0">
+        <ul className="m-0 flex list-none flex-col p-0">
           {list.map((r) => {
             const lead = r.wins > r.losses ? 'text-green-700' : r.wins < r.losses ? 'text-[color-mix(in_srgb,var(--color-qtt-coral)_75%,black)]' : 'text-neutral-700';
             return (
               // Карточка встречи: «имя · аватар · счёт · аватар · имя», под счётом —
               // три последних матча ✳ (22.11.2026, образец владельца продукта).
-              <li key={r.key} className="flex flex-col gap-2 rounded-xl border border-neutral-200 bg-white px-3 py-2.5" data-testid="h2h-row" data-name={r.name}>
+              <li key={r.key} className="flex flex-col gap-2 border-b border-neutral-100 py-3 first:pt-0 last:border-b-0 last:pb-0" data-testid="h2h-row" data-name={r.name}>
                 <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2">
                   <span className="flex min-w-0 items-center justify-end gap-2">
                     <span className="truncate text-right text-[13px] font-medium" title={me.name}>

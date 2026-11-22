@@ -20,7 +20,7 @@ import { dmy } from '@/entities/national';
 import { num2, plainLabel, signed2, useRatingCard } from '@/entities/rating';
 import { Line } from '@/shared/kit/app';
 
-import { SectionHead } from './ui';
+import { Panel } from './ui';
 
 type Period = '3m' | '6m' | '1y' | 'all';
 const PERIODS: { id: Period; label: string; months: number | null }[] = [
@@ -74,17 +74,17 @@ export function RatingBlock({ userId, card }: { userId: string; card: ReturnType
   const change = shown.length ? shown[shown.length - 1].after - base : 0;
 
   return (
-    <section className="bg-[color-mix(in_srgb,var(--color-qtt-sand)_30%,white)] px-6 py-6" data-testid="profile-rating">
-      <SectionHead
-        title="Рейтинг"
-        action={
-          card.data && (
-            <a href={`/rating/${userId}`} className="text-[13px] font-medium text-brand-600 hover:underline" data-testid="profile-rating-open">
-              Вся история
-            </a>
-          )
-        }
-      />
+    <Panel
+      testId="profile-rating"
+      title="Динамика рейтинга"
+      action={
+        card.data && (
+          <a href={`/rating/${userId}`} className="text-[13px] font-medium text-brand-600 hover:underline" data-testid="profile-rating-open">
+            Вся история
+          </a>
+        )
+      }
+    >
       {card.loading ? (
         <Spinner size="sm" />
       ) : card.error ? (
@@ -124,6 +124,6 @@ export function RatingBlock({ userId, card }: { userId: string; card: ReturnType
           )}
         </>
       )}
-    </section>
+    </Panel>
   );
 }
