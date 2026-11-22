@@ -170,7 +170,8 @@
 - Правила — `tournaments/scoring.py` (`my_matches`, `start`, `record_game`, `undo_game`, `submit`, `correct`,
   `ScoringError` / `ScoringDenied`): матч группы ведёт судья, посаженный расписанием, по партиям (до 11, при 10 : 10 —
   до разрыва в два), подтверждает решённый матч; дальше правит только главный судья. Поля `GroupMatch.games`,
-  `result_by`, `result_at` (миграция `0032`). Ручки `GET /api/tournaments/my-table/`,
+  `result_by`, `result_at` (миграция `0032`). У игрока в ответе — `region`, `sex`, `figure` (`people_extras`:
+  рейтинговая карточка + фигура из профиля сборной — для табло-сцены). Ручки `GET /api/tournaments/my-table/`,
   `GET|POST /api/tournaments/<id>/group-matches/<match>/scoring/` `{action}`. Устройство — [ENGINE.md](../ENGINE.md)
   «Сделано: счёт судьёй стола». Тесты — `test_scoring.py`.
 

@@ -2149,8 +2149,8 @@ class MyTableView(APIView):
 
         matches = list(scoring.my_matches(request.user))
         ids = {m.player1_id for m in matches} | {m.player2_id for m in matches}
-        regions = scoring._regions(ids)
-        return Response({"matches": [scoring.serialize(m, request.user, regions) for m in matches]})
+        extras = scoring.people_extras(ids)
+        return Response({"matches": [scoring.serialize(m, request.user, extras) for m in matches]})
 
 
 class MatchScoringView(APIView):

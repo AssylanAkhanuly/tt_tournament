@@ -148,3 +148,23 @@ def test_finished_tournament_is_closed(world):
     world["t"].save(update_fields=["status"])
     assert act(ref, m, action="start").status_code == 400
     assert api_for(ref).get("/api/tournaments/my-table/").json()["matches"] == []
+
+
+def test_board_players_carry_figure_and_sex(world):
+    """Табло рисует по краям фигуры игроков ✳ (22.11.2026): снимок по пояс из
+    профиля сборной, без снимка — заглушка своего пола."""
+    from decimal import Decimal
+
+    from national.models import NationalTeamMember
+    from rating.models import RatingProfile
+
+    m = world["m"]
+    RatingProfile.objects.create(user=m.player1, value=Decimal("500"), sex="f", region="Алматы", birth_year=2006)
+    NationalTeamMember.objects.create(user=m.player1, figure="national/figures/p1.png")
+    data = api_for(m.referee).get(url(m)).json()
+    assert data["player1"]["figure"] == "/media/national/figures/p1.png"
+    assert data["player1"]["sex"] == "f"
+    assert data["player1"]["region"] == "Алматы"
+    assert data["player2"]["figure"] is None and data["player2"]["sex"] == ""
+    mine = next(x for x in api_for(m.referee).get("/api/tournaments/my-table/").json()["matches"] if x["id"] == m.id)
+    assert mine["player1"]["figure"] == "/media/national/figures/p1.png"

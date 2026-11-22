@@ -139,27 +139,41 @@ def my_matches(user):
     )
 
 
-def _person(u, regions):
+def _person(u, extras):
     if not u:
         return None
+    x = extras.get(u.id, {})
     return {
         "id": str(u.id),
         "name": u.name,
         "avatar": u.avatar.url if u.avatar else None,
-        "region": regions.get(u.id, ""),
+        "region": x.get("region", ""),
+        # Табло в духе эфирной заставки ✳ (22.11.2026, решение владельца
+        # продукта): по краям — фигура игрока из профиля сборной (снимок по
+        # пояс); нет снимка — экран рисует заглушку своего пола (`sex`).
+        "sex": x.get("sex", ""),
+        "figure": x.get("figure"),
     }
 
 
-def _regions(user_ids) -> dict:
+def people_extras(user_ids) -> dict:
+    """Регион и пол — из рейтинговой карточки, фигура — из профиля сборной."""
+    from national.models import NationalTeamMember
     from rating.models import RatingProfile
 
-    return dict(RatingProfile.objects.filter(user_id__in=user_ids).values_list("user_id", "region"))
+    out = {
+        uid: {"region": region, "sex": sex}
+        for uid, region, sex in RatingProfile.objects.filter(user_id__in=user_ids).values_list("user_id", "region", "sex")
+    }
+    for m in NationalTeamMember.objects.filter(user_id__in=user_ids).exclude(figure=""):
+        out.setdefault(m.user_id, {})["figure"] = m.figure.url
+    return out
 
 
-def serialize(match: GroupMatch, user, regions=None) -> dict:
+def serialize(match: GroupMatch, user, extras=None) -> dict:
     t = _tournament(match)
-    if regions is None:
-        regions = _regions([match.player1_id, match.player2_id])
+    if extras is None:
+        extras = people_extras([match.player1_id, match.player2_id])
     finished = match.status == GroupMatch.FINISHED
     live = t.schedule_status == "final" and t.status != Tournament.STATUS_FINISHED
     return {
@@ -171,8 +185,8 @@ def serialize(match: GroupMatch, user, regions=None) -> dict:
         "scheduled_at": match.scheduled_at.isoformat() if match.scheduled_at else None,
         "status": match.status,
         "games_to_win": t.games_to_win,
-        "player1": _person(match.player1, regions),
-        "player2": _person(match.player2, regions),
+        "player1": _person(match.player1, extras),
+        "player2": _person(match.player2, extras),
         "games": match.games or [],
         "score1": match.score1,
         "score2": match.score2,
