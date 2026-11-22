@@ -3,6 +3,7 @@
 
 Ответы несут `access` / `can_*`: что этому человеку можно. Экраны по ним
 решают, какие кнопки показать, и не повторяют правила у себя."""
+from bisect import bisect_right
 from datetime import date
 
 from django.http import FileResponse
@@ -181,7 +182,18 @@ class MeView(Base):
 
 class MembersView(Base):
     def get(self, request):
-        return Response([_member(m, request.user) for m in s.visible_members(request.user)])
+        # Место в рейтинг-листе — для огромной цифры карточки состава ✳ (22.11.2026):
+        # то же правило, что у карточки рейтинга (1 + сколько выше баллом), но
+        # одним запросом на весь список, а не по запросу на строку.
+        from rating.models import RatingProfile
+
+        values = sorted(RatingProfile.objects.values_list("value", flat=True))
+
+        def place(m):
+            card = getattr(m.user, "rating_profile", None)
+            return len(values) - bisect_right(values, card.value) + 1 if card else None
+
+        return Response([{**_member(m, request.user), "place": place(m)} for m in s.visible_members(request.user)])
 
     def post(self, request):
         m = s.add_member(

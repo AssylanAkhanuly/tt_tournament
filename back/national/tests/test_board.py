@@ -135,6 +135,10 @@ def test_member_profile_and_item_state(team):
     # Пол — для заглушки фигуры своего пола ✳ (22.11.2026): из рейтинговой карточки.
     card = getattr(team["ma"].user, "rating_profile", None)
     assert row["person"]["sex"] == (card.sex if card else "")
+    # Место в листе — то же, что в карточке рейтинга.
+    if card:
+        from rating.models import RatingProfile
+        assert row["place"] == RatingProfile.objects.filter(value__gt=card.value).count() + 1
     plans = head.get(f"/api/national/members/{team['ma'].pk}/plans/").json()
     items = {i["title"]: i for i in plans[0]["items"]}
     assert items["Тест ОФП"]["state"] == "done"

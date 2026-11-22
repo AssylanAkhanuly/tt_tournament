@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
+import { Bebas_Neue, Inter } from "next/font/google";
 // Tailwind — собирается PostCSS при сборке (postcss.config.mjs), файла в репозитории нет.
 // В нём же базовый сброс и палитра приложения (бывший `globals.css`).
 import "@/shared/kit/tailwind.src.css";
@@ -8,6 +8,9 @@ import "@/shared/kit/tailwind.src.css";
 // сборку (запросов к Google у посетителя нет) и отдаёт имя семейства
 // переменной `--font-inter`; её читает `--font` во входе Tailwind.
 const inter = Inter({ subsets: ["latin", "cyrillic"], variable: "--font-inter", display: "swap" });
+// Узкая «номерная» гарнитура — только для огромной цифры места в карточке
+// состава сборной ✳ (22.11.2026): три цифры Inter не помещались в карточку.
+const jersey = Bebas_Neue({ subsets: ["latin"], weight: "400", variable: "--font-jersey", display: "swap" });
 
 export const metadata: Metadata = {
   title: "ФНТ РК",
@@ -22,7 +25,7 @@ export default function RootLayout({
   return (
     // `data-app` — к нему привязаны сброс и палитра в `tailwind.src.css`: тот
     // же файл грузит Storybook, и там они действовать не должны.
-    <html lang="ru" data-app="" className={inter.variable}>
+    <html lang="ru" data-app="" className={inter.variable + " " + jersey.variable}>
       <body>{children}</body>
     </html>
   );

@@ -92,6 +92,14 @@ test('сборная: тренер — состав и план, врач — м
   // Без снимка — заглушка: сгенерированный игрок в стойке ✳ (22.11.2026).
   await expect(row.getByTestId('member-photo')).toHaveAttribute('data-photo', 'no');
   await expect(row.getByTestId('member-photo')).toHaveAttribute('src', /\/national\/players\/[mf]-[1-3]\.webp$/);
+  // Вид «Таблица»: та же строка с аватаром-заглушкой, вид — в адресе.
+  await coach.getByTestId('roster-view-table').click();
+  await coach.waitForURL(/view=table/);
+  const trow = coach.locator(`[data-testid="member-table-row"][data-name="${athlete}"]`);
+  await expect(trow.getByTestId('member-avatar')).toHaveAttribute('data-photo', 'no');
+  await expect(trow).toContainText('Юноши');
+  await coach.getByTestId('roster-view-grid').click();
+  await expect(row).toBeVisible();
 
   // Карточка — профиль ✳ (22.11.2026): сайдбар — меню кабинета, вкладок нет —
   // разделы открываются из блоков профиля.

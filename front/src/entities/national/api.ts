@@ -63,6 +63,8 @@ export type NationalMember = {
   ageGroup: AgeGroup;
   /** Фото спортсмена ✳ (22.11.2026): карточки состава. */
   avatar: string | null;
+  /** Место в рейтинг-листе — только в списке состава ✳ (22.11.2026). */
+  place?: number | null;
   personalCoach: { id: string; name: string } | null;
   clearance: Clearance;
   /** Сколько действует ограничений нагрузки. */
@@ -210,6 +212,7 @@ const member = (m: Raw): NationalMember => {
     squad: m.squad as Squad,
     ageGroup: m.age_group as AgeGroup,
     avatar: (m.avatar as string | null | undefined) ?? null,
+    place: (m.place as number | null | undefined) ?? undefined,
     personalCoach: (m.personal_coach as NationalMember['personalCoach']) ?? null,
     clearance: m.clearance as Clearance,
     limits: Number(m.limits ?? 0),

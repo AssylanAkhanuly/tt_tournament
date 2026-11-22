@@ -939,8 +939,11 @@ iPhone (`env(safe-area-inset-bottom)`); текст полей 16 px (`TextInput`
 `canReview`, у рапорта `canDecide` / `canResubmit`): правил прав на экране нет.
 Транспорт — `entities/national`, блоки — `widgets/national`: `RosterBoard`
 (состав карточками по 12 на страницу и панель выбранного справа ✳ 22.11.2026,
-образец CoachPro; слева фигура — фото или заглушка-игрок своего пола,
-`public/national/players/`, сгенерированы fal.ai;
+образец CoachPro; слева фигура на персиковом — фото или заглушка-игрок своего
+пола, `public/national/players/`, сгенерированы fal.ai; фоном — место в листе
+гарнитурой Bebas Neue (`--font-jersey` из `app/layout.tsx`, только для этой
+цифры); «Фильтры» — `FilterMenu` кита; вид «Карточки · Таблица» — `?view=table`,
+таблица — `RosterTable` в `RosterParts`;
 окно «Внести в сборную», значок допуска, списки — `RosterParts`),
 `MemberProfile` (профиль ✳ 22.11.2026, образцы Orbix и Athlitiq: серая
 страница, белые карточки — отступление от «от края до края» по просьбе

@@ -2,17 +2,21 @@
 
 /* Состав национальной команды — карточки ✳ (22.11.2026, образец владельца
    продукта CoachPro «Players»; прежняя таблица снята). Серая страница: слева
-   поиск, отбор плашками (состав — «Все · Основной · Расширенный», группа —
-   «Кадеты · Юноши · Взрослые», повторный щелчок снимает) и «Внести в сборную»
-   (`canEdit`), под ними карточки спортсменов по 12 на страницу (страницы —
+   поиск, одна кнопка «Фильтры» (`FilterMenu` кита: состав, группа — подменю),
+   справа значками вид «Карточки · Таблица» (в адресе `?view=table`, таблица —
+   `RosterTable`, строка открывает профиль, панели справа у неё нет) и
+   «Внести в сборную» (`canEdit`); в виде карточек под ними карточки спортсменов по 12 на страницу (страницы —
    `TablePagination`, как у таблиц). Карточка — как в образце: слева фигура
-   спортсмена по пояс на голубой подложке (фото, если есть; нет — **заглушка:
+   спортсмена по пояс на персиковой подложке — `qtt-peach`, пара к тёмно-синему, как на знаке QTT (фото, если есть; нет — **заглушка:
    сгенерированный игрок в стойке** своего пола — три мужских, три женских,
    выбор по id, у человека не меняется; решение владельца продукта 22.11.2026),
    в углу фигуры — точка допуска (зелёная — допущен, коралловая — истёк, серая
    — не внесён); справа фамилия крупно, имя и отчество, регион, «группа ·
    рейтинг · план» (план — тем, кому сервер прислал планы: «7 из 9», «· ждёт» —
-   на согласовании).
+   на согласовании); фоном справа — место в рейтинг-листе огромной контурной
+   цифрой во всю высоту карточки узкой «номерной» гарнитурой (Bebas Neue,
+   `--font-jersey`), как номер игрока в образце; цифра не заходит на фигуру
+   (`place` в строке состава считает сервер).
    Выбранная карточка залита тёмно-синим бренда.
 
    Заглушки сгенерированы fal.ai (FLUX dev, 22.11.2026): «вымышленный
@@ -30,16 +34,17 @@
    телефоне панели нет — щелчок открывает профиль. Строки — те, кого человеку
    видно (решает сервер). */
 
-import { Button, SearchField, Spinner } from '@heroui/react';
-import { ArrowRight } from 'lucide-react';
+import { Button, SearchField, Spinner, ToggleButton, ToggleButtonGroup } from '@heroui/react';
+import { ArrowRight, LayoutGrid, List } from 'lucide-react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useMemo, useState, type ReactNode } from 'react';
 
 import { AGE_GROUP_LABEL, fetchMembers, SQUAD_LABEL, useLoad, type AgeGroup, type NationalMember, type Squad } from '@/entities/national';
 import { num2, useRatingCard } from '@/entities/rating';
-import { useNarrow } from '@/shared/kit/app';
+import { FilterMenu, useNarrow } from '@/shared/kit/app';
 import { TablePagination } from '@/shared/ui/table';
 
-import { AddMemberDialog, ClearanceChip } from './RosterParts';
+import { AddMemberDialog, ClearanceChip, placeholderOf, RosterTable } from './RosterParts';
 
 /* Точка допуска на фото. Классы целиком. */
 const DOT = { ok: 'bg-green-500', expired: 'bg-qtt-coral', none: 'bg-neutral-300' } as const;
@@ -53,16 +58,6 @@ const splitName = (name: string) => {
 };
 
 const PAGE = 12; // карточек на страницу — значение наше
-const PLACEHOLDERS = { m: ['m-1', 'm-2', 'm-3'], f: ['f-1', 'f-2', 'f-3'] } as const;
-
-/** Заглушка фигуры — своего пола (пол неизвестен — любая), одна и та же для человека: по id. */
-function placeholderOf(m: NationalMember) {
-  let h = 0;
-  for (const ch of m.id) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
-  const list: readonly string[] = m.person.sex ? PLACEHOLDERS[m.person.sex] : [...PLACEHOLDERS.m, ...PLACEHOLDERS.f];
-  return `/national/players/${list[h % list.length]}.webp`;
-}
-
 /** Фигура спортсмена: фото или заглушка — игрок по пояс, прижат к низу. */
 function Figure({ m, className, size }: { m: NationalMember; className: string; size: string }) {
   return (
@@ -129,8 +124,24 @@ function MemberCard({ m, on, onPick, onOpen }: { m: NationalMember; on: boolean;
       data-testid="member-row"
       data-name={m.person.name}
     >
-      <Figure m={m} className={'w-32 ' + (on ? 'bg-white/10' : 'bg-[color-mix(in_srgb,var(--color-qtt-sky)_28%,white)]')} size="h-[94%]" />
+      <Figure m={m} className="w-32 bg-qtt-peach" size="h-[94%]" />
       <Dot m={m} className="top-2.5 left-2.5" />
+      {/* Место в рейтинг-листе — огромной контурной цифрой фоном справа, во всю
+          высоту карточки, как номер игрока в образце ✳ (22.11.2026, решение
+          владельца продукта). */}
+      {m.place && (
+        <span aria-hidden className="pointer-events-none absolute inset-y-0 right-0 left-32 flex items-center justify-end overflow-hidden pr-3">
+          <span
+            className={
+              'font-[family-name:var(--font-jersey)] text-[196px] leading-[0.72] tracking-tight text-transparent tabular-nums select-none ' +
+              (on ? '[-webkit-text-stroke:1.5px_color-mix(in_srgb,white_22%,transparent)]' : '[-webkit-text-stroke:1.5px_color-mix(in_srgb,var(--color-neutral-200)_80%,transparent)]')
+            }
+            data-testid="member-place"
+          >
+            {m.place}
+          </span>
+        </span>
+      )}
       <span className="relative flex min-w-0 flex-1 flex-col justify-center px-4 py-3">
         <span className="truncate text-[16px] leading-tight font-bold">{surname}</span>
         <span className={'truncate text-[13px] ' + (on ? 'text-white/75' : 'text-neutral-500')}>{rest}</span>
@@ -227,26 +238,16 @@ function Detail({ m, best, onOpen }: { m: NationalMember; best: number; onOpen: 
   );
 }
 
-function Chip({ on, onPress, children, testId }: { on: boolean; onPress: () => void; children: ReactNode; testId: string }) {
-  return (
-    <button
-      type="button"
-      onClick={onPress}
-      aria-pressed={on}
-      className={
-        'rounded-full px-3.5 py-1.5 text-[12px] font-semibold transition-colors ' +
-        (on ? 'bg-brand-600 text-white' : 'border border-neutral-200 bg-white text-neutral-600 hover:border-brand-200 hover:text-brand-700')
-      }
-      data-testid={testId}
-    >
-      {children}
-    </button>
-  );
-}
+const ALL = 'Все';
+const SQUAD_KEYS = Object.keys(SQUAD_LABEL) as Squad[];
+const GROUP_KEYS = Object.keys(AGE_GROUP_LABEL) as AgeGroup[];
 
 export function RosterBoard({ canEdit, onOpen }: { canEdit: boolean; onOpen: (memberId: string) => void }) {
   const members = useLoad(fetchMembers, 'members');
   const narrow = useNarrow();
+  const router = useRouter();
+  const params = useSearchParams();
+  const view = params.get('view') === 'table' ? 'table' : 'grid';
   const [q, setQ] = useState('');
   const [squad, setSquad] = useState<Squad | null>(null);
   const [group, setGroup] = useState<AgeGroup | null>(null);
@@ -265,11 +266,39 @@ export function RosterBoard({ canEdit, onOpen }: { canEdit: boolean; onOpen: (me
   const at = Math.min(page, pages - 1); // отбор сузил список — страница могла исчезнуть
   const shown = list.slice(at * PAGE, at * PAGE + PAGE);
   const current = list.find((m) => m.id === picked) ?? shown[0] ?? null;
+  const grid = view === 'grid';
+
+  function setView(v: string) {
+    const next = new URLSearchParams(params.toString());
+    if (v === 'table') next.set('view', 'table');
+    else next.delete('view');
+    const qs = next.toString();
+    router.replace(qs ? '?' + qs : '?', { scroll: false });
+  }
+
+  const filters = [
+    {
+      label: 'Состав',
+      items: [ALL, ...SQUAD_KEYS.map((k) => SQUAD_LABEL[k])],
+      active: squad ? SQUAD_LABEL[squad] : ALL,
+      onPick: (v: string) => (setSquad(SQUAD_KEYS.find((k) => SQUAD_LABEL[k] === v) ?? null), setPage(0)),
+    },
+    {
+      label: 'Группа',
+      items: [ALL, ...GROUP_KEYS.map((k) => AGE_GROUP_LABEL[k])],
+      active: group ? AGE_GROUP_LABEL[group] : ALL,
+      onPick: (v: string) => (setGroup(GROUP_KEYS.find((k) => AGE_GROUP_LABEL[k] === v) ?? null), setPage(0)),
+    },
+  ];
 
   return (
-    <div className="grid h-full min-h-0 bg-neutral-100 md:grid-cols-[minmax(0,1fr)_22rem] xl:grid-cols-[minmax(0,1fr)_25rem]" data-testid="national-roster">
+    <div
+      className={'grid h-full min-h-0 bg-neutral-100 ' + (grid ? 'md:grid-cols-[minmax(0,1fr)_22rem] xl:grid-cols-[minmax(0,1fr)_25rem]' : '')}
+      data-testid="national-roster"
+      data-view={view}
+    >
       <div className="flex min-h-0 flex-col overflow-y-auto">
-        <div className="sticky top-0 z-10 flex flex-wrap items-center gap-x-4 gap-y-3 bg-neutral-100 px-4 pt-4 pb-3">
+        <div className="sticky top-0 z-10 flex flex-wrap items-center gap-x-3 gap-y-3 bg-neutral-100 px-4 pt-4 pb-3">
           <SearchField aria-label="Поиск" value={q} onChange={(v) => (setQ(v), setPage(0))} className="w-64 max-md:w-full">
             <SearchField.Group className="rounded-xl bg-white">
               <SearchField.SearchIcon />
@@ -277,27 +306,28 @@ export function RosterBoard({ canEdit, onOpen }: { canEdit: boolean; onOpen: (me
               <SearchField.ClearButton />
             </SearchField.Group>
           </SearchField>
-          <div className="flex flex-wrap items-center gap-2" role="group" aria-label="Отбор">
-            <Chip on={!squad} onPress={() => (setSquad(null), setPage(0))} testId="roster-squad-all">
-              Все
-            </Chip>
-            {(Object.keys(SQUAD_LABEL) as Squad[]).map((s) => (
-              <Chip key={s} on={squad === s} onPress={() => (setSquad(squad === s ? null : s), setPage(0))} testId={'roster-squad-' + s}>
-                {SQUAD_LABEL[s]}
-              </Chip>
-            ))}
-            <span aria-hidden className="mx-1 h-5 w-px bg-neutral-300" />
-            {(Object.keys(AGE_GROUP_LABEL) as AgeGroup[]).map((g) => (
-              <Chip key={g} on={group === g} onPress={() => (setGroup(group === g ? null : g), setPage(0))} testId={'roster-group-' + g}>
-                {AGE_GROUP_LABEL[g]}
-              </Chip>
-            ))}
+          <FilterMenu groups={filters} />
+          <div className="ml-auto flex items-center gap-3">
+            <ToggleButtonGroup
+              size="sm"
+              aria-label="Вид"
+              selectionMode="single"
+              disallowEmptySelection
+              selectedKeys={[view]}
+              onSelectionChange={(keys) => {
+                const v = [...keys][0];
+                if (v) setView(String(v));
+              }}
+            >
+              <ToggleButton id="grid" aria-label="Карточки" data-testid="roster-view-grid">
+                <LayoutGrid size={16} />
+              </ToggleButton>
+              <ToggleButton id="table" aria-label="Таблица" data-testid="roster-view-table">
+                <List size={16} />
+              </ToggleButton>
+            </ToggleButtonGroup>
+            {canEdit && <AddMemberDialog onAdded={members.reload} />}
           </div>
-          {canEdit && (
-            <div className="ml-auto">
-              <AddMemberDialog onAdded={members.reload} />
-            </div>
-          )}
         </div>
         {!members.data ? (
           members.error ? (
@@ -309,6 +339,10 @@ export function RosterBoard({ canEdit, onOpen }: { canEdit: boolean; onOpen: (me
           <p className="m-0 py-16 text-center text-[13px] text-neutral-500" data-testid="table-empty">
             {members.data.length ? 'Никого не найдено' : 'В сборной никого нет'}
           </p>
+        ) : !grid ? (
+          <div className="flex min-h-0 flex-1 flex-col bg-white">
+            <RosterTable rows={list} onOpen={onOpen} />
+          </div>
         ) : (
           <div className="grid gap-4 px-4 pb-4 sm:grid-cols-2 2xl:grid-cols-3">
             {shown.map((m) => (
@@ -316,11 +350,13 @@ export function RosterBoard({ canEdit, onOpen }: { canEdit: boolean; onOpen: (me
             ))}
           </div>
         )}
-        <div className="mt-auto">
-          <TablePagination page={at} pages={pages} onPage={setPage} />
-        </div>
+        {grid && (
+          <div className="mt-auto">
+            <TablePagination page={at} pages={pages} onPage={setPage} />
+          </div>
+        )}
       </div>
-      {!narrow && current && <Detail m={current} best={best} onOpen={() => onOpen(current.id)} />}
+      {grid && !narrow && current && <Detail m={current} best={best} onOpen={() => onOpen(current.id)} />}
     </div>
   );
 }
