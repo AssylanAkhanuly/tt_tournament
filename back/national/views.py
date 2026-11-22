@@ -64,6 +64,7 @@ def _access(m: NationalTeamMember, viewer) -> dict:
         "medical": "full" if s.is_doctor(viewer) else ("summary" if s.can_read_medical_summary(m, viewer) else None),
         "sport": s.is_psychologist(viewer),
         "umo": s.can_read_umo(viewer, m),  # вкладки УМО в медкарте ✳ (22.11.2026)
+        "images": s.is_self(m, viewer),  # снимки меняет сам спортсмен ✳ (22.11.2026)
     }
 
 

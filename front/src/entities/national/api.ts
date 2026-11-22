@@ -56,6 +56,8 @@ export type MemberAccess = {
   sport: boolean;
   /** Вкладки УМО в медкарте: врачу и штабу ✳ (22.11.2026). */
   umo: boolean;
+  /** Снимки (аватар, фигура) меняет сам спортсмен ✳ (22.11.2026). */
+  images: boolean;
 };
 
 export type NationalMember = {
@@ -224,7 +226,9 @@ const member = (m: Raw): NationalMember => {
     personalCoach: (m.personal_coach as NationalMember['personalCoach']) ?? null,
     clearance: m.clearance as Clearance,
     limits: Number(m.limits ?? 0),
-    access: (({ plan_author, umo, ...a }) => ({ ...a, planAuthor: Boolean(plan_author), umo: Boolean(umo) }))(m.access as Raw & MemberAccess) as MemberAccess,
+    access: (({ plan_author, umo, images, ...a }) => ({ ...a, planAuthor: Boolean(plan_author), umo: Boolean(umo), images: Boolean(images) }))(
+      m.access as Raw & MemberAccess,
+    ) as MemberAccess,
     plan:
       plan === undefined
         ? undefined

@@ -106,19 +106,25 @@ def test_doctor_records_exams_others_cannot_read(squad):
     assert UmoExam.objects.filter(member=squad["member"]).count() == 1
 
 
-def test_head_staff_uploads_images_doctor_cannot(squad, settings, tmp_path):
+def test_athlete_uploads_own_images_staff_cannot(squad, settings, tmp_path):
     settings.MEDIA_ROOT = tmp_path
     url = f"/api/national/members/{squad['member'].pk}/images/figure/"
     png = (b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01\x08\x06\x00\x00\x00\x1f\x15\xc4\x89"
            b"\x00\x00\x00\rIDATx\x9cc\xf8\x0f\x00\x00\x01\x01\x00\x05\x18\xd8N\x00\x00\x00\x00IEND\xaeB`\x82")
     f = SimpleUploadedFile("fig.png", png, content_type="image/png")
-    r = client_for(squad["head"]).post(url, {"file": f}, format="multipart")
+    me = client_for(squad["member"].user)
+    r = me.post(url, {"file": f}, format="multipart")
     assert r.status_code == 200 and r.json()["figure"].startswith("/media/national/figures/")
-    f2 = SimpleUploadedFile("a.png", png, content_type="image/png")
-    assert client_for(squad["doctor"]).post(url, {"file": f2}, format="multipart").status_code == 403
+    assert r.json()["access"]["images"] is True
+    # штаб и врач — не меняют ✳ (решение владельца продукта)
+    for who in ("head", "doctor"):
+        f2 = SimpleUploadedFile("a.png", png, content_type="image/png")
+        assert client_for(squad[who]).post(url, {"file": f2}, format="multipart").status_code == 403
+    assert client_for(squad["head"]).get(f"/api/national/members/{squad['member'].pk}/").json()["access"]["images"] is False
     txt = SimpleUploadedFile("a.txt", b"hello", content_type="text/plain")
-    assert client_for(squad["head"]).post(url, {"file": txt}, format="multipart").status_code == 400
-    assert client_for(squad["head"]).delete(url).json()["figure"] is None
+    assert me.post(url, {"file": txt}, format="multipart").status_code == 400
+    assert client_for(squad["head"]).delete(url).status_code == 403
+    assert me.delete(url).json()["figure"] is None
 
 
 def test_athlete_sees_own_card_read_only_not_others(squad):

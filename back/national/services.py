@@ -710,9 +710,10 @@ IMAGE_MAX = 8 * 1024 * 1024  # 8 МБ — предел наш
 
 
 def set_member_image(member: NationalTeamMember, kind: str, file, by):
-    """Загрузить или снять (`file=None`) снимок. Меняет тот, кто ведёт состав."""
-    if not is_head_staff(by):
-        raise NationalError("Снимки меняет штаб сборной.", 403)
+    """Загрузить или снять (`file=None`) снимок. Меняет только сам спортсмен
+    ✳ (22.11.2026, решение владельца продукта; раньше — штаб)."""
+    if not is_self(member, by):
+        raise NationalError("Снимки меняет сам спортсмен.", 403)
     if kind not in IMAGE_KINDS:
         raise NationalError("Снимок — аватар или фигура.")
     field = getattr(member, kind)

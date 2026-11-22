@@ -15,18 +15,20 @@
      возраст, регион, «в сборной с»; «написать», «позвонить», штабу —
      «Убрать из сборной».
 
-   Штаб меняет снимки прямо здесь: значок-камера у аватара и «Фигура» на
-   баннере (JPG, PNG, WebP до 8 МБ — предел наш; снять — в том же меню). */
+   Снимки меняет только сам спортсмен ✳ (22.11.2026, решение владельца
+   продукта): значок-камера у аватара и «Фигура» на баннере открывают окно —
+   выбрать или перетащить файл, обрезать (`ImageDialog`); штабу кнопок нет. */
 
-import { Dropdown, Tooltip } from '@heroui/react';
+import { Tooltip } from '@heroui/react';
 import { Camera, Crown, Mail, Phone } from 'lucide-react';
-import { useRef, useState, type ReactNode } from 'react';
+import type { ReactNode } from 'react';
 
-import { AGE_GROUP_LABEL, dmy, setMemberImage, SQUAD_LABEL, type MemberImageKind, type NationalMember } from '@/entities/national';
+import { AGE_GROUP_LABEL, dmy, SQUAD_LABEL, type NationalMember } from '@/entities/national';
 import type { useRatingCard } from '@/entities/rating';
 
 import { RemoveMemberButton } from '../MemberControls';
 import { placeholderOf } from '../RosterParts';
+import { ImageDialog } from './ImageDialog';
 import { CARD } from './ui';
 
 /* Кольцо фото — цвет допуска. Классы целиком. */
@@ -63,66 +65,6 @@ function Fact({ label, value, accent }: { label: string; value: ReactNode; accen
       <dd className={'m-0 text-[19px] leading-tight font-semibold tabular-nums ' + (accent ? 'text-qtt-peach' : 'text-white')}>{value}</dd>
       <dt className="text-[12px] text-white/60">{label}</dt>
     </div>
-  );
-}
-
-/** Меню снимка для штаба: загрузить новый или снять загруженный. */
-function ImageMenu({ member, kind, has, onChanged, children, label }: {
-  member: NationalMember;
-  kind: MemberImageKind;
-  has: boolean;
-  onChanged: () => void;
-  children: ReactNode;
-  label: string;
-}) {
-  const input = useRef<HTMLInputElement>(null);
-  const [error, setError] = useState<string | null>(null);
-  const run = (file: File | null) =>
-    setMemberImage(member.id, kind, file).then(
-      () => {
-        setError(null);
-        onChanged();
-      },
-      (e: Error) => setError(e.message),
-    );
-  return (
-    <>
-      <input
-        ref={input}
-        type="file"
-        accept="image/jpeg,image/png,image/webp"
-        className="hidden"
-        data-testid={'image-input-' + kind}
-        onChange={(e) => {
-          const f = e.target.files?.[0];
-          e.target.value = '';
-          if (f) void run(f);
-        }}
-      />
-      <Dropdown>
-        <Dropdown.Trigger aria-label={label} data-testid={'image-open-' + kind}>
-          {children}
-        </Dropdown.Trigger>
-        <Dropdown.Popover placement="bottom end" className="rounded-xl">
-          <Dropdown.Menu
-            onAction={(key) => {
-              if (key === 'upload') input.current?.click();
-              else void run(null);
-            }}
-          >
-            <Dropdown.Item id="upload" textValue="Загрузить" className="rounded-xl">
-              Загрузить снимок
-            </Dropdown.Item>
-            {has ? (
-              <Dropdown.Item id="remove" textValue="Снять" className="rounded-xl text-red-600">
-                Снять снимок
-              </Dropdown.Item>
-            ) : null}
-          </Dropdown.Menu>
-        </Dropdown.Popover>
-      </Dropdown>
-      {error && <span className="absolute top-full right-0 mt-1 rounded-lg bg-white px-2 py-1 text-[12px] whitespace-nowrap text-red-600 shadow">{error}</span>}
-    </>
   );
 }
 
@@ -243,6 +185,8 @@ export function Hero({ member, card, canEdit, onChanged, onRemoved }: {
   const p = member.person;
   const pr = member.profile;
   const hasContacts = !!(pr?.email || pr?.phone || canEdit);
+  // Снимки меняет только сам спортсмен (сервер: `access.images`).
+  const canImages = member.access.images;
   return (
     <ProfileHero
       who={{
@@ -274,21 +218,21 @@ export function Hero({ member, card, canEdit, onChanged, onRemoved }: {
         )
       }
       figureSlot={
-        canEdit && (
-          <ImageMenu member={member} kind="figure" has={!!member.figure} onChanged={onChanged} label="Снимок по пояс">
+        canImages && (
+          <ImageDialog memberId={member.id} kind="figure" has={!!member.figure} onChanged={onChanged}>
             <span className="flex items-center gap-1.5 rounded-full bg-white/90 px-3 py-1.5 text-[12px] font-medium text-neutral-700 shadow-sm hover:bg-white">
               <Camera size={14} /> Фигура
             </span>
-          </ImageMenu>
+          </ImageDialog>
         )
       }
       avatarSlot={
-        canEdit && (
-          <ImageMenu member={member} kind="avatar" has={!!member.avatar} onChanged={onChanged} label="Аватар">
+        canImages && (
+          <ImageDialog memberId={member.id} kind="avatar" has={!!member.avatar} onChanged={onChanged}>
             <span className="grid size-9 place-items-center rounded-full border-2 border-white bg-brand-500 text-white shadow-md hover:brightness-110">
               <Camera size={15} />
             </span>
-          </ImageMenu>
+          </ImageDialog>
         )
       }
     />

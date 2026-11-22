@@ -278,7 +278,7 @@ test('сборная: рапорт старшего тренера регион�
   await expect(regional.locator(`[data-testid="report-row"][data-event="${camp}"]`)).toHaveAttribute('data-status', 'submitted');
 });
 
-test('сборная: врач ведёт УМО по вкладкам медкарты, штаб загружает фигуру', async ({ browser, request }) => {
+test('сборная: врач ведёт УМО по вкладкам медкарты, штаб снимков не меняет', async ({ browser, request }) => {
   const stamp = Date.now();
   const athlete = `[e2e] УМО ${stamp}`;
   const memberId = await makeMember(request, athlete, 'adult');
@@ -314,8 +314,7 @@ test('сборная: врач ведёт УМО по вкладкам медк�
   await doctor.getByRole('navigation', { name: 'Вкладки страницы' }).getByRole('button', { name: 'Сводка УМО' }).click();
   await expect(doctor.locator('[data-testid="umo-block-card"][data-code="nutrition"]')).toContainText('1 ниже');
 
-  // Штаб: УМО видно только для просмотра ✳ (решение владельца продукта);
-  // фигура для баннера загружается из профиля.
+  // Штаб: УМО видно только для просмотра ✳ (решение владельца продукта).
   const coach = await signIn(browser, E2E_NATIONAL_COACH, '/national');
   await coach.goto(`/national/members/${memberId}/medical?tab=nutrition`);
   await expect(coach.locator('[data-testid="umo-param"][data-code="ldl"]').getByTestId('umo-status')).toHaveAttribute('data-status', 'low');
@@ -323,10 +322,9 @@ test('сборная: врач ведёт УМО по вкладкам медк�
   await coach.getByRole('navigation', { name: 'Вкладки страницы' }).getByRole('button', { name: 'Сводка УМО' }).click();
   await expect(coach.getByTestId('umo-exam-date')).toHaveCount(1);
   await expect(coach.getByTestId('umo-new')).toHaveCount(0);
+  // Снимки меняет только сам спортсмен ✳ (22.11.2026): у штаба кнопок нет.
   await coach.goto(`/national/members/${memberId}`);
   await expect(coach.getByTestId('member-figure')).toHaveAttribute('data-photo', 'no');
-  await coach.getByTestId('image-input-figure').setInputFiles('public/national/players/m-1.webp');
-  await expect(coach.getByTestId('member-figure')).toHaveAttribute('data-photo', 'yes');
-  await expect(coach.getByTestId('member-figure')).toHaveAttribute('src', /\/media\/national\/figures\//);
-  await coach.screenshot({ path: 'test-results/national/hero-figure.png' });
+  await expect(coach.getByTestId('image-open-figure')).toHaveCount(0);
+  await expect(coach.getByTestId('image-open-avatar')).toHaveCount(0);
 });
