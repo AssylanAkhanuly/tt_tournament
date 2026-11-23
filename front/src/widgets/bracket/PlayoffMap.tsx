@@ -4,7 +4,8 @@
    продукта): сетка по итогам групп, только смотреть. Посев и метки считает
    сервер (`back/tournaments/playoff.py`): позиция — «A1», «B2»; группа сыграна
    целиком — в позиции её игрок (фамилия с инициалами и фото), рядом метка.
-   Рисует тот же `BracketFlow`, что демо-сетка `/bracket`. */
+   Рисует плакат `BracketPoster` ✳ (23.11.2026; до того — `BracketFlow`, он
+   остался у демо-сетки `/bracket`). */
 
 import { useMemo } from 'react';
 
@@ -12,12 +13,13 @@ import type { Bracket, Side } from '@/entities/bracket/model';
 import type { PlayoffMap as PlayoffData, PlayoffSide } from '@/entities/tournament';
 import { shortName } from '@/shared/lib/name';
 
-import { BracketFlow } from './BracketFlow';
+import { BracketPoster } from './BracketPoster';
 
 const toSide = (s: PlayoffSide | null): Side | null =>
   s && {
     id: s.player?.id ?? s.label,
-    name: s.player ? s.label + ' · ' + shortName(s.player.name) : s.label,
+    name: s.player ? shortName(s.player.name) : s.label,
+    tag: s.label,
     avatarUrl: s.player?.avatar ?? undefined,
     placeholder: !s.player,
   };
@@ -44,8 +46,9 @@ export function PlayoffMap({ playoff, still = false }: { playoff: PlayoffData; s
       </p>
     );
   return (
-    <div className="min-h-0 flex-1" data-testid="playoff-map">
-      <BracketFlow bracket={bracket} still={still} focusStart={still ? 0.85 : undefined} />
+    <div className="flex min-h-0 flex-1 flex-col" data-testid="playoff-map">
+      {/* На обзоре — восьмёрка целиком (как плакат лендинга), в «Сетке» — вся сетка по ширине. */}
+      <BracketPoster bracket={bracket} lastRounds={still ? 3 : undefined} fit={still ? 'contain' : 'width'} />
     </div>
   );
 }
