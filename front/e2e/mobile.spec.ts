@@ -67,11 +67,16 @@ test('на телефоне — вкладки разделов вместо б�
   await expect(page.locator('[data-testid="rating-row"][data-player="Ахметов Ерлан"]')).toHaveCount(0);
   await expect(page.locator('[data-testid="rating-row"]').first()).toBeVisible();
 
-  // Панель вкладок — общая для всех кабинетов ✳ (23.11.2026): «Календарь» —
-  // своя вкладка, «Выйти» — на странице «Профиль».
+  // Панель вкладок — общая для всех кабинетов, не больше четырёх ✳ (23.11.2026):
+  // главные разделы и «Меню»; «Журнал», «Калибровка» и «Выйти» — на странице «Меню».
   const вкладки = page.getByTestId('tab-bar');
-  await expect(вкладки.getByTestId('tab-bar-item')).toHaveText(['Рейтинг', 'Журнал', 'Калибровка', 'Календарь']);
+  await expect(вкладки.getByTestId('tab-bar-item')).toHaveText(['Рейтинг', 'Календарь']);
   await page.screenshot({ path: 'test-results/mobile/tab-bar.png' });
+  await вкладки.getByTestId('side-person').click();
+  await expect(page.getByTestId('menu-nav-item')).toHaveText(['Журнал', 'Калибровка']);
+  await page.getByTestId('menu-nav-item').filter({ hasText: 'Журнал' }).click();
+  await page.waitForURL((url) => url.pathname === '/rating/journal');
+  await expect(вкладки.getByTestId('side-person')).toHaveAttribute('aria-current', 'true');
   await вкладки.getByRole('button', { name: 'Календарь' }).click();
   await page.waitForURL((url) => url.pathname === '/calendar');
 

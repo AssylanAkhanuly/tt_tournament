@@ -14,7 +14,7 @@
    Подписей-заголовков в меню нет (решение владельца продукта, 28.10.2026). */
 
 import { Avatar, Button, Chip, Dropdown, Label, Modal, Separator, useOverlayState } from '@heroui/react';
-import { Check, ChevronDown, ChevronLeft, ChevronRight, ChevronsUpDown, LogOut, User } from 'lucide-react';
+import { Check, ChevronDown, ChevronLeft, ChevronRight, ChevronsUpDown, LogOut, Menu, User } from 'lucide-react';
 import { useState, type ReactNode } from 'react';
 
 import { useNarrow } from '@/shared/kit/app';
@@ -39,7 +39,8 @@ export type ShellSubItem = { label: string; href: string; active?: boolean; badg
 /** Пункт меню: `group` — заголовок группы над ним (как «Operations» в
  *  образце Visitly), `badge` — красный счётчик справа. */
 /** `short` — подпись во вкладке панели телефона, когда полная не помещается («Рейтинг игроков» → «Рейтинг»). */
-export type ShellNavItem = { label: string; short?: string; icon?: ReactNode; children?: ShellSubItem[]; group?: string; badge?: number };
+/** `secondary` — на телефоне раздел не во вкладках, а в «Меню» (журнал, калибровка). */
+export type ShellNavItem = { label: string; short?: string; icon?: ReactNode; children?: ShellSubItem[]; group?: string; badge?: number; secondary?: boolean };
 export type ShellRole = { title: string; to: string };
 /** Вкладка страницы ✳ (21.11.2026): разделы страницы (турнира, сезона, лиги,
  *  тура) — вкладками под заголовком, а не в сайдбаре; у выбранной — её виды
@@ -116,6 +117,11 @@ export function AppShell({
   // Телефон: виды текущего раздела (подпункты сайдбара) — над содержимым.
   const phoneViews = nav.find((n) => n.label === active)?.children;
   const tabBar = narrow && !phoneBare;
+  // Панель вкладок — не больше четырёх ✳ (23.11.2026, решения владельца продукта):
+  // главные разделы (до трёх) и «Меню»; второстепенные (`secondary`) и лишние — в «Меню».
+  const tabs3 = nav.filter((n) => !n.secondary).slice(0, 3);
+  const more = nav.filter((n) => !tabs3.includes(n));
+  const menuLit = accountPage || more.some((n) => n.label === active);
   // Разделы с подпунктами складываются и раскрываются ✳ (30.10.2026, решение
   // владельца продукта). Тот, где человек сейчас, раскрыт, пока его не сложили;
   // прочие сложены, пока их не раскрыли. Помним только сделанное руками.
@@ -450,6 +456,12 @@ export function AppShell({
             {title && !tabs && <h1 className="pb-4 text-xl font-semibold tracking-tight">{title}</h1>}
             {narrow && accountPage ? (
               <AccountPage
+                more={more}
+                active={active}
+                onNavigate={(label) => {
+                  setAccountPage(false);
+                  onNavigate(label);
+                }}
                 person={person}
                 role={role}
                 roles={roles}
@@ -505,7 +517,7 @@ export function AppShell({
           className="absolute inset-x-3 bottom-[calc(12px+env(safe-area-inset-bottom))] z-40 flex gap-0.5 rounded-[28px] bg-[color-mix(in_srgb,white_88%,transparent)] p-1.5 shadow-[0_10px_30px_color-mix(in_srgb,var(--color-brand-900)_18%,transparent)] ring-1 ring-shell-line backdrop-blur-xl"
           data-testid="tab-bar"
         >
-          {nav.map((item) => {
+          {tabs3.map((item) => {
             const on = item.label === active && !accountPage;
             return (
               <button
@@ -532,19 +544,17 @@ export function AppShell({
               </button>
             );
           })}
-          {/* Человек: роль, профиль, «Выйти» — панелью снизу. */}
+          {/* «Меню» — последняя вкладка: остальные разделы и человек (роль, профиль, «Выйти»). */}
           <button
             type="button"
             onClick={() => setAccountPage(true)}
-            aria-label={person.name}
-            aria-current={accountPage || undefined}
-            className={'flex min-w-0 flex-1 flex-col items-center justify-center gap-0.5 rounded-[22px] py-1.5 text-[10.5px] font-medium ' + (accountPage ? 'bg-brand-50 text-brand-700' : 'text-shell-muted')}
+            aria-label="Меню"
+            aria-current={menuLit || undefined}
+            className={'flex min-w-0 flex-1 flex-col items-center justify-center gap-0.5 rounded-[22px] py-1.5 text-[10.5px] font-medium [&_svg]:size-[22px] ' + (menuLit ? 'bg-brand-50 text-brand-700' : 'text-shell-muted')}
             data-testid="side-person"
           >
-            <Avatar size="sm" className="size-[22px]">
-              <Avatar.Fallback className="text-[11px]">{person.name.slice(0, 1)}</Avatar.Fallback>
-            </Avatar>
-            <span className="max-w-full truncate">Профиль</span>
+            <Menu />
+            <span className="max-w-full truncate">Меню</span>
           </button>
         </nav>
       )}
@@ -574,9 +584,13 @@ export function AppShell({
   );
 }
 
-/** Страница аккаунта на телефоне ✳ (23.11.2026, решение владельца продукта):
-    кто вошёл, «Работать как» (роли), «Профиль» и «Выйти» — строками меню. */
-function AccountPage({ person, role, roles, onSwitchRole, onProfile, onSignOut }: {
+/** Страница «Меню» на телефоне ✳ (23.11.2026, решения владельца продукта):
+    кто вошёл, разделы, не поместившиеся в панель вкладок, «Работать как»
+    (роли), «Профиль» и «Выйти» — строками меню. */
+function AccountPage({ more, active, onNavigate, person, role, roles, onSwitchRole, onProfile, onSignOut }: {
+  more: ShellNavItem[];
+  active?: string;
+  onNavigate: (label: string) => void;
   person: { name: string; email?: string | null };
   role: { title: string };
   roles: ShellRole[];
@@ -594,6 +608,33 @@ function AccountPage({ person, role, roles, onSwitchRole, onProfile, onSignOut }
         <div className="text-[20px] font-semibold">{person.name}</div>
         {person.email && <div className="text-[13px] text-shell-muted">{person.email}</div>}
       </div>
+      {more.length > 0 && (
+        <section>
+          <p className="px-4 pb-1.5 text-[12px] font-semibold tracking-wider text-shell-faint uppercase">Разделы</p>
+          <div className="divide-y divide-shell-line overflow-hidden rounded-2xl bg-shell-side ring-1 ring-shell-line">
+            {more.map((item) => {
+              const on = item.label === active;
+              return (
+                <button
+                  key={item.label}
+                  type="button"
+                  className={row + ' [&>svg:first-child]:size-[18px] ' + (on ? 'text-brand-700' : '')}
+                  onClick={() => onNavigate(item.label)}
+                  aria-current={on || undefined}
+                  data-testid="menu-nav-item"
+                >
+                  <span className="text-shell-muted [&_svg]:size-[18px]">{item.icon}</span>
+                  <span className="min-w-0 flex-1 truncate">{item.label}</span>
+                  {!!item.badge && (
+                    <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-red-600 px-1 text-[11px] font-semibold tabular-nums text-white">{item.badge}</span>
+                  )}
+                  <ChevronRight size={18} className="text-shell-faint" />
+                </button>
+              );
+            })}
+          </div>
+        </section>
+      )}
       {roles.length > 1 && (
         <section>
           <p className="px-4 pb-1.5 text-[12px] font-semibold tracking-wider text-shell-faint uppercase">Работать как</p>

@@ -43,6 +43,9 @@ const NAV: RatingNavItem[] = [
   ['Календарь', '/calendar', <CalendarDays size={16} key="c" />],
 ];
 
+/** Второстепенные разделы: на телефоне — в «Меню», а не во вкладках ✳ (23.11.2026). */
+const SECONDARY = new Set(['Журнал', 'Калибровка']);
+
 /** Подписи разделов в полосе вкладок телефона — одним словом. */
 const TAB: Record<string, string> = { 'Рейтинг игроков': 'Рейтинг' };
 
@@ -104,7 +107,7 @@ export function RatingShell({
         role={{ title: 'Председатель ГСК' }}
         roles={workspacesOf(user)}
         person={{ name: user.name, email: user.email }}
-        nav={nav.map(([label, , icon, children]) => ({ label, short: TAB[label], icon, children: label === active && sub ? sub : children }))}
+        nav={nav.map(([label, , icon, children]) => ({ label, short: TAB[label], secondary: SECONDARY.has(label), icon, children: label === active && sub ? sub : children }))}
         active={active}
         title={title}
         actions={actions}
