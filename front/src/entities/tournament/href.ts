@@ -13,7 +13,7 @@
  *  турнира ✳ (30.10.2026). */
 export type TournamentCabinet = 'dashboard' | 'gsk' | 'chief' | 'referee' | 'coach';
 /** `entries` — «Заявлены» в кабинете старшего тренера региона ✳ (19.11.2026). */
-export type TournamentSectionSlug = 'info' | 'players' | 'referees' | 'schedule' | 'entries';
+export type TournamentSectionSlug = 'info' | 'players' | 'referees' | 'schedule' | 'tables' | 'entries';
 
 export const tournamentHref = (cabinet: TournamentCabinet, id: string, section?: TournamentSectionSlug) =>
   '/' + cabinet + '/tournaments/' + id + (section ? '/' + section : '');

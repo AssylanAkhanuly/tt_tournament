@@ -14,7 +14,7 @@
    HeroUI + Tailwind. */
 
 import { Chip } from '@heroui/react';
-import { CalendarClock, Gavel, Info, Users } from 'lucide-react';
+import { CalendarClock, Gavel, Info, LayoutGrid, Users } from 'lucide-react';
 import { useSearchParams } from 'next/navigation';
 import { useState, type ReactNode } from 'react';
 
@@ -32,14 +32,14 @@ import {
 } from '@/entities/tournament';
 import { ApplicationDrawer } from '@/features/referee-recruitment';
 import { TournamentInfoForm } from '@/features/tournament-info';
-import { ScheduleSection } from '@/features/tournament-schedule';
+import { ScheduleSection, TablesBoard } from '@/features/tournament-schedule';
 import { PlayoffMap } from '@/widgets/bracket/PlayoffMap';
 import { AddToRosterDialog, PlayerDrawer, RefereeDrawer } from '@/features/tournament-roster';
 import { RecruitmentSettings, SettingsButton } from '@/features/tournament-settings';
 import { DataTable, type DataColumn } from '@/shared/ui/DataTable';
 import { PersonAvatar } from '@/shared/ui/PersonAvatar';
 
-export type TournamentSectionId = 'info' | 'players' | 'referees' | 'schedule';
+export type TournamentSectionId = 'info' | 'players' | 'referees' | 'schedule' | 'tables';
 
 const SECTIONS: { id: TournamentSectionId; label: string; icon: ReactNode }[] = [
   // «Сведения» ✳ (29.10.2026) — первым: общее о турнире и формат.
@@ -48,6 +48,8 @@ const SECTIONS: { id: TournamentSectionId; label: string; icon: ReactNode }[] = 
   { id: 'referees', label: 'Судьи', icon: <Gavel size={16} /> },
   // «Расписание» ✳ (30.10.2026): строит главный судья, остальные видят.
   { id: 'schedule', label: 'Расписание', icon: <CalendarClock size={16} /> },
+  // «Столы» ✳ (23.11.2026): все столы карточками — что сейчас на каждом.
+  { id: 'tables', label: 'Столы', icon: <LayoutGrid size={16} /> },
 ];
 
 /** Вид раздела — подпункт в сайдбаре ✳ (30.10.2026, решение владельца продукта:
@@ -398,6 +400,7 @@ export function TournamentSection({
   recruitment?: boolean;
 }) {
   if (section === 'info') return <InfoSection id={id} />;
+  if (section === 'tables') return <TablesBoard tournamentId={id} />;
   if (section === 'schedule') return <ScheduleSection tournamentId={id} playoff={(s) => <PlayoffMap playoff={s.playoff} />} />;
   return section === 'referees' ? <Referees id={id} /> : <Players id={id} recruitment={recruitment} />;
 }
