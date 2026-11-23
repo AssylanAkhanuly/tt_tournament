@@ -141,7 +141,7 @@ function TableCard({ table, m, s }: { table: number; m: ScheduledMatch | null; s
 
 function Panel({ title, testId, children }: { title: string; testId: string; children: React.ReactNode }) {
   return (
-    <section className="flex min-h-0 flex-col overflow-hidden [&+section]:border-t [&+section]:border-neutral-200" data-testid={testId}>
+    <section className="flex min-h-0 flex-col overflow-hidden bg-white" data-testid={testId}>
       <h2 className="m-0 shrink-0 border-b border-neutral-200 px-4 py-3 text-[14px] font-semibold">{title}</h2>
       <div className="min-h-0 flex-1 md:overflow-y-auto">{children}</div>
     </section>
@@ -284,7 +284,7 @@ export function TablesBoard({ tournamentId }: { tournamentId: string }) {
           }
         />
       </div>
-      <aside className="min-h-0 border-l md:grid md:grid-rows-[minmax(0,1fr)_minmax(0,1fr)] border-neutral-200 bg-white max-md:border-t max-md:border-l-0">
+      <aside className="flex min-h-0 flex-col gap-2 border-l border-neutral-200 bg-neutral-100 max-md:border-t max-md:border-l-0 md:grid md:grid-rows-[minmax(0,1fr)_minmax(0,1fr)]">
         <Panel title="Ближайшие матчи" testId="tables-upcoming">
           {upcoming.length ? (
             <ul className="m-0 list-none p-0">
