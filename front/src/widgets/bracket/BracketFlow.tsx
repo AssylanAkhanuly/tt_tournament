@@ -223,6 +223,21 @@ function FocusMine({ matchId }: { matchId?: string }) {
   return null;
 }
 
+/** Крупный план начала сетки: первый круг сверху слева в читаемом масштабе —
+    там уже стоят игроки (или метки «A1»); общий план большой сетки нечитаем. */
+function FocusStart({ matchId, zoom }: { matchId?: string; zoom: number }) {
+  const flow = useReactFlow();
+  useEffect(() => {
+    if (!matchId) return;
+    const t = setTimeout(() => {
+      const n = flow.getNode(matchId);
+      if (n) void flow.setViewport({ x: -n.position.x * zoom + 20, y: -n.position.y * zoom + 20, zoom }, { duration: 0 });
+    }, 60);
+    return () => clearTimeout(t);
+  }, [flow, matchId, zoom]);
+  return null;
+}
+
 export function BracketFlow({
   bracket,
   minZoom = 0.4,
@@ -232,6 +247,8 @@ export function BracketFlow({
   controls = true,
   focusMine = false,
   tone = 'light',
+  still = false,
+  focusStart,
 }: {
   bracket: Bracket;
   minZoom?: number; // ниже — чтобы уместить всю сетку в узком контейнере (напр. телефон)
@@ -250,8 +267,13 @@ export function BracketFlow({
       системы. Тёмный остался как выбор — он уместен на самом табло, где сетку
       показывают залу поверх видео. */
   tone?: Tone;
+  /** Только картинка ✳ (23.11.2026, обзор турнира): ни перетаскивания, ни
+      масштаба, ни кнопок; высота — по контейнеру, а не экрану. */
+  still?: boolean;
+  /** Открыть крупным планом начала сетки с этим масштабом, а не всей сеткой. */
+  focusStart?: number;
 }) {
-  const { nodes, connectorD, mineConnectorD, extent, mineMatchId } = useMemo(() => {
+  const { nodes, connectorD, mineConnectorD, extent, mineMatchId, startId } = useMemo(() => {
     const layout = layoutSingleElimination(bracket, {
       nodeW: NODE_W,
       nodeH: NODE_H,
@@ -317,11 +339,14 @@ export function BracketFlow({
       [right + m, bottom + m],
     ];
 
-    return { nodes: ns, connectorD, mineConnectorD, extent, mineMatchId };
+    const firstRound = Math.min(...bracket.matches.map((m) => m.round));
+    const startId = bracket.matches.filter((m) => m.round === firstRound).sort((x, y) => x.slot - y.slot)[0]?.id;
+
+    return { nodes: ns, connectorD, mineConnectorD, extent, mineMatchId, startId };
   }, [bracket, minePlayerId, tone]);
 
   return (
-    <div className="flex h-screen flex-col bg-[color:var(--c-screen-1,#0c1439)] text-[color:var(--text)]">
+    <div className={cx('flex flex-col bg-[color:var(--c-screen-1,#0c1439)] text-[color:var(--text)]', still ? 'pointer-events-none h-full' : 'h-screen')}>
       <div className={cx(CANVAS, CANVAS_TONE[tone])}>
         <ReactFlow
           nodes={nodes}
@@ -336,6 +361,12 @@ export function BracketFlow({
           nodesDraggable={false}
           nodesConnectable={false}
           elementsSelectable={false}
+          panOnDrag={!still}
+          panOnScroll={false}
+          zoomOnScroll={!still}
+          zoomOnPinch={!still}
+          zoomOnDoubleClick={!still}
+          preventScrolling={!still}
           proOptions={{ hideAttribution: true }}
         >
           <ViewportPortal>
@@ -363,7 +394,8 @@ export function BracketFlow({
           </ViewportPortal>
           <Background variant={BackgroundVariant.Dots} gap={24} size={1} color="currentColor" />
           {focusMine && <FocusMine matchId={mineMatchId} />}
-          {controls && <Controls showInteractive={false} />}
+          {focusStart && <FocusStart matchId={startId} zoom={focusStart} />}
+          {controls && !still && <Controls showInteractive={false} />}
         </ReactFlow>
       </div>
     </div>

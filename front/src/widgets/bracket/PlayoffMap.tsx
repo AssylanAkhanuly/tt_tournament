@@ -22,7 +22,7 @@ const toSide = (s: PlayoffSide | null): Side | null =>
     placeholder: !s.player,
   };
 
-export function PlayoffMap({ playoff }: { playoff: PlayoffData }) {
+export function PlayoffMap({ playoff, still = false }: { playoff: PlayoffData; still?: boolean }) {
   const bracket = useMemo<Bracket>(
     () => ({
       format: 'single_elimination',
@@ -45,7 +45,7 @@ export function PlayoffMap({ playoff }: { playoff: PlayoffData }) {
     );
   return (
     <div className="min-h-0 flex-1" data-testid="playoff-map">
-      <BracketFlow bracket={bracket} />
+      <BracketFlow bracket={bracket} still={still} focusStart={still ? 0.85 : undefined} />
     </div>
   );
 }
