@@ -28,7 +28,8 @@
     "react": "19.2.4",
     "react-dom": "19.2.4",
     "react-easy-crop": "^5.4.1",
-    "react-i18next": "^15.7.4"
+    "react-i18next": "^15.7.4",
+    "svg-dotted-map": "^2.1.0"
   },
   "devDependencies": {
     "@playwright/test": "^1.62.0",
