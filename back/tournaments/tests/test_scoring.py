@@ -119,6 +119,35 @@ def test_games_are_public_at_once_and_match_score_follows_games(world):
     assert (gp.wins, gp.points, gp.diff) == (1, 2, 2)
 
 
+def test_referee_fixes_a_recorded_game_before_submit(world):
+    """Табло: судья переключается на сыгранную партию и правит её счёт ✳
+    (23.11.2026) — счёт матча пересчитывается, правила те же."""
+    m, ref = world["m"], world["m"].referee
+    act(ref, m, action="game", a=11, b=7)
+    act(ref, m, action="game", a=9, b=11)
+    d = act(ref, m, action="set_game", index=0, a=8, b=11).json()
+    assert d["games"] == [[8, 11], [9, 11]] and (d["score1"], d["score2"]) == (0, 2)
+    assert act(ref, m, action="set_game", index=1, a=11, b=10).status_code == 400  # не по правилам
+    assert act(ref, m, action="set_game", index=5, a=11, b=3).status_code == 400  # такой партии нет
+    # индекс следующей партии — то же, что «записать партию»
+    d = act(ref, m, action="set_game", index=2, a=3, b=11).json()
+    assert (d["score1"], d["score2"]) == (0, 3)
+    # 2 : 2, затем правка второй партии решила бы матч до четвёртой — отказ
+    act(ref, m, action="set_game", index=0, a=11, b=8)
+    act(ref, m, action="set_game", index=2, a=11, b=9)
+    act(ref, m, action="game", a=9, b=11)
+    assert api_for(ref).get(url(m)).json()["games"] == [[11, 8], [9, 11], [11, 9], [9, 11]]
+    r = act(ref, m, action="set_game", index=1, a=11, b=9)
+    assert r.status_code == 400 and "лишняя" in r.json()["detail"]
+    act(ref, m, action="game", a=11, b=5)
+    assert act(ref, m, action="submit").status_code == 200
+    assert act(ref, m, action="set_game", index=0, a=5, b=11).status_code == 400  # подтверждён
+    other = world["referees"][0] if world["referees"][0] != ref else world["referees"][1]
+    m2 = GroupMatch.objects.filter(group__tournament=world["t"]).exclude(referee=other).exclude(id=m.id).first()
+    if m2:
+        assert act(other, m2, action="set_game", index=0, a=11, b=3).status_code == 403
+
+
 def test_result_only_short_path(world):
     m, ref = world["m"], world["m"].referee
     assert act(ref, m, action="submit", score1=3, score2=3).status_code == 400

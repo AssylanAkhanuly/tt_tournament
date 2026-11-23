@@ -18,7 +18,14 @@
 04.11.2026 `[2:03:04–2:03:33]`) — `correct`: партии или итог заново, пока
 турнир не завершён.
 
-Чего здесь нет: счёта по очкам (iScoring, Э9.3 «По очкам»), тайм-аутов и
+Пока результат не подтверждён, судья стола может переключиться на любую
+сыгранную партию и поправить её счёт (`set_game`, 23.11.2026): цепочка партий
+проверяется заново — правка не может решить матч раньше последней партии.
+Очки идущей партии судья набирает на табло «+» / «−»; на сервер они уходят
+только партией целиком.
+
+Чего здесь нет: хранения очков идущей партии (они живут на телефоне судьи до
+записи партии), счёта по очкам (iScoring, Э9.3 «По очкам»), тайм-аутов и
 карточек, неявки со стола, «запросить правку», матчей сетки плей-офф (судей на
 них расписание пока не сажает), работы без сети."""
 from django.db import transaction
@@ -65,9 +72,10 @@ def _clean_total(score1, score2, n: int) -> tuple:
     return s1, s2
 
 
-def _clean_games(games, n: int) -> list:
-    """Партии целиком (для правки главным судьёй): каждая по правилам, матч решён
-    последней партией, лишних партий нет."""
+def _clean_games(games, n: int, finished: bool = True) -> list:
+    """Партии целиком: каждая по правилам, лишних партий после решённого матча
+    нет. `finished` — матч обязан быть решён последней партией (правка главным
+    судьёй); без него — идущий матч (правка партии судьёй стола)."""
     out, s1, s2 = [], 0, 0
     for g in games or []:
         try:
@@ -80,7 +88,7 @@ def _clean_games(games, n: int) -> list:
             raise ScoringError("Партия %d : %d не по правилам: до 11, при 10 : 10 — до разрыва в два." % (a, b))
         out.append([a, b])
         s1, s2 = tally(out)
-    if out and not _decided(s1, s2, n):
+    if finished and out and not _decided(s1, s2, n):
         raise ScoringError("Матч до %d побед — не доигран." % n)
     return out
 
@@ -242,6 +250,32 @@ def record_game(match: GroupMatch, user, a, b) -> GroupMatch:
     if not valid_game(a, b):
         raise ScoringError("Партия %d : %d не по правилам: до 11, при 10 : 10 — до разрыва в два." % (a, b))
     games.append([a, b])
+    match.games = games
+    match.score1, match.score2 = tally(games)
+    match.status = GroupMatch.IN_PROGRESS
+    match.save(update_fields=["games", "score1", "score2", "status"])
+    return match
+
+
+@transaction.atomic
+def set_game(match: GroupMatch, user, index, a, b) -> GroupMatch:
+    """Счёт партии по номеру ✳ (23.11.2026, табло судьи: переключиться на
+    сыгранную партию и поправить её). Номер следующей партии — то же, что
+    «записать партию». Пока результат не подтверждён; вся цепочка партий —
+    снова по правилам (правка не может решить матч раньше последней партии)."""
+    t = _check_referee(match, user)
+    games = list(match.games or [])
+    try:
+        i = int(index)
+    except (TypeError, ValueError):
+        raise ScoringError("Номер партии — число.")
+    if not 0 <= i <= len(games):
+        raise ScoringError("Такой партии нет.")
+    if i == len(games):
+        games.append([a, b])
+    else:
+        games[i] = [a, b]
+    games = _clean_games(games, t.games_to_win, finished=False)
     match.games = games
     match.score1, match.score2 = tally(games)
     match.status = GroupMatch.IN_PROGRESS

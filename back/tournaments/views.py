@@ -2156,7 +2156,7 @@ class MyTableView(APIView):
 class MatchScoringView(APIView):
     """GET `/api/tournaments/<pk>/group-matches/<id>/scoring/` — матч со счётом
     по партиям (результаты публичны — любому вошедшему). POST `{action, …}`:
-    `start` · `game {a, b}` · `undo` · `submit {score1?, score2?}` — судья стола
+    `start` · `game {a, b}` · `set_game {index, a, b}` · `undo` · `submit {score1?, score2?}` — судья стола
     матча; `correct {games? | score1, score2}` — главный судья турнира."""
 
     permission_classes = [IsAuthenticated]
@@ -2183,6 +2183,8 @@ class MatchScoringView(APIView):
                 scoring.start(m, request.user)
             elif action == "game":
                 scoring.record_game(m, request.user, d.get("a"), d.get("b"))
+            elif action == "set_game":
+                scoring.set_game(m, request.user, d.get("index"), d.get("a"), d.get("b"))
             elif action == "undo":
                 scoring.undo_game(m, request.user)
             elif action == "submit":
