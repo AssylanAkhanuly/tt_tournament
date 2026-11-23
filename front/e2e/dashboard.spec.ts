@@ -351,7 +351,7 @@ test('«Добавить» в разделе турнира: выбор в вы�
   });
   expect(r.status(), await r.text()).toBe(201);
   const t = (await r.json()) as { id: string };
-  await page.goto(`/dashboard/tournaments/${t.id}/players`);
+  await page.goto(`/dashboard/tournaments/${t.id}/players?view=table`);
   await expect(page.getByTestId('table-empty')).toHaveText('Участников нет');
 
   // Спортсмены: один шаг — отметили в выдаче, «Добавить» в подвале.
@@ -509,6 +509,9 @@ test('внутри турнира сайдбар — разделы турнир
   await page.waitForURL((url) => url.pathname === '/dashboard/tournaments/' + demo.id + '/players');
   await expect(page.getByRole('button', { name: 'Спортсмены', exact: true })).toHaveAttribute('aria-current', 'true');
 
+  // По умолчанию — карточки, по одной на участника; строки — в «Таблице».
+  await expect(page.getByTestId('participant-card')).toHaveCount(Math.min(24, demo.participant_count));
+  await page.getByTestId('participants-view-table').click();
   const rows = page.getByTestId('participant-row');
   await expect(rows).toHaveCount(demo.participant_count);
   expect(await разделы.evaluateAll((els) => els.map((e) => Math.round(e.getBoundingClientRect().y)))).toEqual(местаДо);
@@ -618,7 +621,7 @@ test('у председателя ГСК тот же «Календарь»: с�
   await page.waitForURL(/\/gsk\/tournaments\/[0-9a-f-]{36}\/info$/);
   await expect(page.getByTestId('params-name')).toHaveValue('[demo] Чемпионат Республики Казахстан');
   await page.getByRole('button', { name: 'Спортсмены', exact: true }).click();
-  await expect(page.getByTestId('participant-row')).toHaveCount(8);
+  await expect(page.getByTestId('participant-card')).toHaveCount(8);
   await expect(page.getByRole('button', { name: 'Спортсмены', exact: true })).toHaveAttribute('aria-current', 'true');
   await page.getByTestId('home-link').click();
   await page.waitForURL((url) => url.pathname === '/calendar');
@@ -825,7 +828,7 @@ test('«Спортсмены»: фото-заглушка в строке, ка�
   ).json()) as { id: string }[];
   expect((await page.request.post(`/api/tournaments/${t.id}/participants/`, { data: { user_id: игрок.id } })).status()).toBe(201);
 
-  await page.goto(`/dashboard/tournaments/${t.id}/players`);
+  await page.goto(`/dashboard/tournaments/${t.id}/players?view=table`);
   const строка = page.getByTestId('participant-row');
   await expect(строка).toHaveCount(1);
   // Фото нет — в строке силуэт-заглушка.

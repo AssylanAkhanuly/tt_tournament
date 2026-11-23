@@ -13,10 +13,10 @@
    (`features/referee-recruitment`); вкладка — в адресе (`?tab=applications`).
    HeroUI + Tailwind. */
 
-import { Chip } from '@heroui/react';
-import { CalendarClock, Gavel, Info, LayoutGrid, Users } from 'lucide-react';
-import { useSearchParams } from 'next/navigation';
-import { useState, type ReactNode } from 'react';
+import { Chip, ToggleButton, ToggleButtonGroup } from '@heroui/react';
+import { CalendarClock, Gavel, Info, LayoutGrid, List, Users } from 'lucide-react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { useMemo, useState, type ReactNode } from 'react';
 
 import {
   REFEREE_POSITIONS,
@@ -37,6 +37,7 @@ import { AddToRosterDialog, PlayerDrawer, RefereeDrawer } from '@/features/tourn
 import { RecruitmentSettings, SettingsButton } from '@/features/tournament-settings';
 import { DataTable, type DataColumn } from '@/shared/ui/DataTable';
 import { PersonAvatar } from '@/shared/ui/PersonAvatar';
+import { RatingPlayerCard } from '@/widgets/rating';
 
 import { TournamentDashboard } from './TournamentDashboard';
 
@@ -171,10 +172,30 @@ const REFEREE_COLUMNS: DataColumn<TournamentReferee>[] = [
 
 /** «Спортсмены»: состав турнира. Как у «Судей»: справа в полосе «Настройки»
  *  (приём заявок игроков) и «Добавить», щелчок по строке — карточка справа. */
+/** «Спортсмены» — карточками по умолчанию ✳ (23.11.2026, решение владельца
+    продукта): карточки рейтинг-листа (`RatingPlayerCard`) по убыванию текущего
+    рейтинга, номер — место в составе по рейтингу; таблица — `?view=table`.
+    Переключатель — справа в полосе над списком, как у «Столов». */
 function Players({ id, recruitment }: { id: string; recruitment: boolean }) {
   const participants = useParticipants(id);
   const tournament = useTournament(id);
-  const rows = participants.data ?? [];
+  const params = useSearchParams();
+  const router = useRouter();
+  const asTable = params.get('view') === 'table';
+  const setView = (v: string) => {
+    const next = new URLSearchParams(params.toString());
+    if (v === 'table') next.set('view', 'table');
+    else next.delete('view');
+    const qs = next.toString();
+    router.replace(qs ? '?' + qs : '?', { scroll: false });
+  };
+  const all = participants.data;
+  // В карточках — по убыванию рейтинга; место считается по всему составу, а не по странице.
+  const rows = useMemo(
+    () => (asTable ? (all ?? []) : [...(all ?? [])].sort((a, b) => (b.rating ?? -1) - (a.rating ?? -1) || a.name.localeCompare(b.name, 'ru'))),
+    [all, asTable],
+  );
+  const place = useMemo(() => new Map(rows.map((p, i) => [p.id, i + 1])), [rows]);
   const [open, setOpen] = useState<number | null>(null);
   return (
     <>
@@ -187,8 +208,44 @@ function Players({ id, recruitment }: { id: string; recruitment: boolean }) {
         columns={PLAYER_COLUMNS}
         getId={(p) => String(p.id)}
         search={{ placeholder: 'Фамилия или имя', text: (p) => p.name, testId: 'participants-search' }}
+        pageSize={asTable ? undefined : 24}
+        cards={
+          asTable
+            ? undefined
+            : (shown) => (
+                <div className="grid grid-cols-1 gap-4 bg-neutral-50 p-5 max-md:p-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4" data-testid="participant-cards">
+                  {shown.map((p) => (
+                    <RatingPlayerCard
+                      key={p.id}
+                      r={{ userId: p.userId, name: p.name, value: p.rating, region: p.region, birthYear: p.birthYear, sex: p.sex }}
+                      place={place.get(p.id) ?? 0}
+                      onOpen={() => setOpen(p.id)}
+                      testId="participant-card"
+                    />
+                  ))}
+                </div>
+              )
+        }
         actions={
           <>
+            <ToggleButtonGroup
+              size="sm"
+              aria-label="Вид"
+              selectionMode="single"
+              disallowEmptySelection
+              selectedKeys={[asTable ? 'table' : 'cards']}
+              onSelectionChange={(keys) => {
+                const v = [...keys][0];
+                if (v) setView(String(v));
+              }}
+            >
+              <ToggleButton id="cards" aria-label="Карточки" data-testid="participants-view-cards">
+                <LayoutGrid size={16} />
+              </ToggleButton>
+              <ToggleButton id="table" aria-label="Таблица" data-testid="participants-view-table">
+                <List size={16} />
+              </ToggleButton>
+            </ToggleButtonGroup>
             {!recruitment ? null : tournament.data ? (
               <RecruitmentSettings
                 tournamentId={id}

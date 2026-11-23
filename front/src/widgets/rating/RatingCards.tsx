@@ -19,7 +19,7 @@ function split(name: string): { surname: string; rest: string } {
 /** Карточка спортсмена как в рейтинг-листе — общая для листа и обзора турнира ✳ (23.11.2026). */
 export type RatingCardData = { userId: string; name: string; value: number | null; region: string; birthYear: number | null; sex: string };
 
-export function RatingPlayerCard({ r, place, onOpen }: { r: RatingCardData; place: number; onOpen: () => void }) {
+export function RatingPlayerCard({ r, place, onOpen, testId = 'rating-card' }: { r: RatingCardData; place: number; onOpen: () => void; testId?: string }) {
   const { surname, rest } = split(r.name);
   const facts: [string, string][] = [
     ['Рейтинг', r.value !== null ? num2(r.value) : '—'],
@@ -30,7 +30,7 @@ export function RatingPlayerCard({ r, place, onOpen }: { r: RatingCardData; plac
       type="button"
       onClick={onOpen}
       className="group relative flex h-36 min-w-0 overflow-hidden rounded-2xl border border-neutral-200/80 bg-white text-left hover:border-brand-200 hover:shadow-md"
-      data-testid="rating-card"
+      data-testid={testId}
       data-player={r.name}
     >
       <span className="relative w-28 shrink-0 overflow-hidden bg-qtt-peach">
