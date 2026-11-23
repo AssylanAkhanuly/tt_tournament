@@ -4,15 +4,18 @@
    — экран «Route Optimization» Truck&Co). Сверху — показатели турнира. Ниже
    слева — карта Казахстана точками: место турнира выбирают щелчком по городу
    (сохраняется сразу, как в форме); справа — параметры турнира строками,
+   над ними — даты календарём-диапазоном (выбор сохраняется сразу);
    «Изменить» открывает прежнюю форму сведений в широкой панели — с проектом
    протокола и его выгрузкой в PDF. Ниже — участники лентой карточек (лицо, группа и место, победы
    и поражения), ещё ниже — расписание лентой времени: строка — стол, блок —
    матч (сыгран — залит, идёт — с обводкой, ждёт — светлый), красная черта —
    «сейчас». Данные — сведения, состав и снимок расписания; считает сервер. */
 
-import { Button, Chip, Drawer, Spinner } from '@heroui/react';
+import { Button, Chip, Drawer, I18nProvider, RangeCalendar, Spinner } from '@heroui/react';
+import { parseDate } from '@internationalized/date';
 import { ChevronLeft, ChevronRight, Pencil } from 'lucide-react';
-import { useMemo, useRef, useState, type ReactNode } from 'react';
+import { usePathname, useRouter } from 'next/navigation';
+import { useMemo, useState, type ReactNode } from 'react';
 
 import {
   FORMAT_LABEL,
@@ -23,15 +26,14 @@ import {
   useParticipants,
   useSchedule,
   useTournament,
-  type GroupStanding,
   type Schedule,
   type ScheduledMatch,
   type TournamentSummary,
 } from '@/entities/tournament';
 import { TournamentInfoForm, infoOf } from '@/features/tournament-info';
-import { placeholderFigure } from '@/shared/lib/figure';
 import { shortName } from '@/shared/lib/name';
 import { SideContent, SideDialog } from '@/shared/ui/SidePanel';
+import { RatingPlayerCard, type RatingCardData } from '@/widgets/rating';
 
 import { KzDotMap } from './KzDotMap';
 
@@ -65,6 +67,45 @@ const pill = (text: string, tone: 'brand' | 'green' | 'neutral' = 'brand') => (
     {text}
   </span>
 );
+
+// ── даты: календарь-диапазон ─────────────────────────────────────────────────
+
+/** Даты турнира — календарь-диапазон HeroUI ✳ (23.11.2026, решение владельца
+    продукта): выбранный диапазон сохраняется сразу, как место на карте. */
+function Dates({ t, onPick, error }: { t: TournamentSummary; onPick: (startsOn: string, endsAt: string) => void; error: string | null }) {
+  const start = t.startsAt ? dayKey(t.startsAt) : null;
+  const value = start ? { start: parseDate(start), end: parseDate(t.endsAt ?? start) } : null;
+  return (
+    <section className={CARD + ' p-4'} data-testid="overview-dates">
+      <div className="mb-2 flex items-center justify-between gap-3 px-1">
+        <h2 className="m-0 text-[17px] font-semibold">Даты</h2>
+        <span className="text-[13px] text-neutral-500" data-testid="overview-dates-label">
+          {start ? ruDate(start) + (t.endsAt && t.endsAt !== start ? ' — ' + ruDate(t.endsAt) : '') : 'Не выбраны'}
+        </span>
+      </div>
+      <I18nProvider locale="ru-RU">
+        <RangeCalendar
+          aria-label="Даты турнира"
+          className="w-full"
+          value={value}
+          defaultFocusedValue={value?.start}
+          onChange={(v) => v && onPick(v.start.toString(), v.end.toString())}
+        >
+          <RangeCalendar.Header>
+            <RangeCalendar.Heading />
+            <RangeCalendar.NavButton slot="previous" />
+            <RangeCalendar.NavButton slot="next" />
+          </RangeCalendar.Header>
+          <RangeCalendar.Grid className="w-full">
+            <RangeCalendar.GridHeader>{(d) => <RangeCalendar.HeaderCell>{d}</RangeCalendar.HeaderCell>}</RangeCalendar.GridHeader>
+            <RangeCalendar.GridBody>{(date) => <RangeCalendar.Cell date={date} />}</RangeCalendar.GridBody>
+          </RangeCalendar.Grid>
+        </RangeCalendar>
+      </I18nProvider>
+      {error && <p className="m-0 mt-2 px-1 text-[12px] text-red-600">{error}</p>}
+    </section>
+  );
+}
 
 // ── параметры справа ─────────────────────────────────────────────────────────
 
@@ -106,52 +147,25 @@ function Params({ t, onEdit }: { t: TournamentSummary; onEdit: () => void }) {
   );
 }
 
-// ── участники ────────────────────────────────────────────────────────────────
+// ── лучшие по рейтингу ───────────────────────────────────────────────────────
 
-type PlayerCard = { id: string; name: string; avatar: string | null; group: string | null; standing: GroupStanding | null; rating: number | null };
-
-function Players({ players }: { players: PlayerCard[] }) {
-  const strip = useRef<HTMLDivElement>(null);
-  const scroll = (d: number) => strip.current?.scrollBy({ left: d * strip.current.clientWidth * 0.8, behavior: 'smooth' });
+/** Пять сильнейших участников по текущему рейтингу — карточками рейтинг-листа;
+    «Все спортсмены» — раздел «Спортсмены» турнира ✳ (23.11.2026). */
+function TopPlayers({ players, allHref }: { players: RatingCardData[]; allHref: string }) {
+  const router = useRouter();
   return (
-    <section className="flex items-center gap-2" data-testid="overview-players">
-      <Button isIconOnly size="sm" variant="secondary" className="shrink-0 rounded-full max-md:hidden" aria-label="Назад" onPress={() => scroll(-1)}>
-        <ChevronLeft size={16} />
-      </Button>
-      <div ref={strip} className="flex min-w-0 flex-1 snap-x gap-3 overflow-x-auto pb-1 [scrollbar-width:none]">
-        {players.map((p) => {
-          const games = p.standing ? p.standing.wins + p.standing.losses : 0;
-          const share = games ? p.standing!.wins / games : 0;
-          return (
-            <div key={p.id} className={CARD + ' flex w-60 shrink-0 snap-start flex-col gap-3 p-4'} data-testid="overview-player">
-              <div className="flex items-center gap-2">
-                {p.group && <span className="text-[13px] font-semibold">Группа {p.group}</span>}
-                {p.standing && p.standing.place ? pill('место ' + p.standing.place) : pill('—', 'neutral')}
-              </div>
-              <div className="flex items-center gap-3">
-                <span className="block size-10 shrink-0 overflow-hidden rounded-full bg-qtt-peach">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={p.avatar ?? placeholderFigure(p.id)} alt="" className={'size-full object-cover ' + (p.avatar ? '' : 'origin-[50%_12%] scale-[2.2] object-top')} />
-                </span>
-                <div className="min-w-0 flex-1">
-                  <div className="truncate text-[14px] font-semibold" title={p.name}>{shortName(p.name)}</div>
-                  {p.rating !== null && <div className="text-[12px] text-neutral-500">рейтинг {p.rating.toFixed(2).replace('.', ',')}</div>}
-                </div>
-                <div className="text-right">
-                  <div className="text-[15px] font-semibold tabular-nums">{p.standing ? p.standing.wins + '–' + p.standing.losses : '—'}</div>
-                  <div className="text-[11px] text-neutral-500">побед</div>
-                </div>
-              </div>
-              <div className="h-1.5 overflow-hidden rounded-full bg-neutral-100" aria-hidden>
-                <div className="h-full rounded-full bg-brand-600" style={{ width: Math.round(share * 100) + '%' }} />
-              </div>
-            </div>
-          );
-        })}
+    <section className="flex flex-col gap-3" data-testid="overview-players">
+      <div className="flex items-center justify-between gap-3">
+        <h2 className="m-0 text-[17px] font-semibold">Лучшие по рейтингу</h2>
+        <Button size="sm" variant="secondary" className="rounded-full" onPress={() => router.push(allHref)} data-testid="overview-players-all">
+          Все спортсмены <ChevronRight size={14} />
+        </Button>
       </div>
-      <Button isIconOnly size="sm" variant="secondary" className="shrink-0 rounded-full max-md:hidden" aria-label="Вперёд" onPress={() => scroll(1)}>
-        <ChevronRight size={16} />
-      </Button>
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-5">
+        {players.map((p, i) => (
+          <RatingPlayerCard key={p.userId} r={p} place={i + 1} onOpen={() => router.push('/rating/' + p.userId)} />
+        ))}
+      </div>
     </section>
   );
 }
@@ -262,16 +276,19 @@ export function TournamentDashboard({ id }: { id: string }) {
   const schedule = useSchedule(id);
   const [editing, setEditing] = useState(false);
   const [placeError, setPlaceError] = useState<string | null>(null);
+  const [datesError, setDatesError] = useState<string | null>(null);
   const t = tournament.data;
   const s = schedule.data;
 
-  const players = useMemo<PlayerCard[]>(() => {
-    const standing = new Map<string, { group: string; standing: GroupStanding }>();
-    s?.groups.forEach((g) => g.players.forEach((p) => standing.set(p.id, { group: g.name, standing: p.standing })));
-    return (participants.data ?? [])
-      .map((p) => ({ id: p.userId, name: p.name, avatar: p.avatar, group: standing.get(p.userId)?.group ?? null, standing: standing.get(p.userId)?.standing ?? null, rating: p.ratingBefore }))
-      .sort((a, b) => (a.group ?? '~').localeCompare(b.group ?? '~') || (a.standing?.place || 99) - (b.standing?.place || 99) || a.name.localeCompare(b.name, 'ru'));
-  }, [participants.data, s]);
+  const top = useMemo<RatingCardData[]>(
+    () =>
+      (participants.data ?? [])
+        .map((p) => ({ userId: p.userId, name: p.name, value: p.rating, region: p.region, birthYear: p.birthYear, sex: p.sex }))
+        .sort((a, b) => (b.value ?? -1) - (a.value ?? -1) || a.name.localeCompare(b.name, 'ru'))
+        .slice(0, 5),
+    [participants.data],
+  );
+  const allHref = usePathname().replace(/\/info$/, '/players');
 
   if (tournament.error) return <p className="p-6 text-[13px] text-red-600">{tournament.error}</p>;
   if (!t) return <Spinner className="m-auto" />;
@@ -281,6 +298,15 @@ export function TournamentDashboard({ id }: { id: string }) {
   const live = s?.matches.filter((m) => m.status === 'in_progress').length ?? 0;
   const tables = s ? Math.max(s.settings.tables, ...s.matches.map((m) => m.table ?? 0)) : 0;
 
+  const pickDates = async (startsOn: string, endsAt: string) => {
+    setDatesError(null);
+    try {
+      await updateTournament(t.id, { ...infoOf(t), startsOn, endsAt });
+      tournament.reload();
+    } catch (e) {
+      setDatesError((e as Error).message);
+    }
+  };
   const pickPlace = async (place: { region: string; city: string }) => {
     setPlaceError(null);
     try {
@@ -302,20 +328,26 @@ export function TournamentDashboard({ id }: { id: string }) {
               <Kpi label="Идут сейчас" value={live} chip={live ? pill('live') : undefined} testId="kpi-live" />
               <Kpi label="Столов" value={tables || '—'} chip={s ? pill(s.groups.length + ' групп', 'neutral') : undefined} testId="kpi-tables" />
             </div></div>
-            <div className={CARD + ' relative h-[380px] overflow-hidden bg-neutral-50 p-4 max-md:h-[260px]'}>
-              <KzDotMap region={t.region} city={t.city} onPick={(p) => void pickPlace(p)} />
-              <div className="absolute right-4 bottom-4 rounded-xl border border-neutral-200 bg-white px-3 py-2 text-[12px] shadow-sm" data-testid="overview-place">
-                <div className="text-neutral-500">Место проведения</div>
-                <div className="font-semibold">{placeLabel(t) || 'Выберите город на карте'}</div>
-                {t.venue && <div className="text-neutral-500">{t.venue}</div>}
+            {/* Карта и даты — рядом: правая колонка (параметры) по высоте вровень с ними. */}
+            <div className="grid flex-1 gap-5 lg:grid-cols-[minmax(0,1fr)_300px]">
+              <div className={CARD + ' relative min-h-[340px] overflow-hidden bg-neutral-50 p-4 max-md:min-h-[240px]'}>
+                <div className="absolute inset-4 bottom-16">
+                  <KzDotMap region={t.region} city={t.city} onPick={(p) => void pickPlace(p)} />
+                </div>
+                <div className="absolute right-4 bottom-4 rounded-xl border border-neutral-200 bg-white px-3 py-2 text-[12px] shadow-sm" data-testid="overview-place">
+                  <div className="text-neutral-500">Место проведения</div>
+                  <div className="font-semibold">{placeLabel(t) || 'Выберите город на карте'}</div>
+                  {t.venue && <div className="text-neutral-500">{t.venue}</div>}
+                </div>
+                {placeError && <p className="absolute top-3 left-4 m-0 rounded-lg bg-red-50 px-3 py-1.5 text-[12px] text-red-700">{placeError}</p>}
               </div>
-              {placeError && <p className="absolute top-3 left-4 m-0 rounded-lg bg-red-50 px-3 py-1.5 text-[12px] text-red-700">{placeError}</p>}
+              <Dates t={t} onPick={(a, b) => void pickDates(a, b)} error={datesError} />
             </div>
           </div>
           <Params t={t} onEdit={() => setEditing(true)} />
         </div>
 
-        {players.length > 0 && <Players players={players} />}
+        {top.length > 0 && <TopPlayers players={top} allHref={allHref} />}
         {s && s.status !== 'none' ? (
           <Timeline s={s} />
         ) : (

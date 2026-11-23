@@ -123,6 +123,11 @@ export type TournamentParticipant = {
   /** Рейтинг до турнира и изменение за него; у неучтённого турнира — null. */
   ratingBefore: number | null;
   ratingChange: number | null;
+  /** Текущий рейтинг и рейтинговая карточка ✳ (23.11.2026); нет карточки — null и пусто. */
+  rating: number | null;
+  region: string;
+  sex: string;
+  birthYear: number | null;
 };
 
 /** Судейские должности турнира ✳ (28.10.2026, ТЗ §2, роли 6–9): главный судья,
@@ -199,10 +204,11 @@ type Raw = {
 
 type RawParticipant = {
   id: number;
-  user: { id: string; name: string; avatar: string | null };
+  user: { id: string; name: string; avatar: string | null; rating?: string | null };
   is_absent: boolean;
   rating_before: string | null;
   rating_change: string | null;
+  profile?: { region: string; sex: string; birth_year: number | null } | null;
 };
 
 const toSummary = (t: Raw): TournamentSummary => ({
@@ -332,6 +338,10 @@ export async function fetchParticipants(id: string): Promise<TournamentParticipa
     absent: p.is_absent,
     ratingBefore: num(p.rating_before),
     ratingChange: num(p.rating_change),
+    rating: num(p.user.rating ?? null),
+    region: p.profile?.region ?? '',
+    sex: p.profile?.sex ?? '',
+    birthYear: p.profile?.birth_year ?? null,
   }));
 }
 

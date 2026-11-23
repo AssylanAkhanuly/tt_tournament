@@ -16,10 +16,13 @@ function split(name: string): { surname: string; rest: string } {
   return { surname: surname.toUpperCase(), rest: rest.join(' ') };
 }
 
-function RatingCard({ r, place, onOpen }: { r: RatingProfile; place: number; onOpen: () => void }) {
+/** Карточка спортсмена как в рейтинг-листе — общая для листа и обзора турнира ✳ (23.11.2026). */
+export type RatingCardData = { userId: string; name: string; value: number | null; region: string; birthYear: number | null; sex: string };
+
+export function RatingPlayerCard({ r, place, onOpen }: { r: RatingCardData; place: number; onOpen: () => void }) {
   const { surname, rest } = split(r.name);
   const facts: [string, string][] = [
-    ['Рейтинг', num2(r.value)],
+    ['Рейтинг', r.value !== null ? num2(r.value) : '—'],
     ['Год', r.birthYear ? String(r.birthYear) : '—'],
   ];
   return (
@@ -62,7 +65,7 @@ export function RatingCards({ rows, first, onOpen }: { rows: RatingProfile[]; fi
   return (
     <div className="grid gap-4 bg-neutral-100 p-4 sm:grid-cols-2 2xl:grid-cols-3" data-testid="rating-cards">
       {rows.map((r, i) => (
-        <RatingCard key={r.userId} r={r} place={first + i + 1} onOpen={() => onOpen(r.userId)} />
+        <RatingPlayerCard key={r.userId} r={r} place={first + i + 1} onOpen={() => onOpen(r.userId)} />
       ))}
     </div>
   );
