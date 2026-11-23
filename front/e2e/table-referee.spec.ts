@@ -129,6 +129,14 @@ test('судья стола: мой стол → ввод счёта по пар
     await expect(page.getByTestId('board-name-left')).toContainText(match.player1.name.split(' ')[0]);
     await expect(page.getByTestId('board-name-right')).toContainText(match.player2.name.split(' ')[0]);
 
+    // телефон: партии — списком под карточкой, строка открывает партию
+    await page.setViewportSize({ width: 390, height: 844 });
+    await expect(page.getByTestId('score-games-list').getByTestId('score-game-row')).toHaveCount(4);
+    await page.getByTestId('score-games-list').getByRole('button', { name: 'Партия 2' }).click();
+    await expect(page.getByTestId('score-game-label')).toHaveText('Партия 2');
+    await expect(page.getByTestId('points-2')).toHaveText('11');
+    await page.setViewportSize({ width: 1280, height: 720 });
+
     // идущий матч со счётом по партиям виден с сервера ещё до подтверждения
     const live = (await (await page.request.get(`/api/tournaments/${id}/group-matches/${match.id}/scoring/`)).json()) as {
       status: string;

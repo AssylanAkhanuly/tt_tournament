@@ -285,6 +285,63 @@ function GamesTable({ games, rows, live, draft, selected, onSelect, avatars, pla
   );
 }
 
+/** Партии списком на телефоне (образец — «Previous Matches» Apple Sports):
+    партия — заголовок и две строки игроков со счётом, у выбранной — метка.
+    Строка открывает партию на табло. Несыгранных, кроме идущей, нет. */
+function GamesList({ games, rows, live, draft, selected, onSelect, avatars, players }: {
+  games: Pair[];
+  rows: number;
+  live: number | null;
+  draft: Pair;
+  selected: number;
+  onSelect?: (i: number) => void;
+  avatars: [string, string];
+  players: [ScoringPlayer, ScoringPlayer];
+}) {
+  const open = Array.from({ length: rows }, (_, i) => i).filter((i) => i < games.length || i === live);
+  return (
+    <div className="mb-3 shrink-0 rounded-[28px] bg-brand-900 px-4 pt-4 pb-2 text-white md:hidden" data-testid="score-games-list">
+      <div className="pb-2 text-center text-[15px] font-semibold">Партии</div>
+      {open.map((i) => {
+        const [a, b] = games[i] ?? draft;
+        const played = i < games.length;
+        return (
+          <button
+            key={i}
+            type="button"
+            disabled={!onSelect}
+            onClick={() => onSelect?.(i)}
+            aria-label={`Партия ${i + 1}`}
+            aria-pressed={i === selected}
+            className={'block w-full border-t border-white/10 py-3 text-left ' + (i === selected ? 'bg-white/[0.04]' : '')}
+            data-testid="score-game-row"
+          >
+            <div className={'mb-1.5 flex items-center gap-1.5 text-[12px] font-semibold ' + (i === live ? 'text-brand-300' : 'text-white/55')}>
+              {i === live && <span className="size-1.5 animate-pulse rounded-full bg-brand-400" />}
+              Партия {i + 1}
+            </div>
+            {players.map((p, k) => {
+              const v = k === 0 ? a : b;
+              const win = played && (k === 0 ? a > b : b > a);
+              return (
+                <div key={p.id} className="flex items-center gap-2.5 py-1">
+                  <span className="block size-7 shrink-0 overflow-hidden rounded-full bg-qtt-peach">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={p.avatar ?? avatars[k]} alt="" className={'size-full object-cover ' + (p.avatar ? '' : 'origin-[50%_12%] scale-[2.2] object-top')} />
+                  </span>
+                  <span className={'min-w-0 flex-1 truncate text-[14px] ' + (win ? 'font-semibold text-white' : 'text-white/70')}>{shortName(p.name)}</span>
+                  <span className={NUM + ' w-8 text-right text-[22px] ' + (i === live ? 'text-brand-300' : win ? 'text-white' : 'text-white/45')}>{v}</span>
+                  <span className={'w-3 text-[10px] text-white/70 ' + (i === selected && k === 0 ? '' : 'invisible')}>◂</span>
+                </div>
+              );
+            })}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
 // ── сцена ────────────────────────────────────────────────────────────────────
 
 export function ScoreStage({
@@ -340,9 +397,9 @@ export function ScoreStage({
   const [a, b] = points;
 
   return (
-    <section className="flex h-full min-h-[640px] w-full p-3 md:min-h-[600px] md:p-6" data-testid="board-stage">
+    <section className="flex h-full w-full flex-col gap-3 p-3 md:p-6" data-testid="board-stage">
       {/* Форма режет только слой фона: заголовок стоит в вырезе, а фигуры — внутри карточки. */}
-      <div ref={cardRef} className="relative isolate flex w-full flex-col text-white">
+      <div ref={cardRef} className="relative isolate flex h-full min-h-[640px] w-full shrink-0 flex-col text-white md:min-h-[600px]">
         <div aria-hidden className="absolute inset-0 -z-10 overflow-hidden" style={d ? { clipPath: `path('${d}')` } : undefined}>
           <div className="absolute inset-0 bg-[linear-gradient(180deg,var(--color-brand-700)_0%,var(--color-brand-900)_70%)]" />
           <div className={'absolute inset-0 ' + SPLIT} />
@@ -366,7 +423,7 @@ export function ScoreStage({
         </div>
 
         {rows > 0 && (
-          <div className="absolute top-[84px] right-6 z-20 md:top-8 md:right-8">
+          <div className="absolute top-8 right-8 z-20 max-md:hidden">
             <GamesTable games={games} rows={rows} live={live} draft={draft} selected={selected} onSelect={onSelect} avatars={[src1, src2]} players={[player1, player2]} />
           </div>
         )}
@@ -381,6 +438,10 @@ export function ScoreStage({
         </div>
         {tab}
       </div>
+      {/* Телефон: партии — списком под карточкой, до него прокручивают ✳ (23.11.2026). */}
+      {rows > 0 && (
+        <GamesList games={games} rows={rows} live={live} draft={draft} selected={selected} onSelect={onSelect} avatars={[src1, src2]} players={[player1, player2]} />
+      )}
     </section>
   );
 }
