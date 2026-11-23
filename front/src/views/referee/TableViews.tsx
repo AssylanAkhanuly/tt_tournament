@@ -5,19 +5,21 @@
 
    «Мой стол» (`/referee/table`) — одна карточка текущего матча и одна кнопка
    («Старт матча» / «Продолжить счёт»); очереди стола на экране нет (Э9.2).
-   «Ввод счёта» (`/referee/table/<турнир>/<матч>`) — табло-сцена (`BoardStage`:
-   фигуры игроков по краям, счёт и столбец партий между ними), под ним поля
-   партии и «Записать партию». Партия — по правилам (до 11, при 10 : 10 — до разрыва в
-   два), счёт матча — из партий. «Подтвердить результат» появляется, только
-   когда матч решён; до этого на его месте — регламент и текущий счёт.
-   Короткий путь — «Записать только итог». После подтверждения — «Результат
+   «Ввод счёта» (`/referee/table/<турнир>/<матч>`) — табло `ScoreStage` ✳
+   (23.11.2026): стол с фигурами игроков, по краям очки идущей партии с «+» /
+   «−», в центре номер партии и счёт матча, в углу таблица партий — щелчок
+   переключает на сыгранную, её можно поправить и сохранить. Язычок карточки —
+   главное действие: «Записать партию» (активна, когда очки по правилам — до 11,
+   при 10 : 10 — до разрыва в два), «Сохранить партию N», «Подтвердить
+   результат» (только у решённого матча). Очки идущей партии — на телефоне
+   (`useDraft`), на сервер уходит партия целиком. Короткий путь — «Записать только итог». После подтверждения — «Результат
    отправлен» (Э9.5) на том же адресе: партии целиком, кто и когда, «К моему
    столу». Правила и права — на сервере (`tournaments/scoring.py`). */
 
-import { Button, Input, Spinner, TextField } from '@heroui/react';
+import { Button, Spinner } from '@heroui/react';
 import { CheckCircle2, Play, Undo2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 
 import {
   fetchMyTable,
@@ -31,7 +33,7 @@ import {
 import { useLoad } from '@/shared/lib/useLoad';
 import { PersonAvatar } from '@/shared/ui/PersonAvatar';
 
-import { BoardStage } from './BoardStage';
+import { ScoreStage, StageTab, type Pair } from './ScoreStage';
 import { RefereeShell } from './RefereeShell';
 
 const TABLE = '/referee/table';
@@ -47,9 +49,9 @@ function wins(n: number): string {
   return `до ${n} ${n === 1 ? 'победы' : 'побед'} в партиях`;
 }
 
-/** Подпись над счётом на табло: группа и круг. */
+/** Строка под заголовком матча на табло: стол, группа, круг. */
 function caption(m: ScoringMatch): string {
-  return `Группа ${m.group}${m.round ? ` · круг ${m.round}` : ''}`;
+  return [m.table ? `Стол ${m.table}` : '', `Группа ${m.group}`, m.round ? `круг ${m.round}` : ''].filter(Boolean).join(' · ');
 }
 
 /** Текущий матч стола: идущий, иначе ближайший несыгранный. */
@@ -122,146 +124,195 @@ export function RefereeTableView() {
 
 // ── Э9.3 Ввод счёта · Э9.5 Результат отправлен ────────────────────────────────
 
-function digits(v: string) {
-  return v.replace(/\D/g, '').slice(0, 2);
+/** Очки идущей партии живут на телефоне судьи до записи партии и переживают
+    перезагрузку страницы (хранилище закрыто — просто с нуля). */
+function useDraft(matchId: number): [Pair, (p: Pair) => void] {
+  const key = `scoring-draft:${matchId}`;
+  const [draft, setDraft] = useState<Pair>(() => {
+    try {
+      const v: unknown = JSON.parse(localStorage.getItem(key) ?? 'null');
+      return Array.isArray(v) && v.length === 2 ? [Number(v[0]) || 0, Number(v[1]) || 0] : [0, 0];
+    } catch {
+      return [0, 0];
+    }
+  });
+  const save = (p: Pair) => {
+    setDraft(p);
+    try {
+      localStorage.setItem(key, JSON.stringify(p));
+    } catch {
+      /* закрытое хранилище — очки только в памяти */
+    }
+  };
+  return [draft, save];
 }
 
-/** Два поля счёта рядом: партия или итог матча. */
-function Pair({ a, b, onA, onB, label, testId }: { a: string; b: string; onA: (v: string) => void; onB: (v: string) => void; label: string; testId: string }) {
-  const field = (v: string, on: (v: string) => void, side: string) => (
-    <TextField value={v} onChange={(x) => on(digits(x))} aria-label={`${label}: ${side}`}>
-      <Input inputMode="numeric" className={NUM + ' h-16 w-20 rounded-xl text-center text-[40px]'} data-testid={`${testId}-${side === 'игрок 1' ? 'a' : 'b'}`} onFocus={(e) => e.currentTarget.select()} />
-    </TextField>
-  );
+const same = (x?: Pair, y?: Pair) => !!x && !!y && x[0] === y[0] && x[1] === y[1];
+const decidedOf = (m: ScoringMatch) => (m.score1 ?? 0) === m.gamesToWin || (m.score2 ?? 0) === m.gamesToWin;
+/** Какую партию показать после ответа сервера: идущую, у решённого — последнюю. */
+const focusOf = (m: ScoringMatch) => (decidedOf(m) ? Math.max(0, m.games.length - 1) : m.games.length);
+
+function Center({ label, score, testId, note }: { label: string; score: string; testId: string; note?: string }) {
   return (
-    <div className="flex items-center justify-center gap-3">
-      {field(a, onA, 'игрок 1')}
-      <span className={NUM + ' text-[40px] text-neutral-400'}>:</span>
-      {field(b, onB, 'игрок 2')}
-    </div>
+    <>
+      <div className="text-[11px] font-semibold tracking-[0.18em] text-brand-200 uppercase" data-testid="score-game-label">{label}</div>
+      <div className={NUM + ' text-[40px] md:text-[56px]'} data-testid={testId}>{score}</div>
+      {note && <div className="text-[12px] text-white/55" data-testid="score-rule">{note}</div>}
+    </>
   );
 }
 
-function ScoreBoard({ m, act }: { m: ScoringMatch; act: (body: ScoringAction) => Promise<boolean> }) {
-  const [a, setA] = useState('');
-  const [b, setB] = useState('');
-  const [totalMode, setTotalMode] = useState(false);
+const LINK = 'text-[13px] font-medium text-white/70 underline-offset-4 hover:text-white hover:underline';
+
+function ScoreBoard({ m, act }: { m: ScoringMatch; act: (body: ScoringAction) => Promise<ScoringMatch | null> }) {
   const n = m.gamesToWin;
   const s1 = m.score1 ?? 0;
   const s2 = m.score2 ?? 0;
-  const decided = s1 === n || s2 === n;
-  const gameOk = a !== '' && b !== '' && validGame(Number(a), Number(b));
-  const totalOk = a !== '' && b !== '' && Math.max(Number(a), Number(b)) === n && Math.min(Number(a), Number(b)) < n;
-  const reset = () => {
-    setA('');
-    setB('');
+  const decided = decidedOf(m);
+  const live = decided ? null : m.games.length;
+  const [draft, setDraft] = useDraft(m.id);
+  const [edits, setEdits] = useState<Record<number, Pair>>({});
+  const [sel, setSel] = useState(() => focusOf(m));
+  const [total, setTotal] = useState<Pair | null>(null);
+
+  const isLive = total === null && sel === live;
+  const recorded = m.games[sel] as Pair | undefined;
+  const edited = !isLive && recorded && edits[sel] && !same(edits[sel], recorded) ? edits[sel] : undefined;
+  const shown: Pair = total ?? (isLive ? draft : (edited ?? recorded ?? [0, 0]));
+
+  const step = (side: 0 | 1, d: 1 | -1) => {
+    const next = [...shown] as Pair;
+    next[side] = Math.max(0, next[side] + d);
+    if (total) next[side] = Math.min(n, next[side]);
+    navigator.vibrate?.(8);
+    if (total) setTotal(next);
+    else if (isLive) setDraft(next);
+    else setEdits({ ...edits, [sel]: next });
+  };
+  const after = (fresh: ScoringMatch | null, then?: () => void) => {
+    if (!fresh) return;
+    then?.();
+    setSel(focusOf(fresh));
+  };
+  const dropEdit = () => {
+    const rest = { ...edits };
+    delete rest[sel];
+    setEdits(rest);
   };
 
+  let tab: ReactNode;
+  let below: ReactNode = null;
+  if (total) {
+    const ok = Math.max(...total) === n && Math.min(...total) < n;
+    tab = (
+      <StageTab onPress={() => void act({ action: 'submit', score1: total[0], score2: total[1] })} disabled={!ok} tone="success" testId="score-submit-total">
+        <CheckCircle2 size={18} /> Подтвердить итог
+      </StageTab>
+    );
+    below = <button type="button" className={LINK} onClick={() => setTotal(null)}>Считать по партиям</button>;
+  } else if (isLive) {
+    tab = (
+      <StageTab
+        onPress={() => void act({ action: 'game', a: draft[0], b: draft[1] }).then((f) => after(f, () => setDraft([0, 0])))}
+        disabled={!validGame(draft[0], draft[1])}
+        testId="score-record"
+      >
+        Записать партию
+      </StageTab>
+    );
+    if (m.games.length === 0 && draft[0] + draft[1] === 0)
+      below = <button type="button" className={LINK} onClick={() => setTotal([0, 0])} data-testid="score-total-mode">Записать только итог</button>;
+  } else if (edited) {
+    tab = (
+      <StageTab
+        onPress={() => void act({ action: 'set_game', index: sel, a: edited[0], b: edited[1] }).then((f) => after(f, dropEdit))}
+        disabled={!validGame(edited[0], edited[1])}
+        testId="score-save-game"
+      >
+        Сохранить партию {sel + 1}
+      </StageTab>
+    );
+    below = <button type="button" className={LINK} onClick={dropEdit} data-testid="score-cancel-edit">Отменить правку</button>;
+  } else {
+    tab = decided ? (
+      <StageTab onPress={() => void act({ action: 'submit' })} tone="success" testId="score-submit">
+        <CheckCircle2 size={18} /> Подтвердить результат
+      </StageTab>
+    ) : (
+      <StageTab onPress={() => setSel(live ?? 0)} tone="quiet" testId="score-to-live">
+        К партии {(live ?? 0) + 1}
+      </StageTab>
+    );
+    if (sel === m.games.length - 1)
+      below = (
+        <button type="button" className={LINK + ' inline-flex items-center gap-1.5'} onClick={() => void act({ action: 'undo' }).then((f) => after(f))} data-testid="score-undo">
+          <Undo2 size={14} /> Снять партию {sel + 1}
+        </button>
+      );
+  }
+
   return (
-    <section className="flex h-full flex-col overflow-y-auto" data-testid="score-board">
-      <BoardStage
-        player1={m.player1}
-        player2={m.player2}
-        score1={s1}
-        score2={s2}
-        games={m.games}
-        gamesToWin={n}
+    <ScoreStage
+      player1={m.player1}
+      player2={m.player2}
+      points={shown}
+      onStep={step}
+      center={
+        total ? (
+          <Center label="Итог матча" score={`${total[0]} : ${total[1]}`} testId="score-total" note={wins(n)} />
+        ) : (
+          <Center label={`Партия ${sel + 1}`} score={`${s1} : ${s2}`} testId="score-total" note={wins(n)} />
+        )
+      }
+      title={m.tournament.name}
         caption={caption(m)}
-        live={!decided}
-        totalTestId="score-total"
-      />
-
-      <div className="mx-auto flex w-full max-w-md flex-col items-center gap-4 px-4 pt-8">
-        {decided ? null : totalMode ? (
-          <>
-            <Pair a={a} b={b} onA={setA} onB={setB} label="Итог матча" testId="score-total-input" />
-            <div className="flex gap-2">
-              <Button variant="tertiary" className="rounded-xl" onPress={() => { setTotalMode(false); reset(); }}>
-                Считать по партиям
-              </Button>
-              <Button className="rounded-xl" isDisabled={!totalOk} onPress={() => void act({ action: 'submit', score1: Number(a), score2: Number(b) })} data-testid="score-submit-total">
-                <CheckCircle2 size={16} /> Подтвердить итог
-              </Button>
-            </div>
-          </>
-        ) : (
-          <>
-            <div className="text-[13px] font-medium text-neutral-500">Партия {m.games.length + 1}</div>
-            <Pair a={a} b={b} onA={setA} onB={setB} label={`Партия ${m.games.length + 1}`} testId="score-game-input" />
-            <div className="flex flex-wrap justify-center gap-2">
-              {m.games.length > 0 && (
-                <Button variant="tertiary" className="rounded-xl" onPress={() => void act({ action: 'undo' })} data-testid="score-undo">
-                  <Undo2 size={16} /> Снять последнюю
-                </Button>
-              )}
-              <Button className="rounded-xl" isDisabled={!gameOk} onPress={() => void act({ action: 'game', a: Number(a), b: Number(b) }).then((ok) => ok && reset())} data-testid="score-record">
-                Записать партию
-              </Button>
-            </div>
-            {m.games.length === 0 && (
-              <Button variant="ghost" size="sm" className="rounded-xl text-neutral-500" onPress={() => { setTotalMode(true); reset(); }} data-testid="score-total-mode">
-                Записать только итог
-              </Button>
-            )}
-          </>
-        )}
-      </div>
-
-      <div className="mt-auto flex flex-col items-center gap-2 border-t border-neutral-200 px-4 py-6">
-        {decided ? (
-          <div className="flex gap-2">
-            <Button variant="tertiary" className="rounded-xl" onPress={() => void act({ action: 'undo' })} data-testid="score-undo">
-              <Undo2 size={16} /> Снять последнюю
-            </Button>
-            <Button size="lg" className="h-14 min-w-64 rounded-xl bg-green-600 text-[16px] text-white" onPress={() => void act({ action: 'submit' })} data-testid="score-submit">
-              <CheckCircle2 size={18} /> Подтвердить результат
-            </Button>
-          </div>
-        ) : (
-          <p className="m-0 text-[14px] text-neutral-500" data-testid="score-rule">
-            {wins(n)}, сейчас {s1} : {s2}
-          </p>
-        )}
-      </div>
-    </section>
+      games={m.games}
+      rows={Math.max(2 * n - 1, m.games.length)}
+      live={total ? null : live}
+      draft={draft}
+      selected={total ? -1 : sel}
+      onSelect={total ? undefined : setSel}
+      tab={tab}
+      below={below}
+    />
   );
 }
 
 function ResultSent({ m }: { m: ScoringMatch }) {
   const router = useRouter();
-  const winner = m.winnerId === m.player1.id ? m.player1 : m.player2;
+  const [sel, setSel] = useState(Math.max(0, m.games.length - 1));
+  const g = m.games[sel] as Pair | undefined;
   return (
-    <section className="flex h-full flex-col items-center gap-5 overflow-y-auto pb-10 text-center" data-testid="score-result">
-      <BoardStage
+    <div className="h-full" data-testid="score-result">
+      <ScoreStage
         player1={m.player1}
         player2={m.player2}
-        score1={m.score1 ?? 0}
-        score2={m.score2 ?? 0}
-        games={m.games}
-        gamesToWin={m.gamesToWin}
+        points={g ?? [m.score1 ?? 0, m.score2 ?? 0]}
+        center={<Center label="Результат принят" score={`${m.score1 ?? 0} : ${m.score2 ?? 0}`} testId="result-total" note={g ? `партия ${sel + 1}` : 'итог матча'} />}
+        title={m.tournament.name}
         caption={caption(m)}
-        live={false}
-        totalTestId="result-total"
+        games={m.games}
+        rows={m.games.length}
+        live={null}
+        draft={[0, 0]}
+        selected={sel}
+        onSelect={setSel}
+        tab={
+          <StageTab onPress={() => router.push(TABLE)} testId="result-back">
+            К моему столу
+          </StageTab>
+        }
+        below={
+          <span className="text-[13px] text-white/60" data-testid="result-by">
+            {m.resultBy} · {when(m.resultAt)}
+          </span>
+        }
       />
-      <div className="mt-3 flex items-center gap-2 text-[15px] font-semibold text-green-700">
-        <CheckCircle2 size={20} /> Результат принят
-      </div>
-      {!m.games.length && <p className="m-0 text-[13px] text-neutral-500">Партии не заполнялись — записан итог матча</p>}
-      <div className="text-[14px] text-neutral-600">
-        Победитель — <span className="font-semibold text-neutral-900">{winner.name}</span>
-      </div>
-      <div className="text-[13px] text-neutral-500" data-testid="result-by">
-        {m.resultBy} · {when(m.resultAt)}
-      </div>
-      <Button size="lg" className="h-12 rounded-xl" onPress={() => router.push(TABLE)} data-testid="result-back">
-        К моему столу
-      </Button>
-    </section>
+    </div>
   );
 }
 
 export function MatchScoringView({ tournamentId, matchId }: { tournamentId: string; matchId: string }) {
-  const router = useRouter();
   const loaded = useLoad(() => fetchScoring(tournamentId, matchId), `scoring:${tournamentId}:${matchId}`);
   const [fresh, setFresh] = useState<ScoringMatch | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -272,34 +323,38 @@ export function MatchScoringView({ tournamentId, matchId }: { tournamentId: stri
       (d) => {
         setFresh(d);
         setError(null);
+        return d;
       },
       (e: Error) => {
         setError(e.message);
-        throw e;
+        return null;
       },
     );
-  const safeAct = (body: ScoringAction) => act(body).then(() => true, () => false);
 
-  const title = m ? `Стол ${m.table ?? '—'} · ${m.tournament.name}` : 'Ввод счёта';
+  // Заголовок матча — в вырезе карточки табло, шапки страницы нет.
   return (
-    <RefereeShell active="Мой стол" bleed title={title} back={{ label: 'Мой стол', onPress: () => router.push(TABLE) }}>
+    <RefereeShell active="Мой стол" bleed>
       {loaded.error ? (
         <p className="p-6 text-[13px] text-red-600">{loaded.error}</p>
       ) : !m ? (
         <Spinner className="m-auto" />
       ) : (
-        <div className="flex h-full min-h-0 flex-col">
-          {error && <p className="m-0 px-6 pt-3 text-center text-[13px] text-red-600" data-testid="score-error">{error}</p>}
+        <div className="relative flex h-full min-h-0 flex-col overflow-y-auto">
+          {error && (
+            <p className="absolute top-3 left-1/2 z-30 m-0 max-w-[90%] -translate-x-1/2 bg-red-600 px-4 py-2 text-center text-[13px] text-white shadow-lg" data-testid="score-error">
+              {error}
+            </p>
+          )}
           {m.status === 'finished' ? (
             <ResultSent m={m} />
           ) : m.canScore && m.status === 'pending' ? (
             <div className="m-auto">
-              <Button size="lg" className="h-14 min-w-64 rounded-xl" onPress={() => void safeAct({ action: 'start' })} data-testid="table-start">
+              <Button size="lg" className="h-14 min-w-64 rounded-xl" onPress={() => void act({ action: 'start' })} data-testid="table-start">
                 <Play size={18} /> Старт матча
               </Button>
             </div>
           ) : m.canScore ? (
-            <ScoreBoard m={m} act={safeAct} />
+            <ScoreBoard m={m} act={act} />
           ) : (
             <p className="m-auto text-[14px] text-neutral-500">Счёт этого матча ведёт назначенный судья</p>
           )}

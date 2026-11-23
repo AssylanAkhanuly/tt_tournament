@@ -1116,6 +1116,8 @@ export async function fetchScoring(tournamentId: string, matchId: string | numbe
 export type ScoringAction =
   | { action: 'start' }
   | { action: 'game'; a: number; b: number }
+  /** Счёт партии по номеру: правка сыгранной (или следующая) ✳ 23.11.2026. */
+  | { action: 'set_game'; index: number; a: number; b: number }
   | { action: 'undo' }
   | { action: 'submit'; score1?: number; score2?: number }
   | { action: 'correct'; games?: [number, number][]; score1?: number; score2?: number };

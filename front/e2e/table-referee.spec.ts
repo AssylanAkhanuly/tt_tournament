@@ -8,8 +8,10 @@ import { E2E_ADMIN, E2E_REFEREE } from './global-setup';
    Администратор (своя API-сессия) заводит турнир «группы + плей-офф» из двух
    спортсменов засева, сам становится главным судьёй, сажает учётку судьи
    проверок судьёй стола, строит и отправляет расписание. Судья открывает «Мой
-   стол», стартует матч, вносит партии (неверная партия не записывается),
-   снимает лишнюю, подтверждает результат и видит «Результат принят»; счёт
+   стол», стартует матч, набирает очки «+» / «−» (неверная партия не
+   записывается, очки идущей партии переживают перезагрузку), переключается
+   на сыгранную партию, снимает её, правит другую, подтверждает результат и
+   видит «Результат принят»; счёт
    по партиям виден с сервера, и после подтверждения судья его уже не правит.
    Турнир удаляется в конце — роли в его области уходят вместе с ним. */
 
@@ -68,39 +70,64 @@ test('судья стола: мой стол → ввод счёта по пар
     await page.getByTestId('table-start').click();
     await page.waitForURL((u) => u.pathname === `/referee/table/${id}/${match.id}`);
 
-    // ── Ввод счёта по партиям ───────────────────────────────────────────
-    const game = async (a: string, b: string) => {
-      await page.getByTestId('score-game-input-a').fill(a);
-      await page.getByTestId('score-game-input-b').fill(b);
+    // ── Ввод счёта: очки «+» / «−», партия записывается целиком ─────────
+    const tap = async (testId: string, times: number) => {
+      for (let i = 0; i < times; i++) await page.getByTestId(testId).click();
     };
-    await expect(page.getByTestId('score-rule')).toHaveText('до 3 побед в партиях, сейчас 0 : 0');
-    await game('11', '10'); // не по правилам — кнопка неактивна
+    const points = async (a: number, b: number) => {
+      await tap('point-plus-1', a);
+      await tap('point-plus-2', b);
+    };
+    await expect(page.getByTestId('board-title')).toContainText('Судья стола');
+    await expect(page.getByTestId('score-rule')).toHaveText('до 3 побед в партиях');
+    await points(11, 10); // не по правилам — записать нельзя
+    await expect(page.getByTestId('points-1')).toHaveText('11');
     await expect(page.getByTestId('score-record')).toBeDisabled();
-    await game('11', '7');
+    await tap('point-minus-2', 3);
     await page.getByTestId('score-record').click();
     await expect(page.getByTestId('score-total')).toHaveText('1 : 0');
-    await game('10', '12');
+    await expect(page.getByTestId('points-1')).toHaveText('0'); // новая партия — с нуля
+    // очки идущей партии переживают перезагрузку
+    await points(3, 1);
+    await page.reload();
+    await expect(page.getByTestId('points-1')).toHaveText('3');
+    await expect(page.getByTestId('points-2')).toHaveText('1');
+    await tap('point-minus-1', 3);
+    await tap('point-minus-2', 1);
+    await points(0, 11);
     await page.getByTestId('score-record').click();
     await expect(page.getByTestId('score-total')).toHaveText('1 : 1');
-    await game('11', '4');
+    await points(11, 4);
     await page.getByTestId('score-record').click();
     await expect(page.getByTestId('score-total')).toHaveText('2 : 1');
     await expect(page.getByTestId('score-submit')).toHaveCount(0); // матч не решён — подтверждать нечего
-    await game('5', '11');
+    await points(5, 11);
     await page.getByTestId('score-record').click();
     await expect(page.getByTestId('score-total')).toHaveText('2 : 2');
-    await page.getByTestId('score-undo').click(); // снял по ошибке записанную
+    // переключился на четвёртую партию в таблице и снял её
+    await page.getByRole('button', { name: 'Партия 4' }).click();
+    await expect(page.getByTestId('score-game-label')).toHaveText('Партия 4');
+    await expect(page.getByTestId('points-1')).toHaveText('5');
+    await page.getByTestId('score-undo').click();
     await expect(page.getByTestId('score-total')).toHaveText('2 : 1');
-    await game('13', '11');
+    await points(13, 11); // больше-меньше: 13 : 11
     await page.getByTestId('score-record').click();
     await expect(page.getByTestId('score-total')).toHaveText('3 : 1');
+    // правка сыгранной партии: первая была 11 : 7, на самом деле 11 : 9
+    await page.getByRole('button', { name: 'Партия 1' }).click();
+    await tap('point-plus-2', 3);
+    await expect(page.getByTestId('score-save-game')).toBeDisabled(); // 11 : 10 — не по правилам
+    await tap('point-minus-2', 1);
+    await page.getByTestId('score-save-game').click();
+    await expect(page.getByTestId('score-game').first()).toHaveAttribute('data-score', '11 : 9');
     const played = await page.getByTestId('score-game').evaluateAll((rows) => rows.map((r) => (r as HTMLElement).dataset.score));
-    expect(played).toEqual(['11 : 7', '10 : 12', '11 : 4', '13 : 11']);
-    // табло-сцена: фигуры игроков по краям (у спортсменов засева снимков нет — заглушки), плашки с фамилиями
+    expect(played).toEqual(['11 : 9', '0 : 11', '11 : 4', '13 : 11']);
+    await expect(page.getByTestId('score-total')).toHaveText('3 : 1');
+    // табло: фигуры игроков на столе (у спортсменов засева снимков нет — заглушки), фамилии у аватаров
     await expect(page.getByTestId('board-figure-left')).toHaveAttribute('src', /\/national\/players\/[mf]-\d\.webp$/);
     await expect(page.getByTestId('board-figure-right')).toHaveAttribute('data-photo', 'no');
-    await expect(page.getByTestId('board-plate-left')).toContainText(match.player1.name.split(' ')[0]);
-    await expect(page.getByTestId('board-plate-right')).toContainText(match.player2.name.split(' ')[0]);
+    await expect(page.getByTestId('board-name-left')).toContainText(match.player1.name.split(' ')[0]);
+    await expect(page.getByTestId('board-name-right')).toContainText(match.player2.name.split(' ')[0]);
 
     // идущий матч со счётом по партиям виден с сервера ещё до подтверждения
     const live = (await (await page.request.get(`/api/tournaments/${id}/group-matches/${match.id}/scoring/`)).json()) as {
@@ -108,7 +135,7 @@ test('судья стола: мой стол → ввод счёта по пар
       games: number[][];
     };
     expect(live.status).toBe('in_progress');
-    expect(live.games).toEqual([[11, 7], [10, 12], [11, 4], [13, 11]]);
+    expect(live.games).toEqual([[11, 9], [0, 11], [11, 4], [13, 11]]);
     await page.screenshot({ path: 'test-results/table-referee/entry.png' });
 
     // ── Подтвердить результат → «Результат принят» ──────────────────────
