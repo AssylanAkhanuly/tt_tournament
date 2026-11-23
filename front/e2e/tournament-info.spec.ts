@@ -108,7 +108,7 @@ test.describe('сведения и живой протокол', () => {
     await expect(field('level')).toHaveAttribute('data-active', 'true');
     await expect(field('level')).toContainText('Любительские');
 
-    await page.getByRole('switch', { name: 'Рейтинговый' }).focus();
+    await page.getByTestId('info-scroll').getByRole('switch', { name: 'Рейтинговый' }).focus();
     await page.keyboard.press('Space');
     await expect(field('isRating')).toHaveAttribute('data-active', 'true');
     await expect(field('isRating')).toContainText('не учитываются');

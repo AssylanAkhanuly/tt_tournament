@@ -1,21 +1,21 @@
 'use client';
 
-/* «Сведения» турнира — обзор ✳ (23.11.2026, решение владельца продукта; образец
-   — экран «Route Optimization» Truck&Co). Сверху — показатели турнира. Ниже
-   слева — карта Казахстана точками: место турнира выбирают щелчком по городу
-   (сохраняется сразу, как в форме); справа — параметры турнира строками,
-   над ними — даты календарём-диапазоном (выбор сохраняется сразу);
-   «Изменить» открывает прежнюю форму сведений в широкой панели — с проектом
-   протокола и его выгрузкой в PDF. Ниже — участники лентой карточек (лицо, группа и место, победы
-   и поражения), ещё ниже — расписание лентой времени: строка — стол, блок —
-   матч (сыгран — залит, идёт — с обводкой, ждёт — светлый), красная черта —
-   «сейчас». Данные — сведения, состав и снимок расписания; считает сервер. */
+/* «Сведения» турнира — обзор ✳ (23.11.2026, решения владельца продукта; образец
+   — экран «Route Optimization» Truck&Co). Сверху — показатели турнира. Слева —
+   сетка плей-офф неподвижной картинкой с переходом «Открыть сетку», под ней
+   карта Казахстана точками (место выбирают щелчком по городу, сохраняется
+   сразу) и даты календарём-диапазоном (тоже сразу); справа — параметры
+   строками, «Изменить» открывает прежнюю форму сведений в широкой панели — с
+   проектом протокола и выгрузкой в PDF. Ниже во всю ширину — пять лучших
+   участников по рейтингу карточками рейтинг-листа и «Все спортсмены». Ленты
+   расписания здесь нет (снята) — оно в разделе «Расписание». Данные —
+   сведения, состав и снимок расписания; считает сервер. */
 
-import { Button, Chip, Drawer, I18nProvider, RangeCalendar, Spinner } from '@heroui/react';
+import { Button, Chip, Drawer, I18nProvider, Input, Label, Modal, NumberField, RangeCalendar, Spinner, Switch, TextField } from '@heroui/react';
 import { parseDate } from '@internationalized/date';
-import { ChevronLeft, ChevronRight, Pencil } from 'lucide-react';
+import { ChevronRight, MapPin, Pencil } from 'lucide-react';
 import { usePathname, useRouter } from 'next/navigation';
-import { useMemo, useState, type ReactNode } from 'react';
+import { useMemo, useState, type FormEvent, type ReactNode } from 'react';
 
 import {
   FORMAT_LABEL,
@@ -25,22 +25,26 @@ import {
   updateTournament,
   useParticipants,
   useSchedule,
+  useTemplates,
   useTournament,
   type Schedule,
-  type ScheduledMatch,
+  type TournamentFormat,
+  type TournamentInfo,
+  type TournamentLevel,
   type TournamentSummary,
 } from '@/entities/tournament';
-import { TournamentInfoForm, infoOf } from '@/features/tournament-info';
-import { shortName } from '@/shared/lib/name';
+import { PlaceSelect, TournamentInfoForm, infoOf } from '@/features/tournament-info';
+import { ModalSheet } from '@/shared/ui/ModalSheet';
+import { Picker } from '@/shared/ui/Picker';
 import { SideContent, SideDialog } from '@/shared/ui/SidePanel';
+import { PlayoffMap } from '@/widgets/bracket/PlayoffMap';
 import { RatingPlayerCard, type RatingCardData } from '@/widgets/rating';
 
-import { KzDotMap } from './KzDotMap';
+import { KzMap } from './KzMap';
 
 const CARD = 'rounded-2xl border border-neutral-200 bg-white';
 const pad = (n: number) => String(n).padStart(2, '0');
 const dayKey = (d: Date) => d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
-const hhmm = (d: Date) => pad(d.getHours()) + ':' + pad(d.getMinutes());
 const ruDate = (iso: string | null) => (iso ? new Date(iso + 'T12:00').toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' }) : '—');
 
 // ── показатели ───────────────────────────────────────────────────────────────
@@ -67,6 +71,90 @@ const pill = (text: string, tone: 'brand' | 'green' | 'neutral' = 'brand') => (
     {text}
   </span>
 );
+
+// ── сетка плей-офф: только картинка ─────────────────────────────────────────
+
+/** Сетка плей-офф — неподвижной картинкой ✳ (23.11.2026, решение владельца
+    продукта: «не исследуемая, только переход к сетке»): «Открыть сетку» ведёт
+    в «Расписание» на вид «Сетка», где её можно двигать и приближать. */
+function BracketPreview({ s, href }: { s: Schedule | null; href: string }) {
+  const router = useRouter();
+  return (
+    <section className={CARD + ' flex flex-col overflow-hidden'} data-testid="overview-bracket">
+      <div className="flex items-center justify-between gap-3 px-5 pt-4 pb-3">
+        <h2 className="m-0 text-[17px] font-semibold">Сетка плей-офф</h2>
+        <Button size="sm" variant="secondary" className="rounded-full" onPress={() => router.push(href)} data-testid="overview-bracket-open">
+          Открыть сетку <ChevronRight size={14} />
+        </Button>
+      </div>
+      <div className="flex h-[300px] flex-col border-t border-neutral-100 max-md:h-[220px]">
+        {s && s.status !== 'none' && s.playoff.matches.length ? (
+          <PlayoffMap playoff={s.playoff} still />
+        ) : (
+          <p className="m-0 px-5 py-8 text-[14px] text-neutral-500">Сетки пока нет</p>
+        )}
+      </div>
+    </section>
+  );
+}
+
+// ── место: город с карты и адрес ─────────────────────────────────────────────
+
+/** Карточка места поверх карты ✳ (23.11.2026, решение владельца продукта): город
+    и адрес текстом, значок рядом открывает окно с адресом — город и область
+    (`PlaceSelect`, справочник мест сервера) и адрес с залом; город можно
+    выбрать и щелчком по карте. */
+function PlaceCard({ t, onSave }: { t: TournamentSummary; onSave: (place: { region: string; city: string; venue: string }) => Promise<boolean> }) {
+  const [open, setOpen] = useState(false);
+  const [place, setPlace] = useState({ region: t.region, city: t.city, venue: t.venue });
+  const [busy, setBusy] = useState(false);
+  const start = () => {
+    setPlace({ region: t.region, city: t.city, venue: t.venue });
+    setOpen(true);
+  };
+  const submit = async (e: FormEvent) => {
+    e.preventDefault();
+    setBusy(true);
+    const ok = await onSave({ ...place, venue: place.venue.trim() });
+    setBusy(false);
+    if (ok) setOpen(false);
+  };
+  return (
+    <div className="absolute right-4 bottom-4 z-10 flex max-w-[calc(100%-32px)] items-start gap-3 rounded-xl border border-neutral-200 bg-white py-2 pr-2 pl-3 text-[12px] shadow-md" data-testid="overview-place">
+      <div className="min-w-0">
+        <div className="text-neutral-500">Место проведения</div>
+        <div className="truncate font-semibold" data-testid="overview-place-city">{placeLabel(t) || 'Выберите город на карте'}</div>
+        {t.venue && <div className="truncate text-neutral-600" data-testid="overview-place-venue">{t.venue}</div>}
+      </div>
+      <Button isIconOnly size="sm" variant="secondary" className="shrink-0 rounded-full" aria-label="Адрес" onPress={start} data-testid="overview-place-edit">
+        <MapPin size={15} />
+      </Button>
+      <ModalSheet isOpen={open} onOpenChange={setOpen} size="sm" testId="place-dialog">
+        <Modal.CloseTrigger aria-label="Закрыть" />
+        <Modal.Header>
+          <Modal.Heading className="text-lg font-semibold">Место проведения</Modal.Heading>
+        </Modal.Header>
+        <form onSubmit={(e) => void submit(e)}>
+          <Modal.Body className="flex flex-col gap-4">
+            <PlaceSelect region={place.region} city={place.city} onChange={(p) => setPlace((x) => ({ ...x, ...p }))} />
+            <TextField value={place.venue} onChange={(v) => setPlace((x) => ({ ...x, venue: v }))}>
+              <Label>Адрес, зал</Label>
+              <Input className="rounded-xl" placeholder="Улица, дом, спорткомплекс" data-testid="place-venue" />
+            </TextField>
+          </Modal.Body>
+          <Modal.Footer>
+            <Button variant="tertiary" className="rounded-xl" onPress={() => setOpen(false)}>
+              Отмена
+            </Button>
+            <Button type="submit" variant="primary" className="rounded-xl" isPending={busy} data-testid="place-save">
+              Сохранить
+            </Button>
+          </Modal.Footer>
+        </form>
+      </ModalSheet>
+    </div>
+  );
+}
 
 // ── даты: календарь-диапазон ─────────────────────────────────────────────────
 
@@ -109,19 +197,113 @@ function Dates({ t, onPick, error }: { t: TournamentSummary; onPick: (startsOn: 
 
 // ── параметры справа ─────────────────────────────────────────────────────────
 
-function Params({ t, onEdit }: { t: TournamentSummary; onEdit: () => void }) {
-  const age = t.ageMin || t.ageMax ? [t.ageMin ? 'от ' + t.ageMin : '', t.ageMax ? 'до ' + t.ageMax : ''].filter(Boolean).join(' ') + ' лет' : 'Без ограничений';
+const NO_KIND = 'none';
+const LEVELS = Object.keys(LEVEL_LABEL) as TournamentLevel[];
+const FORMATS: TournamentFormat[] = ['single_elimination', 'group_playoff'];
+
+/** Число с «−» / «+» по краям — один вид на все числовые параметры. */
+function Stepper({ label, value, onChange, min, max, testId }: {
+  label: string;
+  value: number | null;
+  onChange: (v: number | null) => void;
+  min: number;
+  max: number;
+  testId: string;
+}) {
+  return (
+    <NumberField aria-label={label} value={value ?? Number.NaN} onChange={(v) => onChange(Number.isNaN(v) ? null : v)} minValue={min} maxValue={max} className="w-32">
+      <NumberField.Group className="h-8 rounded-xl">
+        <NumberField.DecrementButton aria-label={'Уменьшить: ' + label} />
+        <NumberField.Input className="text-center text-[13px]" placeholder="—" data-testid={testId} />
+        <NumberField.IncrementButton aria-label={'Увеличить: ' + label} />
+      </NumberField.Group>
+    </NumberField>
+  );
+}
+
+/** Параметры полями прямо на обзоре ✳ (23.11.2026, решение владельца продукта):
+    правки — черновиком, «Отменить» и «Сохранить» появляются только после
+    изменения; уходят на сервер разом, правила проверяет он. «Изменить» —
+    прежняя полная форма с протоколом. */
+function Params({ t, onEdit, onSaved }: { t: TournamentSummary; onEdit: () => void; onSaved: () => void }) {
+  const templates = useTemplates();
+  const saved = useMemo(() => infoOf(t), [t]);
+  const [draft, setDraft] = useState<TournamentInfo>(saved);
+  const [base, setBase] = useState(saved);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  // Пришли свежие сведения с сервера — черновик начинается с них (без эффекта).
+  if (base !== saved) {
+    setBase(saved);
+    setDraft(saved);
+  }
+  const dirty = JSON.stringify(draft) !== JSON.stringify(saved);
+  const set = <K extends keyof TournamentInfo>(k: K, v: TournamentInfo[K]) => setDraft((d) => ({ ...d, [k]: v }));
+  const manual = t.format === 'manual';
+  const save = async () => {
+    setBusy(true);
+    setError(null);
+    try {
+      await updateTournament(t.id, draft);
+      onSaved();
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  };
+  const field = (k: 'name', label: string, testId: string) => (
+    <TextField aria-label={label} value={draft[k]} onChange={(v) => set(k, v)} className="w-full">
+      <Input className="h-8 w-full rounded-xl text-[13px]" placeholder="—" data-testid={testId} />
+    </TextField>
+  );
   const rows: [string, ReactNode][] = [
-    ['Название', t.name],
-    ['Вид', t.kind?.name ?? 'Без вида'],
-    ['Статус', <Chip key="s" size="sm" variant="soft" color={t.status === 'in_progress' ? 'success' : 'default'}>{STATUS_LABEL[t.status]}</Chip>],
-    ['Зал', t.venue || '—'],
-    ['Система', FORMAT_LABEL[t.format] ?? t.format],
-    ['Игроков в группе', t.groupSize],
-    ['Матч', 'до ' + t.gamesToWin + ' побед'],
-    ['Уровень', LEVEL_LABEL[t.level] ?? t.level],
-    ['Возраст', age],
-    ['Рейтинговый', t.isRating ? 'Да' : 'Нет'],
+    ['Название', field('name', 'Название', 'params-name')],
+    ['Вид', (
+      <Picker key="2399112"
+        label="Вид соревнования"
+        value={draft.template || NO_KIND}
+        options={[{ id: NO_KIND, label: 'Без вида' }, ...(templates.data ?? []).map((k) => ({ id: k.code, label: k.name }))]}
+        onChange={(k) => set('template', k === NO_KIND ? '' : k)}
+        isDisabled={t.admissionLocked}
+        testId="params-kind"
+      />
+    )],
+    ['Статус', <Chip key="Статус" size="sm" variant="soft" color={t.status === 'in_progress' ? 'success' : 'default'}>{STATUS_LABEL[t.status]}</Chip>],
+    ['Система', (
+      <Picker key="2399700"
+        label="Система"
+        value={draft.format}
+        options={(manual ? (['manual'] as TournamentFormat[]) : FORMATS).map((f) => ({ id: f, label: FORMAT_LABEL[f] }))}
+        onChange={(k) => set('format', k as TournamentFormat)}
+        isDisabled={manual}
+        testId="params-format"
+      />
+    )],
+    ...(draft.format === 'group_playoff'
+      ? ([['Игроков в группе', <Stepper key="Игроков в группе" label="Игроков в группе" value={draft.groupSize} onChange={(v) => v !== null && set('groupSize', v)} min={2} max={16} testId="params-group-size" />]] as [string, ReactNode][])
+      : []),
+    ['Матч до побед', <Stepper key="Матч до побед" label="Матч до побед" value={draft.gamesToWin} onChange={(v) => v !== null && set('gamesToWin', v)} min={2} max={5} testId="params-games" />],
+    ['Уровень', (
+      <Picker key="23991533"
+        label="Уровень"
+        value={draft.level}
+        options={LEVELS.map((l) => ({ id: l, label: LEVEL_LABEL[l] }))}
+        onChange={(k) => set('level', k as TournamentLevel)}
+        testId="params-level"
+      />
+    )],
+    ['Возраст от', <Stepper key="Возраст от" label="Возраст от" value={draft.ageMin} onChange={(v) => set('ageMin', v)} min={5} max={90} testId="params-age-min" />],
+    ['Возраст до', <Stepper key="Возраст до" label="Возраст до" value={draft.ageMax} onChange={(v) => set('ageMax', v)} min={5} max={90} testId="params-age-max" />],
+    ['Рейтинговый', (
+      <Switch key="23992133" isSelected={draft.isRating} onChange={(v) => set('isRating', v)} aria-label="Рейтинговый">
+        <Switch.Content>
+          <Switch.Control>
+            <Switch.Thumb />
+          </Switch.Control>
+        </Switch.Content>
+      </Switch>
+    )],
   ];
   return (
     <section className={CARD + ' flex min-h-0 flex-col p-4'} data-testid="overview-params">
@@ -131,16 +313,29 @@ function Params({ t, onEdit }: { t: TournamentSummary; onEdit: () => void }) {
           <Pencil size={14} /> Изменить
         </Button>
       </div>
-      <dl className="m-0 mt-3 flex min-h-0 flex-1 flex-col overflow-y-auto">
+      <div className="mt-3 flex flex-col">
         {rows.map(([k, v]) => (
-          <div key={k} className="flex items-center justify-between gap-4 border-b border-neutral-100 py-2 text-[13px] last:border-b-0">
-            <dt className="text-neutral-500">{k}</dt>
-            <dd className="m-0 truncate text-right font-medium" title={typeof v === 'string' ? v : undefined}>
-              {v}
-            </dd>
+          <div key={k} className="flex min-h-11 items-center justify-between gap-3 border-b border-neutral-100 py-1.5 text-[13px] last:border-b-0">
+            <span className="shrink-0 text-neutral-500">{k}</span>
+            <span className="flex min-w-0 max-w-[62%] flex-1 justify-end">{v}</span>
           </div>
         ))}
-      </dl>
+      </div>
+      {error && (
+        <p className="m-0 mt-2 rounded-lg bg-red-50 px-3 py-1.5 text-[12px] text-red-700" role="alert">
+          {error}
+        </p>
+      )}
+      {dirty && (
+        <div className="mt-3 flex justify-end gap-2" data-testid="params-actions">
+          <Button size="sm" variant="secondary" className="rounded-xl" onPress={() => setDraft(saved)} isDisabled={busy} data-testid="params-cancel">
+            Отменить
+          </Button>
+          <Button size="sm" className="rounded-xl" onPress={() => void save()} isPending={busy} data-testid="params-save">
+            Сохранить
+          </Button>
+        </div>
+      )}
     </section>
   );
 }
@@ -159,108 +354,10 @@ function TopPlayers({ players, allHref }: { players: RatingCardData[]; allHref: 
           Все спортсмены <ChevronRight size={14} />
         </Button>
       </div>
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-5">
         {players.map((p, i) => (
           <RatingPlayerCard key={p.userId} r={p} place={i + 1} onOpen={() => router.push('/rating/' + p.userId)} />
         ))}
-      </div>
-    </section>
-  );
-}
-
-// ── расписание лентой времени ────────────────────────────────────────────────
-
-function Timeline({ s }: { s: Schedule }) {
-  const days = s.settings.days.length ? s.settings.days : [];
-  const today = dayKey(new Date());
-  const [at, setAt] = useState(() => Math.max(0, days.findIndex((d) => d.date === today)));
-  const day = days[at];
-  if (!day) return null;
-  const [sh, sm] = day.start.split(':').map(Number);
-  const [eh, em] = day.end.split(':').map(Number);
-  const from = sh * 60 + sm;
-  const to = eh * 60 + em;
-  const span = Math.max(60, to - from);
-  const minutes = (d: Date) => d.getHours() * 60 + d.getMinutes();
-  const ofDay = s.matches.filter((m) => m.scheduledAt && dayKey(m.scheduledAt) === day.date && m.table);
-  const tables = Array.from({ length: Math.max(s.settings.tables, ...ofDay.map((m) => m.table ?? 0)) }, (_, i) => i + 1);
-  const hours = Array.from({ length: Math.floor(span / 60) + 1 }, (_, i) => from + i * 60).filter((v) => v <= to);
-  const now = new Date();
-  const nowAt = day.date === today ? minutes(now) : null;
-  const pct = (v: number) => ((v - from) / span) * 100;
-  const block = (m: ScheduledMatch) => {
-    const done = m.status === 'finished';
-    const live = m.status === 'in_progress';
-    return (
-      <div
-        key={m.id}
-        className={
-          'absolute inset-y-1 flex min-w-0 flex-col justify-center overflow-hidden rounded-lg px-2 text-[11px] leading-tight ' +
-          (done ? 'bg-brand-600 text-white' : live ? 'bg-brand-100 text-brand-900 ring-2 ring-brand-500' : 'border border-neutral-200 bg-white text-neutral-700')
-        }
-        style={{ left: pct(minutes(m.scheduledAt!)) + '%', width: (s.settings.matchMinutes / span) * 100 + '%' }}
-        title={m.player1.name + ' — ' + m.player2.name}
-        data-testid="timeline-match"
-        data-state={done ? 'done' : live ? 'live' : 'pending'}
-      >
-        <span className="truncate font-semibold">{shortName(m.player1.name).split(' ')[0]} — {shortName(m.player2.name).split(' ')[0]}</span>
-        <span className="truncate opacity-75">
-          {hhmm(m.scheduledAt!)}
-          {done || live ? ' · ' + (m.score1 ?? 0) + ':' + (m.score2 ?? 0) : ''}
-        </span>
-      </div>
-    );
-  };
-  return (
-    <section className={CARD + ' p-5'} data-testid="overview-timeline">
-      <div className="mb-3 flex flex-wrap items-center gap-3">
-        <h2 className="m-0 text-[17px] font-semibold">Расписание</h2>
-        <div className="ml-auto flex items-center gap-1 rounded-full border border-neutral-200 p-1">
-          <Button isIconOnly size="sm" variant="ghost" className="rounded-full" aria-label="Предыдущий день" isDisabled={at === 0} onPress={() => setAt(at - 1)}>
-            <ChevronLeft size={14} />
-          </Button>
-          <span className="px-2 text-[13px] font-medium" data-testid="timeline-day">{ruDate(day.date)}</span>
-          <Button isIconOnly size="sm" variant="ghost" className="rounded-full" aria-label="Следующий день" isDisabled={at >= days.length - 1} onPress={() => setAt(at + 1)}>
-            <ChevronRight size={14} />
-          </Button>
-        </div>
-      </div>
-      <div className="max-h-[440px] overflow-auto">
-        <div style={{ minWidth: 150 + (span / 60) * 190 }}>
-          <div className="sticky top-0 z-10 grid grid-cols-[150px_1fr] bg-white pb-1 text-[12px] text-neutral-500">
-            <span>Стол</span>
-            <div className="relative h-5">
-              {hours.map((h) => (
-                <span key={h} className="absolute -translate-x-1/2" style={{ left: pct(h) + '%' }}>
-                  {pad(Math.floor(h / 60))}:00
-                </span>
-              ))}
-            </div>
-          </div>
-          {tables.map((tb) => {
-            const ms = ofDay.filter((m) => m.table === tb);
-            const done = ms.filter((m) => m.status === 'finished').length;
-            return (
-              <div key={tb} className="grid grid-cols-[150px_1fr] items-center gap-0 py-1" data-testid="timeline-row">
-                <div className="flex flex-col gap-1 pr-4">
-                  <span className="flex items-center justify-between text-[13px] font-semibold">
-                    Стол {tb}
-                    <span className="text-[12px] font-normal text-neutral-500 tabular-nums">{done}/{ms.length}</span>
-                  </span>
-                  <span className="h-1 overflow-hidden rounded-full bg-neutral-100">
-                    <span className="block h-full rounded-full bg-brand-600" style={{ width: (ms.length ? (done / ms.length) * 100 : 0) + '%' }} />
-                  </span>
-                </div>
-                <div className="relative h-12 rounded-lg bg-neutral-50">
-                  {ms.map(block)}
-                  {nowAt !== null && nowAt >= from && nowAt <= to && (
-                    <span aria-hidden className="absolute inset-y-0 w-0.5 bg-red-500" style={{ left: pct(nowAt) + '%' }} />
-                  )}
-                </div>
-              </div>
-            );
-          })}
-        </div>
       </div>
     </section>
   );
@@ -286,7 +383,7 @@ export function TournamentDashboard({ id }: { id: string }) {
         .slice(0, 5),
     [participants.data],
   );
-  const allHref = usePathname().replace(/\/info$/, '/players');
+  const base = usePathname().replace(/\/info$/, '');
 
   if (tournament.error) return <p className="p-6 text-[13px] text-red-600">{tournament.error}</p>;
   if (!t) return <Spinner className="m-auto" />;
@@ -305,13 +402,15 @@ export function TournamentDashboard({ id }: { id: string }) {
       setDatesError((e as Error).message);
     }
   };
-  const pickPlace = async (place: { region: string; city: string }) => {
+  const pickPlace = async (place: { region: string; city: string; venue?: string }) => {
     setPlaceError(null);
     try {
       await updateTournament(t.id, { ...infoOf(t), ...place });
       tournament.reload();
+      return true;
     } catch (e) {
       setPlaceError((e as Error).message);
+      return false;
     }
   };
 
@@ -327,34 +426,27 @@ export function TournamentDashboard({ id }: { id: string }) {
             <Kpi label="Столов" value={tables || '—'} chip={s ? pill(s.groups.length + ' групп', 'neutral') : undefined} testId="kpi-tables" />
           </div>
         </div>
-        <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,1fr)_340px]">
+        {/* Слева: сетка, под ней карта и даты; справа — параметры. Участники и
+            расписание — во всю ширину ✳ (23.11.2026). */}
+        <div className="grid items-start gap-5 xl:grid-cols-[minmax(0,1fr)_340px]">
           <div className="flex min-w-0 flex-col gap-5">
-          <div className={CARD + ' relative h-[300px] overflow-hidden bg-neutral-50 p-4 max-md:h-[220px]'}>
-            <div className="absolute inset-4 bottom-16">
-              <KzDotMap region={t.region} city={t.city} onPick={(p) => void pickPlace(p)} />
+            <BracketPreview s={s} href={base + '/schedule?view=bracket'} />
+            <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_320px]">
+              {/* `isolate`: слои Leaflet (z-index 400+) остаются внутри карточки и не перекрывают окна страницы. */}
+              <div className={CARD + ' relative isolate min-h-[300px] overflow-hidden bg-brand-50 max-md:min-h-[220px]'}>
+                <div className="absolute inset-0 z-0">
+                  <KzMap region={t.region} city={t.city} onPick={(p) => void pickPlace(p)} />
+                </div>
+                <PlaceCard t={t} onSave={pickPlace} />
+                {placeError && <p className="absolute top-3 left-4 z-10 m-0 rounded-lg bg-red-50 px-3 py-1.5 text-[12px] text-red-700">{placeError}</p>}
+              </div>
+              <Dates t={t} onPick={(a, b) => void pickDates(a, b)} error={datesError} />
             </div>
-            <div className="absolute right-4 bottom-4 rounded-xl border border-neutral-200 bg-white px-3 py-2 text-[12px] shadow-sm" data-testid="overview-place">
-              <div className="text-neutral-500">Место проведения</div>
-              <div className="font-semibold">{placeLabel(t) || 'Выберите город на карте'}</div>
-              {t.venue && <div className="text-neutral-500">{t.venue}</div>}
-            </div>
-            {placeError && <p className="absolute top-3 left-4 m-0 rounded-lg bg-red-50 px-3 py-1.5 text-[12px] text-red-700">{placeError}</p>}
           </div>
-          {top.length > 0 && <TopPlayers players={top} allHref={allHref} />}
-          </div>
-          <div className="flex min-w-0 flex-col gap-5">
-            <Dates t={t} onPick={(a, b) => void pickDates(a, b)} error={datesError} />
-            <Params t={t} onEdit={() => setEditing(true)} />
-          </div>
+          <Params t={t} onEdit={() => setEditing(true)} onSaved={() => tournament.reload()} />
         </div>
 
-        {s && s.status !== 'none' ? (
-          <Timeline s={s} />
-        ) : (
-          <section className={CARD + ' p-5 text-[14px] text-neutral-500'} data-testid="overview-timeline">
-            Расписания пока нет
-          </section>
-        )}
+        {top.length > 0 && <TopPlayers players={top} allHref={base + '/players'} />}
       </div>
 
       <Drawer.Backdrop isOpen={editing} onOpenChange={setEditing}>

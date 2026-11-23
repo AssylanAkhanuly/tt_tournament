@@ -77,7 +77,7 @@ test('главная администратора — календарь: тур
   await page.waitForURL(/\/dashboard\/tournaments\/[0-9a-f-]{36}\/info$/);
   // Шапки турнира в сайдбаре нет ✳ (19.11.2026) — название в «Сведениях».
   await expect(page.getByTestId('tournament-context')).toHaveCount(0);
-  await expect(page.getByTestId('overview-params')).toContainText(`[e2e] Кубок ${stamp}`);
+  await expect(page.getByTestId('params-name')).toHaveValue(`[e2e] Кубок ${stamp}`);
   await page.getByRole('button', { name: 'Спортсмены', exact: true }).click();
   await expect(page.getByTestId('table-empty')).toHaveText('Участников нет'); // заведён без участников
   // Назад к списку — знак в шапке.
@@ -334,7 +334,7 @@ test('вид «Таблица»: поиск сужает, строка откр�
   await page.getByTestId('tournament-search').fill('Чемпионат Республики');
   await rows.first().click();
   await page.waitForURL(/\/dashboard\/tournaments\/[0-9a-f-]{36}\/info$/);
-  await expect(page.getByTestId('overview-params')).toContainText('[demo] Чемпионат Республики Казахстан');
+  await expect(page.getByTestId('params-name')).toHaveValue('[demo] Чемпионат Республики Казахстан');
 
   await page.goto('/dashboard?view=table');
   await page.getByTestId('nav-sub').filter({ hasText: 'Месяц' }).click();
@@ -481,7 +481,7 @@ test('внутри турнира сайдбар — разделы турнир
 
   // Разделы турнира — вкладками под названием, сайдбар — «Календарь» кабинета ✳ (21.11.2026).
   await expect(page.getByTestId('tournament-context')).toHaveCount(0);
-  await expect(page.getByTestId('overview-params')).toContainText(demo.name);
+  await expect(page.getByTestId('params-name')).toHaveValue(demo.name);
   await expect(page.getByTestId('page-title')).toHaveText(demo.name);
   await expect(page.getByRole('navigation', { name: 'Разделы' }).getByRole('button', { name: 'Календарь' })).toBeVisible();
   const разделы = page
@@ -616,7 +616,7 @@ test('у председателя ГСК тот же «Календарь»: с�
   await page.getByTestId('tournament-search').fill('Чемпионат Республики');
   await page.getByTestId('tournament-table-row').first().click();
   await page.waitForURL(/\/gsk\/tournaments\/[0-9a-f-]{36}\/info$/);
-  await expect(page.getByTestId('overview-params')).toContainText('[demo] Чемпионат Республики Казахстан');
+  await expect(page.getByTestId('params-name')).toHaveValue('[demo] Чемпионат Республики Казахстан');
   await page.getByRole('button', { name: 'Спортсмены', exact: true }).click();
   await expect(page.getByTestId('participant-row')).toHaveCount(8);
   await expect(page.getByRole('button', { name: 'Спортсмены', exact: true })).toHaveAttribute('aria-current', 'true');
@@ -714,10 +714,51 @@ test('«Сведения»: даты, место, возраст ползунк�
   });
   // Сохранённое переживает перезагрузку.
   await page.reload();
-  await expect(page.getByTestId('overview-params')).toContainText('Темиртау, Карагандинская область');
+  await expect(page.getByTestId('overview-place-city')).toHaveText('Темиртау, Карагандинская область');
   await page.getByTestId('info-edit').click();
   await expect(page.getByTestId('info-place')).toHaveValue('Темиртау, Карагандинская область');
   await expect(page.getByTestId('info-age-max')).toHaveValue('18');
+});
+
+test('обзор «Сведений»: параметры полями черновиком, адрес окном со значка, сетка ведёт в «Расписание»', async ({ page }) => {
+  await войти(page, E2E_ADMIN);
+  await page.waitForURL((url) => url.pathname === '/dashboard');
+  const name = `[e2e] Обзор ${Date.now()}`;
+  await завести(page, name, new Date());
+  const t = ((await (await page.request.get('/api/tournaments/')).json()) as { id: string; name: string }[]).find(
+    (x) => x.name === name,
+  )!;
+  await page.goto(`/dashboard/tournaments/${t.id}/info`);
+  await expect(page.getByTestId('params-name')).toHaveValue(name);
+
+  // Параметры: «Сохранить» появляется только после правки, «+» прибавляет победу.
+  await expect(page.getByTestId('params-save')).toHaveCount(0);
+  const games = page.getByTestId('params-games');
+  const before = Number(await games.inputValue());
+  await page.getByRole('button', { name: 'Увеличить: Матч до побед' }).click();
+  await expect(games).toHaveValue(String(before + 1));
+  await page.getByTestId('params-cancel').click();
+  await expect(games).toHaveValue(String(before));
+  await expect(page.getByTestId('params-save')).toHaveCount(0);
+  await page.getByRole('button', { name: 'Увеличить: Матч до побед' }).click();
+  await page.getByTestId('params-name').fill(name + ' · правка');
+  await page.getByTestId('params-save').click();
+  await expect(page.getByTestId('params-save')).toHaveCount(0);
+  let d = await (await page.request.get(`/api/tournaments/${t.id}/`)).json();
+  expect(d).toMatchObject({ name: name + ' · правка', games_to_win: before + 1 });
+
+  // Адрес: значок на карточке места открывает окно, сохранённое видно на карте.
+  await page.getByTestId('overview-place-edit').click();
+  await page.getByTestId('place-venue').fill('пр. Абая, 15, СК «Арена»');
+  await page.getByTestId('place-save').click();
+  await expect(page.getByTestId('place-dialog')).toHaveCount(0);
+  await expect(page.getByTestId('overview-place-venue')).toHaveText('пр. Абая, 15, СК «Арена»');
+  d = await (await page.request.get(`/api/tournaments/${t.id}/`)).json();
+  expect(d.venue).toBe('пр. Абая, 15, СК «Арена»');
+
+  // Сетка на обзоре — только картинка; «Открыть сетку» ведёт на вид «Сетка».
+  await page.getByTestId('overview-bracket-open').click();
+  await page.waitForURL((url) => url.pathname.endsWith('/schedule') && url.searchParams.get('view') === 'bracket');
 });
 
 test('протокол на «Сведениях» скачивается PDF-файлом кнопкой в углу листа', async ({ page }) => {
