@@ -18,6 +18,7 @@ import { Chip, Spinner } from '@heroui/react';
 import { useEffect } from 'react';
 
 import { useSchedule, type Schedule, type ScheduledMatch, type SchedulePerson } from '@/entities/tournament';
+import { placeholderFigure } from '@/shared/lib/figure';
 import { shortName } from '@/shared/lib/name';
 import { PersonAvatar } from '@/shared/ui/PersonAvatar';
 
@@ -39,6 +40,21 @@ function onTable(matches: ScheduledMatch[], table: number): ScheduledMatch | nul
 
 // ── карточка стола ───────────────────────────────────────────────────────────
 
+/** Лицо игрока: снимок, иначе лицо заглушки-фигуры на персиковом — как в
+    составе сборной и на табло судьи стола. */
+function Face({ p }: { p: SchedulePerson }) {
+  return (
+    <span className="block size-10 shrink-0 overflow-hidden rounded-full bg-qtt-peach ring-2 ring-white/80" data-photo={p.avatar ? 'yes' : 'no'}>
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={p.avatar ?? placeholderFigure(p.id)}
+        alt=""
+        className={'size-full object-cover ' + (p.avatar ? '' : 'origin-[50%_12%] scale-[2.2] object-top')}
+      />
+    </span>
+  );
+}
+
 function Side({ p, score, lead, align }: { p: SchedulePerson; score: number | null; lead: boolean; align: 'left' | 'right' }) {
   return (
     <div className={'flex min-w-0 flex-1 items-center gap-3 px-4 @max-md:gap-1 @max-md:px-2 ' + (align === 'right' ? 'flex-row-reverse' : '')}>
@@ -49,9 +65,7 @@ function Side({ p, score, lead, align }: { p: SchedulePerson; score: number | nu
           (align === 'right' ? '@md:flex-row-reverse @md:pr-1 @md:pl-3' : '@md:pr-3 @md:pl-1')
         }
       >
-        <span className="shrink-0 rounded-full ring-2 ring-white/80">
-          <PersonAvatar name={p.name} src={p.avatar} size="md" />
-        </span>
+        <Face p={p} />
         <span className="max-w-[88px] min-w-0 truncate text-[13px] font-semibold text-white @max-md:text-[11px] @md:max-w-none" title={p.name}>
           {shortName(p.name)}
         </span>
