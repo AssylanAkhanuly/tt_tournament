@@ -6,10 +6,10 @@
    Две оболочки, как в макетах:
    - гость — публичный сайт (Э0.4): шапка с разделами и «Войти», без бокового
      меню. Роли нет — это отсутствие роли (ТЗ §3);
-   - председатель ГСК после входа — на десктопе `AppShell` ✳ (28.10.2026,
-     HeroUI + Tailwind, общая с кабинетом администратора), на телефоне —
-     `PhoneChrome` из кита. Сверху меню — роль, снизу —
-     человек и «Выйти», главные кнопки экрана прилипают к низу.
+   - председатель ГСК после входа — `AppShell` ✳ (28.10.2026, HeroUI +
+     Tailwind, общая с кабинетами администратора и судьи); на телефоне ✳
+     (23.11.2026) — та же оболочка с плавающей панелью вкладок, прежний
+     `PhoneChrome` из кита снят.
 
    В меню председателя только те разделы, что есть в приложении. Разделы его
    кабинета из макета (панель, соревнования, судьи…) появятся вместе с
@@ -24,7 +24,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import type { ReactNode } from 'react';
 
 import { useSession, workspacesOf } from '@/entities/session';
-import { FullScreen, PhoneChrome, SiteHeader, useNarrow, type RoleUI } from '@/shared/kit/app';
+import { FullScreen, SiteHeader } from '@/shared/kit/app';
 import { AppShell, type ShellSubItem } from '@/widgets/app-shell';
 
 /** Разделы кабинета председателя. «Выпуски», «Апелляции», «Журнал» и
@@ -82,10 +82,6 @@ export function RatingShell({
   const router = useRouter();
   const path = usePathname() || '/rating';
   const { user, loading, isGskChairman, signOut } = useSession();
-  // Телефон ✳ (11.09.2026): оболочка роли как `PhoneRoleApp` в Storybook —
-  // шапка, заголовок, кнопки внизу, вкладки разделов. Десктопная с боковым
-  // меню на узком экране сжимала рабочую область до полоски.
-  const narrow = useNarrow();
 
   // Пока сессия не известна — никакой оболочки ✳ (11.09.2026). Иначе председатель
   // сначала видел шапку сайта, потом страница пересобиралась в его оболочку, и
@@ -100,57 +96,28 @@ export function RatingShell({
       if (href) router.push(href);
     };
 
-    // Десктоп — оболочка на HeroUI ✳ (28.10.2026): та же, что у кабинета
-    // администратора, с меню человека и сменой роли. Телефон пока на ките.
-    if (!narrow) {
-      return (
-        <AppShell
-          role={{ title: 'Председатель ГСК' }}
-          roles={workspacesOf(user)}
-          person={{ name: user.name, email: user.email }}
-          nav={nav.map(([label, , icon, children]) => ({ label, icon, children: label === active && sub ? sub : children }))}
-          active={active}
-          title={title}
-          actions={actions}
-          bleed={bleed}
-          context={context}
-          home={home}
-          onNavigate={onNavigate}
-          onOpen={(href) => router.push(href)}
-          onSwitchRole={(to) => router.push(to)}
-          onSignOut={() => void signOut()}
-        >
-          {children}
-        </AppShell>
-      );
-    }
-
-    const role: RoleUI = {
-      num: '5',
-      title: 'Председатель ГСК',
-      person: { nm: user.name, rl: 'Председатель ГСК', av: '', email: user.email ?? undefined },
-      brandName: 'Национальный рейтинг',
-      badge: false,
-      // В полосе вкладок — одно слово ✳ (03.11.2026): «Рейтинг игроков» → «Рейтинг».
-      nav: nav.map(([label, , icon]) => [icon, TAB[label] ?? label]),
-    };
-    const fromTab = (tab: string) => Object.keys(TAB).find((l) => TAB[l] === tab) ?? tab;
+    // Одна оболочка на десктопе и телефоне ✳ (23.11.2026, решение владельца
+    // продукта: «панель вкладок — один компонент для всех»): `AppShell`, как у
+    // остальных кабинетов; на телефоне — плавающая панель вкладок с «Профилем».
     return (
-      <FullScreen>
-        <PhoneChrome
-          role={role}
-          nav={TAB[active] ?? active}
-          header={false}
-          title={title}
-          actions={actions}
-          bell={false}
-          bleed={bleed}
-          onNavigate={(tab) => onNavigate(fromTab(tab))}
-          onSignOut={() => void signOut()}
-        >
-          {children}
-        </PhoneChrome>
-      </FullScreen>
+      <AppShell
+        role={{ title: 'Председатель ГСК' }}
+        roles={workspacesOf(user)}
+        person={{ name: user.name, email: user.email }}
+        nav={nav.map(([label, , icon, children]) => ({ label, short: TAB[label], icon, children: label === active && sub ? sub : children }))}
+        active={active}
+        title={title}
+        actions={actions}
+        bleed={bleed}
+        context={context}
+        home={home}
+        onNavigate={onNavigate}
+        onOpen={(href) => router.push(href)}
+        onSwitchRole={(to) => router.push(to)}
+        onSignOut={() => void signOut()}
+      >
+        {children}
+      </AppShell>
     );
   }
 

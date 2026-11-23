@@ -38,7 +38,8 @@ const RADIUS = 'rounded-xl';
 export type ShellSubItem = { label: string; href: string; active?: boolean; badge?: number };
 /** Пункт меню: `group` — заголовок группы над ним (как «Operations» в
  *  образце Visitly), `badge` — красный счётчик справа. */
-export type ShellNavItem = { label: string; icon?: ReactNode; children?: ShellSubItem[]; group?: string; badge?: number };
+/** `short` — подпись во вкладке панели телефона, когда полная не помещается («Рейтинг игроков» → «Рейтинг»). */
+export type ShellNavItem = { label: string; short?: string; icon?: ReactNode; children?: ShellSubItem[]; group?: string; badge?: number };
 export type ShellRole = { title: string; to: string };
 /** Вкладка страницы ✳ (21.11.2026): разделы страницы (турнира, сезона, лиги,
  *  тура) — вкладками под заголовком, а не в сайдбаре; у выбранной — её виды
@@ -357,7 +358,7 @@ export function AppShell({
           </div>
         </aside>
 
-        <main className="flex min-h-0 min-w-0 flex-1 flex-col bg-shell-page">
+        <main className={'flex min-h-0 min-w-0 flex-1 flex-col bg-shell-page ' + (tabBar ? 'pb-[calc(84px+env(safe-area-inset-bottom))]' : '')}>
           {/* Заголовок и вкладки страницы ✳ (21.11.2026). Место заголовка
               держится и пока имя грузится — вкладки не прыгают. Пустой список
               вкладок — только заголовок с чертой (карточка члена сборной ✳
@@ -443,8 +444,7 @@ export function AppShell({
           <div
             className={
               'flex min-h-0 flex-1 flex-col ' +
-              (bleed ? 'overflow-hidden' : 'overflow-auto px-6 pb-6 pt-5 [&>*]:shrink-0') +
-              (tabBar ? ' pb-24' : '')
+              (bleed ? 'overflow-hidden' : 'overflow-auto px-6 pb-6 pt-5 [&>*]:shrink-0')
             }
           >
             {title && !tabs && <h1 className="pb-4 text-xl font-semibold tracking-tight">{title}</h1>}
@@ -502,7 +502,7 @@ export function AppShell({
       {tabBar && (
         <nav
           aria-label="Разделы"
-          className="absolute inset-x-3 bottom-[calc(12px+env(safe-area-inset-bottom))] z-40 flex rounded-[28px] bg-[color-mix(in_srgb,white_88%,transparent)] p-1.5 shadow-[0_10px_30px_color-mix(in_srgb,var(--color-brand-900)_18%,transparent)] ring-1 ring-shell-line backdrop-blur-xl"
+          className="absolute inset-x-3 bottom-[calc(12px+env(safe-area-inset-bottom))] z-40 flex gap-0.5 rounded-[28px] bg-[color-mix(in_srgb,white_88%,transparent)] p-1.5 shadow-[0_10px_30px_color-mix(in_srgb,var(--color-brand-900)_18%,transparent)] ring-1 ring-shell-line backdrop-blur-xl"
           data-testid="tab-bar"
         >
           {nav.map((item) => {
@@ -517,13 +517,13 @@ export function AppShell({
                   onNavigate(item.label);
                 }}
                 className={
-                  'relative flex min-w-0 flex-1 flex-col items-center justify-center gap-0.5 rounded-[22px] py-1.5 text-[11px] font-medium [&_svg]:size-[22px] ' +
+                  'relative flex min-w-0 flex-1 flex-col items-center justify-center gap-0.5 rounded-[22px] py-1.5 text-[10.5px] font-medium [&_svg]:size-[22px] ' +
                   (on ? 'bg-brand-50 text-brand-700' : 'text-shell-muted')
                 }
                 data-testid="tab-bar-item"
               >
                 {item.icon}
-                <span className="max-w-full truncate px-1">{item.label}</span>
+                <span className="max-w-full truncate">{item.short ?? item.label}</span>
                 {!!item.badge && (
                   <span className="absolute top-0.5 left-[calc(50%+6px)] inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-red-600 px-1 text-[10px] font-semibold tabular-nums text-white">
                     {item.badge}
@@ -538,13 +538,13 @@ export function AppShell({
             onClick={() => setAccountPage(true)}
             aria-label={person.name}
             aria-current={accountPage || undefined}
-            className={'flex min-w-0 flex-1 flex-col items-center justify-center gap-0.5 rounded-[22px] py-1.5 text-[11px] font-medium ' + (accountPage ? 'bg-brand-50 text-brand-700' : 'text-shell-muted')}
+            className={'flex min-w-0 flex-1 flex-col items-center justify-center gap-0.5 rounded-[22px] py-1.5 text-[10.5px] font-medium ' + (accountPage ? 'bg-brand-50 text-brand-700' : 'text-shell-muted')}
             data-testid="side-person"
           >
             <Avatar size="sm" className="size-[22px]">
               <Avatar.Fallback className="text-[11px]">{person.name.slice(0, 1)}</Avatar.Fallback>
             </Avatar>
-            <span className="max-w-full truncate px-1">Профиль</span>
+            <span className="max-w-full truncate">Профиль</span>
           </button>
         </nav>
       )}

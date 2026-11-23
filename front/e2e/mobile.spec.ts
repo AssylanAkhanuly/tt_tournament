@@ -15,8 +15,8 @@ test('на телефоне — вкладки разделов вместо б�
   await page.getByRole('button', { name: 'Войти' }).click();
   await page.waitForURL((url) => url.pathname === '/rating');
 
-  await expect(page.getByTestId('side-person')).toHaveCount(0);
-  // Шапки нет ✳ (03.11.2026): ни знака, ни аватара; вкладка — одним словом.
+  // Шапки нет ✳ (03.11.2026, 23.11.2026): ни знака, ни карточки рабочего места; вкладка — одним словом.
+  await expect(page.getByTestId('home-link')).toBeHidden();
   await expect(page.getByText('Национальный рейтинг', { exact: true })).toHaveCount(0);
   await expect(page.getByTestId('phone-person')).toHaveCount(0);
   await expect(page.getByRole('button', { name: 'Рейтинг', exact: true })).toHaveAttribute('aria-current', 'true');
@@ -67,18 +67,18 @@ test('на телефоне — вкладки разделов вместо б�
   await expect(page.locator('[data-testid="rating-row"][data-player="Ахметов Ерлан"]')).toHaveCount(0);
   await expect(page.locator('[data-testid="rating-row"]').first()).toBeVisible();
 
-  // Календарь и «Выйти» — во вкладке «Ещё».
-  await page.getByTestId('phone-more').click();
-  const ещё = page.getByTestId('phone-more-sheet');
-  await expect(ещё.getByTestId('phone-person')).toContainText('Председатель ГСК (проверки)');
-  await expect(ещё.getByRole('button', { name: 'Выйти' })).toBeInViewport();
-  await page.waitForTimeout(400); // анимация панели — для снимка
-  await page.screenshot({ path: 'test-results/mobile/more-tab.png' });
-  await ещё.getByRole('button', { name: 'Календарь' }).click();
+  // Панель вкладок — общая для всех кабинетов ✳ (23.11.2026): «Календарь» —
+  // своя вкладка, «Выйти» — на странице «Профиль».
+  const вкладки = page.getByTestId('tab-bar');
+  await expect(вкладки.getByTestId('tab-bar-item')).toHaveText(['Рейтинг', 'Журнал', 'Калибровка', 'Календарь']);
+  await page.screenshot({ path: 'test-results/mobile/tab-bar.png' });
+  await вкладки.getByRole('button', { name: 'Календарь' }).click();
   await page.waitForURL((url) => url.pathname === '/calendar');
 
-  await page.getByTestId('phone-more').click();
-  await page.getByTestId('phone-more-sheet').getByRole('button', { name: 'Выйти' }).click();
+  await вкладки.getByTestId('side-person').click();
+  const аккаунт = page.getByTestId('account-page');
+  await expect(аккаунт).toContainText('Председатель ГСК (проверки)');
+  await аккаунт.getByTestId('person-signout').click();
   await expect(page.getByTestId('login-link')).toBeVisible();
 });
 
