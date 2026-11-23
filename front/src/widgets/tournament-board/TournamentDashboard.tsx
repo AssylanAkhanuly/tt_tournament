@@ -115,8 +115,6 @@ function Params({ t, onEdit }: { t: TournamentSummary; onEdit: () => void }) {
     ['Название', t.name],
     ['Вид', t.kind?.name ?? 'Без вида'],
     ['Статус', <Chip key="s" size="sm" variant="soft" color={t.status === 'in_progress' ? 'success' : 'default'}>{STATUS_LABEL[t.status]}</Chip>],
-    ['Даты', t.startsAt ? ruDate(dayKey(t.startsAt)) + (t.endsAt && t.endsAt !== dayKey(t.startsAt) ? ' — ' + ruDate(t.endsAt) : '') : '—'],
-    ['Место', placeLabel(t) || '—'],
     ['Зал', t.venue || '—'],
     ['Система', FORMAT_LABEL[t.format] ?? t.format],
     ['Игроков в группе', t.groupSize],
@@ -126,7 +124,7 @@ function Params({ t, onEdit }: { t: TournamentSummary; onEdit: () => void }) {
     ['Рейтинговый', t.isRating ? 'Да' : 'Нет'],
   ];
   return (
-    <section className={CARD + ' flex min-h-0 flex-col p-5'} data-testid="overview-params">
+    <section className={CARD + ' flex min-h-0 flex-col p-4'} data-testid="overview-params">
       <div className="flex items-center justify-between gap-3">
         <h2 className="m-0 text-[17px] font-semibold">Параметры</h2>
         <Button size="sm" variant="secondary" className="rounded-full" onPress={onEdit} data-testid="info-edit">
@@ -135,7 +133,7 @@ function Params({ t, onEdit }: { t: TournamentSummary; onEdit: () => void }) {
       </div>
       <dl className="m-0 mt-3 flex min-h-0 flex-1 flex-col overflow-y-auto">
         {rows.map(([k, v]) => (
-          <div key={k} className="flex items-center justify-between gap-4 border-b border-neutral-100 py-2.5 text-[14px] last:border-b-0">
+          <div key={k} className="flex items-center justify-between gap-4 border-b border-neutral-100 py-2 text-[13px] last:border-b-0">
             <dt className="text-neutral-500">{k}</dt>
             <dd className="m-0 truncate text-right font-medium" title={typeof v === 'string' ? v : undefined}>
               {v}
@@ -161,7 +159,7 @@ function TopPlayers({ players, allHref }: { players: RatingCardData[]; allHref: 
           Все спортсмены <ChevronRight size={14} />
         </Button>
       </div>
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-5">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
         {players.map((p, i) => (
           <RatingPlayerCard key={p.userId} r={p} place={i + 1} onOpen={() => router.push('/rating/' + p.userId)} />
         ))}
@@ -320,34 +318,36 @@ export function TournamentDashboard({ id }: { id: string }) {
   return (
     <div className="h-full overflow-y-auto bg-neutral-50" data-testid="tournament-overview">
       <div className="flex flex-col gap-5 p-6 max-md:p-4">
-        <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_360px]">
-          <div className="flex min-w-0 flex-col gap-5">
-            <div className="@container"><div className="grid grid-cols-2 gap-4 @[640px]:grid-cols-4 @[640px]:gap-0 @[640px]:divide-x @[640px]:divide-neutral-200">
-              <Kpi label="Участников" value={t.participants} chip={t.participantLimit ? pill('из ' + t.participantLimit, 'neutral') : undefined} testId="kpi-players" />
-              <Kpi label="Сыграно матчей" value={total ? done + ' / ' + total : '—'} chip={total ? pill(Math.round((done / total) * 100) + '%', 'green') : undefined} testId="kpi-done" />
-              <Kpi label="Идут сейчас" value={live} chip={live ? pill('live') : undefined} testId="kpi-live" />
-              <Kpi label="Столов" value={tables || '—'} chip={s ? pill(s.groups.length + ' групп', 'neutral') : undefined} testId="kpi-tables" />
-            </div></div>
-            {/* Карта и даты — рядом: правая колонка (параметры) по высоте вровень с ними. */}
-            <div className="grid flex-1 gap-5 lg:grid-cols-[minmax(0,1fr)_300px]">
-              <div className={CARD + ' relative min-h-[340px] overflow-hidden bg-neutral-50 p-4 max-md:min-h-[240px]'}>
-                <div className="absolute inset-4 bottom-16">
-                  <KzDotMap region={t.region} city={t.city} onPick={(p) => void pickPlace(p)} />
-                </div>
-                <div className="absolute right-4 bottom-4 rounded-xl border border-neutral-200 bg-white px-3 py-2 text-[12px] shadow-sm" data-testid="overview-place">
-                  <div className="text-neutral-500">Место проведения</div>
-                  <div className="font-semibold">{placeLabel(t) || 'Выберите город на карте'}</div>
-                  {t.venue && <div className="text-neutral-500">{t.venue}</div>}
-                </div>
-                {placeError && <p className="absolute top-3 left-4 m-0 rounded-lg bg-red-50 px-3 py-1.5 text-[12px] text-red-700">{placeError}</p>}
-              </div>
-              <Dates t={t} onPick={(a, b) => void pickDates(a, b)} error={datesError} />
-            </div>
+        {/* Показатели — во всю ширину; ниже карта широко, справа стопкой даты и параметры ✳ (23.11.2026). */}
+        <div className="@container">
+          <div className="grid grid-cols-2 gap-4 @[640px]:grid-cols-4 @[640px]:gap-0 @[640px]:divide-x @[640px]:divide-neutral-200">
+            <Kpi label="Участников" value={t.participants} chip={t.participantLimit ? pill('из ' + t.participantLimit, 'neutral') : undefined} testId="kpi-players" />
+            <Kpi label="Сыграно матчей" value={total ? done + ' / ' + total : '—'} chip={total ? pill(Math.round((done / total) * 100) + '%', 'green') : undefined} testId="kpi-done" />
+            <Kpi label="Идут сейчас" value={live} chip={live ? pill('live') : undefined} testId="kpi-live" />
+            <Kpi label="Столов" value={tables || '—'} chip={s ? pill(s.groups.length + ' групп', 'neutral') : undefined} testId="kpi-tables" />
           </div>
-          <Params t={t} onEdit={() => setEditing(true)} />
+        </div>
+        <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,1fr)_340px]">
+          <div className="flex min-w-0 flex-col gap-5">
+          <div className={CARD + ' relative h-[300px] overflow-hidden bg-neutral-50 p-4 max-md:h-[220px]'}>
+            <div className="absolute inset-4 bottom-16">
+              <KzDotMap region={t.region} city={t.city} onPick={(p) => void pickPlace(p)} />
+            </div>
+            <div className="absolute right-4 bottom-4 rounded-xl border border-neutral-200 bg-white px-3 py-2 text-[12px] shadow-sm" data-testid="overview-place">
+              <div className="text-neutral-500">Место проведения</div>
+              <div className="font-semibold">{placeLabel(t) || 'Выберите город на карте'}</div>
+              {t.venue && <div className="text-neutral-500">{t.venue}</div>}
+            </div>
+            {placeError && <p className="absolute top-3 left-4 m-0 rounded-lg bg-red-50 px-3 py-1.5 text-[12px] text-red-700">{placeError}</p>}
+          </div>
+          {top.length > 0 && <TopPlayers players={top} allHref={allHref} />}
+          </div>
+          <div className="flex min-w-0 flex-col gap-5">
+            <Dates t={t} onPick={(a, b) => void pickDates(a, b)} error={datesError} />
+            <Params t={t} onEdit={() => setEditing(true)} />
+          </div>
         </div>
 
-        {top.length > 0 && <TopPlayers players={top} allHref={allHref} />}
         {s && s.status !== 'none' ? (
           <Timeline s={s} />
         ) : (
