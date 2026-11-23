@@ -41,18 +41,18 @@ function onTable(matches: ScheduledMatch[], table: number): ScheduledMatch | nul
 
 function Side({ p, score, lead, align }: { p: SchedulePerson; score: number | null; lead: boolean; align: 'left' | 'right' }) {
   return (
-    <div className={'flex min-w-0 flex-1 items-center gap-3 px-4 max-md:gap-1 max-md:px-2 ' + (align === 'right' ? 'flex-row-reverse' : '')}>
+    <div className={'flex min-w-0 flex-1 items-center gap-3 px-4 @max-md:gap-1 @max-md:px-2 ' + (align === 'right' ? 'flex-row-reverse' : '')}>
       {/* Игрок — плашкой поверх столешницы: средняя линия проходит под ней, а не по имени. */}
       <span
         className={
-          'flex min-w-0 items-center gap-2 rounded-full bg-[color-mix(in_srgb,var(--color-brand-950)_55%,transparent)] py-1 backdrop-blur-sm max-md:flex-col max-md:gap-1 max-md:rounded-2xl max-md:px-2 max-md:py-1.5 ' +
-          (align === 'right' ? 'md:flex-row-reverse md:pr-1 md:pl-3' : 'md:pr-3 md:pl-1')
+          'flex min-w-0 items-center gap-2 rounded-full bg-[color-mix(in_srgb,var(--color-brand-950)_55%,transparent)] py-1 backdrop-blur-sm @max-md:flex-col @max-md:gap-1 @max-md:rounded-2xl @max-md:px-2 @max-md:py-1.5 ' +
+          (align === 'right' ? '@md:flex-row-reverse @md:pr-1 @md:pl-3' : '@md:pr-3 @md:pl-1')
         }
       >
         <span className="shrink-0 rounded-full ring-2 ring-white/80">
           <PersonAvatar name={p.name} src={p.avatar} size="md" />
         </span>
-        <span className="max-w-[88px] min-w-0 truncate text-[13px] font-semibold text-white max-md:text-[11px] md:max-w-none" title={p.name}>
+        <span className="max-w-[88px] min-w-0 truncate text-[13px] font-semibold text-white @max-md:text-[11px] @md:max-w-none" title={p.name}>
           {shortName(p.name)}
         </span>
       </span>
@@ -66,7 +66,7 @@ function TableCard({ table, m, s }: { table: number; m: ScheduledMatch | null; s
   const isLive = !!m && live(m);
   const shown = isLive ? [m!.score1 ?? 0, m!.score2 ?? 0] : [null, null];
   return (
-    <article className="flex min-w-0 flex-col gap-2" data-testid="table-card" data-table={table} data-state={isLive ? 'live' : m ? 'next' : 'free'}>
+    <article className="@container flex min-w-0 flex-col gap-2" data-testid="table-card" data-table={table} data-state={isLive ? 'live' : m ? 'next' : 'free'}>
       <header className="flex items-center gap-2 px-1">
         <span className="text-[15px] font-semibold">Стол {table}</span>
         {m && <span className={'rounded-md px-1.5 py-0.5 text-[11px] font-semibold ' + groupTone(s.groups, m.group).chip}>{m.groupName}</span>}
