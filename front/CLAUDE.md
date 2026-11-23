@@ -1063,8 +1063,8 @@ iPhone (`env(safe-area-inset-bottom)`); текст полей 16 px (`TextInput`
 (`tour-day-now`), карточки цвета круга (`toneAt` — палитра групп турнира) без
 значков, короткая встреча — одной строкой. Отправленное расписание участнику —
 `widgets/league/ParticipantSchedule`: кабинет клуба «Расписание»
-(`views/club/ClubScheduleView`, `ClubShell`) и кабинет судьи «Лига»
-(`views/referee/RefereeLeagueView`).
+(`views/club/ClubScheduleView`, `ClubShell`) и у судьи — страница `/referee/league`
+(`views/referee/RefereeLeagueView`; пункта «Лига» в меню судьи нет ✳ 23.11.2026, решение владельца продукта).
 
 **Календарь: сегодня и тесные дни** ✳ (29.10.2026, образец владельца продукта —
 Google Календарь). Сегодняшняя клетка подсвечена рамкой (`data-today`), поперёк
