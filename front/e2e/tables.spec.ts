@@ -60,6 +60,13 @@ test('главный судья: «Столы» — идущий матч на �
     await expect(page.getByTestId('tables-upcoming')).toContainText('Нет');
     await expect(page.getByTestId('tables-results')).toContainText('Нет');
     await page.screenshot({ path: 'test-results/tables/board.png' });
+
+    // Вид таблицей ✳ (23.11.2026): та же картина строками.
+    await page.goto(`/chief/tournaments/${id}/tables?view=table`);
+    const row = page.locator(`[data-testid="tables-row"][data-table="${match.table}"]`);
+    await expect(row).toContainText('идёт');
+    await expect(row).toContainText('1:0');
+    await expect(page.locator(`[data-testid="tables-row"][data-table="${other}"]`)).toContainText('свободен');
   } finally {
     await page.request.delete(`/api/tournaments/${id}/update/`);
   }

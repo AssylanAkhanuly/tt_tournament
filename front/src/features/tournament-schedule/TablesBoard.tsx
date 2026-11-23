@@ -11,21 +11,29 @@
    фамилия, счёт матча по партиям; сбоку у сетки — судья стола, как он и сидит.
    Стол без матчей — «свободен».
 
+   Вид ✳ (23.11.2026): карточки по 20 на страницу, мелкие — до пяти в ряд, или
+   таблица (`?view=table`, общий `DataTable` с поиском и сортировкой).
+
    Данные — снимок расписания (`useSchedule`), тот же, что у «Матчей» и «Дня»;
    экран перечитывает его раз в 15 секунд, пока открыт — счёт идёт со столов. */
 
 import { Chip, Spinner } from '@heroui/react';
-import { useEffect } from 'react';
+import { useSearchParams } from 'next/navigation';
+import { useEffect, useState } from 'react';
 
 import { useSchedule, type Schedule, type ScheduledMatch, type SchedulePerson } from '@/entities/tournament';
 import { placeholderFigure } from '@/shared/lib/figure';
 import { shortName } from '@/shared/lib/name';
+import { DataTable, type DataColumn } from '@/shared/ui/DataTable';
 import { PersonAvatar } from '@/shared/ui/PersonAvatar';
+import { TablePagination } from '@/shared/ui/table';
 
 import { groupTone } from './groupTone';
 
 const NUM = 'font-[family-name:var(--font-jersey)] tabular-nums leading-none';
 const REFRESH_MS = 15_000;
+/** Карточек столов на странице ✳ (23.11.2026). */
+const PAGE = 20;
 
 const hhmm = (d: Date | null) => (d ? d.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' }) : '—');
 const byTime = (a: ScheduledMatch, b: ScheduledMatch) => (a.scheduledAt?.getTime() ?? 0) - (b.scheduledAt?.getTime() ?? 0);
@@ -44,7 +52,7 @@ function onTable(matches: ScheduledMatch[], table: number): ScheduledMatch | nul
     составе сборной и на табло судьи стола. */
 function Face({ p }: { p: SchedulePerson }) {
   return (
-    <span className="block size-10 shrink-0 overflow-hidden rounded-full bg-qtt-peach ring-2 ring-white/80" data-photo={p.avatar ? 'yes' : 'no'}>
+    <span className="block size-8 shrink-0 overflow-hidden rounded-full bg-qtt-peach ring-2 ring-white/80" data-photo={p.avatar ? 'yes' : 'no'}>
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
         src={p.avatar ?? placeholderFigure(p.id)}
@@ -66,12 +74,12 @@ function Side({ p, score, lead, align }: { p: SchedulePerson; score: number | nu
         }
       >
         <Face p={p} />
-        <span className="max-w-[88px] min-w-0 truncate text-[13px] font-semibold text-white @max-md:text-[11px] @md:max-w-none" title={p.name}>
+        <span className="max-w-[76px] min-w-0 truncate text-[12px] font-semibold text-white @max-md:text-[10.5px] @md:max-w-none" title={p.name}>
           {shortName(p.name)}
         </span>
       </span>
       <span className="flex-1" />
-      {score !== null && <span className={NUM + ' text-[40px] ' + (lead ? 'text-white' : 'text-white/60')}>{score}</span>}
+      {score !== null && <span className={NUM + ' text-[28px] ' + (lead ? 'text-white' : 'text-white/60')}>{score}</span>}
     </div>
   );
 }
@@ -80,9 +88,9 @@ function TableCard({ table, m, s }: { table: number; m: ScheduledMatch | null; s
   const isLive = !!m && live(m);
   const shown = isLive ? [m!.score1 ?? 0, m!.score2 ?? 0] : [null, null];
   return (
-    <article className="@container flex min-w-0 flex-col gap-2" data-testid="table-card" data-table={table} data-state={isLive ? 'live' : m ? 'next' : 'free'}>
+    <article className="@container flex min-w-0 flex-col gap-1.5" data-testid="table-card" data-table={table} data-state={isLive ? 'live' : m ? 'next' : 'free'}>
       <header className="flex items-center gap-2 px-1">
-        <span className="text-[15px] font-semibold">Стол {table}</span>
+        <span className="text-[13px] font-semibold">Стол {table}</span>
         {m && <span className={'rounded-md px-1.5 py-0.5 text-[11px] font-semibold ' + groupTone(s.groups, m.group).chip}>{m.groupName}</span>}
         {m?.round ? <span className="text-[12px] text-neutral-500">круг {m.round}</span> : null}
         <span className="ml-auto">
@@ -113,7 +121,7 @@ function TableCard({ table, m, s }: { table: number; m: ScheduledMatch | null; s
       </div>
 
       {/* Судья — сбоку стола у сетки. */}
-      <div className="flex min-h-9 items-center justify-center gap-2 text-[13px]" data-testid="table-referee">
+      <div className="flex min-h-7 items-center justify-center gap-1.5 text-[12px]" data-testid="table-referee">
         {m?.referee ? (
           <>
             <PersonAvatar name={m.referee.name} src={m.referee.avatar} />
@@ -151,11 +159,57 @@ function Row({ m, right }: { m: ScheduledMatch; right: React.ReactNode }) {
   );
 }
 
+// ── вид таблицей ─────────────────────────────────────────────────────────────
+
+type TableRow = { table: number; m: ScheduledMatch | null };
+
+const stateOf = (m: ScheduledMatch | null) => (!m ? 'свободен' : live(m) ? 'идёт' : 'в ' + hhmm(m.scheduledAt));
+
+function Person({ p }: { p: SchedulePerson }) {
+  return (
+    <span className="flex items-center gap-2.5">
+      <span className="block size-8 shrink-0 overflow-hidden rounded-full bg-qtt-peach">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={p.avatar ?? placeholderFigure(p.id)} alt="" className={'size-full object-cover ' + (p.avatar ? '' : 'origin-[50%_12%] scale-[2.2] object-top')} />
+      </span>
+      <span className="truncate" title={p.name}>
+        {shortName(p.name)}
+      </span>
+    </span>
+  );
+}
+
+const TABLE_COLUMNS: DataColumn<TableRow>[] = [
+  { id: 'table', label: 'Стол', sortValue: (r) => r.table, render: (r) => <span className="font-semibold">Стол {r.table}</span> },
+  {
+    id: 'state',
+    label: 'Состояние',
+    sortValue: (r) => stateOf(r.m),
+    render: (r) => (
+      <Chip size="sm" variant="soft" color={r.m && live(r.m) ? 'success' : 'default'}>
+        {stateOf(r.m)}
+      </Chip>
+    ),
+  },
+  { id: 'group', label: 'Группа', sortValue: (r) => r.m?.groupName ?? null, render: (r) => (r.m ? r.m.groupName + (r.m.round ? ' · круг ' + r.m.round : '') : '—') },
+  { id: 'p1', label: 'Игрок 1', sortValue: (r) => r.m?.player1.name ?? null, render: (r) => (r.m ? <Person p={r.m.player1} /> : '—') },
+  {
+    id: 'score',
+    label: 'Счёт',
+    align: 'right',
+    render: (r) => (r.m && live(r.m) ? <span className={NUM + ' text-[20px]'}>{(r.m.score1 ?? 0) + ':' + (r.m.score2 ?? 0)}</span> : '—'),
+  },
+  { id: 'p2', label: 'Игрок 2', sortValue: (r) => r.m?.player2.name ?? null, render: (r) => (r.m ? <Person p={r.m.player2} /> : '—') },
+  { id: 'referee', label: 'Судья стола', sortValue: (r) => r.m?.referee?.name ?? null, render: (r) => (r.m?.referee ? shortName(r.m.referee.name) : '—') },
+];
+
 // ── экран ────────────────────────────────────────────────────────────────────
 
 export function TablesBoard({ tournamentId }: { tournamentId: string }) {
   const loaded = useSchedule(tournamentId);
   const { reload } = loaded;
+  const asTable = useSearchParams().get('view') === 'table';
+  const [page, setPage] = useState(0);
   useEffect(() => {
     const t = setInterval(reload, REFRESH_MS);
     return () => clearInterval(t);
@@ -169,18 +223,39 @@ export function TablesBoard({ tournamentId }: { tournamentId: string }) {
   const used = s.matches.map((m) => m.table ?? 0);
   const count = Math.max(s.settings.tables, ...used);
   const tables = Array.from({ length: count }, (_, i) => i + 1);
+  const pages = Math.ceil(tables.length / PAGE);
+  const at = Math.min(page, Math.max(0, pages - 1));
   const upcoming = s.matches.filter((m) => m.status === 'pending').sort(byTime).slice(0, 12);
   const results = s.matches.filter(finished).sort(byTime).reverse().slice(0, 12);
 
   return (
     <div className="h-full min-h-0 overflow-y-auto bg-neutral-50 md:grid md:grid-cols-[4fr_1fr] md:overflow-hidden" data-testid="tables-board">
-      <div className="min-h-0 p-6 max-md:p-4 md:overflow-y-auto">
-        <div className="grid gap-x-6 gap-y-8 lg:grid-cols-2 2xl:grid-cols-3">
-          {tables.map((t) => (
-            <TableCard key={t} table={t} m={onTable(s.matches, t)} s={s} />
-          ))}
+      {asTable ? (
+        <div className="flex min-h-0 flex-col max-md:min-h-[60vh]">
+          <DataTable
+            ariaLabel="Столы"
+            testId="tables-table"
+            rows={tables.map((t) => ({ table: t, m: onTable(s.matches, t) }))}
+            columns={TABLE_COLUMNS}
+            getId={(r) => String(r.table)}
+            search={{ placeholder: 'Игрок или судья', text: (r) => (r.m ? [r.m.player1.name, r.m.player2.name, r.m.referee?.name ?? ''].join(' ') : '') }}
+            defaultSort={{ column: 'table', direction: 'ascending' }}
+            pageSize={25}
+            rowProps={(r) => ({ 'data-testid': 'tables-row', 'data-table': String(r.table) })}
+          />
         </div>
-      </div>
+      ) : (
+        <div className="flex min-h-0 flex-col md:overflow-y-auto">
+          <div className="grid grid-cols-2 gap-x-4 gap-y-5 p-5 max-md:p-4 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
+            {tables.slice(at * PAGE, (at + 1) * PAGE).map((t) => (
+              <TableCard key={t} table={t} m={onTable(s.matches, t)} s={s} />
+            ))}
+          </div>
+          <div className="mt-auto">
+            <TablePagination page={at} pages={pages} onPage={setPage} />
+          </div>
+        </div>
+      )}
       <aside className="min-h-0 border-l md:grid md:grid-rows-[minmax(0,1fr)_minmax(0,1fr)] border-neutral-200 bg-white max-md:border-t max-md:border-l-0">
         <Panel title="Ближайшие матчи" testId="tables-upcoming">
           {upcoming.length ? (

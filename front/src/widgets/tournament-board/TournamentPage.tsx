@@ -60,7 +60,7 @@ type NavSubItem = { label: string; href: string; active?: boolean; badge?: numbe
 
 export type SectionView = {
   tab: 'roster' | 'applications';
-  view: 'matches' | 'day' | 'groups' | 'bracket';
+  view: 'matches' | 'day' | 'groups' | 'bracket' | 'table';
   pending: number;
 };
 
@@ -82,6 +82,12 @@ export function tournamentNav(pageHref: string, only?: TournamentSectionId[], at
         { label: 'Группы', href: base + '?view=groups', active: at?.view === 'groups' },
         // Карта плей-офф по итогам групп ✳ (30.10.2026).
         { label: 'Сетка', href: base + '?view=bracket', active: at?.view === 'bracket' },
+      ];
+    // «Столы» ✳ (23.11.2026): карточками или таблицей (`?view=table`).
+    if (section === 'tables')
+      return [
+        { label: 'Карточки', href: base, active: at?.view !== 'table' },
+        { label: 'Таблица', href: base + '?view=table', active: at?.view === 'table' },
       ];
     return undefined;
   };
