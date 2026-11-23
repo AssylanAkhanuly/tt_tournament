@@ -12,21 +12,22 @@
    Стол без матчей — «свободен».
 
    Вид ✳ (23.11.2026): карточки по 20 на страницу, мелкие — до пяти в ряд, или
-   таблица (`?view=table`, общий `DataTable` с поиском и сортировкой).
+   таблица (`?view=table`). Оба вида — общий `DataTable` (у карточек — его вид
+   `cards`): один заголовок с поиском и переключателем вида справа, те же страницы.
 
    Данные — снимок расписания (`useSchedule`), тот же, что у «Матчей» и «Дня»;
    экран перечитывает его раз в 15 секунд, пока открыт — счёт идёт со столов. */
 
-import { Chip, Spinner } from '@heroui/react';
-import { useSearchParams } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { Chip, Spinner, ToggleButton, ToggleButtonGroup } from '@heroui/react';
+import { LayoutGrid, List } from 'lucide-react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { useEffect } from 'react';
 
 import { useSchedule, type Schedule, type ScheduledMatch, type SchedulePerson } from '@/entities/tournament';
 import { placeholderFigure } from '@/shared/lib/figure';
 import { shortName } from '@/shared/lib/name';
 import { DataTable, type DataColumn } from '@/shared/ui/DataTable';
 import { PersonAvatar } from '@/shared/ui/PersonAvatar';
-import { TablePagination } from '@/shared/ui/table';
 
 import { groupTone } from './groupTone';
 
@@ -208,8 +209,17 @@ const TABLE_COLUMNS: DataColumn<TableRow>[] = [
 export function TablesBoard({ tournamentId }: { tournamentId: string }) {
   const loaded = useSchedule(tournamentId);
   const { reload } = loaded;
-  const asTable = useSearchParams().get('view') === 'table';
-  const [page, setPage] = useState(0);
+  const params = useSearchParams();
+  const router = useRouter();
+  const asTable = params.get('view') === 'table';
+  // Вид — в адресе (`?view=table`): переживает перезагрузку и ссылку.
+  function setView(v: string) {
+    const next = new URLSearchParams(params.toString());
+    if (v === 'table') next.set('view', 'table');
+    else next.delete('view');
+    const qs = next.toString();
+    router.replace(qs ? '?' + qs : '?', { scroll: false });
+  }
   useEffect(() => {
     const t = setInterval(reload, REFRESH_MS);
     return () => clearInterval(t);
@@ -223,39 +233,57 @@ export function TablesBoard({ tournamentId }: { tournamentId: string }) {
   const used = s.matches.map((m) => m.table ?? 0);
   const count = Math.max(s.settings.tables, ...used);
   const tables = Array.from({ length: count }, (_, i) => i + 1);
-  const pages = Math.ceil(tables.length / PAGE);
-  const at = Math.min(page, Math.max(0, pages - 1));
   const upcoming = s.matches.filter((m) => m.status === 'pending').sort(byTime).slice(0, 12);
   const results = s.matches.filter(finished).sort(byTime).reverse().slice(0, 12);
 
   return (
     <div className="h-full min-h-0 overflow-y-auto bg-neutral-50 md:grid md:grid-cols-[4fr_1fr] md:overflow-hidden" data-testid="tables-board">
-      {asTable ? (
-        <div className="flex min-h-0 flex-col max-md:min-h-[60vh]">
-          <DataTable
-            ariaLabel="Столы"
-            testId="tables-table"
-            rows={tables.map((t) => ({ table: t, m: onTable(s.matches, t) }))}
-            columns={TABLE_COLUMNS}
-            getId={(r) => String(r.table)}
-            search={{ placeholder: 'Игрок или судья', text: (r) => (r.m ? [r.m.player1.name, r.m.player2.name, r.m.referee?.name ?? ''].join(' ') : '') }}
-            defaultSort={{ column: 'table', direction: 'ascending' }}
-            pageSize={25}
-            rowProps={(r) => ({ 'data-testid': 'tables-row', 'data-table': String(r.table) })}
-          />
-        </div>
-      ) : (
-        <div className="flex min-h-0 flex-col md:overflow-y-auto">
-          <div className="grid grid-cols-2 gap-x-4 gap-y-5 p-5 max-md:p-4 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
-            {tables.slice(at * PAGE, (at + 1) * PAGE).map((t) => (
-              <TableCard key={t} table={t} m={onTable(s.matches, t)} s={s} />
-            ))}
-          </div>
-          <div className="mt-auto">
-            <TablePagination page={at} pages={pages} onPage={setPage} />
-          </div>
-        </div>
-      )}
+      {/* Один заголовок на оба вида ✳ (23.11.2026, решение владельца продукта):
+          поиск и справа переключатель «Карточки · Таблица»; страницы — те же. */}
+      <div className="flex min-h-0 flex-col max-md:min-h-[60vh]">
+        <DataTable
+          ariaLabel="Столы"
+          testId="tables-table"
+          rows={tables.map((t) => ({ table: t, m: onTable(s.matches, t) }))}
+          columns={TABLE_COLUMNS}
+          getId={(r) => String(r.table)}
+          search={{ placeholder: 'Игрок или судья', text: (r) => (r.m ? [r.m.player1.name, r.m.player2.name, r.m.referee?.name ?? ''].join(' ') : '') }}
+          defaultSort={{ column: 'table', direction: 'ascending' }}
+          pageSize={asTable ? 25 : PAGE}
+          rowProps={(r) => ({ 'data-testid': 'tables-row', 'data-table': String(r.table) })}
+          actions={
+            <ToggleButtonGroup
+              size="sm"
+              aria-label="Вид"
+              selectionMode="single"
+              disallowEmptySelection
+              selectedKeys={[asTable ? 'table' : 'cards']}
+              onSelectionChange={(keys) => {
+                const v = [...keys][0];
+                if (v) setView(String(v));
+              }}
+            >
+              <ToggleButton id="cards" aria-label="Карточки" data-testid="tables-view-cards">
+                <LayoutGrid size={16} />
+              </ToggleButton>
+              <ToggleButton id="table" aria-label="Таблица" data-testid="tables-view-table">
+                <List size={16} />
+              </ToggleButton>
+            </ToggleButtonGroup>
+          }
+          cards={
+            asTable
+              ? undefined
+              : (rows) => (
+                  <div className="grid grid-cols-2 gap-x-4 gap-y-5 bg-neutral-50 p-5 max-md:p-4 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
+                    {rows.map((r) => (
+                      <TableCard key={r.table} table={r.table} m={r.m} s={s} />
+                    ))}
+                  </div>
+                )
+          }
+        />
+      </div>
       <aside className="min-h-0 border-l md:grid md:grid-rows-[minmax(0,1fr)_minmax(0,1fr)] border-neutral-200 bg-white max-md:border-t max-md:border-l-0">
         <Panel title="Ближайшие матчи" testId="tables-upcoming">
           {upcoming.length ? (

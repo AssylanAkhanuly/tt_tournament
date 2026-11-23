@@ -61,8 +61,9 @@ test('главный судья: «Столы» — идущий матч на �
     await expect(page.getByTestId('tables-results')).toContainText('Нет');
     await page.screenshot({ path: 'test-results/tables/board.png' });
 
-    // Вид таблицей ✳ (23.11.2026): та же картина строками.
-    await page.goto(`/chief/tournaments/${id}/tables?view=table`);
+    // Вид таблицей ✳ (23.11.2026): переключатель в заголовке, та же картина строками.
+    await page.getByTestId('tables-view-table').click();
+    await page.waitForURL((u) => u.searchParams.get('view') === 'table');
     const row = page.locator(`[data-testid="tables-row"][data-table="${match.table}"]`);
     await expect(row).toContainText('идёт');
     await expect(row).toContainText('1:0');

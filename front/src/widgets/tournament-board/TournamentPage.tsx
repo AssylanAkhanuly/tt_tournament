@@ -83,12 +83,7 @@ export function tournamentNav(pageHref: string, only?: TournamentSectionId[], at
         // Карта плей-офф по итогам групп ✳ (30.10.2026).
         { label: 'Сетка', href: base + '?view=bracket', active: at?.view === 'bracket' },
       ];
-    // «Столы» ✳ (23.11.2026): карточками или таблицей (`?view=table`).
-    if (section === 'tables')
-      return [
-        { label: 'Карточки', href: base, active: at?.view !== 'table' },
-        { label: 'Таблица', href: base + '?view=table', active: at?.view === 'table' },
-      ];
+    // «Столы» — без подпунктов: вид переключается в заголовке экрана ✳ (23.11.2026).
     return undefined;
   };
   return SECTIONS.filter((s) => !only || only.includes(s.id)).map((s) => ({
