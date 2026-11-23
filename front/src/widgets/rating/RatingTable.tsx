@@ -30,6 +30,8 @@ import { useNarrow } from '@/shared/kit/app';
 import { DataTable, type DataColumn } from '@/shared/ui/DataTable';
 import { TableTools, type TableAction } from '@/shared/ui/TableTools';
 import { AthleteForm } from '@/features/rating-admin';
+
+import { RatingCards } from './RatingCards';
 import { Button } from '@heroui/react';
 
 export const SEX_ITEMS = ['Все', 'Мужчины', 'Женщины'];
@@ -132,7 +134,10 @@ export function RatingTable({
   onSortingChange,
   onColumnFiltersChange,
   onPaginationChange,
+  cards = false,
 }: {
+  /** Вид карточками ✳ (23.11.2026); нет — таблица. */
+  cards?: boolean;
   data: RatingList | null;
   loading: boolean;
   error: string | null;
@@ -249,6 +254,7 @@ export function RatingTable({
       actions={<TableTools place="actions" groups={groups} actions={actions} />}
       onRowAction={(r) => router.push('/rating/' + r.userId)}
       rowProps={(r) => ({ 'data-testid': 'rating-row', 'data-player': r.name })}
+      cards={cards ? (shown) => <RatingCards rows={shown} first={pagination.pageIndex * pagination.pageSize} onOpen={(id) => router.push('/rating/' + id)} /> : undefined}
       server={{
         query,
         // Поиск — фильтр колонки «Фамилия Имя Отчество» (состояние экрана).

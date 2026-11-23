@@ -80,6 +80,7 @@ export function DataTable<T>({
   fixed,
   testId,
   server,
+  cards,
 }: {
   ariaLabel: string;
   rows: T[];
@@ -107,6 +108,9 @@ export function DataTable<T>({
   testId?: string;
   /** Серверный режим: поиск, сортировка и страницы — у вызывающего. */
   server?: DataTableServer;
+  /** Вид карточками ✳ (23.11.2026): строки показанной страницы рисует вызывающий
+      (сетка карточек) — полоса сверху, пустое состояние и страницы те же. */
+  cards?: (rows: T[]) => ReactNode;
 }) {
   const [ownQuery, setOwnQuery] = useState('');
   const [ownSort, setOwnSort] = useState<SortDescriptor | null>(defaultSort ?? null);
@@ -182,6 +186,14 @@ export function DataTable<T>({
           <p className="px-6 py-4 text-[13px] text-red-600" data-testid="table-error">
             {error}
           </p>
+        ) : cards ? (
+          view.shown.length ? (
+            cards(view.shown)
+          ) : (
+            <p className="py-6 text-center text-[13px] text-neutral-500" data-testid="table-empty">
+              {loading ? 'Загружается' : empty}
+            </p>
+          )
         ) : (
           <Table variant="secondary" className={edge}>
             <Table.ScrollContainer>

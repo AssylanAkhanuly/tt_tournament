@@ -19,7 +19,7 @@
    вместе с выгрузкой — в меню «⋯» над таблицей. */
 
 import type { ColumnFiltersState, OnChangeFn, PaginationState, SortingState } from '@tanstack/react-table';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useMemo, useState } from 'react';
 
 import { createAthlete, ratingExportUrl, useRatingList, type NewAthlete } from '@/entities/rating';
@@ -45,6 +45,8 @@ const PAGE_SIZE = 100;
 export function RatingListView() {
   const router = useRouter();
   const { isGskChairman } = useSession();
+  // Вид листа ✳ (23.11.2026): таблица или карточки (`?view=cards`), подпунктами раздела.
+  const cards = useSearchParams().get('view') === 'cards';
   const [adding, setAdding] = useState(false);
   /** Завести и сразу открыть карточку — из окна и из панели на телефоне. */
   const create = async (athlete: NewAthlete) => {
@@ -91,8 +93,15 @@ export function RatingListView() {
   return (
     /* Без заголовка и пояснений ✳ (10.09.2026, решение владельца продукта):
        экран начинается прямо с отбора и таблицы. */
-    <RatingShell bleed>
+    <RatingShell
+      bleed
+      sub={[
+        { label: 'Таблица', href: '/rating', active: !cards },
+        { label: 'Карточки', href: '/rating?view=cards', active: cards },
+      ]}
+    >
       <RatingTable
+        cards={cards}
         data={data}
         loading={loading}
         error={error}

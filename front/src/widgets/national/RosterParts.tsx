@@ -26,6 +26,7 @@ import { num2 } from '@/entities/rating';
 import { DataTable, type DataColumn } from '@/shared/ui/DataTable';
 import { ModalSheet } from '@/shared/ui/ModalSheet';
 import { Picker } from '@/shared/ui/Picker';
+import { placeholderFigure } from '@/shared/lib/figure';
 
 export function ClearanceChip({ clearance }: { clearance: Clearance }) {
   const { status, until } = clearance;
@@ -153,16 +154,11 @@ export function AddMemberDialog({ onAdded }: { onAdded: () => void }) {
   );
 }
 
-const PLACEHOLDERS = { m: ['m-1', 'm-2', 'm-3'], f: ['f-1', 'f-2', 'f-3'] } as const;
-
 /** Заглушка фигуры — своего пола (пол неизвестен — любая), одна и та же для человека: по id. */
 type Who = { id: string; person: { sex: NationalMember['person']['sex'] }; avatar?: string | null };
 
 export function placeholderOf(m: Who) {
-  let h = 0;
-  for (const ch of m.id) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
-  const list: readonly string[] = m.person.sex ? PLACEHOLDERS[m.person.sex] : [...PLACEHOLDERS.m, ...PLACEHOLDERS.f];
-  return `/national/players/${list[h % list.length]}.webp`;
+  return placeholderFigure(m.id, m.person.sex);
 }
 
 /** Круглый аватар члена сборной: фото или лицо заглушки своего пола на
