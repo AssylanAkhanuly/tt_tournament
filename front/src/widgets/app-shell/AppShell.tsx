@@ -14,11 +14,10 @@
    Подписей-заголовков в меню нет (решение владельца продукта, 28.10.2026). */
 
 import { Avatar, Button, Chip, Dropdown, Label, Modal, Separator, useOverlayState } from '@heroui/react';
-import { ChevronDown, ChevronLeft, ChevronsUpDown, LogOut, User } from 'lucide-react';
+import { Check, ChevronDown, ChevronLeft, ChevronRight, ChevronsUpDown, LogOut, User } from 'lucide-react';
 import { useState, type ReactNode } from 'react';
 
 import { useNarrow } from '@/shared/kit/app';
-import { MenuSheet } from '@/shared/ui/MenuSheet';
 import { ModalSheet } from '@/shared/ui/ModalSheet';
 
 /** Квадратный знак QTT — значок приложения (`app/icon.svg`, Next отдаёт его по `/icon.svg`). */
@@ -111,7 +110,8 @@ export function AppShell({
   const profile = useOverlayState();
   const openProfile = profileHref ? () => onOpen?.(profileHref) : profile.open;
   const narrow = useNarrow();
-  const [personSheet, setPersonSheet] = useState(false);
+  // Телефон: «Профиль» в панели вкладок открывает страницу аккаунта на месте содержимого.
+  const [accountPage, setAccountPage] = useState(false);
   // Телефон: виды текущего раздела (подпункты сайдбара) — над содержимым.
   const phoneViews = nav.find((n) => n.label === active)?.children;
   const tabBar = narrow && !phoneBare;
@@ -284,29 +284,6 @@ export function AppShell({
                 панелью снизу, а не выпадающим списком. */}
             {narrow ? (
               <>
-                <MenuSheet
-                  isOpen={personSheet}
-                  onOpenChange={setPersonSheet}
-                  title={person.name}
-                  testId="person-menu"
-                  sections={[
-                    {
-                      label: 'Работать как',
-                      items: roles.map((r) => ({
-                        id: r.to,
-                        label: r.title,
-                        selected: r.title === role.title,
-                        onAction: () => r.title !== role.title && onSwitchRole(r.to),
-                      })),
-                    },
-                    {
-                      items: [
-                        { id: 'profile', label: 'Профиль', icon: <User size={18} />, testId: 'person-profile', onAction: openProfile },
-                        { id: 'out', label: 'Выйти', icon: <LogOut size={18} />, danger: true, onAction: onSignOut },
-                      ],
-                    },
-                  ]}
-                />
               </>
             ) : (
             <Dropdown>
@@ -471,6 +448,17 @@ export function AppShell({
             }
           >
             {title && !tabs && <h1 className="pb-4 text-xl font-semibold tracking-tight">{title}</h1>}
+            {narrow && accountPage ? (
+              <AccountPage
+                person={person}
+                role={role}
+                roles={roles}
+                onSwitchRole={onSwitchRole}
+                onProfile={openProfile}
+                onSignOut={onSignOut}
+              />
+            ) : (
+              <>
             {narrow && phoneViews && phoneViews.length > 0 && (
               // Телефон: виды раздела («Месяц · Таблица») — переключателем над содержимым.
               <div className="flex shrink-0 justify-center px-4 pt-3 pb-1">
@@ -496,6 +484,8 @@ export function AppShell({
               </div>
             )}
             {children}
+              </>
+            )}
           </div>
           {actions && (
             <div className="flex shrink-0 items-center justify-end gap-2 border-t border-shell-line bg-shell-page px-6 py-3">
@@ -516,13 +506,16 @@ export function AppShell({
           data-testid="tab-bar"
         >
           {nav.map((item) => {
-            const on = item.label === active;
+            const on = item.label === active && !accountPage;
             return (
               <button
                 key={item.label}
                 type="button"
                 aria-current={on || undefined}
-                onClick={() => onNavigate(item.label)}
+                onClick={() => {
+                  setAccountPage(false);
+                  onNavigate(item.label);
+                }}
                 className={
                   'relative flex min-w-0 flex-1 flex-col items-center justify-center gap-0.5 rounded-[22px] py-1.5 text-[11px] font-medium [&_svg]:size-[22px] ' +
                   (on ? 'bg-brand-50 text-brand-700' : 'text-shell-muted')
@@ -542,9 +535,10 @@ export function AppShell({
           {/* Человек: роль, профиль, «Выйти» — панелью снизу. */}
           <button
             type="button"
-            onClick={() => setPersonSheet(true)}
+            onClick={() => setAccountPage(true)}
             aria-label={person.name}
-            className="flex min-w-0 flex-1 flex-col items-center justify-center gap-0.5 rounded-[22px] py-1.5 text-[11px] font-medium text-shell-muted"
+            aria-current={accountPage || undefined}
+            className={'flex min-w-0 flex-1 flex-col items-center justify-center gap-0.5 rounded-[22px] py-1.5 text-[11px] font-medium ' + (accountPage ? 'bg-brand-50 text-brand-700' : 'text-shell-muted')}
             data-testid="side-person"
           >
             <Avatar size="sm" className="size-[22px]">
@@ -576,6 +570,57 @@ export function AppShell({
               ))}
             </Modal.Body>
           </ModalSheet>
+    </div>
+  );
+}
+
+/** Страница аккаунта на телефоне ✳ (23.11.2026, решение владельца продукта):
+    кто вошёл, «Работать как» (роли), «Профиль» и «Выйти» — строками меню. */
+function AccountPage({ person, role, roles, onSwitchRole, onProfile, onSignOut }: {
+  person: { name: string; email?: string | null };
+  role: { title: string };
+  roles: ShellRole[];
+  onSwitchRole: (to: string) => void;
+  onProfile: () => void;
+  onSignOut: () => void;
+}) {
+  const row = 'flex w-full items-center gap-3 px-4 py-3.5 text-left text-[15px]';
+  return (
+    <div className="flex flex-col gap-6 px-4 pt-8" data-testid="account-page">
+      <div className="flex flex-col items-center gap-2 text-center">
+        <Avatar className="size-20 rounded-full">
+          <Avatar.Fallback className="rounded-full text-[28px]">{person.name.slice(0, 1)}</Avatar.Fallback>
+        </Avatar>
+        <div className="text-[20px] font-semibold">{person.name}</div>
+        {person.email && <div className="text-[13px] text-shell-muted">{person.email}</div>}
+      </div>
+      {roles.length > 1 && (
+        <section>
+          <p className="px-4 pb-1.5 text-[12px] font-semibold tracking-wider text-shell-faint uppercase">Работать как</p>
+          <div className="divide-y divide-shell-line overflow-hidden rounded-2xl bg-shell-side ring-1 ring-shell-line">
+            {roles.map((r) => {
+              const on = r.title === role.title;
+              return (
+                <button key={r.to} type="button" className={row} onClick={() => !on && onSwitchRole(r.to)} aria-current={on || undefined}>
+                  <span className="min-w-0 flex-1 truncate">{r.title}</span>
+                  {on && <Check size={18} className="text-brand-600" />}
+                </button>
+              );
+            })}
+          </div>
+        </section>
+      )}
+      <div className="divide-y divide-shell-line overflow-hidden rounded-2xl bg-shell-side ring-1 ring-shell-line">
+        <button type="button" className={row} onClick={onProfile} data-testid="person-profile">
+          <User size={18} className="text-shell-muted" />
+          <span className="flex-1">Профиль</span>
+          <ChevronRight size={18} className="text-shell-faint" />
+        </button>
+        <button type="button" className={row + ' text-red-600'} onClick={onSignOut} data-testid="person-signout">
+          <LogOut size={18} />
+          <span className="flex-1">Выйти</span>
+        </button>
+      </div>
     </div>
   );
 }
