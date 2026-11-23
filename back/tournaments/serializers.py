@@ -275,10 +275,17 @@ class TournamentUpdateSerializer(serializers.ModelSerializer):
 
 class ParticipantSerializer(serializers.ModelSerializer):
     user = UserSerializer(read_only=True)
+    # Обзор турнира ✳ (23.11.2026): лента лучших по рейтингу рисует карточку как в
+    # рейтинг-листе — регион, пол, год рождения из рейтинговой карточки; нет её — null.
+    profile = serializers.SerializerMethodField()
 
     class Meta:
         model  = TournamentParticipant
-        fields = ["id", "user", "joined_at", "is_absent", "rating_before", "rating_change", "entered_as"]
+        fields = ["id", "user", "joined_at", "is_absent", "rating_before", "rating_change", "entered_as", "profile"]
+
+    def get_profile(self, obj):
+        p = getattr(obj.user, "rating_profile", None)
+        return {"region": p.region, "sex": p.sex, "birth_year": p.birth_year} if p else None
 
 
 class TournamentTableSerializer(serializers.ModelSerializer):

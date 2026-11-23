@@ -205,3 +205,19 @@ def test_убрать_судью_без_роли_нельзя(мир):
     чужой.force_authenticate(мир["игрок"])
     assert чужой.delete(f"/api/tournaments/{t.id}/referees/{мир['судья'].id}/").status_code == 403
     assert Role.objects.filter(user=мир["судья"], scope_id=t.id).exists()
+
+
+def test_participants_carry_rating_card_region_sex_and_year(мир):
+    """Обзор турнира ✳ (23.11.2026): лента лучших по рейтингу — у участника в
+    списке регион, пол и год рождения из рейтинговой карточки; нет карточки — пусто."""
+    from decimal import Decimal
+
+    from rating.models import RatingProfile
+
+    RatingProfile.objects.create(user=мир["уже"], value=Decimal("61.25"), sex="f", birth_year=2004, region="Алматы")
+    p = мир["api"].get(f"/api/tournaments/{мир['t'].id}/participants/").json()[0]
+    assert p["profile"] == {"region": "Алматы", "sex": "f", "birth_year": 2004}
+    assert p["user"]["rating"] == "61.25"
+    TournamentParticipant.objects.create(tournament=мир["t"], user=мир["игрок"])
+    rows = {r["user"]["name"]: r for r in мир["api"].get(f"/api/tournaments/{мир['t'].id}/participants/").json()}
+    assert rows["Ахметов Ерлан"]["profile"] is None
