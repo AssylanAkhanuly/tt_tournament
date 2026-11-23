@@ -58,11 +58,11 @@ function Face({ p }: { p: SchedulePerson }) {
 function Side({ p, score, lead, align }: { p: SchedulePerson; score: number | null; lead: boolean; align: 'left' | 'right' }) {
   return (
     <div className={'flex min-w-0 flex-1 items-center gap-3 px-4 @max-md:gap-1 @max-md:px-2 ' + (align === 'right' ? 'flex-row-reverse' : '')}>
-      {/* Игрок — плашкой поверх столешницы: средняя линия проходит под ней, а не по имени. */}
+      {/* Игрок — без подложки ✳ (23.11.2026, решение владельца продукта): аватар и фамилия с тенью текста. */}
       <span
         className={
-          'flex min-w-0 items-center gap-2 rounded-full bg-[color-mix(in_srgb,var(--color-brand-950)_55%,transparent)] py-1 backdrop-blur-sm @max-md:flex-col @max-md:gap-1 @max-md:rounded-2xl @max-md:px-2 @max-md:py-1.5 ' +
-          (align === 'right' ? '@md:flex-row-reverse @md:pr-1 @md:pl-3' : '@md:pr-3 @md:pl-1')
+          'flex min-w-0 items-center gap-2 [text-shadow:0_1px_3px_var(--color-brand-950),0_0_8px_var(--color-brand-950)] @max-md:flex-col @max-md:gap-1 ' +
+          (align === 'right' ? '@md:flex-row-reverse' : '')
         }
       >
         <Face p={p} />
