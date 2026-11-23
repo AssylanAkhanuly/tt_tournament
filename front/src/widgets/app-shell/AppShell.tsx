@@ -57,6 +57,7 @@ export function AppShell({
   profileHref,
   actions,
   bleed = false,
+  phoneBare = false,
   context,
   home,
   tabs,
@@ -95,6 +96,9 @@ export function AppShell({
   /** Содержимое на всю рабочую область — без полей и общей прокрутки:
    *  экран сам раскладывается по высоте (календарь). */
   bleed?: boolean;
+  /** Телефон без шапки кабинета (знак, человек, разделы) ✳ (23.11.2026):
+   *  экран сам рисует возврат — табло судьи стола. */
+  phoneBare?: boolean;
   /** Главные кнопки экрана: полоса внизу рабочей области. */
   actions?: ReactNode;
   onNavigate: (label: string) => void;
@@ -108,6 +112,9 @@ export function AppShell({
   const openProfile = profileHref ? () => onOpen?.(profileHref) : profile.open;
   const narrow = useNarrow();
   const [personSheet, setPersonSheet] = useState(false);
+  // Телефон: виды текущего раздела (подпункты сайдбара) — над содержимым.
+  const phoneViews = nav.find((n) => n.label === active)?.children;
+  const tabBar = narrow && !phoneBare;
   // Разделы с подпунктами складываются и раскрываются ✳ (30.10.2026, решение
   // владельца продукта). Тот, где человек сейчас, раскрыт, пока его не сложили;
   // прочие сложены, пока их не раскрыли. Помним только сделанное руками.
@@ -130,7 +137,9 @@ export function AppShell({
     >
 
       <div className="flex min-h-0 flex-1 flex-col md:flex-row">
-        <aside className="flex w-full shrink-0 flex-col border-b border-shell-line bg-shell-side px-3 py-2 md:w-56 md:border-b-0 md:border-r md:py-3">
+        {/* Телефон: шапки нет ✳ (23.11.2026, решение владельца продукта) — разделы
+            и человек в плавающей панели вкладок внизу. */}
+        <aside className="flex w-full shrink-0 flex-col border-b border-shell-line bg-shell-side px-3 py-2 max-md:hidden md:w-56 md:border-b-0 md:border-r md:py-3">
           {/* Верх сайдбара ✳ (21.11.2026, образец Visitly): карточка рабочего
               места — знак, «ФНТ РК», роль; ⇅ — смена роли. Карточка ведёт на
               уровень выше (`home`). Поиска нет ✳ (21.11.2026, решение владельца продукта). */}
@@ -186,7 +195,7 @@ export function AppShell({
           {nav.length > 0 && !nav.some((n) => n.group) && (
             <p className="px-2 pb-1 text-[10px] font-semibold tracking-wider text-shell-faint uppercase max-md:hidden">Главное меню</p>
           )}
-          {nav.length > 0 && (
+          {nav.length > 0 && (narrow ? nav.some((n) => n.label === active && n.children?.length) : true) && (
             <nav className="flex gap-0.5 overflow-x-auto md:flex-col" aria-label="Разделы">
               {nav.map((item, k) => {
                 const on = item.label === active;
@@ -203,7 +212,7 @@ export function AppShell({
                         {heading}
                       </p>
                     )}
-                    <div className="relative flex max-md:flex-1">
+                    <div className="relative flex max-md:hidden">
                       <Button
                         variant="ghost"
                         aria-current={lit || undefined}
@@ -275,22 +284,6 @@ export function AppShell({
                 панелью снизу, а не выпадающим списком. */}
             {narrow ? (
               <>
-                <button
-                  type="button"
-                  data-testid="side-person"
-                  onClick={() => setPersonSheet(true)}
-                  className="flex w-full items-center gap-2.5 rounded-xl border border-shell-line bg-shell-active px-2.5 py-2 text-left hover:bg-shell-side-hover max-md:size-10 max-md:justify-center max-md:p-0"
-                  aria-label={person.name}
-                >
-                <Avatar size="sm">
-                  <Avatar.Fallback>{person.name.slice(0, 1)}</Avatar.Fallback>
-                </Avatar>
-                <span className="min-w-0 flex-1 leading-tight max-md:hidden">
-                  <span className="block truncate text-[12.5px] font-semibold">{person.name}</span>
-                  <span className="block truncate text-[11px] text-shell-muted">{role.title}</span>
-                </span>
-                <ChevronsUpDown size={14} className="shrink-0 text-shell-faint max-md:hidden" />
-              </button>
                 <MenuSheet
                   isOpen={personSheet}
                   onOpenChange={setPersonSheet}
@@ -473,10 +466,35 @@ export function AppShell({
           <div
             className={
               'flex min-h-0 flex-1 flex-col ' +
-              (bleed ? 'overflow-hidden' : 'overflow-auto px-6 pb-6 pt-5 [&>*]:shrink-0')
+              (bleed ? 'overflow-hidden' : 'overflow-auto px-6 pb-6 pt-5 [&>*]:shrink-0') +
+              (tabBar ? ' pb-24' : '')
             }
           >
             {title && !tabs && <h1 className="pb-4 text-xl font-semibold tracking-tight">{title}</h1>}
+            {narrow && phoneViews && phoneViews.length > 0 && (
+              // Телефон: виды раздела («Месяц · Таблица») — переключателем над содержимым.
+              <div className="flex shrink-0 justify-center px-4 pt-3 pb-1">
+                <div className="flex gap-1 rounded-full bg-shell-side p-1 ring-1 ring-shell-line" role="group" aria-label="Виды">
+                  {phoneViews.map((sub) => (
+                    <button
+                      key={sub.href}
+                      type="button"
+                      aria-current={sub.active || undefined}
+                      onClick={() => onOpen?.(sub.href)}
+                      className={'flex items-center gap-1.5 rounded-full px-4 py-1.5 text-[13px] font-medium ' + (sub.active ? 'bg-shell-page text-shell-ink shadow-sm' : 'text-shell-muted')}
+                      data-testid="nav-sub"
+                    >
+                      {sub.label}
+                      {!!sub.badge && (
+                        <span className="inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-red-600 px-1 text-[10px] font-semibold tabular-nums text-white" data-testid="nav-sub-badge">
+                          {sub.badge}
+                        </span>
+                      )}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
             {children}
           </div>
           {actions && (
@@ -486,6 +504,56 @@ export function AppShell({
           )}
         </main>
       </div>
+
+      {/* Телефон: разделы кабинета — панелью вкладок внизу ✳ (23.11.2026, решение
+          владельца продукта). Значок над подписью, выбранный — цветом акцента;
+          виды раздела («Месяц · Таблица») остаются полосой сверху. Экран без
+          шапки (`phoneBare`, табло судьи) — без панели. */}
+      {tabBar && (
+        <nav
+          aria-label="Разделы"
+          className="absolute inset-x-3 bottom-[calc(12px+env(safe-area-inset-bottom))] z-40 flex rounded-[28px] bg-[color-mix(in_srgb,white_88%,transparent)] p-1.5 shadow-[0_10px_30px_color-mix(in_srgb,var(--color-brand-900)_18%,transparent)] ring-1 ring-shell-line backdrop-blur-xl"
+          data-testid="tab-bar"
+        >
+          {nav.map((item) => {
+            const on = item.label === active;
+            return (
+              <button
+                key={item.label}
+                type="button"
+                aria-current={on || undefined}
+                onClick={() => onNavigate(item.label)}
+                className={
+                  'relative flex min-w-0 flex-1 flex-col items-center justify-center gap-0.5 rounded-[22px] py-1.5 text-[11px] font-medium [&_svg]:size-[22px] ' +
+                  (on ? 'bg-brand-50 text-brand-700' : 'text-shell-muted')
+                }
+                data-testid="tab-bar-item"
+              >
+                {item.icon}
+                <span className="max-w-full truncate px-1">{item.label}</span>
+                {!!item.badge && (
+                  <span className="absolute top-0.5 left-[calc(50%+6px)] inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-red-600 px-1 text-[10px] font-semibold tabular-nums text-white">
+                    {item.badge}
+                  </span>
+                )}
+              </button>
+            );
+          })}
+          {/* Человек: роль, профиль, «Выйти» — панелью снизу. */}
+          <button
+            type="button"
+            onClick={() => setPersonSheet(true)}
+            aria-label={person.name}
+            className="flex min-w-0 flex-1 flex-col items-center justify-center gap-0.5 rounded-[22px] py-1.5 text-[11px] font-medium text-shell-muted"
+            data-testid="side-person"
+          >
+            <Avatar size="sm" className="size-[22px]">
+              <Avatar.Fallback className="text-[11px]">{person.name.slice(0, 1)}</Avatar.Fallback>
+            </Avatar>
+            <span className="max-w-full truncate px-1">Профиль</span>
+          </button>
+        </nav>
+      )}
 
       {/* Профиль — окно поверх экрана, а не страница: у каждой роли своя
           оболочка, а профиль один на человека. */}

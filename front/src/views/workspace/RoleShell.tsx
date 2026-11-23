@@ -25,6 +25,7 @@ export function RoleShell({
   back,
   profileHref,
   bleed,
+  phoneBare,
   context,
   home,
   sub,
@@ -48,6 +49,8 @@ export function RoleShell({
   /** «Профиль» в меню человека — страница, а не окно. */
   profileHref?: string;
   bleed?: boolean;
+  /** Телефон без шапки кабинета — экран сам рисует возврат. */
+  phoneBare?: boolean;
   /** Шапка сайдбара над разделами. */
   context?: ReactNode;
   /** Куда ведёт знак в шапке; нет — кабинет этой роли. */
@@ -93,6 +96,7 @@ export function RoleShell({
       back={back}
       profileHref={profileHref}
       bleed={bleed}
+      phoneBare={phoneBare}
       actions={actions}
       context={context}
       home={home ?? workspacesOf(user).find((w) => w.kind === kind)?.to}

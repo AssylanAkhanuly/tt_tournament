@@ -18,6 +18,7 @@ import { useState } from 'react';
 
 import { updateSeason, type Season } from '@/entities/league';
 import { DateInput } from '@/shared/ui/DateInput';
+import { SideContent, SideDialog } from '@/shared/ui/SidePanel';
 
 type Draft = { open: boolean; until: string | null; closed: boolean };
 const draftOf = (s: Season): Draft => ({ open: s.registration.open, until: s.registration.until, closed: s.closed });
@@ -76,8 +77,8 @@ export function SeasonSettings({ season, onChanged }: { season: Season; onChange
       </Button>
       <Drawer.Backdrop>
         {/* Ширина — у самой панели: `Content` у HeroUI — полоса на весь экран. */}
-        <Drawer.Content placement="right">
-          <Drawer.Dialog className="sm:w-[26rem]" data-testid="season-settings-drawer">
+        <SideContent>
+          <SideDialog className="sm:w-[26rem]" data-testid="season-settings-drawer">
             <Drawer.CloseTrigger aria-label="Закрыть" />
             <Drawer.Header className="border-b border-neutral-200 pb-4">
               <Drawer.Heading className="text-lg font-semibold">Настройки</Drawer.Heading>
@@ -138,8 +139,8 @@ export function SeasonSettings({ season, onChanged }: { season: Season; onChange
                 Сохранить
               </Button>
             </Drawer.Footer>
-          </Drawer.Dialog>
-        </Drawer.Content>
+          </SideDialog>
+        </SideContent>
       </Drawer.Backdrop>
     </Drawer>
   );

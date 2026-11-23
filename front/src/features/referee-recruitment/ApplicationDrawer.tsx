@@ -22,6 +22,7 @@ import {
   type RefereeApplication,
   type RefereePosition,
 } from '@/entities/tournament';
+import { SideContent, SideDialog } from '@/shared/ui/SidePanel';
 
 const STATUS: Record<ApplicationStatus, { label: string; color: 'warning' | 'success' | 'danger' }> = {
   pending: { label: 'Ждёт решения', color: 'warning' },
@@ -164,8 +165,8 @@ export function ApplicationDrawer({
     // Без обёртки-триггера: карточку открывает строка таблицы, а не кнопка.
     <Drawer.Backdrop isOpen={application !== null} onOpenChange={(open) => !open && onClose()}>
       {/* Ширина — у самой панели: `Content` у HeroUI — полоса на весь экран. */}
-      <Drawer.Content placement="right">
-        <Drawer.Dialog className="sm:w-[28rem]" data-testid="application-drawer">
+      <SideContent>
+        <SideDialog className="sm:w-[28rem]" data-testid="application-drawer">
           <Drawer.CloseTrigger aria-label="Закрыть" />
           <Drawer.Header>
             <Drawer.Heading className="text-lg font-semibold">Заявка</Drawer.Heading>
@@ -179,8 +180,8 @@ export function ApplicationDrawer({
               onDecided={onDecided}
             />
           )}
-        </Drawer.Dialog>
-      </Drawer.Content>
+        </SideDialog>
+      </SideContent>
     </Drawer.Backdrop>
   );
 }

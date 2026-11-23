@@ -29,6 +29,7 @@ import { DataTable, type DataColumn } from '@/shared/ui/DataTable';
 import { DateInput } from '@/shared/ui/DateInput';
 import { AlertSheet } from '@/shared/ui/ModalSheet';
 import { Picker } from '@/shared/ui/Picker';
+import { SideContent, SideDialog } from '@/shared/ui/SidePanel';
 
 export type TourScheduleView = 'list' | 'day';
 
@@ -124,8 +125,8 @@ function MatchEdit({ tour, match, onClose, onSaved }: { tour: TourDetail; match:
 
   return (
     <Drawer.Backdrop isOpen={!!match} onOpenChange={(open) => !open && onClose()}>
-      <Drawer.Content placement="right">
-        <Drawer.Dialog className="sm:w-[26rem]" data-testid="tour-match-edit">
+      <SideContent>
+        <SideDialog className="sm:w-[26rem]" data-testid="tour-match-edit">
           <Drawer.CloseTrigger aria-label="Закрыть" />
           <Drawer.Header className="border-b border-neutral-200 pb-4">
             <Drawer.Heading className="text-lg font-semibold">
@@ -171,8 +172,8 @@ function MatchEdit({ tour, match, onClose, onSaved }: { tour: TourDetail; match:
               Сохранить
             </Button>
           </Drawer.Footer>
-        </Drawer.Dialog>
-      </Drawer.Content>
+        </SideDialog>
+      </SideContent>
     </Drawer.Backdrop>
   );
 }
@@ -502,8 +503,8 @@ export function TourSchedule({ tour, view, onChanged }: { tour: TourDetail; view
       )}
       <MatchEdit tour={tour} match={editing} onClose={() => setEditing(null)} onSaved={onChanged} />
       <Drawer.Backdrop isOpen={params.isOpen} onOpenChange={params.setOpen}>
-        <Drawer.Content placement="right">
-          <Drawer.Dialog className="sm:w-[34rem]" data-testid="tour-schedule-params-drawer">
+        <SideContent>
+          <SideDialog className="sm:w-[34rem]" data-testid="tour-schedule-params-drawer">
             <Drawer.CloseTrigger aria-label="Закрыть" />
             <Drawer.Header className="border-b border-neutral-200 pb-4">
               <Drawer.Heading className="text-lg font-semibold">Параметры расписания</Drawer.Heading>
@@ -518,8 +519,8 @@ export function TourSchedule({ tour, view, onChanged }: { tour: TourDetail; view
                 }}
               />
             </Drawer.Body>
-          </Drawer.Dialog>
-        </Drawer.Content>
+          </SideDialog>
+        </SideContent>
       </Drawer.Backdrop>
     </>
   );

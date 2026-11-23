@@ -41,6 +41,7 @@ import {
 } from '@/entities/tournament';
 
 import { AdmissionFields } from './AdmissionFields';
+import { SideContent, SideDialog } from '@/shared/ui/SidePanel';
 
 /** Кнопка «Настройки». Отдельно — чтобы экран показал её сразу, неактивной,
  *  пока турнир грузится, и полоса над таблицей не прыгала. */
@@ -119,8 +120,8 @@ export function RecruitmentSettings({
       <SettingsButton />
       <Drawer.Backdrop>
         {/* Ширина — у самой панели: `Content` у HeroUI — полоса на весь экран. */}
-        <Drawer.Content placement="right">
-          <Drawer.Dialog className="sm:w-[26rem]" data-testid="tournament-settings-drawer">
+        <SideContent>
+          <SideDialog className="sm:w-[26rem]" data-testid="tournament-settings-drawer">
             <Drawer.CloseTrigger aria-label="Закрыть" />
             {/* Черта под заголовком — заголовок отделён от настроек. */}
             <Drawer.Header className="border-b border-neutral-200 pb-4">
@@ -220,8 +221,8 @@ export function RecruitmentSettings({
                 Сохранить
               </Button>
             </Drawer.Footer>
-          </Drawer.Dialog>
-        </Drawer.Content>
+          </SideDialog>
+        </SideContent>
       </Drawer.Backdrop>
     </Drawer>
   );

@@ -37,6 +37,7 @@ import { ModalSheet } from '@/shared/ui/ModalSheet';
 import { Picker } from '@/shared/ui/Picker';
 
 import { FormDialog } from './PlanBoard';
+import { SideContent, SideDialog } from '@/shared/ui/SidePanel';
 
 const STATUS_COLOR: Record<ReportStatus, 'warning' | 'danger' | 'success' | 'default'> = {
   submitted: 'warning',
@@ -274,8 +275,8 @@ function ReportDrawer({ report, onClose, onChanged }: { report: TravelReport | n
   const r = report;
   return (
     <Drawer.Backdrop isOpen={r !== null} onOpenChange={(open) => !open && onClose()}>
-      <Drawer.Content placement="right">
-        <Drawer.Dialog className="sm:w-[34rem]" data-testid="report-drawer">
+      <SideContent>
+        <SideDialog className="sm:w-[34rem]" data-testid="report-drawer">
           <Drawer.CloseTrigger aria-label="Закрыть" />
           <Drawer.Header>
             <Drawer.Heading className="text-lg font-semibold">Рапорт</Drawer.Heading>
@@ -367,8 +368,8 @@ function ReportDrawer({ report, onClose, onChanged }: { report: TravelReport | n
               )}
             </>
           )}
-        </Drawer.Dialog>
-      </Drawer.Content>
+        </SideDialog>
+      </SideContent>
     </Drawer.Backdrop>
   );
 }

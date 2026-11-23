@@ -15,6 +15,7 @@ import { useState, type ReactNode } from 'react';
 import { removeParticipant, type TournamentParticipant } from '@/entities/tournament';
 import { PersonAvatar } from '@/shared/ui/PersonAvatar';
 import { AlertSheet } from '@/shared/ui/ModalSheet';
+import { SideContent, SideDialog } from '@/shared/ui/SidePanel';
 
 const num = (v: number | null, signed = false) =>
   v === null ? '—' : (signed && v > 0 ? '+' : v < 0 ? '−' : '') + Math.abs(v).toFixed(2).replace('.', ',');
@@ -72,8 +73,8 @@ export function PlayerDrawer({
       }}
     >
       {/* Ширина — у самой панели: `Content` у HeroUI — полоса на весь экран. */}
-      <Drawer.Content placement="right">
-        <Drawer.Dialog className="sm:w-[28rem]" data-testid="player-drawer">
+      <SideContent>
+        <SideDialog className="sm:w-[28rem]" data-testid="player-drawer">
           <Drawer.CloseTrigger aria-label="Закрыть" />
           <Drawer.Header>
             <Drawer.Heading className="text-lg font-semibold">Спортсмен</Drawer.Heading>
@@ -154,8 +155,8 @@ export function PlayerDrawer({
               </Drawer.Footer>
             </>
           )}
-        </Drawer.Dialog>
-      </Drawer.Content>
+        </SideDialog>
+      </SideContent>
     </Drawer.Backdrop>
   );
 }

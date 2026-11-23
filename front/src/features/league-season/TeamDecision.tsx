@@ -11,6 +11,7 @@ import { Button, Drawer, Label, Spinner, TextArea, TextField } from '@heroui/rea
 import { useState } from 'react';
 
 import { decideTeam, fetchTeam, TEAM_STATUS_LABEL, useLoad, type SeasonTeam } from '@/entities/league';
+import { SideContent, SideDialog } from '@/shared/ui/SidePanel';
 
 export function TeamDecision({
   team,
@@ -60,8 +61,8 @@ export function TeamDecision({
 
   return (
     <Drawer.Backdrop isOpen={!!team} onOpenChange={(open) => !open && close()}>
-      <Drawer.Content placement="right">
-        <Drawer.Dialog className="sm:w-[28rem]" data-testid="team-decision">
+      <SideContent>
+        <SideDialog className="sm:w-[28rem]" data-testid="team-decision">
           <Drawer.CloseTrigger aria-label="Закрыть" />
           <Drawer.Header className="border-b border-neutral-200 pb-4">
             <Drawer.Heading className="text-lg font-semibold">{team?.name}</Drawer.Heading>
@@ -139,8 +140,8 @@ export function TeamDecision({
               </Button>
             </div>
           </Drawer.Footer>
-        </Drawer.Dialog>
-      </Drawer.Content>
+        </SideDialog>
+      </SideContent>
     </Drawer.Backdrop>
   );
 }

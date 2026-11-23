@@ -22,6 +22,7 @@ import {
 } from '@/entities/league';
 import { DataTable, type DataColumn } from '@/shared/ui/DataTable';
 import { Picker } from '@/shared/ui/Picker';
+import { ModalSheet } from '@/shared/ui/ModalSheet';
 
 const SIDE_A = ['A', 'B', 'C', 'D', 'E'];
 const SIDE_B = ['X', 'Y', 'Z', 'U', 'V'];
@@ -169,9 +170,7 @@ function MatchDialog({ matchId, canEdit, onClose, onSaved }: { matchId: number |
   const detail = useLoad(() => (matchId ? fetchTeamMatch(matchId) : Promise.resolve(null)), String(matchId));
   const m = detail.data;
   return (
-    <Modal.Backdrop isOpen={matchId !== null} onOpenChange={(open) => !open && onClose()}>
-      <Modal.Container size="lg">
-        <Modal.Dialog className="rounded-xl" data-testid="match-dialog">
+    <ModalSheet isOpen={matchId !== null} onOpenChange={(open) => !open && onClose()} size="lg" testId="match-dialog">
           <Modal.CloseTrigger />
           <Modal.Header>
             <Modal.Heading className="text-lg font-semibold">
@@ -191,9 +190,7 @@ function MatchDialog({ matchId, canEdit, onClose, onSaved }: { matchId: number |
               />
             )}
           </Modal.Body>
-        </Modal.Dialog>
-      </Modal.Container>
-    </Modal.Backdrop>
+        </ModalSheet>
   );
 }
 

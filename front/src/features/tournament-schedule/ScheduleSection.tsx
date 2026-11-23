@@ -41,6 +41,7 @@ import { PlayDays } from './PlayDays';
 import { ScheduleDay } from './ScheduleDay';
 import { ScheduleGroups } from './ScheduleGroups';
 import { AlertSheet } from '@/shared/ui/ModalSheet';
+import { SideContent, SideDialog } from '@/shared/ui/SidePanel';
 
 const pad = (n: number) => String(n).padStart(2, '0');
 const hm = (d: Date) => pad(d.getHours()) + ':' + pad(d.getMinutes());
@@ -150,8 +151,8 @@ function MatchDrawer({
 }) {
   return (
     <Drawer.Backdrop isOpen={match !== null} onOpenChange={(open) => !open && onClose()}>
-      <Drawer.Content placement="right">
-        <Drawer.Dialog className="sm:w-[28rem]" data-testid="schedule-match-drawer">
+      <SideContent>
+        <SideDialog className="sm:w-[28rem]" data-testid="schedule-match-drawer">
           <Drawer.CloseTrigger aria-label="Закрыть" />
           <Drawer.Header className="border-b border-neutral-200 pb-4">
             <Drawer.Heading className="text-lg font-semibold">Матч</Drawer.Heading>
@@ -159,8 +160,8 @@ function MatchDrawer({
           {match && (
             <MatchForm key={match.id} schedule={schedule} match={match} tournamentId={tournamentId} onSaved={onSaved} onCancel={onClose} />
           )}
-        </Drawer.Dialog>
-      </Drawer.Content>
+        </SideDialog>
+      </SideContent>
     </Drawer.Backdrop>
   );
 }
@@ -429,8 +430,8 @@ export function ScheduleSection({
               <SlidersHorizontal size={16} /> Параметры
             </Button>
             <Drawer.Backdrop>
-              <Drawer.Content placement="right">
-                <Drawer.Dialog className="sm:w-[30rem]" data-testid="schedule-params-drawer">
+              <SideContent>
+                <SideDialog className="sm:w-[30rem]" data-testid="schedule-params-drawer">
                   {({ close }) => (
                     <>
                       <Drawer.CloseTrigger aria-label="Закрыть" />
@@ -462,8 +463,8 @@ export function ScheduleSection({
                       </Drawer.Footer>
                     </>
                   )}
-                </Drawer.Dialog>
-              </Drawer.Content>
+                </SideDialog>
+              </SideContent>
             </Drawer.Backdrop>
           </Drawer>
           <AlertDialog>

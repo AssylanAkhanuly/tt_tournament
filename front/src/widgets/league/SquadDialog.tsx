@@ -22,6 +22,7 @@ import {
   type LeaguePerson,
   type TeamStatus,
 } from '@/entities/league';
+import { ModalSheet } from '@/shared/ui/ModalSheet';
 
 const STATUS_COLOR: Record<TeamStatus, 'warning' | 'success' | 'danger'> = {
   submitted: 'warning',
@@ -84,9 +85,7 @@ export function SquadDialog({
 
   const members = detail.data?.members ?? [];
   return (
-    <Modal.Backdrop isOpen={!!team} onOpenChange={(open) => !open && onClose()}>
-      <Modal.Container size="md">
-        <Modal.Dialog className="rounded-xl" data-testid="squad-dialog">
+    <ModalSheet isOpen={!!team} onOpenChange={(open) => !open && onClose()} size="md" testId="squad-dialog">
           <Modal.CloseTrigger />
           <Modal.Header>
             <Modal.Heading className="text-lg font-semibold">
@@ -161,8 +160,6 @@ export function SquadDialog({
             )}
             {error && <p className="text-[13px] text-red-600" data-testid="squad-error">{error}</p>}
           </Modal.Body>
-        </Modal.Dialog>
-      </Modal.Container>
-    </Modal.Backdrop>
+        </ModalSheet>
   );
 }

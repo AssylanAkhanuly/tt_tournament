@@ -22,6 +22,7 @@ const NAV: RoleNavItem[] = [
 export function RefereeShell({
   active,
   bleed,
+  phoneBare,
   nav = NAV,
   context,
   home,
@@ -33,6 +34,8 @@ export function RefereeShell({
 }: {
   active: string;
   bleed?: boolean;
+  /** Телефон без шапки кабинета — экран сам рисует возврат. */
+  phoneBare?: boolean;
   /** Свои разделы вместо разделов кабинета — внутри турнира. */
   nav?: RoleNavItem[];
   context?: ReactNode;
@@ -49,7 +52,7 @@ export function RefereeShell({
 }) {
   return (
     <RoleShell sub={sub} kind={ROLE_REFEREE} title="Судья" nav={nav} context={context}
-      home={home} active={active} bleed={bleed} actions={actions}
+      home={home} active={active} bleed={bleed} phoneBare={phoneBare} actions={actions}
       pageTitle={title} sections={title ? [] : undefined} back={back}>
       {children}
     </RoleShell>

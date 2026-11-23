@@ -20,6 +20,7 @@ import {
   type RefereePosition,
 } from '@/entities/tournament';
 import { AlertSheet } from '@/shared/ui/ModalSheet';
+import { SideContent, SideDialog } from '@/shared/ui/SidePanel';
 
 
 function Card({
@@ -193,8 +194,8 @@ export function RefereeDrawer({
     <Drawer.Backdrop isOpen={userId !== null} onOpenChange={(open) => !open && onClose()}>
       {/* Ширина — у самой панели: `Content` у HeroUI — полоса на весь экран,
           прижимающая панель к правому краю; сузить её — увести панель влево. */}
-      <Drawer.Content placement="right">
-        <Drawer.Dialog className="sm:w-[28rem]" data-testid="referee-drawer">
+      <SideContent>
+        <SideDialog className="sm:w-[28rem]" data-testid="referee-drawer">
           <Drawer.CloseTrigger aria-label="Закрыть" />
           <Drawer.Header>
             <Drawer.Heading className="text-lg font-semibold">Судья</Drawer.Heading>
@@ -212,8 +213,8 @@ export function RefereeDrawer({
               }}
             />
           )}
-        </Drawer.Dialog>
-      </Drawer.Content>
+        </SideDialog>
+      </SideContent>
     </Drawer.Backdrop>
   );
 }
