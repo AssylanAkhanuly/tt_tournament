@@ -77,7 +77,7 @@ test('главная администратора — календарь: тур
   await page.waitForURL(/\/dashboard\/tournaments\/[0-9a-f-]{36}\/info$/);
   // Шапки турнира в сайдбаре нет ✳ (19.11.2026) — название в «Сведениях».
   await expect(page.getByTestId('tournament-context')).toHaveCount(0);
-  await expect(page.getByTestId('info-name')).toHaveValue(`[e2e] Кубок ${stamp}`);
+  await expect(page.getByTestId('overview-params')).toContainText(`[e2e] Кубок ${stamp}`);
   await page.getByRole('button', { name: 'Спортсмены', exact: true }).click();
   await expect(page.getByTestId('table-empty')).toHaveText('Участников нет'); // заведён без участников
   // Назад к списку — знак в шапке.
@@ -271,6 +271,8 @@ test('вид соревнования: «Главный старт» засев�
   // «Сведения» — вид соревнования можно сменить, пока нет заявок: смена засевает допуск заново.
   await rows.filter({ hasText: mainName }).click();
   await page.waitForURL(/\/dashboard\/tournaments\/[0-9a-f-]{36}\/info$/);
+  await expect(page.getByTestId('overview-params')).toContainText('Главный республиканский старт');
+  await page.getByTestId('info-edit').click();
   const kindPicker = page.getByTestId('info-template');
   await expect(kindPicker).toHaveText(/Главный республиканский старт/);
   await kindPicker.click();
@@ -332,7 +334,7 @@ test('вид «Таблица»: поиск сужает, строка откр�
   await page.getByTestId('tournament-search').fill('Чемпионат Республики');
   await rows.first().click();
   await page.waitForURL(/\/dashboard\/tournaments\/[0-9a-f-]{36}\/info$/);
-  await expect(page.getByTestId('info-name')).toHaveValue('[demo] Чемпионат Республики Казахстан');
+  await expect(page.getByTestId('overview-params')).toContainText('[demo] Чемпионат Республики Казахстан');
 
   await page.goto('/dashboard?view=table');
   await page.getByTestId('nav-sub').filter({ hasText: 'Месяц' }).click();
@@ -479,14 +481,14 @@ test('внутри турнира сайдбар — разделы турнир
 
   // Разделы турнира — вкладками под названием, сайдбар — «Календарь» кабинета ✳ (21.11.2026).
   await expect(page.getByTestId('tournament-context')).toHaveCount(0);
-  await expect(page.getByTestId('info-name')).toHaveValue(demo.name);
+  await expect(page.getByTestId('overview-params')).toContainText(demo.name);
   await expect(page.getByTestId('page-title')).toHaveText(demo.name);
   await expect(page.getByRole('navigation', { name: 'Разделы' }).getByRole('button', { name: 'Календарь' })).toBeVisible();
   const разделы = page
     .getByRole('navigation', { name: 'Вкладки страницы' })
     .getByRole('button')
     .and(page.locator(':not([data-testid])'));
-  await expect(разделы).toHaveText(['Сведения', 'Спортсмены', 'Судьи', 'Расписание']);
+  await expect(разделы).toHaveText(['Сведения', 'Спортсмены', 'Судьи', 'Расписание', 'Столы']);
   await expect(page.getByRole('button', { name: 'Сведения', exact: true })).toHaveAttribute('aria-current', 'true');
   // Смена раздела сайдбар не сдвигает: шапка турнира не пропадает на время загрузки.
   const местаДо = await разделы.evaluateAll((els) => els.map((e) => Math.round(e.getBoundingClientRect().y)));
@@ -614,7 +616,7 @@ test('у председателя ГСК тот же «Календарь»: с�
   await page.getByTestId('tournament-search').fill('Чемпионат Республики');
   await page.getByTestId('tournament-table-row').first().click();
   await page.waitForURL(/\/gsk\/tournaments\/[0-9a-f-]{36}\/info$/);
-  await expect(page.getByTestId('info-name')).toHaveValue('[demo] Чемпионат Республики Казахстан');
+  await expect(page.getByTestId('overview-params')).toContainText('[demo] Чемпионат Республики Казахстан');
   await page.getByRole('button', { name: 'Спортсмены', exact: true }).click();
   await expect(page.getByTestId('participant-row')).toHaveCount(8);
   await expect(page.getByRole('button', { name: 'Спортсмены', exact: true })).toHaveAttribute('aria-current', 'true');
@@ -656,6 +658,7 @@ test('«Сведения»: даты, место, возраст ползунк�
   await page.waitForURL((url) => url.pathname === `/dashboard/tournaments/${t.id}/info`);
   await expect(page.getByRole('button', { name: 'Сведения', exact: true })).toHaveAttribute('aria-current', 'true');
 
+  await page.getByTestId('info-edit').click();
   const сохранить = page.getByTestId('info-save');
   const отменить = page.getByTestId('info-discard');
   await expect(сохранить).toBeDisabled();
@@ -711,6 +714,8 @@ test('«Сведения»: даты, место, возраст ползунк�
   });
   // Сохранённое переживает перезагрузку.
   await page.reload();
+  await expect(page.getByTestId('overview-params')).toContainText('Темиртау, Карагандинская область');
+  await page.getByTestId('info-edit').click();
   await expect(page.getByTestId('info-place')).toHaveValue('Темиртау, Карагандинская область');
   await expect(page.getByTestId('info-age-max')).toHaveValue('18');
 });
@@ -724,6 +729,19 @@ test('протокол на «Сведениях» скачивается PDF-ф
     (x) => x.name === имя,
   )!;
   await page.goto(`/dashboard/tournaments/${t.id}/info`);
+  // Форма с листом — в панели «Изменить» ✳ (23.11.2026); меряем, когда панель доехала.
+  await page.getByTestId('info-edit').click();
+  const панель = page.getByTestId('info-drawer');
+  await expect(панель).toBeVisible();
+  let было = -1;
+  await expect
+    .poll(async () => {
+      const x = (await панель.boundingBox())!.x;
+      const стоит = x === было;
+      было = x;
+      return стоит;
+    })
+    .toBe(true);
   const лист = page.getByTestId('protocol-document');
   const кнопка = лист.getByTestId('protocol-download');
   // Кнопка — в правом верхнем углу листа.

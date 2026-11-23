@@ -44,7 +44,7 @@ const dayOf = (d: Date | null) =>
   d
     ? d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0')
     : null;
-const infoOf = (t: TournamentSummary): TournamentInfo => ({
+export const infoOf = (t: TournamentSummary): TournamentInfo => ({
   name: t.name,
   description: t.description,
   startsOn: dayOf(t.startsAt),
@@ -105,9 +105,12 @@ function Group({ title, children, testId }: { title: string; children: ReactNode
 export function TournamentInfoForm({
   tournament,
   onSaved,
+  preview: withPreview = true,
 }: {
   tournament: TournamentSummary;
   onSaved: (t: TournamentSummary) => void;
+  /** Проект протокола рядом; без него — только поля (панель обзора турнира ✳ 23.11.2026). */
+  preview?: boolean;
 }) {
   const saved = infoOf(tournament);
   const [draft, setDraft] = useState<TournamentInfo>(saved);
@@ -169,6 +172,7 @@ export function TournamentInfoForm({
 
   return (
     <div className="flex min-h-0 flex-1 flex-col bg-white font-sans" data-testid="tournament-info">
+      {withPreview && (
       <Tabs
         selectedKey={mobilePanel}
         onSelectionChange={(key) => setMobilePanel(String(key))}
@@ -187,7 +191,8 @@ export function TournamentInfoForm({
           </Tabs.List>
         </Tabs.ListContainer>
       </Tabs>
-      <div className="flex min-h-0 flex-1 lg:grid lg:grid-cols-[minmax(0,1.2fr)_minmax(360px,1fr)]">
+      )}
+      <div className={'flex min-h-0 flex-1 ' + (withPreview ? 'lg:grid lg:grid-cols-[minmax(0,1.2fr)_minmax(360px,1fr)]' : '')}>
         <div className={'min-h-0 min-w-0 flex-1 flex-col ' + (mobilePanel === 'form' ? 'flex' : 'hidden lg:flex')}>
           <div className="min-h-0 flex-1 overflow-auto px-4 sm:px-6" data-testid="info-scroll">
             <div className="@container mx-auto max-w-3xl pb-4">
@@ -430,6 +435,7 @@ export function TournamentInfoForm({
             </div>
           </div>
         </div>
+        {withPreview && (
         <div
           className={
             'min-h-0 min-w-0 flex-1 border-neutral-200 lg:flex lg:border-l ' +
@@ -444,6 +450,7 @@ export function TournamentInfoForm({
             groupSizeInput={numberInput.groupSize}
           />
         </div>
+        )}
       </div>
       <div className="shrink-0 border-t border-neutral-200 bg-white px-4 py-3 sm:px-6">
         <div className="flex flex-wrap items-center justify-end gap-3">

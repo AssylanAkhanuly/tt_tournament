@@ -17,6 +17,8 @@ test.describe('сведения и живой протокол', () => {
     expect(response.status()).toBe(201);
     id = (await response.json()).id;
     await page.goto(`/tournaments/${id}/info`);
+    // «Сведения» — обзор; форма с протоколом — в панели по «Изменить» ✳ (23.11.2026).
+    await page.getByTestId('info-edit').click();
     await expect(page.getByTestId('info-name')).toHaveValue(name);
   });
 
@@ -154,6 +156,7 @@ test.describe('сведения и живой протокол', () => {
     await page.getByTestId('info-save').click();
     await expect(page.getByTestId('info-save')).toBeDisabled();
     await page.reload();
+    await page.getByTestId('info-edit').click();
     await expect(page.getByTestId('info-place')).toContainText('Караганда, Карагандинская область');
     await page.getByRole('tab', { name: 'Протокол', exact: true }).click();
     await expect(city).toContainText('Караганда');

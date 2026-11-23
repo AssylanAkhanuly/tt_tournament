@@ -1,1 +1,1 @@
-export { TournamentInfoForm } from './TournamentInfoForm';
+export { TournamentInfoForm, infoOf } from './TournamentInfoForm';

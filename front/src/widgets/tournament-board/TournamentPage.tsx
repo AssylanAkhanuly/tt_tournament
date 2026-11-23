@@ -31,13 +31,14 @@ import {
   type TournamentReferee,
 } from '@/entities/tournament';
 import { ApplicationDrawer } from '@/features/referee-recruitment';
-import { TournamentInfoForm } from '@/features/tournament-info';
 import { ScheduleSection, TablesBoard } from '@/features/tournament-schedule';
 import { PlayoffMap } from '@/widgets/bracket/PlayoffMap';
 import { AddToRosterDialog, PlayerDrawer, RefereeDrawer } from '@/features/tournament-roster';
 import { RecruitmentSettings, SettingsButton } from '@/features/tournament-settings';
 import { DataTable, type DataColumn } from '@/shared/ui/DataTable';
 import { PersonAvatar } from '@/shared/ui/PersonAvatar';
+
+import { TournamentDashboard } from './TournamentDashboard';
 
 export type TournamentSectionId = 'info' | 'players' | 'referees' | 'schedule' | 'tables';
 
@@ -381,11 +382,10 @@ function Applications({
 }
 
 /** «Сведения»: общее о турнире и формат — правка черновиком. */
+/** «Сведения» — обзор турнира ✳ (23.11.2026): показатели, карта места, параметры,
+    участники, расписание; форма — в панели по «Изменить». */
 function InfoSection({ id }: { id: string }) {
-  const tournament = useTournament(id);
-  if (tournament.error) return <p className="p-6 text-[13px] text-red-600">{tournament.error}</p>;
-  if (!tournament.data) return null;
-  return <TournamentInfoForm tournament={tournament.data} onSaved={tournament.reload} />;
+  return <TournamentDashboard id={id} />;
 }
 
 /** Содержимое раздела турнира — на всю рабочую область (`bleed`). */
