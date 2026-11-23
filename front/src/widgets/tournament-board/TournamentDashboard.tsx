@@ -45,7 +45,7 @@ const ruDate = (iso: string | null) => (iso ? new Date(iso + 'T12:00').toLocaleD
 
 function Kpi({ label, value, chip, testId }: { label: string; value: ReactNode; chip?: ReactNode; testId: string }) {
   return (
-    <div className="flex min-w-0 flex-col gap-1.5 px-5 first:pl-0 max-md:px-0" data-testid={testId}>
+    <div className="flex min-w-0 flex-col gap-1.5 @[640px]:px-5 @[640px]:first:pl-0" data-testid={testId}>
       <span className="text-[13px] text-neutral-500">{label}</span>
       <span className="flex items-center gap-2">
         <span className="text-[26px] leading-none font-semibold whitespace-nowrap tabular-nums">{value}</span>
@@ -294,14 +294,14 @@ export function TournamentDashboard({ id }: { id: string }) {
   return (
     <div className="h-full overflow-y-auto bg-neutral-50" data-testid="tournament-overview">
       <div className="flex flex-col gap-5 p-6 max-md:p-4">
-        <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_360px]">
+        <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_360px]">
           <div className="flex min-w-0 flex-col gap-5">
-            <div className="grid grid-cols-4 divide-x divide-neutral-200 max-md:grid-cols-2 max-md:gap-4 max-md:divide-x-0">
+            <div className="@container"><div className="grid grid-cols-2 gap-4 @[640px]:grid-cols-4 @[640px]:gap-0 @[640px]:divide-x @[640px]:divide-neutral-200">
               <Kpi label="Участников" value={t.participants} chip={t.participantLimit ? pill('из ' + t.participantLimit, 'neutral') : undefined} testId="kpi-players" />
               <Kpi label="Сыграно матчей" value={total ? done + ' / ' + total : '—'} chip={total ? pill(Math.round((done / total) * 100) + '%', 'green') : undefined} testId="kpi-done" />
               <Kpi label="Идут сейчас" value={live} chip={live ? pill('live') : undefined} testId="kpi-live" />
               <Kpi label="Столов" value={tables || '—'} chip={s ? pill(s.groups.length + ' групп', 'neutral') : undefined} testId="kpi-tables" />
-            </div>
+            </div></div>
             <div className={CARD + ' relative h-[380px] overflow-hidden bg-neutral-50 p-4 max-md:h-[260px]'}>
               <KzDotMap region={t.region} city={t.city} onPick={(p) => void pickPlace(p)} />
               <div className="absolute right-4 bottom-4 rounded-xl border border-neutral-200 bg-white px-3 py-2 text-[12px] shadow-sm" data-testid="overview-place">
