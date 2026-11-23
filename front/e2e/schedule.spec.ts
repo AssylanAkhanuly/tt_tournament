@@ -79,11 +79,15 @@ test('главный судья: черновик расписания, прав
     await page.waitForURL((url) => url.pathname === '/chief');
     await page.goto(`/chief/tournaments/${id}`);
     await page.waitForURL((url) => url.pathname === `/chief/tournaments/${id}/info`);
-    await expect(page.getByRole('navigation', { name: 'Разделы' }).getByRole('button').and(page.locator(':not([data-testid])'))).toHaveText([
+    // Сайдбар — разделы кабинета, разделы турнира — вкладками вверху, без заголовка ✳ (23.11.2026).
+    await expect(page.getByRole('navigation', { name: 'Разделы' }).getByRole('button').and(page.locator(':not([data-testid])'))).toHaveText(['Турниры']);
+    await expect(page.getByRole('navigation', { name: 'Вкладки страницы' }).getByRole('button')).toHaveText([
       'Сведения',
       'Спортсмены',
       'Расписание',
+      'Столы',
     ]);
+    await expect(page.getByTestId('page-title')).toHaveCount(0);
     await page.getByRole('button', { name: 'Расписание', exact: true }).click();
     await page.waitForURL((url) => url.pathname === `/chief/tournaments/${id}/schedule`);
 

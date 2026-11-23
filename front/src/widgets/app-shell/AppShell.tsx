@@ -374,6 +374,8 @@ export function AppShell({
               className={'shrink-0 px-6 pt-5 max-md:px-4 max-md:pt-3 ' + (tabs.length ? '' : 'border-b border-shell-line pb-4')}
               data-testid="page-header"
             >
+              {/* Без заголовка (`title` пуст, «назад» нет) — только вкладки ✳ (23.11.2026). */}
+              {(title !== undefined || back) && (
               <div className="flex min-w-0 items-center gap-2">
                 {back && (
                   <Button
@@ -392,8 +394,9 @@ export function AppShell({
                   {title}
                 </h1>
               </div>
+              )}
               {tabs.length > 0 && (
-              <div className="mt-3 flex flex-wrap items-end justify-between gap-x-6 gap-y-2 border-b border-shell-line">
+              <div className={(title !== undefined || back ? 'mt-3 ' : '') + 'flex flex-wrap items-end justify-between gap-x-6 gap-y-2 border-b border-shell-line'}>
                 <nav className="-mb-px flex gap-6 overflow-x-auto" aria-label="Вкладки страницы">
                   {tabs.map((t) => (
                     <button

@@ -20,6 +20,9 @@ export function ChiefShell({
   context,
   home,
   sub,
+  title,
+  sections,
+  section,
   children,
 }: {
   active: string;
@@ -29,11 +32,15 @@ export function ChiefShell({
   home?: string;
   /** Подпункты активного раздела (вид экрана: «Месяц», «Таблица») ✳ 30.10.2026. */
   sub?: ShellSubItem[];
+  /** Страница внутри кабинета (турнир): заголовок и разделы вкладками под ним ✳ (23.11.2026). */
+  title?: string;
+  sections?: RoleNavItem[];
+  section?: string;
   children: ReactNode;
 }) {
   return (
     <RoleShell sub={sub} kind={ROLE_CHIEF_REFEREE} title="Главный судья" nav={nav} context={context}
-      home={home} active={active} bleed>
+      home={home} active={active} bleed pageTitle={title} sections={sections} section={section}>
       {children}
     </RoleShell>
   );

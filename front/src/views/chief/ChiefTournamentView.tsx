@@ -15,7 +15,10 @@ const SECTIONS: TournamentSectionId[] = ['info', 'players', 'schedule', 'tables'
 export function ChiefTournamentView({ id, section }: { id: string; section: TournamentSectionId }) {
   const page = useTournamentPage({ id, section, cabinet: 'chief', back: '/chief', sections: SECTIONS, recruitment: false });
   return (
-    <ChiefShell active={page.active} nav={page.nav} home={page.home}>
+    // Сайдбар — разделы кабинета («Турниры»), разделы турнира — вкладками под
+    // названием ✳ (23.11.2026, решение владельца продукта; как у администратора);
+    // заголовка над вкладками нет — только вкладки вверху.
+    <ChiefShell active="Турниры" sections={page.nav} section={page.active} home={page.home}>
       {page.body}
     </ChiefShell>
   );
