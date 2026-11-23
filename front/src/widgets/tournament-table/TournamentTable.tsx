@@ -87,7 +87,6 @@ export function TournamentTable({
         text: (t) =>
           [t.name, t.clubName ?? '', STATUS_LABEL[t.status], formatLabel(t), t.category ? CATEGORY_LABEL[t.category] : ''].join(' '),
       }}
-      count={(n) => 'Турниров: ' + n}
       actions={toolbar}
       defaultSort={{ column: 'date', direction: 'descending' }}
       onRowAction={(t) => onOpen(t.id)}
