@@ -45,11 +45,11 @@ export function figureOf(p: ScoringPlayer, avoid?: string): string {
 
 function useBox<T extends HTMLElement>() {
   const ref = useRef<T>(null);
-  const [box, setBox] = useState<[number, number] | null>(null);
+  const [box, setBox] = useState<[number, number, number] | null>(null);
   useLayoutEffect(() => {
     const el = ref.current;
     if (!el) return;
-    const ro = new ResizeObserver(() => setBox([el.offsetWidth, el.offsetHeight]));
+    const ro = new ResizeObserver(() => setBox([el.offsetWidth, el.offsetHeight, el.offsetTop]));
     ro.observe(el);
     return () => ro.disconnect();
   }, []);
@@ -80,32 +80,48 @@ function tabPath(w: number, h: number): string {
 // ── стол и фигуры ────────────────────────────────────────────────────────────
 
 /** Рамка стола внутри карточки: кромка повторяет форму карточки с отступом,
-    сетка — от выреза до низа, средняя линия поперёк. */
-function TableFrame({ w, h, notch, depth }: { w: number; h: number; notch: number; depth: number }) {
+    сетка — от выреза до низа, средняя линия поперёк; обе рвутся вокруг блока
+    счёта (`gap` — его верх и низ). */
+function TableFrame({ w, h, notch, depth, gap }: { w: number; h: number; notch: number; depth: number; gap?: [number, number] }) {
   const m = 14;
+  const net = gap
+    ? [[depth + m, gap[0] - 12], [gap[1] + 12, h - m]].filter(([a, b]) => b > a)
+    : [[depth + m, h - m]];
+  // Средняя линия рвётся вокруг блока счёта, если проходит через него (сетка
+  // счёта — не шире 760 px и с полями по краям карточки, как в разметке ниже).
+  const half = Math.min(760, w - 64) / 2 + 16;
+  const crosses = gap && h / 2 > gap[0] - 12 && h / 2 < gap[1] + 12;
+  const mid = crosses ? [[m, w / 2 - half], [w / 2 + half, w - m]].filter(([a, b]) => b > a) : [[m, w - m]];
   return (
     <svg aria-hidden className="absolute inset-0 size-full">
       <path d={cardPath(w - 2 * m, h - 2 * m, notch + m, depth, 28 - m)} transform={`translate(${m} ${m})`} fill="none" className="stroke-white/45" strokeWidth={2.5} />
-      <line x1={w / 2} y1={depth + m} x2={w / 2} y2={h - m} className="stroke-white/40" strokeWidth={2.5} />
-      <line x1={m} y1={h / 2} x2={w - m} y2={h / 2} className="stroke-white/20" strokeWidth={1} />
+      {net.map(([y1, y2]) => (
+        <line key={y1} x1={w / 2} y1={y1} x2={w / 2} y2={y2} className="stroke-white/40" strokeWidth={2.5} />
+      ))}
+      {mid.map(([x1, x2]) => (
+        <line key={x1} x1={x1} y1={h / 2} x2={x2} y2={h / 2} className="stroke-white/20" strokeWidth={1} />
+      ))}
     </svg>
   );
 }
 
-function Figure({ src, side, photo }: { src: string; side: Side; photo: boolean }) {
+/** `bottom` — от низа карточки: фигура стоит на блоке счёта, чуть заходя за него. */
+function Figure({ src, side, photo, bottom, height }: { src: string; side: Side; photo: boolean; bottom?: number; height?: number }) {
   return (
     <div
       aria-hidden
+      style={bottom !== undefined ? { bottom, height } : undefined}
+      data-placed={bottom !== undefined ? '' : undefined}
       className={
-        'pointer-events-none absolute top-0 h-[58%] w-[60%] overflow-hidden [mask-image:linear-gradient(to_bottom,black_45%,transparent_95%)] md:h-[64%] md:w-[42%] ' +
-        (side === 'left' ? '-left-[6%] md:left-0' : '-right-[6%] md:right-0')
+        'pointer-events-none absolute top-0 h-[46%] w-[50%] overflow-hidden data-[placed]:top-auto [mask-image:linear-gradient(to_bottom,black_45%,transparent_95%)] md:h-[48%] md:w-[34%] ' +
+        (side === 'left' ? 'left-0 md:left-[6%]' : 'right-0 md:right-[6%]')
       }
     >
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
         src={src}
         alt=""
-        className="absolute top-3 left-1/2 h-[166%] w-auto max-w-none -translate-x-1/2 opacity-85 saturate-[0.85] md:top-6"
+        className="absolute top-0 left-1/2 h-[166%] w-auto max-w-none -translate-x-1/2 opacity-85 saturate-[0.85]"
         data-testid={'board-figure-' + side}
         data-photo={photo ? 'yes' : 'no'}
       />
@@ -182,7 +198,7 @@ export function StageTab({ children, onPress, disabled, testId, tone = 'accent' 
   const [ref, box] = useBox<HTMLDivElement>();
   const bg =
     disabled || tone === 'quiet'
-      ? 'bg-white/12 text-white/55'
+      ? 'bg-[color-mix(in_srgb,white_12%,var(--color-brand-900))] text-white/55'
       : tone === 'success'
         ? 'bg-qtt-lime text-brand-900'
         : 'bg-brand-500 text-brand-950';
@@ -313,6 +329,11 @@ export function ScoreStage({
   const src2 = figureOf(player2, src1);
   const [cardRef, cardBox] = useBox<HTMLDivElement>();
   const [capRef, capBox] = useBox<HTMLDivElement>();
+  const [bodyRef, bodyBox] = useBox<HTMLDivElement>();
+  // Низ фигур — на 64 px ниже верха блока счёта.
+  const figureBottom = cardBox && bodyBox ? Math.max(0, cardBox[1] - bodyBox[2] - 64) : undefined;
+  // Высота — не больше места между вырезом и блоком счёта: голова не уходит под вырез.
+  const figureHeight = cardBox && bodyBox ? Math.max(120, Math.min(cardBox[1] * 0.47, bodyBox[2] + 64 - (capBox?.[1] ?? 52) - 24)) : undefined;
   const depth = capBox?.[1] ?? 52;
   const notch = (capBox?.[0] ?? 160) + 28;
   const d = cardBox ? cardPath(cardBox[0], cardBox[1], notch, depth) : undefined;
@@ -325,10 +346,10 @@ export function ScoreStage({
         <div aria-hidden className="absolute inset-0 -z-10 overflow-hidden" style={d ? { clipPath: `path('${d}')` } : undefined}>
           <div className="absolute inset-0 bg-[linear-gradient(180deg,var(--color-brand-700)_0%,var(--color-brand-900)_70%)]" />
           <div className={'absolute inset-0 ' + SPLIT} />
-          {cardBox && <TableFrame w={cardBox[0]} h={cardBox[1]} notch={notch} depth={depth} />}
-          <Figure src={src1} side="left" photo={!!player1.figure} />
-          <Figure src={src2} side="right" photo={!!player2.figure} />
+          <Figure src={src1} side="left" photo={!!player1.figure} bottom={figureBottom} height={figureHeight} />
+          <Figure src={src2} side="right" photo={!!player2.figure} bottom={figureBottom} height={figureHeight} />
           <div className="absolute inset-x-0 bottom-0 h-3/5 bg-[linear-gradient(to_top,var(--color-brand-900)_35%,transparent)]" />
+          {cardBox && <TableFrame w={cardBox[0]} h={cardBox[1]} notch={notch} depth={depth} gap={bodyBox ? [bodyBox[2], bodyBox[2] + bodyBox[1]] : undefined} />}
         </div>
         {d && (
           <svg aria-hidden className="pointer-events-none absolute inset-0 -z-10 size-full overflow-visible">
@@ -350,7 +371,7 @@ export function ScoreStage({
           </div>
         )}
 
-        <div className="relative mt-auto px-4 pb-20 md:px-8 md:pb-24">
+        <div ref={bodyRef} className="relative mt-auto px-4 pb-20 md:my-auto md:px-8 md:pt-8 md:pb-8">
           <div className="mx-auto grid max-w-[760px] grid-cols-[1fr_auto_1fr] items-start gap-2 md:gap-6">
             <SidePoints n={1} p={player1} value={a} lead={a > b} side="left" avatar={src1} onStep={onStep && ((x) => onStep(0, x))} />
             <div className="flex min-w-[84px] flex-col items-center gap-1.5 pt-3 text-center md:pt-6">{center}</div>
