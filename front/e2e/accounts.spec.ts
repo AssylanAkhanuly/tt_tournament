@@ -23,10 +23,10 @@ test('два аккаунта на устройстве: переход карт
   await signInWithForm(page, E2E_ADMIN);
   await page.waitForURL((url) => url.pathname === '/dashboard');
 
-  // «Другой аккаунт» — форма поверх открытой сессии, администратор не выходит.
+  // Форма видна и при открытой сессии — вход в другой аккаунт, администратор не выходит.
   await page.goto('/login');
   await expect(page.getByTestId('already-in')).toBeVisible();
-  await page.getByTestId('login-add-account').click();
+  await expect(page.getByTestId('login-add-account')).toHaveCount(0);
   await signInWithForm(page, E2E_COACH);
   await page.waitForURL((url) => url.pathname === '/coach');
 

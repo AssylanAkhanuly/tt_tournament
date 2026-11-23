@@ -72,9 +72,6 @@ export function LoginView() {
   const asked = raw && raw.startsWith('/') && !raw.startsWith('//') ? raw : null;
 
   const { user, loading, signIn, signOut, switchTo: switchSession } = useSession();
-  // Форма поверх открытой сессии: «Другой аккаунт» или карточка без живой
-  // сессии. Текущую сессию это не закрывает — её аккаунт остаётся на устройстве.
-  const [adding, setAdding] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -109,7 +106,6 @@ export function LoginView() {
         return;
       }
     }
-    setAdding(true);
     setEmail(account.email);
     setPassword('');
   }
@@ -125,66 +121,49 @@ export function LoginView() {
           <div className="text-center text-2xl font-semibold tracking-tight">Вход в систему</div>
         </div>
 
-        {!loading && current && !adding ? (
-          <div className="flex flex-col gap-2" data-testid="already-in">
-            <AccountList>
-              <AccountRow account={current} onPress={() => router.push(asked ?? homeFor(user))} />
-              {others.map((a) => (
-                <AccountRow key={a.email} account={a} onPress={() => void switchTo(a)} />
-              ))}
-            </AccountList>
-            <div className="mt-1 flex justify-center gap-6">
-              <button
-                type="button"
-                onClick={() => {
-                  setAdding(true);
-                  setEmail('');
-                  setPassword('');
-                }}
-                className="text-[12.5px] font-semibold text-brand-700 hover:underline"
-                data-testid="login-add-account"
-              >
-                Другой аккаунт
-              </button>
-              <button
-                type="button"
-                onClick={() => void signOut()}
-                className="text-[12.5px] font-semibold text-neutral-500 hover:underline"
-              >
-                Выйти
-              </button>
-            </div>
-          </div>
-        ) : (
-          <div className="flex flex-col gap-3">
-            {!loading && others.length > 0 && (
+        {/* Форма входа видна всегда ✳ (23.11.2026, решение владельца продукта):
+            над ней — аккаунты устройства (открытая сессия первой), кнопки
+            «Другой аккаунт» нет. */}
+        <div className="flex flex-col gap-3">
+          {!loading && (current || others.length > 0) && (
+            <div className="flex flex-col gap-2" data-testid={current ? 'already-in' : undefined}>
               <AccountList>
+                {current && <AccountRow account={current} onPress={() => router.push(asked ?? homeFor(user))} />}
                 {others.map((a) => (
                   <AccountRow key={a.email} account={a} onPress={() => void switchTo(a)} />
                 ))}
               </AccountList>
+            </div>
+          )}
+          <form onSubmit={onSubmit} className="flex flex-col gap-3">
+            <TextInput label="Эл. почта" type="email" autoComplete="email" value={email} onChange={setEmail} />
+            <TextInput
+              label="Пароль"
+              type="password"
+              autoComplete="current-password"
+              value={password}
+              onChange={setPassword}
+            />
+            {error && (
+              <div role="alert" data-testid="login-error" className="text-center text-xs leading-snug text-red-600">
+                {error}
+              </div>
             )}
-            <form onSubmit={onSubmit} className="flex flex-col gap-3">
-              <TextInput label="Эл. почта" type="email" autoComplete="email" value={email} onChange={setEmail} />
-              <TextInput
-                label="Пароль"
-                type="password"
-                autoComplete="current-password"
-                value={password}
-                onChange={setPassword}
-              />
-              {error && (
-                <div role="alert" data-testid="login-error" className="text-center text-xs leading-snug text-red-600">
-                  {error}
-                </div>
-              )}
-              {/* Углы как у кнопок приложения (`rounded-xl`), а не «таблетка». */}
-              <Button type="submit" className="mt-1 w-full rounded-xl" variant="primary" isDisabled={busy}>
-                <LogIn size={15} /> {busy ? 'Входим…' : 'Войти'}
-              </Button>
-            </form>
-          </div>
-        )}
+            {/* Углы как у кнопок приложения (`rounded-xl`), а не «таблетка». */}
+            <Button type="submit" className="mt-1 w-full rounded-xl" variant="primary" isDisabled={busy}>
+              <LogIn size={15} /> {busy ? 'Входим…' : 'Войти'}
+            </Button>
+          </form>
+          {!loading && current && (
+            <button
+              type="button"
+              onClick={() => void signOut()}
+              className="self-center text-[12.5px] font-semibold text-neutral-500 hover:underline"
+            >
+              Выйти
+            </button>
+          )}
+        </div>
       </AuthScreen>
     </FullScreen>
   );
