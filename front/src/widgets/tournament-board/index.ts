@@ -7,4 +7,5 @@ export {
   type TournamentSectionId,
 } from './TournamentPage';
 export { TournamentOverview } from './TournamentOverview';
+export { BrigadeDesk } from './BrigadeDesk';
 export { useTournamentPage } from './useTournamentPage';

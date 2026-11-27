@@ -147,7 +147,7 @@ export const APPLY_POSITIONS = REFEREE_POSITIONS.filter((p) => !('apply' in p) |
 export type RefereePosition = (typeof REFEREE_POSITIONS)[number]['id'];
 
 /** Судья турнира — судейская должность в области этого турнира. */
-export type TournamentReferee = { id: string; name: string; email: string | null; position: RefereePosition };
+export type TournamentReferee = { id: string; name: string; email: string | null; position: RefereePosition; avatar?: string | null };
 
 export const FORMAT_LABEL: Record<TournamentFormat, string> = {
   single_elimination: 'Олимпийская система',
@@ -692,8 +692,16 @@ export type PlayoffMap = {
 export type Schedule = {
   status: 'none' | 'draft' | 'final';
   playoff: PlayoffMap;
-  /** Править может только главный судья, пока не отправлено. */
+  /** Править черновик — главный судья и главный секретарь ✳ (24.11.2026), пока не отправлено. */
   canEdit: boolean;
+  /** Отправить (запереть и начать турнир) — только главный судья. */
+  canFinalize: boolean;
+  /** Секретарь передал черновик главному судье — когда; правка черновика отзывает. */
+  submittedAt: string | null;
+  /** Передать черновик главному судье — только секретарь, пока не передан. */
+  canSubmit: boolean;
+  /** Смотрящий ведёт ход турнира сейчас — у него полномочия главного судьи (правка счёта). */
+  canRun: boolean;
   settings: ScheduleSettings;
   /** Игроки группы — по посеву, с итогом. */
   groups: { id: number; name: string; players: (SchedulePerson & { standing: GroupStanding })[] }[];
@@ -730,15 +738,23 @@ export type ManualMatch = {
   number: number;
   player1: SchedulePerson;
   player2: SchedulePerson;
-  score1: number;
-  score2: number;
+  /** `null` — итог без счёта ✳ (27.11.2026). */
+  score1: number | null;
+  score2: number | null;
   winner: string | null;
+  /** Идёт ли матч в рейтинг: итог без счёта — нет. */
+  rated: boolean;
 };
 
 type RawSchedule = Omit<
   Schedule,
-  'canEdit' | 'settings' | 'matches' | 'canManual' | 'canBuild' | 'manualMatches' | 'gamesToWin' | 'canFinish' | 'canUnfinish' | 'tournamentStatus' | 'ratingChanges'
+  | 'canEdit' | 'canFinalize' | 'submittedAt' | 'canSubmit' | 'canRun' | 'settings' | 'matches' | 'canManual' | 'canBuild'
+  | 'manualMatches' | 'gamesToWin' | 'canFinish' | 'canUnfinish' | 'tournamentStatus' | 'ratingChanges'
 > & {
+  can_finalize?: boolean;
+  submitted_at?: string | null;
+  can_submit?: boolean;
+  can_run?: boolean;
   games_to_win: number;
   can_finish: boolean;
   can_unfinish?: boolean;
@@ -760,6 +776,10 @@ const toSchedule = (r: RawSchedule): Schedule => ({
   status: r.status,
   playoff: r.playoff,
   canEdit: r.can_edit,
+  canFinalize: r.can_finalize ?? false,
+  submittedAt: r.submitted_at ?? null,
+  canSubmit: r.can_submit ?? false,
+  canRun: r.can_run ?? false,
   settings: {
     tables: r.settings.tables,
     matchMinutes: r.settings.match_minutes,
@@ -843,19 +863,14 @@ export async function setManualResults(id: string, on: boolean): Promise<Schedul
   return toSchedule(await send<RawSchedule>(scheduleUrl(id, 'manual/'), 'POST', { on }));
 }
 
-/** Внести матч вручную: кто с кем и счёт в партиях. */
+/** Внести матч вручную: кто с кем и счёт в партиях — или ✳ (27.11.2026)
+    только победителя (`winner`): такой итог в рейтинг не идёт. */
 export async function addManualMatch(
   id: string,
-  m: { a: string; b: string; scoreA: number; scoreB: number },
+  m: { a: string; b: string; scoreA: number; scoreB: number } | { a: string; b: string; winner: string },
 ): Promise<Schedule> {
-  return toSchedule(
-    await send<RawSchedule>(scheduleUrl(id, 'manual/matches/'), 'POST', {
-      a: m.a,
-      b: m.b,
-      score_a: m.scoreA,
-      score_b: m.scoreB,
-    }),
-  );
+  const body = 'winner' in m ? { a: m.a, b: m.b, winner: m.winner } : { a: m.a, b: m.b, score_a: m.scoreA, score_b: m.scoreB };
+  return toSchedule(await send<RawSchedule>(scheduleUrl(id, 'manual/matches/'), 'POST', body));
 }
 
 /** Убрать матч, внесённый вручную. */
@@ -878,7 +893,65 @@ export async function finalizeSchedule(id: string): Promise<Schedule> {
   return toSchedule(await send<RawSchedule>(scheduleUrl(id, 'finalize/'), 'POST'));
 }
 
+/** Секретарь передаёт черновик главному судье на проверку ✳ (24.11.2026). */
+export async function submitSchedule(id: string): Promise<Schedule> {
+  return toSchedule(await send<RawSchedule>(scheduleUrl(id, 'submit/'), 'POST'));
+}
+
 export const useSchedule = (id: string) => useAsync(() => fetchSchedule(id), id);
+
+// ── полномочия главного судьи ✳ (24.11.2026, flows/07–08) ─────────────────────
+
+export type BrigadePerson = { id: string; name: string; position: string; positionLabel: string };
+export type Authority = {
+  /** У кого ход турнира сейчас; по умолчанию — главный судья. */
+  holder: BrigadePerson | null;
+  transferred: boolean;
+  since: string | null;
+  canRun: boolean;
+  canTransfer: boolean;
+  canReturn: boolean;
+  /** Кому можно передать — секретарь и заместитель турнира (только главному судье). */
+  candidates: BrigadePerson[];
+  log: { action: 'transfer' | 'return'; holder: string; by: string; at: string }[];
+};
+type RawPerson = { id: string; name: string; position: string; position_label: string };
+type RawAuthority = {
+  holder: RawPerson | null;
+  transferred: boolean;
+  since: string | null;
+  can_run: boolean;
+  can_transfer: boolean;
+  can_return: boolean;
+  candidates: RawPerson[];
+  log: Authority['log'];
+};
+const toPerson = (p: RawPerson): BrigadePerson => ({ id: p.id, name: p.name, position: p.position, positionLabel: p.position_label });
+const toAuthority = (r: RawAuthority): Authority => ({
+  holder: r.holder ? toPerson(r.holder) : null,
+  transferred: r.transferred,
+  since: r.since,
+  canRun: r.can_run,
+  canTransfer: r.can_transfer,
+  canReturn: r.can_return,
+  candidates: r.candidates.map(toPerson),
+  log: r.log,
+});
+const authorityUrl = (id: string) => `/api/tournaments/${id}/authority/`;
+
+export async function fetchAuthority(id: string): Promise<Authority> {
+  return toAuthority(await getJson<RawAuthority>(authorityUrl(id), 'Полномочия'));
+}
+
+export async function transferAuthority(id: string, userId: string): Promise<Authority> {
+  return toAuthority(await send<RawAuthority>(authorityUrl(id), 'POST', { action: 'transfer', user_id: userId }));
+}
+
+export async function returnAuthority(id: string): Promise<Authority> {
+  return toAuthority(await send<RawAuthority>(authorityUrl(id), 'POST', { action: 'return' }));
+}
+
+export const useAuthority = (id: string) => useAsync(() => fetchAuthority(id), id);
 
 // ─── Допуск заявки ✳ (19.11.2026, ADMISSION.md) ─────────────────────────────
 
@@ -1135,3 +1208,52 @@ export type ScoringAction =
 export async function scoreMatch(tournamentId: string, matchId: string | number, body: ScoringAction): Promise<ScoringMatch> {
   return toScoring(await send<RawScoring>(`/api/tournaments/${tournamentId}/group-matches/${matchId}/scoring/`, 'POST', body));
 }
+
+// ── профиль судьи ✳ (24.11.2026) ─────────────────────────────────────────────
+
+export type RefereeHistoryRow = {
+  tournament: { id: string; name: string; startsAt: string | null; endsAt: string | null; status: TournamentStatus; city: string };
+  position: string;
+  positionLabel: string;
+  /** Подтверждённых матчей, отсуженных им судьёй стола в этом турнире. */
+  matches: number;
+};
+export type RefereeProfile = {
+  user: { id: string; name: string; email: string | null; avatar: string | null };
+  isReferee: boolean;
+  tournaments: number;
+  asChief: number;
+  matches: number;
+  last: string | null;
+  history: RefereeHistoryRow[];
+};
+type RawRefereeProfile = Omit<RefereeProfile, 'isReferee' | 'asChief' | 'history'> & {
+  is_referee: boolean;
+  as_chief: number;
+  history: {
+    tournament: { id: string; name: string; starts_at: string | null; ends_at: string | null; status: TournamentStatus; city: string };
+    position: string;
+    position_label: string;
+    matches: number;
+  }[];
+};
+
+export async function fetchRefereeProfile(userId: string): Promise<RefereeProfile> {
+  const r = await getJson<RawRefereeProfile>(`/api/tournaments/referees/${userId}/profile/`, 'Профиль судьи');
+  return {
+    user: r.user,
+    isReferee: r.is_referee,
+    tournaments: r.tournaments,
+    asChief: r.as_chief,
+    matches: r.matches,
+    last: r.last,
+    history: r.history.map((h) => ({
+      tournament: { id: h.tournament.id, name: h.tournament.name, startsAt: h.tournament.starts_at, endsAt: h.tournament.ends_at, status: h.tournament.status, city: h.tournament.city },
+      position: h.position,
+      positionLabel: h.position_label,
+      matches: h.matches,
+    })),
+  };
+}
+
+export const useRefereeProfile = (userId: string) => useAsync(() => fetchRefereeProfile(userId), userId);

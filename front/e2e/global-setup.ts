@@ -25,6 +25,10 @@ export const E2E_GSK = { email: 'e2e-gsk@fnt.kz', password: 'E2e-Gsk-2026' };
 /** Спортсмен и судья ✳ (28.10.2026) — кабинеты пока пустые, `workspaces.spec.ts`. */
 export const E2E_PLAYER = { email: 'e2e-player@fnt.kz', password: 'E2e-Player-2026' };
 export const E2E_REFEREE = { email: 'e2e-referee@fnt.kz', password: 'E2e-Referee-2026' };
+/** Бригада турнира ✳ (24.11.2026, `brigade.spec.ts`): главный секретарь и
+ *  заместитель главного судьи — судьи, должность им дают в коллегии турнира. */
+export const E2E_SECRETARY = { email: 'e2e-secretary@fnt.kz', password: 'E2e-Secretary-2026' };
+export const E2E_DEPUTY = { email: 'e2e-deputy@fnt.kz', password: 'E2e-Deputy-2026' };
 
 /** Старший тренер региона ✳ (19.11.2026) — заявка на главный старт,
  *  `admission.spec.ts`. Регион — такой, где у засева спортсменов нет: проверка
@@ -75,6 +79,8 @@ export default function globalSetup() {
   manage('create_referee', '--email', E2E_ADMIN.email, '--name', 'Администратор федерации (проверки)');
   manage('create_player', '--email', E2E_PLAYER.email, '--name', 'Спортсмен (проверки)', '--password', E2E_PLAYER.password);
   manage('create_referee', '--email', E2E_REFEREE.email, '--name', 'Судья (проверки)', '--password', E2E_REFEREE.password);
+  manage('create_referee', '--email', E2E_SECRETARY.email, '--name', 'Секретарь (проверки)', '--password', E2E_SECRETARY.password);
+  manage('create_referee', '--email', E2E_DEPUTY.email, '--name', 'Заместитель (проверки)', '--password', E2E_DEPUTY.password);
   manage(
     'create_regional_head_coach',
     '--email', E2E_COACH.email,

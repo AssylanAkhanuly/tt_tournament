@@ -103,6 +103,47 @@ def other_tournaments(role: Role):
     return [(t, by_id[t.id]) for t in found]
 
 
+def referee_profile(user) -> dict:
+    """Профиль судьи ✳ (24.11.2026, решение владельца продукта: «профиль судьи —
+    как у спортсмена»): все его должности в турнирах (свежие сверху), сколько
+    матчей он отсудил судьёй стола (подтверждённых) и сколько раз был главным.
+    Рейтинга судей в системе ещё нет (flows Э0.11) — здесь только факты."""
+    from .models import GroupMatch
+
+    roles = Role.objects.filter(user_id=user.id, kind__in=POSITIONS, scope="tournament")
+    by_id = {r.scope_id: r for r in roles}
+    found = list(Tournament.objects.filter(id__in=by_id).order_by("-starts_at"))
+    matches = GroupMatch.objects.filter(referee_id=user.id, status=GroupMatch.FINISHED)
+    per_tournament = {}
+    for tid in matches.values_list("group__tournament_id", flat=True):
+        per_tournament[tid] = per_tournament.get(tid, 0) + 1
+    history = [
+        {
+            "tournament": {
+                "id": str(t.id),
+                "name": t.name,
+                "starts_at": t.starts_at.isoformat() if t.starts_at else None,
+                "ends_at": t.ends_at.isoformat() if t.ends_at else None,
+                "status": t.status,
+                "city": t.city,
+            },
+            "position": by_id[t.id].kind,
+            "position_label": by_id[t.id].get_kind_display(),
+            "matches": per_tournament.get(t.id, 0),
+        }
+        for t in found
+    ]
+    return {
+        "user": {"id": str(user.id), "name": user.name, "email": user.email, "avatar": user.avatar.url if user.avatar else None},
+        "is_referee": Role.objects.filter(user_id=user.id, kind=Role.KIND_REFEREE).exists() or bool(history),
+        "tournaments": len(history),
+        "as_chief": sum(1 for h in history if h["position"] == Role.KIND_CHIEF_REFEREE),
+        "matches": sum(per_tournament.values()),
+        "last": history[0]["tournament"]["starts_at"] if history else None,
+        "history": history,
+    }
+
+
 def change_referee(tournament: Tournament, role: Role, position: str) -> Role:
     """Сменить должность судьи в турнире. Единственные должности — те же
     правила, что при назначении: занятую второму не дать."""

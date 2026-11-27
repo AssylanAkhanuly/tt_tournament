@@ -180,6 +180,17 @@ class Tournament(models.Model):
     # только его можно вернуть из завершённых (`manual_results.unfinish`). Пусто —
     # не завершён или завершён до появления поля и без строк рейтинга.
     finished_at = models.DateTimeField(null=True, blank=True, verbose_name="Завершён")
+    # Полномочия главного судьи ✳ (24.11.2026, flows/07–08; решение совещания
+    # 04.11.2026): у кого ход турнира — ввод и правка счёта. Пусто — у главного
+    # судьи. Передаёт только он, секретарю или заместителю своего турнира;
+    # правит один (`authority.py`). Переданное расписание ✳ — секретарь отдал
+    # черновик главному судье; любая правка черновика его отзывает.
+    authority_holder = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name="+",
+        verbose_name="Полномочия главного судьи у",
+    )
+    authority_since = models.DateTimeField(null=True, blank=True, verbose_name="Полномочия с")
+    schedule_submitted_at = models.DateTimeField(null=True, blank=True, verbose_name="Расписание передано главному судье")
 
     # Условия допуска ✳ (19.11.2026, ТЗ §4.1, §8.2; ADMISSION.md). Засевает их
     # вид соревнования (`template`), дальше они собственные; первая заявка их
@@ -613,3 +624,22 @@ class ScoreLog(models.Model):
 
     def __str__(self):
         return f"{self.entered_by_name}: {self.player1_name} {self.score1}:{self.score2} {self.player2_name}"
+
+
+class AuthorityLog(models.Model):
+    """Журнал передачи полномочий главного судьи ✳ (24.11.2026): кто передал,
+    кому и когда; возврат — той же строкой с `action=return`. Спор «кто вносил
+    счёт» начинается отсюда и с `ScoreLog`."""
+
+    ACTION_TRANSFER = "transfer"
+    ACTION_RETURN = "return"
+    ACTION_CHOICES = [(ACTION_TRANSFER, "Передал"), (ACTION_RETURN, "Вернул")]
+
+    tournament = models.ForeignKey(Tournament, on_delete=models.CASCADE, related_name="authority_log")
+    action = models.CharField(max_length=8, choices=ACTION_CHOICES)
+    holder = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, related_name="+")
+    by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, related_name="+")
+    at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-at", "-id"]

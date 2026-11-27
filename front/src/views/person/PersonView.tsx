@@ -1,30 +1,45 @@
-'use client';
+"use client";
 
 /* Профиль человека ✳ (28.10.2026, решение владельца продукта): страница любой
    учётки — имя, почта, телефон и роли (у ролей турнира — какого). Открывается
    «Профилем» из карточки судьи. Оболочка — кабинет того, кто смотрит:
    администратора федерации или председателя ГСК. Роли — общей таблицей
-   `DataTable`; строка роли турнира ведёт на этот турнир. HeroUI + Tailwind. */
+   `DataTable`; строка роли турнира ведёт на этот турнир. HeroUI + Tailwind.
 
-import { Avatar, Button, Spinner } from '@heroui/react';
-import { ArrowLeft } from 'lucide-react';
-import { useRouter } from 'next/navigation';
-import { useEffect, type ReactNode } from 'react';
+   У кого есть рейтинговая карточка — вид профиля спортсмена ✳ (24.11.2026,
+   решение владельца продукта: «как профиль, что мы сделали»): `PlayerProfile`
+   (шапка с фигурой и местом, показатели, динамика рейтинга, личные встречи),
+   ниже — карточка «Роли и контакты». Нет карточки — прежняя шапка и роли. */
 
-import { usePerson, type PersonRole } from '@/entities/person';
-import { useSession } from '@/entities/session';
-import { tournamentHref } from '@/entities/tournament';
-import { DataTable, type DataColumn } from '@/shared/ui/DataTable';
-import { AdminShell } from '@/views/dashboard/AdminShell';
-import { RatingShell } from '@/views/rating';
+import { Avatar, Button, Spinner } from "@heroui/react";
+import { ArrowLeft } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useEffect, type ReactNode } from "react";
+
+import { usePerson, type PersonRole } from "@/entities/person";
+import { useSession } from "@/entities/session";
+import { tournamentHref } from "@/entities/tournament";
+import { DataTable, type DataColumn } from "@/shared/ui/DataTable";
+import { AdminShell } from "@/views/dashboard/AdminShell";
+import { RatingShell } from "@/views/rating";
+import { PlayerProfile, RefereeProfile } from "@/widgets/national";
 
 const COLUMNS: DataColumn<PersonRole>[] = [
-  { id: 'label', label: 'Роль', rowHeader: true, sortValue: (r) => r.label, render: (r) => r.label },
   {
-    id: 'tournament',
-    label: 'Турнир',
+    id: "label",
+    label: "Роль",
+    rowHeader: true,
+    sortValue: (r) => r.label,
+    render: (r) => r.label,
+  },
+  {
+    id: "tournament",
+    label: "Турнир",
     sortValue: (r) => r.tournament?.name ?? null,
-    render: (r) => r.tournament?.name ?? <span className="text-neutral-500">вся система</span>,
+    render: (r) =>
+      r.tournament?.name ?? (
+        <span className="text-neutral-500">вся система</span>
+      ),
   },
 ];
 
@@ -35,7 +50,8 @@ export function PersonView({ id }: { id: string }) {
 
   // Профиль — персональные данные: только администратору и председателю ГСК.
   useEffect(() => {
-    if (!loading && !isFederationAdmin && !isGskChairman) router.replace('/login?next=/people/' + id);
+    if (!loading && !isFederationAdmin && !isGskChairman)
+      router.replace("/login?next=/people/" + id);
   }, [loading, isFederationAdmin, isGskChairman, router, id]);
   const p = person.data;
   // Строка роли турнира ведёт на турнир — в кабинете, в оболочке которого открыт профиль.
@@ -59,30 +75,134 @@ export function PersonView({ id }: { id: string }) {
   ) : !p ? (
     <Spinner className="m-auto" />
   ) : (
-    <div className="flex min-h-0 flex-1 flex-col bg-white">
-      <div className="flex shrink-0 items-center gap-4 border-b border-neutral-200 px-6 py-5" data-testid="person-header">
-        <Avatar size="lg">
-          <Avatar.Fallback>{p.name.slice(0, 1)}</Avatar.Fallback>
-        </Avatar>
-        <div className="min-w-0 leading-tight">
-          <h1 className="text-xl font-semibold tracking-tight">{p.name}</h1>
-          <p className="mt-1 text-[13px] text-neutral-500">
-            {[p.email ?? 'почта не указана', p.phone].filter(Boolean).join(' · ')}
-          </p>
+    <PlayerProfile
+      userId={id}
+      fallback={
+        // Не спортсмен, но судья — профиль судьи того же вида ✳ (24.11.2026).
+        <RefereeProfile
+          userId={id}
+          tournamentHref={(tid) =>
+            tournamentHref(isFederationAdmin ? "dashboard" : "gsk", tid)
+          }
+          fallback={
+            <div className="flex min-h-0 flex-1 flex-col bg-white">
+              <div
+                className="flex shrink-0 items-center gap-4 border-b border-neutral-200 px-6 py-5"
+                data-testid="person-header"
+              >
+                <Avatar size="lg">
+                  <Avatar.Fallback>{p.name.slice(0, 1)}</Avatar.Fallback>
+                </Avatar>
+                <div className="min-w-0 leading-tight">
+                  <h1 className="text-xl font-semibold tracking-tight">
+                    {p.name}
+                  </h1>
+                  <p className="mt-1 text-[13px] text-neutral-500">
+                    {[p.email ?? "почта не указана", p.phone]
+                      .filter(Boolean)
+                      .join(" · ")}
+                  </p>
+                </div>
+              </div>
+              <DataTable
+                ariaLabel="Роли"
+                testId="person-roles"
+                rows={p.roles}
+                columns={COLUMNS}
+                getId={(r) => r.kind + ":" + (r.tournament?.id ?? r.scope)}
+                count={(n) => "Ролей: " + n}
+                empty="Ролей нет"
+                onRowAction={(r) =>
+                  r.tournament &&
+                  router.push(
+                    tournamentHref(
+                      isFederationAdmin ? "dashboard" : "gsk",
+                      r.tournament.id,
+                    ),
+                  )
+                }
+                rowProps={(r) => ({
+                  "data-testid": "person-role-row",
+                  "data-kind": r.kind,
+                })}
+              />
+            </div>
+          }
+        >
+          <section
+            className="flex min-w-0 flex-col overflow-hidden rounded-2xl border border-neutral-200/80 bg-white"
+            data-testid="person-header"
+          >
+            <div className="flex flex-wrap items-baseline justify-between gap-2 px-5 pt-5 pb-3">
+              <h2 className="m-0 text-[15px] font-semibold">Роли и контакты</h2>
+              <span className="text-[13px] text-neutral-500">
+                {[p.email ?? "почта не указана", p.phone]
+                  .filter(Boolean)
+                  .join(" · ")}
+              </span>
+            </div>
+            <DataTable
+              ariaLabel="Роли"
+              testId="person-roles"
+              rows={p.roles}
+              columns={COLUMNS}
+              getId={(r) => r.kind + ":" + (r.tournament?.id ?? r.scope)}
+              count={(n) => "Ролей: " + n}
+              empty="Ролей нет"
+              onRowAction={(r) =>
+                r.tournament &&
+                router.push(
+                  tournamentHref(
+                    isFederationAdmin ? "dashboard" : "gsk",
+                    r.tournament.id,
+                  ),
+                )
+              }
+              rowProps={(r) => ({
+                "data-testid": "person-role-row",
+                "data-kind": r.kind,
+              })}
+            />
+          </section>
+        </RefereeProfile>
+      }
+    >
+      <section
+        className="flex min-w-0 flex-col overflow-hidden rounded-2xl border border-neutral-200/80 bg-white"
+        data-testid="person-header"
+      >
+        <div className="flex flex-wrap items-baseline justify-between gap-2 px-5 pt-5 pb-3">
+          <h2 className="m-0 text-[15px] font-semibold">Роли и контакты</h2>
+          <span className="text-[13px] text-neutral-500">
+            {[p.email ?? "почта не указана", p.phone]
+              .filter(Boolean)
+              .join(" · ")}
+          </span>
         </div>
-      </div>
-      <DataTable
-        ariaLabel="Роли"
-        testId="person-roles"
-        rows={p.roles}
-        columns={COLUMNS}
-        getId={(r) => r.kind + ':' + (r.tournament?.id ?? r.scope)}
-        count={(n) => 'Ролей: ' + n}
-        empty="Ролей нет"
-        onRowAction={(r) => r.tournament && router.push(tournamentHref(isFederationAdmin ? 'dashboard' : 'gsk', r.tournament.id))}
-        rowProps={(r) => ({ 'data-testid': 'person-role-row', 'data-kind': r.kind })}
-      />
-    </div>
+        <DataTable
+          ariaLabel="Роли"
+          testId="person-roles"
+          rows={p.roles}
+          columns={COLUMNS}
+          getId={(r) => r.kind + ":" + (r.tournament?.id ?? r.scope)}
+          count={(n) => "Ролей: " + n}
+          empty="Ролей нет"
+          onRowAction={(r) =>
+            r.tournament &&
+            router.push(
+              tournamentHref(
+                isFederationAdmin ? "dashboard" : "gsk",
+                r.tournament.id,
+              ),
+            )
+          }
+          rowProps={(r) => ({
+            "data-testid": "person-role-row",
+            "data-kind": r.kind,
+          })}
+        />
+      </section>
+    </PlayerProfile>
   );
 
   return isFederationAdmin ? (

@@ -8,6 +8,8 @@ from .views import (
     ManualResultsView,
     ScheduleMatchView,
     ScheduleView,
+    AuthorityView,
+    RefereeProfileView,
     AddParticipantView,
     AssignTableView,
     ElevenLabsVoicesView,
@@ -57,6 +59,7 @@ urlpatterns = [
     path("my/", MyTournamentsView.as_view(), name="tournament-my"),
     path("places/", PlacesView.as_view(), name="tournament-places"),
     path("my-table/", MyTableView.as_view(), name="tournament-my-table"),
+    path("referees/<uuid:user_id>/profile/", RefereeProfileView.as_view(), name="referee-profile"),
     path("templates/", TournamentTemplatesView.as_view(), name="tournament-templates"),
     path("applicants/", ApplicantKindsView.as_view(), name="tournament-applicants"),
     path("score-log/", ScoreLogView.as_view(), name="tournament-score-log"),
@@ -71,8 +74,9 @@ urlpatterns = [
     path("<uuid:pk>/schedule/", ScheduleView.as_view(), name="tournament-schedule"),
     *[
         path(f"<uuid:pk>/schedule/{action}/", ScheduleView.as_view(), {"action": action}, name=f"tournament-schedule-{action}")
-        for action in ("build", "move", "finalize")
+        for action in ("build", "move", "finalize", "submit")
     ],
+    path("<uuid:pk>/authority/", AuthorityView.as_view(), name="tournament-authority"),
     path("<uuid:pk>/schedule/matches/<int:match_id>/", ScheduleMatchView.as_view(), name="tournament-schedule-match"),
     # Результаты без расписания ✳ (03.11.2026).
     path("<uuid:pk>/schedule/manual/", ManualResultsView.as_view(), name="tournament-results-manual"),

@@ -13,8 +13,8 @@
    (`features/referee-recruitment`); вкладка — в адресе (`?tab=applications`).
    HeroUI + Tailwind. */
 
-import { Chip, ToggleButton, ToggleButtonGroup } from '@heroui/react';
-import { CalendarClock, Gavel, Info, LayoutGrid, List, Users } from 'lucide-react';
+import { Chip } from '@heroui/react';
+import { CalendarClock, Gavel, Info, LayoutGrid, Users } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useMemo, useState, type ReactNode } from 'react';
 
@@ -22,6 +22,7 @@ import {
   REFEREE_POSITIONS,
   useParticipants,
   useReferees,
+  useAuthority,
   useRefereeApplications,
   useTournament,
   type ApplicationStatus,
@@ -31,12 +32,14 @@ import {
   type TournamentReferee,
 } from '@/entities/tournament';
 import { ApplicationDrawer } from '@/features/referee-recruitment';
+import { AccessCell, AuthorityBar } from '@/features/tournament-authority';
 import { ScheduleSection, TablesBoard } from '@/features/tournament-schedule';
 import { PlayoffMap } from '@/widgets/bracket/PlayoffMap';
 import { AddToRosterDialog, PlayerDrawer, RefereeDrawer } from '@/features/tournament-roster';
 import { RecruitmentSettings, SettingsButton } from '@/features/tournament-settings';
 import { DataTable, type DataColumn } from '@/shared/ui/DataTable';
 import { PersonAvatar } from '@/shared/ui/PersonAvatar';
+import { ViewToggle } from '@/shared/ui/ViewToggle';
 import { RatingPlayerCard } from '@/widgets/rating';
 
 import { TournamentDashboard } from './TournamentDashboard';
@@ -69,9 +72,11 @@ export type SectionView = {
 /** Разделы турнира для сайдбара: подпись, адрес, значок и подпункты. Каждый
  *  раздел — своя страница ✳ (28.10.2026, решение владельца продукта):
  *  `…/<id>/players`, `…/<id>/referees`, а не параметр адреса. */
-export function tournamentNav(pageHref: string, only?: TournamentSectionId[], at?: SectionView) {
+export function tournamentNav(pageHref: string, only?: TournamentSectionId[], at?: SectionView, readOnly = false) {
   const sub = (section: TournamentSectionId): NavSubItem[] | undefined => {
     const base = pageHref + '/' + section;
+    // Только смотреть (бригада турнира) — заявок судей нет, «Коллегия» одна.
+    if (section === 'referees' && readOnly) return undefined;
     if (section === 'referees')
       return [
         { label: 'Коллегия', href: base, active: at?.tab !== 'applications' },
@@ -110,7 +115,7 @@ const PLAYER_COLUMNS: DataColumn<TournamentParticipant>[] = [
     // Фото — в строке рядом с именем ✳ (29.10.2026): нет снимка — силуэт-заглушка.
     render: (p) => (
       <span className="flex items-center gap-3">
-        <PersonAvatar name={p.name} src={p.avatar} />
+        <PersonAvatar name={p.name} src={p.avatar} id={p.userId} sex={p.sex} />
         {p.name}
         {p.absent && (
           <Chip size="sm" variant="soft" color="warning">
@@ -154,7 +159,19 @@ const POSITION_ORDER: string[] = REFEREE_POSITIONS.map((p) => p.id);
 const POSITION_LABEL = Object.fromEntries(REFEREE_POSITIONS.map((p) => [p.id, p.label])) as Record<string, string>;
 
 const REFEREE_COLUMNS: DataColumn<TournamentReferee>[] = [
-  { id: 'name', label: 'Судья', rowHeader: true, sortValue: (r) => r.name, render: (r) => r.name },
+  {
+    id: 'name',
+    label: 'Судья',
+    rowHeader: true,
+    sortValue: (r) => r.name,
+    // Аватар рядом с именем ✳ (24.11.2026), как у спортсменов.
+    render: (r) => (
+      <span className="flex items-center gap-3">
+        <PersonAvatar name={r.name} src={r.avatar} id={r.id} />
+        {r.name}
+      </span>
+    ),
+  },
   {
     id: 'position',
     label: 'Должность',
@@ -176,7 +193,7 @@ const REFEREE_COLUMNS: DataColumn<TournamentReferee>[] = [
     продукта): карточки рейтинг-листа (`RatingPlayerCard`) по убыванию текущего
     рейтинга, номер — место в составе по рейтингу; таблица — `?view=table`.
     Переключатель — справа в полосе над списком, как у «Столов». */
-function Players({ id, recruitment }: { id: string; recruitment: boolean }) {
+function Players({ id, recruitment, readOnly = false }: { id: string; recruitment: boolean; readOnly?: boolean }) {
   const participants = useParticipants(id);
   const tournament = useTournament(id);
   const params = useSearchParams();
@@ -219,7 +236,7 @@ function Players({ id, recruitment }: { id: string; recruitment: boolean }) {
                       key={p.id}
                       r={{ userId: p.userId, name: p.name, value: p.rating, region: p.region, birthYear: p.birthYear, sex: p.sex }}
                       place={place.get(p.id) ?? 0}
-                      onOpen={() => setOpen(p.id)}
+                      onOpen={() => (readOnly ? router.push('/rating/' + p.userId) : setOpen(p.id))}
                       testId="participant-card"
                     />
                   ))}
@@ -228,25 +245,8 @@ function Players({ id, recruitment }: { id: string; recruitment: boolean }) {
         }
         actions={
           <>
-            <ToggleButtonGroup
-              size="sm"
-              aria-label="Вид"
-              selectionMode="single"
-              disallowEmptySelection
-              selectedKeys={[asTable ? 'table' : 'cards']}
-              onSelectionChange={(keys) => {
-                const v = [...keys][0];
-                if (v) setView(String(v));
-              }}
-            >
-              <ToggleButton id="cards" aria-label="Карточки" data-testid="participants-view-cards">
-                <LayoutGrid size={16} />
-              </ToggleButton>
-              <ToggleButton id="table" aria-label="Таблица" data-testid="participants-view-table">
-                <List size={16} />
-              </ToggleButton>
-            </ToggleButtonGroup>
-            {!recruitment ? null : tournament.data ? (
+            <ViewToggle cards={!asTable} onChange={(c) => setView(c ? 'cards' : 'table')} testIds={{ cards: 'participants-view-cards', table: 'participants-view-table' }} />
+            {readOnly || !recruitment ? null : tournament.data ? (
               <RecruitmentSettings
                 tournamentId={id}
                 of="players"
@@ -265,11 +265,12 @@ function Players({ id, recruitment }: { id: string; recruitment: boolean }) {
             ) : (
               <SettingsButton isDisabled />
             )}
-            <AddToRosterDialog tournamentId={id} role="player" onAdded={participants.reload} />
+            {!readOnly && <AddToRosterDialog tournamentId={id} role="player" onAdded={participants.reload} />}
           </>
         }
         empty="Участников нет"
-        onRowAction={(p) => setOpen(p.id)}
+        // Только смотреть — строка ведёт в рейтинговую карточку, а не в правку.
+        onRowAction={(p) => (readOnly ? router.push('/rating/' + p.userId) : setOpen(p.id))}
         rowProps={() => ({ 'data-testid': 'participant-row' })}
       />
       <PlayerDrawer
@@ -283,6 +284,38 @@ function Players({ id, recruitment }: { id: string; recruitment: boolean }) {
 }
 
 type RefereeTab = SectionView['tab'];
+
+/** «Судьи» бригаде турнира и главному судье ✳ (24.11.2026): коллегия только на
+    чтение — без заявок, «Настроек», «Добавить» и карточки с правкой должности;
+    колонка «Доступ к правке» — у кого полномочия главного судьи, и главному
+    судье — переключатель у секретаря и заместителя (`AccessCell`). */
+function RefereesReadOnly({ id }: { id: string }) {
+  const referees = useReferees(id);
+  const authority = useAuthority(id);
+  const columns: DataColumn<TournamentReferee>[] = [
+    ...REFEREE_COLUMNS,
+    {
+      id: 'access',
+      label: 'Доступ к правке',
+      render: (r) => <AccessCell tournamentId={id} authority={authority.data ?? null} person={r} onChange={authority.reload} />,
+    },
+  ];
+  return (
+    <DataTable
+      ariaLabel="Судьи"
+      testId="referees"
+      rows={referees.data ?? []}
+      loading={!referees.data && !referees.error}
+      error={referees.error}
+      columns={columns}
+      getId={(r) => r.id}
+      search={{ placeholder: 'Фамилия, имя или почта', text: (r) => r.name + ' ' + (r.email ?? ''), testId: 'referees-search' }}
+      defaultSort={{ column: 'position', direction: 'ascending' }}
+      empty="Судей нет"
+      rowProps={(r) => ({ 'data-testid': 'referee-row', 'data-position': r.position })}
+    />
+  );
+}
 
 function Referees({ id }: { id: string }) {
   const params = useSearchParams();
@@ -450,15 +483,37 @@ export function TournamentSection({
   id,
   section,
   recruitment = true,
+  readOnly = false,
+  refereesReadOnly = false,
 }: {
   id: string;
   section: TournamentSectionId;
+  /** Только смотреть состав (бригада турнира ✳ 24.11.2026). */
+  readOnly?: boolean;
+  /** «Судьи» только смотреть, с «Доступом к правке» — главный судья ✳ 24.11.2026. */
+  refereesReadOnly?: boolean;
   /** «Настройки» приёма заявок у «Спортсменов»: у главного судьи их нет —
    *  приём ведёт председатель ГСК. */
   recruitment?: boolean;
 }) {
   if (section === 'info') return <InfoSection id={id} />;
-  if (section === 'tables') return <TablesBoard tournamentId={id} />;
+  if (section === 'tables') return <TablesSection id={id} />;
   if (section === 'schedule') return <ScheduleSection tournamentId={id} playoff={(s) => <PlayoffMap playoff={s.playoff} />} />;
-  return section === 'referees' ? <Referees id={id} /> : <Players id={id} recruitment={recruitment} />;
+  if (section === 'referees') return readOnly || refereesReadOnly ? <RefereesReadOnly id={id} /> : <Referees id={id} />;
+  return <Players id={id} recruitment={recruitment} readOnly={readOnly} />;
+}
+
+/** «Столы» — ход турнира: сверху полоса полномочий главного судьи ✳ (24.11.2026,
+    flows/07–08), под ней столы. Передали или вернули полномочия — столы
+    перечитываются сразу (кто правит счёт), не дожидаясь опроса раз в 15 с. */
+function TablesSection({ id }: { id: string }) {
+  const [rev, setRev] = useState(0);
+  return (
+    <div className="flex h-full min-h-0 flex-col">
+      <AuthorityBar tournamentId={id} onChange={() => setRev((r) => r + 1)} />
+      <div className="min-h-0 flex-1">
+        <TablesBoard key={rev} tournamentId={id} />
+      </div>
+    </div>
+  );
 }

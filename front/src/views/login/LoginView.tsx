@@ -19,7 +19,7 @@ import { ChevronRight, LogIn } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { type ReactNode, useState, type FormEvent } from 'react';
 
-import { homeFor, useKnownAccounts, useSession, type KnownAccount } from '@/entities/session';
+import { afterSignIn, useKnownAccounts, useSession, type KnownAccount } from '@/entities/session';
 import { AuthScreen, FullScreen, TextInput } from '@/shared/kit/app';
 
 const initials = (name: string) =>
@@ -85,7 +85,7 @@ export function LoginView() {
     setError(null);
     try {
       const signedIn = await signIn(email.trim(), password);
-      router.push(asked ?? homeFor(signedIn));
+      router.push(afterSignIn(signedIn, asked));
     } catch (e) {
       setError((e as Error).message);
     } finally {
@@ -102,12 +102,15 @@ export function LoginView() {
       const switched = await switchSession(account.id);
       setBusy(false);
       if (switched) {
-        router.push(asked ?? homeFor(switched));
+        router.push(afterSignIn(switched, asked));
         return;
       }
     }
+    // Сессии этого аккаунта на устройстве нет — почта в форме и слово об этом,
+    // иначе щелчок выглядит так, будто ничего не произошло.
     setEmail(account.email);
     setPassword('');
+    setError('Сессия «' + account.name + '» закончилась — введите пароль');
   }
 
   const current: KnownAccount | null = user ? { email: user.email ?? '', name: user.name } : null;
@@ -128,7 +131,7 @@ export function LoginView() {
           {!loading && (current || others.length > 0) && (
             <div className="flex flex-col gap-2" data-testid={current ? 'already-in' : undefined}>
               <AccountList>
-                {current && <AccountRow account={current} onPress={() => router.push(asked ?? homeFor(user))} />}
+                {current && <AccountRow account={current} onPress={() => router.push(afterSignIn(user, asked))} />}
                 {others.map((a) => (
                   <AccountRow key={a.email} account={a} onPress={() => void switchTo(a)} />
                 ))}

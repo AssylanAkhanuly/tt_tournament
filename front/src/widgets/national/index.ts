@@ -8,4 +8,5 @@ export { SportCard } from './SportCard';
 export { HistoryTable } from './HistoryTable';
 export { ReportsBoard } from './ReportsBoard';
 export { UMO_TABS } from './MedicalUmo';
-export { PlayerProfile } from './PlayerProfile';
+export { PlayerProfile, PlayerProfileView } from './PlayerProfile';
+export { RefereeHistory, RefereeProfile } from './RefereeProfile';

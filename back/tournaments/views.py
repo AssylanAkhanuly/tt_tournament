@@ -457,7 +457,8 @@ class RegisterAndJoinView(APIView):
 
 
 def _person(u):
-    return {"id": str(u.id), "name": u.name, "email": u.email}
+    # Фото — для аватара в таблице судей ✳ (24.11.2026); нет — заглушка на экране.
+    return {"id": str(u.id), "name": u.name, "email": u.email, "avatar": u.avatar.url if u.avatar else None}
 
 
 class IsGskChairmanOrChief(IsAuthenticated):
@@ -474,6 +475,20 @@ class IsGskChairmanOrChief(IsAuthenticated):
             return True
         t = Tournament.objects.filter(pk=view.kwargs.get("pk")).first()
         return t is not None and schedule.is_chief(t, request.user)
+
+
+class BrigadeReads(IsAuthenticated):
+    """Смотреть состав турнира — ещё и бригаде этого турнира ✳ (24.11.2026):
+    главному секретарю и заместителю главного судьи (`authority.can_see`:
+    бригада, председатель ГСК, администратор). Править — по-прежнему нет."""
+
+    def has_permission(self, request, view):
+        from . import authority
+
+        if not super().has_permission(request, view):
+            return False
+        t = Tournament.objects.filter(pk=view.kwargs.get("pk")).first()
+        return t is not None and authority.can_see(t, request.user)
 
 
 class _RosterView(APIView):
@@ -496,7 +511,13 @@ class _RosterView(APIView):
 
 class TournamentRefereesView(_RosterView):
     """Судьи турнира — судейские должности в области этого турнира
-    (`roster.POSITIONS`). `POST {user_id, position}` — назначить."""
+    (`roster.POSITIONS`). `POST {user_id, position}` — назначить. Смотреть —
+    ещё и бригаде турнира ✳ (24.11.2026)."""
+
+    def get_permissions(self):
+        if self.request.method == "GET":
+            return [BrigadeReads()]
+        return super().get_permissions()
 
     def get(self, request, pk):
         from . import roster
@@ -521,6 +542,25 @@ class TournamentRefereesView(_RosterView):
             {**_person(user), "position": role.kind, "position_label": role.get_kind_display()},
             status=status.HTTP_201_CREATED,
         )
+
+
+class RefereeProfileView(APIView):
+    """`GET /api/tournaments/referees/<user_id>/profile/` ✳ (24.11.2026) — профиль
+    судьи: должности по турнирам, отсуженные матчи (`roster.referee_profile`).
+    Председатель ГСК, администратор федерации и сам судья."""
+
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, user_id):
+        from users.models import Role, User
+        from users.permissions import has_role
+
+        from . import roster
+
+        if str(request.user.id) != str(user_id) and not has_role(request.user, Role.KIND_GSK_CHAIRMAN, Role.KIND_FEDERATION_ADMIN):
+            return Response({"detail": "Нет прав."}, status=status.HTTP_403_FORBIDDEN)
+        user = get_object_or_404(User, pk=user_id)
+        return Response(roster.referee_profile(user))
 
 
 class TournamentRefereeView(_RosterView):
@@ -581,9 +621,12 @@ class TournamentRefereeView(_RosterView):
 
 
 class TournamentParticipantsView(_RosterView):
-    """Спортсмены турнира: ещё и главный судья этого турнира ✳ (30.10.2026)."""
+    """Спортсмены турнира: ещё и главный судья этого турнира ✳ (30.10.2026);
+    смотреть — ещё и бригаде турнира ✳ (24.11.2026)."""
 
     def get_permissions(self):
+        if self.request.method == "GET":
+            return [BrigadeReads()]
         return [IsGskChairmanOrChief()]
 
     def get(self, request, pk):
@@ -747,18 +790,27 @@ class ScheduleView(APIView):
 
         from . import schedule
 
+        from . import authority
+
         t = get_object_or_404(Tournament, pk=pk)
         chief = schedule.is_chief(t, request.user)
-        if edit and not chief:
-            return t, Response({"detail": "Расписание правит только главный судья турнира."}, status=status.HTTP_403_FORBIDDEN)
-        if not edit and not (chief or has_role(request.user, Role.KIND_GSK_CHAIRMAN, Role.KIND_FEDERATION_ADMIN)):
+        # Черновик правят главный судья и секретарь, отправляет только главный
+        # судья, передаёт на проверку только секретарь ✳ (24.11.2026, flows/07).
+        if edit == "finalize" and not chief:
+            return t, Response({"detail": "Отправляет расписание только главный судья турнира."}, status=status.HTTP_403_FORBIDDEN)
+        if edit == "submit" and not schedule.is_secretary(t, request.user):
+            return t, Response({"detail": "Передаёт расписание главному судье секретарь турнира."}, status=status.HTTP_403_FORBIDDEN)
+        if edit and not schedule.can_work(t, request.user):
+            return t, Response({"detail": "Расписание правят главный судья и главный секретарь турнира."}, status=status.HTTP_403_FORBIDDEN)
+        # Смотрят ещё заместитель (бригада) и председатель ГСК / администратор.
+        if not edit and not authority.can_see(t, request.user):
             return t, Response({"detail": "Нет прав."}, status=status.HTTP_403_FORBIDDEN)
         return t, None
 
-    def _run(self, request, pk, action):
+    def _run(self, request, pk, action, kind=True):
         from . import schedule
 
-        t, denied = self._tournament(request, pk, edit=True)
+        t, denied = self._tournament(request, pk, edit=kind)
         if denied:
             return denied
         try:
@@ -785,13 +837,52 @@ class ScheduleView(APIView):
             )
         if action == "move":
             return self._run(request, pk, lambda s, t: s.move(t, d.get("user_id"), d.get("group_id")))
-        return self._run(request, pk, lambda s, t: s.finalize(t))
+        if action == "submit":
+            return self._run(request, pk, lambda s, t: s.submit(t), kind="submit")
+        return self._run(request, pk, lambda s, t: s.finalize(t), kind="finalize")
+
+
+class AuthorityView(APIView):
+    """Полномочия главного судьи ✳ (24.11.2026, `authority.py`): `GET` — у кого
+    они, с какого времени, журнал; `POST {action: "transfer", user_id}` — главный
+    судья передаёт секретарю или заместителю; `POST {action: "return"}` — вернуть
+    (держатель или главный судья). Видят бригада, председатель ГСК, администратор."""
+
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, pk):
+        from . import authority
+
+        t = get_object_or_404(Tournament, pk=pk)
+        if not authority.can_see(t, request.user):
+            return Response({"detail": "Нет прав."}, status=status.HTTP_403_FORBIDDEN)
+        return Response(authority.snapshot(t, request.user))
+
+    def post(self, request, pk):
+        from . import authority
+
+        t = get_object_or_404(Tournament, pk=pk)
+        action = request.data.get("action")
+        try:
+            if action == "transfer":
+                authority.transfer(t, request.user, request.data.get("user_id"))
+            elif action == "return":
+                authority.take_back(t, request.user)
+            else:
+                return Response({"detail": "Неизвестное действие."}, status=status.HTTP_400_BAD_REQUEST)
+        except authority.AuthorityDenied as e:
+            return Response({"detail": str(e)}, status=status.HTTP_403_FORBIDDEN)
+        except authority.AuthorityError as e:
+            return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        t.refresh_from_db()
+        return Response(authority.snapshot(t, request.user))
 
 
 class ManualResultsView(APIView):
     """Результаты без расписания ✳ (03.11.2026, `manual_results.py`):
     `POST schedule/manual/` `{on}` — выбрать «вручную» или вернуться к выбору;
     `POST schedule/manual/matches/` `{a, b, score_a, score_b}` — внести матч;
+    `{a, b, winner}` без счёта — итог, который не идёт в рейтинг ✳ (27.11.2026);
     `DELETE schedule/manual/matches/<id>/` — убрать; `POST schedule/manual/finish/`
     — завершить турнир и пересчитать рейтинг; `POST schedule/manual/unfinish/` ✳
     (12.11.2026) — вернуть последний завершённый турнир, откатив рейтинг. Главный судья турнира,
@@ -819,7 +910,7 @@ class ManualResultsView(APIView):
         if request.path.rstrip("/").endswith("/finish"):
             return self._run(request, pk, lambda m, t: m.finish(t, actor=request.user))
         if request.path.rstrip("/").endswith("/matches"):
-            return self._run(request, pk, lambda m, t: m.add_match(t, d.get("a"), d.get("b"), d.get("score_a"), d.get("score_b")))
+            return self._run(request, pk, lambda m, t: m.add_match(t, d.get("a"), d.get("b"), d.get("score_a"), d.get("score_b"), d.get("winner")))
         return self._run(request, pk, lambda m, t: m.set_manual(t, bool(d.get("on"))))
 
     def delete(self, request, pk, match_id):

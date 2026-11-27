@@ -105,6 +105,13 @@ def is_chief(t: Tournament, user) -> bool:
     return schedule.is_chief(t, user)
 
 
+def _runs(t: Tournament, user) -> bool:
+    """Ведёт ли человек ход турнира — главный судья или тот, кому он передал полномочия."""
+    from . import authority
+
+    return authority.can_run(t, user)
+
+
 def _tournament(match: GroupMatch) -> Tournament:
     return match.group.tournament
 
@@ -203,7 +210,8 @@ def serialize(match: GroupMatch, user, extras=None) -> dict:
         "result_by": match.result_by.name if match.result_by_id else "",
         "result_at": match.result_at.isoformat() if match.result_at else None,
         "can_score": live and not finished and is_table_referee(match, user),
-        "can_correct": live and finished and not match.is_walkover and is_chief(t, user),
+        # Правит тот, у кого полномочия главного судьи ✳ (24.11.2026, `authority`).
+        "can_correct": live and finished and not match.is_walkover and _runs(t, user),
     }
 
 
@@ -330,10 +338,11 @@ def submit(match: GroupMatch, user, score1=None, score2=None) -> GroupMatch:
 
 @transaction.atomic
 def correct(match: GroupMatch, user, games=None, score1=None, score2=None) -> GroupMatch:
-    """Правка подтверждённого результата — только главный судья турнира."""
+    """Правка подтверждённого результата — главный судья турнира или тот, кому он
+    передал полномочия ✳ (24.11.2026); правит один."""
     t = _tournament(match)
-    if not is_chief(t, user):
-        raise ScoringDenied("Подтверждённый результат правит только главный судья.")
+    if not _runs(t, user):
+        raise ScoringDenied("Подтверждённый результат правит тот, у кого полномочия главного судьи.")
     _check_live(t)
     if match.status != GroupMatch.FINISHED or match.is_walkover:
         raise ScoringError("Править можно только подтверждённый результат.")

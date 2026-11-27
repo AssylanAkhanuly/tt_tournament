@@ -16,6 +16,10 @@ export const ROLE_REFEREE = 'referee';
 /** Главный судья турнира ✳ (30.10.2026) — роль с областью «турнир»: свой
  *  кабинет `/chief` с турнирами, где он главный (`chiefTournamentIds`). */
 export const ROLE_CHIEF_REFEREE = 'chief_referee';
+/** Главный секретарь и заместитель главного судьи ✳ (24.11.2026, роли 7 и 8;
+ *  flows/07–08): роли одного турнира, у каждой свой кабинет. */
+export const ROLE_CHIEF_SECRETARY = 'chief_secretary';
+export const ROLE_DEPUTY_CHIEF_REFEREE = 'deputy_chief_referee';
 /** Врач соревнований ✳ (22.11.2026, роль 18): роль одного турнира, кабинет
  *  `/medic` — допуск участников его турниров. */
 export const ROLE_COMPETITION_DOCTOR = 'competition_doctor';
@@ -43,11 +47,13 @@ export const ROLE_CLUB_ADMIN = 'club_admin';
  *  кабинетом — строка здесь. */
 const WORKSPACES: { kind: string; title: string; to: string }[] = [
   { kind: ROLE_FEDERATION_ADMIN, title: 'Администратор федерации', to: '/dashboard' },
-  { kind: ROLE_GSK_CHAIRMAN, title: 'Председатель ГСК', to: '/rating' },
+  { kind: ROLE_GSK_CHAIRMAN, title: 'Председатель ГСК', to: '/gsk' },
   { kind: ROLE_REFEREE, title: 'Судья', to: '/referee' },
   // После судьи: главный судья — роль одного турнира, а судья входит в свой
   // кабинет; в кабинет главного судьи — из меню «Работать как».
   { kind: ROLE_CHIEF_REFEREE, title: 'Главный судья', to: '/chief' },
+  { kind: ROLE_CHIEF_SECRETARY, title: 'Главный секретарь', to: '/secretary' },
+  { kind: ROLE_DEPUTY_CHIEF_REFEREE, title: 'Заместитель главного судьи', to: '/deputy' },
   { kind: ROLE_COMPETITION_DOCTOR, title: 'Врач соревнований', to: '/medic' },
   { kind: ROLE_REGIONAL_HEAD_COACH, title: 'Старший тренер региона', to: '/coach' },
   { kind: ROLE_CLUB_ADMIN, title: 'Администратор клуба', to: '/club' },
@@ -73,6 +79,18 @@ export function workspacesOf(user: SessionUser | null): { kind: string; title: s
  *  роли, без роли с кабинетом — в рейтинг. */
 export function homeFor(user: SessionUser | null): string {
   return workspacesOf(user)[0]?.to ?? '/rating';
+}
+
+/** Куда вести после входа ✳ (24.11.2026): адрес возврата — только если это
+ *  кабинет этого человека или общая страница. Адрес чужого кабинета (остался
+ *  от прошлого входа другой учёткой) вернул бы его на вход — щелчок по
+ *  аккаунту выглядел бы так, будто ничего не произошло; тогда — свой кабинет. */
+export function afterSignIn(user: SessionUser | null, asked: string | null): string {
+  if (!asked) return homeFor(user);
+  const cabinets = new Set(WORKSPACES.map((w) => w.to));
+  const own = new Set(workspacesOf(user).map((w) => w.to));
+  const cabinet = [...cabinets].find((to) => asked === to || asked.startsWith(to + '/') || asked.startsWith(to + '?'));
+  return !cabinet || own.has(cabinet) ? asked : homeFor(user);
 }
 
 /** Роль человека; у ролей турнира `scope_id` — какого. */

@@ -84,6 +84,7 @@ test('главный судья: черновик расписания, прав
     await expect(page.getByRole('navigation', { name: 'Вкладки страницы' }).getByRole('button')).toHaveText([
       'Сведения',
       'Спортсмены',
+      'Судьи',
       'Расписание',
       'Столы',
     ]);

@@ -10,7 +10,7 @@ import { PersonAvatar } from '@/shared/ui/PersonAvatar';
 export function MatchPlayer({ person }: { person: SchedulePerson }) {
   return (
     <span className="inline-flex min-w-0 items-center gap-2" title={person.name} data-testid="match-player">
-      <PersonAvatar name={person.name} src={person.avatar} />
+      <PersonAvatar name={person.name} src={person.avatar} id={person.id} />
       <span className="truncate">{shortName(person.name)}</span>
     </span>
   );

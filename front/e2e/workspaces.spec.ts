@@ -294,7 +294,7 @@ test('администратор в кабинете судьи видит ту�
   // Сменил роль в меню человека — кабинет судьи.
   await page.getByTestId('side-person').click();
   await page.getByTestId('person-role').click();
-  await page.getByTestId('role-menu').getByRole('menuitemradio', { name: 'Судья' }).click();
+  await page.getByTestId('role-menu').getByRole('menuitemradio', { name: 'Судья', exact: true }).click();
   await page.waitForURL((url) => url.pathname === '/referee');
   await page.goto(`/referee/tournaments/${t.id}`);
   await expect(page.getByTestId('application-panel')).toBeVisible();
@@ -324,7 +324,7 @@ test('судье кабинеты администратора и председ
 
 test('с другой ролью в пустой кабинет не пускает', async ({ page }) => {
   await войти(page, E2E_GSK);
-  await page.waitForURL((url) => url.pathname === '/rating');
+  await page.waitForURL((url) => url.pathname === '/gsk');
   for (const path of ['/player', '/referee']) {
     await page.goto(path);
     await page.waitForURL((url) => url.pathname === '/login');

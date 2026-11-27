@@ -15,7 +15,7 @@
    Tailwind. */
 
 import { AlertDialog, Button, Chip, Drawer, NumberField } from '@heroui/react';
-import { ArrowLeft, CalendarClock, PenLine, Send, SlidersHorizontal } from 'lucide-react';
+import { ArrowLeft, CalendarClock, PenLine, Send, SlidersHorizontal, UserCheck } from 'lucide-react';
 import { useSearchParams } from 'next/navigation';
 import { useState, type ReactNode } from 'react';
 
@@ -24,6 +24,7 @@ import {
   editScheduledMatch,
   finalizeSchedule,
   setManualResults,
+  submitSchedule,
   useSchedule,
   type Schedule,
   type ScheduledMatch,
@@ -423,6 +424,18 @@ export function ScheduleSection({
           Отправлено
         </Chip>
       )}
+      {/* Секретарь передал черновик главному судье ✳ (24.11.2026, flows/07):
+          правка черновика отзывает переданное — значок пропадает сам. */}
+      {s.status === 'draft' && s.submittedAt && (
+        <Chip size="sm" variant="soft" color="accent" data-testid="schedule-submitted">
+          У главного судьи
+        </Chip>
+      )}
+      {s.canSubmit && (
+        <Button variant="primary" size="sm" className="rounded-xl" isDisabled={busy} onPress={() => void run(() => submitSchedule(tournamentId))} data-testid="schedule-submit">
+          <UserCheck size={16} /> Передать главному судье
+        </Button>
+      )}
       {s.canEdit && (
         <>
           <Drawer>
@@ -467,6 +480,7 @@ export function ScheduleSection({
               </SideContent>
             </Drawer.Backdrop>
           </Drawer>
+          {s.canFinalize && (
           <AlertDialog>
             <Button variant="primary" size="sm" className="rounded-xl" isDisabled={busy} data-testid="schedule-finalize">
               <Send size={16} /> Отправить
@@ -489,6 +503,7 @@ export function ScheduleSection({
                   </AlertDialog.Footer>
                 </AlertSheet>
           </AlertDialog>
+          )}
         </>
       )}
     </>

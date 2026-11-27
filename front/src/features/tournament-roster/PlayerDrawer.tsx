@@ -83,7 +83,7 @@ export function PlayerDrawer({
             <>
               <Drawer.Body className="flex flex-col gap-6">
                 <div className="flex items-center gap-3" data-testid="player-profile">
-                  <PersonAvatar name={p.name} src={p.avatar} size="lg" />
+                  <PersonAvatar name={p.name} src={p.avatar} size="lg" id={p.userId} sex={p.sex} />
                   <div className="min-w-0 leading-tight">
                     <p className="text-[16px] font-semibold">{p.name}</p>
                     {p.absent && (

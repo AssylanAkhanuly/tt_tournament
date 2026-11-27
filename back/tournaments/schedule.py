@@ -160,6 +160,38 @@ def is_chief(tournament: Tournament, user) -> bool:
     return role is not None and role.kind == Role.KIND_CHIEF_REFEREE
 
 
+def is_secretary(tournament: Tournament, user) -> bool:
+    """Главный секретарь этого турнира ✳ (24.11.2026, flows/07)."""
+    if not user or not user.is_authenticated:
+        return False
+    role = roster.referee_role(tournament, user.id)
+    return role is not None and role.kind == Role.KIND_CHIEF_SECRETARY
+
+
+def can_work(tournament: Tournament, user) -> bool:
+    """Собирать и править черновик: главный судья и главный секретарь ✳
+    (24.11.2026: «параметры проведения формирует секретарь, главный судья их
+    утверждает» — flows/07). Отправляет только главный судья."""
+    return is_chief(tournament, user) or is_secretary(tournament, user)
+
+
+def _recall(t: Tournament) -> None:
+    """Правка черновика отзывает переданное главному судье ✳: он не должен
+    утверждать то, чего уже нет (flows/07, одно правило на все работы)."""
+    if t.schedule_submitted_at is not None:
+        t.schedule_submitted_at = None
+        t.save(update_fields=["schedule_submitted_at"])
+
+
+def submit(t: Tournament) -> None:
+    """Секретарь передаёт черновик главному судье на проверку."""
+    _draft_only(t)
+    if t.schedule_submitted_at is not None:
+        raise ScheduleError("Черновик уже у главного судьи.")
+    t.schedule_submitted_at = timezone.now()
+    t.save(update_fields=["schedule_submitted_at"])
+
+
 def table_referees(tournament: Tournament) -> list:
     """Судьи стола турнира — они и судят матчи."""
     return [r.user for r in roster.referees(tournament) if r.kind == Role.KIND_REFEREE]
@@ -308,7 +340,8 @@ def build(t: Tournament, *, tables, match_minutes, days=None) -> None:
         _rebuild_matches(group)
     _timetable(t)
     t.schedule_status = DRAFT
-    t.save(update_fields=["schedule_tables", "schedule_match_minutes", "schedule_days", "schedule_status"])
+    t.schedule_submitted_at = None
+    t.save(update_fields=["schedule_tables", "schedule_match_minutes", "schedule_days", "schedule_status", "schedule_submitted_at"])
 
 
 @transaction.atomic
@@ -328,6 +361,7 @@ def move(t: Tournament, user_id, group_id) -> None:
     _rebuild_matches(source)
     _rebuild_matches(target)
     _timetable(t)
+    _recall(t)
 
 
 @transaction.atomic
@@ -369,6 +403,7 @@ def edit_match(t: Tournament, match: GroupMatch, *, referee_id=None, table=None,
     ):
         raise ScheduleError("Судья в это время играет сам.")
     match.save(update_fields=["referee", "table_number", "scheduled_at"])
+    _recall(t)
     return match
 
 
@@ -420,13 +455,22 @@ def snapshot(t: Tournament, user) -> dict:
     can_manual = (
         t.schedule_status == "none" and t.status != Tournament.STATUS_FINISHED and manual_results.can_enter(t, user)
     )
+    from . import authority
+
+    draft = t.schedule_status == DRAFT
     return {
         "status": t.schedule_status,
-        "can_edit": t.schedule_status != FINAL and is_chief(t, user),
+        # Правят черновик главный судья и секретарь; отправляет только судья ✳ (24.11.2026).
+        "can_edit": t.schedule_status != FINAL and can_work(t, user),
+        "can_finalize": draft and is_chief(t, user),
+        "submitted_at": t.schedule_submitted_at.isoformat() if (draft and t.schedule_submitted_at) else None,
+        "can_submit": draft and t.schedule_submitted_at is None and is_secretary(t, user),
+        # Ведёт ли смотрящий ход турнира сейчас (полномочия главного судьи).
+        "can_run": t.schedule_status == FINAL and authority.can_run(t, user),
         # Способ ✳ (03.11.2026): «» — не выбран, «manual» — вручную, без расписания.
         "mode": t.results_mode,
         "can_manual": can_manual,
-        "can_build": t.schedule_status == "none" and t.results_mode != "manual" and is_chief(t, user),
+        "can_build": t.schedule_status == "none" and t.results_mode != "manual" and can_work(t, user),
         "manual_matches": manual_results.manual_snapshot(t),
         "can_finish": manual_results.can_finish(t, user),
         # Вернуть из завершённых ✳ (12.11.2026) — только последний завершённый турнир.

@@ -11,7 +11,7 @@
 
 /** Кабинет, в котором открыта страница турнира. `chief` — главный судья этого
  *  турнира ✳ (30.10.2026). */
-export type TournamentCabinet = 'dashboard' | 'gsk' | 'chief' | 'referee' | 'coach';
+export type TournamentCabinet = 'dashboard' | 'gsk' | 'chief' | 'secretary' | 'deputy' | 'referee' | 'coach';
 /** `entries` — «Заявлены» в кабинете старшего тренера региона ✳ (19.11.2026). */
 export type TournamentSectionSlug = 'info' | 'players' | 'referees' | 'schedule' | 'tables' | 'entries';
 
@@ -28,6 +28,9 @@ export function cabinetFor(
   if (has('federation_admin')) return 'dashboard';
   if (has('gsk_chairman')) return 'gsk';
   if (roles.some((r) => r.kind === 'chief_referee' && r.scope_id === tournamentId)) return 'chief';
+  // Бригада турнира ✳ (24.11.2026): секретарь и заместитель — только своего.
+  if (roles.some((r) => r.kind === 'chief_secretary' && r.scope_id === tournamentId)) return 'secretary';
+  if (roles.some((r) => r.kind === 'deputy_chief_referee' && r.scope_id === tournamentId)) return 'deputy';
   if (has('referee')) return 'referee';
   // Старший тренер региона ✳ (19.11.2026): сведения и заявка своего региона.
   if (has('regional_head_coach')) return 'coach';

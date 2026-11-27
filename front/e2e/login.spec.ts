@@ -13,9 +13,10 @@ import { E2E_GSK } from './global-setup';
 const строка = (page: Page, имя: string) =>
   page.locator('[data-testid="rating-row"][data-player="' + имя + '"]');
 
-const текущий = (page: Page) => page.getByText('Текущий рейтинг').locator('..');
+// Текущий рейтинг — карточка показателя «Рейтинг» профиля ✳ (24.11.2026).
+const текущий = (page: Page) => page.getByTestId('kpi-rating');
 
-async function войти(page: Page, next = '/rating') {
+async function войти(page: Page, next = '/gsk') {
   await page.goto('/login?next=' + encodeURIComponent(next));
   await page.getByLabel('Эл. почта').fill(E2E_GSK.email);
   await page.getByLabel('Пароль').fill(E2E_GSK.password);
@@ -92,11 +93,11 @@ test('разделы бокового меню переводят между э�
   await expect(page.locator('[data-testid="rating-row"]').first()).toBeVisible();
   await page.screenshot({ path: 'test-results/rating/gsk-list.png' });
   await page.getByRole('button', { name: 'Календарь', exact: true }).click();
-  await page.waitForURL((url) => url.pathname === '/calendar');
+  await page.waitForURL((url) => url.pathname === '/gsk/calendar');
   // Раздела «Турниры» у председателя нет ✳ (28.10.2026), старый адрес ведёт в календарь.
   await expect(page.getByRole('button', { name: 'Турниры', exact: true })).toHaveCount(0);
   await page.goto('/rating/tournaments');
-  await page.waitForURL((url) => url.pathname === '/calendar');
+  await page.waitForURL((url) => url.pathname === '/gsk/calendar');
 });
 
 test('корень сайта ведёт на вход', async ({ page }) => {
@@ -109,19 +110,24 @@ test('корень сайта ведёт на вход', async ({ page }) => {
    карточка открытой сессии; клик по ней входит. */
 test('вошедший на странице входа видит карточку аккаунта и входит по клику', async ({ page }) => {
   await войти(page);
-  await page.goto('/login?next=/calendar');
+  await page.goto('/login?next=/gsk/calendar');
   const карточка = page.locator('[data-testid="account-card"][data-account="' + E2E_GSK.email + '"]');
   await expect(карточка).toContainText('Председатель ГСК (проверки)');
   await expect(page.getByRole('button', { name: 'Продолжить' })).toHaveCount(0);
   await expect(page.getByText('Вы вошли как')).toHaveCount(0);
 
   await карточка.click();
-  await page.waitForURL((url) => url.pathname === '/calendar');
+  await page.waitForURL((url) => url.pathname === '/gsk/calendar');
 });
 
 test('выход из карточки человека возвращает гостя', async ({ page }) => {
   await войти(page);
   await page.getByTestId('side-person').click();
   await page.getByRole('menuitem', { name: 'Выйти' }).click();
+  // Кабинет `/gsk` гостю закрыт ✳ (24.11.2026) — уводит на вход, как остальные кабинеты.
+  await page.waitForURL((url) => url.pathname === '/login');
+  await expect(page.getByTestId('side-person')).toHaveCount(0);
+  // Публичный лист гостю открыт — шапка сайта с «Войти».
+  await page.goto('/rating');
   await expect(page.getByTestId('login-link')).toBeVisible();
 });
