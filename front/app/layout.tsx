@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import { Bebas_Neue, Inter, Oswald } from "next/font/google";
 // Tailwind — собирается PostCSS при сборке (postcss.config.mjs), файла в репозитории нет.
 // В нём же базовый сброс и палитра приложения (бывший `globals.css`).
@@ -29,7 +30,13 @@ export default function RootLayout({
     // `data-app` — к нему привязаны сброс и палитра в `tailwind.src.css`: тот
     // же файл грузит Storybook, и там они действовать не должны.
     <html lang="ru" data-app="" className={inter.variable + " " + jersey.variable + " " + poster.variable}>
-      <body>{children}</body>
+      {/* Одна граница Suspense на все страницы ✳ (27.11.2026): клиентские экраны
+          читают адрес (`useSearchParams`), и без границы `next build` падает на
+          пререндере («should be wrapped in a suspense boundary») — так падали
+          сборки Vercel с ff28bd3. Экраны всё равно рисуются в браузере. */}
+      <body>
+        <Suspense>{children}</Suspense>
+      </body>
     </html>
   );
 }
