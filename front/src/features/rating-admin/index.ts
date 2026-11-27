@@ -5,5 +5,6 @@
    владельца продукта). */
 
 export { CorrectionDialog } from './CorrectionDialog';
+export { RemoveDialog, RestoreButton } from './RemoveDialog';
 export { AthleteDialog, AthleteForm } from './AthleteDialog';
 export { useRatingActions } from './useRatingActions';

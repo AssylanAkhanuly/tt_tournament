@@ -103,6 +103,17 @@ export async function correctRating(userId: string, value: number, reason: strin
   return toEntry(raw);
 }
 
+/** Удалить спортсмена из рейтинга ✳ (27.11.2026): карточка и история
+    остаются, спортсмен пропадает из листа и подборов. Основание необязательно. */
+export async function removeFromRating(userId: string, reason = ''): Promise<RatingEntry> {
+  return toEntry(await request<Record<string, unknown>>('/' + userId + '/remove/', { method: 'POST', body: JSON.stringify({ reason }) }));
+}
+
+/** Вернуть удалённого в рейтинг — с тем же значением и историей. */
+export async function restoreToRating(userId: string): Promise<RatingEntry> {
+  return toEntry(await request<Record<string, unknown>>('/' + userId + '/remove/', { method: 'DELETE' }));
+}
+
 /* ── Протоколы турниров: уровень и места (п. 10, 13) ✳ (11.09.2026) ─── */
 
 const toProtocol = (r: Record<string, unknown>): RatingProtocol => ({

@@ -174,7 +174,11 @@ class RatingCardView(APIView):
     permission_classes = [AllowAny]
 
     def get(self, request, user_id):
-        profile = RatingProfile.objects.select_related("user").filter(user_id=user_id).first()
+        profile = RatingProfile.all_objects.select_related("user").filter(user_id=user_id).first()
+        # Удалённого из рейтинга ✳ (27.11.2026) видит только председатель ГСК —
+        # чтобы вернуть; для остальных карточки нет.
+        if profile and profile.removed_at and not _is_chairman(request.user):
+            profile = None
         if not profile:
             return Response({"detail": "Рейтинговой карточки нет"}, status=status.HTTP_404_NOT_FOUND)
 
@@ -299,6 +303,48 @@ class RatingMergeView(APIView):
         except services.MergeError as e:
             return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
         return Response(RatingProfileSerializer(profile).data)
+
+
+def _is_chairman(user) -> bool:
+    from users.models import Role
+    from users.permissions import has_role
+
+    return bool(user and user.is_authenticated and has_role(user, Role.KIND_GSK_CHAIRMAN))
+
+
+class RatingRemoveView(APIView):
+    """Удалить спортсмена из рейтинга / вернуть ✳ (27.11.2026) — председатель ГСК.
+
+    `POST /api/rating/<user_id>/remove/` — убрать (`reason` необязателен);
+    `DELETE` того же адреса — вернуть. Карточка и история не
+    стираются (`services.remove_profile`)."""
+
+    permission_classes = [IsGskChairman]
+
+    def _user(self, user_id):
+        from django.contrib.auth import get_user_model
+
+        return get_user_model().objects.filter(pk=user_id).first()
+
+    def post(self, request, user_id):
+        user = self._user(user_id)
+        if not user:
+            return _missing("Спортсмен не найден")
+        try:
+            entry = services.remove_profile(user, reason=request.data.get("reason") or "", actor=request.user)
+        except services.RemoveError as e:
+            return _bad(e)
+        return Response(RatingEntrySerializer(entry).data, status=status.HTTP_201_CREATED)
+
+    def delete(self, request, user_id):
+        user = self._user(user_id)
+        if not user:
+            return _missing("Спортсмен не найден")
+        try:
+            entry = services.restore_profile(user, reason=request.data.get("reason") or "", actor=request.user)
+        except services.RemoveError as e:
+            return _bad(e)
+        return Response(RatingEntrySerializer(entry).data)
 
 
 def _protocol(t) -> dict:
@@ -520,9 +566,10 @@ class RatingRegionsView(APIView):
     permission_classes = [AllowAny]
 
     def get(self, request):
-        from .regions import REGIONS
+        from .regions import ATHLETE_REGIONS
 
-        return Response(REGIONS)
+        # И страны СНГ ✳ (27.11.2026) — после регионов Казахстана.
+        return Response(ATHLETE_REGIONS)
 
 
 class RatingProtocolCandidatesView(APIView):

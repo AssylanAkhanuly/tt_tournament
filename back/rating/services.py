@@ -34,7 +34,9 @@ def _dec(x: float, places: str = "0.01") -> Decimal:
 def get_or_create_profile(user, **defaults) -> RatingProfile:
     """Карточка спортсмена (п. 19). Новый входит с 1,00 (п. 6.1), и это
     записывается отдельной строкой журнала: иначе значение возьмётся ниоткуда."""
-    profile = RatingProfile.objects.filter(user=user).first()
+    # И удалённую карточку: второй у человека быть не может, а возвращает
+    # спортсмена в рейтинг только председатель ГСК (`restore_profile`).
+    profile = RatingProfile.all_objects.filter(user=user).first()
     if profile:
         return profile
     params = RatingParams.active()
@@ -587,6 +589,59 @@ def merge_profiles(keep_user, drop_user, *, reason: str, actor=None) -> RatingPr
         created_by=actor,
     )
     return keep
+
+
+# ── Удаление из рейтинга ✳ (27.11.2026) ────────────────────────────
+
+
+class RemoveError(ValueError):
+    """Удалить или вернуть нельзя. Текст объясняет почему."""
+
+
+def _mark(profile: RatingProfile, kind: str, reason: str, actor) -> RatingEntry:
+    return RatingEntry.objects.create(
+        profile=profile,
+        kind=kind,
+        occurred_at=timezone.localdate(),
+        before=profile.value,
+        delta=Decimal("0.00"),
+        after=profile.value,
+        reason=reason,
+        created_by=actor,
+    )
+
+
+@transaction.atomic
+def remove_profile(user, *, reason: str = "", actor=None) -> RatingEntry:
+    """Убрать спортсмена из рейтинга ✳ (27.11.2026, решение владельца продукта).
+
+    Карточка не стирается: п. 21.6 запрещает удалять записи истории, а матчи
+    соперников с ним остаются посчитанными. Спортсмен пропадает из листа,
+    выгрузки, мест и подборов (`RatingProfile.objects`). Основание не
+    спрашивается ✳ (27.11.2026, решение владельца продукта: «только
+    подтверждение») — в журнале остаются кто и когда."""
+    reason = (reason or "").strip()
+    profile = RatingProfile.all_objects.filter(user=user).first()
+    if not profile:
+        raise RemoveError("Рейтинговой карточки нет")
+    if profile.removed_at:
+        raise RemoveError("Спортсмен уже удалён из рейтинга")
+    profile.removed_at = timezone.now()
+    profile.save(update_fields=["removed_at", "updated_at"])
+    return _mark(profile, RatingEntry.KIND_REMOVE, reason, actor)
+
+
+@transaction.atomic
+def restore_profile(user, *, reason: str = "", actor=None) -> RatingEntry:
+    """Вернуть удалённого спортсмена в рейтинг — с тем же значением и историей."""
+    profile = RatingProfile.all_objects.filter(user=user).first()
+    if not profile:
+        raise RemoveError("Рейтинговой карточки нет")
+    if not profile.removed_at:
+        raise RemoveError("Спортсмен и так в рейтинге")
+    profile.removed_at = None
+    profile.save(update_fields=["removed_at", "updated_at"])
+    return _mark(profile, RatingEntry.KIND_RESTORE, (reason or "").strip(), actor)
 
 
 # ── Утверждение протокола: уровень и места (п. 10, 13) ──────────────

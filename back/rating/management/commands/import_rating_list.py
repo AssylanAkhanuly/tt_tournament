@@ -296,7 +296,7 @@ class Command(BaseCommand):
         n_t = Tournament.objects.count()
         Tournament.objects.all().delete()
         RatingEntry.objects.all().delete()
-        RatingProfile.objects.all().delete()
+        RatingProfile.all_objects.all().delete()
         doomed = User.objects.filter(roles__isnull=True, is_staff=False, is_superuser=False)
         n_u = doomed.count()
         doomed.delete()

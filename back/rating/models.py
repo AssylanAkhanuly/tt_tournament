@@ -139,6 +139,17 @@ class RatingParams(models.Model):
         )
 
 
+class ListedProfiles(models.Manager):
+    """Карточки, которые стоят в рейтинге: без удалённых председателем ГСК ✳
+    (27.11.2026). Всё, что отбирает спортсменов — лист, выгрузка, место,
+    подбор в сборную и в лигу, допуск, — ходит через него и удалённых не
+    видит. Сама карточка и её история не стираются (п. 21.6): их видно через
+    `all_objects` и в журнале."""
+
+    def get_queryset(self):
+        return super().get_queryset().filter(removed_at__isnull=True)
+
+
 class RatingProfile(models.Model):
     """Рейтинговая карточка спортсмена — поля из таблицы п. 19 Положения.
 
@@ -202,7 +213,18 @@ class RatingProfile(models.Model):
 
     updated_at = models.DateTimeField(auto_now=True)
 
+    # Удалён из рейтинга ✳ (27.11.2026, решение владельца продукта: «ГСК может
+    # удалять спортсменов из рейтинга»). Не стирание: карточка и история
+    # остаются (п. 21.6 — записи не удаляются), спортсмен пропадает из листа и
+    # подборов. Кто и когда — строкой журнала `remove`; вернуть — `restore`.
+    removed_at = models.DateTimeField(null=True, blank=True, verbose_name="Удалён из рейтинга")
+
+    all_objects = models.Manager()
+    objects = ListedProfiles()
+
     class Meta:
+        default_manager_name = "all_objects"
+        base_manager_name = "all_objects"
         verbose_name = "Рейтинговая карточка"
         verbose_name_plural = "Рейтинговые карточки"
         ordering = ["-value"]
@@ -249,6 +271,8 @@ class RatingEntry(models.Model):
     KIND_START = "start"
     KIND_VOID = "void"
     KIND_MERGE = "merge"
+    KIND_REMOVE = "remove"
+    KIND_RESTORE = "restore"
     KIND_CHOICES = [
         (KIND_MATCH, "Матч"),
         (KIND_NO_SHOW, "Неявка без уважительной причины (п. 15.4–15.6)"),
@@ -259,6 +283,10 @@ class RatingEntry(models.Model):
         # Нулевая строка-отметка: при объединении дублей п. 5.3 требует
         # отразить сведения об объединении в журнале ✳ (11.09.2026).
         (KIND_MERGE, "Объединение карточек (п. 5.3)"),
+        # Нулевые строки-отметки ✳ (27.11.2026): удалён из рейтинга и
+        # возвращён — с основанием и автором.
+        (KIND_REMOVE, "Удалён из рейтинга"),
+        (KIND_RESTORE, "Возвращён в рейтинг"),
     ]
 
     profile = models.ForeignKey(RatingProfile, on_delete=models.CASCADE, related_name="entries")

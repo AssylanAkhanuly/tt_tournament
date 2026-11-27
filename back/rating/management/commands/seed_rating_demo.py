@@ -109,7 +109,7 @@ class Command(BaseCommand):
                 phone=ПРЕФИКС + suffix, defaults={"name": name}
             )
             users[suffix] = user
-            profile = RatingProfile.objects.filter(user=user).first()
+            profile = RatingProfile.all_objects.filter(user=user).first()
             if not profile:
                 kwargs = {"region": region, "sex": sex, "birth_year": year}
                 if origin == engine.ORIGIN_ITTF:

@@ -72,6 +72,7 @@ export const toProfile = (raw: RawProfile): RatingProfile => ({
   ageCategory: (raw.age_category as RatingProfile['ageCategory']) ?? null,
   region: String(raw.region ?? ''),
   updatedAt: String(raw.updated_at ?? ''),
+  removedAt: (raw.removed_at as string) ?? null,
 });
 
 export const toEntry = (raw: Record<string, unknown>): RatingEntry => ({

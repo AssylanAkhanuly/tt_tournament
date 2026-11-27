@@ -21,6 +21,7 @@ from .views import (
     RatingProtocolsView,
     RatingProtocolView,
     RatingRegionsView,
+    RatingRemoveView,
 )
 
 urlpatterns = [
@@ -49,4 +50,5 @@ urlpatterns = [
     path("preview/", RatingPreviewView.as_view(), name="rating-preview"),
     path("journal/", RatingJournalView.as_view(), name="rating-journal"),
     path("<uuid:user_id>/", RatingCardView.as_view(), name="rating-card"),
+    path("<uuid:user_id>/remove/", RatingRemoveView.as_view(), name="rating-remove"),
 ]

@@ -42,8 +42,10 @@ def завести(api, region):
 def test_список_регионов_отдаётся_экрану(api):
     r = api.get("/api/rating/regions/")
     assert r.status_code == 200
-    assert len(r.data) == 20, r.data
+    # 3 города и 17 областей, за ними 9 стран СНГ ✳ (27.11.2026).
+    assert len(r.data) == 29, r.data
     assert r.data[:3] == ["Астана", "Алматы", "Шымкент"]
+    assert r.data[20:] == ["Азербайджан", "Армения", "Беларусь", "Кыргызстан", "Молдова", "Россия", "Таджикистан", "Туркменистан", "Узбекистан"]
     assert "Павлодарская область" in r.data
     assert "Улытауская область" in r.data
 
@@ -73,3 +75,15 @@ def test_регион_проверяется_и_у_нового_участник
     )
     assert r.status_code == 400
     assert "регион" in r.data["detail"].lower()
+
+
+def test_athlete_from_cis_country_is_created(params, api):
+    from rating.tests.test_api import председатель
+
+    председатель(api, "+7710000951")
+    r = api.post("/api/rating/athletes/", {"name": "Гость Из Ташкента", "region": "Узбекистан", "sex": "m"}, format="json")
+    assert r.status_code == 201, r.data
+    assert r.data["region"] == "Узбекистан"
+    # Страны в справочник мест турнира не попали.
+    places = api.get("/api/tournaments/places/").json()
+    assert "Узбекистан" not in [p["region"] for p in places]

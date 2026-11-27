@@ -15,38 +15,54 @@
    истории карточки: выпусков и апелляций нет.
    Отдельного экрана под правки нет намеренно: править
    значение, не видя истории, из которой оно сложилось, нельзя. Права всё
-   равно проверяет сервер. */
+   равно проверяет сервер.
+
+   Вид — профиль спортсмена ✳ (24.11.2026, решение владельца продукта: «это
+   старый вид профиля»): тот же `PlayerProfileView`, что у кабинета спортсмена
+   и страницы человека — шапка с фигурой и местом, показатели, динамика,
+   личные встречи; ниже — история изменений таблицей со слагаемыми. */
 
 import { useState } from 'react';
 
 import { num2, signed2, useRatingCard, type RatingEntry } from '@/entities/rating';
 import { useSession } from '@/entities/session';
-import { CorrectionDialog } from '@/features/rating-admin';
-import { EmptyBox, useNarrow } from '@/shared/kit/app';
-import { PlayerCard } from '@/widgets/rating';
+import { CorrectionDialog, RemoveDialog, RestoreButton } from '@/features/rating-admin';
+import { EmptyBox } from '@/shared/kit/app';
+import { PlayerProfileView } from '@/widgets/national';
+import { CardHistory } from '@/widgets/rating';
 import { RatingShell } from './RatingShell';
 
 export function PlayerCardView({ userId }: { userId: string }) {
-  const { data, loading, error, reload } = useRatingCard(userId);
+  const card = useRatingCard(userId);
+  const { data, loading, error, reload } = card;
   const { isGskChairman } = useSession();
-  const narrow = useNarrow();
   const [done, setDone] = useState<string | null>(null);
 
   const finish = (entry: RatingEntry) => {
-    setDone(entry.kindLabel.replace(/\s*\(.*\)$/, '') + ': ' + signed2(entry.delta) + ' → ' + num2(entry.after));
+    // Удаление и возврат полосой «Записано» не отмечаются ✳ (27.11.2026,
+    // решение владельца продукта): видно по строке в шапке профиля.
+    if (entry.kind === 'remove' || entry.kind === 'restore') setDone(null);
+    else setDone(entry.kindLabel.replace(/\s*\(.*\)$/, '') + ': ' + signed2(entry.delta) + ' → ' + num2(entry.after));
     reload();
   };
 
-  // Одна кнопка — «Редактировать» ✳ (03.11.2026, решение владельца продукта).
+  // «Редактировать» ✳ (03.11.2026) и «Удалить из рейтинга» ✳ (27.11.2026,
+  // решение владельца продукта). Удалённому — только «Вернуть в рейтинг».
+  const removed = Boolean(data?.profile.removedAt);
   const actions =
     data && isGskChairman ? (
-      <CorrectionDialog userId={userId} name={data.profile.name} current={data.profile.value} onDone={finish} />
+      removed ? (
+        <RestoreButton userId={userId} onDone={finish} />
+      ) : (
+        <span className="flex items-center gap-2">
+          <RemoveDialog userId={userId} name={data.profile.name} onDone={finish} />
+          <CorrectionDialog userId={userId} name={data.profile.name} current={data.profile.value} onDone={finish} />
+        </span>
+      )
     ) : undefined;
 
-  // На всю рабочую область, без полей ✳ (03.11.2026): имя — в шапке карточки.
-  // На телефоне имя несёт заголовок оболочки, и в карточке его не повторяем.
   return (
-    <RatingShell title={narrow ? (data?.profile.name ?? 'Карточка спортсмена') : undefined} actions={actions} bleed>
+    <RatingShell actions={actions} bleed>
       {done && (
         <p
           data-testid="chairman-result"
@@ -68,7 +84,14 @@ export function PlayerCardView({ userId }: { userId: string }) {
         </div>
       )}
       {!error && loading && !data && <p className="px-6 py-6 text-[13px] text-neutral-500">Карточка загружается…</p>}
-      {!error && data && <PlayerCard card={data} showName={!narrow} />}
+      {!error && data && (
+        <PlayerProfileView userId={userId} card={card} ownPage>
+          <section className="flex min-w-0 flex-col overflow-hidden rounded-2xl border border-neutral-200/80 bg-white" data-testid="player-card">
+            <h2 className="m-0 px-5 pt-5 pb-3 text-[15px] font-semibold">История изменения рейтинга</h2>
+            <CardHistory history={data.history} />
+          </section>
+        </PlayerProfileView>
+      )}
     </RatingShell>
   );
 }

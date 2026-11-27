@@ -35,9 +35,11 @@ export type RatingProfile = {
   ageCategory: AgeCategory | null;
   region: string;
   updatedAt: string;
+  /** Удалён из рейтинга председателем ГСК ✳ (27.11.2026); такую карточку видит только он. */
+  removedAt: string | null;
 };
 
-export type RatingEntryKind = 'start' | 'match' | 'prize' | 'no_show' | 'correction' | 'void' | 'merge';
+export type RatingEntryKind = 'start' | 'match' | 'prize' | 'no_show' | 'correction' | 'void' | 'merge' | 'remove' | 'restore';
 
 /** Строка истории — колонки таблицы п. 20 плюс слагаемые изменения. */
 export type RatingEntry = {

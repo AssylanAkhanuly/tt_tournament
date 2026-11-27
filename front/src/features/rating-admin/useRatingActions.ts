@@ -11,7 +11,7 @@
 
 import { useCallback, useState } from 'react';
 
-import { correctRating, type RatingEntry } from '@/entities/rating';
+import { correctRating, removeFromRating, restoreToRating, type RatingEntry } from '@/entities/rating';
 
 export function useRatingActions(userId: string) {
   const [busy, setBusy] = useState(false);
@@ -35,5 +35,8 @@ export function useRatingActions(userId: string) {
     [run, userId],
   );
 
-  return { correct, busy, error };
+  const remove = useCallback((reason: string) => run(() => removeFromRating(userId, reason)), [run, userId]);
+  const restore = useCallback(() => run(() => restoreToRating(userId)), [run, userId]);
+
+  return { correct, remove, restore, busy, error };
 }
