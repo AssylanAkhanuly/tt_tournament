@@ -77,9 +77,9 @@ for (const phone of [false, true]) {
       const y = async (id: string) => (await page.getByTestId(id).boundingBox())!.y;
       const ys = [await y('manual-a'), await y('manual-score-a'), await y('manual-score-b'), await y('manual-b')];
       expect([...ys].sort((p, q) => p - q)).toEqual(ys);
-      // Подписей у партий нет, поле узкое.
+      // Подписей у партий нет; поле крупное — ростом с кнопки «В» / «П» ✳ (27.11.2026).
       await expect(окно.getByText('Партий у спортсмена')).toHaveCount(0);
-      expect((await page.getByTestId('manual-score-a').locator('..').boundingBox())!.width).toBeLessThanOrEqual(160);
+      expect((await page.getByTestId('manual-score-a').boundingBox())!.height).toBeGreaterThanOrEqual(56);
       await page.screenshot({ path: `test-results/manual/${phone ? 'phone-' : ''}dialog.png` });
       await page.getByTestId('manual-save').click();
       await expect(окно).toHaveCount(0);

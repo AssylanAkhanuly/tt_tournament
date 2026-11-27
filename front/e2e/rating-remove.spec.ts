@@ -94,7 +94,12 @@ test('ручной ввод: итог без счёта большими кно�
       await page.getByRole('option', { name, exact: true }).last().click();
     };
     await pick('manual-a', players[0].name);
-    await page.getByTestId('manual-mode').getByText('Итог', { exact: true }).click();
+    // Выбор с поиском: напечатал часть фамилии — в списке только подходящие.
+    const dialog = page.getByTestId('manual-dialog');
+    const before = (await dialog.boundingBox())!.height;
+    await page.getByTestId('manual-mode').getByRole('tab', { name: 'Итог' }).click();
+    // Окно не прыгает при смене режима.
+    expect(Math.abs((await dialog.boundingBox())!.height - before)).toBeLessThan(2);
     // Партий нет — две большие кнопки, по умолчанию «Победа».
     await expect(page.getByTestId('manual-score-a')).toHaveCount(0);
     const win = page.getByTestId('manual-win');
@@ -107,7 +112,9 @@ test('ручной ввод: итог без счёта большими кно�
     await loss.click();
     await expect(loss).toHaveAttribute('aria-checked', 'true');
     await expect(win).toHaveAttribute('aria-checked', 'false');
-    await pick('manual-b', players[1].name);
+    await page.getByTestId('manual-b').fill(`${stamp} Б`);
+    await expect(page.getByRole('option')).toHaveCount(1);
+    await page.getByRole('option', { name: players[1].name, exact: true }).click();
     await page.screenshot({ path: 'test-results/rating-remove/outcome.png' });
     await page.getByTestId('manual-save').click();
 

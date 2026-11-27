@@ -62,8 +62,9 @@ function Games({
   return (
     <I18nProvider locale="ru-RU">
       {/* Подписи у партий нет ✳ (03.11.2026): что чьё, видно по порядку —
-          спортсмен над своими партиями, соперник под своими; подпись — для
-          читалки. Ширина своя, узкая, по центру — число, а не поле ввода. */}
+          партии спортсмена сверху, соперника снизу; подпись — для читалки.
+          Высота — как у кнопок «В» / «П» ✳ (27.11.2026): режимы меняются без
+          сдвига окна. */}
       <NumberField
         aria-label={label}
         value={value}
@@ -71,12 +72,12 @@ function Games({
         minValue={0}
         maxValue={max}
         step={1}
-        className="w-40 self-center"
+        className="w-full"
       >
-        <NumberField.Group className="w-full rounded-xl">
-          <NumberField.DecrementButton aria-label={'Меньше: ' + label} />
-          <NumberField.Input className="w-full min-w-0 text-center tabular-nums" data-testid={testId} />
-          <NumberField.IncrementButton aria-label={'Больше: ' + label} />
+        <NumberField.Group className="h-16 w-full rounded-2xl">
+          <NumberField.DecrementButton aria-label={'Меньше: ' + label} className="h-full w-14" />
+          <NumberField.Input className="h-full w-full min-w-0 text-center text-[28px] font-bold tabular-nums" data-testid={testId} />
+          <NumberField.IncrementButton aria-label={'Больше: ' + label} className="h-full w-14" />
         </NumberField.Group>
       </NumberField>
     </I18nProvider>
@@ -145,31 +146,41 @@ function AddMatch({ s, tournamentId, onSaved }: { s: Schedule; tournamentId: str
             value={a}
             options={options.filter((o) => o.id !== b)}
             onChange={setA}
-            placeholder="Выберите"
+            placeholder="Фамилия или имя"
+            search
             testId="manual-a"
           />
           {/* Вертикально ✳ (27.11.2026, решение владельца продукта): слева
               столбиком «Счёт / Итог», справа — партии или «В» над «П». */}
           <div className="flex items-stretch gap-3">
-            <div role="tablist" aria-label="Что вносим" aria-orientation="vertical" className="flex flex-col gap-1 rounded-xl bg-neutral-100 p-1" data-testid="manual-mode">
-              {(['Счёт', 'Итог'] as const).map((v) => (
+            <div role="tablist" aria-label="Что вносим" aria-orientation="vertical" className="flex w-16 flex-col gap-1 rounded-2xl bg-neutral-100 p-1" data-testid="manual-mode">
+              {/* Значками, а не словами ✳ (27.11.2026, решение владельца
+                  продукта): «3:1» — счёт по партиям, «В:П» — только итог. */}
+              {(
+                [
+                  ['Счёт', '3:1'],
+                  ['Итог', 'В:П'],
+                ] as const
+              ).map(([v, glyph]) => (
                 <button
                   key={v}
                   type="button"
                   role="tab"
                   aria-selected={mode === v}
+                  aria-label={v}
+                  title={v === 'Счёт' ? 'Счёт по партиям' : 'Только итог — победа или поражение'}
                   onClick={() => setMode(v)}
                   className={
-                    'flex-1 cursor-pointer rounded-lg px-3 text-[13px] font-medium transition-colors ' +
-                    (mode === v ? 'bg-white text-neutral-900 shadow-sm' : 'text-neutral-500 hover:text-neutral-800')
+                    'flex-1 cursor-pointer rounded-xl text-[15px] font-bold tabular-nums transition-colors ' +
+                    (mode === v ? 'bg-white text-neutral-900 shadow-sm' : 'text-neutral-400 hover:text-neutral-700')
                   }
                 >
-                  {v}
+                  {glyph}
                 </button>
               ))}
             </div>
             {mode === 'Счёт' ? (
-              <div className="flex flex-1 flex-col justify-center gap-2">
+              <div className="flex flex-1 flex-col gap-2">
                 <Games label="Партий у спортсмена" value={ga} max={n} onChange={setGa} testId="manual-score-a" />
                 <Games label="Партий у соперника" value={gb} max={n} onChange={setGb} testId="manual-score-b" />
               </div>
@@ -202,7 +213,6 @@ function AddMatch({ s, tournamentId, onSaved }: { s: Schedule; tournamentId: str
                     );
                   })}
                 </div>
-                <span className="text-center text-[12.5px] text-neutral-500">Не влияет на рейтинг</span>
               </div>
             )}
           </div>
@@ -212,7 +222,8 @@ function AddMatch({ s, tournamentId, onSaved }: { s: Schedule; tournamentId: str
             value={b}
             options={options.filter((o) => o.id !== a)}
             onChange={setB}
-            placeholder="Выберите"
+            placeholder="Фамилия или имя"
+            search
             testId="manual-b"
           />
           {error && (
