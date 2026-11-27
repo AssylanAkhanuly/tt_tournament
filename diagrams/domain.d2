@@ -127,6 +127,12 @@ tournament: TOURNAMENT {
   # Способ внести результаты ✳ 03.11.2026: пусто — не выбран, «вручную» —
   # матчи со счётом без расписания; после первого матча расписания нет.
   results_mode: "не выбран | вручную"
+  # Полномочия главного судьи ✳ 24.11.2026 (flows/07–08, совещание 04.11.2026):
+  # у кого ход турнира (правка счёта) — пусто: у главного судьи; передаёт только
+  # он, секретарю или заместителю; правит один. Журнал — AUTHORITY_LOG.
+  authority_holder_id: "uuid — у кого полномочия; пусто — у главного судьи" {constraint: foreign_key}
+  authority_since: "datetime — с какого времени"
+  schedule_submitted_at: "datetime — секретарь передал черновик расписания судье; правка отзывает"
   venue: "string — место проведения: зал, адрес"
   age_min: "int — возраст от, лет; пусто — без границы"
   age_max: "int — возраст до, лет; пусто — без границы"
@@ -448,6 +454,17 @@ match_event: MATCH_EVENT {
   at: datetime
 }
 
+authority_log: AUTHORITY_LOG {
+  shape: sql_table
+  # ✳ 24.11.2026: передача и возврат полномочий главного судьи — с временем.
+  id: int {constraint: primary_key}
+  tournament_id: uuid {constraint: foreign_key}
+  action: "передал | вернул"
+  holder_id: "uuid — кому передали / у кого забрали" {constraint: foreign_key}
+  by_id: "uuid — кто нажал" {constraint: foreign_key}
+  at: datetime
+}
+
 score_log: SCORE_LOG {
   shape: sql_table
   # Не class: audit. У sql_table d2 красит ШАПКУ цветом fill, а ТЕЛО строк —
@@ -646,7 +663,10 @@ rating_profile: RATING_PROFILE {
   # из закреплённого списка — 3 города республиканского значения и 17 областей
   # (`rating/regions.py`, ручка `GET /api/rating/regions/`). Проверка стоит при
   # заведении карточки; у загруженных раньше остались прежние написания.
-  region: "строка из закреплённого списка: 3 города и 17 областей"
+  region: "строка из закреплённого списка: 3 города и 17 областей; ✳ 27.11.2026 + страны СНГ"
+  # Удалён из рейтинга ✳ 27.11.2026 (решение владельца продукта): карточка и
+  # история остаются (п. 21.6), спортсмен пропадает из листа и подборов.
+  removed_at: "datetime? — удалён из рейтинга председателем ГСК"
 }
 
 # Журнал изменений — таблица п. 20 плюс слагаемые изменения. ИСТОЧНИК ПРАВДЫ:
@@ -657,7 +677,7 @@ rating_entry: RATING_ENTRY {
   class: audit
   id: uuid {constraint: primary_key}
   profile_id: uuid {constraint: foreign_key}
-  kind: "стартовое | матч | место за турнир | неявка | исправление | аннулирование | объединение дублей (п. 5.3)"
+  kind: "стартовое | матч | место за турнир | неявка | исправление | аннулирование | объединение дублей (п. 5.3) | удалён / возвращён"
   occurred_at: date
   tournament_id: uuid {constraint: foreign_key}
   match_id: uuid {constraint: foreign_key}
@@ -857,6 +877,8 @@ table_.id -> match.table_id: проводит
 match.id -> game.match_id: партии
 game.id -> rally.game_id: розыгрыши
 match.id -> match_event.match_id
+tournament.id -> authority_log.tournament_id: полномочия
+user.id -> authority_log.holder_id: держатель
 match.id -> score_log.match_id
 user.id -> score_log.author_id: автор правки
 # Связь «матч → журнал» объявлена ПЕРВОЙ в рейтинговой группе намеренно: dagre

@@ -1123,6 +1123,7 @@ erDiagram
     MATCH ||--|{ GAME : "состоит из партий"
     GAME ||--o{ RALLY : "розыгрыши"
     MATCH ||--o{ MATCH_EVENT : "смена сторон и подачи"
+    TOURNAMENT ||--o{ AUTHORITY_LOG : "передачи полномочий"
     MATCH ||--o{ SCORE_LOG : "правки счёта"
     USER ||--o{ SCORE_LOG : "автор правки"
 
@@ -1196,6 +1197,9 @@ erDiagram
         json scheduleDays "игровые дни: дата, начало, конец"
         int scheduleMatchMinutes "норматив длительности матча, минут"
         string resultsMode "не выбран | вручную — матчи со счётом без расписания"
+        uuid authorityHolderId FK "у кого полномочия главного судьи; пусто — у него"
+        datetime authoritySince "с какого времени"
+        datetime scheduleSubmittedAt "секретарь передал черновик судье; правка отзывает"
         string venue "место проведения: зал, адрес"
         int ageMin "возраст от, лет; пусто — без границы"
         int ageMax "возраст до, лет; пусто — без границы"
@@ -1457,6 +1461,14 @@ erDiagram
         uuid recordedBy FK "судья стола"
         datetime at
     }
+    AUTHORITY_LOG {
+        int id PK
+        uuid tournamentId FK
+        string action "передал | вернул"
+        uuid holderId FK
+        uuid byId FK
+        datetime at
+    }
     SCORE_LOG {
         uuid id PK
         uuid matchId FK
@@ -1482,12 +1494,13 @@ erDiagram
         string sex "общий рейтинг по полу (п. 7.1); в пилоте здесь, регистрации ещё нет"
         date birthDate "сверка с возрастной категорией; в пилоте здесь, регистрации ещё нет"
         int birthYear "возрастная выборка U11-U21 (п. 7.4); выводится из даты"
-        string region "из закреплённого списка: 3 города и 17 областей (16.09.2026)"
+        string region "из закреплённого списка: 3 города и 17 областей (16.09.2026), страны СНГ (27.11.2026)"
+        datetime removedAt "удалён из рейтинга председателем ГСК (27.11.2026); история остаётся"
     }
     RATING_ENTRY {
         uuid id PK
         uuid profileId FK
-        string kind "стартовое | матч | место | неявка | исправление | аннулирование"
+        string kind "стартовое | матч | место | неявка | исправление | аннулирование | объединение | удалён / возвращён"
         date occurredAt
         uuid tournamentId FK
         uuid matchId FK
