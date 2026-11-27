@@ -15,7 +15,7 @@ import { RatingShell } from '@/views/rating';
 import { useChairmanOnly } from '@/views/rating/useChairmanOnly';
 
 export function CalibrationView() {
-  const allowed = useChairmanOnly('/rating/calibration');
+  const allowed = useChairmanOnly('/gsk/calibration');
   const lab = useCalibration();
   const ready = allowed && !!lab.params.draft;
 

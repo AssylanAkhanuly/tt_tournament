@@ -20,11 +20,11 @@ export function CalendarView() {
   const { loading, isGskChairman } = useSession();
 
   useEffect(() => {
-    if (!loading && !isGskChairman) router.replace('/login?next=/calendar');
+    if (!loading && !isGskChairman) router.replace('/login?next=/gsk/calendar');
   }, [loading, isGskChairman, router]);
 
   return (
-    <RatingShell active="Календарь" bleed sub={boardViews('/calendar', useBoardView())}>
+    <RatingShell active="Календарь" bleed sub={boardViews('/gsk/calendar', useBoardView())}>
       {isGskChairman && (
         <TournamentBoard
           detailsPath={(id) => tournamentHref('gsk', id)}

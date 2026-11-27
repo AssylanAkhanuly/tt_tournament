@@ -136,8 +136,8 @@ test('карточка сходится: рейтинг равен сумме и
   }
 
   // И значение карточки равно сумме журнала — главный инвариант рейтинга.
-  const тайл = page.getByText('Текущий рейтинг').locator('..');
-  const значение = число((await тайл.textContent()) ?? '');
+  const тайл = page.getByTestId('kpi-rating');
+  const значение = число(((await тайл.textContent()) ?? '').match(/\d+,\d\d/)![0]);
   expect(значение).toBeCloseTo(сумма, 2);
 });
 
@@ -169,20 +169,17 @@ test('у спортсмена без рейтинга карточки нет, �
   await expect(page.getByText('Карточки нет')).toBeVisible();
 });
 
-test('история рейтинга переключается на график ✳ (16.09.2026)', async ({ page }) => {
+test('на карточке — динамика рейтинга графиком и история таблицей ✳ (24.11.2026)', async ({ page }) => {
   await page.goto('/rating');
   await строка(page, 'Ахметов Ерлан').click();
   await page.waitForURL(/\/rating\/[0-9a-f-]{36}$/);
+  // Вид профиля: график — блок «Динамика рейтинга», таблица со слагаемыми — ниже.
+  const график = page.getByTestId('profile-rating-chart');
+  await expect(график).toBeVisible();
+  expect(Number(await график.getAttribute('data-points'))).toBeGreaterThan(1);
   await expect(page.getByTestId('card-history-row').first()).toBeVisible();
-
-  await page.getByRole('tab', { name: 'График' }).click();
-  await expect(page.getByRole('img', { name: 'История рейтинга' })).toBeVisible();
-  // Вкладка именно переключает: таблицы под графиком нет.
-  await expect(page.getByTestId('card-history-row')).toHaveCount(0);
-
-  await page.getByRole('tab', { name: 'Таблица' }).click();
-  await expect(page.getByTestId('card-history-row').first()).toBeVisible();
-  await expect(page.getByRole('img', { name: 'История рейтинга' })).toHaveCount(0);
+  // Ссылки «Вся история» на саму себя нет.
+  await expect(page.getByTestId('profile-rating-open')).toHaveCount(0);
 });
 
 /* Сортировка колонкой ✳ (16.09.2026). Считает её сервер: таблица (TanStack)
@@ -315,12 +312,14 @@ test('вторая страница листа продолжает нумера
 test('карточка спортсмена — на всю рабочую область, без обёрток ✳ (03.11.2026)', async ({ page }) => {
   await page.goto('/rating');
   await строка(page, 'Ахметов Ерлан').click();
-  const карточка = page.getByTestId('player-card');
-  await expect(карточка.locator('h1')).toHaveText('Ахметов Ерлан');
-  await expect(page.getByTestId('card-fact').filter({ hasText: 'Место в листе' })).toContainText('№1 из');
+  // Вид профиля ✳ (24.11.2026): шапка с фигурой и местом, показатели, история.
+  const профиль = page.getByTestId('player-profile');
+  await expect(профиль.getByTestId('member-name')).toHaveText('Ахметов Ерлан');
+  await expect(профиль.getByTestId('member-hero')).toContainText('№ 1');
   // Статус — точкой на фото, плашки «Активен» нет.
-  await expect(карточка.getByTestId('card-status')).toHaveAttribute('data-status', 'active');
-  await expect(карточка.getByTestId('card-status')).toHaveAttribute('aria-label', 'Активен');
-  await expect(карточка.getByText('Активен', { exact: true })).toHaveCount(0);
+  await expect(профиль.getByTestId('card-status')).toHaveAttribute('data-status', 'active');
+  await expect(профиль.getByTestId('card-status')).toHaveAttribute('aria-label', 'Активен');
+  await expect(профиль.getByText('Активен', { exact: true })).toHaveCount(0);
+  await expect(page.getByTestId('player-card').getByTestId('card-history-row').first()).toBeVisible();
   await page.screenshot({ path: 'test-results/rating/card.png' });
 });

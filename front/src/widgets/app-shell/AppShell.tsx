@@ -15,7 +15,7 @@
 
 import { Avatar, Button, Chip, Dropdown, Label, Modal, Separator, useOverlayState } from '@heroui/react';
 import { Check, ChevronDown, ChevronLeft, ChevronRight, ChevronsUpDown, LogOut, Menu, User } from 'lucide-react';
-import { useState, type ReactNode } from 'react';
+import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
 
 import { useNarrow } from '@/shared/kit/app';
 import { ModalSheet } from '@/shared/ui/ModalSheet';
@@ -46,6 +46,24 @@ export type ShellRole = { title: string; to: string };
  *  тура) — вкладками под заголовком, а не в сайдбаре; у выбранной — её виды
  *  («Матчи · День») справа в той же полосе. */
 export type ShellTab = { label: string; href: string; icon?: ReactNode; active?: boolean; views?: ShellSubItem[] };
+
+/** Вкладки страницы на телефоне — внутри экрана ✳ (24.11.2026, решение владельца
+ *  продукта: на «Сведениях» турнира вкладки встают в шапку экрана вместо
+ *  чипов, а полосы вкладок над экраном нет). Экран зовёт `usePageTabs(true)`:
+ *  получает вкладки и переход, оболочка на телефоне полосу не рисует. */
+type PageTabs = { tabs: ShellTab[]; open: (href: string) => void; claim: (on: boolean) => void };
+const PageTabsContext = createContext<PageTabs | null>(null);
+
+export function usePageTabs(take: boolean) {
+  const ctx = useContext(PageTabsContext);
+  const claim = ctx?.claim;
+  useEffect(() => {
+    if (!take || !claim) return;
+    claim(true);
+    return () => claim(false);
+  }, [take, claim]);
+  return ctx ? { tabs: ctx.tabs, open: ctx.open } : { tabs: [] as ShellTab[], open: () => {} };
+}
 
 export function AppShell({
   role,
@@ -114,6 +132,9 @@ export function AppShell({
   const narrow = useNarrow();
   // Телефон: «Профиль» в панели вкладок открывает страницу аккаунта на месте содержимого.
   const [accountPage, setAccountPage] = useState(false);
+  // Экран забрал вкладки себе (`usePageTabs`) — на телефоне полосы над ним нет.
+  const [tabsTaken, setTabsTaken] = useState(false);
+  const [pageTabs] = useState(() => ({ claim: setTabsTaken }));
   // Телефон: виды текущего раздела (подпункты сайдбара) — над содержимым.
   const phoneViews = nav.find((n) => n.label === active)?.children;
   const tabBar = narrow && !phoneBare;
@@ -136,8 +157,9 @@ export function AppShell({
     });
 
   return (
-    // `hero-scope` — локальный сброс вместо preflight; `relative` — диалоги
-    // рабочей области рисуются абсолютным слоем внутри.
+    <PageTabsContext.Provider value={{ tabs: tabs ?? [], open: (href) => onOpen?.(href), claim: pageTabs.claim }}>
+    {/* `hero-scope` — локальный сброс вместо preflight; `relative` — диалоги
+        рабочей области рисуются абсолютным слоем внутри. */}
     <div
       className="hero-scope relative flex h-screen w-full flex-col overflow-hidden bg-shell-page font-[family-name:var(--font)] text-shell-ink"
       data-theme="light"
@@ -369,7 +391,7 @@ export function AppShell({
               держится и пока имя грузится — вкладки не прыгают. Пустой список
               вкладок — только заголовок с чертой (карточка члена сборной ✳
               22.11.2026: разделы открываются из профиля). */}
-          {tabs && (
+          {tabs && !(narrow && tabsTaken) && (
             <header
               className={'shrink-0 px-6 pt-5 max-md:px-4 max-md:pt-3 ' + (tabs.length ? '' : 'border-b border-shell-line pb-4')}
               data-testid="page-header"
@@ -584,6 +606,7 @@ export function AppShell({
             </Modal.Body>
           </ModalSheet>
     </div>
+    </PageTabsContext.Provider>
   );
 }
 

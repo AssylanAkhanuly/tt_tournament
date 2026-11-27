@@ -5,11 +5,13 @@
    фигура на персиковом (снимков у рейтинга нет — заглушка своего пола), справа
    место в листе огромной контурной цифрой фоном, фамилия, имя и отчество,
    регион; внизу — рейтинг и год рождения. Нажатие открывает карточку
-   спортсмена. Сетка: одна колонка на телефоне, две — от `sm`, три — от `2xl`. */
+   спортсмена. Сетка: одна колонка на телефоне, две — от `sm`, три — от `2xl`.
+   Карточка — общий `PlayerCard` ✳ (24.11.2026): белый градиент вместо персика. */
 
 import type { RatingProfile } from '@/entities/rating';
 import { num2 } from '@/entities/rating';
 import { placeholderFigure } from '@/shared/lib/figure';
+import { PlayerCard, PlayerFigure } from '@/shared/ui/PlayerCard';
 
 function split(name: string): { surname: string; rest: string } {
   const [surname = '', ...rest] = name.trim().split(/\s+/);
@@ -21,43 +23,21 @@ export type RatingCardData = { userId: string; name: string; value: number | nul
 
 export function RatingPlayerCard({ r, place, onOpen, testId = 'rating-card' }: { r: RatingCardData; place: number; onOpen: () => void; testId?: string }) {
   const { surname, rest } = split(r.name);
-  const facts: [string, string][] = [
-    ['Рейтинг', r.value !== null ? num2(r.value) : '—'],
-    ['Год', r.birthYear ? String(r.birthYear) : '—'],
-  ];
   return (
-    <button
-      type="button"
-      onClick={onOpen}
-      className="group relative flex h-36 min-w-0 overflow-hidden rounded-2xl border border-neutral-200/80 bg-white text-left hover:border-brand-200 hover:shadow-md"
-      data-testid={testId}
-      data-player={r.name}
-    >
-      <span className="relative w-28 shrink-0 overflow-hidden bg-qtt-peach">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={placeholderFigure(r.userId, r.sex)} alt="" loading="lazy" className="absolute bottom-0 left-1/2 h-[94%] w-auto max-w-none -translate-x-1/2" />
-      </span>
-      <span aria-hidden className="pointer-events-none absolute inset-y-0 right-0 left-28 flex items-center justify-end overflow-hidden pr-3">
-        <span className="font-[family-name:var(--font-jersey)] text-[180px] leading-[0.72] tracking-tight text-transparent tabular-nums select-none [-webkit-text-stroke:1.5px_color-mix(in_srgb,var(--color-neutral-200)_80%,transparent)]">
-          {place}
-        </span>
-      </span>
-      <span className="relative flex min-w-0 flex-1 flex-col justify-center px-4 py-3">
-        <span className="truncate text-[16px] leading-tight font-bold">{surname}</span>
-        <span className="truncate text-[13px] text-neutral-500">{rest}</span>
-        <span className="truncate text-[12px] text-neutral-400">{r.region || 'Регион не указан'}</span>
-        <span className="mt-2.5 flex gap-x-4">
-          {facts.map(([label, value]) => (
-            <span key={label} className="flex min-w-0 flex-col">
-              <span className="text-[10px] font-semibold tracking-wide text-neutral-400 uppercase">{label}</span>
-              <span className="text-[12.5px] font-medium whitespace-nowrap tabular-nums" data-testid={label === 'Рейтинг' ? 'rating-value' : undefined}>
-                {value}
-              </span>
-            </span>
-          ))}
-        </span>
-      </span>
-    </button>
+    <PlayerCard
+      figure={<PlayerFigure src={placeholderFigure(r.userId, r.sex)} />}
+      place={place}
+      surname={surname}
+      rest={rest}
+      region={r.region}
+      facts={[
+        { label: 'Рейтинг', value: r.value !== null ? num2(r.value) : '—', testId: 'rating-value' },
+        { label: 'Год', value: r.birthYear ? String(r.birthYear) : '—' },
+      ]}
+      onPress={onOpen}
+      testId={testId}
+      data={{ player: r.name }}
+    />
   );
 }
 

@@ -18,7 +18,8 @@ test.describe.configure({ mode: 'serial' });
 
 const ИМЯ = 'Жумабаева Айна';
 const строка = (page: Page, имя: string) => page.locator('[data-testid="rating-row"][data-player="' + имя + '"]');
-const текущий = (page: Page) => page.getByText('Текущий рейтинг').locator('..');
+// Текущий рейтинг — карточка показателя «Рейтинг» профиля ✳ (24.11.2026).
+const текущий = (page: Page) => page.getByTestId('kpi-rating');
 
 async function войти(page: Page, next: string) {
   await page.goto('/login?next=' + encodeURIComponent(next));
@@ -38,7 +39,7 @@ async function карточка(page: Page, имя: string) {
 }
 
 test('гостя из разделов председателя уводит на вход', async ({ page }) => {
-  for (const path of ['/rating/journal', '/rating/calibration']) {
+  for (const path of ['/gsk/journal', '/gsk/calibration']) {
     await page.goto(path);
     await page.waitForURL(/\/login\?next=/);
     expect(decodeURIComponent(page.url())).toContain('next=' + path);
@@ -46,7 +47,7 @@ test('гостя из разделов председателя уводит н�
 });
 
 test('в меню нет выпусков и апелляций, на карточке — одна кнопка «Редактировать»', async ({ page }) => {
-  await войти(page, '/rating');
+  await войти(page, '/gsk');
   await expect(page.getByRole('button', { name: 'Журнал', exact: true })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Калибровка', exact: true })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Выпуски', exact: true })).toHaveCount(0);
@@ -60,8 +61,27 @@ test('в меню нет выпусков и апелляций, на карто
   await page.screenshot({ path: 'test-results/rating-governance/card.png' });
 });
 
+test('лист председателя — в кабинете /gsk, вид «Карточки · Таблица» переключателем над листом', async ({ page }) => {
+  await войти(page, '/gsk');
+  // Публичный адрес у председателя ведёт в кабинет, вместе с видом.
+  await page.goto('/rating?view=cards');
+  await page.waitForURL((url) => url.pathname === '/gsk' && url.search === '?view=cards');
+  const first = page.getByTestId('rating-card').first();
+  await expect(first).toBeVisible();
+  await expect(first.getByTestId('rating-value')).toHaveText(/^\d+,\d{2}$/);
+  await expect(page.getByTestId('rating-view-cards')).toHaveAttribute('aria-checked', 'true');
+
+  await page.getByTestId('rating-view-table').click();
+  await page.waitForURL((url) => url.pathname === '/gsk' && url.search === '');
+  await expect(page.getByTestId('rating-row').first()).toBeVisible();
+  await expect(page.getByTestId('rating-card')).toHaveCount(0);
+
+  // Подпунктов «Таблица · Карточки» в сайдбаре больше нет.
+  await expect(page.getByTestId('nav-sub')).toHaveCount(0);
+});
+
 test('журнал: исправление — строкой с основанием и автором, отбор и поиск', async ({ page }) => {
-  await войти(page, '/rating');
+  await войти(page, '/gsk');
   await карточка(page, ИМЯ);
   await page.getByTestId('correction-open').click();
   await page.getByTestId('correction-value').fill('49,50');
@@ -75,7 +95,7 @@ test('журнал: исправление — строкой с основан�
   await expect(строка(page, ИМЯ).getByTestId('rating-value')).toHaveText('49,50');
 
   await page.getByRole('button', { name: 'Журнал', exact: true }).click();
-  await page.waitForURL(/\/rating\/journal$/);
+  await page.waitForURL(/\/gsk\/journal$/);
   await page.getByPlaceholder('Фамилия спортсмена').fill('Жумабаева');
   const записи = page.locator('[data-testid="journal-row"][data-player="' + ИМЯ + '"]');
   await expect(записи.first()).toContainText('[e2e] Опечатка в протоколе');
@@ -94,7 +114,7 @@ test('журнал: исправление — строкой с основан�
 });
 
 test('калибровка: формула у коэффициента, без панели доли побед, сохранение делает действующим', async ({ page }) => {
-  await войти(page, '/rating/calibration');
+  await войти(page, '/gsk/calibration');
   // «Прогона» и «Ожидаемой доли побед» нет ✳ (03.11.2026).
   await expect(page.getByTestId('nav-sub')).toHaveCount(0);
   await expect(page.getByTestId('calibration-insights')).toHaveCount(0);

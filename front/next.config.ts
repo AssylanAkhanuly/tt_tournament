@@ -37,8 +37,14 @@ const nextConfig: NextConfig = {
       { source: "/setka", destination: "/bracket", permanent: true },
       // «Протоколы» became «Турниры» on 11.09.2026; «Турниры» were removed from
       // the ГСК chairman on 28.10.2026 — all tournaments live in the calendar.
-      { source: "/rating/protocols/:path*", destination: "/calendar", permanent: true },
-      { source: "/rating/tournaments/:path*", destination: "/calendar", permanent: true },
+      { source: "/rating/protocols/:path*", destination: "/gsk/calendar", permanent: true },
+      { source: "/rating/tournaments/:path*", destination: "/gsk/calendar", permanent: true },
+      // The ГСК chairman's sections live under his cabinet /gsk since 24.11.2026,
+      // like every other role (/dashboard, /chief, /coach…). /rating and
+      // /rating/<id> stay public pages.
+      { source: "/rating/journal", destination: "/gsk/journal", permanent: true },
+      { source: "/rating/calibration", destination: "/gsk/calibration", permanent: true },
+      { source: "/calendar", destination: "/gsk/calendar", permanent: true },
       // The tournament page lives in each role's cabinet since 30.10.2026
       // (product owner's decision): /dashboard/tournaments/<id>,
       // /gsk/tournaments/<id>, /referee/tournaments/<id>. The ГСК chairman's

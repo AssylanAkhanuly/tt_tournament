@@ -272,12 +272,13 @@ test('вид соревнования: «Главный старт» засев�
   await rows.filter({ hasText: mainName }).click();
   await page.waitForURL(/\/dashboard\/tournaments\/[0-9a-f-]{36}\/info$/);
   await expect(page.getByTestId('overview-params')).toContainText('Главный республиканский старт');
-  await page.getByTestId('info-edit').click();
-  const kindPicker = page.getByTestId('info-template');
+  // Правка — прямо на обзоре ✳ (24.11.2026): «Изменить» и боковой формы нет.
+  const kindPicker = page.getByTestId('params-kind');
   await expect(kindPicker).toHaveText(/Главный республиканский старт/);
   await kindPicker.click();
   await page.getByRole('option', { name: 'Открытый республиканский' }).click();
-  await page.getByRole('button', { name: 'Сохранить' }).click();
+  await page.getByTestId('params-save').click();
+  await expect(page.getByTestId('params-save')).toHaveCount(0);
   await expect(kindPicker).toHaveText(/Открытый республиканский/);
   const changed = (await (await page.request.get(`/api/tournaments/${created.id}/`)).json()) as {
     category: string;
@@ -568,7 +569,7 @@ test('меню человека открывается справа, роль р
 
   // Вторая роль ведёт в её кабинет, и там текущей стала уже она.
   await roles.getByRole('menuitemradio', { name: 'Председатель ГСК' }).click();
-  await page.waitForURL((url) => url.pathname === '/rating');
+  await page.waitForURL((url) => url.pathname === '/gsk');
   await page.getByTestId('side-person').click();
   await page.getByTestId('person-role').click();
   await expect(
@@ -594,10 +595,10 @@ test('меню человека открывается справа, роль р
 
 test('у председателя ГСК тот же «Календарь»: сетка, таблица, страница турнира', async ({ page }) => {
   await войти(page, E2E_GSK);
-  await page.waitForURL((url) => url.pathname === '/rating');
+  await page.waitForURL((url) => url.pathname === '/gsk');
 
   await page.getByRole('button', { name: 'Календарь', exact: true }).click();
-  await page.waitForURL((url) => url.pathname === '/calendar');
+  await page.waitForURL((url) => url.pathname === '/gsk/calendar');
   await expect(page.getByRole('grid')).toBeVisible();
   await expect(page.getByTestId('calendar-month')).toBeVisible();
   // «Новый турнир» — и у председателя ✳ (03.11.2026): заводит, и турнир встаёт на свой день.
@@ -615,7 +616,7 @@ test('у председателя ГСК тот же «Календарь»: с�
   await page.screenshot({ path: 'test-results/dashboard/gsk-calendar.png' });
 
   await page.getByTestId('nav-sub').filter({ hasText: 'Таблица' }).click();
-  await page.waitForURL((url) => url.pathname === '/calendar' && url.search === '?view=table');
+  await page.waitForURL((url) => url.pathname === '/gsk/calendar' && url.search === '?view=table');
   await page.getByTestId('tournament-search').fill('Чемпионат Республики');
   await page.getByTestId('tournament-table-row').first().click();
   await page.waitForURL(/\/gsk\/tournaments\/[0-9a-f-]{36}\/info$/);
@@ -624,7 +625,7 @@ test('у председателя ГСК тот же «Календарь»: с�
   await expect(page.getByTestId('participant-card')).toHaveCount(8);
   await expect(page.getByRole('button', { name: 'Спортсмены', exact: true })).toHaveAttribute('aria-current', 'true');
   await page.getByTestId('home-link').click();
-  await page.waitForURL((url) => url.pathname === '/calendar');
+  await page.waitForURL((url) => url.pathname === '/gsk/calendar');
 });
 
 test('страница турнира — в кабинете роли; ссылка «поделиться» ведёт в свой кабинет', async ({ page }) => {
@@ -643,11 +644,12 @@ test('страница турнира — в кабинете роли; ссыл
     await page.waitForURL((url) => url.pathname === now);
   }
   // Сам календарь председателя на месте — перенаправляются только страницы турниров.
+  // Прежний `/calendar` ведёт в кабинет ✳ (24.11.2026).
   await page.goto('/calendar');
-  await expect(page).toHaveURL(/\/calendar$/);
+  await expect(page).toHaveURL(/\/gsk\/calendar$/);
 });
 
-test('«Сведения»: даты, место, возраст ползунком и полями, формат — черновиком с «Сохранить»', async ({ page }) => {
+test('«Сведения»: возраст, город и адрес — на странице «Участники и место» черновиком, даты — календарём', async ({ page }) => {
   await войти(page, E2E_ADMIN);
   await page.waitForURL((url) => url.pathname === '/dashboard');
   const now = new Date();
@@ -660,67 +662,56 @@ test('«Сведения»: даты, место, возраст ползунк�
   await page.goto(`/dashboard/tournaments/${t.id}`);
   await page.waitForURL((url) => url.pathname === `/dashboard/tournaments/${t.id}/info`);
   await expect(page.getByRole('button', { name: 'Сведения', exact: true })).toHaveAttribute('aria-current', 'true');
+  // «Изменить» и боковой формы нет ✳ (24.11.2026) — только правка на месте.
+  await expect(page.getByTestId('info-edit')).toHaveCount(0);
 
-  await page.getByTestId('info-edit').click();
-  const сохранить = page.getByTestId('info-save');
-  const отменить = page.getByTestId('info-discard');
-  await expect(сохранить).toBeDisabled();
-  // Возраст: поля «от» и «до» двигают оба конца ползунка.
-  await page.getByTestId('info-age-min').fill('12');
-  await page.getByTestId('info-age-min').press('Tab');
-  await page.getByTestId('info-age-max').fill('18');
-  await page.getByTestId('info-age-max').press('Tab');
-  const ползунок = page.getByTestId('info-age-slider');
-  await expect(ползунок.getByRole('slider', { name: 'От' })).toHaveValue('12');
-  await expect(ползунок.getByRole('slider', { name: 'До' })).toHaveValue('18');
-  // …и ползунок — поля: левый конец стрелкой вправо.
-  await ползунок.getByRole('slider', { name: 'От' }).focus();
-  await page.keyboard.press('ArrowRight');
-  await expect(page.getByTestId('info-age-min')).toHaveValue('13');
+  // Вторая страница параметров.
+  await page.locator('[data-testid="params-page"][data-page="players"]').click();
+  await expect(page.locator('[data-testid="params-page"][data-page="players"]')).toHaveAttribute('aria-selected', 'true');
+  await expect(page.getByTestId('params-save')).toHaveCount(0);
+  await page.getByTestId('params-age-min').fill('12');
+  await page.getByTestId('params-age-min').press('Tab');
+  await expect(page.getByTestId('params-save')).toBeVisible();
   // «Отменить» — всё как было.
-  await expect(отменить).toBeEnabled();
-  await отменить.click();
-  await expect(page.getByTestId('info-age-min')).toHaveValue('');
-  await expect(сохранить).toBeDisabled();
+  await page.getByTestId('params-cancel').click();
+  await expect(page.getByTestId('params-age-min')).toHaveValue('');
+  await expect(page.getByTestId('params-save')).toHaveCount(0);
 
-  // Как человек: поле на виду, щелчок, набор — прокрутка закрывает открытый список.
-  await page.getByTestId('info-place').scrollIntoViewIfNeeded();
+  await page.getByTestId('params-age-min').fill('12');
+  await page.getByTestId('params-age-min').press('Tab');
+  await page.getByTestId('params-age-max').fill('18');
+  await page.getByTestId('params-age-max').press('Tab');
   await page.getByTestId('info-place').click();
   await page.getByTestId('info-place').pressSequentially('Темиртау');
   await expect(page.getByTestId('info-place-options').getByRole('option')).toHaveCount(1);
   await page.getByTestId('info-place-options').getByRole('option').first().click();
-  await page.getByTestId('info-venue').fill('Дворец спорта «Казахстан»');
-  await page.getByTestId('info-age-min').fill('12');
-  await page.getByTestId('info-age-min').press('Tab');
-  await page.getByTestId('info-age-max').fill('18');
-  await page.getByTestId('info-age-max').press('Tab');
-  // Окончание — день «конца» диапазона дат: день, месяц, год печатаются подряд.
-  const конец = new Date(день.getTime() + 2 * 864e5);
-  const дд = (n: number) => String(n).padStart(2, '0');
-  const сегменты = page.getByTestId('info-dates').getByRole('spinbutton');
-  await сегменты.nth(3).click();
-  await page.keyboard.type(дд(конец.getDate()) + дд(конец.getMonth() + 1) + конец.getFullYear());
+  await page.getByTestId('params-venue').fill('Дворец спорта «Казахстан»');
   await page.screenshot({ path: 'test-results/dashboard/info.png' });
   const ответ = page.waitForResponse((r) => r.url().includes(`/api/tournaments/${t.id}/update/`));
-  await сохранить.click();
+  await page.getByTestId('params-save').click();
   expect((await ответ).status()).toBe(200);
-  await expect(сохранить).toBeDisabled();
+  await expect(page.getByTestId('params-save')).toHaveCount(0);
 
+  // Окончание — вторым щелчком по дню в календаре, сохраняется сразу.
+  const дд = (n: number) => String(n).padStart(2, '0');
+  const даты = page.getByTestId('overview-dates');
+  const сохранено = page.waitForResponse((r) => r.url().includes(`/api/tournaments/${t.id}/update/`));
+  await даты.getByText('20', { exact: true }).click();
+  await даты.getByText('22', { exact: true }).click();
+  expect((await сохранено).status()).toBe(200);
+
+  const конец = new Date(день.getTime() + 2 * 864e5);
+  await expect
+    .poll(async () => (await (await page.request.get(`/api/tournaments/${t.id}/`)).json()).ends_at)
+    .toBe(конец.getFullYear() + '-' + дд(конец.getMonth() + 1) + '-' + дд(конец.getDate()));
   const d = await (await page.request.get(`/api/tournaments/${t.id}/`)).json();
-  expect(d).toMatchObject({
-    region: 'Карагандинская область',
-    city: 'Темиртау',
-    venue: 'Дворец спорта «Казахстан»',
-    age_min: 12,
-    age_max: 18,
-    ends_at: конец.getFullYear() + '-' + дд(конец.getMonth() + 1) + '-' + дд(конец.getDate()),
-  });
+  expect(d).toMatchObject({ region: 'Карагандинская область', city: 'Темиртау', venue: 'Дворец спорта «Казахстан»', age_min: 12, age_max: 18 });
   // Сохранённое переживает перезагрузку.
   await page.reload();
   await expect(page.getByTestId('overview-place-city')).toHaveText('Темиртау, Карагандинская область');
-  await page.getByTestId('info-edit').click();
+  await page.locator('[data-testid="params-page"][data-page="players"]').click();
   await expect(page.getByTestId('info-place')).toHaveValue('Темиртау, Карагандинская область');
-  await expect(page.getByTestId('info-age-max')).toHaveValue('18');
+  await expect(page.getByTestId('params-age-max')).toHaveValue('18');
 });
 
 test('обзор «Сведений»: параметры полями черновиком, адрес окном со значка, сетка ведёт в «Расписание»', async ({ page }) => {
@@ -759,57 +750,9 @@ test('обзор «Сведений»: параметры полями черн�
   d = await (await page.request.get(`/api/tournaments/${t.id}/`)).json();
   expect(d.venue).toBe('пр. Абая, 15, СК «Арена»');
 
-  // Сетка на обзоре — только картинка; «Открыть сетку» ведёт на вид «Сетка».
-  await page.getByTestId('overview-bracket-open').click();
-  await page.waitForURL((url) => url.pathname.endsWith('/schedule') && url.searchParams.get('view') === 'bracket');
-});
-
-test('протокол на «Сведениях» скачивается PDF-файлом кнопкой в углу листа', async ({ page }) => {
-  await войти(page, E2E_ADMIN);
-  await page.waitForURL((url) => url.pathname === '/dashboard');
-  const имя = `[e2e] Протокол ${Date.now()}`;
-  await завести(page, имя, new Date());
-  const t = ((await (await page.request.get('/api/tournaments/')).json()) as { id: string; name: string }[]).find(
-    (x) => x.name === имя,
-  )!;
-  await page.goto(`/dashboard/tournaments/${t.id}/info`);
-  // Форма с листом — в панели «Изменить» ✳ (23.11.2026); меряем, когда панель доехала.
-  await page.getByTestId('info-edit').click();
-  const панель = page.getByTestId('info-drawer');
-  await expect(панель).toBeVisible();
-  let было = -1;
-  await expect
-    .poll(async () => {
-      const x = (await панель.boundingBox())!.x;
-      const стоит = x === было;
-      было = x;
-      return стоит;
-    })
-    .toBe(true);
-  const лист = page.getByTestId('protocol-document');
-  const кнопка = лист.getByTestId('protocol-download');
-  // Кнопка — в правом верхнем углу листа.
-  const л = (await лист.boundingBox())!;
-  const к = (await кнопка.boundingBox())!;
-  expect(к.x + к.width).toBeGreaterThan(л.x + л.width - 24);
-  expect(к.y).toBeLessThan(л.y + 24);
-  // Лист прокрутили — кнопка на том же месте экрана, а не уехала вверх с листом.
-  const прокрутка = page.getByTestId('protocol-scroll');
-  await прокрутка.evaluate((el) => el.scrollTo(0, 300));
-  await expect.poll(async () => прокрутка.evaluate((el) => el.scrollTop)).toBeGreaterThan(100);
-  const после = (await кнопка.boundingBox())!;
-  expect(Math.abs(после.y - к.y)).toBeLessThan(2);
-  expect(Math.abs(после.x - к.x)).toBeLessThan(2);
-  await page.screenshot({ path: 'test-results/dashboard/protocol-scrolled.png' });
-
-  const [файл] = await Promise.all([page.waitForEvent('download'), кнопка.click()]);
-  expect(файл.suggestedFilename()).toBe(`Протокол — ${имя}.pdf`);
-  const путь = await файл.path();
-  const { readFileSync } = await import('node:fs');
-  const байты = readFileSync(путь!);
-  expect(байты.subarray(0, 5).toString()).toBe('%PDF-'); // настоящий PDF, а не пустышка
-  expect(байты.length).toBeGreaterThan(20_000); // в нём картинка листа
-  await expect(кнопка).toBeEnabled();
+  // Сетки у нового турнира нет — пустое состояние, кнопки «Открыть сетку» нет ✳ (24.11.2026).
+  await expect(page.getByTestId('overview-bracket-empty')).toContainText('Сетки пока нет');
+  await expect(page.getByTestId('overview-bracket-open')).toHaveCount(0);
 });
 
 test('«Спортсмены»: фото-заглушка в строке, карточка справа, «Настройки» — приём заявок игроков', async ({
@@ -867,7 +810,7 @@ test('«Спортсмены»: фото-заглушка в строке, ка�
 
 test('председатель ГСК после входа по-прежнему в рейтинге', async ({ page }) => {
   await войти(page, E2E_GSK);
-  await page.waitForURL((url) => url.pathname === '/rating');
+  await page.waitForURL((url) => url.pathname === '/gsk');
 });
 
 test('гостя и председателя из кабинета уводит на вход', async ({ page }) => {
@@ -875,7 +818,7 @@ test('гостя и председателя из кабинета уводит 
   await page.waitForURL((url) => url.pathname === '/login');
 
   await войти(page, E2E_GSK);
-  await page.waitForURL((url) => url.pathname === '/rating');
+  await page.waitForURL((url) => url.pathname === '/gsk');
   await page.goto('/dashboard');
   await page.waitForURL((url) => url.pathname === '/login');
 });

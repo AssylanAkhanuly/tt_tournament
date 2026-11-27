@@ -9,11 +9,11 @@ import { E2E_ADMIN, E2E_GSK } from './global-setup';
 test.use({ viewport: { width: 390, height: 844 } });
 
 test('на телефоне — вкладки разделов вместо бокового меню, выход из аватара', async ({ page }) => {
-  await page.goto('/login?next=' + encodeURIComponent('/rating'));
+  await page.goto('/login?next=' + encodeURIComponent('/gsk'));
   await page.getByLabel('Эл. почта').fill(E2E_GSK.email);
   await page.getByLabel('Пароль').fill(E2E_GSK.password);
   await page.getByRole('button', { name: 'Войти' }).click();
-  await page.waitForURL((url) => url.pathname === '/rating');
+  await page.waitForURL((url) => url.pathname === '/gsk');
 
   // Шапки нет ✳ (03.11.2026, 23.11.2026): ни знака, ни карточки рабочего места; вкладка — одним словом.
   await expect(page.getByTestId('home-link')).toBeHidden();
@@ -27,8 +27,9 @@ test('на телефоне — вкладки разделов вместо б�
   expect((await ахметов.boundingBox())!.width).toBeLessThanOrEqual(390);
   // Отбор и действия — один значок настроек рядом с поиском, панель снизу ✳ (03.11.2026).
   await expect(page.getByTestId('rating-more')).toHaveCount(0);
-  // Поиск занимает строку, значок — справа от него.
-  expect((await page.getByPlaceholder('Фамилия или регион').locator('..').boundingBox())!.width).toBeGreaterThan(280);
+  // Поиск занимает строку; справа — «Карточки · Таблица» ✳ (24.11.2026) и значок настроек.
+  expect((await page.getByPlaceholder('Фамилия или регион').locator('..').boundingBox())!.width).toBeGreaterThan(200);
+  await expect(page.getByTestId('rating-view-cards')).toBeVisible();
   await expect(page.getByTestId('filters-open')).toHaveCount(0);
   const поиск = (await page.getByPlaceholder('Фамилия или регион').boundingBox())!;
   const значок = (await page.getByTestId('table-tools-open').boundingBox())!;
@@ -75,10 +76,10 @@ test('на телефоне — вкладки разделов вместо б�
   await вкладки.getByTestId('side-person').click();
   await expect(page.getByTestId('menu-nav-item')).toHaveText(['Журнал', 'Калибровка']);
   await page.getByTestId('menu-nav-item').filter({ hasText: 'Журнал' }).click();
-  await page.waitForURL((url) => url.pathname === '/rating/journal');
+  await page.waitForURL((url) => url.pathname === '/gsk/journal');
   await expect(вкладки.getByTestId('side-person')).toHaveAttribute('aria-current', 'true');
   await вкладки.getByRole('button', { name: 'Календарь' }).click();
-  await page.waitForURL((url) => url.pathname === '/calendar');
+  await page.waitForURL((url) => url.pathname === '/gsk/calendar');
 
   await вкладки.getByTestId('side-person').click();
   const аккаунт = page.getByTestId('account-page');
@@ -88,11 +89,11 @@ test('на телефоне — вкладки разделов вместо б�
 });
 
 test('на телефоне таблицы и график — от края до края, без полей ✳ (03.11.2026)', async ({ page }) => {
-  await page.goto('/login?next=' + encodeURIComponent('/rating/journal'));
+  await page.goto('/login?next=' + encodeURIComponent('/gsk/journal'));
   await page.getByLabel('Эл. почта').fill(E2E_GSK.email);
   await page.getByLabel('Пароль').fill(E2E_GSK.password);
   await page.getByRole('button', { name: 'Войти' }).click();
-  await page.waitForURL((url) => url.pathname === '/rating/journal');
+  await page.waitForURL((url) => url.pathname === '/gsk/journal');
 
   // Журнал: таблица во всю ширину экрана, счётчика записей нет.
   const журнал = page.getByTestId('journal');
@@ -103,28 +104,28 @@ test('на телефоне таблицы и график — от края д�
   await expect(page.getByTestId('table-count')).toHaveCount(0);
   await page.screenshot({ path: 'test-results/mobile/journal.png' });
 
-  // Карточка: история и график — тоже от края до края.
+  // Карточка — вид профиля ✳ (24.11.2026): блоки в ширину экрана, без бокового сдвига.
   await page.goto('/rating');
   await page.locator('[data-testid="rating-row"][data-player="Ахметов Ерлан"]').click();
   await page.waitForURL(/\/rating\/[0-9a-f-]{36}$/);
-  const история = page.getByTestId('card-history');
+  const история = page.getByTestId('player-card');
   await expect(история).toBeVisible();
-  expect((await история.boundingBox())!.x).toBe(0);
-  expect((await история.boundingBox())!.width).toBe(390);
+  const и = (await история.boundingBox())!;
+  expect(и.x).toBeGreaterThanOrEqual(0);
+  expect(и.x + и.width).toBeLessThanOrEqual(390);
+  const график = page.getByTestId('profile-rating-chart');
+  await expect(график).toBeVisible();
+  const г = (await график.boundingBox())!;
+  expect(г.x + г.width).toBeLessThanOrEqual(390);
   await page.screenshot({ path: 'test-results/mobile/card.png', fullPage: true });
-  await page.getByRole('tab', { name: 'График' }).click();
-  const график = page.getByTestId('card-chart');
-  expect((await график.boundingBox())!.x).toBe(0);
-  expect((await график.boundingBox())!.width).toBe(390);
-  await page.screenshot({ path: 'test-results/mobile/chart.png' });
 });
 
 test('на телефоне окна и карточки календаря — панелями снизу ✳ (03.11.2026)', async ({ page }) => {
-  await page.goto('/login?next=' + encodeURIComponent('/rating'));
+  await page.goto('/login?next=' + encodeURIComponent('/gsk'));
   await page.getByLabel('Эл. почта').fill(E2E_GSK.email);
   await page.getByLabel('Пароль').fill(E2E_GSK.password);
   await page.getByRole('button', { name: 'Войти' }).click();
-  await page.waitForURL((url) => url.pathname === '/rating');
+  await page.waitForURL((url) => url.pathname === '/gsk');
 
   // «Редактировать» на карточке — окно встаёт панелью снизу во всю ширину.
   await page.locator('[data-testid="rating-row"][data-player="Ахметов Ерлан"]').click();
@@ -143,7 +144,7 @@ test('на телефоне окна и карточки календаря — 
   await page.keyboard.press('Escape');
 
   // Календарь: карточка турнира — панель снизу, не поповер за краем.
-  await page.goto('/calendar');
+  await page.goto('/gsk/calendar');
   const турнир = page.getByTestId('calendar-tournament').first();
   await expect(турнир).toBeVisible();
   await турнир.click();

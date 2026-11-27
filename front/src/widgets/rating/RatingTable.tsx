@@ -29,6 +29,7 @@ import { fio, num2, type NewAthlete, type RatingList, type RatingProfile } from 
 import { useNarrow } from '@/shared/kit/app';
 import { DataTable, type DataColumn } from '@/shared/ui/DataTable';
 import { TableTools, type TableAction } from '@/shared/ui/TableTools';
+import { ViewToggle } from '@/shared/ui/ViewToggle';
 import { AthleteForm } from '@/features/rating-admin';
 
 import { RatingCards } from './RatingCards';
@@ -135,9 +136,12 @@ export function RatingTable({
   onColumnFiltersChange,
   onPaginationChange,
   cards = false,
+  onView,
 }: {
   /** Вид карточками ✳ (23.11.2026); нет — таблица. */
   cards?: boolean;
+  /** «Карточки · Таблица» справа над листом ✳ (24.11.2026); нет — переключателя нет (гость). */
+  onView?: (cards: boolean) => void;
   data: RatingList | null;
   loading: boolean;
   error: string | null;
@@ -251,7 +255,12 @@ export function RatingTable({
       empty="По такому отбору никого нет"
       search={{ placeholder: 'Фамилия или регион' }}
       filters={<TableTools place="filters" groups={groups} actions={actions} />}
-      actions={<TableTools place="actions" groups={groups} actions={actions} />}
+      actions={
+        <>
+          {onView && <ViewToggle cards={cards} onChange={onView} testIds={{ cards: 'rating-view-cards', table: 'rating-view-table' }} />}
+          <TableTools place="actions" groups={groups} actions={actions} />
+        </>
+      }
       onRowAction={(r) => router.push('/rating/' + r.userId)}
       rowProps={(r) => ({ 'data-testid': 'rating-row', 'data-player': r.name })}
       cards={cards ? (shown) => <RatingCards rows={shown} first={pagination.pageIndex * pagination.pageSize} onOpen={(id) => router.push('/rating/' + id)} /> : undefined}

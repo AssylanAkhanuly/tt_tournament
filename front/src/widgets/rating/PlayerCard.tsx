@@ -1,27 +1,16 @@
 'use client';
 
-/* Карточка спортсмена ✳ (новый вид 03.11.2026, решение владельца продукта:
-   строго и без обёрток). На всю рабочую область, без карточек и полей вокруг —
-   как таблицы приложения:
-   - шапка: фото со статусом точкой в углу (зелёная — активен), ФИО, регион и
-     год рождения; справа — текущий рейтинг крупно;
-   - полоса показателей строками ячеек через черту: место, матчи, победы и
-     поражения, доля побед, старт, последний матч (и позиция ITTF, неявки —
-     если есть);
-   - история изменения рейтинга — полоса с переключателем «Таблица · График»
-     и общий `DataTable` во всю ширину; изменение рейтинга видно только здесь:
-     выпусков нет.
+/* История изменения рейтинга на карточке спортсмена. Сама карточка с
+   24.11.2026 — вид профиля (`PlayerProfile` из `widgets/national`: шапка,
+   показатели, динамика, личные встречи), эта таблица — блоком под ним.
+   Прежняя карточка «без обёрток» (03.11.2026) снята решением владельца продукта.
 
    История — таблица п. 20 Положения со слагаемыми изменения: п. 4.6 требует,
    чтобы каждое изменение было связано с конкретным матчем и объяснимо.
    Ссылок на пункты Положения на экране нет ✳ (10.09.2026): подписи видов
    записей приходят с сервера с «(п. …)» — их отрезает `plainLabel`. */
 
-import { Avatar } from '@heroui/react';
-import { useState, type ReactNode } from 'react';
-
 import { coeff, num2, plainLabel, ruDate, signed2, type RatingCard, type RatingEntry } from '@/entities/rating';
-import { Line, Segmented } from '@/shared/kit/app';
 import { DataTable, type DataColumn } from '@/shared/ui/DataTable';
 
 /** Вид записи задаёт, как её читать: матч, штраф или служебная строка. */
@@ -33,6 +22,8 @@ const KIND_TONE: Record<RatingEntry['kind'], string> = {
   correction: 'text-amber-700',
   void: 'text-red-600',
   merge: 'text-brand-700',
+  remove: 'text-red-600',
+  restore: 'text-brand-700',
 };
 
 const right = (text: string) => <span className="block text-right">{text}</span>;
@@ -91,118 +82,30 @@ const COLUMNS: DataColumn<RatingEntry>[] = [
 ];
 
 /** Цвет точки статуса на фото: зелёная — активен (п. 18). */
-const STATUS_DOT: Record<RatingCard['profile']['status'], string> = {
+export const STATUS_DOT: Record<RatingCard['profile']['status'], string> = {
   active: 'bg-green-500',
   inactive: 'bg-amber-400',
   no_matches: 'bg-neutral-300',
   void: 'bg-red-500',
 };
 
-export function PlayerCard({ card, showName = true }: { card: RatingCard; showName?: boolean }) {
-  const { profile: p, history, place, of } = card;
-  const доля = p.matchesPlayed ? Math.round((p.wins / p.matchesPlayed) * 100) : null;
-
-  // Таблица и график — два взгляда на одну историю ✳ (16.09.2026): в таблице
-  // видно каждую запись со слагаемыми, на графике — куда движется значение.
-  // Отменённые строки в линию не идут: значение карточки — сумма неотменённых.
-  const [view, setView] = useState('Таблица');
-  const points = [...history]
-    .filter((h) => !h.isReverted)
-    .reverse()
-    .map((h) => ({
-      t: ruDate(h.occurredAt),
-      v: h.after,
-      note: h.tournamentName ?? plainLabel(h.kindLabel),
-      tone: h.delta > 0 ? ('up' as const) : h.delta < 0 ? ('down' as const) : undefined,
-      lines: [
-        ruDate(h.occurredAt),
-        'рейтинг ' + num2(h.after) + (h.kind === 'start' ? '' : ' · ' + signed2(h.delta)),
-        ...(h.opponentName ? [h.opponentName + (h.score ? ' · ' + h.score : '')] : []),
-        ...(h.reason && h.kind !== 'start' ? [h.reason] : []),
-      ],
-    }));
-
-  const facts: [string, ReactNode][] = [
-    ['Место в листе', '№' + place + ' из ' + of],
-    ['Рейтинговых матчей', p.matchesPlayed],
-    ['Побед и поражений', p.wins + ' / ' + p.losses],
-    ['Доля побед', доля === null ? '—' : доля + ' %'],
-    ['Стартовое значение', num2(p.startValue)],
-    ...(p.ittfPosition ? ([['Позиция в ITTF на момент входа', p.ittfPosition]] as [string, ReactNode][]) : []),
-    ['Последний рейтинговый матч', ruDate(p.lastMatchAt) || '—'],
-    ...(p.noShows ? ([['Подтверждённых неявок', p.noShows]] as [string, ReactNode][]) : []),
-  ];
-
+/** История изменения рейтинга таблицей со слагаемыми — под профилем на
+    карточке спортсмена ✳ (24.11.2026); график — блок «Динамика рейтинга» выше. */
+export function CardHistory({ history }: { history: RatingEntry[] }) {
   return (
-    <div className="flex min-h-0 flex-1 flex-col overflow-auto bg-white" data-testid="player-card">
-      <header className="flex flex-wrap items-center gap-4 border-b border-neutral-200 px-6 py-5">
-        {/* Статус — точкой в углу фото ✳ (03.11.2026, решение владельца
-            продукта), а не плашкой: зелёная — активен; подпись — в подсказке. */}
-        <span className="relative shrink-0">
-          <Avatar size="lg">
-            <Avatar.Fallback>{p.name.slice(0, 1)}</Avatar.Fallback>
-          </Avatar>
-          <span
-            role="img"
-            aria-label={p.statusLabel}
-            title={p.statusLabel}
-            data-testid="card-status"
-            data-status={p.status}
-            className={'absolute bottom-0.5 right-0.5 size-3.5 rounded-full ring-2 ring-white ' + STATUS_DOT[p.status]}
-          />
-        </span>
-        <div className="min-w-0 flex-1 leading-tight">
-          {showName && <h1 className="text-xl font-semibold tracking-tight">{p.name}</h1>}
-          <p className="mt-1 text-[13px] text-neutral-500">
-            {[p.region, p.ageCategory, p.birthYear ? p.birthYear + ' г. р.' : null].filter(Boolean).join(' · ') ||
-              'Регион не указан'}
-          </p>
-        </div>
-        <div className="text-right" data-testid="card-value">
-          <p className="text-[12px] text-neutral-500">Текущий рейтинг</p>
-          <p className="text-3xl font-semibold tabular-nums tracking-tight">{num2(p.value)}</p>
-        </div>
-      </header>
-
-      <dl className="m-0 grid grid-cols-2 border-b border-neutral-200 sm:grid-cols-3 xl:grid-cols-[repeat(auto-fit,minmax(10rem,1fr))]">
-        {facts.map(([label, value]) => (
-          <div key={label} className="border-b border-r border-neutral-100 px-6 py-3 xl:border-b-0" data-testid="card-fact">
-            <dt className="text-[12px] text-neutral-500">{label}</dt>
-            <dd className="m-0 mt-0.5 text-[15px] font-semibold tabular-nums">{value}</dd>
-          </div>
-        ))}
-      </dl>
-
-      <div className="flex items-center gap-3 border-b border-neutral-200 px-6 py-3">
-        <h2 className="min-w-0 flex-1 text-[14px] font-semibold">История изменения рейтинга</h2>
-        {history.length > 0 && (
-          <div className="shrink-0 [&_[data-seg]]:flex-nowrap">
-            <Segmented items={['Таблица', 'График']} value={view} onPick={setView} ariaLabel="Вид истории" />
-          </div>
-        )}
-      </div>
-
-      {view === 'График' && history.length ? (
-        // На телефоне график — от края до края, поля только на широком экране.
-        <div className="py-4 sm:px-6 sm:py-5" data-testid="card-chart">
-          <Line points={points} label="История рейтинга" />
-        </div>
-      ) : (
-        <DataTable
-          ariaLabel="История изменения рейтинга"
-          testId="card-history"
-          rows={history}
-          columns={COLUMNS}
-          getId={(h) => String(h.id)}
-          pageSize={50}
-          empty="Рейтинговых матчей у спортсмена ещё не было"
-          rowProps={(h) => ({
-            'data-testid': 'card-history-row',
-            'data-kind': h.kind,
-            'data-reverted': h.isReverted ? 'yes' : 'no',
-          })}
-        />
-      )}
-    </div>
+    <DataTable
+      ariaLabel="История изменения рейтинга"
+      testId="card-history"
+      rows={history}
+      columns={COLUMNS}
+      getId={(h) => String(h.id)}
+      pageSize={50}
+      empty="Рейтинговых матчей у спортсмена ещё не было"
+      rowProps={(h) => ({
+        'data-testid': 'card-history-row',
+        'data-kind': h.kind,
+        'data-reverted': h.isReverted ? 'yes' : 'no',
+      })}
+    />
   );
 }

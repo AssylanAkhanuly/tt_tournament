@@ -19,11 +19,8 @@
    (`place` в строке состава считает сервер).
    Выбранная карточка залита тёмно-синим бренда.
 
-   Заглушки сгенерированы fal.ai (FLUX dev, 22.11.2026): «вымышленный
-   казахстанский спортсмен / спортсменка по пояс, в стойке с ракеткой, в
-   тёмно-синей форме с голубой отделкой без знаков и надписей», фон снят
-   (`imageutils/rembg`); вымышленные люди, не спортсмены федерации. Лежат в
-   `public/national/players/`.
+   Заглушка — контур игрока своего пола ✳ (27.11.2026, `shared/lib/figure.ts`);
+   до того — снимки вымышленных людей, сгенерированные fal.ai.
 
    Справа — панель выбранного (`roster-detail`): шапка на тёмно-синем — та же
    фигура крупно слева, справа состав, имя, короткие сведения; ниже строки с
@@ -34,15 +31,17 @@
    телефоне панели нет — щелчок открывает профиль. Строки — те, кого человеку
    видно (решает сервер). */
 
-import { Button, SearchField, Spinner, ToggleButton, ToggleButtonGroup } from '@heroui/react';
-import { ArrowRight, LayoutGrid, List } from 'lucide-react';
+import { Button, SearchField, Spinner } from '@heroui/react';
+import { ArrowRight } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useMemo, useState, type ReactNode } from 'react';
 
 import { AGE_GROUP_LABEL, fetchMembers, SQUAD_LABEL, useLoad, type AgeGroup, type NationalMember, type Squad } from '@/entities/national';
 import { num2, useRatingCard } from '@/entities/rating';
 import { FilterMenu, useNarrow } from '@/shared/kit/app';
+import { PlayerCard, PlayerFigure } from '@/shared/ui/PlayerCard';
 import { TablePagination } from '@/shared/ui/table';
+import { ViewToggle } from '@/shared/ui/ViewToggle';
 
 import { AddMemberDialog, ClearanceChip, placeholderOf, RosterTable } from './RosterParts';
 
@@ -106,56 +105,27 @@ const planText = (m: NationalMember) => (m.plan ? m.plan.done + ' из ' + m.pla
 
 function MemberCard({ m, on, onPick, onOpen }: { m: NationalMember; on: boolean; onPick: () => void; onOpen: () => void }) {
   const { surname, rest } = splitName(m.person.name);
-  const facts: [string, ReactNode][] = [
-    ['Группа', AGE_GROUP_LABEL[m.ageGroup]],
-    ['Рейтинг', m.person.rating ? num2(Number(m.person.rating)) : '—'],
-    ...(m.plan !== undefined ? [['План', <span key="p" data-testid="member-plan">{planText(m)}</span>] as [string, ReactNode]] : []),
-  ];
   return (
-    <button
-      type="button"
-      onClick={onPick}
+    <PlayerCard
+      figure={<PlayerFigure src={m.figure ?? placeholderOf(m)} photo={!!m.figure} testId="member-photo" />}
+      // Место в рейтинг-листе — огромной контурной цифрой фоном справа ✳ (22.11.2026).
+      place={m.place}
+      placeTestId="member-place"
+      surname={surname}
+      rest={rest}
+      region={m.person.region}
+      facts={[
+        { label: 'Группа', value: AGE_GROUP_LABEL[m.ageGroup] },
+        { label: 'Рейтинг', value: m.person.rating ? num2(Number(m.person.rating)) : '—' },
+        ...(m.plan !== undefined ? [{ label: 'План', value: planText(m), testId: 'member-plan' }] : []),
+      ]}
+      selected={on}
+      corner={<Dot m={m} className="top-0 left-0" />}
+      onPress={onPick}
       onDoubleClick={onOpen}
-      aria-pressed={on}
-      className={
-        'group relative flex h-36 min-w-0 overflow-hidden rounded-2xl border text-left transition-[box-shadow,border-color] ' +
-        (on ? 'border-transparent text-white shadow-lg shadow-brand-700/25 ' + FILL : 'border-neutral-200/80 bg-white hover:border-brand-200 hover:shadow-md')
-      }
-      data-testid="member-row"
-      data-name={m.person.name}
-    >
-      <Figure m={m} className="w-32 bg-qtt-peach" size="h-[94%]" />
-      <Dot m={m} className="top-2.5 left-2.5" />
-      {/* Место в рейтинг-листе — огромной контурной цифрой фоном справа, во всю
-          высоту карточки, как номер игрока в образце ✳ (22.11.2026, решение
-          владельца продукта). */}
-      {m.place && (
-        <span aria-hidden className="pointer-events-none absolute inset-y-0 right-0 left-32 flex items-center justify-end overflow-hidden pr-3">
-          <span
-            className={
-              'font-[family-name:var(--font-jersey)] text-[196px] leading-[0.72] tracking-tight text-transparent tabular-nums select-none ' +
-              (on ? '[-webkit-text-stroke:1.5px_color-mix(in_srgb,white_22%,transparent)]' : '[-webkit-text-stroke:1.5px_color-mix(in_srgb,var(--color-neutral-200)_80%,transparent)]')
-            }
-            data-testid="member-place"
-          >
-            {m.place}
-          </span>
-        </span>
-      )}
-      <span className="relative flex min-w-0 flex-1 flex-col justify-center px-4 py-3">
-        <span className="truncate text-[16px] leading-tight font-bold">{surname}</span>
-        <span className={'truncate text-[13px] ' + (on ? 'text-white/75' : 'text-neutral-500')}>{rest}</span>
-        <span className={'truncate text-[12px] ' + (on ? 'text-white/60' : 'text-neutral-400')}>{m.person.region || 'Регион не указан'}</span>
-        <span className="mt-2.5 flex gap-x-4">
-          {facts.map(([label, value]) => (
-            <span key={label} className="flex min-w-0 flex-col">
-              <span className={'text-[10px] font-semibold tracking-wide uppercase ' + (on ? 'text-white/60' : 'text-neutral-400')}>{label}</span>
-              <span className="text-[12.5px] font-medium whitespace-nowrap tabular-nums">{value}</span>
-            </span>
-          ))}
-        </span>
-      </span>
-    </button>
+      testId="member-row"
+      data={{ name: m.person.name }}
+    />
   );
 }
 
@@ -308,24 +278,7 @@ export function RosterBoard({ canEdit, onOpen }: { canEdit: boolean; onOpen: (me
           </SearchField>
           <FilterMenu groups={filters} />
           <div className="ml-auto flex items-center gap-3">
-            <ToggleButtonGroup
-              size="sm"
-              aria-label="Вид"
-              selectionMode="single"
-              disallowEmptySelection
-              selectedKeys={[view]}
-              onSelectionChange={(keys) => {
-                const v = [...keys][0];
-                if (v) setView(String(v));
-              }}
-            >
-              <ToggleButton id="grid" aria-label="Карточки" data-testid="roster-view-grid">
-                <LayoutGrid size={16} />
-              </ToggleButton>
-              <ToggleButton id="table" aria-label="Таблица" data-testid="roster-view-table">
-                <List size={16} />
-              </ToggleButton>
-            </ToggleButtonGroup>
+            <ViewToggle cards={view === 'grid'} onChange={(c) => setView(c ? 'grid' : 'table')} testIds={{ cards: 'roster-view-grid', table: 'roster-view-table' }} />
             {canEdit && <AddMemberDialog onAdded={members.reload} />}
           </div>
         </div>

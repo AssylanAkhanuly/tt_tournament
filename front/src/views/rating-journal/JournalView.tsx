@@ -41,6 +41,8 @@ const KINDS: [string, RatingEntryKind | undefined][] = [
   ['Стартовое значение', 'start'],
   ['Аннулирование', 'void'],
   ['Объединение карточек', 'merge'],
+  ['Удаление из рейтинга', 'remove'],
+  ['Возврат в рейтинг', 'restore'],
 ];
 
 function what(e: RatingJournalEntry): string {
@@ -122,7 +124,7 @@ const COLUMNS: DataColumn<RatingJournalEntry>[] = [
 
 export function JournalView() {
   const router = useRouter();
-  const allowed = useChairmanOnly('/rating/journal');
+  const allowed = useChairmanOnly('/gsk/journal');
   const [kind, setKind] = useState(KINDS[0][0]);
   const [q, setQ] = useState('');
   const [page, setPage] = useState(0);

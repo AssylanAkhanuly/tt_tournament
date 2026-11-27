@@ -35,12 +35,16 @@ import { AppShell, type ShellSubItem } from '@/widgets/app-shell';
 /** Раздел меню: подпись, адрес, значок и — по желанию — подпункты (`ShellSubItem`). */
 export type RatingNavItem = [string, string, ReactNode, ShellSubItem[]?];
 
+/* Адреса — под кабинетом `/gsk` ✳ (24.11.2026, решение владельца продукта:
+   «как у остальных ролей» — `/dashboard`, `/chief`, `/coach`…). Прежние
+   `/rating/journal`, `/rating/calibration`, `/calendar` перенаправляются
+   (`next.config.ts`); `/rating` и карточка `/rating/<id>` — публичные. */
 const NAV: RatingNavItem[] = [
-  ['Рейтинг игроков', '/rating', <BarChart3 size={16} key="r" />],
-  ['Журнал', '/rating/journal', <ScrollText size={16} key="j" />],
-  ['Калибровка', '/rating/calibration', <SlidersHorizontal size={16} key="k" />],
+  ['Рейтинг игроков', '/gsk', <BarChart3 size={16} key="r" />],
+  ['Журнал', '/gsk/journal', <ScrollText size={16} key="j" />],
+  ['Калибровка', '/gsk/calibration', <SlidersHorizontal size={16} key="k" />],
   // Тот же раздел, что главная у администратора федерации ✳ (28.10.2026).
-  ['Календарь', '/calendar', <CalendarDays size={16} key="c" />],
+  ['Календарь', '/gsk/calendar', <CalendarDays size={16} key="c" />],
 ];
 
 /** Второстепенные разделы: на телефоне — в «Меню», а не во вкладках ✳ (23.11.2026). */
@@ -61,7 +65,7 @@ export function RatingShell({
   nav = NAV,
   sub,
   context,
-  home = '/calendar',
+  home = '/gsk/calendar',
   children,
 }: {
   /** Заголовок — только когда он и есть содержание (имя спортсмена). */

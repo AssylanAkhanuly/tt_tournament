@@ -48,7 +48,7 @@ function Stat({ label, value, tone }: { label: string; value: string; tone?: 'up
   );
 }
 
-export function RatingBlock({ userId, card }: { userId: string; card: ReturnType<typeof useRatingCard> }) {
+export function RatingBlock({ userId, card, historyLink = true }: { userId: string; card: ReturnType<typeof useRatingCard>; historyLink?: boolean }) {
   const [period, setPeriod] = useState<Period>('all');
   // Сервер отдаёт историю новыми вперёд и в порядке записи: у записей одного
   // турнира время одно, пересортировка по нему перемешала бы их.
@@ -78,7 +78,7 @@ export function RatingBlock({ userId, card }: { userId: string; card: ReturnType
       testId="profile-rating"
       title="Динамика рейтинга"
       action={
-        card.data && (
+        card.data && historyLink && (
           <a href={`/rating/${userId}`} className="text-[13px] font-medium text-brand-600 hover:underline" data-testid="profile-rating-open">
             Вся история
           </a>

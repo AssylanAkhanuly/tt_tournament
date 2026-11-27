@@ -16,7 +16,7 @@ import { useTournamentPage, type TournamentSectionId } from '@/widgets/tournamen
 export function GskTournamentView({ id, section }: { id: string; section: TournamentSectionId }) {
   const router = useRouter();
   const { loading, isGskChairman } = useSession();
-  const page = useTournamentPage({ id, section, cabinet: 'gsk', back: '/calendar' });
+  const page = useTournamentPage({ id, section, cabinet: 'gsk', back: '/gsk/calendar' });
 
   useEffect(() => {
     if (!loading && !isGskChairman) router.replace('/login?next=' + encodeURIComponent(tournamentHref('gsk', id, section)));
