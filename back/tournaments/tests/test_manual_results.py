@@ -347,3 +347,15 @@ def test_result_winner_must_be_one_of_the_pair(мир):
     вручную(api, t)
     r = api.post(url(t, "manual/matches/"), {"a": str(a.id), "b": str(b.id), "winner": str(c.id)}, format="json")
     assert r.status_code == 400
+
+
+def test_match_with_deleted_player_is_not_listed(мир):
+    t = мир["t"]
+    a, b, c, d = мир["игроки"]
+    api = клиент(мир["председатель"])
+    вручную(api, t)
+    матч(api, t, a, b, 3, 1)
+    матч(api, t, c, d, 3, 2)
+    d.delete()
+    rows = api.get(url(t)).data["manual_matches"]
+    assert [(r["player1"]["name"], r["player2"]["name"]) for r in rows] == [("Игрок 0", "Игрок 1")]

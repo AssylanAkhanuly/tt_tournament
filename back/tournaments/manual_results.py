@@ -256,5 +256,7 @@ def manual_snapshot(t: Tournament) -> list:
             # Итог без счёта ✳ (27.11.2026) — в рейтинг не идёт.
             "rated": m.score1 is not None and m.score2 is not None,
         }
-        for m in t.matches.select_related("player1", "player2").order_by("match_number")
+        # Матч, у которого спортсмена удалили вместе с учёткой, не показываем:
+        # без пары он ничего не значит, а экран ждёт обоих.
+        for m in t.matches.select_related("player1", "player2").filter(player1__isnull=False, player2__isnull=False).order_by("match_number")
     ]
