@@ -319,3 +319,31 @@ def test_незавершённый_не_возвращается_и_чужим_
     assert вернуть(клиент(мир["судья"]), t).status_code == 403
     assert вернуть(клиент(a), t).status_code == 403
     assert вернуть(api, t).status_code == 200
+
+
+def test_result_without_score_is_recorded_but_does_not_change_rating(мир):
+    """Итог без счёта ✳ (27.11.2026): победа видна, рейтинг считает только матч со счётом."""
+    from rating.models import RatingEntry
+
+    t = мир["t"]
+    a, b, c, d = мир["игроки"]
+    api = клиент(мир["председатель"])
+    вручную(api, t)
+    r = api.post(url(t, "manual/matches/"), {"a": str(c.id), "b": str(d.id), "winner": str(d.id)}, format="json")
+    assert r.status_code == 200, r.data
+    row = next(m for m in r.data["manual_matches"] if m["player1"]["id"] == str(c.id))
+    assert (row["winner"], row["score1"], row["score2"], row["rated"]) == (str(d.id), None, None, False)
+    матч(api, t, a, b, 3, 0)
+
+    assert завершить(api, t).status_code == 200
+    rated = set(RatingEntry.objects.filter(tournament=t, kind=RatingEntry.KIND_MATCH).values_list("profile__user_id", flat=True))
+    assert rated == {a.id, b.id}
+
+
+def test_result_winner_must_be_one_of_the_pair(мир):
+    t = мир["t"]
+    a, b, c, _ = мир["игроки"]
+    api = клиент(мир["председатель"])
+    вручную(api, t)
+    r = api.post(url(t, "manual/matches/"), {"a": str(a.id), "b": str(b.id), "winner": str(c.id)}, format="json")
+    assert r.status_code == 400

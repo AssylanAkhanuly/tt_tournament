@@ -13,7 +13,12 @@
 - матч — между двумя разными участниками турнира, счёт по «до N побед»
   турнира (`games_to_win`): у победителя ровно N партий, у проигравшего
   меньше; ничьих нет;
-- вносят главный судья турнира, председатель ГСК и администратор федерации.
+- вносят главный судья турнира, председатель ГСК и администратор федерации;
+- **итог без счёта** ✳ (27.11.2026, решение владельца продукта: «при ручном
+  вводе — победа/поражение, которые не влияют на рейтинг»): вместо партий
+  указывают победителя (`winner`). Матч хранится без счёта (`score1/2 = None`),
+  и рейтинг его не берёт — `rating.services._collect_matches` пропускает матчи
+  без счёта (п. 16.3: начисление — только по подтверждённому счёту партий).
 
 Матч хранится обычным `Match` — кругом 1, сыгранным, с победителем: тем же
 видом, что у турнира протоколом вручную (`rating/manual.py`), поэтому учёт в
@@ -87,8 +92,11 @@ def _check_open(t: Tournament) -> None:
 
 
 @transaction.atomic
-def add_match(t: Tournament, a_id, b_id, score_a, score_b) -> Match:
-    """Кто с кем сыграл и счёт. Победитель — у кого больше партий."""
+def add_match(t: Tournament, a_id, b_id, score_a, score_b, winner_id=None) -> Match:
+    """Кто с кем сыграл и счёт. Победитель — у кого больше партий.
+
+    С `winner_id` и без счёта — итог без партий: победа и поражение видны в
+    турнире, но в рейтинг не идут (см. шапку модуля)."""
     _check_open(t)
     if str(a_id) == str(b_id):
         raise ResultsError("Спортсмен не играет сам с собой.")
@@ -96,6 +104,19 @@ def add_match(t: Tournament, a_id, b_id, score_a, score_b) -> Match:
     a, b = members.get(str(a_id)), members.get(str(b_id))
     if not a or not b:
         raise ResultsError("Матч — только между участниками турнира.")
+    if winner_id not in (None, ""):
+        if str(winner_id) not in (str(a_id), str(b_id)):
+            raise ResultsError("Победитель — один из двух спортсменов матча.")
+        number = (t.matches.aggregate(n=Max("match_number"))["n"] or 0) + 1
+        return Match.objects.create(
+            tournament=t,
+            round_number=1,
+            match_number=number,
+            player1=a,
+            player2=b,
+            winner=a if str(winner_id) == str(a_id) else b,
+            status=Match.FINISHED,
+        )
     try:
         sa, sb = int(score_a), int(score_b)
     except (TypeError, ValueError):
@@ -232,6 +253,8 @@ def manual_snapshot(t: Tournament) -> list:
             "score1": m.score1,
             "score2": m.score2,
             "winner": str(m.winner_id) if m.winner_id else None,
+            # Итог без счёта ✳ (27.11.2026) — в рейтинг не идёт.
+            "rated": m.score1 is not None and m.score2 is not None,
         }
         for m in t.matches.select_related("player1", "player2").order_by("match_number")
     ]

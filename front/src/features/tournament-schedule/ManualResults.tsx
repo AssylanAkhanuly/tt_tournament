@@ -14,6 +14,12 @@
    сервер. После этого матчи не меняются, а у таблицы два вида — «Рейтинг»
    (было, изменение, стало — по каждому сыгравшему) и «Матчи».
 
+   «Итог без счёта» ✳ (27.11.2026, решение владельца продукта: «победа /
+   поражение вручную, не влияет на рейтинг»): в окне матча переключатель
+   «Счёт · Итог»; во «Итоге» вместо партий — победа или поражение спортсмена.
+   Сервер хранит матч без счёта и в рейтинг его не берёт (`rated: false`); в
+   таблице — «В : П» и пометка «вне рейтинга».
+
    «Вернуть турнир» ✳ (12.11.2026, решение владельца продукта) — только у
    последнего завершённого турнира, с подтверждением: рейтинг турнира
    откатывается, матчи снова правятся. Кнопку показывает `canUnfinish` —
@@ -83,10 +89,13 @@ function AddMatch({ s, tournamentId, onSaved }: { s: Schedule; tournamentId: str
   const [b, setB] = useState<string | null>(null);
   const [ga, setGa] = useState(s.gamesToWin);
   const [gb, setGb] = useState(0);
+  const [mode, setMode] = useState<'Счёт' | 'Итог'>('Счёт');
+  const [won, setWon] = useState<'Победа' | 'Поражение'>('Победа');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const n = s.gamesToWin;
-  const ready = !!a && !!b && a !== b && Math.max(ga, gb) === n && Math.min(ga, gb) < n;
+  const pair = !!a && !!b && a !== b;
+  const ready = pair && (mode === 'Итог' || (Math.max(ga, gb) === n && Math.min(ga, gb) < n));
   const options = s.players.map((p) => ({ id: p.id, label: p.name }));
 
   const open = (isOpen: boolean) => {
@@ -95,6 +104,8 @@ function AddMatch({ s, tournamentId, onSaved }: { s: Schedule; tournamentId: str
       setB(null);
       setGa(n);
       setGb(0);
+      setMode('Счёт');
+      setWon('Победа');
       setError(null);
     }
     state.setOpen(isOpen);
@@ -105,7 +116,8 @@ function AddMatch({ s, tournamentId, onSaved }: { s: Schedule; tournamentId: str
     setBusy(true);
     setError(null);
     try {
-      onSaved(await addManualMatch(tournamentId, { a, b, scoreA: ga, scoreB: gb }));
+      const match = mode === 'Итог' ? { a, b, winner: won === 'Победа' ? a : b } : { a, b, scoreA: ga, scoreB: gb };
+      onSaved(await addManualMatch(tournamentId, match));
       state.close();
     } catch (e) {
       setError((e as Error).message);
@@ -136,8 +148,48 @@ function AddMatch({ s, tournamentId, onSaved }: { s: Schedule; tournamentId: str
             placeholder="Выберите"
             testId="manual-a"
           />
-          <Games label="Партий у спортсмена" value={ga} max={n} onChange={setGa} testId="manual-score-a" />
-          <Games label="Партий у соперника" value={gb} max={n} onChange={setGb} testId="manual-score-b" />
+          <div className="self-center" data-testid="manual-mode">
+            <Segmented items={['Счёт', 'Итог']} value={mode} onPick={(v) => setMode(v as 'Счёт' | 'Итог')} ariaLabel="Что вносим" />
+          </div>
+          {mode === 'Счёт' ? (
+            <>
+              <Games label="Партий у спортсмена" value={ga} max={n} onChange={setGa} testId="manual-score-a" />
+              <Games label="Партий у соперника" value={gb} max={n} onChange={setGb} testId="manual-score-b" />
+            </>
+          ) : (
+            // Две большие кнопки вместо переключателя ✳ (27.11.2026, решение
+            // владельца продукта): «В» — спортсмен выиграл, «П» — проиграл.
+            <div className="flex flex-col gap-2" data-testid="manual-outcome">
+              <div className="grid grid-cols-2 gap-3" role="radiogroup" aria-label="Итог спортсмена">
+                {(['Победа', 'Поражение'] as const).map((v) => {
+                  const on = won === v;
+                  const win = v === 'Победа';
+                  return (
+                    <button
+                      key={v}
+                      type="button"
+                      role="radio"
+                      aria-checked={on}
+                      onClick={() => setWon(v)}
+                      data-testid={win ? 'manual-win' : 'manual-loss'}
+                      className={
+                        'flex h-28 cursor-pointer flex-col items-center justify-center gap-1 rounded-2xl border-2 transition-colors ' +
+                        (on
+                          ? win
+                            ? 'border-green-600 bg-green-600 text-white'
+                            : 'border-red-600 bg-red-600 text-white'
+                          : 'border-neutral-200 bg-white text-neutral-700 hover:border-neutral-300')
+                      }
+                    >
+                      <span className="text-[44px] leading-none font-bold">{win ? 'В' : 'П'}</span>
+                      <span className="text-[13px] font-medium">{v}</span>
+                    </button>
+                  );
+                })}
+              </div>
+              <span className="text-center text-[12.5px] text-neutral-500">Не влияет на рейтинг</span>
+            </div>
+          )}
           <Picker
             label="Соперник"
             showLabel
@@ -326,12 +378,19 @@ export function ManualResults({
     {
       id: 'score',
       label: 'Счёт',
-      className: 'w-20',
-      render: (m) => (
-        <span className="font-semibold tabular-nums" data-testid="manual-score">
-          {m.score1}:{m.score2}
-        </span>
-      ),
+      className: 'w-32',
+      render: (m) =>
+        m.rated ? (
+          <span className="font-semibold tabular-nums" data-testid="manual-score">
+            {m.score1}:{m.score2}
+          </span>
+        ) : (
+          // Итог без счёта ✳ (27.11.2026): победа / поражение, в рейтинг не идёт.
+          <span className="flex flex-col leading-tight" data-testid="manual-score" data-rated="no">
+            <span className="font-semibold">{m.winner === m.player1.id ? 'В : П' : 'П : В'}</span>
+            <span className="text-[11.5px] text-neutral-500">вне рейтинга</span>
+          </span>
+        ),
     },
     {
       id: 'b',

@@ -247,7 +247,13 @@
 - **Хранение:** обычный `Match` — круг 1, сыгран, с победителем, как у турнира
   протоколом вручную; учёт в рейтинге при завершении — общим путём.
 - **Ручки:** `POST …/schedule/manual/` `{on}`, `POST …/schedule/manual/matches/`
-  `{a, b, score_a, score_b}`, `DELETE …/schedule/manual/matches/<id>/`; в
+  `{a, b, score_a, score_b}` или ✳ (27.11.2026) `{a, b, winner}` — **итог без
+  счёта** (решение владельца продукта: «победа / поражение, не влияет на
+  рейтинг»): матч хранится без партий (`score1/2 = None`), и
+  `rating.services._collect_matches` его пропускает, как неявку — п. 16.3
+  начисляет только по счёту партий; в ответе у матча `rated: false`. На экране —
+  «Счёт · Итог» в окне матча и две большие кнопки «В» / «П»;
+  `DELETE …/schedule/manual/matches/<id>/`; в
   ответе расписания — `mode`, `can_manual`, `can_build`, `manual_matches`,
   `players`, `games_to_win`.
 - **Завершить турнир** ✳ (03.11.2026): `POST …/schedule/manual/finish/` — когда
