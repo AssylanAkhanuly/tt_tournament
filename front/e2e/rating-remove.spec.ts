@@ -100,7 +100,10 @@ test('ручной ввод: итог без счёта большими кно�
     const win = page.getByTestId('manual-win');
     const loss = page.getByTestId('manual-loss');
     await expect(win).toHaveAttribute('aria-checked', 'true');
-    expect((await win.boundingBox())!.height).toBeGreaterThanOrEqual(100);
+    // Кнопки большие и стоят столбиком: «П» под «В».
+    const [wb, lb] = [(await win.boundingBox())!, (await loss.boundingBox())!];
+    expect(wb.height).toBeGreaterThanOrEqual(56);
+    expect(lb.y).toBeGreaterThan(wb.y + wb.height - 1);
     await loss.click();
     await expect(loss).toHaveAttribute('aria-checked', 'true');
     await expect(win).toHaveAttribute('aria-checked', 'false');

@@ -148,48 +148,64 @@ function AddMatch({ s, tournamentId, onSaved }: { s: Schedule; tournamentId: str
             placeholder="Выберите"
             testId="manual-a"
           />
-          <div className="self-center" data-testid="manual-mode">
-            <Segmented items={['Счёт', 'Итог']} value={mode} onPick={(v) => setMode(v as 'Счёт' | 'Итог')} ariaLabel="Что вносим" />
-          </div>
-          {mode === 'Счёт' ? (
-            <>
-              <Games label="Партий у спортсмена" value={ga} max={n} onChange={setGa} testId="manual-score-a" />
-              <Games label="Партий у соперника" value={gb} max={n} onChange={setGb} testId="manual-score-b" />
-            </>
-          ) : (
-            // Две большие кнопки вместо переключателя ✳ (27.11.2026, решение
-            // владельца продукта): «В» — спортсмен выиграл, «П» — проиграл.
-            <div className="flex flex-col gap-2" data-testid="manual-outcome">
-              <div className="grid grid-cols-2 gap-3" role="radiogroup" aria-label="Итог спортсмена">
-                {(['Победа', 'Поражение'] as const).map((v) => {
-                  const on = won === v;
-                  const win = v === 'Победа';
-                  return (
-                    <button
-                      key={v}
-                      type="button"
-                      role="radio"
-                      aria-checked={on}
-                      onClick={() => setWon(v)}
-                      data-testid={win ? 'manual-win' : 'manual-loss'}
-                      className={
-                        'flex h-28 cursor-pointer flex-col items-center justify-center gap-1 rounded-2xl border-2 transition-colors ' +
-                        (on
-                          ? win
-                            ? 'border-green-600 bg-green-600 text-white'
-                            : 'border-red-600 bg-red-600 text-white'
-                          : 'border-neutral-200 bg-white text-neutral-700 hover:border-neutral-300')
-                      }
-                    >
-                      <span className="text-[44px] leading-none font-bold">{win ? 'В' : 'П'}</span>
-                      <span className="text-[13px] font-medium">{v}</span>
-                    </button>
-                  );
-                })}
-              </div>
-              <span className="text-center text-[12.5px] text-neutral-500">Не влияет на рейтинг</span>
+          {/* Вертикально ✳ (27.11.2026, решение владельца продукта): слева
+              столбиком «Счёт / Итог», справа — партии или «В» над «П». */}
+          <div className="flex items-stretch gap-3">
+            <div role="tablist" aria-label="Что вносим" aria-orientation="vertical" className="flex flex-col gap-1 rounded-xl bg-neutral-100 p-1" data-testid="manual-mode">
+              {(['Счёт', 'Итог'] as const).map((v) => (
+                <button
+                  key={v}
+                  type="button"
+                  role="tab"
+                  aria-selected={mode === v}
+                  onClick={() => setMode(v)}
+                  className={
+                    'flex-1 cursor-pointer rounded-lg px-3 text-[13px] font-medium transition-colors ' +
+                    (mode === v ? 'bg-white text-neutral-900 shadow-sm' : 'text-neutral-500 hover:text-neutral-800')
+                  }
+                >
+                  {v}
+                </button>
+              ))}
             </div>
-          )}
+            {mode === 'Счёт' ? (
+              <div className="flex flex-1 flex-col justify-center gap-2">
+                <Games label="Партий у спортсмена" value={ga} max={n} onChange={setGa} testId="manual-score-a" />
+                <Games label="Партий у соперника" value={gb} max={n} onChange={setGb} testId="manual-score-b" />
+              </div>
+            ) : (
+              <div className="flex flex-1 flex-col gap-2" data-testid="manual-outcome">
+                <div className="flex flex-col gap-2" role="radiogroup" aria-label="Итог спортсмена">
+                  {(['Победа', 'Поражение'] as const).map((v) => {
+                    const on = won === v;
+                    const win = v === 'Победа';
+                    return (
+                      <button
+                        key={v}
+                        type="button"
+                        role="radio"
+                        aria-checked={on}
+                        onClick={() => setWon(v)}
+                        data-testid={win ? 'manual-win' : 'manual-loss'}
+                        className={
+                          'flex h-16 cursor-pointer items-center gap-4 rounded-2xl border-2 px-5 transition-colors ' +
+                          (on
+                            ? win
+                              ? 'border-green-600 bg-green-600 text-white'
+                              : 'border-red-600 bg-red-600 text-white'
+                            : 'border-neutral-200 bg-white text-neutral-700 hover:border-neutral-300')
+                        }
+                      >
+                        <span className="w-8 text-center text-[34px] leading-none font-bold">{win ? 'В' : 'П'}</span>
+                        <span className="text-[14px] font-medium">{v}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+                <span className="text-center text-[12.5px] text-neutral-500">Не влияет на рейтинг</span>
+              </div>
+            )}
+          </div>
           <Picker
             label="Соперник"
             showLabel
