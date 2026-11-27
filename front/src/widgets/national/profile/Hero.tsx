@@ -5,7 +5,7 @@
 
    - **Баннер — вся шапка во всю высоту**: линейный градиент бренда
      (тёмно-синий → голубой), справа фигура во всю высоту — загруженный снимок
-     или сгенерированный игрок своего пола (заглушка, `public/national/players`),
+     или контур игрока своего пола (заглушка ✳ 27.11.2026, `shared/lib/figure.ts`),
      позади неё огромная контурная цифра места в рейтинг-листе узкой «номерной»
      гарнитурой (как в карточке состава).
    - Слева на баннере белым: **аватар** — фото или лицо той же заглушки, кольцо
@@ -83,11 +83,15 @@ export type HeroPerson = {
 
 /** Шапка профиля без сборной: баннер-градиент с фигурой и местом в листе,
  *  аватар, имя, сведения. Сборная добавляет своё слотами (`Hero` ниже). */
-export function ProfileHero({ who, place, tag, joined, ring, crown, contacts, avatarSlot, figureSlot }: {
+export function ProfileHero({ who, place, tag, badge, danger = false, joined, ring, crown, contacts, avatarSlot, figureSlot }: {
   who: HeroPerson;
   place?: number;
   /** Строка бренда над именем (у сборной — состав и группа). */
   tag?: string;
+  /** Строка в голове шапки, поверх неё, — например «Удалён из рейтинга» ✳ (27.11.2026). */
+  badge?: ReactNode;
+  /** Красная шапка — человек удалён из рейтинга ✳ (27.11.2026). */
+  danger?: boolean;
   /** «В сборной с». */
   joined?: string | null;
   /** Кольцо фото — цвет допуска; нет — белое. */
@@ -104,10 +108,15 @@ export function ProfileHero({ who, place, tag, joined, ring, crown, contacts, av
     <section
       className={
         CARD +
-        ' relative min-h-72 overflow-hidden border-0 bg-[linear-gradient(110deg,var(--color-brand-700)_0%,var(--color-brand-600)_45%,color-mix(in_srgb,var(--color-brand-500)_70%,var(--color-brand-600))_100%)] text-white'
+        ' relative min-h-72 overflow-hidden border-0 text-white ' +
+        (danger
+          ? 'bg-[linear-gradient(110deg,var(--color-red-950)_0%,var(--color-red-800)_45%,var(--color-red-600)_100%)]'
+          : 'bg-[linear-gradient(110deg,var(--color-brand-700)_0%,var(--color-brand-600)_45%,color-mix(in_srgb,var(--color-brand-500)_70%,var(--color-brand-600))_100%)]')
       }
       data-testid="member-hero"
+      data-danger={danger ? 'yes' : undefined}
     >
+      {badge && <div className="absolute top-4 left-6 z-10">{badge}</div>}
       <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden" data-testid="member-banner">
         {place && (
           <span
@@ -121,7 +130,8 @@ export function ProfileHero({ who, place, tag, joined, ring, crown, contacts, av
         <img
           src={who.figure ?? placeholderOf(face)}
           alt=""
-          className="absolute right-10 bottom-0 h-[94%] w-auto max-w-none object-contain object-bottom max-md:hidden"
+          // Контур-заглушка на тёмной шапке — белым ✳ (27.11.2026).
+          className={'absolute right-10 bottom-0 h-[94%] w-auto max-w-none object-contain object-bottom max-md:hidden ' + (who.figure ? '' : 'opacity-70 brightness-0 invert')}
           data-testid="member-figure"
           data-photo={who.figure ? 'yes' : 'no'}
         />
@@ -130,7 +140,7 @@ export function ProfileHero({ who, place, tag, joined, ring, crown, contacts, av
       <div className="relative flex min-h-72 flex-wrap items-center gap-x-8 gap-y-5 p-6 md:pr-80">
         <div className="relative shrink-0">
           <div
-            className={'grid size-36 place-items-center overflow-hidden rounded-full border-4 border-white bg-qtt-peach ' + (ring ? 'ring-4 ' + RING[ring] : '')}
+            className={'grid size-36 place-items-center overflow-hidden rounded-full border-4 border-white bg-[linear-gradient(180deg,white,var(--color-neutral-100))] ' + (ring ? 'ring-4 ' + RING[ring] : '')}
             data-testid="member-photo-ring"
             data-status={ring ?? ''}
           >
@@ -138,7 +148,7 @@ export function ProfileHero({ who, place, tag, joined, ring, crown, contacts, av
             <img
               src={who.avatar ?? placeholderOf(face)}
               alt={who.name}
-              className={'size-full object-cover ' + (who.avatar ? '' : 'origin-[50%_12%] scale-[2.1] object-top')}
+              className={'size-full object-cover ' + (who.avatar ? '' : 'origin-top scale-[1.2] object-top')}
               data-testid="member-photo"
               data-photo={who.avatar ? 'yes' : 'no'}
             />

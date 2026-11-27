@@ -18,15 +18,16 @@
    Данные — снимок расписания (`useSchedule`), тот же, что у «Матчей» и «Дня»;
    экран перечитывает его раз в 15 секунд, пока открыт — счёт идёт со столов. */
 
-import { Chip, Spinner, ToggleButton, ToggleButtonGroup } from '@heroui/react';
-import { LayoutGrid, List } from 'lucide-react';
+import { Button, Chip, Label, Modal, NumberField, Spinner, ToggleButton, ToggleButtonGroup } from '@heroui/react';
+import { LayoutGrid, List, Pencil } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 
-import { useSchedule, type Schedule, type ScheduledMatch, type SchedulePerson } from '@/entities/tournament';
+import { scoreMatch, useSchedule, type Schedule, type ScheduledMatch, type SchedulePerson } from '@/entities/tournament';
 import { placeholderFigure } from '@/shared/lib/figure';
 import { shortName } from '@/shared/lib/name';
 import { DataTable, type DataColumn } from '@/shared/ui/DataTable';
+import { ModalSheet } from '@/shared/ui/ModalSheet';
 import { PersonAvatar } from '@/shared/ui/PersonAvatar';
 
 import { groupTone } from './groupTone';
@@ -58,7 +59,7 @@ function Face({ p }: { p: SchedulePerson }) {
       <img
         src={p.avatar ?? placeholderFigure(p.id)}
         alt=""
-        className={'size-full object-cover ' + (p.avatar ? '' : 'origin-[50%_12%] scale-[2.2] object-top')}
+        className={'size-full object-cover ' + (p.avatar ? '' : 'origin-top scale-[1.2] object-top')}
       />
     </span>
   );
@@ -125,7 +126,7 @@ function TableCard({ table, m, s }: { table: number; m: ScheduledMatch | null; s
       <div className="flex min-h-7 items-center justify-center gap-1.5 text-[12px]" data-testid="table-referee">
         {m?.referee ? (
           <>
-            <PersonAvatar name={m.referee.name} src={m.referee.avatar} />
+            <PersonAvatar name={m.referee.name} src={m.referee.avatar} id={m.referee.id} />
             <span className="truncate text-neutral-700">{shortName(m.referee.name)}</span>
             <span className="text-neutral-400">судья</span>
           </>
@@ -171,7 +172,7 @@ function Person({ p }: { p: SchedulePerson }) {
     <span className="flex items-center gap-2.5">
       <span className="block size-8 shrink-0 overflow-hidden rounded-full bg-qtt-peach">
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={p.avatar ?? placeholderFigure(p.id)} alt="" className={'size-full object-cover ' + (p.avatar ? '' : 'origin-[50%_12%] scale-[2.2] object-top')} />
+        <img src={p.avatar ?? placeholderFigure(p.id)} alt="" className={'size-full object-cover ' + (p.avatar ? '' : 'origin-top scale-[1.2] object-top')} />
       </span>
       <span className="truncate" title={p.name}>
         {shortName(p.name)}
@@ -203,6 +204,81 @@ const TABLE_COLUMNS: DataColumn<TableRow>[] = [
   { id: 'p2', label: 'Игрок 2', sortValue: (r) => r.m?.player2.name ?? null, render: (r) => (r.m ? <Person p={r.m.player2} /> : '—') },
   { id: 'referee', label: 'Судья стола', sortValue: (r) => r.m?.referee?.name ?? null, render: (r) => (r.m?.referee ? shortName(r.m.referee.name) : '—') },
 ];
+
+// ── исправить счёт ───────────────────────────────────────────────────────────
+
+/** Исправить подтверждённый счёт ✳ (24.11.2026, flows/07 Э7.6, flows/08 Э8.2) —
+    тому, у кого полномочия главного судьи (`canRun` с сервера); правит один.
+    Итогом в партиях: у победителя ровно N, у проигравшего меньше — проверяет
+    сервер. Кто внёс — в журнале счёта (`ScoreLog`). */
+function CorrectScore({ tournamentId, m, gamesToWin, onDone }: { tournamentId: string; m: ScheduledMatch; gamesToWin: number; onDone: () => void }) {
+  const [open, setOpen] = useState(false);
+  const [a, setA] = useState(m.score1 ?? 0);
+  const [b, setB] = useState(m.score2 ?? 0);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const save = async () => {
+    setBusy(true);
+    setError(null);
+    try {
+      await scoreMatch(tournamentId, m.id, { action: 'correct', score1: a, score2: b });
+      setOpen(false);
+      onDone();
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  };
+  const step = (label: string, value: number, set: (v: number) => void, testId: string) => (
+    <NumberField value={value} onChange={(v) => set(Number.isNaN(v) ? 0 : v)} minValue={0} maxValue={gamesToWin} className="flex items-center justify-between gap-3">
+      <Label className="min-w-0 truncate text-[14px]">{label}</Label>
+      <NumberField.Group className="h-9 w-32 rounded-xl">
+        <NumberField.DecrementButton aria-label={'Меньше: ' + label} />
+        <NumberField.Input className="text-center" data-testid={testId} />
+        <NumberField.IncrementButton aria-label={'Больше: ' + label} />
+      </NumberField.Group>
+    </NumberField>
+  );
+  return (
+    <>
+      <Button
+        isIconOnly
+        size="sm"
+        variant="ghost"
+        aria-label="Исправить счёт"
+        className="rounded-full"
+        onPress={() => {
+          setA(m.score1 ?? 0);
+          setB(m.score2 ?? 0);
+          setOpen(true);
+        }}
+        data-testid="tables-correct"
+      >
+        <Pencil size={14} />
+      </Button>
+      <ModalSheet isOpen={open} onOpenChange={setOpen} size="sm" testId="correct-dialog">
+        <Modal.CloseTrigger aria-label="Закрыть" />
+        <Modal.Header>
+          <Modal.Heading className="text-lg font-semibold">Исправить счёт</Modal.Heading>
+        </Modal.Header>
+        <Modal.Body className="flex flex-col gap-3">
+          {step(shortName(m.player1.name), a, setA, 'correct-score1')}
+          {step(shortName(m.player2.name), b, setB, 'correct-score2')}
+          {error && <p className="m-0 text-[13px] text-red-600">{error}</p>}
+        </Modal.Body>
+        <Modal.Footer>
+          <Button variant="tertiary" className="rounded-xl" onPress={() => setOpen(false)}>
+            Отмена
+          </Button>
+          <Button variant="primary" className="rounded-xl" isPending={busy} onPress={() => void save()} data-testid="correct-save">
+            Сохранить
+          </Button>
+        </Modal.Footer>
+      </ModalSheet>
+    </>
+  );
+}
 
 // ── экран ────────────────────────────────────────────────────────────────────
 
@@ -309,7 +385,16 @@ export function TablesBoard({ tournamentId }: { tournamentId: string }) {
           {results.length ? (
             <ul className="m-0 list-none border-t border-neutral-200 p-0 [&>li:first-child]:border-t-0">
               {results.map((m) => (
-                <Row key={m.id} m={m} right={<span className={NUM + ' shrink-0 text-[22px]'}>{m.isWalkover ? '+:−' : `${m.score1 ?? 0}:${m.score2 ?? 0}`}</span>} />
+                <Row
+                  key={m.id}
+                  m={m}
+                  right={
+                    <span className="flex shrink-0 items-center gap-1" data-testid="tables-result" data-match={m.id}>
+                      <span className={NUM + ' text-[22px]'}>{m.isWalkover ? '+:−' : `${m.score1 ?? 0}:${m.score2 ?? 0}`}</span>
+                      {s.canRun && !m.isWalkover && <CorrectScore tournamentId={tournamentId} m={m} gamesToWin={s.gamesToWin} onDone={reload} />}
+                    </span>
+                  }
+                />
               ))}
             </ul>
           ) : (

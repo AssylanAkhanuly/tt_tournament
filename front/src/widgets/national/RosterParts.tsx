@@ -171,7 +171,7 @@ export function MemberFace({ m, className = 'size-9' }: { m: Who; className?: st
         src={m.avatar ?? placeholderOf(m)}
         alt=""
         loading="lazy"
-        className={'size-full object-cover ' + (m.avatar ? '' : 'origin-[50%_12%] scale-[2.2] object-top')}
+        className={'size-full object-cover ' + (m.avatar ? '' : 'origin-top scale-[1.2] object-top')}
         data-testid="member-avatar"
         data-photo={m.avatar ? 'yes' : 'no'}
       />

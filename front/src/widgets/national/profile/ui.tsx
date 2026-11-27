@@ -32,23 +32,6 @@ export function Panel({ title, action, testId, className = '', children }: { tit
   );
 }
 
-/** Мини-линия карточки показателя: значения слева направо, с мягкой заливкой. */
-export function Spark({ values, stroke, fill }: { values: number[]; stroke: string; fill: string }) {
-  if (values.length < 2) return <div className="h-10" />;
-  const w = 200;
-  const h = 40;
-  const min = Math.min(...values);
-  const span = Math.max(...values) - min || 1;
-  const pts = values.map((v, i) => [(i / (values.length - 1)) * w, h - 3 - ((v - min) / span) * (h - 6)]);
-  const line = pts.map(([x, y], i) => (i ? 'L' : 'M') + x.toFixed(1) + ' ' + y.toFixed(1)).join(' ');
-  return (
-    <svg viewBox={`0 0 ${w} ${h}`} preserveAspectRatio="none" className="h-10 w-full" aria-hidden>
-      <path d={`${line} L${w} ${h} L0 ${h} Z`} className={fill} />
-      <path d={line} fill="none" strokeWidth={2} strokeLinejoin="round" strokeLinecap="round" vectorEffect="non-scaling-stroke" className={stroke} />
-    </svg>
-  );
-}
-
 /** Кольцо доли: выполнено из всего — дугой цвета брендбука, число внутри. */
 export function ProgressRing({ done, total, size = 44 }: { done: number; total: number; size?: number }) {
   const r = (size - 6) / 2;

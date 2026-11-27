@@ -89,9 +89,9 @@ test('сборная: тренер — состав и план, врач — м
   await expect(row).toContainText('Юноши');
   await expect(row.getByTestId('member-plan')).toHaveText('Нет');
   await expect(row.getByTestId('clearance')).toHaveAttribute('data-status', 'none');
-  // Без снимка — заглушка: сгенерированный игрок в стойке ✳ (22.11.2026).
+  // Без снимка — заглушка: контур игрока своего пола ✳ (27.11.2026).
   await expect(row.getByTestId('member-photo')).toHaveAttribute('data-photo', 'no');
-  await expect(row.getByTestId('member-photo')).toHaveAttribute('src', /\/national\/players\/[mf]-[1-3]\.webp$/);
+  await expect(row.getByTestId('member-photo')).toHaveAttribute('src', /\/national\/players\/outline-[mf]\.webp$/);
   // Вид «Таблица»: та же строка с аватаром-заглушкой, вид — в адресе.
   await coach.getByTestId('roster-view-table').click();
   await coach.waitForURL(/view=table/);
